@@ -89,4 +89,9 @@ export const preseasonTeamLine = (p: Pick<FriendPerson, 'preseasonTeam'>) =>
     : null;
 
 /** 개막 뒤 친구 화면에서 프리시즌 팀이 없는 창단 멤버에게 보이는 안내. */
+/** T-11-601 친구 줄을 누르면 여는 구단주 프로필의 팀 id — 가장 최근 팀(배포 전 응답이면 이번 시즌 · 프리시즌 팀). 없으면 null. */
+export const friendProfileTeam = (
+  p: Pick<FriendPerson, 'profileTeamId' | 'team' | 'preseasonTeam'>,
+) => p.profileTeamId ?? p.team?.id ?? p.preseasonTeam?.id ?? null;
+
 export const preseasonFriendlyHint = () => L.preseasonHint;

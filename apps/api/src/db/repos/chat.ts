@@ -1,5 +1,6 @@
 import type { AdminChatReport } from '@offside/contracts';
 import type { CommentReportReason } from '@offside/contracts/board-limits';
+import type { ChatRoomKey } from '@offside/contracts/chat';
 import { and, count, desc, eq, gt, isNull, max, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { boardBlocks, chatMutes, chatReports } from '../schema.js';
@@ -38,6 +39,7 @@ export async function reportChat(
     authorProfileId: string;
     nickname: string;
     body: string;
+    room: ChatRoomKey;
   },
   now: string,
 ): Promise<number> {
@@ -62,6 +64,7 @@ export async function listOpenChatReports(db: Db): Promise<AdminChatReport[]> {
       // 한 메시지의 사본은 모두 같다.
       nickname: sql<string>`min(${chatReports.nickname})`,
       body: sql<string>`min(${chatReports.body})`,
+      room: sql<ChatRoomKey>`min(${chatReports.room})`,
       reasons: sql<string>`group_concat(distinct ${chatReports.reason})`,
       reports: count(),
       lastReportedAt: lastAt,
@@ -78,19 +81,19 @@ export async function listOpenChatReports(db: Db): Promise<AdminChatReport[]> {
   }));
 }
 
-/** 메시지의 열린 신고를 닫고 작성자 프로필 id를 돌려준다. 열린 신고가 없으면 null. */
+/** 메시지의 열린 신고를 닫고 작성자 프로필 id와 메시지가 있는 방을 돌려준다. 열린 신고가 없으면 null. */
 export async function resolveChatReports(
   db: Db,
   messageId: string,
   now: string,
-): Promise<string | null> {
+): Promise<{ author: string; room: ChatRoomKey } | null> {
   const open = and(eq(chatReports.messageId, messageId), isNull(chatReports.resolvedAt));
   const [row] = await db
     .update(chatReports)
     .set({ resolvedAt: now })
     .where(open)
-    .returning({ author: chatReports.authorProfileId });
-  return row?.author ?? null;
+    .returning({ author: chatReports.authorProfileId, room: chatReports.room });
+  return row ?? null;
 }
 
 /** 내가 신고한 메시지 id(since 이후 — 방이 메시지를 들고 있는 기간만). */

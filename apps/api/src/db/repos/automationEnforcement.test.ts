@@ -85,12 +85,14 @@ describe('automatic moderation', () => {
       oneIdle: [sig({ clicks: 0 })],
       weak: [sig({ moves: 1 })],
       touch: [sig({ touches: 25, moves: 0 })],
+      appIdle: [sig({ clicks: 0, app: true }), sig({ clicks: 0, app: true })],
+      appMacro: [sig({ clicks: 0, app: true, touches: 300, same: 290 })],
       old: [null],
       invalid: ['broken'],
     };
     for (const [id, signals] of Object.entries(inputs)) await seed(id, signals);
     const result = await sweepAutomation(ctx.env.DB, NOW);
-    expect(result).toMatchObject({ status: 'complete', checked: 8, hidden: 4 });
+    expect(result).toMatchObject({ status: 'complete', checked: 10, hidden: 4 });
     for (const [id, signals] of Object.entries(inputs))
       expect(await hidden(id)).toBe(Number(blockingReasons(signals).length > 0));
     const report = await automationEnforcement(ctx.db, true);
@@ -103,7 +105,7 @@ describe('automatic moderation', () => {
     expect((await sweepAutomation(ctx.env.DB, NOW + 86400000))?.hidden).toBe(0);
     expect((await automationEnforcement(ctx.db, true)).actions).toHaveLength(4);
     expect(await ctx.env.DB.prepare('SELECT count(*) AS n FROM career_seasons').first('n')).toBe(
-      10,
+      13,
     );
   });
   it('uses cumulative script-click thresholds and honors the upload pause', async () => {

@@ -15,16 +15,13 @@ import {
 import { accountCache, appState } from '../../store';
 import { noteOwner } from '@offside/app-core/api/friendPending';
 import { accountLabel, isMember, runProfileDeletion } from '@offside/app-core/account';
-import { closeSheet, refreshAccount, showSheet, toast } from '../../game/host';
+import { closeSheet, ensureAccount, refreshAccount, showSheet, toast } from '../../game/host';
 import { appleReauthCode } from '../../platform/auth';
 import { setSessionToken } from '../../platform/session';
 import { rem } from '../../theme/type';
 import { Btn, Row, Txt } from '../../ui';
 import { LinkBtn } from '../settings/parts';
 import { accountText as L } from '@offside/app-core/i18n/ko/account';
-
-// 화면을 벗어났다 돌아와도(다시 마운트) 캐시가 이 시간 안이면 '확인 중…'을 다시 보이지 않는다.
-const REVALIDATE_MS = 5 * 60_000;
 
 const set = (v: typeof accountCache.value) => {
   accountCache.value = v;
@@ -113,10 +110,7 @@ export function Account() {
   const cache = useSnapshot(accountCache);
   const profile = cache.value;
 
-  useEffect(() => {
-    if (accountCache.value === undefined) void load();
-    else if (Date.now() - accountCache.fetchedAt > REVALIDATE_MS) void load(true);
-  }, []);
+  useEffect(ensureAccount, []);
 
   const who = { flex: 1, minWidth: 0, gap: 3 } as const;
   const head = {
@@ -154,7 +148,7 @@ export function Account() {
       </View>
     );
   if (!profile || !isMember(profile))
-    // T-10-102 비로그인은 안내만 — 로그인 버튼은 구단주 화면이 카드 밖에 하나만 둔다(T-11-026 잠긴 '내 팀' 카드 안).
+    // T-10-102 비로그인은 안내만 — 로그인 버튼은 카드를 쓰는 화면이 둔다(설정 계정 카드 · 구단주 화면의 잠긴 '내 팀' 카드).
     return (
       <View style={head}>
         <View style={who}>

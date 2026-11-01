@@ -1,0 +1,1 @@
+ALTER TABLE `owner_teams` ADD `cup_ovr` integer;

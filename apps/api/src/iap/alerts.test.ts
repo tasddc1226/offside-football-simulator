@@ -22,7 +22,7 @@ describe('verified billing Slack outbox', () => {
   beforeEach(async () => {
     ctx = await createTestD1();
     ctx.env.BILLING_ALERTS_ENABLED = '1';
-    ctx.env.BILLING_SLACK_WEBHOOK = 'https://hooks.slack.com/services/test';
+    ctx.env.BILLING_SLACK_WEBHOOK = 'https://discord.com/api/webhooks/1/test';
   });
   afterEach(async () => {
     vi.unstubAllGlobals();

@@ -58,6 +58,7 @@ import type { Context, Hono } from 'hono';
 import type { Db } from '../db/client.js';
 import { cupEntries, cupMatches } from '../db/schema.js';
 import {
+  cupTeamOf,
   myTeamIn,
   publicNamesOf,
   slotIdsOf,
@@ -332,7 +333,7 @@ async function myDivision(
     .limit(1);
   if (entered) return cupById(entered.cupId, siblings) ?? cup;
   const [team] = await myTeamIn(db, profileId, cup.season);
-  return team ? (divisionFor(siblings, team.ovr) ?? cup) : cup;
+  return team ? (divisionFor(siblings, cupTeamOf(team).ovr) ?? cup) : cup;
 }
 
 /** Two DB round trips including schedule lookup; never load team logos or match details for home. */
@@ -463,7 +464,7 @@ export async function cupChampionView(db: Db, cup: CupDef): Promise<CupChampion 
   };
 }
 
-/** 신청 자격(지금 팀 기준). 실제 선수 수는 선발을 다시 세어 본다(팔린 카드는 빠진다). */
+/** 신청 자격(지금 팀 기준, T-11-570 컵 명단 프리셋이 있으면 그 편성). 실제 선수 수는 선발을 다시 세어 본다(팔린 카드는 빠진다). */
 async function eligibility(
   db: Db,
   cup: CupDef,
@@ -472,7 +473,8 @@ async function eligibility(
   entries: readonly CupEntryRow[],
   all: readonly CupDef[],
 ) {
-  const [team] = await myTeamIn(db, profileId, cup.season);
+  const [row] = await myTeamIn(db, profileId, cup.season);
+  const team = row ? cupTeamOf(row) : undefined;
   if (!team) return { ok: false, reason: 'no-team' as const, filled: 0, team };
   // T-11-410 같은 회차 다른 구간에 이미 신청했는가.
   const others = cup.division
@@ -1052,10 +1054,16 @@ export async function checkCupLineup(
   filled: number,
   now: string,
   ovr: number,
+  /**
+   * T-11-570 league: 리그 잠금을 본다(팀 명단 · 감독). cup: 이 명단이 컵 명단이다 — 컵 명단 프리셋이 따로 있는 팀의 팀 저장은
+   * false로 불러 컵 검사를 건너뛰고, 프리셋 저장은 league를 false로 불러 컵 검사만 한다.
+   */
+  { league = true, cup = true }: { league?: boolean; cup?: boolean } = {},
 ) {
   // T-11-418b 리그 경기도 1시간 전부터 끝날 때까지 명단을 잠근다.
-  if (await leagueLineupLocked(db, profileId, season, now))
+  if (league && (await leagueLineupLocked(db, profileId, season, now)))
     throw conflictError(cupKo('leagueLocked'), 'LEAGUE_LINEUP_LOCKED');
+  if (!cup) return;
   const active = await activeCups(db, profileId, season);
   if (!active.length) return;
   const matches = await cupMatchesIn(
@@ -1089,13 +1097,13 @@ export async function checkCupLineup(
 
 /**
  * 참가 중인(탈락 전) 컵의 선발 선수. 대회 시즌의 팀 명단을 본다 — T-11-552 시즌이 넘어간 뒤에도 끝나지 않은 지난 시즌 컵
- * (시즌 1 제3회)의 선발을 지킨다.
+ * (시즌 1 제3회)의 선발을 지킨다. T-11-570 컵 명단 프리셋이 있으면 그 프리셋 선발이다.
  */
 export async function cupLineupIds(db: Db, profileId: string): Promise<Set<string>> {
   const out = new Set<string>();
   for (const { season } of await activeCupSeasonsQuery(db, profileId)) {
     const [team] = await myTeamIn(db, profileId, season);
-    for (const id of team ? slotIdsOf(team) : []) if (id) out.add(id);
+    for (const id of team ? slotIdsOf(cupTeamOf(team)) : []) if (id) out.add(id);
   }
   return out;
 }

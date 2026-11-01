@@ -1,0 +1,1 @@
+ALTER TABLE `chat_reports` ADD `room` text DEFAULT 'ko' NOT NULL;

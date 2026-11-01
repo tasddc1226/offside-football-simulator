@@ -2,7 +2,7 @@
 
 Meta 앱 설치 광고(광고 관리자 'JP App Promo Test')는 앱이 설치 · 실행을 Meta에 알려야 설치 수를 세고 최적화한다.
 2026-10-28 점검 때 광고에 연결한 앱(비즈니스 소유 개발자 앱 'OFFSIDE Agents', `1440883941339231`)이
-`app_install_tracked: false`라 노출이 0이었다. 1.1.6부터 안드로이드 앱에 Meta SDK(`facebook-core`)를 넣는다.
+`app_install_tracked: false`라 노출이 0이었다. 1.1.7부터(처음 1.1.6을 노렸으나 라운지 필드 T-11-600이 먼저 1.1.6으로 나갔다) 안드로이드 앱에 Meta SDK(`facebook-core`)를 넣는다.
 
 ## 동작
 
@@ -23,9 +23,10 @@ Meta 앱 설치 광고(광고 관리자 'JP App Promo Test')는 앱이 설치 ·
    토큰이 없으면 SDK가 초기화되지 않아 아무것도 보내지 않는다(빌드는 된다).
 2. **앱 모드**: 같은 대시보드에서 앱이 '라이브'인지 확인한다. 개발 모드면 역할이 없는 사용자의 이벤트를 받지 않는다.
 3. **Google Play 데이터 보안**: '앱 활동(앱 상호작용)', '기기 또는 기타 ID'를 '공유: Meta, 광고 · 마케팅 측정, 선택 사항(동의)'으로 고친다.
-4. **1.1.6 production 빌드**(iOS · 안드로이드)를 PR 브랜치에서 만들고 `.github/scripts/ota-store-runtime.mjs`의
-   `STORE_RUNTIMES`를 그 빌드의 지문으로 바꾼 뒤 머지 · 배포한다. 1.1.5 빌드는 `prepare-ota-115.mjs` 경로로 계속 OTA를 받는다.
-5. 개인정보처리방침(웹 `/legal/privacy/` 8항)은 이 PR의 웹 배포로 바뀐다. 시행일을 실제 배포일로 맞춘다.
+4. **1.1.7 production 빌드**(iOS · 안드로이드)를 PR 브랜치에서 만들고, `.github/scripts/ota-store-runtime.mjs`의
+   `STORE_RUNTIMES`가 그 빌드의 지문과 같은지 확인한 뒤 머지 · 배포한다. 1.1.6 · 1.1.5 · 1.1.4 빌드는
+   `prepare-ota-legacy.mjs`가 Meta 모듈 · 플러그인을 빼는 경로로 계속 OTA를 받는다.
+5. 개인정보처리방침(웹 `/legal/privacy/` 8항)은 이 PR의 웹 배포로 바뀐다. 시행일이 배포일보다 앞서지 않는지 확인한다.
 
 ## 확인
 

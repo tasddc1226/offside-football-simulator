@@ -26,4 +26,4 @@
 3. 서버 변수 `MEMBERSHIP_ENABLED=1`을 켠다(운영은 `wrangler.jsonc` production vars, 2026-10-26 켬). 꺼져 있으면 GET이 `stores: []`라 앱이 가입 버튼을 보이지 않는다. 이미 가입한 구독의 확인과 혜택은 스위치와 상관없다.
 4. `MEMBERSHIP_LIVE`(contracts)를 `true`로 바꿔 웹 · 앱 구단주 화면에 입구를 연다. 같은 PR에서 공개 가이드(`apps/web/scripts/seo.mjs` GUIDE_SECTIONS) · FAQ에 멤버십을 더한다. 앱의 구독 결제는 네이티브 변경이 없어 OTA로 나가지만, Apple 첫 구독 심사에는 이 화면이 든 빌드가 필요하다.
 
-`MEMBERSHIP_LIVE`가 false인 동안 입구는 개발 빌드(`import.meta.env.DEV`, `__DEV__`)에서만 보인다. iOS 앱은 `MEMBERSHIP_IOS_LIVE`도 true여야 입구가 보인다(T-11-516). App Store 구독 심사가 끝나기 전에는 가입 버튼이 없어서 iOS만 닫아 두고, 승인되면 true로 바꿔 운영 배포(OTA)로 연다.
+`MEMBERSHIP_LIVE`가 false인 동안 입구는 개발 빌드(`import.meta.env.DEV`, `__DEV__`)에서만 보인다. iOS 앱은 `MEMBERSHIP_IOS_LIVE`도 true여야 입구가 보인다(T-11-516). App Store 구독 심사가 끝나기 전에는 가입 버튼이 없어서 iOS만 닫아 두고, 승인되면 true로 바꿔 운영 배포(OTA)로 연다. 2026-10-29 1.1.5 출시 뒤 true로 열었다(T-11-566).

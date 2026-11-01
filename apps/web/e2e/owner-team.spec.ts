@@ -143,7 +143,7 @@ test('익명 구단주는 내 팀 대신 구글 · Apple 로그인 버튼만 본
   await stubOwner(page, false);
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('#account-slot')).toContainText('로그인하지 않았어요');
+  await expect(page.locator('[data-owner-team-locked]')).toBeVisible();
   await expect(page.getByRole('link', { name: '구글로 로그인' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: '구글로 로그인' })).toHaveCount(1);
   await expect(page.getByRole('button', { name: 'Apple로 로그인' })).toHaveCount(1);
@@ -877,7 +877,7 @@ test('시즌 업적 — 등급·점수·랭킹 순위, 분류별 단계 묶음�
   await expect(box.locator('[data-ach-group="manager"]')).toContainText('감독 시뮬레이션이 열리면');
   await expectNoA11yViolations(page);
 
-  await box.getByLabel('시즌').selectOption({ label: '프리시즌' });
+  await box.getByLabel('시즌').selectOption('0');
   await expect(box).toContainText('프리시즌에 처음 뛰어 은퇴한 내 선수 5명');
   expect(seasons).toEqual([1, 0]);
 });
@@ -1118,7 +1118,7 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await expect(page.locator('.tm-head')).toContainText('시즌 1에 뛰고 은퇴한');
 
   // T-11-113 개막 뒤 프리시즌 팀은 친선전 전용으로 고칠 수 있다(랭크 경기 기록은 그대로 보인다).
-  await page.locator('[data-team-season]').selectOption({ label: '프리시즌' });
+  await page.locator('[data-team-season]').selectOption('0');
   await expect(page.locator('h1')).toHaveText('프리 FC');
   await expect(page.locator('[data-team-legacy]')).toContainText('친선전에만');
   await expect(page.locator('[data-team-readonly]')).toHaveCount(0);
@@ -1527,6 +1527,55 @@ test('친구 — 코드로 신청하고 받은 신청을 수락하고 친선전�
   await expect(panel.locator('[data-friendly-match="fmt_1"]')).toContainText('친선전 · 친구 감독');
 });
 
+test('T-11-601 친구 줄을 누르면 그 구단주 프로필을 열고, 뒤로 가면 친구 칸으로 돌아온다', async ({
+  page,
+}) => {
+  await stubOwner(page, true);
+  await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam()));
+  await page.route(`${API}/v1/owner-team/opponents`, (route) => route.fulfill(ok({ items: [] })));
+  await page.route(`${API}/v1/friends`, (route) =>
+    route.fulfill(
+      ok(
+        friendsBody({
+          friends: [
+            // 이번 시즌 팀이 없어도 지난 시즌 팀으로 프로필을 연다.
+            person('FRND2345', '친구 감독', { profileTeamId: 'team_s1' }),
+            person('NOTM2345', '새 구단주', { profileTeamId: null }),
+          ],
+        }),
+      ),
+    ),
+  );
+  const opened: string[] = [];
+  await page.route(`${API}/v1/owners/by-team/*`, (route) => {
+    opened.push(new URL(route.request().url()).pathname);
+    return route.fulfill({ status: 404, body: '{}' });
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
+  await page.locator('[data-match-mode="friends"]').click();
+  const panel = page.locator('[data-friends]');
+  // 팀을 만든 적 없는 친구는 누를 수 없다.
+  await expect(panel.locator('[data-friend="NOTM2345"]')).toContainText('새 구단주');
+  await expect(panel.locator('[data-friend="NOTM2345"] [data-act="friend-profile"]')).toHaveCount(
+    0,
+  );
+  await expectNoA11yViolations(page);
+
+  await panel
+    .locator('[data-friend="FRND2345"]')
+    .getByRole('button', { name: '친구 감독 구단주 프로필 보기' })
+    .click();
+  await expect.poll(() => opened).toEqual(['/v1/owners/by-team/team_s1']);
+  await expect(panel).toHaveCount(0);
+
+  await page.goBack();
+  await expect(panel.locator('[data-friend="FRND2345"]')).toBeVisible();
+});
+
 test('친구 초대 링크로 들어오면 친구 화면에서 그 구단주에게 신청한다', async ({ page }) => {
   await stubOwner(page, true);
   await page.route(ownerTeamUrl, (route) => route.fulfill(ownerTeam()));
@@ -1884,7 +1933,7 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
       },
     ],
   };
-  const puts: { presets: { name: string; formation: string }[] }[] = [];
+  const puts: { presets: { name: string; formation: string; cup?: true }[] }[] = [];
   let teamPuts = 0;
   await page.route(ownerTeamUrl, async (route) => {
     if (route.request().method() === 'GET')
@@ -1911,7 +1960,9 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   expect(puts[0]!.presets.map((p) => p.name)).toEqual(['옛 편성', '프리셋 2']);
   await expect(sheet.locator('[data-preset]')).toHaveCount(2);
 
-  // 이름 바꾸기 · 삭제도 목록을 통째로 보낸다.
+  // 이름 바꾸기 · 삭제도 목록을 통째로 보낸다. 덮어쓰기 · 이름 바꾸기 · 삭제는 카드의 관리(⋯)를 열어야 보인다.
+  await expect(sheet.locator('[data-act="preset-rename"]')).toHaveCount(0);
+  await sheet.locator('[data-preset="1"] [data-act="preset-more"]').click();
   await sheet.locator('[data-preset="1"] [data-act="preset-rename"]').click();
   await sheet.locator('[data-preset-name-input]').fill('주말 리그');
   await sheet.locator('[data-act="preset-rename-done"]').click();
@@ -1930,12 +1981,14 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
 
   await page.locator('[data-act="team-presets"]').click();
   // T-11-431 덮어쓰기 · 삭제는 한 번 더 묻는다. 취소하면 아무것도 보내지 않는다.
+  await sheet.locator('[data-preset="1"] [data-act="preset-more"]').click();
   await sheet.locator('[data-preset="1"] [data-act="preset-overwrite"]').click();
   await expect(sheet.locator('[data-preset="1"] [data-preset-ask="overwrite"]')).toContainText(
     '지금 편성으로 덮어쓸까요?',
   );
   await sheet.locator('[data-act="preset-ask-cancel"]').click();
   await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
+  await sheet.locator('[data-preset="0"] [data-act="preset-more"]').click();
   await sheet.locator('[data-preset="0"] [data-act="preset-delete"]').click();
   await expect(sheet.locator('[data-preset="0"] [data-preset-ask="delete"]')).toContainText(
     '삭제할까요?',
@@ -1945,10 +1998,24 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   await expect.poll(() => puts.length).toBe(3);
   expect(puts[2]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
   await expect(sheet.locator('[data-preset-ask]')).toHaveCount(0);
+  await sheet.locator('[data-preset="0"] [data-act="preset-more"]').click();
   await sheet.locator('[data-preset="0"] [data-act="preset-overwrite"]').click();
   await sheet.locator('[data-act="preset-ask-ok"]').click();
   await expect.poll(() => puts.length).toBe(4);
   expect(puts[3]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
+
+  // T-11-570 위쪽 컵 경기 명단에서 프리셋을 고르면 cup 표시를 보내고 배지가 붙는다. 팀 명단을 고르면 푼다.
+  await expect(sheet.locator('[data-preset-cup-hint]')).toBeVisible();
+  await expect(sheet.locator('[data-act="preset-cup-team"]')).toBeChecked();
+  await sheet.locator('[data-preset-cup-pick] label', { hasText: '주말 리그' }).click();
+  await expect.poll(() => puts.length).toBe(5);
+  expect(puts[4]!.presets[0]).toMatchObject({ name: '주말 리그', cup: true });
+  await expect(sheet.locator('[data-preset="0"] [data-preset-cup]')).toHaveText('컵 명단');
+  await expect(page.getByText('컵 명단으로 정했어요.')).toBeVisible();
+  await sheet.locator('[data-preset-cup-pick] label', { hasText: '팀 명단' }).click();
+  await expect.poll(() => puts.length).toBe(6);
+  expect(puts[5]!.presets[0]!.cup).toBeUndefined();
+  await expect(sheet.locator('[data-preset-cup]')).toHaveCount(0);
 });
 
 for (const width of [320, 390, 1280]) {

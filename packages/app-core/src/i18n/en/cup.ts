@@ -174,6 +174,8 @@ export const cup: Translation<CupMsgs> = {
   barOvrCap: (p) => `Team OVR ${p.ovr} / cap ${p.cap} (${p.division})`,
   barOvrNoCap: (p) => `Team OVR ${p.ovr} · ${p.division} (no cap)`,
   barFilled: (p) => `Starters ${p.n}/min ${p.min}`,
+  barPreset: (p) =>
+    `Cup matches use your “${p.name}” preset. League matches use the team lineup below.`,
   barOverCapBlock: (p) =>
     `Your team is over the ${p.division} cap of ${p.cap}, so you can't save. Bring team OVR down to ${p.cap} or lower.`,
   barOverCapMove: (p) =>

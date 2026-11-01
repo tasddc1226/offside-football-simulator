@@ -5,7 +5,7 @@
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, SHAPE_IDS, presetLayout, positionedLayout, positionRole, shapeBase, matchShape, shapeLayout, slotRating, slotFit, type FormationId, type ShapeId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
-  import { attrLine, salaryIn, synergyFocus, type salaryBar } from '@offside/app-core/teamOwner';
+  import { attrLine, STAMINA_CELLS, salaryIn, staminaOf, synergyFocus, type LeagueFatigue, type salaryBar } from '@offside/app-core/teamOwner';
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { lockToggleable } from '@offside/app-core/market';
   import { synergyApplies, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
@@ -21,14 +21,14 @@
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, salary = null, budget, onassign, onauto, onsave, onlock, onpresets, focusSlot = $bindable(null) }:
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, salary = null, fatigue = null, budget, onassign, onauto, onsave, onlock, onpresets, focusSlot = $bindable(null) }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
       teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean;
       /** T-11-436 컵 규칙에 걸려 서버가 거절할 이유(있으면 저장 버튼 옆에 보인다). */
       saveBlock?: string | null;
       /** T-11-376 지난 시즌 선수 급여 막대(프리시즌은 null). */
-      salary?: ReturnType<typeof salaryBar>; budget: number; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
+      salary?: ReturnType<typeof salaryBar>; fatigue?: LeagueFatigue | null | undefined; budget: number; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
   let shareData = $state<TeamShareData | null>(null);
   let salaryOpen = $state(false);
   let pitch = $state<HTMLElement>();
@@ -239,6 +239,7 @@
           {@const country = NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)}
           {@const pay = salaryIn(p, season)}
           {@const wontFit = at < 0 && pay > 0 && !!salary && salary.sum + pay > salary.budget}
+          {@const stamina = staminaOf(fatigue, p.careerId)}
           <article class="locker-player" class:chosen={selectedPlayer === p.careerId} class:salary-out={wontFit} data-locker-player={p.careerId}>
             <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label={L.lockerPickAria({ who: `${nameOf(p)}${country ? ` · ${tn(country.ko)}` : ''}`, pos: tn(POS_LABEL[p.pos]), peak: p.peak, attrs: attrLine(p) ?? L.noAttrs })} onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
               <PlayerCard player={p} name={nameOf(p)} rating={p.peak} role={detailPosOf(p)} />
@@ -246,6 +247,7 @@
             <div class="roster-row">
               <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? L.rosterStarting({ slot: positions[at]!.slot }) : L.rosterBench}</span>
               {#if pay > 0}<span class="salary-chip" class:over={wontFit} data-salary-chip={pay} data-salary-over={wontFit ? '' : undefined}>{wontFit ? `${TC.salaryChip({ n: pay })} · ${TC.salaryOver}` : TC.salaryChip({ n: pay })}</span>{/if}
+              {#if stamina}<span class="stamina" data-stamina={stamina.left} role="img" title={TC.fatigueHint} aria-label={TC.staminaAria({ left: stamina.left, total: STAMINA_CELLS, pct: stamina.pct })}><small aria-hidden="true">{TC.staminaLabel}</small><span class="stamina-bar" aria-hidden="true">{#each { length: STAMINA_CELLS } as _, k (k)}<i class:on={k < stamina.left}></i>{/each}</span></span>{/if}
               {#if onlock}<button class="lock-toggle" class:on={p.locked} aria-pressed={!!p.locked} aria-label={L.lockerLockAria({ name: nameOf(p) })} data-act="lock" disabled={!lockToggleable(p)} onclick={() => onlock(p)}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d={p.locked ? 'M5.5 7V5a2.5 2.5 0 0 1 5 0v2' : 'M5.5 7V5a2.5 2.5 0 0 1 4.9-.7'} /></svg><span>{p.locked ? L.lockerLocked : p.listing ? L.lockerListed : L.lockerLock}</span></button>{/if}
             </div>
             <button class="drag-handle" aria-label={L.dragAria({ name: nameOf(p) })} onpointerdown={(e) => start(e, p.careerId, null)} onclick={() => pickPlayer(p.careerId)}><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M3 2h2M3 6h2M3 10h2M8 2h2M8 6h2M8 10h2M13 2h2M13 6h2M13 10h2" /></svg><span>{L.dragLabel}</span></button>
@@ -299,6 +301,9 @@
   .salary-help {flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted);}
   .salary-chip {display:inline-block;padding:1px 7px;border-radius:999px;border:1px solid var(--line);font-size:.68rem;font-weight:600;color:var(--muted);white-space:nowrap;}
   .salary-chip.over {border-color:var(--bad);color:var(--bad);}
+  .stamina {display:inline-flex;align-items:center;gap:4px;--stamina:var(--good);} .stamina[data-stamina='3'],.stamina[data-stamina='2'] {--stamina:var(--warn);} .stamina[data-stamina='1'] {--stamina:var(--bad);}
+  .stamina small {font-size:.68rem;font-weight:600;color:var(--muted);}
+  .stamina-bar {display:inline-flex;gap:2px;} .stamina-bar i {width:7px;height:10px;border-radius:2px;background:var(--line);} .stamina-bar i.on {background:var(--stamina);}
   .locker-player.salary-out .locker-select {opacity:.55;}
   .locker-salary {white-space:nowrap;}
   .preset-bar {display:flex;justify-content:flex-end;margin:4px 14px 0;}
@@ -336,7 +341,7 @@
   .locker-grid {display:grid;grid-template-columns:repeat(auto-fill,minmax(144px,1fr));gap:16px 12px;align-items:start;} .locker-player {position:relative;max-width:170px;width:100%;justify-self:center;}
   .locker-select {width:100%;display:block;border:0;border-radius:var(--radius-md);background:none;padding:0;cursor:grab;touch-action:pan-y;user-select:none;-webkit-user-select:none;}
   .locker-select:focus-visible {outline:3px solid var(--accent);outline-offset:3px;} .locker-player.chosen .locker-select {filter:drop-shadow(0 0 5px var(--accent));}
-  .roster-row {display:flex;align-items:center;justify-content:center;gap:8px;padding-top:6px;} .roster-row .roster-state {padding-top:0;}
+  .roster-row {display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:4px 8px;padding-top:6px;} .roster-row .roster-state {padding-top:0;white-space:nowrap;} .roster-row .lock-toggle {white-space:nowrap;}
   .lock-toggle {display:inline-flex;align-items:center;gap:3px;min-height:28px;padding:0 8px;border:1px solid var(--line);border-radius:var(--radius-pill);background:none;color:var(--muted);font:inherit;font-size:var(--fs-caption);cursor:pointer;} .lock-toggle svg {width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;} .lock-toggle rect {fill:currentColor;stroke:none;}
   .lock-toggle.on {border-color:var(--accent);color:var(--accent);font-weight:600;} .lock-toggle:disabled {cursor:default;opacity:.6;}
   .roster-state {display:block;text-align:center;font-size:var(--fs-caption);color:var(--muted);padding-top:6px;} .roster-state.starting {color:var(--good);font-weight:600;}

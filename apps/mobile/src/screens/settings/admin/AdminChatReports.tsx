@@ -3,6 +3,7 @@
 import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
+import { LOCALE_NAMES } from '@offside/contracts/i18n';
 import { CHAT_MUTE_DAYS } from '@offside/contracts/chat';
 import * as api from '@offside/app-core/api/chat';
 import type { AdminChatReport } from '@offside/app-core/api/chat';
@@ -82,6 +83,7 @@ export default function AdminChatReports() {
                 >
                   <Txt bold>{it.nickname}</Txt>
                   <Pill tone="warn">{`신고 ${it.reports}`}</Pill>
+                  <Pill>{LOCALE_NAMES[it.room]}</Pill>
                   {it.reasons.map((r) => (
                     <Pill key={r}>{REPORT_REASON_LABEL[r]}</Pill>
                   ))}

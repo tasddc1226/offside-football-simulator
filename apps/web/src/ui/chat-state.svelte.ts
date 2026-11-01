@@ -1,20 +1,28 @@
 import {
   EMPTY_CHAT,
+  currentChatRoom,
   openChat,
+  setChatRoom,
+  type ChatRoomKey,
   type ChatSession,
   type ChatView,
   type ChatRejectCode,
 } from '@offside/app-core/api/chat';
 import { createChatUnread } from '@offside/app-core/chatUnread';
+import type { ChatServerEvent } from '@offside/contracts/chat';
+import type { FieldClientEvent } from '@offside/contracts/lounge-field';
 
-export const chatState = $state<{ view: ChatView; unread: number }>({
+export const chatState = $state<{ view: ChatView; unread: number; room: ChatRoomKey }>({
   view: EMPTY_CHAT,
   unread: 0,
+  room: 'ko',
 });
 let tracker: ReturnType<typeof createChatUnread> | null = null;
 let session: ChatSession | null = null;
 const listeners = new Set<(view: ChatView) => void>();
 const rejectListeners = new Set<(code: ChatRejectCode, restore: string | null) => void>();
+/** T-11-600 라운지 필드 화면이 열려 있을 때 받은 이벤트를 먼저 본다(필드 이벤트면 true). */
+let fieldHook: ((e: ChatServerEvent) => boolean) | null = null;
 
 function unreadTracker() {
   if (!tracker) {
@@ -24,7 +32,7 @@ function unreadTracker() {
     } catch {
       /* 저장소 없이도 알림을 보여 준다. */
     }
-    tracker = createChatUnread(storage);
+    tracker = createChatUnread(storage, chatState.room);
   }
   return tracker;
 }
@@ -36,6 +44,12 @@ export function markChatRead() {
 }
 
 export function chatSession() {
+  if (!session) {
+    // T-11-583 새로 붙을 때마다 방을 다시 고른다(화면 언어를 바꿨으면 그 언어 방).
+    const room = currentChatRoom();
+    if (room !== chatState.room) tracker = null;
+    chatState.room = room;
+  }
   session ??= openChat(
     (view) => {
       chatState.view = view;
@@ -46,8 +60,18 @@ export function chatSession() {
     (code, restore) => {
       for (const listener of rejectListeners) listener(code, restore);
     },
+    chatState.room,
+    (e) => fieldHook?.(e) ?? false,
   );
   return session;
+}
+
+/** T-11-583 다른 언어 방으로 옮긴다 — 지금 소켓을 닫고 그 방에 새로 붙는다. */
+export function switchChatRoom(room: ChatRoomKey) {
+  if (room === chatState.room && session) return;
+  setChatRoom(room);
+  refreshChatIdentity();
+  chatSession();
 }
 
 /** 계정·닉네임 쓰기가 끝나면 이전 권한의 소켓을 닫고 새 티켓을 받는다. */
@@ -100,3 +124,11 @@ export function listenChat(
     rejectListeners.delete(reject);
   };
 }
+
+/** T-11-600 라운지 필드 화면이 받은 이벤트를 먼저 보게 한다(닫을 때 null). */
+export function hookField(h: ((e: ChatServerEvent) => boolean) | null) {
+  fieldHook = h;
+}
+
+/** T-11-600 라운지 필드 이벤트를 보낸다. 소켓이 열려 있지 않으면 false. */
+export const sendField = (e: FieldClientEvent) => session?.field(e) ?? false;

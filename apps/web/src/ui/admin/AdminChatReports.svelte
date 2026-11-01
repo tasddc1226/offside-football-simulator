@@ -3,6 +3,7 @@
   // 사본이라 메시지가 방에서 지워진 뒤(7일)에도 보이고, 작성자를 정지할 수 있다. 여럿이 신고한 메시지는 이미 가려져 있다.
   import { onMount } from 'svelte';
   import { CHAT_MUTE_DAYS } from '@offside/contracts/chat';
+  import { LOCALE_NAMES } from '@offside/contracts/i18n';
   import * as api from '@offside/app-core/api/chat';
   import type { AdminChatReport } from '@offside/app-core/api/chat';
   import { REPORT_REASON_LABEL, kstDateTime as kst } from '@offside/app-core/boardText';
@@ -45,6 +46,7 @@
           <div class="row" style="gap:6px;flex-wrap:wrap">
             <b>{it.nickname}</b>
             <span class="pill warn">신고 {it.reports}</span>
+            <span class="pill" data-chat-report-room={it.room}>{LOCALE_NAMES[it.room]}</span>
             {#each it.reasons as r (r)}<span class="pill">{REPORT_REASON_LABEL[r]}</span>{/each}
           </div>
           <p>{it.body}</p>

@@ -55,4 +55,6 @@ export const push: Translation<PushMsgs> = {
   askClubTitle: '要用通知接收盃賽報名與比賽結果嗎？',
   askClubBody:
     'OFFSIDE 盃開放報名時會立刻通知你，其他球隊老闆對你的球隊發起的排位賽結果也會通知你。',
+  askCupTitle: '要用通知接收盃賽結果嗎？',
+  askCupBody: '盃賽結束時，會立即通知你球隊的最終結果。下一屆盃賽開放報名時也會通知你。',
 };

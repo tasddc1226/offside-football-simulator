@@ -145,6 +145,63 @@ const wing = (p: GroundPlayer) => (p.lane < 50 ? 10 : 90);
 
 type Move = readonly [GroundPlayer, Pt];
 
+/** 세트피스 때 문전에 서는 자리(공격하는 팀 기준). 주인공은 따로 세운다. */
+const BOX: readonly Pt[] = [
+  [89, 40],
+  [91, 58],
+  [87, 62],
+  [92, 46],
+];
+/** 프리킥 때 오프사이드 줄에 서는 자리. */
+const FK_LINE: readonly Pt[] = [
+  [83, 38],
+  [83, 58],
+  [83, 64],
+  [83, 44],
+];
+
+/**
+ * 세트피스 문전. 센터백 · 최전방(모자라면 중앙 미드필더)이 주인공과 함께 올라가고, 상대 수비가 한 명씩 붙는다. 주인공 한 명만
+ * 올라가고 나머지는 제자리에 남아 있으면 "공격수는 박스 밖인데 센터백만 최전방에" 있는 그림이 된다.
+ */
+function setPiece(
+  T: readonly GroundPlayer[],
+  D: readonly GroundPlayer[],
+  P: (a: number, lane: number) => Pt,
+  sc: GroundPlayer,
+  scAt: Pt,
+  spots: readonly Pt[],
+  not: readonly string[] = [],
+  /** 코너킥: 문전에 가지 않은 필드 선수도 하프라인까지 올라온다(공격하는 팀 기준 a 48 아래면 48~52로). */
+  halfway = false,
+): Move[] {
+  const skip = new Set([sc.key, ...not]);
+  const up: GroundPlayer[] = [];
+  for (const b of ['CB', 'ST', 'CM', 'AM'] as const)
+    for (const p of T) if (p.slot === b && !skip.has(p.key) && up.length < spots.length) up.push(p);
+  const moves: Move[] = [[sc, P(...scAt)], ...up.map((p, i) => [p, P(...spots[i]!)] as Move)];
+  const taken = new Set<string>();
+  const marks: Move[] = [];
+  for (const [, q] of moves) {
+    const [d] = nearest(D, q, 1, [...taken]);
+    if (!d) break;
+    taken.add(d.key);
+    // 상대는 자기 골문 쪽 반 걸음 앞에 붙는다.
+    marks.push([d, [q[0] + (P(1, 50)[0] > 50 ? -1.5 : 1.5), q[1] + (q[1] < 50 ? 2 : -2)]]);
+  }
+  const rest: Move[] = [];
+  if (halfway) {
+    const moved = new Set([...skip, ...up.map((p) => p.key)]);
+    for (const p of T) {
+      if (p.slot === 'GK' || moved.has(p.key)) continue;
+      const own = P(0, 50)[0] === 0 ? p.x : 100 - p.x;
+      // 측면 수비는 중앙 수비보다 조금 더 올라선다.
+      if (own < 48) rest.push([p, P(p.slot === 'FB' ? 52 : 48, p.lane)]);
+    }
+  }
+  return [...moves, ...marks, ...rest];
+}
+
 /** 한 줄의 동작 묶음. 앞 동작에서 옮긴 선수는 그 자리에 남는다. */
 class Moves {
   private moved: Record<string, Pt> = {};
@@ -180,11 +237,43 @@ class Moves {
 /** 그 쪽 골문 안(공격하는 팀 기준 a 100). */
 const netOf = (side: GroundSide, y: number): Pt => [side === 'home' ? 100 : 0, clamp(y, 46, 54)];
 
+/** 측면 · 2선 · 침투 빌드업 마지막 자세에 최전방이 문전으로 뛰어 들고 상대가 따라붙는다(세트피스는 setPiece가 채운다). */
+const OPEN_BUILD = new Set(['buildLeft', 'buildRight', 'buildWide1', 'buildWide2', 'buildMid1']);
+
 /**
  * 중계 줄 하나의 움직임. prev는 바로 앞 줄의 마지막 자세(골 줄은 빌드업에서 이어 간다, 장면 줄은 멈춘 장면에서 이어 간다).
  * 마지막 자세가 다음 줄 전까지 그대로 남는다.
  */
 export function groundPoses(
+  matchId: string,
+  players: readonly GroundPlayer[],
+  line: LiveLine,
+  prev: GroundPose | null = null,
+): GroundPose[] {
+  const poses = scenePoses(matchId, players, line, prev);
+  const last = poses.at(-1);
+  if (line.kind !== 'build' || !line.side || !line.say || !OPEN_BUILD.has(line.say) || !last)
+    return poses;
+  const atk = line.side;
+  const moves: Record<string, Pt> = { ...last.moves };
+  const runs = players.filter(
+    (p) => p.side === atk && p.slot === 'ST' && p.key !== last.hl && !(p.key in moves),
+  );
+  const D = players.filter((p) => p.side !== atk);
+  runs.slice(0, 2).forEach((p, i) => {
+    const q = at(atk, 88, i ? 58 : 42);
+    const [d] = nearest(D, q, 1, Object.keys(moves));
+    moves[p.key] = q;
+    if (d) moves[d.key] = [q[0] + (atk === 'home' ? 1.5 : -1.5), q[1] + (q[1] < 50 ? 2 : -2)];
+  });
+  return [...poses.slice(0, -1), { ...last, moves }];
+}
+
+/**
+ * 중계 줄 하나의 움직임. prev는 바로 앞 줄의 마지막 자세(골 줄은 빌드업에서 이어 간다, 장면 줄은 멈춘 장면에서 이어 간다).
+ * 마지막 자세가 다음 줄 전까지 그대로 남는다.
+ */
+function scenePoses(
   matchId: string,
   players: readonly GroundPlayer[],
   line: LiveLine,
@@ -349,10 +438,7 @@ export function groundPoses(
           .add(
             0.5,
             P(99.5, flag),
-            [
-              [tk, P(99, flag)],
-              [sc, P(86, 50)],
-            ],
+            [[tk, P(99, flag)], ...setPiece(T, D, P, sc, [86, 50], BOX, [tk.key], true)],
             tk,
           )
           .add(0.5, P(91, 50), [[sc, P(91, 50)]], sc).poses;
@@ -363,10 +449,7 @@ export function groundPoses(
           .add(
             0.5,
             P(70, 30),
-            [
-              [tk, P(69, 30)],
-              [sc, P(86, 50)],
-            ],
+            [[tk, P(69, 30)], ...setPiece(T, D, P, sc, [83, 50], FK_LINE, [tk.key])],
             tk,
           )
           .add(0.5, P(90, 50), [[sc, P(90, 50)]], sc).poses;
@@ -487,15 +570,9 @@ export function groundPoses(
       const flag = rnd() < 0.5 ? 2 : 98;
       const tk = role(T, 'W', rnd, flag < 50 ? 'L' : 'R', [st.key]);
       const cb = role(T, 'CB', rnd);
-      const [dc] = nearest(D, P(90, 50));
       return mv
         .add(0.5, P(99.5, flag), [[tk, P(99, flag)]], tk)
-        .add(
-          0.5,
-          P(99.5, flag),
-          [[cb, P(88, 46)], [st, P(89, 56)], ...(dc ? [[dc, P(91, 50)] as Move] : [])],
-          tk,
-        ).poses;
+        .add(0.5, P(99.5, flag), setPiece(T, D, P, cb, [88, 50], BOX, [tk.key], true), tk).poses;
     }
     case 'corner2': {
       const tk = role(T, 'AM', rnd);

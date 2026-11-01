@@ -1,11 +1,12 @@
 <script lang="ts">
+  import SeasonSelect from '../SeasonSelect.svelte';
   // T-11-028 시즌 업적 화면 — 점수·등급, 다음 목표, 분류별 업적. 불러오기는 Team.svelte가 맡는다.
   import type { AchCategory } from '@offside/contracts/owner-team';
   import type { ClubAchievementsResponse } from '@offside/app-core/api/team';
   import { num } from '@offside/app-core/teamText';
   import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
   import {
-    achCatShort, achDone, achReward, achGradeName, achGradeView, achMissing, achNear, achPoints, achRankText, achSections, achState, achTotal,
+    achBonusView, achCatShort, achDone, achReward, achGradeName, achGradeView, achMissing, achNear, achPoints, achRankText, achSections, achState, achTotal,
   } from '@offside/app-core/teamOwner';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import AchGradeBadge from './AchGradeBadge.svelte';
@@ -38,11 +39,7 @@
       <h1>{L.achTitle}</h1>
     </div>
     {#if ach && ach.seasons.length > 1}
-      <select class="tm-season" aria-label={L.seasonLabel} value={ach.season} onchange={(e) => load(Number(e.currentTarget.value))}>
-        {#each ach.seasons as o (o.id)}
-          <option value={o.id}>{o.name}</option>
-        {/each}
-      </select>
+      <div class="tm-season"><SeasonSelect compact label={L.seasonLabel} value={ach.season} seasons={ach.seasons} onpick={(v) => load(Number(v))} /></div>
     {/if}
   </div>
   <LoadState {status} failText={L.achLoadFail} retry={() => load(ach?.season)}>
@@ -52,6 +49,7 @@
       {@const sections = achSections(ach.groups)}
       {@const sec = sections.find((x) => x.id === cat) ?? sections[0]!}
       {@const near = achNear(ach.groups)}
+      {@const bonus = achBonusView(ach.bonus)}
       <!-- 단계는 모두 접어 두고, 새로 달성한 업적이 든 단계만 펼친다. -->
       {@const openId = sec.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ?? null}
       <div class="tm-ach-sum" data-ach-summary>
@@ -69,6 +67,15 @@
           {L.achProgress({ head: gv.next ? (gv.byRank ? L.toNextGradeRank({ grade: achGradeName(gv.next), n: num(gv.toNext) }) : L.toNextGrade({ grade: achGradeName(gv.next), pts: num(gv.toNext) })) : L.topGrade, done: tot.done, total: tot.total })}
         </p>
         <p class="muted fs-xs">{L.achAbout({ season: ach.seasons.find((o) => o.id === ach?.season)?.name ?? '', n: ach.players })}</p>
+        {#if bonus}
+          <!-- T-11-541 점수 보너스: 업적 점수 1,000점마다 끝없이 받는다. -->
+          <div class="tm-ach-perks" data-ach-bonus>
+            <b>{bonus.title}</b>
+            <span>{bonus.next}</span>
+            {#if bonus.got}<span class="tm-ach-reward">{bonus.got}</span>{/if}
+            <p class="muted fs-xs">{bonus.note}</p>
+          </div>
+        {/if}
         <div class="tm-ach-perks" data-ach-perks>
           <b>{L.perksTitle}</b>
           <ul>
@@ -161,7 +168,8 @@
     display: grid;
     gap: 4px;
   }
-  .tm-ach-perks li::marker {
+  .tm-ach-perks li::marker,
+  .tm-ach-perks .tm-ach-reward {
     color: var(--accent-text);
   }
   .tm-ach-head {
@@ -321,14 +329,7 @@
   }
   .tm-season {
     flex: none;
-    max-width: 45%;
-    min-height: 40px;
-    padding: 0 8px;
-    border: 1px solid transparent;
-    border-radius: var(--radius-sm);
-    background: var(--surface-2);
-    color: var(--ink);
-    font: inherit;
+    max-width: 50%;
   }
   .tm-ach {
     border: 1px solid transparent;

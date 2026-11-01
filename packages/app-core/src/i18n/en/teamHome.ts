@@ -45,7 +45,6 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   modeRanked: 'Ranked match',
   modeFriends: 'Friends',
   seasonSelect: 'Select season',
-  seasonNow: ' (current)',
   teamMenu: 'Team menu',
   menuLogo: 'Logo',
   menuRename: 'Rename',
@@ -187,6 +186,11 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   attributesAria: 'Player attributes',
   footLegend: 'Legend career',
   footMine: 'My career',
+  specialMvp: 'MVP',
+  specialTopScorer: 'Top scorer',
+  specialTopAssist: 'Top assists',
+  specialBest11: 'Best XI',
+  specialAria: (p) => `Season special card: ${p.label}`,
   pickAria: (p) => `Pick a player for ${p.slot}`,
   pickSortAria: 'Sort',
   youthNote: 'Leave the spot empty and a youth player plays',
@@ -294,4 +298,13 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpLoadedMissing: (p) =>
     `Preset loaded. ${plural(p.n, 'spot')} left empty for players you no longer have.`,
   tpLocked: 'Your cup lineup is locked, so presets can’t be loaded right now.',
+  tpCupBadge: 'Cup lineup',
+  tpCupTitle: 'Cup lineup',
+  tpCupTeam: 'Team lineup',
+  tpCupHint:
+    'Pick the lineup for cup matches. Team lineup plays the same starters as the league. The same player can be in both.',
+  tpMore: (p: { name: string }) => `Manage ${p.name}`,
+  tpCupSetDone: 'Set as your cup lineup. Cup matches will use this lineup.',
+  tpCupUnsetDone: 'Cup lineup cleared. Cup matches will use your team lineup.',
+  tpCupLocked: 'Your cup lineup is locked, so it can’t be changed right now.',
 };

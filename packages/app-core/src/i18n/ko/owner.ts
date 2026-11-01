@@ -14,6 +14,8 @@ const ko = {
   valueInfoOwned: '직접 키운 선수와 영입한 선수를 시즌 구분 없이 모두 포함해요.',
   valueInfoPrice:
     '카드 기준가는 최고 OVR을 기록한 시즌 중 몸값이 가장 높았던 시즌의 몸값이에요. 몸값은 리그 자금력·OVR·나이로 계산해서, 최고 OVR을 찍은 뒤 오래 뛰어도 기준가가 내려가지 않아요.',
+  valueInfoAge:
+    '몸값에는 나이 배수가 붙어요. 24세까지 5배, 25~29세 4배, 30세부터 2배예요. 그래서 30세가 넘어 최고 OVR을 찍은 선수는 커리어 기록의 최고 몸값보다 기준가가 낮을 수 있어요.',
   valueInfoFallback:
     '그 시즌의 몸값이 없으면 가장 비쌌던 프로 시즌을 사용하고, 프로 기록도 없으면 1억 원을 적용해요.',
   valueInfoExcluded: '판매 등록 가격이나 레전드 점수를 직접 더하지는 않아요.',
@@ -68,6 +70,16 @@ const ko = {
   lockBadge: '\u{1F512}︎ 로그인하면 열려요',
   accountSection: '계정',
   adminTools: '운영 도구',
+  // T-11-567 허브 바로가기 칸(2열)과 상점 화면.
+  shortcutsHeading: '바로가기',
+  tilePlayers: '보유 선수 · 육성 기록',
+  tileMarket: '선수 사고팔기',
+  tileExchange: '은퇴 선수를 아이템으로',
+  tileManager: '감독으로 이어 가기',
+  tileHall: '시즌 기록 · 칭호',
+  shopTitle: '상점',
+  tileShop: '리롤 · 강화 · 스카우트권',
+  shopLoginNeeded: '상점은 로그인한 구단주만 써요.',
   // ownerHub.ts
   teamEmptyWith: (p: { season: string; n: number }) =>
     `${p.season}에 은퇴한 내 선수 ${p.n}명으로 팀을 꾸릴 수 있어요. 빈 자리는 유스 선수가 채워요.`,

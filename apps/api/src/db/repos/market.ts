@@ -107,6 +107,7 @@ export async function listOpenListings(
     nation?: string | undefined;
     league?: string | undefined;
     club?: string | undefined;
+    cardSeason?: number | undefined;
     sort: MarketSort;
     page: number;
   },
@@ -128,6 +129,8 @@ export async function listOpenListings(
         q.nation ? sql`coalesce(${cards.nation}, ${DEFAULT_NATION}) = ${q.nation}` : undefined,
         q.league ? eq(careers.mainLeague, q.league) : undefined,
         q.club ? eq(careers.mainClub, q.club) : undefined,
+        // T-11-596 카드가 나온 시즌. 열린 등록만 훑는 조건이라 위와 같이 인덱스를 따로 두지 않는다.
+        q.cardSeason === undefined ? undefined : eq(cards.serviceSeason, q.cardSeason),
       ),
     )
     // T-11-180 OVR 순은 카드 쪽 값이라 인덱스로 받치지 못한다. 열린 등록(2026-10 운영 약 1,600건)만 정렬하고,

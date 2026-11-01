@@ -17,6 +17,8 @@ import { REAL_EVENTS } from './realevents.js';
 import { POSITIONAL_EVENTS } from './positional.js';
 import { LIFE_EVENTS } from './life-events.js';
 import { LOAN_EVENT } from './loan-event.js';
+import { VARIETY_EVENTS } from './variety-events.js';
+import { BIGSTAGE_EVENTS } from './bigstage-events.js';
 
 EVENTS.push(
   ...MILITARY_EVENTS,
@@ -28,4 +30,6 @@ EVENTS.push(
   ...MOMENT_EVENTS,
   ...LIFE_EVENTS,
   LOAN_EVENT,
+  ...VARIETY_EVENTS,
+  ...BIGSTAGE_EVENTS,
 );

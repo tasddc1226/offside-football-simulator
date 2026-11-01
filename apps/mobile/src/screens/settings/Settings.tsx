@@ -2,6 +2,7 @@
 // 구단 이름·엠블럼, 도움말·서비스 정책 링크. 이 설정들은 이 기기에만 저장된다. 계정·운영 도구는 구단주 화면에 있다.
 // 앱에서 뺀 것(웹 전용): 효과음·배경음악·음량·음악 출처, '홈 화면에 추가하기' 안내.
 import { FONT } from '@offside/app-core/design-tokens';
+import { publicDocPath } from '@offside/app-core/links';
 import { setTextSize, TEXT_SIZES } from '@offside/app-core/textSize';
 import { REVEAL_SHORT_KEY } from '@offside/app-core/reveal';
 import { keyMomentsOn, setKeyMomentsOn } from '@offside/app-core/keyMomentPref';
@@ -9,13 +10,19 @@ import { keyMomentText as KM } from '@offside/app-core/i18n/ko/keyMoment';
 import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
 import { useTextSize } from '../../theme/useTextSize';
 import { nativeAnalytics } from '../../analytics';
-import { useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
 import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/storage';
 import { buzz } from '../../game/host';
 import { SiteFooter } from '../../components/SiteFooter';
-import { goAccount, goFairness, goHome, goTypeDex, takeFocus } from '../../game/nav';
+import { go, goFairness, goHome, goTypeDex, takeFocus } from '../../game/nav';
+import { Account } from '../owner/Account';
+import { LoginButtons } from '../owner/LoginButtons';
+import { accountCache } from '../../store';
+import { isMember } from '@offside/app-core/account';
+import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
+import { ownerText as OL } from '@offside/app-core/i18n/ko/owner';
 import { replayCoach } from '../../components/Coachmark';
 import { tutorialText as TU } from '@offside/app-core/i18n/ko/tutorial';
 import { scrollBackTo } from '../../ui/scroll';
@@ -33,14 +40,22 @@ import { AdFreeSettings } from './AdFreeSettings';
 import { PushSettings } from './PushSettings';
 import { ReviewSettings } from './ReviewSettings';
 import { ServerStatus } from './ServerStatus';
-import { SelectField, SettingsCard, SettingsLabel, SettingsRow, Switch } from './parts';
+import {
+  SelectField,
+  SettingsCard,
+  SettingsLabel,
+  SettingsRow,
+  SettingsTrigger,
+  Switch,
+} from './parts';
 import { settingsText as L } from '@offside/app-core/i18n/ko/settings';
 import { LOCALE_NAMES, LOCALES, type Locale } from '@offside/app-core/i18n/core';
 import { useSnapshot } from 'valtio';
 import { saveLocale } from '../../platform/locale';
 
 /** 정책·가이드는 웹 페이지를 앱 안 브라우저로 연다. id·onPress 항목은 앱 안 화면으로 간다. */
-type LinkItem = { text: string; path: string } | { text: string; id: string; onPress: () => void };
+type LinkItem =
+  { text: string; path: string; id?: string } | { text: string; id: string; onPress: () => void };
 function LinkList({ label, items }: { label: string; items: LinkItem[] }) {
   const c = useColors();
   return (
@@ -48,11 +63,11 @@ function LinkList({ label, items }: { label: string; items: LinkItem[] }) {
       <View accessibilityLabel={label}>
         {items.map((it, i) => (
           <Press
-            key={'id' in it ? it.id : it.path}
+            key={'path' in it ? (it.id ?? it.path) : it.id}
             scale={0.985}
             accessibilityRole="link"
-            testID={`link-${'id' in it ? it.id : it.path.replaceAll('/', '')}`}
-            onPress={() => ('id' in it ? it.onPress() : openWeb(it.path))}
+            testID={`link-${'path' in it ? (it.id ?? it.path.replaceAll('/', '')) : it.id}`}
+            onPress={() => ('onPress' in it ? it.onPress() : openWeb(it.path))}
             style={{
               flexDirection: 'row',
               alignItems: 'center',
@@ -119,6 +134,21 @@ function replayTutorial() {
 
 export default function Settings() {
   const [focusBackup] = useState(() => takeFocus('backup'));
+  // T-10-016 운영 도구 입구는 운영자에게만. 구글 연결 계정일 때만 서버에 묻는다(10분 메모, 익명이면 요청이 없다).
+  const c = useColors();
+  const cache = useSnapshot(accountCache);
+  const acct = cache.value;
+  const linked = !!acct && acct !== 'error' && isMember(acct);
+  const guest = acct === null || (!!acct && acct !== 'error' && !isMember(acct));
+  const [admin, setAdmin] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    setAdmin(false);
+    if (linked) void fetchOwnerSummary().then((r) => alive && r.ok && setAdmin(r.data.admin));
+    return () => {
+      alive = false;
+    };
+  }, [linked]);
   const backupFocus = useRef(focusBackup);
   const dark = useIsDark();
   const textSize = useTextSize();
@@ -167,6 +197,26 @@ export default function Settings() {
         <Txt v="h1" accessibilityRole="header" style={{ marginTop: 2 }}>
           {L.title}
         </Txt>
+      </View>
+      {/* T-11-567 계정(로그인 · 연동 · 로그아웃 · 탈퇴)과 운영 도구 입구는 내 구단 화면에서 설정 맨 위로 옮겼다. */}
+      <View testID="account-slot" accessibilityLabel={OL.accountSection}>
+        <SettingsCard>
+          <Account />
+          {guest ? (
+            <View style={{ marginTop: 12 }}>
+              <LoginButtons />
+            </View>
+          ) : null}
+          {admin ? (
+            <View
+              style={{ marginTop: 12, paddingTop: 4, borderTopWidth: 1, borderTopColor: c.line }}
+            >
+              <SettingsTrigger testID="admin" label={OL.adminTools} onPress={() => go('admin')}>
+                <SettingsLabel title={OL.adminTools} />
+              </SettingsTrigger>
+            </View>
+          ) : null}
+        </SettingsCard>
       </View>
       {/* T-11-355 상품 위치 안내(기기마다 닫을 때까지) */}
       <ItemsHint />
@@ -282,9 +332,8 @@ export default function Settings() {
         <LinkList
           label={L.help}
           items={[
-            { text: L.guide, path: '/guide/' },
-            { text: L.accountLink, id: 'account', onPress: goAccount },
-            { text: L.faq, path: '/faq/' },
+            { text: L.guide, path: publicDocPath('/guide/'), id: 'guide' },
+            { text: L.faq, path: publicDocPath('/faq/'), id: 'faq' },
             { text: L.fairness, id: 'fairness', onPress: goFairness },
             { text: FG.typeDex, id: 'type-dex', onPress: goTypeDex },
             // T-11-473 첫 커리어 따라가기 안내를 처음부터(홈으로 가서 새 커리어 버튼을 비춘다).

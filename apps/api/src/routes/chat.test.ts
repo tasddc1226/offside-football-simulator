@@ -1,4 +1,9 @@
-import { CHAT_REPORT_HIDE, CHAT_SOCKET_PATH, type ChatServerEvent } from '@offside/contracts/chat';
+import {
+  CHAT_REPORT_HIDE,
+  CHAT_SOCKET_PATH,
+  chatRoomName,
+  type ChatServerEvent,
+} from '@offside/contracts/chat';
 import type { AdminChatReport, ChatTicketResponse } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { chatReports, ownerTeams } from '../db/schema.js';
@@ -267,6 +272,69 @@ describe('T-11-015 채팅 /v1/chat', () => {
     });
     expect((await deleteProfile(env, bob.cookie, 'chat-del')).ok).toBe(true);
     expect(await ctx.db.select().from(chatReports)).toHaveLength(0);
+  });
+
+  it('T-11-583 언어 방은 서로 따로다 — 입장권 · 소켓 · 신고 · 운영자 처리가 그 방에서만 일어나고 정지는 모든 방에 걸린다', async () => {
+    const ko = await speak('한결', '안녕하세요');
+    const en = chat.named(chatRoomName('en'));
+    const eve = await issueGoogleCookie(ctx, { nickname: 'Eve' });
+    const t = await call('POST', '/v1/chat/ticket?room=en', { cookie: eve.cookie });
+    const ticket = ((await t.json()) as { data: ChatTicketResponse }).data.ticket!;
+    // 영어 방 입장권은 한국어 방에서 쓸 수 없다.
+    expect((await chat.join(ticket)).sent[0]).toMatchObject({ t: 'hello', write: false });
+    await en.room.fetch(new Request(`http://api.test${CHAT_SOCKET_PATH}?room=en&t=${ticket}`));
+    const ws = en.sockets.at(-1)!;
+    expect(ws.sent[0]).toMatchObject({ t: 'hello', write: true, messages: [] });
+    en.room.webSocketMessage(ws as unknown as WebSocket, JSON.stringify({ t: 'send', body: 'hi' }));
+    const id = (ws.sent.at(-1) as { m: { id: string } }).m.id;
+    expect(chat.room.message(id)).toBeNull();
+    expect(en.room.message(ko.id)).toBeNull();
+
+    // 메시지 단위 요청은 그 방(?room=)에서 찾는다.
+    const reporter = await issueCookie(ctx);
+    const report = (room: string) =>
+      call('POST', `/v1/chat/messages/${id}/report${room}`, {
+        cookie: reporter.cookie,
+        body: { reason: 'spam' },
+      });
+    expect((await report('')).status).toBe(404);
+    expect((await report('?room=en')).status).toBe(204);
+    const admin = await issueAdminCookie(ctx);
+    const res = await call('GET', '/v1/admin/chat/reports', { cookie: admin.cookie });
+    const { items } = ((await res.json()) as { data: { items: AdminChatReport[] } }).data;
+    expect(items).toEqual([expect.objectContaining({ messageId: id, room: 'en' })]);
+
+    // 신고 처리는 기록된 방에서 가리고, 정지는 모든 방의 쓰기를 막는다.
+    const resolve = await call('POST', '/v1/admin/chat/reports/resolve', {
+      cookie: admin.cookie,
+      body: { messageId: id, action: 'mute', days: 7 },
+    });
+    expect(resolve.status).toBe(204);
+    expect(en.room.message(id)).toBeNull();
+    expect(ws.sent).toContainEqual({ t: 'err', code: 'muted' });
+    expect((await ticketOf(eve.cookie)).data.reason).toBe('muted');
+
+    // 에이전트는 모든 방을 시각 순으로 읽는다.
+    env.AGENTS_READ_TOKEN = 'agent-secret';
+    const fr = await speak('나래', '두 번째');
+    en.room.hide(id);
+    const read = await call('GET', `/v1/internal/agents/chat?since=${Date.now() - 60_000}`, {
+      headers: { Authorization: 'Bearer agent-secret' },
+    });
+    const got = ((await read.json()) as { items: { id: string; room: string }[] }).items;
+    expect(got.map((i) => [i.id, i.room])).toEqual([
+      [ko.id, 'ko'],
+      [fr.id, 'ko'],
+    ]);
+  });
+
+  it('T-11-583 아바타를 바꾸면 모든 언어 방의 줄이 바뀐다', async () => {
+    const en = chat.named(chatRoomName('en'));
+    const ja = chat.named(chatRoomName('ja'));
+    const spy = [chat.room, en.room, ja.room].map((r) => vi.spyOn(r, 'updateAvatar'));
+    const who = await issueGoogleCookie(ctx, { nickname: '바다' });
+    await callJson(env, 'PUT', '/v1/profile/avatar', { cookie: who.cookie, body: { image: null } });
+    for (const s of spy) expect(s).toHaveBeenCalled();
   });
 
   it('소켓 업그레이드는 앱 미들웨어를 거치지 않고 채팅방으로 넘긴다', async () => {

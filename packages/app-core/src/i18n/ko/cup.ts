@@ -195,6 +195,9 @@ const ko = {
   barOvrNoCap: (p: { ovr: number; division: string }) =>
     `팀 OVR ${p.ovr} · ${p.division}(상한 없음)`,
   barFilled: (p: { n: number; min: number }) => `선발 ${p.n}/최소 ${p.min}`,
+  // T-11-570 컵 명단 프리셋을 고른 팀
+  barPreset: (p: { name: string }) =>
+    `컵 경기는 '${p.name}' 프리셋으로 뛰어요. 리그 경기는 아래 팀 명단으로 뛰어요.`,
   barOverCapBlock: (p: { division: string; cap: number }) =>
     `${p.division} 상한(${p.cap})을 넘어서 저장할 수 없어요. 팀 OVR을 ${p.cap} 이하로 맞춰 주세요.`,
   barOverCapMove: (p: { division: string }) =>

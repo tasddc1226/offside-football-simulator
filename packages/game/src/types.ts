@@ -60,6 +60,8 @@ export interface SeasonComp {
 }
 
 export interface Season {
+  /** Fixed league scoring rules from this season onward. Absent in legacy saves. */
+  scoringVersion?: 1;
   /** 결산 때 고정한 순위표. 이전 저장에는 없으며 이미 끝난 시즌의 승점을 추정해 채우지 않는다. */
   finalTable?: TableRow[];
   apps: number;
@@ -183,6 +185,8 @@ export interface BoostTry {
   /** 쓴 자금(만 원). 광고로 시도했으면 0. */
   c: number;
   ok: boolean;
+  /** T-11-593 대성공 — 두 단계를 올렸다. 기능 전 기록·보통 성공엔 없다. */
+  g?: true;
   /** T-11-116 자금이 모자라 보상형 광고로 시도했다(앱). 기능 전 기록·자금 시도엔 없다. */
   ad?: true;
   /** T-11-153 자금이 모자라 구단주의 구단 자금으로 시도했다. 기능 전 기록·다른 시도엔 없다. */

@@ -6,7 +6,7 @@
   import type { AdminRevenue } from '@offside/app-core/api/admin';
   import { kstDateTime as kst } from '@offside/app-core/boardText';
   import {
-    ADMIN_REVENUE_DAYS, REVENUE_NOTE, adsSince, dayKrw, dayTitle, nick, periodLabel, productLine, productName, recentLine, revenueSummary, storeName, won,
+    ADMIN_REVENUE_DAYS, REVENUE_NOTE, adsSince, dayKrw, dayTitle, paymentNick, periodLabel, productLine, productName, recentLine, revenueSummary, storeName, won,
   } from '@offside/app-core/admin/users';
 
   let days = $state(7);
@@ -54,7 +54,7 @@
         <div class="bars" role="list">
           {#each r.daily as d (d.day)}
             <div class="bar" role="listitem" aria-label="{d.day} {won(dayKrw(d))}" title={dayTitle(d)}>
-              <i style="height:{Math.round((dayKrw(d) / max) * 100)}%"></i>
+              <i style="height:{Math.max(0, Math.round((dayKrw(d) / max) * 100))}%"></i>
               {#if r.daily.length <= 14}<small>{d.day.slice(8)}</small>{/if}
             </div>
           {/each}
@@ -81,7 +81,7 @@
       <ul class="lines">
         {#each r.recent as x, i (i)}
           <li>
-            <span>{productName(x.productId)} <small class="muted">{nick(x.nickname)} · {recentLine(x)}</small></span>
+            <span>{productName(x.productId)} <small class="muted">{paymentNick(x)} · {recentLine(x)}</small></span>
           </li>
         {:else}<li class="muted">없어요.</li>{/each}
       </ul>

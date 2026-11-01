@@ -43,8 +43,14 @@ export function registerNotificationRoutes(app: Hono<AppEnv>) {
   });
   app.get('/v1/notifications', requireProfile, async (c) => {
     const query = parseWithAppError(NotificationListQuerySchema, queryWithoutLang(c));
-    const data = await listNotifications(c.env.DB, getSessionOrThrow(c).profileId, nowIso(), query);
     const lang = reqLang(c);
+    const data = await listNotifications(
+      c.env.DB,
+      getSessionOrThrow(c).profileId,
+      nowIso(),
+      query,
+      lang,
+    );
     return ok(
       c,
       NotificationListSchema,
@@ -66,9 +72,16 @@ export function registerNotificationRoutes(app: Hono<AppEnv>) {
   });
   app.get('/v1/notifications/:id', requireProfile, async (c) => {
     const id = parseWithAppError(NotificationIdSchema, c.req.param('id'));
-    const data = await ownNotification(c.env.DB, getSessionOrThrow(c).profileId, id, nowIso());
+    const lang = reqLang(c);
+    const data = await ownNotification(
+      c.env.DB,
+      getSessionOrThrow(c).profileId,
+      id,
+      nowIso(),
+      lang,
+    );
     if (!data) throw notFoundError('이 알림을 찾을 수 없어요.', 'NOTIFICATION_MISSING');
-    return ok(c, NotificationSchema, localizeNotification(data, reqLang(c)), 200, NO_STORE);
+    return ok(c, NotificationSchema, localizeNotification(data, lang), 200, NO_STORE);
   });
   app.post('/v1/notifications/:id/read', requireProfile, async (c) => {
     const id = parseWithAppError(NotificationIdSchema, c.req.param('id'));

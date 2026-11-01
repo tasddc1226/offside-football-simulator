@@ -2,6 +2,7 @@ import type { Translation } from '../core';
 import type { BalanceKeysMsgs } from '../ko/balanceKeys';
 
 export const balanceKeys: Translation<BalanceKeysMsgs> = {
+  agKoreaBonus: '亞運韓國戰力加成',
   eventRatePreseason: '季前賽事件機率',
   eventRateSeason: '上・下半季事件機率',
   eventTwist: '選擇後轉折機率',
@@ -13,10 +14,17 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   investCost: '自我投資費用倍率',
   boostCost: '潛力強化費用倍率',
   boostExtraTotal: '每段生涯追加強化次數',
+  boostGreat: '潛力強化大成功比例',
   careCost: '身體管理費用倍率',
   potMean: '潛力平均值',
   potSd: '潛力離散度',
   potScoutSd: '球探評估誤差',
+  bloomDrift: '隱藏潛力的浮動',
+  bloomAge: '隱藏潛力定型的年齡',
+  rescoutShare1: '21 歲重新評價的反映比例',
+  rescoutShare2: '24 歲重新評價的反映比例',
+  rescoutDownScale: '重新評價的下降比例',
+  rescoutDropCap: '單次重新評價的最大下降',
   premiumSMult: '高級球探 S 倍數',
   injuryRate: '每場受傷機率',
   bigInjuryShare: '重傷比例',
@@ -38,6 +46,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMin: '最低售價（基準價倍數）',
   marketPriceMax: '最高售價（基準價倍數）',
   cupAtkK: '盃賽戰力差反映',
+  leagueFatigue: '聯賽體力',
   leagueHomeAdv: '聯賽主場優勢',
   pastSalaryBudget: '過去賽季球員薪資預算',
   pastSalaryBudgetStep: '每賽季薪資預算增加',

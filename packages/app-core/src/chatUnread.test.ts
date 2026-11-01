@@ -58,4 +58,18 @@ describe('채팅 읽지 않은 메시지', () => {
     unread.read([message('new', 10)]);
     expect(unread.count([message('new', 10)])).toBe(0);
   });
+
+  it('T-11-583 읽음 기록은 언어 방마다 따로 둔다(한국어 방은 예전 키)', () => {
+    const store = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+    };
+    createChatUnread(storage).read([message('ko-1', 10)]);
+    const en = createChatUnread(storage, 'en');
+    en.read([message('en-1', 5)]);
+    expect([...store.keys()].sort()).toEqual(['ft_chat_read', 'ft_chat_read:en']);
+    expect(en.count([message('en-1', 5), message('en-2', 6)])).toBe(1);
+    expect(createChatUnread(storage).count([message('ko-1', 10), message('ko-2', 11)])).toBe(1);
+  });
 });

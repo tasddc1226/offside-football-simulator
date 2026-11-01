@@ -118,6 +118,14 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
     // T-11-374 카드 과제를 낸 횟수(헌납의 명가).
     'exchanges',
+    // T-11-556 단계 · 새 칭호.
+    'forwards',
+    'positions',
+    'nations',
+    'cups',
+    'podiums',
+    'seasons',
+    'division',
   ],
   cup_entries: [
     'cup_id',
@@ -262,6 +270,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'first_touch_id',
     'last_touch_id',
   ],
+  card_specials: ['career_id', 'season', 'kind', 'rank', 'rule_version', 'created_at'],
   cards: [
     'career_id',
     'owner_id',
@@ -485,6 +494,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'expires_at',
   ],
+  // T-11-572 운영 지표 대시보드(하루 한 번 모은 값).
+  kpi_daily: ['day', 'metric', 'dim', 'value', 'source', 'updated_at'],
   // T-9-009: 커리어·시즌 요약 저장(익명 포함 전체 사용자).
   careers: [
     'id',
@@ -628,6 +639,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'body',
     'created_at',
     'resolved_at',
+    'room',
   ],
   chat_mutes: ['profile_id', 'until', 'created_at'],
   // T-11-146 사용자 글 번역 캐시.
@@ -735,6 +747,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'coach_id',
     'lineup_value_open',
     'lineup_value_closed',
+    // T-11-570 컵 명단 프리셋 OVR.
+    'cup_ovr',
   ],
   team_lineup_cards: ['team_id', 'slot', 'career_id'],
   team_likes: ['team_id', 'profile_id', 'created_at'],

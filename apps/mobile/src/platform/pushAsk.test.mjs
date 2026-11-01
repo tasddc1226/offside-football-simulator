@@ -121,4 +121,22 @@ describe('moment push asks', () => {
     later.onPress();
     expect(f.values.get('offside_push_ask_club')).toBe(true);
   });
+
+  it('T-11-586 asks after league entry with the club copy and after cup entry with the cup copy', async () => {
+    vi.useFakeTimers();
+    const p = await import('./pushAsk.ts');
+    await p.askPushAfter('league');
+    vi.advanceTimersByTime(800);
+    expect(f.alert.mock.calls[0][0]).toBe('askClubTitle');
+    f.alert.mock.calls[0][2].find((b) => b.style === 'cancel').onPress();
+    f.values.set('offside_push_ask_last', Date.now() - p.PUSH_ASK_GAP_MS - 1);
+    await p.askPushAfter('cup');
+    vi.advanceTimersByTime(800);
+    expect(f.alert.mock.calls[1][0]).toBe('askCupTitle');
+    expect(f.events).toEqual([
+      ['view', 'league'],
+      ['later', 'league'],
+      ['view', 'cup'],
+    ]);
+  });
 });

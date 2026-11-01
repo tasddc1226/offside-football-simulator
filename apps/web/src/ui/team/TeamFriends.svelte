@@ -20,6 +20,7 @@
     friendCodeLabel,
     friendInviteText,
     friendInviteUrl,
+    friendProfileTeam,
     friendRequestToast,
     inviteEventLines,
     h2hText,
@@ -31,7 +32,8 @@
   import { copyText } from '../inapp-open.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import { clearInvite, pendingInvite } from '../friendInvite.svelte.js';
-  import { appState } from '../state.svelte.js';
+  import { go } from '../nav.js';
+  import { appState, hofStart } from '../state.svelte.js';
   import TeamLogo from './TeamLogo.svelte';
   import TeamMatchRow from './TeamMatchRow.svelte';
 
@@ -147,6 +149,12 @@
     toast((await copyText(friendCodeLabel(data.code))) ? L.codeCopied : L.codeCopyFail);
   }
 
+  /** T-11-601 친구 줄을 누르면 기록실의 그 친구 구단주 프로필을 연다. 뒤로 가면 이 친구 칸으로 돌아온다. */
+  function openProfile(teamId: string) {
+    appState.hof = { ...hofStart(), tab: 'teams', team: teamId, owner: true };
+    go('hof');
+  }
+
   const teamLine = (p: FriendPerson) => (p.team ? `${p.team.name} · OVR ${p.team.ovr}` : L.noTeamLine);
 </script>
 
@@ -223,14 +231,18 @@
       {#each data.friends as p (p.code)}
         {@const h2h = h2hText(p.h2h)}
         {@const preseasonLine = preseasonTeamLine(p)}
+        {@const profileTeam = friendProfileTeam(p)}
         <div class="fr-person" data-friend={p.code}>
-          <TeamLogo logo={p.team?.logo ?? null} name={p.team?.name ?? p.name} size={32} decorative />
-          <div class="fr-info">
-            <b>{p.name}{#if p.member}<span class="pill good fr-member" title={L.supporterLabel} data-friend-member>{L.supporter}</span>{/if}</b>
-            <span class="muted fs-sm">{teamLine(p)}</span>
-            {#if preseasonLine}<span class="muted fs-sm" data-friend-preseason>{preseasonLine}</span>{/if}
-            {#if h2h}<span class="fs-sm">{L.h2hLine({ record: h2h })}</span>{/if}
-          </div>
+          <svelte:element this={profileTeam ? 'button' : 'div'} class="fr-who" type={profileTeam ? 'button' : undefined} aria-label={profileTeam ? L.profileAria({ name: p.name }) : undefined} onclick={profileTeam ? () => openProfile(profileTeam) : undefined} data-act={profileTeam ? 'friend-profile' : undefined}>
+            <TeamLogo logo={p.team?.logo ?? null} name={p.team?.name ?? p.name} size={32} decorative />
+            <div class="fr-info">
+              <b>{p.name}{#if p.member}<span class="pill good fr-member" title={L.supporterLabel} data-friend-member>{L.supporter}</span>{/if}</b>
+              <span class="muted fs-sm">{teamLine(p)}</span>
+              {#if preseasonLine}<span class="muted fs-sm" data-friend-preseason>{preseasonLine}</span>{/if}
+              {#if h2h}<span class="fs-sm">{L.h2hLine({ record: h2h })}</span>{/if}
+            </div>
+            {#if profileTeam}<span class="fr-chev muted" aria-hidden="true">›</span>{/if}
+          </svelte:element>
           <div class="fr-row-actions">
             <button class="btn btn-primary btn-sm" disabled={busy || !canFriendly(data, p)} onclick={() => void play(p)} data-act="friend-play">{L.play}</button>
             {#if p.preseasonTeam}<button class="btn btn-sm" disabled={busy || !canPreseasonFriendly(data, p)} onclick={() => void play(p, true)} data-act="friend-play-preseason">{L.playPreseason}</button>{/if}
@@ -330,6 +342,32 @@
     gap: 10px;
     padding: 10px 0;
     border-top: 1px solid var(--line);
+  }
+  .fr-who {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+  }
+  button.fr-who {
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+  }
+  @media (hover: hover) {
+    button.fr-who:hover b {
+      text-decoration: underline;
+    }
+  }
+  .fr-chev {
+    flex: none;
+    font-size: var(--fs-body1);
   }
   .fr-legacy {
     display: flex;

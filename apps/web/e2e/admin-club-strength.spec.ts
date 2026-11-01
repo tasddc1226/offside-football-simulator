@@ -71,7 +71,7 @@ for (const width of [320, 390])
       return route.fulfill(fail(404, 'NOT_FOUND', 'No fixture'));
     });
     await page.goto('/');
-    await page.locator('[data-act="owner"]').click();
+    await page.locator('[data-act="settings"]').click();
     await expect(page.getByText('ad***@gmail.com')).toBeVisible();
     await page.locator('[data-act="admin"]').click();
     expect(calls).toBe(0);

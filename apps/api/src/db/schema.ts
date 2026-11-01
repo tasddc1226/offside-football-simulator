@@ -1,5 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
+import { CARD_SPECIAL_KINDS } from '@offside/contracts/card-special';
+import { CHAT_ROOMS } from '@offside/contracts/chat';
 import {
   check,
   index,
@@ -1167,6 +1169,8 @@ export const ownerTeams = sqliteTable(
     friendlyJson: text('friendly_json'),
     /** T-11-217 팀 프리셋(포메이션 · 선발 · 배치, 최대 5개) JSON 배열. 없으면 null. */
     presetsJson: text('presets_json'),
+    /** T-11-570 컵 명단으로 고른 프리셋의 팀 OVR(저장할 때 계산). 컵 명단이 없으면 null — 컵은 팀 OVR을 쓴다. */
+    cupOvr: integer('cup_ovr'),
     /** T-11-310 감독 칸(끝낸 감독 카드의 career_id). 비었으면 null — 지금과 같은 결과. */
     coachId: text('coach_id'),
     createdAt: text('created_at').notNull(),
@@ -1384,6 +1388,8 @@ export const chatReports = sqliteTable(
     createdAt: text('created_at').notNull(),
     /** 운영자가 처리(가리기·기각·정지)한 시각. 처리 전엔 null. */
     resolvedAt: text('resolved_at'),
+    /** T-11-583 메시지가 있는 언어 방. 운영자가 신고를 처리할 때 그 방에서 가린다. */
+    room: text('room', { enum: CHAT_ROOMS }).notNull().default('ko'),
   },
   (table) => [
     primaryKey({ columns: [table.messageId, table.profileId] }),
@@ -1949,6 +1955,15 @@ export const ownerTitleProgress = sqliteTable('owner_title_progress', {
   firsts: integer('firsts').notNull(),
   // T-11-374 카드 과제 낸 횟수.
   exchanges: integer('exchanges').notNull().default(0),
+  // T-11-556 최고 능력치 90 이상 공격수 · 그런 선수의 포지션 가짓수 · 은퇴 선수 국적 가짓수 · 마친 컵 · 컵 4강 이상 ·
+  // 은퇴 선수를 남긴 시즌 · 시즌 마감 디비전 휘장의 최고 index.
+  forwards: integer('forwards').notNull().default(0),
+  positions: integer('positions').notNull().default(0),
+  nations: integer('nations').notNull().default(0),
+  cups: integer('cups').notNull().default(0),
+  podiums: integer('podiums').notNull().default(0),
+  seasons: integer('seasons').notNull().default(0),
+  division: integer('division').notNull().default(0),
   updatedAt: text('updated_at').notNull(),
 });
 /** One editable prediction per account and cup match; settlement and grant are atomic. */
@@ -2101,6 +2116,26 @@ export const managerCareers = sqliteTable(
   ],
 );
 
+/**
+ * T-11-372 시즌 특별 카드 표식. 시즌 결산(team/seasonClose.ts specials 단계)이 마감 시각 기준으로 한 번 매긴다 — 카드(career_id)를
+ * 따라가서 팔려도 남고, 기준이 바뀌어도 지난 시즌 표식은 다시 매기지 않는다(rule_version). 능력치는 더하지 않는다.
+ * 카드 응답은 career_id 앞자리(PK)로 붙이고, 결산 화면의 그 시즌 목록은 season 인덱스로 읽는다.
+ */
+export const cardSpecials = sqliteTable(
+  'card_specials',
+  {
+    careerId: text('career_id').notNull(),
+    season: integer('season').notNull(),
+    kind: text('kind', { enum: CARD_SPECIAL_KINDS }).notNull(),
+    rank: integer('rank').notNull(),
+    ruleVersion: integer('rule_version').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.careerId, table.season, table.kind] }),
+    index('card_specials_season_idx').on(table.season, table.kind, table.rank),
+  ],
+);
 /** Optional account acquisition consent. Never exported to advertising SDKs. */
 export const acquisitionConsents = sqliteTable('acquisition_consents', {
   profileId: text('profile_id')
@@ -2319,4 +2354,22 @@ export const memberships = sqliteTable(
     primaryKey({ columns: [table.store, table.chainId] }),
     index('memberships_profile_idx').on(table.profileId, table.until),
   ],
+);
+
+/**
+ * T-11-572 운영 지표 대시보드(admin.offside-lab.com). 하루 한 번 모은 값(KST 날짜 · 지표 · 나눔)을 긴 표로 둔다.
+ * 운영 D1 값은 일일 cron `kpi` 단계가, 외부(GA4 · 광고 · 스토어) 값은 에이전트 Worker가 `/v1/internal/kpi`로 넣는다.
+ * 대시보드는 이 표만 읽는다(화면을 열 때 운영 표에 집계 쿼리를 날리지 않는다). 설계: docs/tracking/admin-kpi-dashboard-design.md
+ */
+export const kpiDaily = sqliteTable(
+  'kpi_daily',
+  {
+    day: text('day').notNull(),
+    metric: text('metric').notNull(),
+    dim: text('dim').notNull().default('all'),
+    value: real('value').notNull(),
+    source: text('source').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.day, table.metric, table.dim] })],
 );

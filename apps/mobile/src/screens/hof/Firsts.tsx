@@ -31,11 +31,12 @@ import { Press } from '../../ui/Press';
 import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
 import { Txt } from '../../ui/Txt';
-import { Seg, SortChips, TabOpt } from '../board/parts';
+import { SortChips } from '../board/parts';
+import { SelectField } from '../settings/parts';
 import { intlLocale } from '@offside/app-core/i18n/core';
-import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../ui/useSeasonNow';
 import { useRefresh } from '../../ui/refresh';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 type Holder = NonNullable<ServerFirst['holder']>;
 
@@ -204,21 +205,14 @@ export default function Firsts() {
           </Txt>
         </View>
         {seasons.length > 1 ? (
-          <Seg
-            cols={Math.min(seasons.length, 3)}
+          <SelectField
             label={L.seasonLabel}
+            testID="firsts-season"
+            value={season}
+            options={seasonOptions(seasons, now)}
+            onChange={setPicked}
             style={{ marginBottom: 10 }}
-          >
-            {seasons.map((id) => (
-              <TabOpt
-                key={id}
-                title={teamSeasonLabel(id)}
-                selected={season === id}
-                testID={`firsts-season-${id}`}
-                onPress={() => setPicked(id)}
-              />
-            ))}
-          </Seg>
+          />
         ) : null}
         <SortChips
           label={L.tabsLabel}

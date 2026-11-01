@@ -1,4 +1,4 @@
-import { LEAGUE_ROUNDS, type LeagueDef } from '@offside/contracts/league';
+import type { LeagueDef } from '@offside/contracts/league';
 import type { Db } from '../db/client.js';
 import type { Bindings } from '../env.js';
 import { postStallAlerts } from './cupAutopilot.js';
@@ -48,8 +48,8 @@ export async function leagueStalls(db: Db, league: LeagueDef, now: string) {
   for (const m of late.results)
     out.push({ key: `match:${s}:${m.round}`, text: STALL_TEXT.match(s, m.round) });
   const played = await playedRounds(db, s);
-  const last = league.rounds[LEAGUE_ROUNDS - 1]!;
-  if (played === LEAGUE_ROUNDS) {
+  const last = league.rounds.at(-1)!;
+  if (played === league.rounds.length) {
     if (last <= before(now, DONE_MS)) out.push({ key: `done:${s}`, text: STALL_TEXT.done(s) });
     return out;
   }

@@ -24,8 +24,8 @@ export const MOMENT_EVENTS: EventDef[] = [
         ok: {
           text: () => L.kidShirtResult,
           fx: (s) => {
-            addStat(s, 'fame', 3);
-            addStat(s, 'morale', 3);
+            addStat(s, 'fame', 4);
+            addStat(s, 'morale', 1);
           },
         },
       },
@@ -34,9 +34,9 @@ export const MOMENT_EVENTS: EventDef[] = [
         ok: {
           text: () => L.kidSignResult,
           fx: (s) => {
-            addStat(s, 'morale', 5);
+            addStat(s, 'morale', 7);
             addStat(s, 'fame', 1);
-            addStat(s, 'cond', -4);
+            addStat(s, 'cond', -3);
           },
         },
       },
@@ -49,7 +49,7 @@ export const MOMENT_EVENTS: EventDef[] = [
     get title() {
       return L.wcTitle;
     },
-    w: 6,
+    w: 10,
     cond: (s) =>
       isPro(s) &&
       s.phase === 0 &&
@@ -216,9 +216,8 @@ export const MOMENT_EVENTS: EventDef[] = [
           fx: (s) => {
             s.flags.coachFarewell = true;
             s.injury = Math.max(s.injury, 1);
-            addStat(s, 'morale', 6);
-            addStat(s, 'fame', 2);
-            addStat(s, 'trust', -0.5);
+            addStat(s, 'morale', 8);
+            addStat(s, 'fame', 3);
           },
         },
       },

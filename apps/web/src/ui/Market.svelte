@@ -9,6 +9,7 @@
 </script>
 
 <script lang="ts">
+  import SeasonSelect from './SeasonSelect.svelte';
   import { tick as flush } from 'svelte';
   import Skeleton from './Skeleton.svelte';
   import LoginButtons from './LoginButtons.svelte';
@@ -39,6 +40,7 @@
     MARKET_POS_FILTERS,
     marketDetailFilters,
     marketFiltered,
+    marketSeasonChoices,
     marketFindChips,
     marketSubReset,
     cardFrom,
@@ -128,6 +130,8 @@
   let page = $state(0);
   let hasMore = $state(false);
   let season = $state<number | null>(null);
+  // T-11-596 카드 시즌 필터에 고를 시즌(목록 응답의 지금 시즌까지).
+  const seasonChoices = $derived(marketSeasonChoices(season));
   let listStatus = $state<'loading' | 'ok' | 'error'>('loading');
   // '방금 이적' — 첫 페이지 응답에 함께 온 최근 거래. 화면 안에서 한 줄씩 넘기기만 하고 서버는 다시 부르지 않는다.
   let recent = $state<MarketSale[]>([]);
@@ -334,11 +338,7 @@
       </div>
       <p class="muted fs-sm">{L.releaseIntro}</p>
       <div class="mk-chips-row">
-        <div class="mk-chips" role="group" aria-label={L.seasonGroup}>
-          {#each team?.seasons ?? [] as o (o.id)}
-            <button class="mk-chip" aria-pressed={team?.season === o.id} onclick={() => ((teamSeason = o.id), (picked = new Set()))}>{L.seasonChip({ name: o.name })}</button>
-          {/each}
-        </div>
+        {#if team && team.seasons.length > 1}<div class="mk-season"><SeasonSelect compact label={L.seasonGroup} value={team.season} seasons={team.seasons} onpick={(v) => ((teamSeason = Number(v)), (picked = new Set()))} data-market-season /></div>{/if}
         {#if releasable.length > 0}<button class="mk-link" data-act="pick-all" onclick={pickAll}>{pickAllLabel(releasable.length, allPicked)}</button>{/if}
       </div>
       {#if guest}
@@ -492,6 +492,7 @@
         {/if}
         <div class="mk-sort">
           <span class="muted fs-sm">{season === null ? '' : L.listCount({ n: items.length, more: hasMore })}</span>
+          {#if seasonChoices.length > 1}<SeasonSelect compact label={L.seasonGroup} all={L.seasonAll} value={filter.cardSeason ?? 'all'} seasons={seasonChoices} onpick={(v) => pickFilter({ cardSeason: v === 'all' ? undefined : v })} data-market-card-season />{/if}
           <label class="fs-sm">{L.sortLabel}
             <select bind:value={sort} data-market-sort>
               {#each Object.entries(MARKET_SORT_LABEL) as [k, label] (k)}<option value={k}>{label}</option>{/each}

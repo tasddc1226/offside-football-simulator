@@ -12,6 +12,20 @@ const DESCRIPTIONS: Record<string, string> = {
   overlap: '같은 측면의 공격형 풀백 유형(FB·LB·RB·LWB·RWB) + 윙어 유형(W·LW·RW)',
   killpass: '골 사냥꾼 유형(ST·CF·SS) + 플레이메이커 유형(AM·CM·LM·RM)',
   guardian: '슈퍼 세이버 유형(GK) + 스토퍼 유형(CB·SW)',
+  // T-11-542 시즌 2 트리오 · 듀오.
+  trident:
+    '윙어 유형(W·LW·RW) + 골 사냥꾼 또는 타깃맨 유형(ST·CF·SS) + 또 한 명의 윙어 또는 스피드스터 유형(W·LW·RW)',
+  triangle: '플레이메이커 · 박스 투 박스 · 윙어 유형이 모두 DM·CM·AM·LM·RM에 배치',
+  back_three: '빌드업 센터백 유형 + 스토퍼 또는 빌드업 센터백 유형 2명, 셋 다 CB·SW에 배치',
+  big_small: '타깃맨 유형 + 골 사냥꾼 유형, 둘 다 ST·CF·SS에 배치',
+  wings: '윙어 유형 2명이 양쪽 측면의 W·LW·RW에 배치',
+  shadow: '윙어 또는 박스 투 박스 유형(AM) + 골 사냥꾼 유형(ST·CF·SS)',
+  double_pivot: '박스 투 박스 유형 2명, 둘 다 DM·CM·LM·RM에 배치',
+  anchor: '박스 투 박스 유형(DM) + 스토퍼 유형(CB·SW)',
+  regista: '플레이메이커 유형(DM) + 빌드업 센터백 유형(CB·SW)',
+  high_line: '스위퍼 키퍼 유형(GK) + 공격형 풀백 유형(FB·LB·RB·LWB·RWB)',
+  switch: '윙어 유형(W·LW·RW) + 반대쪽 측면의 공격형 풀백 유형(FB·LB·RB·LWB·RWB)',
+  wingbacks: '공격형 풀백 유형 2명이 양쪽 측면의 FB·LB·RB·LWB·RWB에 배치',
   foot: '풀백 자리(FB·LB·RB·LWB·RWB)는 같은 쪽 발, 윙어 자리(W·LW·RW)는 반대쪽 발. 유형은 무관해요.',
 };
 

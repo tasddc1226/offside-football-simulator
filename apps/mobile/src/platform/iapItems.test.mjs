@@ -20,8 +20,12 @@ vi.mock('expo-iap', () => ({
   requestPurchase: vi.fn(),
 }));
 vi.mock('@offside/contracts/cup', () => ({
-  IAP_PRODUCT_IDS: ['reroll_5', 'boost_3'],
-  IAP_PRODUCTS: { reroll_5: { item: 'reroll', qty: 5 }, boost_3: { item: 'boost', qty: 3 } },
+  IAP_PRODUCT_IDS: ['reroll_5', 'boost_3', 'boost_100'],
+  IAP_PRODUCTS: {
+    reroll_5: { item: 'reroll', qty: 5 },
+    boost_3: { item: 'boost', qty: 3 },
+    boost_100: { item: 'boost', qty: 100 },
+  },
 }));
 vi.mock('@offside/app-core/api/cup', () => ({ claimIap: f.claimIap, fetchItems: f.fetchItems }));
 vi.mock('@offside/app-core/market', () => ({
@@ -68,6 +72,22 @@ beforeEach(async () => {
 });
 
 describe('iap items sync (T-11-434)', () => {
+  it.each([false, true])(
+    'shows the 100-ticket pack only with a store price (listed=%s)',
+    async (listed) => {
+      f.fetchItems.mockResolvedValue({ ok: true, data: items });
+      f.fetchProducts.mockResolvedValue([
+        { id: 'boost_3', displayPrice: '₩1,100' },
+        ...(listed ? [{ id: 'boost_100', displayPrice: '₩19,800' }] : []),
+      ]);
+      await m.retryIapItems();
+      expect(m.sellablePacks('boost', m.iapItems)).toEqual(
+        listed ? ['boost_3', 'boost_100'] : ['boost_3'],
+      );
+      expect(m.iapItems.prices.boost_100).toBe(listed ? '₩19,800' : undefined);
+      expect(m.sellablePacks('boost', { ...m.iapItems, open: false })).toEqual([]);
+    },
+  );
   it('does not remember a failed load and asks again on retry', async () => {
     f.fetchItems.mockResolvedValueOnce({ ok: false, error: { code: 'NETWORK', retryable: true } });
     m.useIapItems(true);

@@ -35,8 +35,6 @@ const ko = {
   help: '도움말',
   installGuide: '홈 화면에 추가하기',
   guide: '게임 가이드',
-  // T-11-441 계정 · 닉네임은 내 구단 화면에 있다.
-  accountLink: '계정 · 닉네임 (내 구단)',
   faq: '자주 묻는 질문',
   fairness: '확률과 공정성',
   legal: '서비스 정책',
@@ -69,6 +67,8 @@ const ko = {
   consentDenied: '동의 안 함',
   consentUnset: '선택 전',
   consentAgree: '분석에 동의',
+  consentDefaultNote:
+    '이 지역에서는 처음부터 켜져 있어요. 원하지 않으면 체크를 풀고 저장하면 돼요.',
   consentRevokeNote:
     '철회하면 이후 수집이 중단되고 이 브라우저의 분석용 쿠키·기록을 지워요. 이미 전송된 정보가 자동 삭제되지는 않아요.',
   reviewTitle: '스토어 리뷰',

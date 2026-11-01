@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fetchOwnerTitles, putOwnerTitle, type OwnerTitlesResponse } from '@offside/app-core/api/ownerProfile';
-  import { TITLE_NONE, titleLabel, titleCondition, permanentTitleOf, titleGradeLabel, titleRelated } from '@offside/app-core/ownerTitle';
-  import { titleCollection } from '@offside/app-core/ownerTitleCollection';
+  import { TITLE_NONE, titleLabel, titleCondition, permanentTitleOf, titleGradeLabel, titleRelated, titleCategoryLabel } from '@offside/app-core/ownerTitle';
+  import { titleCollection, titleGroups, titleNextTier, titleProgressText, titleTierText } from '@offside/app-core/ownerTitleCollection';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from '../cup/TitleBadge.svelte';
   import { toast } from '../helpers.js';
@@ -14,6 +14,7 @@
   let filter = $state<'earned' | 'locked' | null>(null);
   const picked = $derived(hall ? (hall.pinned ? (hall.title ?? TITLE_NONE) : null) : null);
   const collection = $derived(hall ? titleCollection(hall) : { earned: [], locked: [], cups: [] });
+  const groups = $derived(hall ? titleGroups(hall) : { earned: [], locked: [] });
   const shown = $derived(filter ?? (collection.earned.length ? 'earned' : 'locked'));
   async function load() {
     failed = false;
@@ -37,7 +38,7 @@
 {#snippet identity(id: string, isNew = false)}
   <span class="oh-title-identity">
     <span class="oh-title-art" aria-hidden="true"><TitleBadge title={id} size="icon" /></span>
-    <span class="oh-title-name"><strong>{titleLabel(id)}</strong><span class="oh-title-meta">{permanentTitleOf(id) ? titleGradeLabel(permanentTitleOf(id)!.grade) : L.titleCup}{#if isNew}<span class="oh-title-new">{L.newTitle}</span>{/if}</span></span>
+    <span class="oh-title-name"><strong>{titleLabel(id)}</strong><span class="oh-title-meta">{permanentTitleOf(id) ? titleGradeLabel(permanentTitleOf(id)!.grade) : L.titleCup}{#if titleTierText(id)}<span>{titleTierText(id)}</span>{/if}{#if isNew}<span class="oh-title-new">{L.newTitle}</span>{/if}</span></span>
   </span>
 {/snippet}
 
@@ -59,20 +60,32 @@
     <p class="muted fs-sm list-hint">{shown === 'earned' ? L.collectionHint : L.challengeHint}</p>
     <div class="oh-title-list" aria-busy={saving}>
       {#if shown === 'earned'}
-        {#each collection.earned as id (id)}
-          {@const t = hall.permanent.find((p) => p.id === id)}
-          <button class="oh-title-item" class:equipped={hall.title === id} data-title-pick={id} data-permanent-title={t ? id : undefined} data-title-grade={permanentTitleOf(id)?.grade} aria-pressed={hall.title === id} aria-label={`${titleLabel(id)} · ${L.equip}`} disabled={saving} onclick={() => pick(id)}>
-            <span class="item-heading">{@render identity(id, t?.isNew)}{#if hall.title === id}<span class="using">✓ {L.titleUsing}</span>{/if}</span>
-            {#if t}<span class="muted fs-sm condition">{titleCondition(id)}</span>{/if}
-          </button>
+        {#each groups.earned as g (g.key)}
+          <section class="oh-title-group" data-title-group={g.key}>
+            <h3 class="group-heading">{titleCategoryLabel(g.key)}<span>{g.ids.length}</span></h3>
+            {#each g.ids as id (id)}
+              {@const t = hall.permanent.find((p) => p.id === id)}
+              {@const next = t ? titleNextTier(hall, id) : null}
+              <button class="oh-title-item" class:equipped={hall.title === id} data-title-pick={id} data-permanent-title={t ? id : undefined} data-title-grade={permanentTitleOf(id)?.grade} aria-pressed={hall.title === id} aria-label={`${titleLabel(id)} · ${L.equip}`} disabled={saving} onclick={() => pick(id)}>
+                <span class="item-heading">{@render identity(id, t?.isNew)}{#if hall.title === id}<span class="using">✓ {L.titleUsing}</span>{/if}</span>
+                {#if t}<span class="muted fs-sm condition">{titleCondition(id)}</span>{/if}
+                {#if next}<small class="muted related" data-next-tier>{next}</small>{/if}
+              </button>
+            {/each}
+          </section>
         {:else}<p class="muted empty">{L.hallEmpty}</p>{/each}
       {:else}
-        {#each collection.locked as t (t.id)}
-          <section class="oh-title-item locked" data-permanent-title={t.id} data-title-grade={permanentTitleOf(t.id)?.grade} aria-label={titleLabel(t.id) ?? t.id}>
-            {@render identity(t.id)}
-            <p class="muted fs-sm condition">{titleCondition(t.id)}</p>
-            <div class="goal-progress"><progress max={t.target} value={Math.min(t.value, t.target)} aria-label={`${titleLabel(t.id)} ${L.progress(t)}`}></progress><span class="num">{L.progress(t)}</span></div>
-            <small class="muted related">{titleRelated(t.id)}</small>
+        {#each groups.locked as g (g.key)}
+          <section class="oh-title-group" data-title-group={g.key}>
+            <h3 class="group-heading">{titleCategoryLabel(g.key)}<span>{g.items.length}</span></h3>
+            {#each g.items as t (t.id)}
+              <section class="oh-title-item locked" data-permanent-title={t.id} data-title-grade={permanentTitleOf(t.id)?.grade} aria-label={titleLabel(t.id) ?? t.id}>
+                {@render identity(t.id)}
+                <p class="muted fs-sm condition">{titleCondition(t.id)}</p>
+                <div class="goal-progress"><progress max={t.target} value={Math.min(t.value, t.target)} aria-label={`${titleLabel(t.id)} ${titleProgressText(t)}`}></progress><span class="num">{titleProgressText(t)}</span></div>
+                <small class="muted related">{titleRelated(t.id)}</small>
+              </section>
+            {/each}
           </section>
         {:else}<p class="muted empty">{L.titleAllEarned}</p>{/each}
       {/if}
@@ -92,7 +105,7 @@
   .oh-title-current p {margin:0;line-height:1.5;}.current-heading {display:flex;align-items:center;justify-content:space-between;gap:8px;}
   .oh-title-remove {background:none;color:var(--muted);border:0;padding:10px 12px;min-height:44px;text-decoration:underline;text-underline-offset:3px;}.oh-title-remove:disabled{opacity:.45;}
   .oh-title-filters {display:flex;gap:8px;flex-wrap:wrap;}.oh-title-filters button {display:flex;gap:8px;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--line);border-radius:var(--radius-pill);padding:8px 14px;background:transparent;color:var(--muted);font-weight:650;}.oh-title-filters button[aria-pressed=true]{background:var(--surface-2);border-color:var(--accent-text);color:var(--ink);}.oh-title-filters span {font-variant-numeric:tabular-nums;opacity:.7;}
-  .list-hint {margin:0;}.oh-title-list{display:flex;flex-direction:column;gap:10px;}
+  .list-hint {margin:0;}.oh-title-list{display:flex;flex-direction:column;gap:20px;}.oh-title-group{display:flex;flex-direction:column;gap:10px;}.group-heading{display:flex;align-items:center;gap:8px;margin:0;font-size:14px;font-weight:700;color:var(--muted);}.group-heading span{font-variant-numeric:tabular-nums;font-weight:500;opacity:.7;}
   .oh-title-item {display:flex;flex-direction:column;align-items:stretch;gap:12px;width:100%;box-sizing:border-box;padding:16px;text-align:left;background:var(--surface);color:var(--ink);border: 1px solid transparent;border-radius:var(--radius-md);min-width:0;}
   button.oh-title-item {cursor:pointer;}.oh-title-item.equipped {border-color:var(--accent-text);background:color-mix(in srgb,var(--accent) 5%,var(--surface));}
   .item-heading {display:flex;width:100%;gap:8px;align-items:center;flex-wrap:wrap;}.oh-title-identity{display:flex;gap:10px;align-items:center;min-width:0;flex:1;}

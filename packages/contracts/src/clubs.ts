@@ -7,7 +7,8 @@ import { IsoUtcSchema } from './primitives.js';
  * 표시용 데이터라 통째로(전체 교체) 저장한다. 웹(game/clubs.ts sanitizeClubCustom)과 같은 한도를 쓴다 —
  * 웹은 zod를 번들에 넣지 않으므로 값 검증을 거기서 따로 하고, 여기 숫자와 맞춰 둔다.
  */
-export const CLUB_CUSTOM_MAX_CLUBS = 250;
+/** T-11-599 리그 추가로 클럽이 302개가 돼 250에서 올렸다(새 리그가 더 붙어도 여유를 둔다). */
+export const CLUB_CUSTOM_MAX_CLUBS = 400;
 export const CLUB_CUSTOM_NAME_MAX = 20;
 export const CLUB_CUSTOM_LOGO_TEXT_MAX = 3;
 export { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX } from './club-limits.js';

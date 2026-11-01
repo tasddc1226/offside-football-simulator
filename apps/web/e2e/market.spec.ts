@@ -183,7 +183,7 @@ test('구단주 화면에서 이적시장을 열고 선수를 영입한다(화�
   await page.locator('[data-act="owner"]').click();
   // 구단 가치는 서버가 센 값(자금 + 카드 가치)
   await expect(page.locator('[data-owner-value]')).toContainText('50억');
-  await expect(page.locator('[data-owner-market]')).toContainText('구단 자금 20억');
+  await expect(page.locator('[data-owner-funds]')).toContainText('20억');
   await page.locator('[data-act="market"]').click();
   await expect(page.locator('[data-market-funds]')).toContainText('20억');
   await expect(page.locator(`[data-listing="${LISTING}"]`)).toContainText('시장 골잡이');
@@ -649,6 +649,7 @@ test('T-11-442 리롤권 상점에서 자금이 모자라면 모자란 금액과
   await page.route(`${API}/v1/market/me`, (r) => r.fulfill(me(30_000)));
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="shop"]').click();
   await page.locator('[data-act="reroll-shop"]').click();
   const short = page.locator('[data-reroll-shop] [data-funds-short]');
   await expect(short).toContainText('구단 자금이 7억 모자라요.');

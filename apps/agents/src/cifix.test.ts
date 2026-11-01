@@ -4,6 +4,7 @@ import { devCi, MAX_FIXES, type DevCi } from './dev.ts';
 import type { Env } from './env.ts';
 import type { Gh } from './github.ts';
 import type { DevJob } from './ledger.ts';
+import { fakeChat } from './testChat.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -30,7 +31,7 @@ function setup(j: DevJob, spent = 0) {
   };
   const env = {
     GITHUB_REPO: 'o/r',
-    SLACK_DEV_BOT_TOKEN: 't',
+    DISCORD: fakeChat,
     DAILY_BUDGET_USD: '5',
     DAILY_BUDGET_DEV_USD: '20',
     DEV_RUN_BUDGET_USD: '5',

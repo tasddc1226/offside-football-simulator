@@ -88,7 +88,9 @@ export function localizeList(
     hasMore: data.hasMore,
     posts: data.posts.map(({ titles, ...p }) => {
       if (lang === 'ko' || !titles) return p;
-      const title = (JSON.parse(titles) as Partial<Record<Lang, string | null>>)[lang];
+      const all = JSON.parse(titles) as Partial<Record<Lang, string | null>>;
+      // T-11-588 번체 중국어 제목이 없으면 영어(상세 translatedPost와 같다).
+      const title = all[lang] ?? (lang === 'zh' ? all.en : null);
       return title ? { ...p, title } : p;
     }),
   };
@@ -177,8 +179,14 @@ export async function getPost(db: Db, id: string): Promise<PostRow | undefined> 
 
 /** 운영자가 쓴 번역이 있으면 그 언어로, 없으면 한국어 원문. */
 export function localizePost({ i18nJson, ...post }: PostRow, lang: Lang): Post {
-  const text = lang === 'ko' ? undefined : parseI18n(i18nJson)[lang];
-  return text ? { ...post, ...text } : post;
+  return { ...post, ...translatedPost(i18nJson, lang) };
+}
+
+/** 요청 언어의 번역. 번체 중국어가 없으면 영어(릴리즈 노트와 같다, T-11-588), 둘 다 없으면 undefined(한국어 원문). */
+export function translatedPost(i18nJson: string | null, lang: Lang) {
+  if (lang === 'ko') return undefined;
+  const all = parseI18n(i18nJson);
+  return all[lang] ?? (lang === 'zh' ? all.en : undefined);
 }
 
 export type PostFields = {
@@ -190,7 +198,8 @@ export type PostFields = {
 };
 
 /** 빈 번역은 NULL로 둔다. undefined는 "보내지 않음"이라 저장된 번역을 건드리지 않는다. */
-const i18nColumn = (i18n: PostTranslations) => (i18n.en || i18n.ja ? JSON.stringify(i18n) : null);
+const i18nColumn = (i18n: PostTranslations) =>
+  TRANSLATED_LOCALES.some((l) => i18n[l]) ? JSON.stringify(i18n) : null;
 
 export async function createPost(
   db: Db,

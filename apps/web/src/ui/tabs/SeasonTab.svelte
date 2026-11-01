@@ -8,6 +8,7 @@
 </script>
 
 <script lang="ts">
+  import CareerOverview from './CareerOverview.svelte';
   import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
   import { appFormatText as W } from '@offside/app-core/i18n/ko/appFormat';
   import { tn } from '@offside/game/i18n/names';
@@ -208,6 +209,8 @@
     <PhaseReport r={report} />
   {/key}
 {/if}
+
+<CareerOverview {s} />
 
 <section class="card stack" data-season-status data-tour="status">
   <div>

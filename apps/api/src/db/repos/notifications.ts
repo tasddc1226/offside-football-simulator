@@ -7,6 +7,8 @@ import {
 } from '@offside/contracts';
 import { parseWithAppError } from '../../errors.js';
 import { newId } from '../ids.js';
+import { translatedPost } from './boards.js';
+import type { Lang } from '../../lang.js';
 
 type Row = {
   id: string;
@@ -16,18 +18,26 @@ type Row = {
   target_json: string;
   created_at: string;
   read_at: string | null;
+  /** T-11-588 공지·릴리즈 노트 알림의 글 번역(한국어가 아닌 요청에서만 읽는다). */
+  post_i18n?: string | null;
 };
-const dto = (r: Row): AppNotification =>
+const dto = (r: Row, lang: Lang = 'ko'): AppNotification =>
   NotificationSchema.parse({
     id: r.id,
     kind: r.kind,
     title: r.title,
-    body: r.body,
+    // 공지 알림의 본문은 보낼 때의 한국어 글 제목이다 — 운영자가 쓴 번역 제목이 있으면 그것으로 보인다.
+    body: (r.kind === 'news' && translatedPost(r.post_i18n ?? null, lang)?.title) || r.body,
     target: JSON.parse(r.target_json),
     createdAt: r.created_at,
     readAt: r.read_at,
   });
 const COLUMNS = 'id, kind, title, body, target_json, created_at, read_at';
+const columns = (lang: Lang) =>
+  lang === 'ko'
+    ? COLUMNS
+    : `${COLUMNS}, CASE kind WHEN 'news' THEN (SELECT i18n_json FROM board_posts
+        WHERE id = json_extract(notifications.target_json, '$.postId')) END AS post_i18n`;
 const RETENTION_MS = 90 * 86400_000;
 
 export async function listNotifications(
@@ -35,6 +45,7 @@ export async function listNotifications(
   profileId: string,
   now: string,
   query: { cursor?: string | undefined; unread?: '1' | undefined },
+  lang: Lang = 'ko',
 ) {
   let cursor: { createdAt: string; id: string } | undefined;
   if (query.cursor) {
@@ -56,7 +67,7 @@ export async function listNotifications(
   const results = await db.batch([
     db
       .prepare(
-        `SELECT ${COLUMNS} FROM notifications WHERE ${where} ORDER BY created_at DESC, id DESC LIMIT 21`,
+        `SELECT ${columns(lang)} FROM notifications WHERE ${where} ORDER BY created_at DESC, id DESC LIMIT 21`,
       )
       .bind(...values),
     db
@@ -69,7 +80,7 @@ export async function listNotifications(
   const page = rows.slice(0, 20);
   const last = page.at(-1);
   return {
-    items: page.map(dto),
+    items: page.map((r) => dto(r, lang)),
     nextCursor:
       rows.length > 20 && last
         ? btoa(JSON.stringify({ createdAt: last.created_at, id: last.id }))
@@ -77,14 +88,20 @@ export async function listNotifications(
     unreadCount: (results[1]!.results[0] as { count: number }).count,
   };
 }
-export async function ownNotification(db: D1Database, profileId: string, id: string, now: string) {
+export async function ownNotification(
+  db: D1Database,
+  profileId: string,
+  id: string,
+  now: string,
+  lang: Lang = 'ko',
+) {
   const row = await db
     .prepare(
-      `SELECT ${COLUMNS} FROM notifications WHERE id = ? AND profile_id = ? AND expires_at > ?`,
+      `SELECT ${columns(lang)} FROM notifications WHERE id = ? AND profile_id = ? AND expires_at > ?`,
     )
     .bind(id, profileId, now)
     .first<Row>();
-  return row ? dto(row) : null;
+  return row ? dto(row, lang) : null;
 }
 export async function readNotification(db: D1Database, profileId: string, id: string, now: string) {
   return db

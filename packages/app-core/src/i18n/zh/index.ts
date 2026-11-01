@@ -14,10 +14,12 @@ import { avatarRecord } from './avatarRecord';
 import { backup } from './backup';
 import { balanceKeys } from './balanceKeys';
 import { best11 } from './best11';
+import { bizInfo } from './bizInfo';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
 import { careerGuide } from './careerGuide';
 import { careerMoment } from './careerMoment';
+import { careerOverview } from './careerOverview';
 import { chat } from './chat';
 import { chatReject } from './chatReject';
 import { club } from './club';
@@ -89,12 +91,15 @@ import { salary } from './salary';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonPass } from './seasonPass';
+import { seasonPick } from './seasonPick';
 import { seasonRecap } from './seasonRecap';
 import { serverStatus } from './serverStatus';
 import { settings } from './settings';
 import { settingsApi } from './settingsApi';
 import { share } from './share';
+import { shareMeta } from './shareMeta';
 import { sheetAchieve } from './sheetAchieve';
+import { sheetChrome } from './sheetChrome';
 import { sheetContract } from './sheetContract';
 import { sheetCore } from './sheetCore';
 import { sheetMinigame } from './sheetMinigame';
@@ -133,10 +138,12 @@ export const zh = {
   backup,
   balanceKeys,
   best11,
+  bizInfo,
   board,
   boardLabel,
   careerGuide,
   careerMoment,
+  careerOverview,
   chat,
   chatReject,
   club,
@@ -208,12 +215,15 @@ export const zh = {
   scout,
   seasonGauge,
   seasonPass,
+  seasonPick,
   seasonRecap,
   serverStatus,
   settings,
   settingsApi,
   share,
+  shareMeta,
   sheetAchieve,
+  sheetChrome,
   sheetContract,
   sheetCore,
   sheetMinigame,

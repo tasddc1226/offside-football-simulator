@@ -24,6 +24,7 @@ import {
   TEAM_STATS_MATCHES_MAX,
 } from './owner-team.js';
 import { IsoUtcSchema } from './primitives.js';
+import { CARD_SPECIAL_KINDS } from './card-special.js';
 import { TeamCoachSchema } from './manager.js';
 import { TEAM_DIVISION_TOP } from './team-division.js';
 import { TEAM_LOGO_IMG_MAX, TEAM_LOGO_PATTERNS, TEAM_LOGO_SHAPES } from './team-logo.js';
@@ -109,6 +110,14 @@ const count = z.number().int().min(0);
 export const TeamRecordSchema = z.strictObject({ w: count, d: count, l: count });
 export type TeamRecord = z.infer<typeof TeamRecordSchema>;
 
+/** T-11-372 시즌 특별 카드 표식(시즌 베스트 11 · 득점왕 · 도움왕 · MVP). 카드를 따라가고 능력치는 더하지 않는다. */
+export const CardSpecialSchema = z.strictObject({
+  season: z.number().int().min(1),
+  kind: z.enum(CARD_SPECIAL_KINDS),
+  rank: z.number().int().min(1),
+});
+export type CardSpecial = z.infer<typeof CardSpecialSchema>;
+
 /** 팀에 넣을 수 있는 내 은퇴 선수. 서버에는 선수 이름이 없다 — 공개한 이름(publicName)만 있다. */
 export const TeamPlayerSchema = z.strictObject({
   careerId: z.string(),
@@ -146,6 +155,8 @@ export const TeamPlayerSchema = z.strictObject({
   weight: z.number().int().optional(),
   /** T-11-188 구단주가 잠근 선수(이적시장에 내놓거나 방출할 수 없다). 구버전 응답에는 없다. */
   locked: z.boolean().optional(),
+  /** T-11-372 이 카드가 받은 시즌 표식(없으면 빠진다). 배포 전 응답엔 없다. */
+  specials: z.array(CardSpecialSchema).optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
 });
@@ -182,9 +193,17 @@ export const TeamPresetSchema = z.strictObject({
   formation: FormationIdSchema,
   slots: z.array(CareerIdParamSchema.nullable()).length(LINEUP_SIZE),
   layout: TeamLayoutSchema.nullable(),
+  /** T-11-570 컵 경기에 이 프리셋으로 나간다(한 팀에 하나까지). 없으면 컵도 팀 명단으로 뛴다. */
+  cup: z.literal(true).optional(),
+  /** T-11-570 컵 명단 프리셋의 팀 OVR · 선발 수(서버가 저장할 때 계산해 채운다, 보낸 값은 무시). */
+  ovr: z.number().int().optional(),
+  filled: z.number().int().optional(),
 });
 export type TeamPreset = z.infer<typeof TeamPresetSchema>;
-export const TeamPresetsSchema = z.array(TeamPresetSchema).max(TEAM_PRESET_MAX);
+export const TeamPresetsSchema = z
+  .array(TeamPresetSchema)
+  .max(TEAM_PRESET_MAX)
+  .refine((ps) => ps.filter((p) => p.cup).length <= 1, { message: 'one cup preset' });
 
 export const OwnerTeamSchema = z.strictObject({
   id: TeamIdSchema,
@@ -240,6 +259,16 @@ export const OwnerTeamResponseSchema = z.strictObject({
   member: z.boolean().optional(),
   /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
   ownerTitle: titleField,
+  /**
+   * T-11-571 리그 체력(운영 도구에서 켰을 때만). rate는 단계마다 깎는 비율, streaks는 직전 리그 경기까지 연속 선발 수
+   * (커리어 id → 수, 1 이상만). 다음 리그 경기 단계는 contracts league.ts leagueFatigueSteps로 센다.
+   */
+  fatigue: z
+    .strictObject({
+      rate: z.number().min(0),
+      streaks: z.record(z.string(), z.number().int().min(1)),
+    })
+    .optional(),
 });
 export type OwnerTeamResponse = z.infer<typeof OwnerTeamResponseSchema>;
 
@@ -628,6 +657,17 @@ export const ClubAchievementsResponseSchema = z.strictObject({
   /** 업적 랭킹 순위(점수가 0이면 null)와 랭킹에 오른 구단주 수. */
   rank: z.number().int().min(1).nullable(),
   ranked: count,
+  /**
+   * T-11-541 시즌 점수 보너스(ACH_SCORE_BONUS, 지금 시즌만 · 없으면 생략). next = 다음 보너스 점수, reward = 그 보너스
+   * 아이템, got = 이 시즌에 받은 보너스 합.
+   */
+  bonus: z
+    .strictObject({
+      next: count,
+      reward: z.strictObject({ boost: count, scout: count, reroll: count }),
+      got: z.strictObject({ boost: count, scout: count, reroll: count }),
+    })
+    .optional(),
 });
 export type ClubAchievementsResponse = z.infer<typeof ClubAchievementsResponseSchema>;
 

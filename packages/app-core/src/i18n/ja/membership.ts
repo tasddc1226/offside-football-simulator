@@ -27,6 +27,10 @@ export const membership: Translation<MembershipMsgs> = {
   restoreBusy: '確認中…',
   restoreNone: '復元できるメンバーシップがありません。',
   adOwned: '広告削除をすでに購入している場合、メンバーシップが終わってもそのまま残ります。',
+  webBuy: (p: { price: string; days: number }) =>
+    `ウェブで${p.days}日間利用券を買う · ${p.price}ウォン`,
+  webOnce:
+    'ウェブで買った利用券は自動で再決済されません。期間が残っているうちに買い直すと、終了日から続けて延びます。',
   notOnSale: '現在、メンバーシップの加入を受け付けていません。',
   webJoin: '加入はアプリでできます。アプリで加入したメンバーシップの特典はウェブでも受けられます。',
   login: 'ログインしたオーナーだけがクラブメンバーシップを使えます。',

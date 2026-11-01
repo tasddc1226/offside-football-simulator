@@ -6,6 +6,7 @@ import { createGameActions, type GameHost } from './game-actions.js';
 import { createSheetController, initialSheetState } from './sheet-controller.js';
 import {
   DRAFT_IDENTITY_KEY,
+  draftCid,
   draftIdentity,
   initialAppState,
   randomName,
@@ -160,5 +161,18 @@ describe('선수 만들기 이름·등번호 이어 쓰기', () => {
       setActiveRng(createRng(5));
       expect(randomName()).toBe(next);
     }
+  });
+});
+
+describe('T-11-545 만들기에서 고른 외형', () => {
+  it('미리보기 ID와 고른 외형으로 시작하고, 다음 선수는 새 ID를 받는다', () => {
+    const { state, actions } = harness();
+    const cid = draftCid(state.C);
+    state.C.look = { skin: 5, style: 2 };
+    actions.startCareer('외형선수', 8);
+    expect(state.G?.cid).toBe(cid);
+    expect(state.G?.look).toEqual({ owned: ['skin', 'style'], pick: { skin: 5, style: 2 } });
+    expect(state.C.cid).toBeUndefined();
+    expect(draftCid(state.C)).not.toBe(cid);
   });
 });

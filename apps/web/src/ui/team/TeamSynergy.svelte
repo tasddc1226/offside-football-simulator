@@ -6,7 +6,7 @@
 
   let { synergy, season, focus = $bindable(null) }: { synergy: TeamSynergy; season: number; focus?: string | null } = $props();
   const power = $derived(synergyPower(synergy));
-  const rows = $derived(synergyRows(synergy));
+  const rows = $derived(synergyRows(synergy, season));
   const anyOn = $derived(rows.some((r) => r.state !== 'off'));
   const offCount = $derived(rows.filter((r) => r.state === 'off').length);
   let showOff = $state(false);

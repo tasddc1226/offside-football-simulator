@@ -1,3 +1,4 @@
+import { careerShareUrl } from '@offside/app-core/links';
 // ───────── 앱 쪽 연결 (T-11-005) ─────────
 // 게임 진행·시트 연출·업로드·선수 상세·클럽 커스텀·영구결번·새 소식은 웹과 같은 @offside/app-core 로직을 쓴다.
 // 여기서는 앱 상태(valtio)와 화면 쪽 동작(스크롤·토스트·햅틱)을 넘겨 한 벌씩 만든다.
@@ -7,6 +8,7 @@ import { createSheetController } from '@offside/app-core/sheet-controller';
 import { createGameActions } from '@offside/app-core/game-actions';
 import { createUploader } from '@offside/app-core/upload';
 import { takeAdUsage } from '../platform/adUsage';
+import { takePlaySignals } from '../platform/playSignals';
 import * as Outbox from '@offside/app-core/outbox';
 import { saveGame } from '@offside/app-core/career';
 import { createClubCustom } from '@offside/app-core/clubCustom';
@@ -66,7 +68,12 @@ export function buzz() {
 // ───────── 업로드 ─────────
 const outbox = () => Promise.resolve(Outbox);
 export const { uploadSeason, uploadRetirement, uploadLegacyRetirement, enqueueAllSeasons } =
-  createUploader({ outbox, appVersion: APP_VERSION, ads: takeAdUsage });
+  createUploader({
+    outbox,
+    appVersion: APP_VERSION,
+    signals: takePlaySignals,
+    ads: takeAdUsage,
+  });
 
 // ───────── 시트 · 진행 액션 ─────────
 const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
@@ -139,7 +146,7 @@ export const {
 } = createLegends({ state: appState, rnOf, toast, uploadRetirement, scrollTop: () => scrollTo(0) });
 
 /** 은퇴 커리어 공유 링크 — 웹 주소로 연다(앱이 없는 사람도 볼 수 있다). */
-export const shareUrl = (careerId: string) => `${WEB_ORIGIN}/career/${careerId}`;
+export const shareUrl = (careerId: string) => careerShareUrl(WEB_ORIGIN, careerId);
 
 export const { markNewsSeen, dismissNews, checkNews, isNewPost } = createNews(newsState);
 
@@ -167,6 +174,13 @@ export async function refreshAccount() {
   accountCache.value = r.ok ? r.data : 'error';
   // T-11-275 로그인 상태를 구단주 표시로도 남겨 홈 선물이 로그인한 기기에서만 묻게 한다.
   if (r.ok) noteOwner(isMember(r.data));
+}
+
+const ACCOUNT_REVALIDATE_MS = 5 * 60_000;
+/** 계정 상태를 쓰는 화면(설정 계정 카드 · 구단주 · 상점, T-11-567)이 열릴 때. 처음이면 묻고, 5분이 지났으면 조용히 다시 묻는다. */
+export function ensureAccount() {
+  if (accountCache.value === undefined) void refreshAccount();
+  else if (Date.now() - accountCache.fetchedAt > ACCOUNT_REVALIDATE_MS) void refreshAccount();
 }
 
 // ───────── 뒤로 가기 ─────────

@@ -49,13 +49,20 @@ const CUP128 = planCup({ id: 's1-2', season: 1, edition: 2, opensOn: '2026-10-09
 describe('T-11-145 컵 규칙', () => {
   it('팀 수로 조 수를 정한다', () => {
     expect(cupGroupCount(128)).toBe(32);
-    expect(cupGroupCount(64)).toBe(32);
-    expect(cupGroupCount(63)).toBe(16);
+    expect(cupGroupCount(96)).toBe(32);
+    // T-11-568 조는 되도록 3~5팀: 제3회 구간 대회(64~70팀)는 32개 조(거의 2팀)가 아니라 16개 조.
+    expect(cupGroupCount(80)).toBe(16);
+    expect(cupGroupCount(70)).toBe(16);
+    expect(cupGroupCount(64)).toBe(16);
+    expect(cupGroupCount(48)).toBe(16);
+    // 3~5팀으로 나눌 수 없으면 예전처럼 2~4팀.
+    expect(cupGroupCount(81)).toBe(32);
     // 정원 64 대회(제1회)는 64강을 열지 않는다.
     expect(cupGroupCount(64, 64)).toBe(16);
-    expect(cupGroupCount(32)).toBe(16);
+    expect(cupGroupCount(32)).toBe(8);
     expect(cupGroupCount(31)).toBe(8);
-    expect(cupGroupCount(8)).toBe(4);
+    expect(cupGroupCount(8)).toBe(2);
+    expect(cupGroupCount(5)).toBe(2);
     expect(cupGroupCount(4)).toBe(2);
     expect(cupGroupCount(3)).toBe(0);
   });
@@ -74,8 +81,13 @@ describe('T-11-145 컵 규칙', () => {
     expect(new Set(teams.slice(0, 16).map((t) => a.get(t.teamId))).size).toBe(16);
   });
 
-  it('조 일정: 4팀은 6경기, 3팀은 3경기, 2팀은 1경기', () => {
+  it('조 일정: 5팀은 10경기, 4팀은 6경기, 3팀은 3경기, 2팀은 1경기', () => {
     const n = (ids: string[]) => groupFixtures(ids).flat().length;
+    // T-11-568 5팀 조는 모든 짝이 한 번씩, 4 · 4 · 2경기로 나눠 모두 네 경기씩.
+    const five = groupFixtures(['a', 'b', 'c', 'd', 'e']);
+    expect(five.map((r) => r.length)).toEqual([4, 4, 2]);
+    expect(new Set(five.flat().map((p) => [...p].sort().join(''))).size).toBe(10);
+    for (const t of 'abcde') expect(five.flat().filter((p) => p.includes(t))).toHaveLength(4);
     expect(n(['a', 'b', 'c', 'd'])).toBe(6);
     expect(n(['a', 'b', 'c'])).toBe(3);
     expect(n(['a', 'b'])).toBe(1);
@@ -128,8 +140,12 @@ describe('T-11-145 컵 규칙', () => {
 
   it('알림 문장을 영어·일본어로 옮긴다(팀 이름은 그대로)', () => {
     expect(cupText('오프사이드 컵 결승 · 이겼어요', 'en')).toBe('OFFSIDE Cup Final: You won');
+    expect(cupText('시즌 1 제1회 오프사이드 컵 조 편성 완료', 'en')).toBe(
+      'Season 1 OFFSIDE Cup #1 groups are set',
+    );
+    // T-11-568 전에 저장된 추첨 알림 제목도 옮긴다.
     expect(cupText('시즌 1 제1회 오프사이드 컵 조 추첨 결과', 'en')).toBe(
-      'Season 1 OFFSIDE Cup #1 group draw',
+      'Season 1 OFFSIDE Cup #1 groups are set',
     );
     expect(cupText('우리 FC 팀은 3조예요. 첫 경기는 오늘 21:00에 열려요.', 'ja')).toBe(
       '우리 FCはグループ3です。初戦は本日21:00に始まります。',
@@ -480,7 +496,9 @@ describe('T-11-145 컵 진행(cron)', () => {
       expect(mine.map((x) => x.sourceKey).filter((k) => k.startsWith('cup-match:'))).toHaveLength(
         played,
       );
-      expect(mine.find((x) => x.sourceKey === `cup:${CUP.id}:draw`)?.body).toContain('21:00');
+      expect(mine.find((x) => x.sourceKey.startsWith(`cup:${CUP.id}:draw:`))?.body).toContain(
+        '21:00',
+      );
       const result = mine.filter((x) => x.sourceKey === `cup:${CUP.id}:result`);
       expect(result).toHaveLength(1);
       expect(result[0]).toMatchObject({ title: '시즌 1 제1회 오프사이드 컵 우승!' });

@@ -1,0 +1,18 @@
+{
+  "id": "t-11-601-friend-profile",
+  "title": "친구 프로필 바로 보기",
+  "items": ["친구 목록에서 친구를 누르면 그 친구의 구단주 프로필로 바로 가요"],
+  "en": {
+    "title": "Open friend profiles",
+    "items": ["Tap a friend in your friend list to open their owner profile."]
+  },
+  "ja": {
+    "title": "フレンドのプロフィールを表示",
+    "items": ["フレンド一覧でフレンドをタップすると、そのオーナープロフィールを開けます。"]
+  },
+  "zh": {
+    "title": "查看好友資料",
+    "items": ["在好友列表點選好友，即可開啟對方的球隊老闆資料。"]
+  },
+  "availability": "web-app"
+}

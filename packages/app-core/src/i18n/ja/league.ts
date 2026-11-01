@@ -7,7 +7,7 @@ export const league: Translation<LeagueMsgs> = {
   open: 'リーグを見る',
   loadFail: 'リーグ情報を読み込めませんでした。',
   pitch:
-    '1リーグ8チームがホーム・アウェーで2回ずつ対戦し、14節を戦います。順位で次のシーズンの部が上下します。',
+    '1リーグ8チームがシーズン終了の前日まで毎日1節ずつ、ホーム・アウェーで対戦します。シーズン終了時の順位で次のシーズンの部が上下します。',
   phaseSoon: '受付予定',
   phaseOpen: '受付中',
   phaseClosed: '組分け待ち',
@@ -22,13 +22,13 @@ export const league: Translation<LeagueMsgs> = {
   scheduleEntry: '申込',
   scheduleSeason: (p) => `シーズン${p.season}開幕`,
   scheduleDraw: '組分け・対戦発表',
-  scheduleRounds: '第1〜14節',
+  scheduleRounds: (p) => `第1〜${p.n}節`,
   date: (p) => `${p.month}月${p.day}日`,
   range: (p) => `${p.from} 〜 ${p.to}`,
   daily: (p) => `${p.from} 〜 ${p.to}、毎日${p.time}`,
   rulesTitle: 'ルール',
   ruleEntry:
-    'シーズン開幕の7日前から申し込めます。組分け時にそのシーズンのチームのスタメンに自分の引退選手が8人未満なら、リーグから外れます。',
+    '新しいシーズンの開幕後5日まで申し込めます。組分け時にそのシーズンのチームのスタメンに自分の引退選手が8人未満なら、リーグから外れます。',
   ruleTiers:
     '1部はリーグ1つ、2部は2つのように下の部ほどリーグが2倍に増えます。最初のシーズンは受付締切時のチームOVR順に上の部から埋めます。参加数によって7チームのリーグもあり、その場合は毎節1チームが休みます。',
   rulePoints:

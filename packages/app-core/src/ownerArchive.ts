@@ -14,7 +14,7 @@ export type ArchiveState = {
   detailError: boolean;
 };
 
-/** One summary request; full records only on expansion. Keep visited records while browsing seasons. */
+/** Load the selected closed season automatically; reuse its records while browsing seasons. */
 export class OwnerArchive {
   state: ArchiveState = {
     data: null,
@@ -27,6 +27,7 @@ export class OwnerArchive {
     detailError: false,
   };
   private epoch = 0;
+  private pending = new Map<number, ReturnType<typeof fetchSeasonRecap>>();
   private records = new Map<number, SeasonRecapResponse>();
   private listeners = new Set<(s: ArchiveState) => void>();
   subscribe(fn: (s: ArchiveState) => void) {
@@ -55,8 +56,9 @@ export class OwnerArchive {
       ? preferred
       : (seasons.at(-1)?.season ?? null);
     this.update({ data: r.data, loading: false, season });
+    await this.expand();
   }
-  select(season: number) {
+  async select(season: number) {
     if (season === this.state.season) return;
     this.epoch++;
     this.update({
@@ -66,27 +68,30 @@ export class OwnerArchive {
       detailLoading: false,
       detailError: false,
     });
+    await this.expand();
   }
   async expand(retry = false) {
     const season = this.state.season;
     if (season === null) return;
     const line = this.state.data?.owner.seasons.find((s) => s.season === season);
     if (!line?.closed) return;
-    if (this.state.expanded && !retry) {
-      this.epoch++;
-      this.update({ expanded: false, detailLoading: false });
-      return;
-    }
+    if (this.state.detailLoading) return;
     const found = this.records.get(season);
-    if (found && !retry) return this.update({ expanded: true, detail: found, detailError: false });
+    if (found && !retry) {
+      markRecapSeen(season);
+      return this.update({ expanded: true, detail: found, detailError: false });
+    }
     if (retry) invalidateApiCache('/v1/owner/season-recap');
     const epoch = ++this.epoch;
     this.update({ expanded: true, detailLoading: true, detailError: false, detail: null });
-    const r = await fetchSeasonRecap(season);
+    const request = this.pending.get(season) ?? fetchSeasonRecap(season);
+    this.pending.set(season, request);
+    const r = await request;
+    if (this.pending.get(season) === request) this.pending.delete(season);
+    if (r.ok && r.data.status === 'ready') this.records.set(season, r.data);
     if (epoch !== this.epoch) return;
     if (!r.ok) return this.update({ detailLoading: false, detailError: true });
     if (r.data.status === 'ready') {
-      this.records.set(season, r.data);
       markRecapSeen(season);
     }
     this.update({ detail: r.data, detailLoading: false });

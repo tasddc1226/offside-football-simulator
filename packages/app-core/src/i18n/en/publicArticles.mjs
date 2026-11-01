@@ -1,5 +1,5 @@
 // T-11-452 Public strategy articles (/guide/<slug>/). Plain ESM read by the Node SEO build; not an app runtime namespace.
-// Rules and numbers must match the game guide (apps/web/scripts/seo.mjs GUIDE_SECTIONS). A PR that changes a rule must update this file too.
+// Rules and numbers must match the game guide (i18n/<lang>/publicGuidePage.mjs). A PR that changes a rule must update this file too.
 export default [
   {
     slug: 'first-career',

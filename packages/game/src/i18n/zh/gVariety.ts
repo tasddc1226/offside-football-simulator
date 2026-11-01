@@ -1,0 +1,143 @@
+import type { Translation } from '@offside/contracts/i18n';
+import type { gVarietyText } from '../ko/gVariety';
+// derby.ts DERBY_PAIRS와 같은 순서의 더비 이름(리그 id → 이름 목록).
+const DERBY_NAMES: Record<string, string[]> = {
+  k2: ['水原德比', '洛東江德比', '忠清德比', '南海岸德比'],
+  k1: ['東海岸德比', '霸權德比', '鄉土德比', '京仁德比'],
+  j1: ['多摩川經典戰', '大阪德比', '東京德比', '日本國家德比'],
+  mls: ['El Tráfico', '哈德遜河德比', '卡斯卡迪亞德比', '德州德比'],
+  ere: ['荷蘭經典戰', '荷甲頂級對決', '鹿特丹德比', '北部德比'],
+  l1: ['法國經典戰', '巴黎德比', '北部德比', '蔚藍海岸德比'],
+  bl: ['德國經典戰', '漢堡德比', '萊茵德比', '北部德比'],
+  sa: ['米蘭德比', '羅馬德比', '都靈德比', '義大利國家德比'],
+  ll: ['西班牙國家德比', '馬德里德比', '塞維亞德比', '巴斯克德比'],
+  pl: ['曼徹斯特德比', '默西塞德德比', '北倫敦德比', '西北德比'],
+  csl: ['上海德比', '青島德比', '京津德比', '京滬德比'],
+  spl: ['利雅德德比', '吉達德比', '沙烏地經典戰'],
+  bra: ['弗拉-弗盧德比', '格雷米奧-國際德比', '聖保羅德比', '米納斯經典戰'],
+  por: ['葡萄牙經典戰', '里斯本德比', '米尼奧德比', '北部德比'],
+};
+
+export const gVariety: Translation<typeof gVarietyText> = {
+  derbyName: (p) => DERBY_NAMES[p.league]?.[p.k] ?? '',
+  derbyText: (p) =>
+    `${p.name}。與${p.opp}對決在即，整整一週整座城市都沸騰了。球場的氣氛和平常不一樣。`,
+  rivalText: (p) => `與${p.opp}的宿敵之戰。整整一週整座城市都沸騰了。球場的氣氛和平常不一樣。`,
+
+  examTitle: '期末考週',
+  examText: '離期末考只剩一週。班導師要你念書，總教練要你準備週末的聯賽。',
+  examTrainLabel: '繼續晚上的自主訓練',
+  examTrainOk: '一交完考卷你就跑向球場。週末的比賽中，身體最輕盈的就是你。',
+  examTrainFail: '每晚練球，上課時打起瞌睡。班導師打了電話給總教練。',
+  examStudyLabel: '專心準備考試',
+  examStudyOk: '你靠一夜苦讀撐過了考試。帶著休息三天的雙腿，你出賽週末的比賽。',
+
+  seniorTitle: '學長們的上下關係',
+  seniorText:
+    '大學足球隊的大一新生，從撿球到洗衣服都要負責。今天練習結束後，學長又把裝備袋丟了過來。',
+  seniorTalkLabel: '向總教練說出雜務的事',
+  seniorTalkOk:
+    '總教練召集全隊，取消了依年級分配的雜務。從隔天起，同屆的隊友們也會在你的位置放上水瓶。',
+  seniorTalkFail: '「才大一，話還真多。」傳聞散開後，學長們不再傳球給你。',
+  seniorBearLabel: '默默忍耐',
+  seniorBearOk: '你把裝備收拾好，留到很晚。看在眼裡的四年級隊長，一對一教了你盤球的訣竅。',
+
+  captainTitle: '隊長臂章',
+  captainText: '練習結束後，總教練把你叫去。「這次大賽，由你來當隊長。」',
+  captainTakeLabel: '戴上隊長臂章，帶領球隊',
+  captainTakeOk: '賽前圍圈時，你第一個大聲喊話。球隊在整個大賽期間一次也沒有崩盤。',
+  captainTakeFail: '同屆和學長之間意見分歧。大賽首戰，球隊在缺乏凝聚力的狀態下落敗。',
+  captainDeclineLabel: '說想專心踢球，婉拒',
+  captainDeclineOk: '隊長臂章交給了學長。比賽中你只專心尋找傳球路線。',
+
+  friendlyTitle: '與職業二軍的練習賽',
+  friendlyText: '職業俱樂部的二軍來當練習賽的對手。對方板凳席上，俱樂部的教練團翻開筆記本坐著。',
+  friendlyBoldLabel: '自信地正面挑戰職業球員的防守',
+  friendlyBoldOk: '你連續過掉兩名職業球員，製造出絕佳機會。賽後，對方教練問起你的背號。',
+  friendlyBoldFail: '在爭球中處處被壓制。你在場上深切體會到與職業球員的差距。',
+  friendlySafeLabel: '忠於基本功，不出差錯地踢',
+  friendlySafeOk: '一腳傳球都沒有浪費。總教練在比賽紀錄表上，把你的名字圈了起來。',
+
+  parentsTitle: '與父母共進晚餐',
+  parentsText: '餐桌上，父親小心翼翼地開口。「不要只想著足球，也考慮一下上大學怎麼樣？」',
+  parentsPersuadeLabel: '說服父母，說自己要賭上足球',
+  parentsPersuadeOk: '你們一起看了上一場比賽的影片，邊看邊聊。隔天，父親買了新球鞋回來。',
+  parentsPersuadeFail: '對話在沉默中結束。隔天早上，餐桌上放著補習班的傳單。',
+  parentsBothLabel: '答應會繼續念書',
+  parentsBothOk: '下課後念了一小時書，再前往訓練場。母親多做了一個便當給你。',
+
+  switchTitle: '轉移長傳',
+  switchText: '對手密密麻麻地聚在球周圍。另一側的邊鋒獨自舉著手。',
+  switchLongLabel: '用40公尺的對角長傳一口氣轉移',
+  switchLongOk: '球剛好落在邊鋒腳下。邊鋒直接切入，將球打進球門。助攻！',
+  switchLongFail: '傳球稍微長了一點。球出了邊線，看台傳來嘆息聲。',
+  switchShortLabel: '短傳串聯，等待機會',
+  switchShortOk: '你靠短傳持續控球。總教練在板凳席拍手。',
+
+  tempoTitle: '1比0，還剩10分鐘',
+  tempoText: '1比0領先的下半場80分鐘。總教練雙手向下壓，示意你們穩住。對手傾巢而出。',
+  tempoKeepLabel: '控球消耗時間',
+  tempoKeepOk: '最後10分鐘，對手幾乎碰不到球。以1比0獲勝。',
+  tempoKeepFail: '回傳太短。補時階段被對手追平。',
+  tempoKillLabel: '壓上空出的空間，爭取追加進球',
+  tempoKillOk: '你在反擊中跑到禁區前，低球推射入網。2比0，致命一擊！',
+  tempoKillFail: '射門被防守擋下，空出來的中場遭到反擊。總教練搖了搖頭。',
+
+  crossTitle: '邊路傳中',
+  crossText: '邊鋒突破了邊路。傳中出腳前，你看見兩名後衛之間有空檔。',
+  crossNearLabel: '衝向近柱',
+  crossNearOk: '你搶在後衛之前把頭伸了進去。球擦過門將的指尖，網窩應聲而動。',
+  crossNearFail: '早了一拍。球從你的頭頂飛了過去。',
+  crossFarLabel: '在遠柱等球',
+  crossFarOk: '防守全員向近柱收縮。獨自留在遠柱的你，凌空把球推進網窩。',
+  crossFarFail: '傳中太短。後衛搶先解圍了。',
+
+  chaseTitle: '逼搶門將',
+  chaseText: '對方後衛向門將送出一記軟綿綿的回傳。離門將有20公尺。',
+  chaseRunLabel: '衝到最後',
+  chaseRunOk: '門將大腳解圍的球打在你的腿上，滾進了空門。',
+  chaseRunFail: '慢了一步。門將沉著地把球踢向邊路。',
+  chaseHoldLabel: '守住位置，保留體力',
+  chaseHoldOk: '你保持陣型，調整呼吸。直到下半場尾聲，雙腿都不曾沉重。',
+
+  trapTitle: '越位陷阱',
+  trapText: '對手最前線排出了三名前鋒。站在最後防線中央的你，必須決定防線的高度。',
+  trapUpLabel: '推高防線，設下陷阱',
+  trapUpOk: '邊裁的旗子舉了起來。對方三名前鋒一起陷入越位。',
+  trapUpFail: '有一人沒跟上防線推進。對方前鋒與門將單刀對決，失了一球。',
+  trapDropLabel: '退守深位，守住禁區',
+  trapDropOk: '你把禁區前守得密不透風。對手上半場只有遠射。',
+
+  adviceTitle: '老將學長的提議',
+  adviceText: '球隊最年長的學長在練習後叫住你。「明天開始早30分鐘來，我帶你。」',
+  adviceJoinLabel: '每天早上一起練習',
+  adviceJoinOk: '一個月來，每天早上都和學長互傳。接球前先轉頭看的習慣就養成了。',
+  adviceJoinFail: '晨練加上全隊練習，雙腿撐不住。最後還是休息了三天。',
+  adviceOwnLabel: '說很感謝，但想照自己的方式來',
+  adviceOwnOk: '學長笑著拍了拍你的肩膀。「這樣啊，卡關的時候隨時來找我。」',
+
+  snsTitle: '第一次遭到惡意攻擊',
+  snsText: '上一場比賽的失誤影片底下，被留了好幾百則惡意留言。手機的通知響個不停。',
+  snsReplyLabel: '下一場比賽後親自回覆',
+  snsReplyOk:
+    '你附上下一場比賽的精彩影片，簡短地留言。「我會更努力。」這則回覆底下湧入了好幾千則加油留言。',
+  snsReplyFail: '回覆的瞬間，截圖就被瘋傳。報導的標題上出現了你的名字。',
+  snsOffLabel: '刪掉App，專心練習',
+  snsOffOk: '你把手機收進置物櫃，前往訓練場。那天晚上很早就睡著了。',
+
+  recoveryTitle: '變慢的恢復',
+  recoveryText: (p) => `比賽隔天早上，連下樓梯都吃力。自費聘請恢復專職的訓練師，費用是${p.fee}。`,
+  recoveryHireLabel: '自費聘請訓練師',
+  recoveryHireOk: '你每天持續冷水浴和睡眠管理。原本要三天的恢復縮短成兩天。',
+  recoveryRestLabel: '向總教練請求輪替',
+  recoveryRestOk: '總教練讓你缺席了週中的比賽。你帶著輕盈的雙腿迎接週末的比賽。',
+  recoveryRestFail: '「我還需要你。」總教練搖搖頭，下一場比賽的名單上仍有你的名字。',
+
+  mentorTitle: '年輕球員的請託',
+  mentorText: '19歲的新人在你的置物櫃前扭扭捏捏。「前輩，您賽前都是怎麼準備的？」',
+  mentorTeachLabel: '練習後留下來，一項一項示範給他看',
+  mentorTeachOk:
+    '從伸展到賽前飲食，你一項一項示範給他看。一個月後，新人踢進了初登場進球，朝你奔來。',
+  mentorRestLabel: '笑著說照顧自己的身體要優先，婉拒',
+  mentorRestOk: '你只簡短給了幾句建議，就前往恢復室。那天晚上睡得很沉。',
+};

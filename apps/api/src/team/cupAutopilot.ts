@@ -14,6 +14,7 @@ import { SERVICE_SEASONS, teamSeasonAt } from '@offside/contracts/service-season
 import { createDb, type Db } from '../db/client.js';
 import { cupKo, cupTitle } from '../cupText.js';
 import type { Bindings } from '../env.js';
+import { notifyHook, postNotify } from '../notifyHook.js';
 import { cupSchedule } from './cupSchedule.js';
 
 // T-11-251 오프사이드 컵 자동 운영. 5분 cron이 runCup 뒤에 부른다.
@@ -268,8 +269,8 @@ export async function postStallAlerts(
   now: string,
 ) {
   if (!stalls.length || !env.BILLING_SLACK_WEBHOOK || env.ENVIRONMENT !== 'production') return [];
-  const url = new URL(env.BILLING_SLACK_WEBHOOK);
-  if (url.origin !== 'https://hooks.slack.com' || !url.pathname.startsWith('/services/')) return [];
+  const hook = notifyHook(env.BILLING_SLACK_WEBHOOK);
+  if (!hook) return [];
   const fresh: string[] = [];
   for (const s of stalls) {
     const res = await d1
@@ -280,13 +281,7 @@ export async function postStallAlerts(
   }
   if (!fresh.length) return [];
   const text = [head, ...fresh.map((t) => `• ${t}`)].join('\n');
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ text }),
-    signal: AbortSignal.timeout(10_000),
-  });
-  if (!response.ok) throw new Error(`${prefix} rejected ${response.status}`);
+  if (!(await postNotify(hook, { text }))) throw new Error(`${prefix} rejected`);
   return fresh;
 }
 

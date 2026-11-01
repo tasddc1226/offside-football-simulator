@@ -82,7 +82,7 @@ export const CUP_KO = {
   droppedBody: '추첨 시각에 선발 선수가 {n}명보다 적어 참가할 수 없었어요.',
   cancelledTitle: '{cup} 개최가 취소됐어요',
   cancelledBody: '참가 팀이 너무 적어 이번 대회는 취소됐어요.',
-  drawTitle: '{cup} 조 추첨 결과',
+  drawTitle: '{cup} 조 편성 완료',
   drawBody: '{team} 팀은 {group}조예요. 첫 경기는 오늘 {time}에 열려요.',
   matchTitle: '오프사이드 컵 {round} · {result}',
   champion: '우승',

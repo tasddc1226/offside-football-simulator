@@ -9,6 +9,11 @@ on:
         default: preflight
         type: choice
         options: [preflight, deploy]
+      skip_release_notes:
+        description: 'Skip publishing in-game release notes for this deployment'
+        required: true
+        default: false
+        type: boolean
       expected_sha:
         description: 'Exact main commit SHA to inspect or deploy'
         required: true
@@ -49,11 +54,8 @@ jobs:
       VITE_GA4_HOSTNAME: ${{ vars.VITE_GA4_HOSTNAME }}
       # T-11-195 Meta pixel for web ad measurement. Loads only after consent on the GA4 production host; empty disables it.
       VITE_META_PIXEL_ID: ${{ vars.VITE_META_PIXEL_ID }}
-      # T-11-061 web ads. Empty until the AdSense site is approved and ad units exist; no slots render without them.
-      VITE_ADSENSE_CLIENT: ${{ vars.VITE_ADSENSE_CLIENT }}
-      VITE_ADSENSE_HOSTNAME: ${{ vars.VITE_ADSENSE_HOSTNAME }}
-      VITE_ADSENSE_SLOTS: ${{ vars.VITE_ADSENSE_SLOTS }}
-      VITE_ADFIT_UNITS: ${{ vars.VITE_ADFIT_UNITS }}
+      # T-11-589 통신판매업 사업자 정보(JSON: name · owner · regNo · mailOrderNo · address · phone). 공개 저장소라 코드에 두지 않는다. 비면 푸터 · 약관에 안 보인다.
+      BUSINESS_INFO: ${{ vars.BUSINESS_INFO }}
     steps:
       - name: Require main and explicit deploy confirmation
         env:
@@ -123,6 +125,12 @@ jobs:
         run: |
           VITE_API_BASE_URL="$PRODUCTION_API_URL" pnpm --filter @offside/web build
           pnpm --filter @offside/web check:bundle
+
+      # T-11-572 운영 지표 대시보드(admin.offside-lab.com). Cloudflare Access(운영자 메일 1개)를 건 뒤
+      # 저장소 변수 ADMIN_DASHBOARD_ENABLED=1을 켜야 배포한다(Access 없이 주소가 열리지 않게).
+      - name: Build admin dashboard
+        if: inputs.mode == 'deploy' && vars.ADMIN_DASHBOARD_ENABLED == '1'
+        run: pnpm --filter @offside/admin build
 
       - name: Capture recovery bookmark and inspect current schema
         id: schema
@@ -205,6 +213,13 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node .github/scripts/acquisition-release.mjs deploy-web production
 
+      - name: Deploy admin dashboard
+        if: inputs.mode == 'deploy' && vars.ADMIN_DASHBOARD_ENABLED == '1'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: pnpm --filter @offside/admin deploy:production
+
       - name: Verify candidate web assets before read-back
         if: inputs.mode == 'deploy'
         run: node tooling/scripts/web-readiness.mjs "$PRODUCTION_WEB_URL" apps/web/dist
@@ -263,7 +278,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [current, '1.1.5', '1.1.4', '1.1.3', '1.1.2']
+        target: [current, '1.1.6', '1.1.5', '1.1.4']
         platform: [ios, android]
     needs: production-release
     # Preflight computes real production fingerprints without publishing any update.
@@ -299,32 +314,22 @@ jobs:
         with:
           eas-version: 24.8.0
           token: ${{ secrets.EXPO_TOKEN }}
-      - name: Prepare reviewed 1.1.2 native compatibility
-        if: env.EXPO_TOKEN != '' && matrix.target == '1.1.2'
-        run: node .github/scripts/prepare-ota-112.mjs prepare
-      # T-11-453 1.1.4에서 미디에이션 어댑터(네이티브)만 더했다. 1.1.3 빌드에는 앱 설정만 1.1.3 모양으로 되돌려 같은 JS를 보낸다.
-      - name: Prepare reviewed 1.1.3 native compatibility
-        if: env.EXPO_TOKEN != '' && matrix.target == '1.1.3'
-        run: node .github/scripts/prepare-ota-113.mjs prepare
-      # T-11-563 1.1.6에서 Meta 앱 이벤트(네이티브, Android)만 더했다. 1.1.5 빌드에는 app.json을 되돌리고 새 네이티브를 빼 같은 JS를 보낸다.
-      - name: Prepare reviewed 1.1.5 native compatibility
-        if: env.EXPO_TOKEN != '' && matrix.target == '1.1.5'
-        run: node .github/scripts/prepare-ota-115.mjs prepare
+      # T-11-559 1.1.2 · 1.1.3 OTA는 끝냈다(최소 앱 버전 1.1.4, 낮은 앱은 스토어 업데이트 팝업).
       # T-11-516 1.1.5는 앱 버전만 올렸다. 1.1.4 빌드에는 app.json만 1.1.4 모양으로 되돌려 같은 JS를 보낸다.
-      - name: Prepare reviewed 1.1.4 native compatibility
-        if: env.EXPO_TOKEN != '' && matrix.target == '1.1.4'
-        run: node .github/scripts/prepare-ota-114.mjs prepare
+      # T-11-600 1.1.6은 Skia(네이티브)를 더했다. 1.1.5 · 1.1.4 빌드에는 Skia를 빼고 라운지 필드 입구를 비워 같은 JS를 보낸다.
+      # T-11-563 1.1.7은 Meta 앱 이벤트(안드로이드 네이티브)를 더했다. 1.1.6 · 1.1.5 · 1.1.4 빌드에는 그 모듈 · 플러그인을 빼고 같은 JS를 보낸다.
+      - name: Prepare reviewed legacy native compatibility
+        if: env.EXPO_TOKEN != '' && matrix.target != 'current'
+        run: node .github/scripts/prepare-ota-legacy.mjs prepare "$OTA_TARGET"
       # eas는 app.json 플러그인(expo-router 등)을 풀어야 해서 update:list 조회 전에 설치가 필요하다.
       # 설치 없이 돌면 stdout에 "Failed to resolve plugin …"이 찍혀 jq가 깨지고 늘 게시로 빠졌다(T-11-014).
       - uses: pnpm/action-setup@v4
         if: env.EXPO_TOKEN != ''
       - run: pnpm install --frozen-lockfile --filter @offside/mobile...
-        if: env.EXPO_TOKEN != ''
-      - name: Validate compatibility adapter
-        if: env.EXPO_TOKEN != '' && matrix.target == '1.1.2'
-        run: |
-          pnpm --filter @offside/mobile typecheck
-          pnpm --filter @offside/game exec vitest run --config ../../apps/mobile/vitest.push.config.mjs rewarded.test.mjs
+        if: env.EXPO_TOKEN != '' && matrix.target == 'current'
+      # 옛 빌드 overlay는 앱 의존성을 뺐으므로 잠금 파일을 그 자리에서 맞춘다(커밋하지 않는 일회용 체크아웃).
+      - run: pnpm install --no-frozen-lockfile --filter @offside/mobile...
+        if: env.EXPO_TOKEN != '' && matrix.target != 'current'
       - name: Pull EAS production env (including file variables)
         if: env.EXPO_TOKEN != ''
         working-directory: apps/mobile
@@ -342,14 +347,8 @@ jobs:
         run: |
           json() { sed -n '/^[{[][]}]\{0,1\}$/,$p'; }
           FP="$(eas fingerprint:generate --platform "$PLATFORM" --environment production --json --non-interactive | json | jq -er '.hash')"
-          if [ "$OTA_TARGET" = '1.1.2' ]; then
-            node ../../.github/scripts/prepare-ota-112.mjs check "$PLATFORM" "$FP"
-          elif [ "$OTA_TARGET" = '1.1.3' ]; then
-            node ../../.github/scripts/prepare-ota-113.mjs check "$PLATFORM" "$FP"
-          elif [ "$OTA_TARGET" = '1.1.4' ]; then
-            node ../../.github/scripts/prepare-ota-114.mjs check "$PLATFORM" "$FP"
-          elif [ "$OTA_TARGET" = '1.1.5' ]; then
-            node ../../.github/scripts/prepare-ota-115.mjs check "$PLATFORM" "$FP"
+          if [ "$OTA_TARGET" != 'current' ]; then
+            node ../../.github/scripts/prepare-ota-legacy.mjs check "$OTA_TARGET" "$PLATFORM" "$FP"
           else
             node ../../.github/scripts/ota-store-runtime.mjs "$PLATFORM" "$FP"
           fi
@@ -370,9 +369,7 @@ jobs:
           fi
           if [ -n "$BASE" ] && git cat-file -e "$BASE^{commit}" 2>/dev/null \
             && git diff --quiet "$BASE" HEAD -- . ../../packages ../../package.json ../../pnpm-lock.yaml \
-              ../../.github/scripts/prepare-ota-112.mjs ../../.github/scripts/prepare-ota-113.mjs \
-              ../../.github/scripts/prepare-ota-114.mjs ../../.github/scripts/prepare-ota-115.mjs \
-              ../../.github/workflows/deploy-production.yml; then
+              ../../.github/scripts/prepare-ota-legacy.mjs ../../.github/workflows/deploy-production.yml; then
             echo "$OTA_TARGET / $PLATFORM: unchanged since ${BASE:0:7}; skipped." >> "$GITHUB_STEP_SUMMARY"
             echo "publish=false" >> "$GITHUB_OUTPUT"
           else
@@ -439,7 +436,7 @@ jobs:
   release-notes:
     name: Publish in-game release notes
     needs: [production-release, app-update, release-tag]
-    if: inputs.mode == 'deploy'
+    if: inputs.mode == 'deploy' && !inputs.skip_release_notes
     runs-on: ubuntu-latest
     timeout-minutes: 5
     environment:

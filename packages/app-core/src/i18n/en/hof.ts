@@ -29,7 +29,6 @@ export const hof: Translation<HofMsgs> = {
   season: 'Season',
   seasonAria: 'Record season',
   allSeasons: 'All seasons',
-  notOpen: ' (opens soon)',
   filter: 'Filter',
   filterLabel: (p) => `Filter, ${p.pos}, ${p.sort}`,
   filterA11y: (p) => `Filter, ${p.label}`,

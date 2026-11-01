@@ -32,6 +32,7 @@ import { SelectField } from '../settings/parts';
 import { ownerPlayersText as L } from '@offside/app-core/i18n/ko/ownerPlayers';
 import { useRefresh } from '../../ui/refresh';
 import { useSeasonNow } from '../../ui/useSeasonNow';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 type MineRow = {
   nation?: string | undefined;
@@ -193,7 +194,7 @@ export function MyPlayers() {
               label={L.seasonGroup}
               testID="my-season"
               value={season}
-              options={seasons.map((s) => ({ value: s.id, label: s.name }))}
+              options={seasonOptions(seasons, now)}
               onChange={(v) => {
                 appState.playersSeason = v;
               }}

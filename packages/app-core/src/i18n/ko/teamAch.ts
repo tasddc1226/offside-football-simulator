@@ -25,6 +25,11 @@ const ko = {
   perkHonor:
     '구단주 랭킹 1위·상위 10위·상위 100위 안에 들면 시즌 결산에 기록 배지가 영구히 남아요.',
   perkNote: '업적 점수는 경기 결과에는 영향을 주지 않아요.',
+  // T-11-541 점수 보너스(업적 점수 every점마다 끝없이).
+  bonusTitle: '점수 보너스',
+  bonusNext: (p: { pts: string; items: string }) => `${p.pts}점에 ${p.items}`,
+  bonusGot: (p: { items: string }) => `받은 보너스 ${p.items}`,
+  bonusNote: (p: { every: string }) => `업적 점수 ${p.every}점마다 받아요. 상한은 없어요.`,
   nextGoal: '다음 목표',
   worthPlus: (p: { n: string }) => `+${p.n}점`,
   catsAria: '업적 분류',

@@ -3,11 +3,11 @@
 import type { Tool } from './claude.ts';
 import type { Env, Role } from './env.ts';
 import { kstDay, ledger, type Memory } from './ledger.ts';
-import { threadLink } from './slack.ts';
+import { threadLink } from './chat.ts';
 import type { Task } from './thread.ts';
 
-const line = (m: Memory) =>
-  `- ${kstDay(m.at)} ${m.kind === 'card' ? '카드' : '결정'}(@${m.role}): ${m.text} · ${threadLink(m.channel, m.threadTs)}`;
+const line = (env: Env, m: Memory) =>
+  `- ${kstDay(m.at)} ${m.kind === 'card' ? '카드' : '결정'}(@${m.role}): ${m.text} · ${threadLink(env, m.channel, m.threadTs)}`;
 
 type Recall = Pick<ReturnType<typeof ledger>, 'recall' | 'remember'>;
 
@@ -22,7 +22,7 @@ export function memoryTools(env: Env, role: Role, task: Task, store?: Recall): T
       input_schema: { type: 'object', properties: { query: { type: 'string' } } },
       run: async (input) => {
         const found = await db().recall(typeof input.query === 'string' ? input.query : '', 8);
-        return found.length ? found.map(line).join('\n') : '찾은 기억 없음';
+        return found.length ? found.map((m) => line(env, m)).join('\n') : '찾은 기억 없음';
       },
     },
   ];

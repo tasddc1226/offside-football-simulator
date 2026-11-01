@@ -18,6 +18,9 @@ const f = vi.hoisted(() => {
     releaseType: 5,
     platform: 'ios',
     rejectNullRegistration: false,
+    session: 'test-session',
+    permission: { granted: true, canAskAgain: true },
+    asked: [],
   };
   fixture.getReleaseType = vi.fn(async () => fixture.releaseType);
   fixture.autoRegistration = vi.fn(async () => {
@@ -52,8 +55,14 @@ vi.mock('expo-notifications', () => ({
   setAutoServerRegistrationEnabledAsync: f.autoRegistration,
   setNotificationChannelAsync: async () => {},
   AndroidImportance: { DEFAULT: 3 },
-  getPermissionsAsync: async () => ({ granted: true, canAskAgain: true }),
-  requestPermissionsAsync: async () => ({ granted: true, canAskAgain: true }),
+  IosAuthorizationStatus: { NOT_DETERMINED: 0, DENIED: 1, AUTHORIZED: 2, PROVISIONAL: 3 },
+  getPermissionsAsync: async () => f.permission,
+  requestPermissionsAsync: async (options) => {
+    f.asked.push(options);
+    if (options?.ios?.allowProvisional)
+      f.permission = { granted: false, canAskAgain: true, ios: { status: 3 } };
+    return f.permission;
+  },
   setNotificationHandler: () => {},
   getLastNotificationResponse: () => f.lastResponse,
   clearLastNotificationResponseAsync: async () => {},
@@ -105,7 +114,7 @@ vi.mock('valtio', () => ({ proxy: (state) => state }));
 vi.mock('@offside/app-core/api/client', () => ({ apiFetch: f.api }));
 vi.mock('./session', () => ({
   ensureSession: async () => true,
-  sessionToken: () => 'test-session',
+  sessionToken: () => f.session,
   onSessionChanged() {},
 }));
 vi.mock('./inbox', () => ({
@@ -138,6 +147,9 @@ beforeEach(() => {
   f.releaseType = 5;
   f.platform = 'ios';
   f.rejectNullRegistration = false;
+  f.session = 'test-session';
+  f.permission = { granted: true, canAskAgain: true };
+  f.asked.length = 0;
 });
 async function app() {
   const p = await import('./push.ts');
@@ -364,5 +376,70 @@ describe('notification inbox routing and unified push subscription', () => {
     await p.pushRegistration.setEnabled(false);
     expect(p.pushState.enabled).toBe(false);
     expect(f.requests.at(-1).path).toBe('/v1/push/device');
+  });
+});
+
+describe('T-11-586 iOS quiet (provisional) notifications', () => {
+  const quiet = { granted: false, canAskAgain: true, ios: { status: 3 } };
+  const device = () => f.requests.filter((r) => r.path === '/v1/push/device');
+  it('asks once without a dialog and registers the device, leaving the opt-in ask open', async () => {
+    f.permission = { granted: false, canAskAgain: true, ios: { status: 0 } };
+    const p = await import('./push.ts');
+    await p.quietPush();
+    expect(f.asked).toEqual([
+      { ios: { allowAlert: true, allowBadge: true, allowSound: true, allowProvisional: true } },
+    ]);
+    expect(device()).toHaveLength(1);
+    expect(f.values.get('offside_push_quiet')).toBe(true);
+    expect(p.pushState.enabled).toBe(false);
+    f.permission = { granted: false, canAskAgain: true, ios: { status: 0 } };
+    f.values.delete('offside_push_quiet');
+    await p.quietPush();
+    expect(f.asked).toHaveLength(1);
+  });
+  it('skips Android, devices without an app session and anyone already asked', async () => {
+    f.permission = { granted: false, canAskAgain: true, ios: { status: 0 } };
+    f.platform = 'android';
+    let p = await import('./push.ts');
+    await p.quietPush();
+    f.platform = 'ios';
+    f.session = null;
+    await p.quietPush();
+    f.session = 'test-session';
+    f.permission = { granted: false, canAskAgain: false, ios: { status: 1 } };
+    vi.resetModules();
+    p = await import('./push.ts');
+    await p.quietPush();
+    expect(f.asked).toEqual([]);
+    expect(f.requests).toEqual([]);
+  });
+  it('removes the device after quiet delivery is turned off in Notification Center', async () => {
+    f.values.set('offside_push_quiet', true);
+    f.permission = { granted: false, canAskAgain: false, ios: { status: 1 } };
+    const p = await import('./push.ts');
+    await p.quietPush();
+    expect(f.api).toHaveBeenCalledWith(
+      '/v1/push/device',
+      expect.objectContaining({ method: 'DELETE' }),
+    );
+    expect(f.values.has('offside_push_quiet')).toBe(false);
+  });
+  it('turns into a normal subscription when the user keeps notifications', async () => {
+    f.values.set('offside_push_quiet', true);
+    f.permission = { granted: true, canAskAgain: true, ios: { status: 2 } };
+    const p = await import('./push.ts');
+    await p.quietPush();
+    expect(p.pushState.enabled).toBe(true);
+    expect(f.values.get('offside_push_wanted')).toBe(true);
+    expect(f.values.has('offside_push_quiet')).toBe(false);
+    expect(f.asked).toEqual([]);
+  });
+  it('keeps a quiet device registered on later launches', async () => {
+    f.values.set('offside_push_quiet', true);
+    f.permission = quiet;
+    const p = await import('./push.ts');
+    await p.quietPush();
+    expect(device()).toHaveLength(1);
+    expect(f.asked).toEqual([]);
   });
 });

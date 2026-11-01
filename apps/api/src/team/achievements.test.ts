@@ -669,11 +669,16 @@ describe('업적 영어 문구(T-11-106)', () => {
     }
     expect(item(en, 'goals')).toMatchObject({ label: 'Goals', unit: ' goals', cur: 120, level: 1 });
     expect(en[0]).toMatchObject({ stage: 'Stage 0', title: 'Where the story starts' });
+    // T-11-588 영어 · 일본어 · 번체 중국어 모두 제목 · 단계 · 이름 · 단위 · 설명에 한글이 없다.
+    for (const lang of ['en', 'ja', 'zh'] as const)
+      for (const g of localizeAchievements(ko, lang)) {
+        expect(`${g.title} ${g.stage}`, lang).not.toMatch(hangul);
+        for (const i of g.items)
+          expect(`${i.label} ${i.unit ?? ''} ${i.desc ?? ''}`, `${lang} ${i.id}`).not.toMatch(
+            hangul,
+          );
+      }
     const ja = localizeAchievements(ko, 'ja');
-    for (const g of ja) {
-      expect(`${g.title} ${g.stage}`).not.toMatch(hangul);
-      for (const i of g.items) expect(`${i.label} ${i.unit ?? ''}`, i.id).not.toMatch(hangul);
-    }
     expect(item(ja, 'goals')).toMatchObject({ label: 'ゴール', unit: 'ゴール', cur: 120 });
     expect(item(ja, 'age-40')?.label).toBe('40歳まで現役');
   });

@@ -14,6 +14,8 @@ export const owner: Translation<OwnerMsgs> = {
   valueInfoOwned: 'Includes players you developed and signed, across all seasons.',
   valueInfoPrice:
     'A card uses the highest market value among the seasons in which the player reached their peak OVR. Market value depends on league wealth, OVR and age, so playing on after the peak never lowers it.',
+  valueInfoAge:
+    'Market value has an age multiplier: ×5 up to 24, ×4 at 25–29 and ×2 from 30. A player who reached peak OVR after turning 30 can have a base value below the top market value in their career record.',
   valueInfoFallback:
     'If that season has no market value, the most valuable professional season is used. Without professional records, the base value is ₩100 million.',
   valueInfoExcluded: 'Listing prices and legend scores are not added directly.',
@@ -68,6 +70,15 @@ export const owner: Translation<OwnerMsgs> = {
   lockBadge: '\u{1F512}︎ Unlocks when you log in',
   accountSection: 'Account',
   adminTools: 'Admin tools',
+  shortcutsHeading: 'Shortcuts',
+  tilePlayers: 'Your players · growth records',
+  tileMarket: 'Buy and sell players',
+  tileExchange: 'Turn retired players into items',
+  tileManager: 'Carry on as a manager',
+  tileHall: 'Season records · titles',
+  shopTitle: 'Shop',
+  tileShop: 'Rerolls · boosts · scout tickets',
+  shopLoginNeeded: 'Sign in as a club owner to use the shop.',
   teamEmptyWith: (p) =>
     `You can build a team from your ${plural(p.n, 'player')} who retired in ${p.season}. Youth players fill any empty spots.`,
   teamEmptyNone: (p) =>

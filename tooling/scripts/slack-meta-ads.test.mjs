@@ -4,8 +4,8 @@ const env = {
   META_AD_ACCOUNT_ID: '123',
   META_GRAPH_VERSION: 'v25.0',
   META_ADS_ACCESS_TOKEN: 'private-token',
-  SLACK_DAILY_WEBHOOK: 'https://hooks.slack.com/services/daily',
-  SLACK_ALERTS_WEBHOOK: 'https://hooks.slack.com/services/alerts',
+  SLACK_DAILY_WEBHOOK: 'https://discord.com/api/webhooks/1/daily',
+  SLACK_ALERTS_WEBHOOK: 'https://discord.com/api/webhooks/1/alerts',
 };
 const now = Date.parse('2026-10-12T00:05:00Z');
 function fixture() {
@@ -14,7 +14,7 @@ function fixture() {
   let ads = [];
   let fail = false;
   const fetcher = vi.fn(async (url, opts) => {
-    if (url.includes('hooks.slack.com')) {
+    if (url.includes('discord.com/api/webhooks')) {
       if (fail) return new Response('failed', { status: 500 });
       sent.push(JSON.parse(opts.body));
       return new Response('ok');
@@ -68,9 +68,10 @@ describe('Meta read-only reporting', () => {
   it('summarizes LPV without calling it purchase and skips repeat queries', async () => {
     const x = fixture();
     await metaAds(x.db, env, 'daily', now, x.fetcher);
-    expect(x.sent[0].text).toContain('조회당 비용 150 KRW');
-    expect(x.sent[0].text).toContain('가입·앱 설치·구매가 아닙니다');
-    expect(x.sent[0].text).not.toContain('<!channel>');
+    expect(x.sent[0].content).toContain('조회당 비용 150 KRW');
+    expect(x.sent[0].content).toContain('가입·앱 설치·구매가 아닙니다');
+    // 광고 이름에 든 멘션 문구는 글자로만 남고 알림은 가지 않는다(allowed_mentions).
+    expect(x.sent[0].allowed_mentions).toEqual({ parse: [] });
     await metaAds(x.db, env, 'daily', now, x.fetcher);
     expect(x.sent).toHaveLength(1);
     expect(x.fetcher.mock.calls.filter(([u]) => u.includes('/insights'))).toHaveLength(1);
@@ -85,7 +86,7 @@ describe('Meta read-only reporting', () => {
     await metaAds(x.db, env, 'monitor', now, x.fetcher);
     await metaAds(x.db, env, 'monitor', now, x.fetcher);
     expect(x.sent).toHaveLength(1);
-    expect(x.sent[0].text).toContain('심사 거절');
+    expect(x.sent[0].content).toContain('심사 거절');
     x.setAds([{ id: '1', name: 'ad', effective_status: 'ACTIVE' }]);
     await metaAds(x.db, env, 'monitor', now, x.fetcher);
     expect(x.sent).toHaveLength(2);

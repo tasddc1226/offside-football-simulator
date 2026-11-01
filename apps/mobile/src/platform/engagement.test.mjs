@@ -197,7 +197,7 @@ describe('native store review adapter', () => {
     async (platform) => {
       f.platform = platform;
       const r = await import('./review.ts');
-      expect(await r.reviewPrompt.afterCareer('career-1', () => true)).toBe(true);
+      expect(await r.reviewPrompt.afterHighlight('career-1', () => true)).toBe(true);
       expect(f.request).toHaveBeenCalledOnce();
       expect(f.open).not.toHaveBeenCalled();
     },
@@ -205,7 +205,7 @@ describe('native store review adapter', () => {
   it('skips automatic review on an old binary with no module', async () => {
     f.native = false;
     const r = await import('./review.ts');
-    expect(await r.reviewPrompt.afterCareer('career-1', () => true)).toBe(false);
+    expect(await r.reviewPrompt.afterHighlight('career-1', () => true)).toBe(false);
     expect(f.request).not.toHaveBeenCalled();
     expect(f.save).not.toHaveBeenCalled();
   });
@@ -221,7 +221,7 @@ describe('native store review adapter', () => {
           : 'https://play.google.com/store/apps/details?id=com.offsidelab.app&showAllReviews=true',
       );
       expect(f.request).not.toHaveBeenCalled();
-      expect(await r.reviewPrompt.afterCareer('career-1', () => true)).toBe(false);
+      expect(await r.reviewPrompt.afterHighlight('career-1', () => true)).toBe(false);
     },
   );
   it('leaves the automatic review cooldown untouched if the explicit store link fails', async () => {
@@ -234,7 +234,7 @@ describe('native store review adapter', () => {
     f.save.mockReturnValue(false);
     const r = await import('./review.ts');
     await expect(r.openReviewStore()).resolves.toBeUndefined();
-    expect(await r.reviewPrompt.afterCareer('career-1', () => true)).toBe(false);
+    expect(await r.reviewPrompt.afterHighlight('career-1', () => true)).toBe(false);
     expect(f.request).not.toHaveBeenCalled();
   });
 });

@@ -84,6 +84,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '커리어당 추가 강화 횟수',
     desc: '자금이 모자란 시즌의 강화 추가 시도 횟수(커리어 전체). 0이면 없다',
   },
+  boostGreat: {
+    group: 'growth',
+    label: '잠재력 강화 대성공 비율',
+    desc: '강화 성공 중 두 단계를 한 번에 올리는 비율(대성공 확률 = 성공 확률 × 이 값). 마지막 단계 시도엔 없다. 0이면 끈다',
+  },
   careCost: {
     group: 'growth',
     label: '몸 관리 비용 배율',
@@ -103,6 +108,36 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'growth',
     label: '스카우트 평가 오차',
     desc: '화면에 보이는 스카우트 평가가 실제 잠재력에서 벗어나는 표준편차 — 0이면 평가가 정확하다',
+  },
+  bloomDrift: {
+    group: 'growth',
+    label: '숨은 잠재력 흔들림',
+    desc: '스카우트 평가에 안 보이는 숨은 잠재력이 해마다 흔들리는 표준편차 — 클수록 재평가에서 크게 오르내린다',
+  },
+  bloomAge: {
+    group: 'growth',
+    label: '숨은 잠재력 고정 나이',
+    desc: '이 나이까지 숨은 잠재력이 해마다 흔들리고, 그 뒤로는 멈춘다',
+  },
+  rescoutShare1: {
+    group: 'growth',
+    label: '21세 재평가 반영 몫',
+    desc: '21세 스카우트 재평가가 그때까지 쌓인 숨은 잠재력 중 평가에 옮기는 비율',
+  },
+  rescoutShare2: {
+    group: 'growth',
+    label: '24세 재평가 반영 몫',
+    desc: '24세 스카우트 재평가가 남은 숨은 잠재력 중 평가에 옮기는 비율',
+  },
+  rescoutDownScale: {
+    group: 'growth',
+    label: '재평가 하락 비율',
+    desc: '재평가가 잠재력을 깎을 때 실제로 깎는 비율 — 1이면 그대로, 0.7이면 30%는 없던 일로 한다',
+  },
+  rescoutDropCap: {
+    group: 'growth',
+    label: '재평가 한 번 최대 하락',
+    desc: '재평가 한 번에 잠재력이 내려가는 최대 폭(99면 제한 없음). 넘는 몫은 없던 일로 한다',
   },
   premiumSMult: {
     group: 'growth',
@@ -148,6 +183,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'national',
     label: 'A대표팀 전력',
     desc: '월드 챔피언십·아시안컵·A매치에서 한국 대표팀 전력',
+  },
+  agKoreaBonus: {
+    group: 'national',
+    label: '아시안게임 한국 전력 보정', // i18n-ignore admin-only copy
+    desc: '아시안게임에서만 한국 U-23 전력에 더한다. 올림픽과 다른 국적에는 적용하지 않는다', // i18n-ignore admin-only copy
   },
   koreaU23: {
     group: 'national',
@@ -218,6 +258,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'team',
     label: '리그 홈 이점',
     desc: '오프사이드 리그 경기에서 홈 팀 기대 득점에 곱하는 배율. 1이면 홈 이점 없음. 랭크 경기 · 친선은 1.08 고정',
+  },
+  leagueFatigue: {
+    group: 'team',
+    label: '리그 체력',
+    desc: '오프사이드 리그에 연속 선발로 나간 선수의 자리 실력을 단계마다 깎는 비율. 3경기 연속부터 1단계, 최대 3단계이고 한 경기 쉬면 회복한다. 0이면 끈다. 랭크 경기 · 친선 · 컵에는 없다',
   },
   cupAtkK: {
     group: 'team',

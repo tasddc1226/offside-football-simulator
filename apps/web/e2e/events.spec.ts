@@ -42,10 +42,37 @@ test('판정 없는 선택지는 확정 대신 판정 없음으로 보인다', a
   await expect(page.locator('#sheet [data-event-legend]')).toHaveCount(0);
 });
 
-// T-11-438 '안전' 뜻은 터치 화면에서도 보이게 선택지 아래 한 줄로 늘 보인다(이벤트 시트는 닫을 수 없어 도감을 못 연다).
+// T-11-438 '안전' 뜻은 터치 화면에서도 보이게 선택지 아래 한 줄로 늘 보인다(시트를 잠시 닫지 않아도 뜻을 확인할 수 있다).
 test("'안전' 선택지가 있으면 그 뜻이 시트에 보인다", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await resumeWithSave(page, { pending: { type: 'event', id: 'bench-talk' } });
   const legend = page.locator('#sheet [data-event-legend]');
   await expect(legend).toContainText('안전 결과는 확정이지만 보상이 줄고, 가끔 대가가 따라요');
+});
+
+test('이벤트를 닫고 일정과 기록을 확인한 뒤 같은 선택지로 돌아온다', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await resumeWithSave(page, { pending: { type: 'event', id: 'bench-talk' } });
+  const sheet = page.locator('#sheet');
+  const choices = await sheet.locator('[data-choice]').allTextContents();
+  const saved = await page.evaluate(() => localStorage.getItem('ft_save'));
+  await sheet.getByRole('button', { name: '잠시 닫기' }).click();
+  await expect(sheet).toBeHidden();
+  await page.locator('[data-career-overview] summary').filter({ hasText: '대회 일정' }).click();
+  await expect(page.locator('[data-career-overview] .calendar')).toContainText('발탁 필요');
+  await page.locator('[data-career-scoring] summary').click();
+  await expect(page.locator('[data-career-scoring]')).toContainText('리그 경기만 집계');
+  await expect(page.locator('[data-scoring-me]')).toHaveCount(1);
+  await page.getByRole('button', { name: '도움', exact: true }).click();
+  await expect(page.getByRole('list', { name: '도움', exact: true })).toBeVisible();
+  expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('[data-act="resume"]').click();
+  await expect(sheet).toBeVisible();
+  expect(await sheet.locator('[data-choice]').allTextContents()).toEqual(choices);
+  await page.reload();
+  await page.locator('[data-act="continue"]').click();
+  await expect(sheet).toContainText('감독실 노크');
+  expect(await sheet.locator('[data-choice]').allTextContents()).toEqual(choices);
 });

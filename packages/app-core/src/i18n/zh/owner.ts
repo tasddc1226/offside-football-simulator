@@ -13,6 +13,8 @@ export const owner: Translation<OwnerMsgs> = {
   valueInfoOwned: '親手培養的球員和簽下的球員都會計入，不分賽季。',
   valueInfoPrice:
     '球員卡基準價是在創下最高 OVR 的賽季中，身價最高那個賽季的身價。身價依聯賽財力・OVR・年齡計算，因此創下最高 OVR 後即使繼續效力很久，基準價也不會下降。',
+  valueInfoAge:
+    '身價會乘上年齡倍率：24 歲以前 5 倍，25～29 歲 4 倍，30 歲起 2 倍。因此 30 歲後才創下最高 OVR 的球員，基準價可能低於生涯紀錄中的最高身價。',
   valueInfoFallback:
     '如果該賽季沒有身價，會採用身價最高的職業賽季；若連職業紀錄都沒有，則以 1 億韓元計算。',
   valueInfoExcluded: '上架價格和傳奇分數不會直接計入。',
@@ -64,6 +66,15 @@ export const owner: Translation<OwnerMsgs> = {
   lockBadge: '\u{1F512}︎ 登入後開放',
   accountSection: '帳號',
   adminTools: '營運工具',
+  shortcutsHeading: '捷徑',
+  tilePlayers: '持有球員・培養紀錄',
+  tileMarket: '買賣球員',
+  tileExchange: '把退役球員換成道具',
+  tileManager: '以總教練身分延續',
+  tileHall: '賽季紀錄・稱號',
+  shopTitle: '商店',
+  tileShop: '重抽・強化・球探券',
+  shopLoginNeeded: '商店僅限已登入的老闆使用。',
   teamEmptyWith: (p) => `可以用${p.season}退役的${p.n}名球員組隊。空缺位置由青訓球員補上。`,
   teamEmptyNone: (p) => `等到有在${p.season}出賽並退役的球員，就能組隊。`,
   locked: (p) =>

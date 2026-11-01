@@ -31,7 +31,9 @@ export function canDismissSheet(
 ): boolean {
   return (
     !state.busy &&
-    (!pending || (state.view?.kind === 'market' && pending.type === 'market' && !pending.res))
+    (!pending ||
+      (state.view?.kind === 'event' && pending.type === 'event') ||
+      (state.view?.kind === 'market' && pending.type === 'market' && !pending.res))
   );
 }
 
@@ -81,6 +83,12 @@ export function fakeScore(m: MatchGame, keeper = false): string {
     else if (conceded) gf = Math.max(gf, 1);
     ga = gf;
   } else ga = gf + ri(1, 2);
+  // A player's own goals and assists belong to different team goals.
+  // Reconcile after the existing draws so presentation consumes the same RNG count.
+  const minimum = (m.g ?? 0) + (m.a ?? 0);
+  gf = Math.max(gf, minimum);
+  if (m.res === 'D') ga = gf;
+  else if (m.res === 'L') ga = Math.max(ga, gf + 1);
   return `${gf}-${ga}`;
 }
 

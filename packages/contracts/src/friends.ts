@@ -43,6 +43,8 @@ export const FriendPersonSchema = z.strictObject({
   founder: z.boolean().optional(),
   /** T-11-512 클럽 멤버십 서포터(구독 중). 배포 전 응답엔 없다. */
   member: z.boolean().optional(),
+  /** T-11-601 구단주 프로필을 여는 팀 id(가장 최근 시즌 팀, 팀을 만든 적 없으면 null). 배포 전 응답엔 없다. */
+  profileTeamId: TeamIdSchema.nullable().optional(),
 });
 export type FriendPerson = z.infer<typeof FriendPersonSchema>;
 

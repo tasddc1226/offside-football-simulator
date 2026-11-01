@@ -5,6 +5,8 @@ import {
   type AdminStats,
   type AnomalyReport,
   type AutomationReport,
+  REMOVE_ADS_PRICE_BEFORE_KRW,
+  REMOVE_ADS_PRICE_CHANGED_AT,
 } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -16,6 +18,7 @@ import {
   iapPurchases,
   notifications,
   ownerItems,
+  seasonPasses,
 } from '../db/schema.js';
 import { kstWindow } from '../db/repos/revenue.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -178,6 +181,98 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     expect(sent).toHaveLength(0);
   });
 
+  it('전체 상품 매출: 100장·패스·멤버십 가입/갱신·광고 제거를 중복 없이 합하고 테스트를 제외한다', async () => {
+    const admin = await makeAdmin();
+    const owner = await googleUser('revenue-all');
+    const at = new Date().toISOString();
+    const old = '2026-01-01T00:00:00.000Z';
+    await ctx.db.insert(iapPurchases).values({
+      store: 'google',
+      transactionId: 'boost100',
+      profileId: owner.profileId,
+      productId: 'com.offsidelab.app.boost_100',
+      item: 'boost',
+      qty: 100,
+      createdAt: at,
+    });
+    await ctx.db.insert(seasonPasses).values([
+      {
+        profileId: owner.profileId,
+        season: 1,
+        store: 'xsolla',
+        transactionId: 'pass',
+        createdAt: at,
+      },
+      {
+        profileId: owner.profileId,
+        season: 2,
+        store: 'apple',
+        transactionId: 'pass-refund',
+        createdAt: old,
+        refundedAt: at,
+      },
+      {
+        profileId: owner.profileId,
+        season: 3,
+        store: 'apple',
+        transactionId: 'pass-test',
+        createdAt: at,
+        test: true,
+      },
+    ]);
+    await ctx.db.insert(billingAlerts).values(
+      [
+        ['pass-alert', 'xsolla', 'purchase', 'season_pass', false],
+        ['member-buy', 'google', 'purchase', 'club_monthly', false],
+        ['member-renew', 'google', 'renewal', 'club_monthly', false],
+        ['member-refund', 'google', 'refund', 'club_monthly', false],
+        ['member-test', 'google', 'renewal', 'club_monthly', true],
+        ['ads-buy', 'apple', 'purchase', 'remove_ads', false],
+        ['ads-refund', 'apple', 'refund', 'remove_ads', false],
+      ].map(([id, store, kind, product, test]) => ({
+        id: id as string,
+        store: store as string,
+        kind: kind as string,
+        productId: `com.offsidelab.app.${product}`,
+        test: test as boolean,
+        createdAt: at,
+      })),
+    );
+    const res = await call('GET', '/v1/admin/revenue?days=7', { cookie: admin.cookie });
+    expect(res.status).toBe(200);
+    const report = await data<AdminRevenue>(res);
+    const expected = 19800 + 9900 + 4900;
+    expect(report.total).toEqual({
+      count: 4,
+      krw: expected,
+      buyers: 1,
+      firstBuyers: 0,
+      refunds: 2,
+      refundKrw: 9900 + 4900,
+    });
+    expect(report.allTime.krw).toBe(expected);
+    expect(report.daily.reduce((s, d) => s + d.krw + (d.adKrw ?? 0), 0)).toBe(expected);
+    expect(report.products.reduce((s, p) => s + p.krw, 0)).toBe(expected);
+    expect(report.stores.reduce((s, p) => s + p.krw, 0)).toBe(expected);
+    expect(report.products.find((p) => p.productId.endsWith('club_monthly'))).toMatchObject({
+      count: 2,
+      krw: 4900,
+      refunded: 1,
+    });
+    expect(report.products.find((p) => p.productId.endsWith('season_pass'))).toMatchObject({
+      count: 1,
+      krw: 9900,
+      refunded: 0,
+    });
+    expect(report.recent.some((p) => p.productId.endsWith('remove_ads'))).toBe(true);
+    expect(
+      report.recent.some(
+        (p) => p.productId.endsWith('club_monthly') && p.profileId === '' && p.nickname === null,
+      ),
+    ).toBe(true);
+    expect(report.removeAds.krw).toBe(0);
+  });
+
   it('T-11-263 매출: 기간 합·첫 구매자·환불·상품별·광고 제거(스토어 알림), 테스트 결제는 뺀다', async () => {
     const admin = await makeAdmin();
     const a = await googleUser('A');
@@ -222,7 +317,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       },
       // T-11-484 기간 밖 구매 · 다른 스토어 · 환불 · 테스트 알림.
       ...[
-        ['b3', 'apple', 'purchase', ago(20), false],
+        ['b3', 'apple', 'purchase', '2026-10-01T00:00:00.000Z', false],
         ['b4', 'google', 'purchase', ago(0), false],
         ['b5', 'apple', 'refund', ago(0), false],
         ['b6', 'google', 'purchase', ago(0), true],
@@ -255,12 +350,16 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       krw: 0,
       refunded: 1,
     });
-    // 기간 안: 애플 1 · 구글 1 구매, 애플 환불 1 → 3,300원. 전체 기간은 20일 전 구매까지 3건.
+    // 기간 안: 애플 1 · 구글 1 구매, 애플 환불 1. 전체 기간은 가격 인상 전 구매(b3)까지 3건.
+    // T-11-574 금액은 판매 시각의 정가로 센다(인상 전 3,300원, 뒤 6,600원).
+    const adPrice = (at: string) =>
+      at >= REMOVE_ADS_PRICE_CHANGED_AT ? 6600 : REMOVE_ADS_PRICE_BEFORE_KRW;
+    const windowKrw = adPrice(ago(1)) + adPrice(ago(0)) - adPrice(ago(0));
     expect(r.removeAds).toMatchObject({
       count: 2,
       refunds: 1,
-      krw: 3300,
-      allTime: { count: 3, refunds: 1, krw: 6600 },
+      krw: windowKrw,
+      allTime: { count: 3, refunds: 1, krw: windowKrw + REMOVE_ADS_PRICE_BEFORE_KRW },
     });
     expect(r.removeAds.stores).toEqual(
       expect.arrayContaining([
@@ -269,9 +368,9 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       ]),
     );
     expect(r.daily.reduce((s, d) => s + (d.adCount ?? 0), 0)).toBe(2);
-    expect(r.daily.reduce((s, d) => s + (d.adKrw ?? 0), 0)).toBe(6600);
+    expect(r.daily.reduce((s, d) => s + (d.adKrw ?? 0), 0)).toBe(windowKrw);
     expect(r.recent.map((x) => x.productId)).not.toContain(undefined);
-    expect(r.recent).toHaveLength(4);
+    expect(r.recent).toHaveLength(8);
     expect((await call('GET', '/v1/admin/revenue?days=5', { cookie: admin.cookie })).status).toBe(
       400,
     );

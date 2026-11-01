@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeasonSelect from './SeasonSelect.svelte';
   // T-11-128 구단주 시즌 결산 — 끝난 시즌의 기록(서버가 굳힌 값)과 받은 휘장을 한 화면에 모아 보여 준다.
   // 구단주 화면의 '시즌 결산' 카드로 연다. 열면 그 시즌 결산을 '봤다'고 표시한다(카드의 NEW).
   // 맨 위 시즌 카드(등급 · 한 줄 요약 · 자랑거리) → 선수단(단체사진 · 카드 흐름) → 숫자 → 이 시즌의 얼굴 → 카드 등급 → 팀 → 순위 → 휘장 → 남긴 기록 순.
@@ -138,12 +139,7 @@
     <h1>{L.title({ season: name || (season !== null ? teamSeasonLabel(season) : L.cardTitle) })}</h1>
     {#if recap}<p class="muted fs-sm" data-recap-cutoff>{recapCutoffText(recap)}</p>{/if}
     {#if seasons.length > 1}
-      <label class="recap-picker">
-        <span class="muted fs-sm">{L.pickSeason}</span>
-        <select data-recap-season value={String(season ?? '')} onchange={(e) => void load(Number(e.currentTarget.value))}>
-          {#each [...seasons].reverse() as s (s)}<option value={String(s)}>{teamSeasonLabel(s)}</option>{/each}
-        </select>
-      </label>
+      <div class="recap-picker"><SeasonSelect compact caption={L.pickSeason} label={L.pickSeason} value={season ?? seasons.at(-1) ?? 0} {seasons} onpick={(v) => void load(Number(v))} data-recap-season /></div>
     {/if}
   </header>
   {/if}
@@ -234,6 +230,24 @@
             </div>
           {/if}
         </div>
+      </section>
+    {/if}
+
+    {#if recap.seasonBest && recap.seasonBest.length > 0}
+      {@const mineN = new Set(recap.seasonBest.filter((x) => x.mine).map((x) => x.card.careerId)).size}
+      <!-- T-11-372 시즌 특별 카드(모든 구단주) — 개인상 셋 다음에 베스트 11. -->
+      <section class="card recap-sec" data-recap-section="specials" aria-label={L.secSpecials}>
+        <h2>{L.secSpecials}</h2>
+        <p class="muted fs-sm sec-lead">{L.specialsLead}</p>
+        {#if mineN > 0}<p class="specials-mine-count" data-recap-specials-mine={mineN}>{L.specialsMineCount({ n: mineN })}</p>{/if}
+        <ul class="specials-grid">
+          {#each recap.seasonBest as x (`${x.special.kind}:${x.card.careerId}`)}
+            <li class:mine={x.mine} data-recap-special={x.special.kind} data-recap-special-career={x.card.careerId}>
+              <PlayerCard player={{ ...x.card, specials: [x.special] }} name={playerName(x.card.publicName, x.card.pos, null)} rating={x.card.peak} role={detailPosOf(x.card)} season={x.card.season} compact />
+              {#if x.mine}<span class="specials-mine">{L.specialsMine}</span>{/if}
+            </li>
+          {/each}
+        </ul>
       </section>
     {/if}
 
@@ -359,6 +373,12 @@
 </div>
 
 <style>
+  /* T-11-372 시즌 특별 카드 묶음. */
+  .specials-grid { list-style: none; margin: 12px 0 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px 8px; }
+  .specials-grid li { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .specials-grid li.mine { outline: 2px solid var(--accent, #2fb3a3); outline-offset: 3px; border-radius: 6px; }
+  .specials-mine { font-size: 0.7rem; font-weight: 700; color: var(--accent, #2fb3a3); }
+  .specials-mine-count { margin: 6px 0 0; font-weight: 700; }
   .embedded {display:flex;flex-direction:column;gap:14px;}
   .embedded :global(*) {animation:none !important;}
   /* 시즌 카드 — 테마와 상관없이 어두운 바탕(공유 이미지와 같은 첫인상). 등급 색 빛이 가운데서 번진다. */

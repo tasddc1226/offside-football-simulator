@@ -34,6 +34,7 @@ import { SkeletonFrame, useSkeletonBlock } from '../../ui/Skeleton';
 import { Txt } from '../../ui/Txt';
 import { useSeasonNow } from '../../ui/useSeasonNow';
 import { RecordsSelect } from './RecordsControls';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 const LAYOUT = best11Layout();
 
@@ -146,7 +147,7 @@ export default function Best11() {
             testID="best11-season"
             label={L.seasonAria}
             value={season}
-            options={seasons.map((s) => ({ value: s.id, label: seasonLabel(s.id, s.name) }))}
+            options={seasonOptions(seasons, now)}
             onChange={setPicked}
           />
         ) : null}

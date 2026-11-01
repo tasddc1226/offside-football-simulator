@@ -1,0 +1,14 @@
+{
+  "id": "t-11-575-chat-reply-icon",
+  "title": "답장 버튼을 아이콘으로",
+  "items": ["라운지 채팅의 답장 버튼을 메시지 시각 옆 화살표 아이콘으로 바꿨어요."],
+  "en": {
+    "title": "Reply button is now an icon",
+    "items": ["In Lounge chat, the reply button is now an arrow icon next to the message time."]
+  },
+  "ja": {
+    "title": "返信ボタンをアイコンに",
+    "items": ["ラウンジチャットの返信ボタンを、メッセージの時刻の横の矢印アイコンに変えました。"]
+  },
+  "availability": "web-app"
+}

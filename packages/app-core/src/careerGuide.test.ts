@@ -39,11 +39,20 @@ it('type guide derives every focus pair from the creation rule and lists the duo
     }
   }
   const speed = positionGuide('FW').find((e) => e.id === 'speed')!;
-  expect(speed.synergies.map((s) => s.id)).toEqual(['counter']);
-  expect(speed.synergies[0]!.slots.split('·')).toEqual(['ST', 'CF', 'SS', 'LW', 'RW']);
+  expect(speed.synergies.map((s) => s.id)).toEqual(['trident', 'counter']);
+  expect(speed.synergies[1]!.slots.split('·')).toEqual(['ST', 'CF', 'SS', 'LW', 'RW']);
   const stopper = positionGuide('DF').find((e) => e.id === 'stopper')!;
-  expect(stopper.synergies.map((s) => s.id)).toEqual(['wall', 'cb_pair', 'guardian']);
-  expect(stopper.synergies[0]!.slots).toBe('CB·SW');
+  expect(stopper.synergies.map((s) => s.id)).toEqual([
+    'back_three',
+    'wall',
+    'cb_pair',
+    'guardian',
+    'anchor',
+  ]);
+  expect(stopper.synergies[1]!.slots).toBe('CB·SW');
+  // T-11-542 한 유형이 두 조건에 드는 트리오도 한 번만 보인다.
+  const libero = positionGuide('DF').find((e) => e.id === 'libero')!;
+  expect(libero.synergies.filter((s) => s.id === 'back_three')).toHaveLength(1);
   expect(getActiveRng().getState()).toEqual(before);
 });
 it('save explanation uses the existing trimmed name boundaries', () => {

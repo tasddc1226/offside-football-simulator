@@ -1,4 +1,5 @@
 <script lang="ts">
+  import SeasonSelect from './SeasonSelect.svelte';
   // T-11-463 시즌 BEST 11(기록실 탭). 4-3-3 그라운드에 시즌마다 포지션별 최고의 은퇴 선수 11명을 세운다. 시즌 중에는 잠정(은퇴마다
   // 자리 주인이 바뀐다), 마감 뒤에는 확정. 자리를 누르면 선정 이유 · 세 기둥 · 그 자리 상위 10명(같은 구단주로 빠진 후보 표시)이 보인다.
   // 탭을 열 때만 부르고 메모(60초)를 거친다.
@@ -81,9 +82,7 @@
       <h2>{L.title({ season: meta ? seasonLabel(meta.id, meta.name) : String(season) })}</h2>
     </div>
     {#if seasons.length > 1}
-      <select aria-label={L.seasonAria} data-best11-season value={String(season)} onchange={(e) => (picked = Number(e.currentTarget.value))}>
-        {#each seasons as s (s.id)}<option value={String(s.id)}>{seasonLabel(s.id, s.name)}</option>{/each}
-      </select>
+      <SeasonSelect compact label={L.seasonAria} value={season} {seasons} onpick={(v) => (picked = Number(v))} data-best11-season />
     {/if}
   </div>
   <p class="muted b11-lead">{L.lead}</p>

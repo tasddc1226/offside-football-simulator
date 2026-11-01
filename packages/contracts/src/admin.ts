@@ -127,6 +127,8 @@ export const AutomationReasonSchema = z.enum([
   'nonstop',
   /** AI·봇을 떠올리게 하는 이름. */
   'aiName',
+  /** T-11-590 앱 터치 대부분이 바로 앞 터치와 같은 좌표(오토 클리커). 관찰 근거만, 자동 숨김에는 안 쓴다. */
+  'sameSpot',
 ]);
 export type AutomationReason = z.infer<typeof AutomationReasonSchema>;
 

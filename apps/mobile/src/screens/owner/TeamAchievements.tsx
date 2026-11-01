@@ -8,6 +8,7 @@ import type { AchCategory } from '@offside/contracts/owner-team';
 import type { ClubAchievementsResponse } from '@offside/app-core/api/team';
 import { hofStart } from '@offside/app-core/state';
 import {
+  achBonusView,
   achCatShort,
   achDone,
   achGradeName,
@@ -33,7 +34,8 @@ import { Card, Press, Txt } from '../../ui';
 import { SelectField } from '../settings/parts';
 import { AchGradeBadge, TmTitle } from './TeamParts';
 import { tn } from '@offside/game/i18n/names';
-import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
+import { teamSeasonLabel } from '@offside/app-core/seasonName';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 function Stage({ children }: { children: string }) {
   const c = useColors();
@@ -281,6 +283,7 @@ export function TeamAchievements({
   const sections = ach ? achSections(ach.groups) : [];
   const sec = sections.find((x) => x.id === cat) ?? sections[0];
   const near = ach ? achNear(ach.groups) : [];
+  const bonus = ach ? achBonusView(ach.bonus) : null;
   // 단계는 모두 접어 두고, 새로 달성한 업적이 든 단계만 펼친다(웹과 같다).
   const openId = sec?.groups.find((g) => g.items.some((i) => newIds.has(i.id)))?.id ?? null;
   /** 기록실 구단주 랭킹 탭을 연다. */
@@ -299,7 +302,7 @@ export function TeamAchievements({
               label={L.seasonLabel}
               testID="ach-season"
               value={ach.season}
-              options={ach.seasons.map((o) => ({ value: o.id, label: seasonLabel(o.id, o.name) }))}
+              options={seasonOptions(ach.seasons)}
               onChange={(v) => load(v)}
               style={{ maxWidth: '45%', minHeight: 40 }}
             />
@@ -374,6 +377,30 @@ export function TeamAchievements({
               <Txt tone="muted" v="xs">
                 {L.achAbout({ season: seasonName, n: ach.players })}
               </Txt>
+              {bonus ? (
+                <View
+                  testID="ach-bonus"
+                  style={{
+                    gap: 6,
+                    padding: 12,
+                    borderRadius: RADIUS.sm,
+                    backgroundColor: c.surface2,
+                  }}
+                >
+                  <Txt v="sm" bold>
+                    {bonus.title}
+                  </Txt>
+                  <Txt v="sm">{bonus.next}</Txt>
+                  {bonus.got ? (
+                    <Txt v="sm" tone="accent">
+                      {bonus.got}
+                    </Txt>
+                  ) : null}
+                  <Txt tone="muted" v="xs">
+                    {bonus.note}
+                  </Txt>
+                </View>
+              ) : null}
               <View
                 testID="ach-perks"
                 style={{

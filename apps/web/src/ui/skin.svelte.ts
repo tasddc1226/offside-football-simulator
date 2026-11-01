@@ -1,11 +1,12 @@
 // T-11-022 업무 모드: PC 브라우저에서 게임을 스프레드시트 화면처럼 보이게 한다. 설정에서 켜고 이 기기에 저장한다.
 // 마우스로 쓰는 넓은 화면에서만 적용한다 — 휴대폰·태블릿은 켜 둬도 원래 화면이다(창을 640px 아래로 좁히면 그 자리에서 풀린다).
 // 첫 페인트 전 적용은 index.html의 인라인 스크립트가 같은 키·같은 매체 쿼리로 한다. 모양은 style.css의 [data-skin='sheet'].
+import { sheetChromeText as T } from '@offside/app-core/i18n/ko/sheetChrome';
+
 const KEY = 'ft_skin';
 const SHEET_MEDIA = '(hover: hover) and (pointer: fine) and (min-width: 640px)';
-/** 업무 모드 문서 이름(틀의 제목)·탭 제목·파비콘이자 틀의 문서 아이콘(녹색 표). */
-export const SHEET_DOC = '4분기 업무 정리_v3';
-const SHEET_TITLE = `${SHEET_DOC} - 스프레드시트`;
+/** 업무 모드 탭 제목(문서 이름은 화면 언어, T-11-588)과 파비콘이자 틀의 문서 아이콘(녹색 표). */
+const sheetTitle = () => T.tabTitle({ doc: T.doc });
 export const SHEET_ICON =
   "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect x='2' y='1' width='12' height='14' rx='1.5' fill='%2334a853'/%3E%3Cpath d='M4.5 6h7v6h-7zM4.5 8h7M4.5 10h7M7.5 6v6' fill='none' stroke='%23fff' stroke-width='1'/%3E%3C/svg%3E";
 
@@ -29,8 +30,8 @@ function apply() {
   const root = document.documentElement;
   if (sheetOn()) {
     root.dataset.skin = 'sheet';
-    if (document.title !== SHEET_TITLE) realTitle = document.title;
-    document.title = SHEET_TITLE;
+    if (document.title !== sheetTitle()) realTitle = document.title;
+    document.title = sheetTitle();
     for (const l of document.querySelectorAll<HTMLLinkElement>('link[rel~="icon"]')) {
       if (!realIcons.has(l)) realIcons.set(l, l.href);
       l.href = SHEET_ICON;

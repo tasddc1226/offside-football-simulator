@@ -59,4 +59,7 @@ export const push: Translation<PushMsgs> = {
   askClubTitle: 'Get cup entries and match results as notifications?',
   askClubBody:
     "We'll tell you as soon as Offside Cup entries open, and send results of ranked matches other owners play against your team.",
+  askCupTitle: 'Get cup results as notifications?',
+  askCupBody:
+    "When the cup ends, we'll tell you your team's final result right away. We'll also let you know when the next cup opens for entries.",
 };

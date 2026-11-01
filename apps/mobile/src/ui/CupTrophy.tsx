@@ -37,6 +37,7 @@ import {
   type TrophyStage,
 } from '@offside/app-core/cupTrophy';
 import { prefs } from '../store';
+import { DECOR_MOTION_MIN } from './motion';
 
 const CYCLE: Record<TrophyStage, number> = { champion: 8500, runnerup: 8000, sf: 9500 };
 const STAR = 'M8 0L10 6L16 8L10 10L8 16L6 10L0 8L6 6Z';
@@ -164,7 +165,9 @@ export function CupTrophy({
   const { palette } = trophy;
   const cupOnly = bare || size < TROPHY_PLATE_MIN;
   const layers = cupOnly ? trophy.layers.filter((l) => !l.plinth) : trophy.layers;
-  const { motionOK } = useSnapshot(prefs);
+  // T-11-602 목록 줄의 작은 트로피(칭호 배지)는 멈춰 그린다(DECOR_MOTION_MIN).
+  const { motionOK: motionPref } = useSnapshot(prefs);
+  const motionOK = motionPref && size >= DECOR_MOTION_MIN;
   const [active, setActive] = useState(AppState.currentState === 'active');
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const phase = useSharedValue(0);

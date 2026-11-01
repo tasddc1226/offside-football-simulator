@@ -1,5 +1,6 @@
 import { DatabaseSync } from 'node:sqlite';
 import { vi } from 'vitest';
+import { CHAT_ROOM } from '@offside/contracts/chat';
 import { ChatRoom } from '../chat/room.js';
 import type { Bindings } from '../env.js';
 
@@ -68,41 +69,63 @@ export function fakeRoom(env = {} as Bindings) {
       }
     },
   );
-  const sockets: FakeSocket[] = [];
-  let alarm: number | null = null;
-  const pending: Promise<unknown>[] = [];
-  const ctx = {
-    storage: {
-      sql: fakeSql(),
-      transactionSync: <T>(fn: () => T) => fn(),
-      getAlarm: async () => alarm,
-      setAlarm: async (at: number) => {
-        alarm = at;
+  /** 방 하나의 저장소·소켓·알람(T-11-583 언어 방마다 따로). */
+  const makeCtx = (name: string) => {
+    const sockets: FakeSocket[] = [];
+    let alarm: number | null = null;
+    const ctx = {
+      id: { name },
+      storage: {
+        sql: fakeSql(),
+        transactionSync: <T>(fn: () => T) => fn(),
+        getAlarm: async () => alarm,
+        setAlarm: async (at: number) => {
+          alarm = at;
+        },
+        deleteAlarm: async () => {
+          alarm = null;
+        },
       },
-      deleteAlarm: async () => {
-        alarm = null;
+      waitUntil: (p: Promise<unknown>) => {
+        pending.push(p);
       },
-    },
-    waitUntil: (p: Promise<unknown>) => {
-      pending.push(p);
-    },
-    getWebSockets: () => sockets,
-    acceptWebSocket: (ws: FakeSocket) => sockets.push(ws),
-    setWebSocketAutoResponse: vi.fn(),
+      getWebSockets: () => sockets,
+      acceptWebSocket: (ws: FakeSocket) => sockets.push(ws),
+      setWebSocketAutoResponse: vi.fn(),
+    };
+    return { ctx, sockets };
   };
+  const pending: Promise<unknown>[] = [];
+  const { ctx, sockets } = makeCtx(CHAT_ROOM);
   const room = new ChatRoom(ctx as unknown as DurableObjectState, env);
   /** 방에 소켓 하나를 붙이고(입장권이 있으면 `?t=`) 서버 쪽 소켓을 돌려준다. */
   const join = async (ticket?: string) => {
     await room.fetch(new Request(`http://api.test/v1/chat/ws${ticket ? `?t=${ticket}` : ''}`));
     return sockets.at(-1)!;
   };
-  const ns = { idFromName: (n: string) => n, get: () => room };
+  /** T-11-583 이름마다 방 하나. 한국어 방(CHAT_ROOM)은 위의 room이다. */
+  const others = new Map<string, { room: ChatRoom; sockets: FakeSocket[] }>();
+  const named = (name: string) => {
+    if (name === CHAT_ROOM) return { room, sockets };
+    let r = others.get(name);
+    if (!r) {
+      const made = makeCtx(name);
+      r = {
+        room: new ChatRoom(made.ctx as unknown as DurableObjectState, env),
+        sockets: made.sockets,
+      };
+      others.set(name, r);
+    }
+    return r;
+  };
+  const ns = { idFromName: (n: string) => n, get: (n: string) => named(n).room };
   return {
     room,
     sockets,
     join,
     drain: () => Promise.all(pending),
     restart: () => new ChatRoom(ctx as unknown as DurableObjectState, env),
+    named,
     ns: ns as unknown as NonNullable<Bindings['CHAT']>,
   };
 }

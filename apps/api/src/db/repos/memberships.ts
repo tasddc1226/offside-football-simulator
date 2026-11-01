@@ -1,10 +1,11 @@
 // T-11-512 클럽 멤버십 구독 원장(memberships). 구매 · 앱 시작 때 다시 보낸 거래 · 스토어 서버 알림이 같은 줄을 고친다.
+import { WEB_MEMBERSHIP_DAYS, WEB_PAY_STORE } from '@offside/contracts';
 import { and, desc, eq, gt, inArray } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { memberships } from '../schema.js';
 
 export type MembershipChain = {
-  store: 'apple' | 'google';
+  store: 'apple' | 'google' | 'xsolla';
   chainId: string;
   until: string;
   autoRenew: boolean | null;
@@ -89,4 +90,54 @@ export async function isMember(db: Db, profileId: string, now: string) {
     .bind(profileId, now)
     .first<{ one: number }>();
   return !!row;
+}
+
+/**
+ * T-11-591 웹 결제(엑솔라) 멤버십: 자동 갱신 없이 주문 하나가 한 줄(chain_id = 엑솔라 주문 번호)이다. 지금 남은 혜택 끝(없으면
+ * 지금)부터 WEB_MEMBERSHIP_DAYS일을 더한다. 같은 주문 웹훅을 다시 받으면 기간을 다시 더하지 않는다. 다른 구단주의 주문이면 false.
+ */
+export async function grantWebMembership(
+  db: Db,
+  p: { profileId: string; xsollaOrderId: string; test: boolean; now: string },
+) {
+  const d1 = db.$client;
+  const seen = await d1
+    .prepare('SELECT profile_id FROM memberships WHERE store = ? AND chain_id = ?')
+    .bind(WEB_PAY_STORE, p.xsollaOrderId)
+    .first<{ profile_id: string }>();
+  if (seen) return seen.profile_id === p.profileId;
+  const current = await membershipOf(db, p.profileId);
+  const from = current?.until && current.until > p.now ? current.until : p.now;
+  const until = new Date(Date.parse(from) + WEB_MEMBERSHIP_DAYS * 86_400_000).toISOString();
+  return bindMembership(
+    db,
+    p.profileId,
+    {
+      store: WEB_PAY_STORE,
+      chainId: p.xsollaOrderId,
+      until,
+      autoRenew: false,
+      test: p.test,
+      verifiedAt: p.now,
+    },
+    p.now,
+  );
+}
+
+/** 웹 결제 멤버십 환불 · 차지백: 그 주문의 혜택을 지금 끝낸다. 모르는 주문이면 found: false, 이미 끝냈으면 already. */
+export async function revokeWebMembership(db: Db, xsollaOrderId: string, now: string) {
+  const d1 = db.$client;
+  const cut = await d1
+    .prepare(
+      `UPDATE memberships SET until = ?, auto_renew = 0, verified_at = ?
+       WHERE store = ? AND chain_id = ? AND until > ? RETURNING profile_id`,
+    )
+    .bind(now, now, WEB_PAY_STORE, xsollaOrderId, now)
+    .first<{ profile_id: string }>();
+  if (cut) return { found: true, already: false };
+  const seen = await d1
+    .prepare('SELECT 1 AS one FROM memberships WHERE store = ? AND chain_id = ?')
+    .bind(WEB_PAY_STORE, xsollaOrderId)
+    .first();
+  return { found: !!seen, already: !!seen };
 }

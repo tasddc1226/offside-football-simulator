@@ -30,7 +30,7 @@ function publish(platform, failedPlatform) {
         PATH: `${dir}:${process.env.PATH}`,
         EXPECTED_SHA: '1234567890abcdef',
         PLATFORM: platform,
-        OTA_TARGET: '1.1.2',
+        OTA_TARGET: '1.1.4',
         GITHUB_STEP_SUMMARY: join(dir, 'summary'),
         OTA_CALLS: join(dir, 'calls'),
         OTA_FAIL_PLATFORM: failedPlatform,

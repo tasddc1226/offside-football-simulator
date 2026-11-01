@@ -1,4 +1,6 @@
 import { withCampaignBanner } from './app-banner.js';
+import { consentRegion, consentRegionCookie } from './consent-region.js';
+import { storeRedirect } from './store-redirect.js';
 import { serveNews, newsSitemap } from './public-news.js';
 import {
   LEGENDS_TTL,
@@ -9,7 +11,7 @@ import {
 import { NEWS_ID } from './news-id.js';
 import { resolveApiBaseUrl } from './api/base-url.js';
 import { fetchHofEntry } from './hof-entry.js';
-import { careerShareMeta, injectShareMeta } from './share-meta.js';
+import { careerShareMeta, injectShareMeta, shareLang } from './share-meta.js';
 import { OG_CARD_PATH, SHARE_PATH } from './share-path.js';
 
 interface Fetcher {
@@ -27,6 +29,9 @@ interface Ctx {
 
 const PUBLIC_PATHS = new Set([
   '/',
+  '/app',
+  '/app/',
+  '/app/index.html',
   '/guide',
   '/guide/',
   '/guide/index.html',
@@ -46,8 +51,9 @@ const PUBLIC_PATHS = new Set([
   '/legal/privacy/',
   '/legal/privacy/index.html',
 ]);
-// T-11-452 가이드 아래 공략 글(/guide/<slug>/). 빌드가 만든 정적 파일이 있을 때만 공개 페이지로 본다.
-const GUIDE_ARTICLE = /^\/guide\/[a-z0-9-]+(\/|\/index\.html)?$/;
+// T-11-452 가이드 아래 공략 글(/guide/<slug>/)과 T-11-588 다른 언어 가이드 · FAQ(/en/guide/…, /ja/faq/ 등).
+// 빌드가 만든 정적 파일이 있을 때만 공개 페이지로 본다.
+const GUIDE_ARTICLE = /^(\/(en|ja|zh))?\/(guide\/[a-z0-9-]+|guide|faq)(\/|\/index\.html)?$/;
 // 앱 셸(오프사이드/풀타임 SPA)로 서빙해야 하는 경로. 게임 자체는 `/`에서 로드되고,
 // `/settings`는 구글 OAuth 콜백(`?google=linked|switched|error&reason=...`)이
 // 돌아오는 목적지라 앱 셸로 떨어져야 한다. `/career/<id>`(T-10-029 공유 링크)는 아래에서 미리보기 메타를 넣어 따로 내린다.
@@ -84,7 +90,7 @@ async function withShareMeta(shellP: Promise<Response>, id: string, url: URL): P
   const [shell, entry] = await Promise.all([shellP, fetchHofEntry(id, url.hostname)]);
   if (!shell.ok || !entry) return shell;
   try {
-    const meta = careerShareMeta(entry, url.origin); // 셸 본문을 읽기 전에 — 여기서 실패해도 셸은 그대로 쓸 수 있다.
+    const meta = careerShareMeta(entry, url.origin, shareLang(url.searchParams.get('lang'))); // 셸 본문을 읽기 전에 — 여기서 실패해도 셸은 그대로 쓸 수 있다.
     const html = injectShareMeta(await shell.text(), meta);
     const headers = new Headers(shell.headers);
     headers.delete('Content-Length');
@@ -108,6 +114,15 @@ function withPreconnect(response: Response, url: URL): Response {
   return result;
 }
 
+// T-11-597 HTML 응답에 접속 나라로 정한 동의 지역 쿠키를 붙인다(화면이 동의 창을 띄울지 정한다).
+function withConsentRegion(response: Response, request: Request): Response {
+  if (!response.headers.get('Content-Type')?.startsWith('text/html')) return response;
+  const country = (request as { cf?: { country?: unknown } }).cf?.country;
+  const result = new Response(response.body, response);
+  result.headers.append('Set-Cookie', consentRegionCookie(consentRegion(country)));
+  return result;
+}
+
 function withCacheControl(response: Response, value: string): Response {
   const result = withRobots(response, 'noindex, nofollow');
   result.headers.set('Cache-Control', value);
@@ -118,9 +133,16 @@ export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(request.url);
     if (OG_CARD_PATH.test(url.pathname)) return careerCard(request, env, ctx);
-    return withPreconnect(
-      await withCampaignBanner(await route(request, env, url, ctx), url, env.APPLE_PROVIDER_TOKEN),
-      url,
+    return withConsentRegion(
+      withPreconnect(
+        await withCampaignBanner(
+          await route(request, env, url, ctx),
+          url,
+          env.APPLE_PROVIDER_TOKEN,
+        ),
+        url,
+      ),
+      request,
     );
   },
 };
@@ -134,6 +156,19 @@ const SHORT_LINKS: Record<string, string> = {
 };
 
 async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Response> {
+  if (url.pathname === '/get' || url.pathname === '/get/')
+    return new Response(null, {
+      status: 302,
+      headers: {
+        Location: storeRedirect(
+          url,
+          request.headers.get('User-Agent') ?? '',
+          env.APPLE_PROVIDER_TOKEN,
+        ),
+        'Cache-Control': 'no-store',
+        'X-Robots-Tag': 'noindex, nofollow',
+      },
+    });
   const short = SHORT_LINKS[url.pathname.toLowerCase()];
   if (short)
     return new Response(null, {
@@ -158,6 +193,13 @@ async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Re
   const isPublicPage =
     PUBLIC_PATHS.has(url.pathname) || (asset.status === 200 && GUIDE_ARTICLE.test(url.pathname));
   const isDiscovery = url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml';
+  // T-11-585 랜딩 스크린샷 · QR은 이미지 검색에 잡히게 둔다(나머지 정적 파일은 noindex 그대로).
+  // 빌드가 만드는 _headers의 /* 규칙이 정적 파일 응답에 noindex를 미리 붙여 오므로 여기서 지운다.
+  if (url.pathname.startsWith('/landing/') && asset.status === 200) {
+    const result = new Response(asset.body, asset);
+    result.headers.delete('X-Robots-Tag');
+    return result;
+  }
   // T-10-004: Vite 산출물(/assets/*)은 파일명에 내용 해시가 들어가 내용이 바뀌면 URL도 바뀐다 —
   // 재방문 때 재검증 없이 캐시를 그대로 쓰도록 1년 immutable로 내려 준다.
   if (url.pathname.startsWith('/assets/') && asset.status === 200)

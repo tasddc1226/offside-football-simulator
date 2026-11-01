@@ -17,6 +17,15 @@ const PRODUCTION_SHAPE = {
   // Synthetic values exercise the optional acquisition path without production traffic.
   VITE_ACQUISITION_ENABLED: 'true',
   VITE_APPLE_PROVIDER_TOKEN: '123456',
+  // 사업자 정보(VITE_ 아님)는 푸터 지연 청크에만 들어간다. 모양만 맞춘 가짜 값으로 그 사실을 같이 잰다.
+  BUSINESS_INFO: JSON.stringify({
+    name: 'Offside Lab',
+    owner: 'Hong Gildong',
+    regNo: '000-00-00000',
+    mailOrderNo: '2026-Gyeonggi-Gwangmyeong-0000',
+    address: '00 Offside-ro, Gwangmyeong-si, Gyeonggi-do',
+    phone: '010-0000-0000',
+  }),
 };
 const cwd = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const env = { ...process.env, ...PRODUCTION_SHAPE };

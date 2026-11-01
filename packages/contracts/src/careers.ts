@@ -272,6 +272,13 @@ export const PlaySignalsSchema = z.strictObject({
   hiddenMs: signalMs,
   /** navigator.webdriver — 자동화 도구가 조종하는 브라우저. */
   webdriver: z.boolean(),
+  /**
+   * T-11-590 앱이 잰 요약. 모달 안 터치와 화면 읽기 프로그램(VoiceOver · TalkBack) 입력은 터치로 잡히지 않아
+   * '입력 없이 진행' 판정에서 뺀다. 웹 · 옛 앱은 없다.
+   */
+  app: z.literal(true).optional(),
+  /** T-11-590 앱: 바로 앞 터치 4번 중 하나와 좌표가 똑같은 터치. 오토 클리커는 정해 둔 점만 누른다. */
+  same: signalCount.optional(),
 });
 export type PlaySignals = z.infer<typeof PlaySignalsSchema>;
 

@@ -1,0 +1,85 @@
+{
+  "id": "season2-update",
+  "title": "시즌 2 업데이트",
+  "items": [
+    "리그가 시즌 내내 매일 열리고, 시즌이 끝날 때 최종 순위가 정해져요",
+    "업적 단계에 끝이 없어졌고, 한 시즌의 활약 · 커리어의 모양 · 경기의 순간 같은 새 업적 22개가 생겼어요. 업적 점수 1,500점마다 강화권과 리롤권을 더 받아요",
+    "시즌이 길어진 만큼 업적 단계 보상은 조금 줄었어요",
+    "명예관 칭호가 32개로 늘었어요. 육성 왕국 · 최전방의 명가 · 만능 육성가 · 다국적 구단 · 컵 단골 같은 상위 단계와 새 칭호가 더해졌어요",
+    "팀 시너지에 세 선수가 함께 켜는 트리오 3개와 새 듀오 9개가 생겼고, 국가대표 색깔이 23개 나라로 늘었어요",
+    "리그마다 실제 더비 상대가 정해졌고, 월드컵 가는 길 이야기와 발롱도르 시상식 · 이적 마감일 · 와일드카드 같은 새 선수 이벤트 30개, 미니게임 선택지 5개가 더해졌어요",
+    "스카우트 재평가로 잠재력이 떨어지는 폭이 줄었어요. 한 번에 최대 3까지만 떨어져요",
+    "한쪽으로 쏠리던 선택지 12개의 득실을 고르게 맞추고, 자주 나오던 조언 · 인터뷰 · 통증 이벤트를 조금 줄였어요",
+    "하루 카드 과제에 내는 카드가 11~14장에서 7~9장으로 줄었어요",
+    "선수를 만들 때 피부색 · 머리색 · 머리 모양을 무료로 고를 수 있어요",
+    "득점의 신 · 세계의 얼굴 등 상위 선수 칭호 7개가 생겼어요"
+  ],
+  "en": {
+    "title": "Season 2 update",
+    "items": [
+      "The league now plays every day all season, and final standings are set when the season ends.",
+      "Achievement steps no longer end, and 22 new achievements arrive across one great season, shape of a career and match moments. Every 1,500 achievement points gives extra boost and reroll tickets.",
+      "Because seasons are longer, achievement step rewards are slightly lower.",
+      "The Hall of Honors now has 32 titles. Higher tiers and new titles join them, such as Front-Line Academy, All-Round Developer, Multinational Club and Cup Regular.",
+      "Team synergy adds 3 trios that switch on with three players plus 9 new duos, and national styles now cover 23 countries.",
+      "Each league now has real derby rivals, with the Road to the World Cup story, 30 new player events such as the Ballon d'Or gala, deadline day and the Olympic wildcard, and 5 more minigame choices.",
+      "Scout re-evaluations now lower potential less, by at most 3 at a time.",
+      "12 lopsided choices are now more even, and the frequent mentor, interview and pain events show up a little less.",
+      "Daily card tasks now take 7 to 9 cards instead of 11 to 14.",
+      "You can pick skin tone, hair colour and hairstyle for free when creating a player.",
+      "7 new top player titles, including God of goals and Face of football."
+    ]
+  },
+  "ja": {
+    "title": "シーズン2アップデート",
+    "items": [
+      "リーグがシーズン中毎日開催され、シーズン終了時に最終順位が決まります。",
+      "実績の段階に上限がなくなり、ひとシーズンの活躍・キャリアの形・試合の瞬間など新しい実績が22個増えました。実績ポイント1,500ごとに強化券とリロール券を追加でもらえます。",
+      "シーズンが長くなった分、実績の段階報酬を少し減らしました。",
+      "名誉館の称号が32個になりました。最前線の名門・万能の育成家・多国籍クラブ・カップの常連など、上位段階と新しい称号が加わりました。",
+      "チームシナジーに3人でそろうトリオ3つと新しいデュオ9つが加わり、代表チームのカラーが23か国になりました。",
+      "リーグごとに実際のダービー相手が決まり、ワールドカップへの道のストーリー、バロンドール授賞式・移籍期限日・ワイルドカードなど新しい選手イベント30個、ミニゲームの選択肢5つが加わりました。",
+      "スカウトの再評価で潜在能力が下がる幅を小さくしました。1回に下がるのは最大3までです。",
+      "片寄っていた選択肢12個の損得をそろえ、よく出ていた助言・インタビュー・痛みのイベントを少し減らしました。",
+      "毎日のカード課題に出すカードが11〜14枚から7〜9枚に減りました。",
+      "選手を作るときに肌の色・髪の色・髪型を無料で選べます。",
+      "得点の神・サッカーの顔など上位の選手称号が7つ増えました。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": {
+    "changes": [
+      {
+        "key": "bloomDrift",
+        "from": 1.2,
+        "to": 1
+      },
+      {
+        "key": "rescoutDownScale",
+        "from": 1,
+        "to": 0.7
+      },
+      {
+        "key": "rescoutDropCap",
+        "from": 99,
+        "to": 3
+      }
+    ]
+  },
+  "zh": {
+    "title": "賽季 2 更新",
+    "items": [
+      "聯賽在整個賽季每天進行，賽季結束時決定最終排名。",
+      "成就階段不再有上限，並新增單一賽季的活躍・生涯的樣貌・比賽的瞬間等 22 個新成就。成就分數每 1,500 分可額外獲得強化券與重抽券。",
+      "賽季變長，成就階段獎勵稍微減少。",
+      "榮譽館稱號增加到 32 個，新增前線名門・全能培育家・多國籍俱樂部・盃賽常客等上位階段與新稱號。",
+      "球隊默契新增三名球員一起啟動的三人組合 3 組與新雙人組合 9 組，國家隊配色增加到 23 國。",
+      "每個聯賽都有真實的德比對手，並新增世界盃之路故事、金球獎頒獎典禮・轉會截止日・外卡等 30 個新球員事件，以及 5 個小遊戲選項。",
+      "球探重新評估使潛力下降的幅度變小，一次最多只降 3。",
+      "調整 12 個偏向一邊的選項得失，並稍微減少常出現的建議・訪問・疼痛事件。",
+      "每日卡片任務需要的卡片從 11~14 張減少為 7~9 張。",
+      "建立球員時可以免費選擇膚色・髮色・髮型。",
+      "新增進球之神・足球的臉孔等 7 個頂尖球員稱號。"
+    ]
+  }
+}

@@ -31,7 +31,6 @@ export const hof: Translation<HofMsgs> = {
   season: 'シーズン',
   seasonAria: '記録シーズン',
   allSeasons: '全シーズン',
-  notOpen: '（開幕予定）',
   filter: 'フィルター',
   filterLabel: (p) => `フィルター、${p.pos}、${p.sort}`,
   filterA11y: (p) => `フィルター、${p.label}`,

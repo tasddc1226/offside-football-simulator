@@ -7,8 +7,14 @@ import type { Db } from '../db/client.js';
 import {
   ACH_REWARD_FIRST_SEASON,
   ACH_REWARD_MIN,
+  ACH_ENDLESS_FROM_SEASON,
+  ACH_SCORE_BONUS,
   ACH_SEASON_GIFT,
+  ACH_VARIETY_FROM_SEASON,
+  achScoreBonusCount,
+  achScoreBonusOf,
   usesRankLadder,
+  type AchBonusReward,
   type AchReward,
 } from '@offside/contracts/owner-team';
 import type { ClubAchievementGroup } from '@offside/contracts';
@@ -120,6 +126,12 @@ export async function computeOwnerAchievements(
           likes: team.likes,
           cupBest,
           coach: !!team.coachId,
+          draws: team.draws,
+          losses: team.losses,
+          goalsAgainst: team.goalsAgainst,
+          cleanWins: activity.cleanWins,
+          bigWins: activity.bigWins,
+          topScore: activity.topScore,
         }
       : open
         ? { slots: [], wins: 0, bestStreak: 0, bestMargin: 0, goalsFor: 0, rating: 0, likes: 0 }
@@ -139,6 +151,8 @@ export async function computeOwnerAchievements(
     retireAt: retireAtOf(season),
     kept: keptOf(prev?.teamKept),
     ladder: usesRankLadder(season),
+    endless: season >= ACH_ENDLESS_FROM_SEASON,
+    varied: season >= ACH_VARIETY_FROM_SEASON,
   });
   return { groups, prev, players: careersIn.length };
 }
@@ -170,17 +184,78 @@ export async function refreshOwnerAchievements(
   );
   // T-11-357 지금 시즌이면 새로 달성한 업적의 보상을 준다(지난 시즌은 보상이 끝났다). 보상을 주기 전 시즌은 표시도 없다.
   let shown = groups;
+  let bonus: AchBonusView | null = null;
   if (season === teamSeasonAt(now) && season >= ACH_REWARD_FIRST_SEASON) {
-    const got = await settleAchievementRewards(db, owner.id, season, groups, now);
-    shown = withAchRewards(groups, got);
+    const settled = await settleSeasonRewards(db, owner.id, season, groups, now);
+    shown = withAchRewards(groups, settled.got, season);
+    bonus = settled.bonus;
   }
-  return { groups: shown, row, players };
+  return { groups: shown, row, players, bonus };
 }
+
+/** T-11-541 점수 보너스 한 칸 — k번째(1부터) 보너스, key는 'score:<k>'(업적 id와 겹치지 않는다). */
+export type AchBonusStep = { key: string; k: number } & AchBonusReward;
+
+/** T-11-541 그 시즌 점수로 닿은 점수 보너스(ACH_SCORE_BONUS). 보너스를 주기 전 시즌은 빈 목록. */
+export function achBonusSteps(season: number, score: number): AchBonusStep[] {
+  if (season < ACH_SCORE_BONUS.fromSeason) return [];
+  return Array.from({ length: achScoreBonusCount(score) }, (_, i) => ({
+    key: `score:${i + 1}`,
+    k: i + 1,
+    ...achScoreBonusOf(i + 1),
+  }));
+}
+
+/** T-11-541 업적 화면의 점수 보너스 — 다음 보너스 점수 · 그 아이템 · 이 시즌에 받은 보너스 합. */
+export type AchBonusView = { next: number; reward: AchBonusReward; got: AchBonusReward };
 
 /**
  * T-11-357 업적 달성 보상을 맞춘다 — 받은 기록에 없는 달성 업적·단계에 보상을 주고, 업적별로 이 시즌에 받은 보상을
  * 돌려준다. ACH_REWARD_FIRST_SEASON 앞 시즌은 주지 않는다. 보상 칸이 없으면 읽지 않는다.
+ * T-11-541 점수 보너스(achBonusSteps)도 같은 받은 기록 · 같은 batch로 한 번만 준다(bonus는 보너스 시즌만).
  */
+export async function settleSeasonRewards(
+  db: Db,
+  profileId: string,
+  season: number,
+  groups: readonly ClubAchievementGroup[],
+  now: string,
+  withBonus = true,
+): Promise<{ got: Map<string, AchReward>; bonus: AchBonusView | null }> {
+  const steps = season < ACH_REWARD_FIRST_SEASON ? [] : achRewardSteps(groups, season);
+  const score = achievementScore(groups).score;
+  const bonusOn = withBonus && season >= ACH_SCORE_BONUS.fromSeason;
+  const bonusSteps = bonusOn ? achBonusSteps(season, score) : [];
+  const got = new Map<string, AchReward>();
+  const bonusGot: AchBonusReward = { boost: 0, scout: 0, reroll: 0 };
+  const all = [...steps, ...bonusSteps];
+  if (all.length) {
+    const claims = await achievementClaimsOf(db, profileId, season);
+    const fresh = all.filter((s) => !claims.has(s.key));
+    const granted = new Set(
+      fresh.length ? await claimAchievementRewards(db, profileId, season, fresh, now) : [],
+    );
+    const mine = (key: string) => claims.has(key) || granted.has(key);
+    for (const s of steps) {
+      if (!mine(s.key)) continue;
+      const g = got.get(s.id) ?? { boost: 0, scout: 0 };
+      got.set(s.id, { boost: g.boost + s.boost, scout: g.scout + s.scout });
+    }
+    for (const s of bonusSteps) {
+      if (!mine(s.key)) continue;
+      bonusGot.boost += s.boost;
+      bonusGot.scout += s.scout;
+      bonusGot.reroll += s.reroll;
+    }
+  }
+  const k = achScoreBonusCount(score) + 1;
+  const bonus = bonusOn
+    ? { next: k * ACH_SCORE_BONUS.every, reward: achScoreBonusOf(k), got: bonusGot }
+    : null;
+  return { got, bonus };
+}
+
+/** 단계 보상만 맞춘다(settleSeasonRewards에서 점수 보너스를 뺀 것). */
 export async function settleAchievementRewards(
   db: Db,
   profileId: string,
@@ -188,26 +263,16 @@ export async function settleAchievementRewards(
   groups: readonly ClubAchievementGroup[],
   now: string,
 ): Promise<Map<string, AchReward>> {
-  const steps = achRewardSteps(groups);
-  if (season < ACH_REWARD_FIRST_SEASON || !steps.length) return new Map();
-  const claims = await achievementClaimsOf(db, profileId, season);
-  const fresh = steps.filter((s) => !claims.has(s.key));
-  const granted = new Set(
-    fresh.length ? await claimAchievementRewards(db, profileId, season, fresh, now) : [],
-  );
-  const got = new Map<string, AchReward>();
-  for (const s of steps) {
-    if (!claims.has(s.key) && !granted.has(s.key)) continue;
-    const g = got.get(s.id) ?? { boost: 0, scout: 0 };
-    got.set(s.id, { boost: g.boost + s.boost, scout: g.scout + s.scout });
-  }
-  return got;
+  return (await settleSeasonRewards(db, profileId, season, groups, now, false)).got;
 }
 
-/** T-11-386 달성한 업적으로 받을 시즌 업적 보상 합(시즌 2 실시간 보상과 같은 표). */
+/**
+ * T-11-386 달성한 시즌 1 업적으로 받을 업적 보상 합. 시즌 1 업적은 시즌 1 보상 표(T-11-541 시즌 2부터 바뀐 표가 아니라
+ * 예전 표)로 센다 — 이미 적어 둔 장수와 처음 세는 장수가 같게.
+ */
 export function seasonGiftAmount(groups: readonly ClubAchievementGroup[]): AchReward {
   const sum = { boost: 0, scout: 0 };
-  for (const s of achRewardSteps(groups)) {
+  for (const s of achRewardSteps(groups, ACH_SEASON_GIFT.season)) {
     sum.boost += s.boost;
     sum.scout += s.scout;
   }

@@ -52,6 +52,7 @@ import { hofRnText as L } from '@offside/app-core/i18n/ko/hofRn';
 import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../ui/useSeasonNow';
 import { useRefresh } from '../../ui/refresh';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 type Item = RetiredNumbersResponse['items'][number];
 type ClubSum = RetiredNumbersSummary['clubs'][number];
@@ -801,10 +802,7 @@ export default function RetiredWall() {
           label={L.season}
           testID="rn-season-select"
           value={season}
-          options={seasons.map((s) => ({
-            value: s.id,
-            label: `${s.name}${s.startsAt > now ? L.notOpen : ''}`,
-          }))}
+          options={seasonOptions(seasons, now)}
           onChange={(id) => {
             view.season = id;
             view.screen = 'home';

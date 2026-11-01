@@ -11,6 +11,8 @@ export const webPay: Translation<WebPayMsgs> = {
   opening: '正在前往付款畫面…',
   startFail: '無法開啟付款畫面，請稍後再試。',
   confirming: '正在確認付款…',
+  donePass: '付款完成，賽季通行證已開啟。',
+  doneMember: '付款完成，會員福利已開始。',
   done: '付款完成，道具已存入。',
   pending: '付款確認後，道具會自動存入。如果沒有付款，不用理會即可。',
   canceled: '此筆付款已退款，已收回道具。',

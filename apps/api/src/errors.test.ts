@@ -46,6 +46,13 @@ describe('오류 문구 영어(T-11-106)', () => {
     expect(
       localizeMessage("감독 이름에 '운영자'처럼 운영진으로 보이는 말은 쓸 수 없어요.", 'en'),
     ).toBe("A manager name that looks like staff, such as 'Moderator', isn't allowed.");
+    // T-11-588 예약 닉네임은 다른 이름 칸과 같은 문장을 쓰고, 경기 선택 충돌도 세 언어로 옮긴다.
+    for (const lang of ['en', 'ja', 'zh'] as const)
+      for (const ko of [
+        "닉네임에 '운영자'처럼 운영진으로 보이는 말은 쓸 수 없어요.",
+        '잠시 뒤 다시 골라 주세요.',
+      ])
+        expect(localizeMessage(ko, lang), `${lang} ${ko}`).not.toMatch(/[가-힣]/);
     expect(localizeMessage('글 항목을 찾을 수 없어요.', 'en')).toBe("We couldn't find that post.");
     expect(
       localizeMessage(

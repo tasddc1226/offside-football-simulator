@@ -25,6 +25,9 @@ import {
   presetsFull,
   removePreset,
   renamePreset,
+  replacePreset,
+  setCupPreset,
+  cupPresetOf,
 } from './teamPresets.js';
 
 const player = (careerId: string, over: Partial<TeamPlayer> = {}): TeamPlayer => ({
@@ -297,5 +300,18 @@ describe('T-11-217 팀 프리셋', () => {
     expect(presetsFull(list)).toBe(true);
     expect(presetsFull(removePreset(list, 0))).toBe(false);
     expect(renamePreset(list, 1, ' 새 이름 ')[1]!.name).toBe('새 이름');
+  });
+
+  it('T-11-570 컵 명단은 하나만, 덮어써도 컵 명단 표시가 남는다', () => {
+    const list = Array.from({ length: 3 }, (_, i) => presetOf(`p${i}`, '4-3-3', slots, null));
+    const one = setCupPreset(list, 1);
+    expect(one.map((p) => !!p.cup)).toEqual([false, true, false]);
+    expect(cupPresetOf(one)?.name).toBe('p1');
+    const moved = setCupPreset(one, 2);
+    expect(moved.map((p) => !!p.cup)).toEqual([false, false, true]);
+    expect(cupPresetOf(setCupPreset(moved, null))).toBeNull();
+    const over = replacePreset(moved, 2, presetOf('p2', '4-4-2', slots, null));
+    expect(over[2]).toMatchObject({ formation: '4-4-2', cup: true });
+    expect(replacePreset(moved, 0, presetOf('p0', '4-4-2', slots, null))[0]!.cup).toBeUndefined();
   });
 });

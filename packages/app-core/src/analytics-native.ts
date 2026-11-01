@@ -16,8 +16,20 @@ const PUSH_CAMPAIGNS = new Map<unknown, readonly number[]>([
   ['retention_onboarding', [1, 2, 3, 4, 5]], // 다음 할 일 순서
 ]);
 
-/** T-11-509 알림 권유를 띄운 곳. 홈 카드 · 친구 화면 · 은퇴 리포트 · 판매 등록 뒤 · 구단 만든 뒤. */
-export const PUSH_ASK_PLACES = ['home', 'friends', 'retire', 'sell', 'club'] as const;
+/**
+ * T-11-509 알림 권유를 띄운 곳. 홈 카드 · 친구 화면 · 은퇴 리포트 · 판매 등록 뒤 · 구단 만든 뒤.
+ * T-11-586 리그 신청 뒤 · 컵 접수 뒤, quiet는 창 없이 받은 iOS 조용한 알림(결과만 보낸다).
+ */
+export const PUSH_ASK_PLACES = [
+  'home',
+  'friends',
+  'retire',
+  'sell',
+  'club',
+  'league',
+  'cup',
+  'quiet',
+] as const;
 export type PushAskPlace = (typeof PUSH_ASK_PLACES)[number];
 /** OS 권한 요청 결과. failed는 권한은 받았지만 기기 등록이 실패한 경우다. */
 export type PushAskResult = 'granted' | 'denied' | 'blocked' | 'failed';

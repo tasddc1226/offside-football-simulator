@@ -8,7 +8,7 @@ const ko = {
   open: '리그 보기',
   loadFail: '리그 정보를 불러오지 못했어요.',
   pitch:
-    '8팀이 한 리그에서 홈 · 원정으로 두 번씩 붙어 14라운드를 치러요. 순위에 따라 다음 시즌 부가 오르내려요.',
+    '8팀이 한 리그에서 시즌 마감 전날까지 매일 한 라운드씩 홈 · 원정으로 붙어요. 시즌이 끝날 때 순위로 다음 시즌 부가 오르내려요.',
   // 단계
   phaseSoon: '접수 예정',
   phaseOpen: '접수 중',
@@ -26,14 +26,14 @@ const ko = {
   scheduleEntry: '신청',
   scheduleSeason: (p: { season: number }) => `시즌 ${p.season} 개막`,
   scheduleDraw: '배치 · 대진 발표',
-  scheduleRounds: '1 ~ 14라운드',
+  scheduleRounds: (p: { n: number }) => `1 ~ ${p.n}라운드`,
   date: (p: { month: number; day: number }) => `${p.month}월 ${p.day}일`,
   range: (p: { from: string; to: string }) => `${p.from} ~ ${p.to}`,
   daily: (p: { from: string; to: string; time: string }) => `${p.from} ~ ${p.to}, 매일 ${p.time}`,
   // 규칙
   rulesTitle: '규칙',
   ruleEntry:
-    '시즌 개막 7일 전부터 미리 신청할 수 있어요. 배치 때 그 시즌 팀 선발에 내 은퇴 선수가 8명보다 적으면 리그에서 빠져요.',
+    '새 시즌 개막 뒤 5일까지 신청할 수 있어요. 배치 때 그 시즌 팀 선발에 내 은퇴 선수가 8명보다 적으면 리그에서 빠져요.',
   ruleTiers:
     '1부는 리그 1개, 2부는 2개처럼 아래 부로 갈수록 리그가 두 배로 늘어요. 첫 시즌은 접수 마감 때 팀 OVR 순으로 위 부부터 채워요. 참가 팀 수에 따라 7팀 리그도 생기고, 7팀 리그는 라운드마다 한 팀이 쉬어요.',
   rulePoints:

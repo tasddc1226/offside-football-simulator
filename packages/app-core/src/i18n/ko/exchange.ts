@@ -29,7 +29,7 @@ const ko = {
   nameSpine: '팀의 척추',
   nameFrontLine: '공격 라인',
   nameVeterans: '베테랑 모임',
-  nameBestEleven: '베스트 세븐',
+  nameBestEleven: '포지션 대표',
   nameLegendGift: '레전드의 선물',
   nameOneNation: '한 나라 대표단',
   nameSeasonOne: '시즌 1 동기들',
@@ -42,6 +42,8 @@ const ko = {
   nameEngineRoom: '중원 엔진',
   nameWorldSelect: '월드 셀렉션',
   nameLeagueStars: '리그 올스타',
+  nameFullBacks: '풀백 듀오',
+  nameRightFoot: '오른발잡이 모임',
   // 조건
   condCount: (p: { n: number }) => `선수 ${p.n}명`,
   condPos: (p: { list: string }) => `${p.list}만`,

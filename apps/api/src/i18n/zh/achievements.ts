@@ -16,6 +16,9 @@ export const GROUP_ZH: Record<string, { stage: string; title: string }> = {
   race: { stage: 'RACE', title: '賽季競賽' },
   owner: { stage: 'OWNER', title: '球隊經營' },
   manager: { stage: 'MANAGER', title: '總教練生涯' },
+  season: { stage: '賽季', title: '單季偉業' },
+  career: { stage: '生涯', title: '生涯樣貌' },
+  match: { stage: 'MATCH', title: '比賽名場面' },
 };
 
 export const LABEL_ZH: Record<string, string> = {
@@ -110,6 +113,29 @@ export const LABEL_ZH: Record<string, string> = {
   'mgr-mastery': '陣型熟練度 S 的總教練',
   'mgr-grade': 'S 級總教練',
   'mgr-coach': '補滿總教練席位',
+  // T-11-541 賽季 2 起
+  's-assists-30': '單季 30 助攻',
+  's-teen-20': '10 幾歲單季 20 球',
+  's-veteran-20': '35 歲後單季 20 球',
+  's-double': '同一賽季聯賽冠軍與得分王',
+  's-young-ballon': '21 歲以下拿下金球獎',
+  's-quadruple': '單季拿下 4 個俱樂部冠軍',
+  's-ballon-treble': '三冠王賽季同時拿下金球獎',
+  'c-journeyman': '一名球員在 5 個聯賽踢過球',
+  'c-df-50': '生涯 50 球的後衛',
+  'c-peak': '最高 OVR',
+  'c-ballon-players': '拿過金球獎的球員',
+  'c-legends': '傳奇分數 1,000 分的球員',
+  'secret-farewell': '以冠軍收尾的最後一個賽季',
+  'secret-homecoming': '回到第一家俱樂部退役',
+  'team-cup-qf': 'OFFSIDE 盃 八強',
+  'team-clean': '零失球勝利',
+  'team-thrash': '贏 4 球以上',
+  'team-six': '單場 6 球',
+  'team-winrate': '勝率 70%',
+  'team-wall': '平均每場失球不到 1 球',
+  'mgr-titles': '總教練聯賽冠軍累計',
+  'mgr-double': '同時拿下冠軍與升級的總教練',
 };
 
 /** 단계 업적의 단위(숫자 바로 뒤에 붙는다). */
@@ -132,6 +158,12 @@ export const UNIT_ZH: Record<string, string> = {
   'owner-match-days': '天',
   'owner-likes': '次',
   'mgr-count': '人',
+  'c-peak': '',
+  'c-ballon-players': '人',
+  'c-legends': '人',
+  'team-clean': '勝',
+  'team-thrash': '勝',
+  'mgr-titles': '次',
 };
 
 /** '○○세까지 현역'(시즌마다 나이가 다르다). */
@@ -141,4 +173,24 @@ export const DESC_ZH: Record<string, string> = {
   'team-mates':
     '只要生涯中曾有一個賽季在同一家職業俱樂部效力就算達成。高中、大學、服兵役的賽季不列入計算。',
   'team-club': '11 人退役時最後所屬的俱樂部必須相同。',
+  // T-11-541
+  's-teen-20': '在 19 歲以下的賽季進 20 球就算達成。',
+  's-veteran-20': '在 35 歲以上的賽季進 20 球就算達成。',
+  's-quadruple':
+    '單季拿下聯賽、盃賽、洲際賽事等 4 個俱樂部冠軍就算達成。超級盃、世界俱樂部錦標賽、國家隊冠軍不列入計算。',
+  'c-journeyman': '除了服兵役的賽季外，在 5 個以上的職業聯賽踢過球就算達成。',
+  'team-clean': '計算自己發起挑戰的比賽中，零失球獲勝的場數。',
+  'team-thrash': '計算自己發起挑戰的比賽中，贏 4 球以上的場數。',
+  'team-six': '在自己發起挑戰的比賽中，單場進 6 球以上就算達成。',
+  'team-winrate': '打滿 50 場以上，勝率達 70% 以上就算達成。',
+  'team-wall': '打滿 30 場以上，失球數少於比賽場數就算達成。',
+};
+
+/** T-11-541 隱藏成就（達成前）。 */
+export const HIDDEN_ZH = {
+  label: '隱藏成就',
+  descs: {
+    'secret-farewell': '這是發生在某位球員最後一個賽季的事。',
+    'secret-homecoming': '這是輾轉多家俱樂部的球員，最後的選擇。',
+  } as Record<string, string>,
 };

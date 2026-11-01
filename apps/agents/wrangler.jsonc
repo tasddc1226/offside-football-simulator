@@ -13,11 +13,14 @@
       { "name": "LEDGER", "class_name": "AgentLedger" },
       // T-11-325 작업 카드(스레드마다 하나, card.ts).
       { "name": "CARD", "class_name": "WorkCard" },
+      // T-11-576 디스코드 게이트웨이 · 메시지 옮기기(bridge.ts, 객체 하나).
+      { "name": "DISCORD", "class_name": "DiscordBridge" },
     ],
   },
   "migrations": [
     { "tag": "v1-agents", "new_sqlite_classes": ["AgentThread", "AgentLedger"] },
     { "tag": "v2-cards", "new_sqlite_classes": ["WorkCard"] },
+    { "tag": "v3-discord", "new_sqlite_classes": ["DiscordBridge"] },
   ],
   // 매시 7분 고객 문의 메일(@plan, support.ts, T-11-291). 3시간마다 47분 유저 반응 살피기(@plan, reactions.ts, 디시는 매시 27분 Actions가 넣어 둔 것, T-11-289),
   // 매일 23:50 UTC(08:50 KST) 주기 작업 보고(@ops) · 열린 카드 목록(@plan) · 월요일 주간 회고(@plan) · 주간 유입 리포트(@mkt).
@@ -29,6 +32,11 @@
   "vars": {
     // ADR-015 도입 단계: 4단계(T-11-296)에 @mkt까지 연다.
     "ENABLED_ROLES": "ops,plan,dev,mkt",
+    // T-11-576 디스코드 서버 OFFSIDE Lab. 채널 · 운영자 ID는 아래 OPERATOR_USER_ID · *_CHANNEL(S).
+    "DISCORD_APP_ID": "1565286012953960458",
+    "DISCORD_PUBLIC_KEY": "0b5796376fc66873a5eb746e1eaf587e968e39f76cf5b8ceed3c72b609eaf143",
+    // OFFSIDE Lab 서버.
+    "DISCORD_GUILD_ID": "1565285712062976002",
     // T-11-299 @mkt GA4 읽기(OFFSIDE - Production 속성, 서비스 계정은 뷰어). 비공개 키 · 계정 메일은 비밀값 GA4_SA_KEY · GA4_SA_EMAIL.
     "GA4_PROPERTY_ID": "556515567",
     "GA4_KEY_ID": "0de7dab176e5ac1a7a2d413b993a0d760a5fc717",
@@ -42,23 +50,20 @@
     "META_AD_ACCOUNT_ID": "943240728441057",
     // T-11-395 인스타그램 @offside.lab.kr. 토큰은 비밀값 INSTAGRAM_ACCESS_TOKEN(T-11-397) 또는 META_GRAPH_TOKEN, Threads는 THREADS_ACCESS_TOKEN.
     "META_IG_USER_ID": "17841417364785110",
-    "OPERATOR_USER_ID": "U0C9BAYGT8Q",
-    // 에이전트 봇 4개(자기 · 서로의 메시지에 반응하지 않는다).
-    "AGENT_APP_IDS": "A0C987NV8HZ,A0C9CFUM98E,A0C996C6R3P,A0C9E9PELTC",
-    "AGENT_BOT_USERS": "U0C987SP9MH,U0C9J5P80JG,U0C996EN269,U0C8Z49E58F",
+    "OPERATOR_USER_ID": "431489017041649664",
     // #offside-alerts
-    "ALERT_CHANNELS": "C0C8FEU657G",
+    "ALERT_CHANNELS": "1565295478701301881",
     "CF_ACCOUNT_ID": "12f369468d8f8386e116a5c76da455d2",
     "D1_DATABASE_ID": "2cfe462c-204e-4842-805c-5840fc9b1758",
     "GITHUB_REPO": "tasddc1226/offside-football-simulator",
     "API_BASE": "https://api.offside-lab.com",
     // #agent-desk
-    "DESK_CHANNEL": "C0C9E9WRVA6",
+    "DESK_CHANNEL": "1565295474821566587",
     "TASK_BUDGET_USD": "1.5",
     "DAILY_BUDGET_USD": "5",
     "DAILY_BUDGET_DEV_USD": "20",
     "DEV_RUN_BUDGET_USD": "5",
-    "APPROVAL_CHANNEL": "C0C9GCJPYAV",
+    "APPROVAL_CHANNEL": "1565295476637433936",
     // 고객 문의 메일함 검색 조건(T-11-291).
     "SUPPORT_QUERY": "to:contact@offside-lab.com",
     // Gmail 보내기 별칭(Cloudflare SMTP로 나간다, DKIM 자동).

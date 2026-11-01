@@ -29,7 +29,7 @@
   // 로컬 기본값. 원격 origin은 staging/production 환경에만 둔다. 비밀값 없음.
   "vars": {
     "ENVIRONMENT": "local",
-    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173",
+    "ALLOWED_ORIGINS": "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174",
     // D-21. GOOGLE_CLIENT_ID·GOOGLE_CLIENT_SECRET은 U-003 뒤 `wrangler secret put`으로 넣는다.
     // GOOGLE_FAKE=1은 로컬에서만 의미가 있다(가짜 OIDC).
     "WEB_APP_URL": "http://localhost:5173",
@@ -173,6 +173,14 @@
         "RETENTION_HOLDOUT_UNTIL": "2026-11-10T15:00:00.000Z",
         // T-11-512 클럽 멤버십 가입을 받는다. 입구는 MEMBERSHIP_LIVE(앱 1.1.5)가 열고, 그 전에는 개발 빌드만 닿는다.
         "MEMBERSHIP_ENABLED": "1",
+        // T-11-569 시즌 패스 판매. 코드가 시즌 2 개막(2026-10-31 00:00 KST) 전에는 팔지 않고 입구도 숨기므로(passSaleOpen) 미리 켜 둔다.
+        "SEASON_PASS_ENABLED": "1",
+        // T-11-589 웹 결제(엑솔라). 스위치와 프로젝트 id는 미리 두고, 실제로는 secret XSOLLA_API_KEY · XSOLLA_WEBHOOK_SECRET이
+        // 들어가야 열린다(webPayEnabled). 처음에는 WEB_PAY_TESTERS를 먼저 넣어 운영자만 연다(docs/operations/web-pay.md).
+        "WEB_PAY_ENABLED": "1",
+        // Xsolla 100장 상품 등록 · 가격 확인 후 이 배포부터 판매한다.
+        "WEB_PAY_BOOST_100_ENABLED": "1",
+        "XSOLLA_PROJECT_ID": "318798",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",
         "GOOGLE_REDIRECT_URI": "https://offside-api.tasddc1569.workers.dev/v1/auth/google/callback",

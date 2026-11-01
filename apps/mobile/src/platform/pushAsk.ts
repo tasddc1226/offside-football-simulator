@@ -12,7 +12,7 @@ import { kv } from './setup';
 export const PUSH_ASK_GAP_MS = 3 * 24 * 60 * 60 * 1000;
 const LAST = 'offside_push_ask_last';
 const askedKey = (place: PushAskPlace) => `offside_push_ask_${place}`;
-type Moment = Exclude<PushAskPlace, 'home' | 'friends'>;
+type Moment = Exclude<PushAskPlace, 'home' | 'friends' | 'quiet'>;
 
 /** 순간 권유를 띄워도 되는가. 홈의 7일 보류와는 따로 곳마다 한 번, 서로 3일 간격을 둔다. */
 export async function pushAskOpen(place: Moment): Promise<boolean> {
@@ -54,9 +54,12 @@ export function laterPushAsk(place: PushAskPlace) {
 const ALERT: Record<Exclude<Moment, 'retire'>, () => [string, string]> = {
   sell: () => [L.askSellTitle, L.askSellBody],
   club: () => [L.askClubTitle, L.askClubBody],
+  // 리그 결과 알림은 아직 없어 구단 만들기와 같은 안내(컵 접수 · 랭크 경기 결과)로 묻는다.
+  league: () => [L.askClubTitle, L.askClubBody],
+  cup: () => [L.askCupTitle, L.askCupBody],
 };
 
-/** 판매 등록 · 구단 만들기가 성공한 뒤 확인 창으로 묻는다. 안내 토스트와 겹치지 않게 조금 뒤에 띄운다. */
+/** 판매 등록 · 구단 만들기 · 리그 신청 · 컵 접수가 성공한 뒤 확인 창으로 묻는다. 안내 토스트와 겹치지 않게 조금 뒤에 띄운다. */
 export async function askPushAfter(place: Exclude<Moment, 'retire'>) {
   if (!(await pushAskOpen(place))) return;
   setTimeout(() => {

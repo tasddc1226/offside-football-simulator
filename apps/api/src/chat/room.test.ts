@@ -1,6 +1,7 @@
 import {
   CHAT_HISTORY,
   CHAT_KEEP_MS,
+  CHAT_REPLY_SNIPPET,
   CHAT_TICKET_MS,
   type ChatServerEvent,
 } from '@offside/contracts/chat';
@@ -148,6 +149,50 @@ describe('T-11-015 ChatRoom', () => {
     expect(page2.messages.map((m) => m.body)).toEqual(['m0', 'm1', 'm2', 'm3']);
     expect(older('없는 줄')).toEqual({ t: 'older', messages: [], more: false });
     expect(admin.sent.some((e) => (e as ChatServerEvent).t === 'older')).toBe(false);
+  });
+
+  it('T-11-573 답장은 원문 앞부분을 붙여 보내고, 원문이 가려지면 다시 들어올 때 원문 없이 받는다', async () => {
+    const { room, join } = fakeRoom();
+    const alice = await join(room.issueTicket(ALICE));
+    const bob = await join(room.issueTicket(BOB));
+    const long = '가'.repeat(CHAT_REPLY_SNIPPET + 10);
+    say(alice, room, long);
+    const { id } = (last(bob) as { m: { id: string } }).m;
+    const reply = (body: string, replyTo: unknown) =>
+      room.webSocketMessage(
+        bob as unknown as WebSocket,
+        JSON.stringify({ t: 'send', body, replyTo }),
+      );
+    reply('반가워요', id);
+    const sent = last(alice) as Extract<ChatServerEvent, { t: 'msg' }>;
+    expect(sent.m).toMatchObject({
+      body: '반가워요',
+      replyTo: id,
+      reply: {
+        id,
+        author: ALICE.author,
+        nickname: '앨리스',
+        admin: false,
+        body: '가'.repeat(CHAT_REPLY_SNIPPET),
+      },
+    });
+    expect(JSON.stringify(sent)).not.toContain('prf_a');
+
+    // 없는 원문 · 이상한 값은 보통 메시지로 올라간다.
+    vi.useFakeTimers({ now: Date.now() + 2_000 });
+    reply('혼잣말', '없는 줄');
+    expect((last(alice) as Extract<ChatServerEvent, { t: 'msg' }>).m).not.toHaveProperty('replyTo');
+
+    const hello = (await join()).sent[0] as Extract<ChatServerEvent, { t: 'hello' }>;
+    expect(hello.messages.map((m) => m.reply?.nickname ?? null)).toEqual([null, '앨리스', null]);
+    expect(hello.messages[0]).not.toHaveProperty('replyTo');
+
+    room.hide(id);
+    const after = (await join()).sent[0] as Extract<ChatServerEvent, { t: 'hello' }>;
+    expect(after.messages.map((m) => [m.body, m.replyTo ?? null, m.reply ?? null])).toEqual([
+      ['반가워요', id, null],
+      ['혼잣말', null, null],
+    ]);
   });
 
   it('신고·차단 대상은 작성자 프로필과 함께 읽는다(가린 메시지는 없다)', async () => {

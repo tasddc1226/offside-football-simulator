@@ -86,7 +86,8 @@ export function handleOAuthReturn() {
         ? appleFailText(reason)
         : googleFailText(reason),
   );
-  window.history.replaceState({}, '', '/');
+  // 주소만 정리하고 화면 기록(history.svelte.ts)의 상태는 남긴다 — 지우면 다음 탭 이동이 홈으로 튄다(T-11-567).
+  window.history.replaceState(window.history.state, '', '/');
   // T-11-360 로그인에 성공했으면 구단주 표시를 남긴다(홈 카드가 구단주 화면을 거치지 않고 바로 출석 상태를 묻게).
   if (google !== 'error') noteOwner(true);
   const back = takeLoginReturn();
@@ -107,6 +108,6 @@ export function handleOAuthReturn() {
   }
   // T-11-098 친구 초대 링크로 들어와 로그인했으면 친구 화면으로 돌아가 신청을 마저 보낸다.
   if (google !== 'error' && pendingInvite()) return openFriends();
-  // 계정 패널이 구단주 화면에 있으므로, 로그인을 마치고 돌아오면 구단주 화면을 연다.
+  // 로그인하면 내 팀 · 이적시장이 열리는 구단주 화면으로 돌아온다(계정 패널은 T-11-567부터 설정 화면).
   appState.screen = 'owner';
 }

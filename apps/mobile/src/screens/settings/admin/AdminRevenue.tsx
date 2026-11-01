@@ -8,7 +8,7 @@ import {
   ADMIN_REVENUE_DAYS,
   REVENUE_NOTE,
   adsSince,
-  nick,
+  paymentNick,
   periodLabel,
   productLine,
   productName,
@@ -177,7 +177,7 @@ export default function AdminRevenue() {
                     >
                       <Txt style={small}>{productName(x.productId)}</Txt>
                       <Txt tone="muted" style={tiny}>
-                        {`${nick(x.nickname)} · ${recentLine(x)}`}
+                        {`${paymentNick(x)} · ${recentLine(x)}`}
                       </Txt>
                     </View>
                   ))

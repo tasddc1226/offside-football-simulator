@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { COMMENT_REPORT_REASONS } from './board-limits.js';
-import { CHAT_DENY_REASONS, CHAT_MUTE_DAYS } from './chat-limits.js';
+import { CHAT_DENY_REASONS, CHAT_MUTE_DAYS, CHAT_ROOMS } from './chat-limits.js';
 import { IsoUtcSchema } from './primitives.js';
 
 export * from './chat-limits.js';
@@ -58,6 +58,8 @@ export const AdminChatReportSchema = z.object({
   reasons: z.array(z.enum(COMMENT_REPORT_REASONS)),
   reports: z.number().int().min(0),
   lastReportedAt: IsoUtcSchema,
+  /** T-11-583 메시지가 있는 언어 방. */
+  room: z.enum(CHAT_ROOMS),
 });
 export type AdminChatReport = z.infer<typeof AdminChatReportSchema>;
 export const AdminChatReportListSchema = z.object({ items: z.array(AdminChatReportSchema) });

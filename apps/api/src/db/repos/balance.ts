@@ -46,6 +46,9 @@ export const pastSalaryBudgetFrom = (row: Row | undefined, teamSeason: number) =
   const b = resolveBalance(row && toVersion(row).values);
   return seasonSalaryBudget(b.pastSalaryBudget, b.pastSalaryBudgetStep, teamSeason);
 };
+/** T-11-571 리그 체력 비율(0이면 끔). */
+export const leagueFatigueFrom = (row: Row | undefined) =>
+  resolveBalance(row && toVersion(row).values).leagueFatigue;
 export async function pastSalaryBudgetOf(db: Db, teamSeason: number): Promise<number> {
   const [row] = await activeBalanceQuery(db);
   return pastSalaryBudgetFrom(row, teamSeason);
@@ -229,6 +232,12 @@ export async function cupAtkKOf(db: Db): Promise<number> {
 
 /** T-11-418e 활성 버전의 리그 홈 이점(없으면 기본값). */
 export async function leagueHomeAdvOf(db: Db): Promise<number> {
+  return (await leagueMatchBalanceOf(db)).homeAdv;
+}
+
+/** T-11-571 리그 경기가 읽는 밸런스(홈 이점 · 체력)를 한 번에. */
+export async function leagueMatchBalanceOf(db: Db) {
   const [row] = await activeBalanceQuery(db);
-  return resolveBalance(row && toVersion(row).values).leagueHomeAdv;
+  const b = resolveBalance(row && toVersion(row).values);
+  return { homeAdv: b.leagueHomeAdv, fatigue: b.leagueFatigue };
 }

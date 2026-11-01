@@ -92,6 +92,32 @@ describe('T-11-128 시즌 결산', () => {
     return steps;
   }
 
+  it('통계를 묶음마다 저장하고 중단 뒤 다음 구단주부터 재개한다', async () => {
+    const a = await issueGoogleCookie(ctx);
+    const b = await issueGoogleCookie(ctx);
+    await addCareer(a.profileId, { goals: 12 });
+    await addCareer(b.profileId, { goals: 34 });
+    const now = new Date().toISOString();
+    expect((await runSeasonClose(ctx.db, now, 1))?.next).toBe('stats');
+    expect((await runSeasonClose(ctx.db, now, 1))?.next).toBe('stats');
+    const state = await closeStateOf(ctx.db, 0);
+    expect(state?.statsAfter).toBeTruthy();
+    const first = await ctx.db.all<{ profile_id: string; stats_json: string | null }>(sql`
+      select profile_id, stats_json from owner_season_records where season = 0 order by profile_id`);
+    expect(first.filter((row) => row.stats_json !== null)).toHaveLength(1);
+    expect(first[0]!.profile_id).toBe(state?.statsAfter);
+    await runSeasonClose(ctx.db, now, 1);
+    expect((await closeStateOf(ctx.db, 0))?.statsAfter).toBe(first[1]!.profile_id);
+    await runSeasonClose(ctx.db, now, 1);
+    expect(await closeStateOf(ctx.db, 0)).toMatchObject({ step: 'ach' });
+    const rows = await ctx.db.all<{ profile_id: string; stats_json: string }>(sql`
+      select profile_id, stats_json from owner_season_records where season = 0`);
+    const totals = Object.fromEntries(
+      rows.map((row) => [row.profile_id, JSON.parse(row.stats_json).stats.goals]),
+    );
+    expect(totals).toEqual({ [a.profileId]: 12, [b.profileId]: 34 });
+  });
+
   it('개막 시각까지의 기록으로 프리시즌을 굳히고 휘장을 준다', async () => {
     const a = await issueGoogleCookie(ctx);
     const b = await issueGoogleCookie(ctx);
@@ -128,7 +154,16 @@ describe('T-11-128 시즌 결산', () => {
     expect(pending.data.status).toBe('pending');
 
     // T-11-375 디비전 단계는 보상 시작 시즌(기본 2) 전이라 휘장 · 리롤권 없이 지나간다.
-    expect(await closeAll()).toEqual(['records', 'ach', 'ranks', 'honors', 'division']);
+    expect(await closeAll()).toEqual([
+      'records',
+      'stats',
+      'stats',
+      'ach',
+      'ranks',
+      'honors',
+      'specials',
+      'division',
+    ]);
     expect(await closeStateOf(ctx.db, 0)).toMatchObject({
       step: 'done',
       cutoff: CUTOFF,

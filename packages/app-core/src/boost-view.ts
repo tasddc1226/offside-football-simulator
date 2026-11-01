@@ -7,6 +7,7 @@ import {
   boostChance,
   boostCost,
   boostExtraLeft,
+  boostGreatChance,
   boostState,
   boostStatus,
   boostSureOpen,
@@ -15,6 +16,7 @@ import {
   type BoostPay,
   type BoostStatus,
 } from '@offside/game/boost';
+import { BAL } from '@offside/game/balance';
 import { fmtMoney } from '@offside/game/player';
 import type { GameState } from '@offside/game/types';
 import { gameBoostText as L } from './i18n/ko/gameBoost';
@@ -28,6 +30,8 @@ export interface BoostView {
   line: string;
   /** 다음 시도 성공 확률(%). T-11-153 구단 자금 버튼에 적는다. */
   chance: number;
+  /** T-11-593 다음 시도의 대성공(두 단계) 확률(%). 없으면 0. */
+  great: number;
   /** 시도할 수 있을 때만 — 비용과 확률을 버튼에 그대로 적는다(접근성 이름). */
   button?: string;
   /** T-11-221 화면에는 '강화하기'와 오른쪽 배지(비용 · 광고 · 확률)로 나눠 그린다. button · adButton과 함께 온다. */
@@ -54,7 +58,12 @@ export interface BoostView {
 }
 
 /** 안내 문구 — 언어가 정해진 뒤에 읽도록 함수로 둔다. */
-export const boostNote = (): string => L.note({ age: BOOST.maxAge, pct: BOOST_PITY_PCT });
+export const boostNote = (): string => {
+  const note = L.note({ age: BOOST.maxAge, pct: BOOST_PITY_PCT });
+  // T-11-593 대성공 비율은 운영 도구에서 바뀌므로 이 커리어에 적용된 값으로 적는다(0이면 문장을 뺀다).
+  const great = BAL.boostGreat * 100;
+  return great > 0 ? `${note} ${L.noteGreat({ pct: great, lv: BOOST_MAX })}` : note;
+};
 
 /** 카드를 숨길지 — 나이 제한을 넘겼고 한 번도 시도하지 않은 선수에게는 보이지 않는다. */
 export const boostHidden = (s: GameState): boolean =>
@@ -84,6 +93,7 @@ export function boostView(
   const b = boostState(s);
   const cost = L2.won({ v: fmtMoney(boostCost(s)) });
   const chance = boostChance(s);
+  const great = boostGreatChance(s);
   const line =
     status === 'locked'
       ? L.lineLocked
@@ -99,13 +109,16 @@ export function boostView(
                 : L.lineDone
             : status === 'short'
               ? L.lineShort({ cost })
-              : L.lineReady({ next: b.lv + 1, chance, cost });
+              : great > 0
+                ? L.lineReadyGreat({ next: b.lv + 1, chance, great, cost })
+                : L.lineReady({ next: b.lv + 1, chance, cost });
   return {
     status,
     lv: b.lv,
     max: BOOST_MAX,
     line,
     chance,
+    great,
     ...(status === 'ready'
       ? {
           button: L.button({ cost, chance }),
@@ -146,18 +159,24 @@ export function boostView(
                 : L2.won({ v: fmtMoney(x.c) });
         // T-11-157 추가 시도는 표시를 붙인다(T-11-513 확정 강화는 시즌의 한 번과 따로라 붙이지 않는다).
         const pay = x.x && !x.sure ? L.extraCost({ cost }) : cost;
-        const p = { y: x.y, lv: x.lv + 1, pct: x.p, cost: pay };
-        return x.ok ? L.historyOk(p) : L.historyFail(p);
+        const p = { y: x.y, lv: x.lv + (x.g ? 2 : 1), pct: x.p, cost: pay };
+        return x.g ? L.historyGreat(p) : x.ok ? L.historyOk(p) : L.historyFail(p);
       }),
   };
 }
 
 export interface BoostOutcome {
   ok: boolean;
+  /** T-11-593 대성공 — 두 단계를 올렸다. */
+  great: boolean;
+  /** 이번 시도로 오른 단계 수(0 · 1 · 2). 연출이 켤 칸 수다. */
+  up: number;
   /** 시도 뒤 단계. */
   lv: number;
   max: number;
   chance: number;
+  /** T-11-593 시도한 대성공 확률(%). 없으면 0. */
+  greatChance: number;
   /** 연출 결과 화면 제목·본문. */
   title: string;
   text: string;
@@ -169,14 +188,23 @@ export function doBoost(s: GameState, pay: BoostPay = 'money'): BoostOutcome | n
   if (!r) return null;
   return {
     ok: r.ok,
+    great: r.great,
+    up: r.great ? 2 : r.ok ? 1 : 0,
     lv: r.lv,
     max: BOOST_MAX,
     chance: r.chance,
-    title: r.ok ? L.resultOkTitle({ lv: r.lv }) : L.resultFailTitle,
+    greatChance: r.greatChance,
+    title: r.great
+      ? L.resultGreatTitle({ lv: r.lv })
+      : r.ok
+        ? L.resultOkTitle({ lv: r.lv })
+        : L.resultFailTitle,
     text: r.ok
       ? r.lv >= BOOST_MAX
         ? L.resultOkMax
-        : L.resultOk
+        : r.great
+          ? L.resultGreat
+          : L.resultOk
       : (pay === 'money' ? L.resultFail : L.resultFailFree)({
           chance: r.chance,
           pct: BOOST_PITY_PCT,

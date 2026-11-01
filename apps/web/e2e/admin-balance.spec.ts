@@ -183,7 +183,7 @@ test('운영 도구: 초안을 만들어 수치를 고치고 적용한다', asyn
   const sent = await mockApi(page, { linked: true, admin: true });
   page.on('dialog', (d) => void d.accept());
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await expect(page.getByText('ad***@gmail.com')).toBeVisible();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('h1')).toHaveText('운영 도구');
@@ -217,7 +217,7 @@ test('T-11-488 운영 도구: 초안을 다음 시즌 개막에 적용하게 예
   const sent = await mockApi(page, { linked: true, admin: true });
   page.on('dialog', (d) => void d.accept());
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await page.locator('[data-act="admin"]').click();
   await page.locator('[data-admin-tab="balance"]').click();
   await page.locator('[data-act="new-draft"]').click();
@@ -243,8 +243,8 @@ test('T-11-488 운영 도구: 초안을 다음 시즌 개막에 적용하게 예
 test('운영 도구: 구글 연결이 없으면 관리자 여부를 묻지도 않고 입구가 없다', async ({ page }) => {
   const sent = await mockApi(page, { linked: false, admin: false });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('h1')).toHaveText('내 구단');
+  await page.locator('[data-act="settings"]').click();
+  await expect(page.locator('#account-slot')).toContainText('로그인하지 않았어요');
   await expect(page.locator('[data-act="admin"]')).toHaveCount(0);
   expect(sent.some((s) => s.path === '/v1/boards/viewer')).toBe(false);
 });
@@ -255,7 +255,7 @@ test('운영 도구: 대시보드가 기본 탭이고, 댓글 탭에서 작성�
   const sent = await mockApi(page, { linked: true, admin: true });
   page.on('dialog', (d) => void d.accept());
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await expect(page.getByText('ad***@gmail.com')).toBeVisible();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('[data-stat="users"]')).toContainText('1,234');
@@ -341,7 +341,7 @@ test('운영 도구: 자동 플레이 탭은 열 때 불러오고, 구간을 바
     );
   });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await expect(page.getByText('ad***@gmail.com')).toBeVisible();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('[data-stat="users"]')).toBeVisible();
@@ -407,7 +407,7 @@ test('자동 숨김 이력: 모바일, 페이지 이동, 복구 및 탭 재진�
     return r.fulfill({ status: 204 });
   });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await page.locator('[data-act="admin"]').click();
   await page.locator('[data-admin-tab="automation"]').click();
   const panel = page.locator('[data-automation-enforcement]');
@@ -484,7 +484,7 @@ test('T-11-263 유저 조회 탭: 찾아서 요약을 보고, 확인 뒤 아이�
     return route.fulfill(ok(user()));
   });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await page.locator('[data-act="admin"]').click();
   await page.locator('[data-admin-tab="users"]').click();
   expect(queries).toEqual([]);
@@ -541,7 +541,7 @@ test('T-11-263 매출 탭: 열 때 불러오고, 기간을 바꾸면 다시 받�
     );
   });
   await page.goto('/');
-  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="settings"]').click();
   await page.locator('[data-act="admin"]').click();
   await expect(page.locator('[data-stat="users"]')).toBeVisible();
   expect(asked).toEqual([]);

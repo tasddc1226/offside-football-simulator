@@ -13,8 +13,15 @@ import {
   permanentTitleOf,
   titleGradeLabel,
   titleRelated,
+  titleCategoryLabel,
 } from '@offside/app-core/ownerTitle';
-import { titleCollection } from '@offside/app-core/ownerTitleCollection';
+import {
+  titleCollection,
+  titleGroups,
+  titleNextTier,
+  titleProgressText,
+  titleTierText,
+} from '@offside/app-core/ownerTitleCollection';
 import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
 import { TitleBadge } from '../../components/TitleBadge';
 import { toast } from '../../game/host';
@@ -63,6 +70,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
     );
   const picked = hall.pinned ? (hall.title ?? TITLE_NONE) : null;
   const collection = titleCollection(hall);
+  const groups = titleGroups(hall);
   const shown = filter ?? (collection.earned.length ? 'earned' : 'locked');
   const small = { fontSize: rem(FONT.label), lineHeight: rem(FONT.title2) };
   async function pick(title: string | null) {
@@ -106,12 +114,27 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
             <Txt tone="muted" style={small}>
               {grade ? titleGradeLabel(grade) : L.titleCup}
             </Txt>
+            {titleTierText(id) ? (
+              <Txt tone="muted" style={small}>
+                {titleTierText(id)}
+              </Txt>
+            ) : null}
             {isNew ? <Txt style={{ ...small, color: c.accentText }}>{L.newTitle}</Txt> : null}
           </View>
         </View>
       </View>
     );
   };
+  const groupHeading = (label: string, n: number) => (
+    <View accessibilityRole="header" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Txt tone="muted" bold style={small}>
+        {label}
+      </Txt>
+      <Txt tone="muted" num style={small}>
+        {n}
+      </Txt>
+    </View>
+  );
   const itemStyle = {
     padding: 16,
     gap: 12,
@@ -186,76 +209,102 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
       <Txt tone="muted" style={small}>
         {shown === 'earned' ? L.collectionHint : L.challengeHint}
       </Txt>
-      <View style={{ gap: 10 }} accessibilityState={{ busy: saving }}>
+      <View style={{ gap: 20 }} accessibilityState={{ busy: saving }}>
         {shown === 'earned' ? (
-          collection.earned.length ? (
-            collection.earned.map((id) => {
-              const t = hall.permanent.find((p) => p.id === id);
-              return (
-                <Press
-                  key={id}
-                  testID={`title-pick-${id}`}
-                  scale={0.985}
-                  accessibilityLabel={`${titleLabel(id)} · ${L.equip}`}
-                  accessibilityState={{ selected: hall.title === id, disabled: saving }}
-                  disabled={saving}
-                  onPress={() => void pick(id)}
-                  style={{ ...itemStyle, borderColor: hall.title === id ? c.accent : c.line }}
-                >
-                  <View
-                    style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}
-                  >
-                    {identity(id, t?.isNew)}
-                    {hall.title === id ? (
-                      <Txt style={{ ...small, color: c.accentText }}>✓ {L.titleUsing}</Txt>
-                    ) : null}
-                  </View>
-                  {t ? (
-                    <Txt tone="muted" style={small}>
-                      {titleCondition(id)}
-                    </Txt>
-                  ) : null}
-                </Press>
-              );
-            })
+          groups.earned.length ? (
+            groups.earned.map((g) => (
+              <View key={g.key} testID={`title-group-${g.key}`} style={{ gap: 10 }}>
+                {groupHeading(titleCategoryLabel(g.key), g.ids.length)}
+                {g.ids.map((id) => {
+                  const t = hall.permanent.find((p) => p.id === id);
+                  const next = t ? titleNextTier(hall, id) : null;
+                  return (
+                    <Press
+                      key={id}
+                      testID={`title-pick-${id}`}
+                      scale={0.985}
+                      accessibilityLabel={`${titleLabel(id)} · ${L.equip}`}
+                      accessibilityState={{ selected: hall.title === id, disabled: saving }}
+                      disabled={saving}
+                      onPress={() => void pick(id)}
+                      style={{ ...itemStyle, borderColor: hall.title === id ? c.accent : c.line }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          alignItems: 'center',
+                          gap: 8,
+                        }}
+                      >
+                        {identity(id, t?.isNew)}
+                        {hall.title === id ? (
+                          <Txt style={{ ...small, color: c.accentText }}>✓ {L.titleUsing}</Txt>
+                        ) : null}
+                      </View>
+                      {t ? (
+                        <Txt tone="muted" style={small}>
+                          {titleCondition(id)}
+                        </Txt>
+                      ) : null}
+                      {next ? (
+                        <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
+                          {next}
+                        </Txt>
+                      ) : null}
+                    </Press>
+                  );
+                })}
+              </View>
+            ))
           ) : (
             <Txt tone="muted">{L.hallEmpty}</Txt>
           )
-        ) : collection.locked.length ? (
-          collection.locked.map((t) => (
-            <View key={t.id} testID={`permanent-title-${t.id}`} style={itemStyle}>
-              {identity(t.id)}
-              <Txt tone="muted" style={small}>
-                {titleCondition(t.id)}
-              </Txt>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <View
-                  accessibilityRole="progressbar"
-                  accessibilityLabel={titleLabel(t.id) ?? t.id}
-                  accessibilityValue={{ min: 0, max: t.target, now: Math.min(t.value, t.target) }}
-                  style={{
-                    flex: 1,
-                    height: 5,
-                    borderRadius: RADIUS.xs,
-                    overflow: 'hidden',
-                    backgroundColor: c.surface2,
-                  }}
-                >
-                  <View
-                    style={{
-                      width: `${Math.min(100, (t.value / t.target) * 100)}%`,
-                      height: 5,
-                      backgroundColor: c.accent,
-                    }}
-                  />
+        ) : groups.locked.length ? (
+          groups.locked.map((g) => (
+            <View key={g.key} testID={`title-group-${g.key}`} style={{ gap: 10 }}>
+              {groupHeading(titleCategoryLabel(g.key), g.items.length)}
+              {g.items.map((t) => (
+                <View key={t.id} testID={`permanent-title-${t.id}`} style={itemStyle}>
+                  {identity(t.id)}
+                  <Txt tone="muted" style={small}>
+                    {titleCondition(t.id)}
+                  </Txt>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View
+                      accessibilityRole="progressbar"
+                      accessibilityLabel={titleLabel(t.id) ?? t.id}
+                      accessibilityValue={{
+                        min: 0,
+                        max: t.target,
+                        now: Math.min(t.value, t.target),
+                        text: titleProgressText(t),
+                      }}
+                      style={{
+                        flex: 1,
+                        height: 5,
+                        borderRadius: RADIUS.xs,
+                        overflow: 'hidden',
+                        backgroundColor: c.surface2,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: `${Math.min(100, (t.value / t.target) * 100)}%`,
+                          height: 5,
+                          backgroundColor: c.accent,
+                        }}
+                      />
+                    </View>
+                    <Txt num style={small}>
+                      {titleProgressText(t)}
+                    </Txt>
+                  </View>
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
+                    {titleRelated(t.id)}
+                  </Txt>
                 </View>
-                <Txt num style={small}>
-                  {L.progress(t)}
-                </Txt>
-              </View>
-              <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
-                {titleRelated(t.id)}
-              </Txt>
+              ))}
             </View>
           ))
         ) : (

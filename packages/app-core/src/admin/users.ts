@@ -7,6 +7,8 @@ import {
   iapProduct,
   REMOVE_ADS_PRODUCT,
 } from '@offside/contracts/admin-items';
+import { SEASON_PASS_PRODUCT_ID } from '@offside/contracts/season-pass';
+import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import { kstDateTime as kst } from '../boardText.js';
 import { fundsText } from '../funds.js';
 
@@ -41,6 +43,8 @@ const STAGE: Record<string, string> = {
 
 /** 상품 이름(리롤권 40장 · 광고 제거). 모르는 상품은 id 그대로. */
 export function productName(productId: string) {
+  if (productId === SEASON_PASS_PRODUCT_ID) return '시즌 패스';
+  if (productId === MEMBERSHIP_PRODUCT_ID) return '클럽 멤버십';
   if (productId === REMOVE_ADS_PRODUCT) return '광고 제거';
   const p = iapProduct(productId);
   return p ? `${itemName(p.item)} ${p.qty}장` : productId;
@@ -119,7 +123,7 @@ export function grantError(delta: number, reason: string) {
 }
 
 export const REVENUE_NOTE =
-  '금액은 상품별 한국 정가 기준 추정이에요(스토어 환산·수수료 전). 웹 결제도 한국 정가로 세요(실제로는 나라 통화로 결제). 테스트 결제는 빼요. 광고 제거는 서버 원장 밖이라 스토어 알림으로 따로 세요(알림 기록 전 판매는 빠져요, 정확한 수는 App Store Connect · Play 판매 보고서).';
+  '금액은 한국 정가 기준 추정이에요(환산·수수료 전, 테스트 제외). 아이템·시즌 패스는 구매 기록, 멤버십·광고 제거는 스토어 알림 기준이에요. 알림 기록 전 판매는 빠져요. 구매자 수는 아이템·패스만 포함해요. 알림 환불은 접수일 가격으로 차감하므로 정확한 결제·환불액은 스토어 보고서에서 확인해 주세요.';
 export const periodLabel = (days: number) => (days === 1 ? '오늘' : `${days}일`);
 
 /** T-11-471 결제 경로별 합. 웹 결제는 엑솔라(xsolla), 나머지 스토어는 앱 인앱 결제다. */
@@ -138,15 +142,18 @@ export function revenueSummary(r: AdminRevenue): [string, string][] {
   const ads = r.removeAds;
   const ch = channelSums(r);
   return [
-    ['매출(소모성)', `${won(r.total.krw)} · ${r.total.count.toLocaleString()}건`],
+    ['아이템·패스·멤버십', `${won(r.total.krw)} · ${r.total.count.toLocaleString()}건`],
     ['앱 인앱 결제', `${won(ch.app.krw)} · ${ch.app.count.toLocaleString()}건`],
     ['웹 결제', `${won(ch.web.krw)} · ${ch.web.count.toLocaleString()}건`],
-    ['결제한 사람', `${r.total.buyers.toLocaleString()}명 (첫 구매 ${r.total.firstBuyers})`],
-    ['환불', `${r.total.refunds}건 · ${won(r.total.refundKrw)}`],
+    [
+      '구매자(아이템·패스)',
+      `${r.total.buyers.toLocaleString()}명 (첫 구매 ${r.total.firstBuyers})`,
+    ],
+    ['환불(광고 제거 제외)', `${r.total.refunds}건 · ${won(r.total.refundKrw)}`],
     ['광고 제거(원장 밖)', adLine(ads, ads.stores)],
     ['합계(광고 제거 포함)', won(r.total.krw + ads.krw)],
     [
-      '전체 기간(소모성)',
+      '전체 기간(광고 제거 제외)',
       `${won(r.allTime.krw)} · ${r.allTime.count.toLocaleString()}건 · ${r.allTime.buyers.toLocaleString()}명`,
     ],
     ...(ads.allTime ? ([['전체 기간(광고 제거)', adLine(ads.allTime)]] as [string, string][]) : []),
@@ -170,5 +177,7 @@ export const adsSince = (r: AdminRevenue) =>
   r.removeAds.since ? `광고 제거 알림은 ${kst(r.removeAds.since)}부터 기록돼요.` : '';
 export const productLine = (p: AdminRevenue['products'][number]) =>
   `${p.count}건 · ${won(p.krw)}${p.refunded ? ` · 환불 ${p.refunded}` : ''}`;
+export const paymentNick = (x: AdminRevenue['recent'][number]) =>
+  x.profileId ? nick(x.nickname) : '스토어 알림';
 export const recentLine = (x: AdminRevenue['recent'][number]) =>
   `${storeName(x.store)} · ${kst(x.createdAt)}${x.refundedAt ? ` · 환불 ${kst(x.refundedAt)}` : ''}`;

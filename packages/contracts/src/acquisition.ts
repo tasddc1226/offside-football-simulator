@@ -18,8 +18,10 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     // T-11-515 크리에이터 협업 숏폼(틱톡 · 유튜브 쇼츠).
     'tiktok',
     'youtube',
+    // T-11-584 앱 · 웹 랜딩(/app/)에서 캠페인 없이 들어온 방문.
+    'landing',
   ],
-  utm_medium: ['social', 'community', 'paid', 'partner'],
+  utm_medium: ['social', 'community', 'paid', 'partner', 'web'],
   utm_campaign: [
     'launch',
     'retirement_share',
@@ -28,6 +30,7 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     'amachuggu_collab',
     // T-11-515 크리에이터 협업 시험(유료 숏폼 1건).
     'creator_test',
+    'app_landing',
   ],
   utm_content: [
     'career',
@@ -70,6 +73,12 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     // T-11-515 크리에이터 ethio_eafc 숏폼: 틱톡 영상 · 같은 영상의 유튜브 쇼츠.
     'ethio_tiktok',
     'ethio_short',
+    // T-11-584 랜딩 버튼 자리: 첫 화면 · 아래 고정 · 마지막 · QR · 위 메뉴.
+    'lp_hero',
+    'lp_dock',
+    'lp_end',
+    'lp_qr',
+    'lp_nav',
   ],
 };
 export function campaignQuery(href: string): string {

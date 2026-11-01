@@ -84,6 +84,29 @@ describe('자동 플레이 탐지', () => {
     ).toEqual([]);
   });
 
+  it('앱 터치 대부분이 바로 앞 터치와 같은 좌표면 보통 (T-11-590)', () => {
+    const app = { clicks: 0, moves: 0, app: true };
+    const [s] = judgeAutomation(
+      career('p-app-macro', 'c1', '김민재', humanGaps, () => ({ ...app, touches: 20, same: 15 })),
+      6,
+    );
+    expect(s).toMatchObject({ level: 'medium', reasons: ['sameSpot'] });
+    // 사람: 같은 좌표가 드물다.
+    expect(
+      judgeAutomation(
+        career('p-app-human', 'c2', '김민재', humanGaps, () => ({ ...app, touches: 20, same: 1 })),
+        6,
+      ),
+    ).toEqual([]);
+    // 터치가 적으면 판단하지 않는다.
+    expect(
+      judgeAutomation(
+        career('p-app-few', 'c3', '김민재', [30, 40], () => ({ ...app, touches: 10, same: 10 })),
+        6,
+      ),
+    ).toEqual([]);
+  });
+
   it('헤드리스 User-Agent', () => {
     expect(
       isHeadless('Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/140.0.0.0 Safari/537.36'),
@@ -110,6 +133,15 @@ describe('공개 순위에서 뺄 자동 플레이 판정 (T-11-024)', () => {
     expect(isAutomatedCareer([json({ webdriver: true })])).toBe(true);
     expect(isAutomatedCareer([json({ headless: true })])).toBe(true);
     expect(isAutomatedCareer([json({ clicks: 1, synthetic: 30 })])).toBe(true);
+  });
+
+  it('앱 요약은 입력 0이어도 빼지 않는다 — 모달 · 화면 읽기 프로그램 입력은 터치로 잡히지 않는다 (T-11-590)', () => {
+    const appIdle = json({ ...idle, app: true, same: 0 });
+    expect(isAutomatedCareer([appIdle, appIdle, appIdle])).toBe(false);
+    // 같은 좌표만 누르는 앱 매크로도 관찰 근거일 뿐 자동으로 빼지 않는다.
+    expect(isAutomatedCareer([json({ clicks: 0, app: true, touches: 200, same: 190 })])).toBe(
+      false,
+    );
   });
 
   it('간격이 일정하거나 커서 이동이 없는 것만으로는 빼지 않는다', () => {

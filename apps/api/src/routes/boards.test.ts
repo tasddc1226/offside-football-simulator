@@ -232,6 +232,8 @@ describe('게시판 /v1/boards', () => {
       await flushEdge();
       expect(await titles('?lang=en')).toEqual(['Maintenance']);
       expect(await titles('?lang=ja')).toEqual(['점검 안내']);
+      // T-11-588 번체 중국어 번역이 없으면 영어로 보인다(릴리즈 노트와 같다).
+      expect(await titles('?lang=zh')).toEqual(['Maintenance']);
       await flushEdge();
     } finally {
       edge.uninstall();
@@ -256,6 +258,10 @@ describe('게시판 /v1/boards', () => {
     expect((await put({ i18n: {} })).status).toBe(200);
     expect((await detail('?lang=en')).data.post.body).toBe('바뀐 본문');
     expect((await put({ i18n: { ja: { title: '点検', body: '' } } })).status).toBe(400);
+    // T-11-588 번체 중국어 번역만 있어도 저장한다.
+    const zh = { title: '維護公告', body: '今晚進行維護。' };
+    expect((await put({ i18n: { zh } })).status).toBe(200);
+    expect((await detail('?lang=zh')).data.post).toEqual(expect.objectContaining(zh));
   });
 
   it('번역 초안: 관리자만, 키가 없으면 503', async () => {

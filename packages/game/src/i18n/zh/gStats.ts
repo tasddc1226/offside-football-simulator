@@ -24,8 +24,12 @@ export const gStats: Translation<GStatsMsgs> = {
   twistUp: (p) => `意外收穫 · ${p.label} +${p.d}`,
   costMoraleLabel: '士氣',
   costMoraleWhy: '沒有挑戰的遺憾',
+  costMoraleWhy2: '社群網站上被留下的「太保守」評論',
+  costMoraleWhy3: '睡前一再浮現的那個畫面',
   costTrustLabel: '總教練信任',
   costTrustWhy: '總教練不冷不熱的評價',
+  costTrustWhy2: '教練團會議上說出的「缺乏決定性」這句話',
   costFameLabel: '名聲',
   costFameWhy: '「表現平平」的評價',
+  costFameWhy2: '連一篇報導都沒有就過去的一週',
 };

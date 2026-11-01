@@ -92,12 +92,12 @@ test('엠블럼 이미지 합계가 서버 한도를 넘으면 보내지 않고,
     if (route.request().method() === 'PUT') putCount++;
     await route.fulfill(ok({ clubs: {}, updatedAt: null }));
   });
-  // 64px 엠블럼 한도(16,000자)에 가까운 이미지 55개 ≈ 82만 자 > 합계 한도 80만 자.
+  // 64px 엠블럼 한도(16,000자)에 가까운 이미지 96개 ≈ 144만 자 > 합계 한도 140만 자(T-11-599).
   await page.addInitScript(() => {
     const img = `data:image/png;base64,${'A'.repeat(14_950)}`;
-    const ids = ['pl', 'll', 'sa']
+    const ids = ['pl', 'll', 'sa', 'bl', 'l1']
       .flatMap((l) => Array.from({ length: 20 }, (_, i) => `${l}-${i}`))
-      .slice(0, 55);
+      .slice(0, 96);
     const clubs = Object.fromEntries(
       ids.map((id) => [id, { logo: { text: 'A', bg: '#123456', fg: '#ffffff', img } }]),
     );

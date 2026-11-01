@@ -11,7 +11,14 @@ import { cardBody } from '@offside/app-core/format';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
-import { CARD_BODY_ROW, CARD_HEIGHT, CARD_STYLE_ROW, PlayerCard } from './PlayerCard';
+import {
+  CARD_BODY_ROW,
+  CARD_HEIGHT,
+  CARD_SPECIAL_ROW,
+  CARD_STYLE_ROW,
+  PlayerCard,
+} from './PlayerCard';
+import { specialRibbon } from '@offside/app-core/cardSpecial';
 
 export type PeekOrigin = { x: number; y: number; w: number; h: number };
 /** 그라운드(measureInWindow 값) 위 자리 카드가 화면에서 놓인 곳 — 자리 카드는 62×88, 가운데가 자리 좌표(TeamPitch). */
@@ -26,7 +33,10 @@ export const pitchPeekOrigin = (
 const CARD_W = 165;
 // PlayerCard 큰 카드 높이(플레이스타일 줄 · 키 몸무게 줄이 있으면 그만큼 더).
 const cardHeight = (p: TeamPlayer) =>
-  CARD_HEIGHT + (typeName(p.pos, p.type) ? CARD_STYLE_ROW : 0) + (cardBody(p) ? CARD_BODY_ROW : 0);
+  CARD_HEIGHT +
+  (typeName(p.pos, p.type) ? CARD_STYLE_ROW : 0) +
+  (cardBody(p) ? CARD_BODY_ROW : 0) +
+  (specialRibbon(p.specials) ? CARD_SPECIAL_ROW : 0);
 
 /** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다(웹 PlayerPeek). */
 export function PlayerPeek({
@@ -137,6 +147,7 @@ export function PlayerPeek({
                 rating: player.peak,
                 number: player.number,
                 legendScore: player.legendScore,
+                specials: player.specials,
                 attrs: player.attrs,
                 attrsEstimated: player.attrsEstimated,
                 height: player.height,

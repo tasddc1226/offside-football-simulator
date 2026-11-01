@@ -110,6 +110,15 @@ async function register() {
     kv.set(`${REGISTERED}_at`, Date.now());
   }
 }
+async function unregister() {
+  if (!(await ensureSession())) throw new Error('No app session');
+  const r = await apiFetch('/v1/push/device', {
+    method: 'DELETE',
+    body: JSON.stringify({ installationId: await installationId() }),
+  });
+  if (!r.ok) throw new Error('Could not remove device');
+  kv.remove(REGISTERED);
+}
 export const pushRegistration = createPushRegistration(pushState, {
   wanted: () => kv.getBoolean(WANTED) ?? false,
   saveWanted: (on) => kv.set(WANTED, on),
@@ -128,16 +137,47 @@ export const pushRegistration = createPushRegistration(pushState, {
     return status.granted ? 'granted' : status.canAskAgain ? 'denied' : 'blocked';
   },
   register,
-  async unregister() {
-    if (!(await ensureSession())) throw new Error('No app session');
-    const r = await apiFetch('/v1/push/device', {
-      method: 'DELETE',
-      body: JSON.stringify({ installationId: await installationId() }),
-    });
-    if (!r.ok) throw new Error('Could not remove device');
-    kv.remove(REGISTERED);
-  },
+  unregister,
 });
+
+const QUIET = 'offside_push_quiet';
+const QUIET_TRIED = 'offside_push_quiet_tried';
+/**
+ * T-11-586 iOS 조용한 알림(provisional). 창 없이 알림 센터로만 조용히 받는 권한을 한 번 받아 기기를 등록한다.
+ * OS 상태가 '아직 묻지 않음'으로 남아 홈 카드 · 순간 권유가 그대로 뜨고, 받기를 누르면 정식 허용 창으로 올린다.
+ * 알림 센터에서 '계속 받기'로 정식 허용이 되면 받기로 넘기고, 끄면 다음 실행 때 기기 등록을 지운다.
+ * 이미 있는 앱 세션에서만 한다(이것 때문에 익명 세션을 만들지 않는다).
+ */
+export async function quietPush() {
+  if (Platform.OS !== 'ios' || pushState.busy || !sessionToken()) return;
+  if (pushState.enabled) {
+    kv.remove(QUIET);
+    return;
+  }
+  try {
+    const { IosAuthorizationStatus } = Notifications;
+    let p = await Notifications.getPermissionsAsync();
+    if (kv.getBoolean(QUIET)) {
+      if (p.ios?.status === IosAuthorizationStatus.PROVISIONAL) return await register();
+      kv.remove(QUIET);
+      if (p.granted) await pushRegistration.setEnabled(true, false);
+      else await unregister();
+      return;
+    }
+    if (kv.getBoolean(QUIET_TRIED) || p.ios?.status !== IosAuthorizationStatus.NOT_DETERMINED)
+      return;
+    kv.set(QUIET_TRIED, true);
+    p = await Notifications.requestPermissionsAsync({
+      ios: { allowAlert: true, allowBadge: true, allowSound: true, allowProvisional: true },
+    });
+    if (p.ios?.status !== IosAuthorizationStatus.PROVISIONAL) return;
+    await register();
+    kv.set(QUIET, true);
+    nativeAnalytics.pushAsk('result', 'quiet', 'granted');
+  } catch {
+    // 조용한 알림은 덤이다. 실패해도 받기 권유와 설정 흐름은 그대로 둔다.
+  }
+}
 
 /** 허용된 게시판 데이터만 연다. 푸시에서 임의 URL이나 게임 명령을 실행하지 않는다. */
 function openNotification(response: Notifications.NotificationResponse) {
@@ -247,7 +287,7 @@ export function startPush() {
     void pushRegistration.restore();
   });
   onSessionChanged(() => {
-    void pushRegistration.restore();
+    void pushRegistration.restore().then(quietPush);
   });
   AppState.addEventListener('change', (state) => {
     if (state === 'active') {
@@ -256,7 +296,7 @@ export function startPush() {
     }
   });
   void flushPushInteractions();
-  void pushRegistration.restore();
+  void pushRegistration.restore().then(quietPush);
 }
 
 const TEST_NEXT = 'offside_push_test_next';

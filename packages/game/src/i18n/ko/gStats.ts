@@ -29,10 +29,14 @@ const ko = {
   // 안전한 선택의 대가(이벤트 도감도 읽는다)
   costMoraleLabel: '사기',
   costMoraleWhy: '도전하지 않은 아쉬움',
+  costMoraleWhy2: 'SNS에 달린 "소극적"이라는 댓글',
+  costMoraleWhy3: '잠들기 전 자꾸 떠오른 그 장면',
   costTrustLabel: '감독 신뢰',
   costTrustWhy: '감독의 미지근한 평가',
+  costTrustWhy2: '코치진 회의에서 나온 "한 방이 없다"는 말',
   costFameLabel: '명성',
   costFameWhy: '"무난했다"는 평가',
+  costFameWhy2: '기사 한 줄 없이 지나간 한 주',
 };
 export type GStatsMsgs = typeof ko;
 export const gStatsText = ns('gStats', ko);

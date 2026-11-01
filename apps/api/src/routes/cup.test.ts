@@ -24,6 +24,7 @@ import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 import { installFakeEdgeCache, flushEdge } from '../test/edgeCache.js';
 import { drawCup, runCup } from '../team/cup.js';
+import { cupTeamsOf } from '../team/cupOdds.js';
 import { checkCupListing, cupChampionView, cupHomeView, recentCupFor } from './cup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
@@ -515,6 +516,61 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: a.cookie });
     await expect(checkCupListing(ctx.db, a.profileId, a.ids[0]!)).resolves.toBeUndefined();
     expect((await a.put([...a.ids.slice(0, 7), ...Array(4).fill(null)])).status).toBe(200);
+  });
+
+  it('T-11-570 컵 명단 프리셋: 컵은 그 프리셋으로 뛰고, 팀 명단은 컵 검사 없이 바꾼다', async () => {
+    const a = await owner(11);
+    expect((await enter(a.cookie)).status).toBe(204);
+    const preset = (slots: (string | null)[], cup = true) => ({
+      name: '컵 명단',
+      formation: '4-3-3',
+      slots,
+      layout: null,
+      ...(cup ? { cup: true } : {}),
+    });
+    const presets = (list: unknown[]) =>
+      call('PUT', '/v1/owner-team/presets', { cookie: a.cookie, body: { presets: list } });
+    const eight = [...a.ids.slice(0, 8), ...Array(3).fill(null)];
+    // 컵 명단도 최소 인원 · 내 선수 검사를 받는다.
+    const short = await presets([preset([...a.ids.slice(0, 7), ...Array(4).fill(null)])]);
+    expect(short.status).toBe(409);
+    expect(await reason(short)).toBe('CUP_MIN_FILLED');
+    const foreign = await presets([preset([crypto.randomUUID(), ...eight.slice(1)])]);
+    expect(await reason(foreign)).toBe('PLAYER_NOT_ELIGIBLE');
+    // 컵 명단은 하나만.
+    expect((await presets([preset(eight), preset(eight)])).status).toBe(400);
+    const saved = await presets([preset(eight), preset(a.ids, false)]);
+    expect(saved.status).toBe(200);
+    const body = (await saved.json()) as { data: { presets: { ovr?: number; filled?: number }[] } };
+    expect(body.data.presets[0]).toMatchObject({ cup: true, filled: 8 });
+    expect(body.data.presets[1]!.ovr).toBeUndefined();
+    const cupOvr = body.data.presets[0]!.ovr!;
+    expect((await me(a.cookie)).ovr).toBe(cupOvr);
+    // 컵 경기 · 예상은 프리셋 선발을 읽는다.
+    const [team] = await ctx.db
+      .select()
+      .from(ownerTeams)
+      .where(eq(ownerTeams.profileId, a.profileId));
+    expect(team!.cupOvr).toBe(cupOvr);
+    const cupTeam = (await cupTeamsOf(ctx.db, CUP, [team!.id]))(team!.id)!;
+    expect(JSON.parse(cupTeam.slotsJson)).toEqual(eight);
+    expect(cupTeam.ovr).toBe(cupOvr);
+    // 팀 명단은 컵 최소 인원과 상관없이 줄일 수 있다.
+    expect((await a.put([...a.ids.slice(8), ...Array(8).fill(null)])).status).toBe(200);
+    // 판매 잠금은 컵 명단 선수만.
+    await expect(checkCupListing(ctx.db, a.profileId, a.ids[0]!)).rejects.toMatchObject({
+      details: { reason: 'CUP_CARD_LOCKED' },
+    });
+    await expect(checkCupListing(ctx.db, a.profileId, a.ids[9]!)).resolves.toBeUndefined();
+    // 컵 명단을 풀면 팀 명단(3명)이 다시 컵에 나가므로 막힌다.
+    const unset = await presets([preset(eight, false)]);
+    expect(await reason(unset)).toBe('CUP_MIN_FILLED');
+    // 이름만 바꾸면 컵 명단 검사를 다시 하지 않고 OVR을 지킨다.
+    const renamed = await presets([{ ...preset(eight), name: '컵 주전' }]);
+    expect(renamed.status).toBe(200);
+    expect(
+      ((await renamed.json()) as { data: { presets: { ovr?: number }[] } }).data.presets[0]!.ovr,
+    ).toBe(cupOvr);
   });
 
   // T-11-322 owner_teams를 IN (...) 한 번으로 읽어 101팀부터 D1 바인딩 한도(100)를 넘겨 503이 났다.

@@ -12,7 +12,7 @@ Expo · React Native, 안드로이드 · iOS)이 같은 게임 로직 `packages/
 게임을 시뮬레이션하지 않고 익명 프로필 · Google/Apple 로그인 · 복구 코드, 커리어 · 시즌 요약
 적재, 명예의 전당 · 기록실, 구단주 팀 · 이적시장 · 감독, 컵 대회 · 승부 예측, 라운지 채팅 ·
 친구, 공지 · 업데이트 게시판, 출석 · 선물, 앱 결제(IAP) · 푸시, 구단명 커스텀, 서버 밸런스
-설정, 운영 도구를 다룬다. `apps/agents`는 운영을 돕는 슬랙 에이전트 Worker다(ADR-015).
+설정, 운영 도구를 다룬다. `apps/agents`는 운영을 돕는 디스코드 에이전트 Worker다(ADR-015).
 계정 병합 플로우는 없다.
 
 pnpm workspaces + Turborepo 모노레포. Node ≥22.13, TypeScript strict. 게임 엔진은 웹·앱이 함께 쓰는 `packages/game`(ADR-014)이다.
@@ -163,7 +163,7 @@ pnpm --filter @offside/fulltime-sim analyze
 
 - 앱(안드로이드·iOS)이 출시돼도 웹(offside-lab.com)을 내리지 않는다. 웹을 줄이는 일은 사용자가 데이터를 보고 정한다.
 - 새 게임 기능은 규칙·문구를 `packages/game`·`packages/app-core`에 두고 웹·앱에 함께 낸다.
-- 게임 규칙·수치가 바뀌면 공개 가이드(`apps/web/scripts/seo.mjs`의 `GUIDE_SECTIONS`, 웹 `/guide/`·앱 설정의 게임 가이드)와 FAQ도 같은 PR에서 고친다(T-11-112).
+- 게임 규칙·수치가 바뀌면 공개 가이드 · FAQ(`packages/app-core/src/i18n/{ko,en,ja,zh}/publicGuidePage.mjs`, 웹 `/guide/`·`/en/guide/` 등 · 앱 설정의 게임 가이드)도 같은 PR에서 네 언어를 함께 고친다(T-11-112, T-11-588).
 - 결제(IAP)·푸시·보상형 광고만 앱 전용이다. 배경과 축소 검토 기준은 [결정 로그](docs/tracking/decision-log.md)(2026-10-04)를 본다.
 
 ## 로딩 표시 규칙 (2026-10-18, T-11-389)

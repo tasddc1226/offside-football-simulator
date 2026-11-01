@@ -36,9 +36,9 @@ import { AchGradeBadge } from '../../owner/TeamParts';
 import { GradeEmblem } from '../../../ui/GradeEmblem';
 import { TitleBadge } from '../../../components/TitleBadge';
 import { TeamLogo } from '../../../components/TeamLogo';
-import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
 import { useSeasonNow } from '../../../ui/useSeasonNow';
 import { useRefresh } from '../../../ui/refresh';
+import { seasonOptions } from '../../../ui/seasonOptions';
 
 export default function AchievementRanking() {
   const c = useColors();
@@ -131,13 +131,7 @@ export default function AchievementRanking() {
           label={L.seasonLabel}
           testID="ach-rank-season-select"
           value={season ?? data?.season ?? displaySeasonAt(now)}
-          options={
-            data?.seasons.map((s) => ({ value: s.id, label: seasonLabel(s.id, s.name) })) ??
-            openTeamSeasons(now).map((id) => ({
-              value: id,
-              label: teamSeasonLabel(id),
-            }))
-          }
+          options={seasonOptions(data?.seasons ?? openTeamSeasons(now), now)}
           onChange={(id) => {
             setSeason(id);
             setPage(1);

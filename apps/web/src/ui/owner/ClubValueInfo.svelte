@@ -12,7 +12,7 @@
 <dialog bind:this={dialog} aria-labelledby="club-value-info-title" onclose={() => open = false} data-club-value-dialog>
   <header><h2 id="club-value-info-title">{L.valueInfoTitle}</h2><button class="close" aria-label={T.close} onclick={() => dialog.close()}>×</button></header>
   <p class="formula">{linked ? L.valueInfoFormula : L.valueInfoGuest}</p>
-  <ul>{#if linked}<li>{L.valueInfoOwned}</li>{/if}<li>{L.valueInfoPrice}</li><li>{L.valueInfoFallback}</li><li>{L.valueInfoExcluded}</li></ul>
+  <ul>{#if linked}<li>{L.valueInfoOwned}</li>{/if}<li>{L.valueInfoPrice}</li><li>{L.valueInfoAge}</li><li>{L.valueInfoFallback}</li><li>{L.valueInfoExcluded}</li></ul>
 </dialog>
 <style>
   .info{position:absolute;top:0;right:0;display:grid;place-items:center;width:44px;height:44px;border:0;background:transparent;color:var(--muted);cursor:pointer;border-radius:var(--radius-sm);}

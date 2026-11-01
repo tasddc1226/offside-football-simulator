@@ -38,7 +38,6 @@ test('owner profile image preview, save, reload and default restoration at mobil
   await page.locator('[data-act="owner"]').click();
   const editor = page.locator('[data-owner-profile-editor]');
   await editor.locator('[data-owner-profile-edit]').click();
-  await expect(page.locator('#account-slot input')).toHaveCount(0);
   await editor
     .locator('[data-avatar-upload]')
     .setInputFiles(path.resolve('public/brand/offside-icon-v7-64.png'));
@@ -107,20 +106,16 @@ test('owner entry shares one compact read and reentry uses cache', async ({ page
   );
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-owner-hall-entry]')).toContainText('9,710');
   await expect(page.getByRole('heading', { name: '내 구단', exact: true })).toBeVisible();
-  await expect(page.locator('[data-owner-summary] [data-owner-value]')).toHaveCount(0);
-  await expect(page.locator('[data-club-operations] [data-owner-value]')).toHaveCount(1);
-  await expect(page.locator('[data-owner-hall-entry]')).toContainText('프리시즌 골드');
-  await expect(page.locator('[data-owner-tier-history] li')).toHaveCount(4);
-  expect(
-    await page
-      .locator('[data-tier-season]')
-      .evaluateAll((nodes) => nodes.map((n) => n.getAttribute('data-tier-season'))),
-  ).toEqual(['3', '2', '1', '0']);
+  // T-11-567 구단 가치 · 자금은 프로필 카드 안 한 줄, 명예관은 바로가기 칸 하나(시즌 등급은 명예관 시즌 기록에서 본다).
+  await expect(
+    page.locator('[data-owner-summary] [data-club-operations] [data-owner-value]'),
+  ).toHaveCount(1);
+  await expect(page.locator('[data-owner-crest="diamond"]')).toBeVisible();
+  await expect(page.locator('[data-owner-hall-entry]')).toBeVisible();
   await page.locator('[data-act="home"]').click();
   await page.locator('[data-act="owner"]').click();
-  await expect(page.locator('[data-owner-hall-entry]')).toContainText('9,710');
+  await expect(page.locator('[data-owner-hall-entry]')).toBeVisible();
   expect(requested.filter((p) => p === '/v1/owner/summary')).toHaveLength(1);
   expect(
     requested.filter((p) =>

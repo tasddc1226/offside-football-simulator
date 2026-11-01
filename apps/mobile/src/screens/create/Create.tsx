@@ -39,6 +39,7 @@ import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
+import { scoutWhatText } from '@offside/app-core/scoutOdds';
 import {
   REROLL_MILEAGE,
   rerollMileageLeft,
@@ -101,6 +102,7 @@ import { noteScrollY, revealFocusedInput } from '../../ui/scroll';
 import { useFormKeyboardScroll } from '../../ui/useFormKeyboardScroll';
 import { MiniRadar } from './MiniRadar';
 import { NationPicker } from './NationPicker';
+import { CreateLook } from './CreateLook';
 import { ScoutScan } from './ScoutScan';
 import { PositionGuide } from '../game/PositionGuide';
 import { ItemsHint } from '../../components/ItemsHint';
@@ -766,6 +768,8 @@ export default function Create() {
               </Txt>
             </Field>
 
+            <CreateLook />
+
             <CoachTarget id="pos">
               <Field label={L.position}>
                 <Seg>
@@ -1171,7 +1175,7 @@ export default function Create() {
                   {rerolling ? SL.busy : SL.btn({ n: scouts })}
                 </Btn>
                 <Txt v="sm" tone="muted">
-                  {SL.what}
+                  {scoutWhatText()}
                 </Txt>
                 <ScoutPityGauge pity={pity} />
                 <ScoutOdds />

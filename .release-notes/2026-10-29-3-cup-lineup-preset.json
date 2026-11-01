@@ -1,0 +1,23 @@
+{
+  "id": "t-11-570-cup-lineup-preset",
+  "title": "리그 · 컵 명단 따로 쓰기",
+  "items": [
+    "팀 프리셋 하나를 '컵 명단'으로 고르면 오프사이드 컵은 그 프리셋으로 뛰어요. 편성 화면의 팀 명단은 리그용으로 자유롭게 바꿀 수 있어요.",
+    "같은 선수가 두 명단에 함께 들어가도 돼요. 컵 경기 1시간 전부터 끝날 때까지는 컵 명단을 바꿀 수 없어요."
+  ],
+  "en": {
+    "title": "Separate league and cup lineups",
+    "items": [
+      "Set one team preset as your cup lineup and the Offside Cup plays with that preset. Your team lineup on the lineup screen is free to change for the league.",
+      "The same player can be in both lineups. The cup lineup can't be changed from 1 hour before a cup match until it ends."
+    ]
+  },
+  "ja": {
+    "title": "リーグとカップのメンバーを分けて使う",
+    "items": [
+      "チームプリセットの1つを「カップ用」にすると、オフサイドカップはそのプリセットで戦います。編成画面のチームメンバーはリーグ用に自由に変えられます。",
+      "同じ選手が両方のメンバーに入っても構いません。カップ戦の1時間前から試合終了まではカップ用メンバーを変えられません。"
+    ]
+  },
+  "availability": "web-app"
+}

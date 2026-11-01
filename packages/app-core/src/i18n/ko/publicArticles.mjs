@@ -1,5 +1,5 @@
 // T-11-452 공개 공략 글(/guide/<slug>/). Node SEO 빌드가 읽는 순수 ESM이며 앱 런타임 네임스페이스가 아니다.
-// 규칙 · 수치는 게임 가이드(apps/web/scripts/seo.mjs GUIDE_SECTIONS)와 같아야 한다. 규칙을 바꾸는 PR은 여기도 함께 고친다.
+// 규칙 · 수치는 게임 가이드(i18n/ko/publicGuidePage.mjs)와 같아야 한다. 규칙을 바꾸는 PR은 여기도 함께 고친다.
 export default [
   {
     slug: 'first-career',

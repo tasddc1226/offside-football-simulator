@@ -42,6 +42,7 @@ const ko = {
   achRewardGot: (p: { items: string }) => `받은 보상 ${p.items}`,
   achRewardBoost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
   achRewardScout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
+  achRewardReroll: (p: { n: number }) => `리롤권 ${p.n}장`,
   achRankNone: '업적을 하나 달성하면 랭킹에 올라요',
   achRank: (p: { rank: string; ranked: string }) => `${p.rank}위 · ${p.ranked}명 중`,
   achCatPlayer: '선수 업적',
@@ -71,6 +72,14 @@ const ko = {
     `이 선수 급여(${p.salary})가 남은 예산(${p.left})보다 커요. 지난 시즌 선수를 빼거나 이번 시즌 선수로 채워 주세요.`,
   salaryChip: (p: { n: number }) => `급여 ${p.n}`,
   salaryOver: '예산 초과',
+  // T-11-571 리그 체력
+  staminaLabel: '체력',
+  staminaAria: (p: { left: number; total: number; pct: number }) =>
+    p.pct
+      ? `체력 ${p.left}/${p.total}칸 · 다음 리그 경기 실력 −${p.pct}%`
+      : `체력 ${p.left}/${p.total}칸 · 문제없음`,
+  fatigueHint:
+    '리그에 3경기 연속 선발로 나가면 지쳐서 실력이 조금 떨어져요. 한 경기 쉬면 회복해요.',
   salaryLeft: (p: { n: number }) => `남은 예산 ${p.n}`,
   salaryOpen: '급여 안내 보기',
   salaryOverSave: (p: { n: number; max: number }) =>

@@ -1,0 +1,23 @@
+{
+  "id": "t-11-567-owner-hub",
+  "title": "내 구단 화면 정리",
+  "items": [
+    "내 구단의 바로가기를 2열 칸으로 줄이고, 리롤권 · 강화권 · 이름 변경권 · 스카우트권은 새 '상점' 칸에 모았어요.",
+    "계정(로그아웃 · 연동 해제 · 계정 삭제)은 설정 맨 위로 옮겼어요."
+  ],
+  "en": {
+    "title": "A lighter My Club",
+    "items": [
+      "My Club shortcuts are now compact tiles, and reroll, boost, rename and scout tickets live in the new Shop tile.",
+      "Account options (log out, unlink, delete account) moved to the top of Settings."
+    ]
+  },
+  "ja": {
+    "title": "マイクラブを整理",
+    "items": [
+      "マイクラブのショートカットを2列のタイルにまとめ、リロール券・強化券・名前変更券・スカウト券は新しい「ショップ」にまとめました。",
+      "アカウント(ログアウト・連携解除・アカウント削除)は設定の一番上に移しました。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -1,11 +1,17 @@
 // T-10-092 구단주 팀 화면의 순수 로직(웹 team/Team.svelte · 앱 screens/owner/Team.tsx 공용, T-11-005).
 // 편성(자동 배치·자리 바꾸기)·선수 고르기 후보·업적 표기·경기 결과 표기처럼 화면이 그리기 전에 계산하는 것만 둔다.
+import {
+  LEAGUE_FATIGUE_MAX_STEPS,
+  leagueFatiguePenalty,
+  leagueFatigueSteps,
+} from '@offside/contracts/league';
 import { flagOf } from '@offside/contracts/nations';
 import { defaultClubName, LEAGUE_BASE } from '@offside/contracts/club-names';
 import { FACE_ABBR, GK_ABBR } from '@offside/game/attributes';
 import { ATTR_KEYS } from '@offside/game/data';
 import {
   ACH_CATEGORIES,
+  ACH_SCORE_BONUS,
   LINEUP_SIZE,
   PAST_SALARY_BUDGET,
   YOUTH_OVR,
@@ -14,14 +20,14 @@ import {
   achGradeCutoff,
   achTierByRank,
   type AchStanding,
-  DUOS,
+  duosFor,
   FOOT_BONUS,
   FOOT_BONUS_BOTH,
   CLUB_EFFECT,
   HOMEGROWN_EFFECT,
   LEAGUE_STYLES,
   NATIONAL_POWER,
-  nationStyle,
+  nationStyleById,
   TEAM_RULES,
   lineStrength,
   slotRating,
@@ -40,6 +46,7 @@ import {
 import type {
   ClubAchievement,
   ClubAchievementGroup,
+  ClubAchievementsResponse,
   OwnerTeam,
   TeamMatch,
   TeamPlayer,
@@ -48,6 +55,7 @@ import { tn } from '@offside/game/i18n/names';
 import { num, signedNum } from './teamText.js';
 import { teamCoreText as L } from './i18n/ko/teamCore.js';
 import { teamHomeText as TH } from './i18n/ko/teamHome.js';
+import { teamAchText as TA } from './i18n/ko/teamAch.js';
 import { teamSynergyText as SY } from './i18n/ko/teamSynergy.js';
 
 /** 최고 시점 대표 능력치 한 줄(골키퍼는 골키퍼 능력치 이름). */
@@ -76,6 +84,22 @@ export function assignSlot(
 // 최고 OVR로 정한 급여(1~20)의 합이 예산 안이어야 한다. 예산은 서버 응답(pastSalaryBudget), 없으면 기본값.
 export const budgetOf = (res: { pastSalaryBudget?: number | undefined } | null | undefined) =>
   res?.pastSalaryBudget ?? PAST_SALARY_BUDGET;
+// T-11-571 리그 체력(docs/tracking/league-fatigue-plan.md). 서버가 켰을 때만 응답에 온다.
+export type LeagueFatigue = { rate: number; streaks: Record<string, number> };
+/** 체력 게이지 칸 수(문제없음 + 단계마다 한 칸씩). */
+export const STAMINA_CELLS = LEAGUE_FATIGUE_MAX_STEPS + 1;
+/**
+ * 다음 리그 경기에 선발로 나갈 때의 체력 게이지. left는 남은 칸(STAMINA_CELLS = 문제없음, 1 = 최대로 지침), pct는 깎이는
+ * 자리 실력(%). 체력이 꺼져 있으면 null.
+ */
+export function staminaOf(f: LeagueFatigue | null | undefined, careerId: string) {
+  if (!f || f.rate <= 0) return null;
+  const streak = f.streaks[careerId] ?? 0;
+  return {
+    left: STAMINA_CELLS - leagueFatigueSteps(streak),
+    pct: Math.round(leagueFatiguePenalty(streak, f.rate) * 100),
+  };
+}
 /** 이 팀 시즌에서 카드가 받는 급여(이번 시즌 선수는 0). */
 export const salaryIn = (p: Pick<TeamPlayer, 'peak' | 'season'>, season: number) =>
   seasonSalaryOf(p, season);
@@ -218,17 +242,20 @@ export function autoFillSlots(
 
 /**
  * T-11-105 편성 중인 선발의 시너지 — 서버 경기 계산(api team/sim.ts buildLineup)과 같은 입력으로 센다. 빈 자리는 유스 선수.
+ * season은 그 팀의 서비스 시즌(T-11-542 시즌 2 규칙은 시즌 2부터, 모르면 지금 규칙).
  */
 export function slotsSynergy(
   positions: TeamLayout,
   slots: readonly (string | null)[],
   byId: ReadonlyMap<string, TeamPlayer>,
+  season?: number,
 ): TeamSynergy {
   return teamSynergy(
     positions.map(({ slot, x }, i) => {
       const p = slots[i] ? byId.get(slots[i]!) : undefined;
       return p ? toSynergyPlayer(slot, x, p) : null;
     }),
+    season,
   );
 }
 
@@ -288,7 +315,7 @@ export const synergyChips = (s: TeamSynergy): SynergyChip[] =>
             ? SY.nationalChip({
                 name,
                 flag: flagOf(a.nation),
-                style: SY.styleName({ id: a.style!, ko: nationStyle(a.nation).name }),
+                style: SY.styleName({ id: a.style!, ko: nationStyleById(a.style!)?.name ?? '' }),
               })
             : a.league
               ? SY.leagueChip({
@@ -340,11 +367,12 @@ const STATE_RANK: Record<SynergyState, number> = { applied: 0, noEffect: 1, off:
 /**
  * 편성 화면의 시너지 목록(웹·앱 공용). 규칙 전부를 숨김 없이 보이고 적용 중 → 효과 없음 → 미적용 순으로 둔다(같은 상태는 표 순서).
  * 켜진 것은 실제 효과, 미적용은 규칙 효과를 보인다. 언어를 바꾸면 다시 만들어야 해서 함수다.
+ * season을 주면 그 시즌에 있던 규칙만 보인다(T-11-542 시즌 2 트리오 · 듀오는 시즌 1 팀에 보이지 않는다).
  */
-export function synergyRows(s: TeamSynergy): SynergyRow[] {
+export function synergyRows(s: TeamSynergy, season?: number): SynergyRow[] {
   const on = new Map(synergyChips(s).map((c) => [c.id, c]));
   const rules: (readonly [{ id: string; name: string; desc: string }, string])[] = [
-    ...DUOS.map((d) => [d, synergyEffectText(d.effect)] as const),
+    ...duosFor(season).map((d) => [d, synergyEffectText(d.effect)] as const),
     [TEAM_RULES.homegrown, synergyEffectText(HOMEGROWN_EFFECT)],
     [TEAM_RULES.national, SY.nationalVaries({ sum: signedNum(NATIONAL_POWER) })],
     [TEAM_RULES.league, SY.leagueVaries({ sum: signedNum(NATIONAL_POWER) })],
@@ -445,11 +473,12 @@ export function achNear(groups: readonly ClubAchievementGroup[], n = 3): AchNear
 export const achPoints = (i: ClubAchievement): string =>
   i.points > 0 ? L.achPointsGot({ n: num(i.points) }) : L.achPointsWorth({ n: num(i.worth) });
 
-/** T-11-357 업적 보상 아이템 이름(잠재력 강화권 · 프리미엄 스카우트권). 없으면 빈 문자열. */
-export const achRewardItems = (r: { boost: number; scout: number }): string =>
+/** T-11-357 업적 보상 아이템 이름(잠재력 강화권 · 프리미엄 스카우트권 · T-11-541 리롤권). 없으면 빈 문자열. */
+export const achRewardItems = (r: { boost: number; scout: number; reroll?: number }): string =>
   [
     r.boost > 0 ? L.achRewardBoost({ n: r.boost }) : '',
     r.scout > 0 ? L.achRewardScout({ n: r.scout }) : '',
+    r.reroll ? L.achRewardReroll({ n: r.reroll }) : '',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -461,6 +490,20 @@ export function achReward(i: ClubAchievement): string | null {
     i.reward ? L.achRewardNext({ items: achRewardItems(i.reward) }) : '',
   ].filter(Boolean);
   return parts.length ? parts.join(' · ') : null;
+}
+
+/** T-11-541 업적 화면의 점수 보너스 줄(지금 시즌 응답에만 bonus가 있다). 없으면 null. */
+export function achBonusView(
+  bonus: ClubAchievementsResponse['bonus'],
+): { title: string; next: string; got: string | null; note: string } | null {
+  if (!bonus) return null;
+  const got = bonus.got.boost + bonus.got.scout + bonus.got.reroll > 0;
+  return {
+    title: TA.bonusTitle,
+    next: TA.bonusNext({ pts: num(bonus.next), items: achRewardItems(bonus.reward) }),
+    got: got ? TA.bonusGot({ items: achRewardItems(bonus.got) }) : null,
+    note: TA.bonusNote({ every: num(ACH_SCORE_BONUS.every) }),
+  };
 }
 
 // T-11-028 업적 분류(선수·팀·구단주·감독)와 시즌 등급.

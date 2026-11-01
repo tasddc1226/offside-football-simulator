@@ -142,4 +142,11 @@ export const create: Translation<CreateMsgs> = {
   groupBase: '基本',
   groupHits: (p) => `搜尋結果 ${p.n}`,
   invalidHint: '請確認輸入的值',
+  // T-11-545 選擇外觀
+  lookTitle: '外觀',
+  lookAuto: '基本',
+  lookAutoAria: (p) => `${p.item} 基本`,
+  lookNote:
+    '沒有選擇的項目會是每位球員各自決定的基本外觀。選好的項目可以在生涯中透過裝扮免費重新更換。',
+  lookPreview: '外觀預覽',
 };

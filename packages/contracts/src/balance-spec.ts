@@ -96,6 +96,14 @@ export const BALANCE_SPEC = {
     max: 5,
     step: 1,
   },
+  /** T-11-593 잠재력 강화 성공 중 대성공(두 단계) 비율. 0이면 대성공이 없다. */
+  boostGreat: {
+    def: 0.2,
+    min: 0,
+    max: 0.5,
+    step: 0.05,
+    unit: 'pct',
+  },
   careCost: {
     def: 1,
     min: 0.25,
@@ -120,6 +128,49 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 6,
     step: 0.5,
+  },
+  // T-11-544 숨은 잠재력(bloom)의 해마다 흔들림(표준편차)과 그 흔들림이 멈추는 나이. 시즌 1은 1.2 · 25, 시즌 2부터 1.0.
+  bloomDrift: {
+    def: 1,
+    min: 0,
+    max: 3,
+    step: 0.1,
+  },
+  bloomAge: {
+    def: 25,
+    min: 19,
+    max: 30,
+    step: 1,
+  },
+  // T-11-544 스카우트 재평가(21세 · 24세)가 숨은 잠재력 중 평가에 반영하는 몫. 기본 0.5 · 0.8 = 시즌 1 그대로.
+  rescoutShare1: {
+    def: 0.5,
+    min: 0,
+    max: 1,
+    step: 0.05,
+    unit: 'pct',
+  },
+  rescoutShare2: {
+    def: 0.8,
+    min: 0,
+    max: 1,
+    step: 0.05,
+    unit: 'pct',
+  },
+  // T-11-544 재평가가 잠재력을 깎을 때 실제로 깎는 비율과 한 번에 깎는 최대 폭. 덜 깎은 몫은 없던 일로 한다(숨은 잠재력에
+  // 남기지 않는다). 시즌 1은 1 · 99(그대로 깎는다), 시즌 2부터 0.7 · 3 — 두 재평가 합이 −5 이하인 커리어가 11% → 3%.
+  rescoutDownScale: {
+    def: 0.7,
+    min: 0,
+    max: 1,
+    step: 0.05,
+    unit: 'x',
+  },
+  rescoutDropCap: {
+    def: 3,
+    min: 0,
+    max: 99,
+    step: 1,
   },
   // T-11-450 프리미엄 스카우트 후보의 S 확률 배수(일반 후보 대비). 기본 2 = T-11-196 그대로.
   premiumSMult: {
@@ -179,6 +230,7 @@ export const BALANCE_SPEC = {
     max: 90,
     step: 1,
   },
+  agKoreaBonus: { def: 6, min: 0, max: 15, step: 1 },
   koreaU23: {
     def: 69,
     min: 55,
@@ -277,6 +329,15 @@ export const BALANCE_SPEC = {
     max: 1.3,
     step: 0.01,
     unit: 'x',
+  },
+  // T-11-571 리그 체력: 리그 경기에 연속 선발로 나간 선수의 자리 실력을 단계마다 이만큼 깎는다(0이면 끔). 기획은
+  // docs/tracking/league-fatigue-plan.md, 단계는 league.ts leagueFatigueSteps.
+  leagueFatigue: {
+    def: 0,
+    min: 0,
+    max: 0.1,
+    step: 0.01,
+    unit: 'pct',
   },
   // T-11-409 오프사이드 컵 경기의 공격 계수(공격 − 상대 벽 10점당 지수). 3회 컵부터 랭크 경기(T-11-510)와 같은 0.45.
   cupAtkK: {

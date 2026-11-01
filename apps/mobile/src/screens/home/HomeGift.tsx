@@ -1,7 +1,7 @@
 // 홈 선물 칸(T-11-386 시즌 업적 보상 → T-11-487 시즌 기록 보상, T-11-472 구단주 선물은 없앴다)(웹 HomeGift.svelte) — 오프사이드 컵 배너 바로 아래. 로그인한 구단주가 한 번 받으면 사라진다.
 // 묻는 조건 · 메모는 app-core api/gift.ts.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { AppState, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import {
   claimHomeGift,
@@ -13,6 +13,9 @@ import { giftText as L } from '@offside/app-core/i18n/ko/gift';
 import { toast } from '../../game/host';
 import { goRerollShop } from '../../game/nav';
 import { notificationDestination } from '../../platform/notificationDestination';
+import { reviewPrompt } from '../../platform/review';
+import { interstitial } from '../../platform/interstitial';
+import { rnAlert, sheetState } from '../../store';
 import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
@@ -65,6 +68,18 @@ export function HomeGift() {
     setBusy(false);
     if (r.ok) {
       setDone(copy.done);
+      // T-11-586 시즌 보상을 받은 직후는 리뷰를 묻기 좋은 순간이다. 결과 카드가 자리 잡은 뒤 OS 리뷰 창을 요청한다.
+      const giftId = gift.id;
+      setTimeout(() => {
+        void reviewPrompt.afterHighlight(
+          `gift:${giftId}`,
+          () =>
+            AppState.currentState === 'active' &&
+            !sheetState.open &&
+            !rnAlert.item &&
+            !interstitial.showing,
+        );
+      }, 1500);
       key.current = crypto.randomUUID();
       setGift(null);
       // T-11-487 업적 보상 다음에 기록 보상이 있으면 바로 이어 보인다.

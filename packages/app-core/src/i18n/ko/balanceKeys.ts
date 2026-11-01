@@ -2,6 +2,7 @@
 import { ns } from '../core';
 
 const ko = {
+  agKoreaBonus: '아시안게임 한국 전력 보정',
   eventRatePreseason: '프리시즌 이벤트 확률',
   eventRateSeason: '전·후반기 이벤트 확률',
   eventTwist: '선택 뒤 반전 확률',
@@ -13,10 +14,17 @@ const ko = {
   investCost: '자기 투자 비용 배율',
   boostCost: '잠재력 강화 비용 배율',
   boostExtraTotal: '커리어당 추가 강화 횟수',
+  boostGreat: '잠재력 강화 대성공 비율',
   careCost: '몸 관리 비용 배율',
   potMean: '잠재력 평균',
   potSd: '잠재력 편차',
   potScoutSd: '스카우트 평가 오차',
+  bloomDrift: '숨은 잠재력 흔들림',
+  bloomAge: '숨은 잠재력 고정 나이',
+  rescoutShare1: '21세 재평가 반영 몫',
+  rescoutShare2: '24세 재평가 반영 몫',
+  rescoutDownScale: '재평가 하락 비율',
+  rescoutDropCap: '재평가 한 번 최대 하락',
   premiumSMult: '프리미엄 스카우트 S 배수',
   injuryRate: '경기당 부상 확률',
   bigInjuryShare: '큰 부상 비율',
@@ -38,6 +46,7 @@ const ko = {
   marketPriceMin: '최저 판매가(기준가 배수)',
   marketPriceMax: '최고 판매가(기준가 배수)',
   cupAtkK: '컵 전력 차이 반영',
+  leagueFatigue: '리그 체력',
   leagueHomeAdv: '리그 홈 이점',
   pastSalaryBudget: '지난 시즌 선수 급여 예산',
   pastSalaryBudgetStep: '시즌당 급여 예산 증가',

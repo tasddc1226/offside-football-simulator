@@ -7,7 +7,8 @@
 // 초기화 없이 바로 요청하면 첫 요청에 입찰 신호가 빠진다. 초기화가 늦어도 광고를 막지 않게 INIT_WAIT_MS까지만 기다린다.
 import mobileAds, { AdsConsent } from 'react-native-google-mobile-ads';
 
-const TEST_DEVICES = ['cf501bb8e326505e664bd41f504f4164'];
+// T-11-587 운영자 iPhone 재설치로 바뀐 ID(9401…)를 더한다. 옛 ID는 다른 설치본용으로 남긴다.
+const TEST_DEVICES = ['cf501bb8e326505e664bd41f504f4164', '9401ba83ecab139866f77381004260bc'];
 const INIT_WAIT_MS = 5_000;
 
 let consent: Promise<boolean> | undefined;

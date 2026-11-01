@@ -29,6 +29,7 @@ import {
   findNations,
   marketFindChips,
   marketFiltered,
+  marketSeasonChoices,
   marketSubReset,
   marketTypeFilters,
   pickMarketFilter,
@@ -238,6 +239,14 @@ describe('이적시장 세부 필터 (T-11-474)', () => {
       club: undefined,
     });
     expect(marketFiltered({ nation: 'BR' })).toBe(true);
+    // T-11-596 카드 시즌도 포지션을 바꿔도 남는다(프리시즌 0도 고른 것으로 센다).
+    expect(pickMarketFilter({ pos: 'FW', cardSeason: 1 }, { pos: 'MF' })).toEqual({
+      pos: 'MF',
+      cardSeason: 1,
+    });
+    expect(marketFiltered({ cardSeason: 0 })).toBe(true);
+    expect(marketSeasonChoices(2)).toEqual([0, 1, 2]);
+    expect(marketSeasonChoices(null)).toEqual([]);
     expect(marketFindChips({ nation: 'BR', club: 'pl-0' })).toEqual([
       { key: 'nation', name: '브라질' },
       { key: 'club', name: '맨체스터 스카이블루' },

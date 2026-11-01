@@ -99,7 +99,7 @@ import type { TabIconName } from '../../ui/TabIcon';
 import { Field, SelectField, TextField } from '../settings/parts';
 import { LoginButtons } from './LoginButtons';
 import { TeamAchievements } from './TeamAchievements';
-import { TeamFriends, OppSwitch, useFriends, type OppTab } from './TeamFriends';
+import { TeamFriends, OppSwitch, oppTabMemory, useFriends, type OppTab } from './TeamFriends';
 import { TeamHistory } from './TeamHistory';
 import { TeamStats } from './TeamStats';
 import { TeamLive } from './TeamLive';
@@ -126,10 +126,11 @@ import {
 import { CupLockNotice, useCup } from './TeamCup';
 import { cupLineupBar } from '@offside/app-core/cupLineupBar';
 import { TeamPresets } from './TeamPresets';
-import { loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
+import { cupPresetOf, loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { fixSlot, slotName } from '@offside/app-core/matchReport';
 import type { ReportLine } from '@offside/contracts/owner-team';
+import { seasonOptions } from '../../ui/seasonOptions';
 
 const between = (v: string, min: number, max: number) =>
   v.trim().length >= min && v.trim().length <= max;
@@ -154,6 +155,7 @@ export default function Team() {
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   const [season, setSeason] = useState(0);
   const [budget, setBudget] = useState(PAST_SALARY_BUDGET);
+  const [fatigue, setFatigue] = useState<OwnerTeamResponse['fatigue'] | null>(null);
   const [synFocus, setSynFocus] = useState<string | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
   // T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(그 시즌 팀은 컵 명단으로 고친다).
@@ -196,7 +198,13 @@ export default function Team() {
 
   /** T-11-098 '경기' 탭의 두 칸(랭크 경기 · 친구). 친구 칸은 처음 열 때만 불러온다. */
   const destination = useSnapshot(notificationDestination);
-  const [oppTab, setOppTab] = useState<OppTab>(destination.friends ? 'friends' : 'ranked');
+  const [oppTab, setOppTabState] = useState<OppTab>(
+    destination.friends ? 'friends' : oppTabMemory.tab,
+  );
+  const setOppTab = (t: OppTab) => {
+    oppTabMemory.tab = t;
+    setOppTabState(t);
+  };
   const friends = useFriends();
   useEffect(() => {
     if (status !== 'ready' || needLogin) return;
@@ -297,7 +305,7 @@ export default function Team() {
   });
   const ovr = teamOvr(ratings);
   // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
-  const synergy = slotsSynergy(positions, slots, byId);
+  const synergy = slotsSynergy(positions, slots, byId, season);
   const syn = synergyFocus(synergy, synFocus);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = draftLines(slotCodes, ratings, synergy, season);
@@ -322,11 +330,24 @@ export default function Team() {
   // T-11-382 줄 칸의 감독 보정이 어디서 왔는지(갈래별 값 · 상한에 잘린 몫 · 꺼진 특기).
   const coachDetail = team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null;
   const filled = slots.filter((s) => s !== null).length;
+  // T-11-570 컵 명단 프리셋이 있으면 컵은 그 편성으로 뛴다 — 줄은 프리셋 값을 보이고 팀 저장은 막지 않는다.
+  const cupPreset = cupPresetOf(team?.presets);
   // T-11-436 컵 규칙 줄 — 서버 저장 검사와 같은 판정. block이 있으면 저장을 막고 이유를 보인다.
   const cupBar =
     editable && !legacy && cupState.cup?.cup.season === season
-      ? cupLineupBar(cupState.cup, cupState.me, { ovr, filled }, new Date().toISOString())
+      ? cupLineupBar(
+          cupState.cup,
+          cupState.me,
+          cupPreset
+            ? {
+                ovr: cupPreset.ovr ?? 0,
+                filled: cupPreset.filled ?? cupPreset.slots.filter(Boolean).length,
+              }
+            : { ovr, filled },
+          new Date().toISOString(),
+        )
       : null;
+  const cupBlock = cupPreset ? null : (cupBar?.block ?? null);
   const dirty =
     !team ||
     name.trim() !== team.name ||
@@ -350,6 +371,7 @@ export default function Team() {
             peak: p.peak,
             number: p.number,
             legendScore: p.legendScore,
+            specials: p.specials,
             careerId: p.careerId,
             look: p.look,
             nation: p.nation,
@@ -428,6 +450,7 @@ export default function Team() {
     setMatchesLeft(d.matchesLeft);
     setPerDay(d.matchesPerDay);
     setBudget(budgetOf(d));
+    setFatigue(d.fatigue ?? null);
     if (silent) {
       if (JSON.stringify(d.team) !== JSON.stringify(teamNow.current)) {
         if (dirtyNow.current) setTeam(d.team);
@@ -493,8 +516,8 @@ export default function Team() {
       toast(TC.salaryOverSave({ n: salary.sum, max: salary.budget }));
       return false;
     }
-    if (cupBar?.block) {
-      toast(cupBar.block);
+    if (cupBlock) {
+      toast(cupBlock);
       return false;
     }
     savingRef.current = true;
@@ -552,6 +575,8 @@ export default function Team() {
     );
     if (!r.ok) {
       toast(r.error.message);
+      // T-11-570 컵 명단 검사에 걸렸으면 컵 상태를 다시 받는다.
+      if (r.error.reason?.startsWith('CUP_')) void cupState.reload(true);
       return false;
     }
     setTeam((t) => (t ? { ...t, presets: r.data.presets } : t));
@@ -800,10 +825,7 @@ export default function Team() {
               label={L.seasonLabel}
               testID="team-season"
               value={season}
-              options={seasons.map((o) => ({
-                value: o.id,
-                label: `${o.name}${o.id === current ? L.seasonNow : ''}`,
-              }))}
+              options={seasonOptions(seasons)}
               onChange={pickSeason}
             />
           ) : (
@@ -952,7 +974,9 @@ export default function Team() {
         ) : null}
         {editable || team ? (
           <>
-            {editable && !legacy ? <CupLockNotice state={cupState} bar={cupBar} /> : null}
+            {editable && !legacy ? (
+              <CupLockNotice state={cupState} bar={cupBar} preset={cupPreset?.name ?? null} />
+            ) : null}
             <Card gap={8}>
               <View
                 style={{
@@ -1135,6 +1159,7 @@ export default function Team() {
               onFocused={() => setFocusSlot(null)}
               season={season}
               salary={salary}
+              fatigue={fatigue}
               change={(nextSlots, nextLayout) => {
                 // T-11-376 지난 시즌 선수는 급여 예산 안에서만.
                 if (salaryBlocks(slots, nextSlots, byId, season, budget)) {
@@ -1306,14 +1331,14 @@ export default function Team() {
                       </Btn>
                     </View>
                   ) : null}
-                  {dirty && (!nameOk || cupBar?.block) ? (
+                  {dirty && (!nameOk || cupBlock) ? (
                     <Txt
                       v="sm"
                       tone="muted"
                       accessibilityLiveRegion="polite"
                       testID="team-save-reason"
                     >
-                      {nameIssues.name || nameIssues.manager || cupBar?.block}
+                      {nameIssues.name || nameIssues.manager || cupBlock}
                     </Txt>
                   ) : null}
                   {dirty ? (
@@ -1321,7 +1346,7 @@ export default function Team() {
                       kind="primary"
                       block
                       testID="team-save"
-                      disabled={saving || !nameOk || !!pendingDraft || !!cupBar?.block}
+                      disabled={saving || !nameOk || !!pendingDraft || !!cupBlock}
                       onPress={() => void save()}
                     >
                       {saving ? L.saving : team ? L.saveLineupApp : L.createTeam}
@@ -1349,7 +1374,9 @@ export default function Team() {
           close={() => setPresetsOpen(false)}
           presets={team?.presets ?? []}
           hasTeam={!!team}
-          locked={!!cupState.me?.locked}
+          locked={!!cupState.me?.locked && !cupPreset}
+          cupLocked={!!cupState.me?.locked}
+          cup={season > 0}
           draft={(presetName) =>
             presetOf(presetName, formation, slots, season > 0 ? positions : null)
           }

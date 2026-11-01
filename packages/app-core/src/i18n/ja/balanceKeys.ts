@@ -2,6 +2,7 @@ import type { Translation } from '../core';
 import type { BalanceKeysMsgs } from '../ko/balanceKeys';
 
 export const balanceKeys: Translation<BalanceKeysMsgs> = {
+  agKoreaBonus: 'アジア大会の韓国戦力補正',
   eventRatePreseason: 'プレシーズンのイベント確率',
   eventRateSeason: '前半戦・後半戦のイベント確率',
   eventTwist: '選択後のどんでん返し確率',
@@ -13,10 +14,17 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   investCost: '自己投資の費用倍率',
   boostCost: '潜在能力強化の費用倍率',
   boostExtraTotal: 'キャリアごとの追加強化回数',
+  boostGreat: '潜在能力強化の大成功の割合',
   careCost: 'コンディション管理の費用倍率',
   potMean: 'ポテンシャルの平均',
   potSd: 'ポテンシャルのばらつき',
   potScoutSd: 'スカウト評価の誤差',
+  bloomDrift: '隠れたポテンシャルの揺れ',
+  bloomAge: '隠れたポテンシャルが固まる年齢',
+  rescoutShare1: '21歳の再評価に反映する割合',
+  rescoutShare2: '24歳の再評価に反映する割合',
+  rescoutDownScale: '再評価で下がる割合',
+  rescoutDropCap: '再評価1回の最大下落',
   premiumSMult: 'プレミアムスカウトのS倍率',
   injuryRate: '1試合あたりのケガ確率',
   bigInjuryShare: '大ケガの割合',
@@ -38,6 +46,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMin: '最低販売価格(基準価格の倍率)',
   marketPriceMax: '最高販売価格(基準価格の倍率)',
   cupAtkK: 'カップの戦力差の反映',
+  leagueFatigue: 'リーグの疲労',
   leagueHomeAdv: 'リーグのホームアドバンテージ',
   pastSalaryBudget: '過去シーズン選手の年俸予算',
   pastSalaryBudgetStep: 'シーズンごとの年俸予算増加',

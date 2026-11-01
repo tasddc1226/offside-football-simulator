@@ -118,6 +118,11 @@ export const seasonRecap: Translation<SeasonRecapMsgs> = {
   cardTagline: '培養一名高三足球員一生的遊戲',
   secSquad: '本賽季球員陣容',
   squadLead: (p) => `培養的 ${p.n} 名球員齊聚一堂`,
+  secSpecials: '賽季特別卡',
+  specialsLead:
+    '從所有俱樂部老闆本賽季退役的球員中，選出各位置的最佳 11 人，以及射手王、助攻王和 MVP。標記會永久留在卡片上。',
+  specialsMine: '我的球員',
+  specialsMineCount: (p) => `我的球員有 ${p.n} 名入選`,
   photoCaption: (p) => `${p.season} 球員陣容`,
   photoMore: (p) => `等 ${p.n} 人`,
   photoAria: (p) => `${p.season} 球員陣容合照：${p.names}`,

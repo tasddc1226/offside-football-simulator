@@ -37,6 +37,8 @@ const ko = {
   pastLead: '받지 않은 보상이 남아 있어요.',
   aheadTitle: (p: { season: number }) => `시즌 ${p.season} 패스를 미리 가지고 있어요`,
   aheadLead: '그 시즌이 열리면 진행이 시작돼요.',
+  webBuyBtn: (p: { price: string }) => `웹에서 사기 · ${p.price}원`,
+  webBuyNote: '카드 · 카카오페이 등으로 사요. 결제가 끝나면 이번 시즌 패스가 바로 열려요.',
   notOnSale: '지금은 패스를 팔지 않아요.',
   webBuy: '패스는 앱에서 살 수 있어요. 산 패스의 보상은 웹에서도 받아요.',
   login: '로그인한 구단주만 시즌 패스를 쓸 수 있어요.',

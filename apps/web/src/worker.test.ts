@@ -97,3 +97,57 @@ describe('T-11-531 크리에이터 짧은 주소', () => {
     }
   });
 });
+
+describe('T-11-584 랜딩 /get', () => {
+  it('기기 스토어로 302, 캐시 · 색인하지 않는다', async () => {
+    const res = await worker.fetch(
+      new Request('https://offside-lab.com/get?os=android&p=end'),
+      { ASSETS: assets },
+      ctx,
+    );
+    expect(res.status).toBe(302);
+    expect(res.headers.get('Location')).toMatch(/^https:\/\/play\.google\.com\//);
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+    expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+  });
+});
+
+describe('T-11-585 랜딩 이미지', () => {
+  it('/landing/ 파일은 noindex를 붙이지 않는다', async () => {
+    const res = await worker.fetch(
+      new Request('https://offside-lab.com/landing/live.webp'),
+      {
+        ASSETS: {
+          // 운영 ASSETS는 _headers의 /* 규칙대로 noindex를 붙여 돌려준다.
+          fetch: async () =>
+            new Response('x', {
+              headers: { 'Content-Type': 'image/webp', 'X-Robots-Tag': 'noindex, nofollow' },
+            }),
+        },
+      },
+      ctx,
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('X-Robots-Tag')).toBeNull();
+  });
+});
+
+describe('T-11-597 동의 지역 쿠키', () => {
+  const at = (path: string, country?: string) => {
+    const req = new Request(`https://offside-lab.com${path}`);
+    if (country) Object.defineProperty(req, 'cf', { value: { country } });
+    return worker.fetch(req, { ASSETS: assets }, ctx);
+  };
+  it('HTML 응답에 접속 나라로 정한 지역을 붙인다', async () => {
+    expect((await at('/', 'KR')).headers.get('Set-Cookie')).toMatch(
+      /^offside_consent_region=notice;/,
+    );
+    expect((await at('/', 'DE')).headers.get('Set-Cookie')).toMatch(/^offside_consent_region=ask;/);
+    expect((await at('/settings')).headers.get('Set-Cookie')).toMatch(
+      /^offside_consent_region=ask;/,
+    );
+  });
+  it('정적 파일에는 붙이지 않는다', async () => {
+    expect((await at('/assets/index-abc.js', 'KR')).headers.get('Set-Cookie')).toBeNull();
+  });
+});

@@ -1983,7 +1983,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
 
       const view = await friendsOf(a.cookie);
       expect(view).toMatchObject({ canPlay: false, canPlayPreseason: true });
-      expect(view.friends[0]).toMatchObject({ name: '창단', founder: true, preseasonTeam: null });
+      expect(view.friends[0]).toMatchObject({
+        name: '창단',
+        founder: true,
+        preseasonTeam: null,
+        profileTeamId: null,
+      });
       const none = await preFriendly(a.cookie, bCode);
       expect(none.status).toBe(409);
       expect(await reason(none)).toBe('FRIEND_TEAM_REQUIRED');
@@ -1993,13 +1998,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect((await putTeam(b.cookie, { season: 2, slots: slots(bPre) })).status).toBe(409);
       const legacy = await putTeam(b.cookie, { season: 0, name: '레전드 FC', slots: slots(bPre) });
       expect(legacy.status).toBe(200);
-      expect(PutRes.parse(await legacy.json()).data.team).toMatchObject({
-        season: 0,
-        name: '레전드 FC',
-      });
-      expect((await friendsOf(a.cookie)).friends[0]!.preseasonTeam).toMatchObject({
-        name: '레전드 FC',
-      });
+      const legacyTeam = PutRes.parse(await legacy.json()).data.team;
+      expect(legacyTeam).toMatchObject({ season: 0, name: '레전드 FC' });
+      const withLegacy = (await friendsOf(a.cookie)).friends[0]!;
+      expect(withLegacy.preseasonTeam).toMatchObject({ name: '레전드 FC' });
+      // T-11-601 이번 시즌 팀이 없어도 가장 최근 팀으로 구단주 프로필을 연다.
+      expect(withLegacy).toMatchObject({ team: null, profileTeamId: legacyTeam!.id });
 
       const played = await preFriendly(a.cookie, bCode);
       expect(played.status).toBe(201);

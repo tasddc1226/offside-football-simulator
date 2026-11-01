@@ -149,4 +149,11 @@ export const create: Translation<CreateMsgs> = {
   groupBase: '基本',
   groupHits: (p) => `検索結果 ${p.n}`,
   invalidHint: '入力値を確認してください',
+  // T-11-545 見た目を選ぶ
+  lookTitle: '見た目',
+  lookAuto: '基本',
+  lookAutoAria: (p: { item: string }) => `${p.item} 基本`,
+  lookNote:
+    '選ばなかった項目は選手ごとに決まる基本の見た目になります。選んだ項目はキャリア中の着せ替えで無料で変えられます。',
+  lookPreview: '見た目のプレビュー',
 };

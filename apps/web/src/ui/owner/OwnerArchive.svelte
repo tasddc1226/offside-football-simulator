@@ -33,12 +33,11 @@
   // T-11-489 서버가 시즌마다 정한 티어(시즌 2부터 상위 비율). 옛 응답이면 점수로 정한다.
   const tier = $derived(line?.tier !== undefined ? line.tier : line?.achScore == null ? null : ownerTierOf({ season: line.season, score: line.achScore }));
 
-  function select(season: number) { appState.honorsSeason = season; archive.select(season); }
-  async function expand(retry = false) {
-    Detail ??= (await import('../SeasonRecap.svelte')).default;
-    await archive.expand(retry);
+  function select(season: number) { appState.honorsSeason = season; void archive.select(season); }
+  $effect(() => {
+    if (view.expanded && !Detail) void import('../SeasonRecap.svelte').then((m) => { Detail = m.default; });
     if (view.detail?.status === 'ready') appState.recapNew = false;
-  }
+  });
   function players() {
     appState.playersSeason = view.season;
     appState.playersView = 'records';
@@ -94,13 +93,10 @@
             {#if !line.closed}<button class="btn" data-act="archive-achievements" onclick={() => { appState.teamView = 'achievements'; go('team'); }}>{L.viewAchievements}</button>{/if}
           </div>
           {#if line.closed}
-            <button class="archive-disclosure" aria-expanded={view.expanded} aria-controls="archive-detail" data-act="archive-details" onclick={() => expand()}>
-              <span>{view.expanded ? L.archiveHide : L.archiveDetails}</span><span aria-hidden="true">{view.expanded ? '−' : '+'}</span>
-            </button>
             {#if view.expanded}
               <div id="archive-detail" class="archive-detail" in:fade={{ duration: dur(160) }}>
                 {#if view.detailLoading}<Skeleton rows={4} />
-                {:else if view.detailError}<p role="status">{L.archiveError}</p><button class="btn" data-act="archive-retry" onclick={() => expand(true)}>{L.retry}</button>
+                {:else if view.detailError}<p role="status">{L.archiveError}</p><button class="btn" data-act="archive-retry" onclick={() => archive.expand(true)}>{L.retry}</button>
                 {:else if view.detail && Detail}<Detail embedded record={view.detail} />{/if}
               </div>
             {/if}
@@ -132,6 +128,5 @@
   .archive-badges ul {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px 6px;padding:0;margin:0;list-style:none;}
   .archive-badges li {display:flex;align-items:center;flex-direction:column;text-align:center;gap:5px;min-width:0;overflow-wrap:anywhere;font-size:12px;}
   .badge-art {width:64px;height:70px;}.archive-badges small {font-size:12px;}.archive-actions {display:flex;gap:8px;flex-wrap:wrap;}.archive-actions .btn {flex:1;min-height:44px;}
-  .archive-disclosure {display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--surface);color:var(--ink);border: 1px solid transparent;border-radius:var(--radius-md);padding:16px;text-align:left;font-weight:600;min-height:52px;}
   .archive-detail {min-width:0;}.cup-empty {margin:0 4px;}
 </style>

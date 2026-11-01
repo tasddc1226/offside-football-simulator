@@ -1,0 +1,30 @@
+{
+  "id": "boost-tickets-100-web",
+  "title": "잠재력 강화권 100장 묶음 추가",
+  "items": [
+    "웹 상점에서 잠재력 강화권 100장을 한 번에 살 수 있어요.",
+    "한국 기준가는 19,800원으로, 10장 묶음 대비 장당 10% 저렴해요."
+  ],
+  "en": {
+    "title": "100-ticket potential boost bundle",
+    "items": [
+      "You can buy 100 potential boost tickets at once in the web shop.",
+      "The Korean base price is KRW 19,800, 10% less per ticket than the 10-ticket bundle."
+    ]
+  },
+  "ja": {
+    "title": "ポテンシャル強化券100枚セットを追加",
+    "items": [
+      "ウェブショップでポテンシャル強化券100枚をまとめて購入できます。",
+      "韓国での基準価格は19,800ウォン。10枚セットより1枚あたり10%お得です。"
+    ]
+  },
+  "zh": {
+    "title": "新增100張潛力強化券組合",
+    "items": [
+      "現在可以在網頁商店一次購買100張潛力強化券。",
+      "韓國基準價格為19,800韓元，每張比10張組合便宜10%。"
+    ]
+  },
+  "availability": "web"
+}

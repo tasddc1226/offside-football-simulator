@@ -11,8 +11,10 @@ export const MAIN_SCREENS = [
 const BROWSE_SCREENS: readonly Screen[] = [
   ...MAIN_SCREENS,
   'cup',
+  'league',
   'market',
   'funds',
+  'shop',
   'manager',
   'recap',
   'honors',

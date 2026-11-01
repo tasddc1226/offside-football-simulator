@@ -5,7 +5,6 @@ import { ordinal, plural } from './_util';
 export const hofRn: Translation<HofRnMsgs> = {
   season: 'Season',
   seasonAria: 'Retired numbers season',
-  notOpen: ' (opens soon)',
   lead: "A long-serving player's shirt number is retired and never worn again. Each club retires a number for one player only.",
   opens: (p) => `${p.name} opens ${p.when} (Korea time).`,
   loadFailed: "Couldn't load retired numbers. Please try again in a moment.",

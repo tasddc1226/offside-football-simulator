@@ -31,6 +31,7 @@ import { useOnPull } from '../../ui/refresh';
 import { TeamLogo } from '../../components/TeamLogo';
 import { CupTrophy } from '../../ui/CupTrophy';
 import { dayTimeText, phaseLabel, reasonText, roundLabel, stageLabel, whenText } from './cupText';
+import { askPushAfter } from '../../platform/pushAsk';
 
 export interface CupState {
   cup: CupResponse | null;
@@ -211,7 +212,10 @@ function CupEntry({ state }: { state: CupState }) {
     try {
       const r = await (kind === 'enter' ? enterCup(cupId) : withdrawCup(cupId));
       if (!r.ok) toast(r.error.message || A.actionFail);
-      else toast(kind === 'enter' ? L.toastEntered : L.toastWithdrawn);
+      else {
+        toast(kind === 'enter' ? L.toastEntered : L.toastWithdrawn);
+        if (kind === 'enter') void askPushAfter('cup');
+      }
       await reload(true);
     } finally {
       lock.current = false;
@@ -437,9 +441,12 @@ export function CupCard({
 export function CupLockNotice({
   state,
   bar = null,
+  preset = null,
 }: {
   state: CupState;
   bar?: CupLineupBar | null;
+  /** T-11-570 컵 명단 프리셋 이름(있으면 컵은 그 편성으로 뛰고, 줄도 그 프리셋 값이다). */
+  preset?: string | null;
 }) {
   const c = useColors();
   const next = myNext(state);
@@ -467,6 +474,11 @@ export function CupLockNotice({
       {bar ? (
         <Txt v="xs" bold>
           {L.title}
+        </Txt>
+      ) : null}
+      {preset ? (
+        <Txt v="sm" testID="cup-preset">
+          {L.barPreset({ name: preset })}
         </Txt>
       ) : null}
       {text ? <Txt v="sm">{text}</Txt> : null}

@@ -36,6 +36,7 @@ import {
   MARKET_POS_FILTERS,
   marketDetailFilters,
   marketFiltered,
+  marketSeasonChoices,
   marketFindChips,
   cardFrom,
   marketTypeFilters,
@@ -97,14 +98,18 @@ import { MarketFind } from './MarketFind';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { marketText as L } from '@offside/app-core/i18n/ko/market';
 import { intlLocale } from '@offside/app-core/i18n/core';
-import { seasonLabel, teamSeasonLabel } from '@offside/app-core/seasonName';
+import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { Skeleton } from '../../ui/Skeleton';
+import { seasonOptions } from '../../ui/seasonOptions';
+import { SelectField } from '../settings/parts';
 
 type Sent<T> = Promise<
   { ok: true; data: T } | { ok: false; error: { message: string; reason?: string | undefined } }
 >;
 
 const SORT_KEYS = Object.keys(MARKET_SORT_LABEL) as MarketSort[];
+/** T-11-596 시즌 필터의 '모든 시즌'(시즌 id와 겹치지 않는 값). */
+const ALL_SEASONS = -1;
 
 /** 목록·고르기용 카드 — 진짜 PlayerCard의 compact·mini판(OVR·자리·시즌·국기·등번호). 폭은 pitch 슬롯(62)과 거의 같은 64. */
 function MiniCard({
@@ -1205,19 +1210,20 @@ export default function Market() {
               {L.releaseIntro}
             </Txt>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                {(team?.seasons ?? []).map((o) => (
-                  <FilterChip
-                    key={o.id}
-                    on={team?.season === o.id}
-                    label={L.seasonChip({ name: seasonLabel(o.id, o.name) })}
-                    testID={`market-season-${o.id}`}
-                    onPress={() => {
-                      setTeamSeason(o.id);
+              <View style={{ flex: 1, minWidth: 0 }}>
+                {team && team.seasons.length > 1 ? (
+                  <SelectField
+                    compact
+                    label={L.seasonGroup}
+                    testID="market-season"
+                    value={team.season}
+                    options={seasonOptions(team.seasons)}
+                    onChange={(id) => {
+                      setTeamSeason(id);
                       setPicked(new Set());
                     }}
                   />
-                ))}
+                ) : null}
               </View>
               {releasable.length > 0 ? (
                 <Press
@@ -1353,6 +1359,19 @@ export default function Market() {
                 </View>
                 <FindRow filter={filter} onOpen={() => setFinding(true)} onPick={pickFilter} />
                 {filter.pos ? <SubFilters filter={filter} onPick={pickFilter} /> : null}
+                {season !== null && season > 0 ? (
+                  <SelectField
+                    compact
+                    label={L.seasonGroup}
+                    testID="market-card-season"
+                    value={filter.cardSeason ?? ALL_SEASONS}
+                    options={[
+                      { value: ALL_SEASONS, label: L.seasonAll },
+                      ...seasonOptions(marketSeasonChoices(season)),
+                    ]}
+                    onChange={(v) => pickFilter({ cardSeason: v === ALL_SEASONS ? undefined : v })}
+                  />
+                ) : null}
                 <View
                   style={{
                     flexDirection: 'row',

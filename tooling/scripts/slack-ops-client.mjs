@@ -24,19 +24,38 @@ export function slackMessage(title, lines, links = []) {
     ],
   };
 }
+const DISCORD_HOOK = /^\/api\/webhooks\/\d+\/[\w-]+$/;
+/** T-11-576 슬랙 메시지(slackMessage) → 디스코드 웹훅 본문. 제목 · 본문 줄 · 링크, 2,000자, 멘션 끔. */
+export function discordMessage(message) {
+  const blocks = message.blocks ?? [];
+  const text = (b) => b.text?.text ?? '';
+  const lines = blocks.length
+    ? blocks.map((b) =>
+        b.type === 'context'
+          ? b.elements
+              .map((e) => e.text.replace(/<(https?:[^|>]+)\|([^>]+)>/g, '[$2](<$1>)'))
+              .join(' · ')
+          : text(b),
+      )
+    : [message.text ?? ''];
+  return { content: lines.join('\n').slice(0, 2000), allowed_mentions: { parse: [] }, flags: 4 };
+}
+/**
+ * 디스코드 웹훅으로 보낸다(T-11-576). 다른 주소는 거절한다. 이름(sendSlack · slackMessage)과 비밀값 이름(SLACK_*_WEBHOOK)은
+ * 슬랙 시절 그대로 둔다(T-11-578).
+ */
 export async function sendSlack(url, message, fetcher = fetch) {
-  if (!url) throw new Error('Slack destination unavailable');
+  if (!url) throw new Error('Notify destination unavailable');
   const parsed = new URL(url);
-  if (parsed.origin !== 'https://hooks.slack.com' || !parsed.pathname.startsWith('/services/'))
-    throw new Error('Invalid Slack destination');
+  if (parsed.origin !== 'https://discord.com' || !DISCORD_HOOK.test(parsed.pathname))
+    throw new Error('Invalid notify destination');
   const r = await fetcher(url, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(message),
+    body: JSON.stringify(discordMessage(message)),
     signal: AbortSignal.timeout(10_000),
   });
-  if (!r.ok || (await r.text()).trim() !== 'ok')
-    throw new Error(`Slack delivery failed (HTTP ${r.status})`);
+  if (!r.ok) throw new Error(`Notify delivery failed (HTTP ${r.status})`);
 }
 export async function productionDb(env = process.env, fetcher = fetch) {
   if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_API_TOKEN)

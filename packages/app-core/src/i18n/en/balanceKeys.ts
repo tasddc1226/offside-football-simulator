@@ -2,6 +2,7 @@ import type { Translation } from '../core';
 import type { BalanceKeysMsgs } from '../ko/balanceKeys';
 
 export const balanceKeys: Translation<BalanceKeysMsgs> = {
+  agKoreaBonus: 'Korea Asian Games strength bonus',
   eventRatePreseason: 'Preseason event chance',
   eventRateSeason: 'Half-season event chance',
   eventTwist: 'Twist chance after a choice',
@@ -13,10 +14,17 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   investCost: 'Self-investment cost multiplier',
   boostCost: 'Potential boost cost multiplier',
   boostExtraTotal: 'Extra boost tries per career',
+  boostGreat: 'Potential boost great success share',
   careCost: 'Conditioning cost multiplier',
   potMean: 'Potential average',
   potSd: 'Potential spread',
   potScoutSd: 'Scouting rating error',
+  bloomDrift: 'Hidden potential drift',
+  bloomAge: 'Hidden potential lock age',
+  rescoutShare1: 'Age-21 re-scout share',
+  rescoutShare2: 'Age-24 re-scout share',
+  rescoutDownScale: 'Re-scout drop ratio',
+  rescoutDropCap: 'Max drop per re-scout',
   premiumSMult: 'Premium scout S multiplier',
   injuryRate: 'Injury chance per match',
   bigInjuryShare: 'Share of serious injuries',
@@ -38,6 +46,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMin: 'Minimum sale price (× base)',
   marketPriceMax: 'Maximum sale price (× base)',
   cupAtkK: 'Cup strength gap weight',
+  leagueFatigue: 'League fatigue',
   leagueHomeAdv: 'League home advantage',
   pastSalaryBudget: 'Past-season player salary budget',
   pastSalaryBudgetStep: 'Salary budget increase per season',

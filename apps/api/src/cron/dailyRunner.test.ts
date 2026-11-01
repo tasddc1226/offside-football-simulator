@@ -154,7 +154,8 @@ it('catches up the next missing business day, and a partial page stays on the sa
 it('runs the real bounded stages against local D1 through to a durable completion record', async () => {
   const env = { ...ctx.env };
   delete env.BACKUP;
-  for (let tick = 0; tick < 12; tick++) {
+  // T-11-572 kpi 단계는 처음에 90일을 7일씩 거꾸로 채워 여러 걸음이 걸린다.
+  for (let tick = 0; tick < 30; tick++) {
     const state = await runDailyStep(env, NOW);
     expect(state?.status).not.toBe('retry');
     if (state?.status === 'complete') break;

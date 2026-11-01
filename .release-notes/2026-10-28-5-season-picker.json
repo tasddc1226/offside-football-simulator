@@ -1,0 +1,20 @@
+{
+  "id": "t-11-562-season-picker",
+  "title": "시즌 고르기 칸 통일",
+  "items": [
+    "명예의 전당 · 기록실 · 내 구단의 시즌 고르기를 한 가지 칸으로 맞췄어요. 최신 시즌이 맨 위에 오고, 시즌마다 기간과 진행 중 · 마감이 함께 보여요."
+  ],
+  "en": {
+    "title": "One season picker everywhere",
+    "items": [
+      "Hall of Fame, Records and My Club now share one season picker. The newest season is on top, and each season shows its dates and whether it is live or ended."
+    ]
+  },
+  "ja": {
+    "title": "シーズン選択を統一",
+    "items": [
+      "殿堂・記録室・マイクラブのシーズン選択を同じ形にそろえました。最新シーズンが一番上に来て、シーズンごとの期間と開催中・終了が表示されます。"
+    ]
+  },
+  "availability": "web-app"
+}

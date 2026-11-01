@@ -4,12 +4,14 @@
   import { cupText as L } from '@offside/app-core/i18n/ko/cup';
   import type { CupLineupBar } from '@offside/app-core/cupLineupBar';
 
-  let { locked, when, bar = null }: { locked: boolean; when: string | null; bar?: CupLineupBar | null } = $props();
+  // T-11-570 preset: 컵 명단 프리셋 이름(있으면 컵은 그 편성으로 뛰고, 줄도 그 프리셋 값이다).
+  let { locked, when, bar = null, preset = null }: { locked: boolean; when: string | null; bar?: CupLineupBar | null; preset?: string | null } = $props();
   const warn = $derived(locked || !!bar?.notes.length);
 </script>
 
 <section class="card cup-band" class:locked={warn} role="status" data-cup-lineup={locked ? 'locked' : 'open'}>
   <b class="cb-title">{L.title}</b>
+  {#if preset}<p class="cb-preset" data-cup-preset>{L.barPreset({ name: preset })}</p>{/if}
   {#if locked || when}<p>{locked ? L.lineupLocked : L.lineupBand({ when: when ?? '' })}</p>{/if}
   {#if bar}
     <div class="cb-rule" data-cup-rule={bar.mode}>
@@ -50,6 +52,9 @@
   .cb-rule .bad {
     color: var(--bad);
     font-weight: 700;
+  }
+  .cup-band p.cb-preset {
+    color: var(--ink);
   }
   .cup-band p.cb-note {
     color: color-mix(in srgb, var(--bad) 70%, var(--ink));

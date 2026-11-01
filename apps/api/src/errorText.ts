@@ -175,6 +175,7 @@ const EXACT: Record<string, string> = {
   '선발에 든 선수는 팀에서 뺀 뒤 내놓거나 방출해 주세요.':
     'Remove starters from your team before listing or releasing them.',
   '방출할 수 있는 선수가 없어요.': 'There are no players you can release.',
+  '잠시 뒤 다시 골라 주세요.': 'Please try choosing again in a moment.',
 };
 
 /** 숫자·이름이 끼는 문장. */
