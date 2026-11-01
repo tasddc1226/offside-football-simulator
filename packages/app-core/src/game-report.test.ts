@@ -82,7 +82,7 @@ describe('report conversion parity (R6)', () => {
     const old = { ...tour };
     Reflect.deleteProperty(old, 'matches');
     expect(tourView(old)).toMatchSnapshot('old save');
-    expect(natViews(undefined)).toEqual([]);
+    expect(natViews(null)).toEqual([]);
     expect(JSON.stringify({ nt, tour })).toBe(before);
     expect(getActiveRng().getState()).toEqual(rng);
   });
