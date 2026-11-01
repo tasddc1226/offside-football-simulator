@@ -37,15 +37,18 @@
       {/each}
     </div>
   </div>
-  <p class="muted fs-sm">{L.lookNote}</p>
+  <p class="muted fs-sm cl-note">{L.lookNote}</p>
 </div>
 
 <style>
   .cl-wrap {display:flex;gap:12px;align-items:flex-start;}
   .cl-preview {flex:none;padding:8px;border-radius:var(--radius-md);background:var(--pitch);position:sticky;top:8px;}
-  .cl-rows {flex:1;min-width:0;display:flex;flex-direction:column;gap:10px;}
-  .cl-row {display:flex;flex-direction:column;gap:6px;font-size:var(--fs-body2);}
-  .cl-opts {display:flex;flex-wrap:wrap;gap:6px;}
+  .cl-rows {flex:1;min-width:0;display:flex;flex-direction:column;gap:6px;}
+  .cl-row {display:flex;flex-direction:column;gap:2px;font-size:var(--fs-caption);}
+  /* T-11-605 항목마다 한 줄로 두고 옆으로 넘긴다(더 꾸미기가 한 화면에 들어오게). */
+  .cl-opts {display:flex;gap:6px;overflow-x:auto;padding:2px;scrollbar-width:none;}
+  .cl-opt {flex:none;}
+  @media (max-height: 700px) { .cl-note {display:none;} }
   .cl-opt {min-height:32px;min-width:32px;padding:0 10px;border:1px solid transparent;border-radius:var(--radius-pill);background:var(--surface-2);color:var(--ink);font:inherit;font-size:var(--fs-label);cursor:pointer;}
   .cl-opt.swatch {padding:4px;display:grid;place-items:center;}
   .cl-opt.swatch span {display:block;width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 1px #0003;}

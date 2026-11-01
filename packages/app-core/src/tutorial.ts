@@ -31,7 +31,7 @@ export const COACH_STEPS: readonly CoachStep[] = [
   { id: 'pos', target: 'pos', advance: 'next' },
   { id: 'focus', target: 'focus', advance: 'next' },
   { id: 'candidates', target: 'candidates', advance: 'tap' },
-  { id: 'cands', target: 'cands', advance: 'next' },
+  { id: 'cands', target: 'cands', advance: 'tap' },
   { id: 'start', target: 'start', advance: 'tap' },
   { id: 'go', target: 'go', advance: 'tap' },
   { id: 'choice', target: 'choice', advance: 'tap' },

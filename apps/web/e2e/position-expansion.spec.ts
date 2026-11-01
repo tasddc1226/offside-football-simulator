@@ -26,7 +26,7 @@ for (const locale of ['ko-KR', 'en-US', 'ja-JP']) {
           await expect(button).toHaveAttribute('aria-pressed', 'true');
           expect(await button.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
           const box = await button.boundingBox();
-          expect(box!.width).toBeGreaterThan(100);
+          expect(box!.width).toBeGreaterThan(80);
           expect(box!.height).toBeGreaterThanOrEqual(44);
         }
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(

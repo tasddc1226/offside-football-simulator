@@ -67,6 +67,8 @@ describe('cupChampionToShow (T-11-290 우승 팝업)', () => {
   it('처음 보는 대회 우승은 보여 주고, 다시 보지 않기를 누른 대회는 숨긴다', () => {
     const m = memory();
     expect(cupChampionToShow({ champion })).toEqual(champion);
+    // T-11-605 커리어도 계정도 없는 처음 온 사람에게는 띄우지 않는다.
+    expect(cupChampionToShow({ champion }, false)).toBeNull();
     dismissCupChampion('s1-1');
     expect(m.get(CUP_CHAMPION_SEEN)).toBe('s1-1');
     expect(cupChampionToShow({ champion })).toBeNull();

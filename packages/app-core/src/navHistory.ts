@@ -9,6 +9,7 @@
 // 기록까지 되돌아간다(navStep).
 import type { BoardKey } from '@offside/contracts/board-limits';
 import type { Candidate } from '@offside/game/candidates';
+import type { CreateStep } from './state.js';
 import type { AppState, LegendView, Screen, TeamView } from './state.js';
 
 export interface NavEntry {
@@ -19,6 +20,8 @@ export interface NavEntry {
   board: BoardKey;
   post: string | null;
   cand: { list: Candidate[]; open: boolean[]; pick: number | null } | null;
+  /** T-11-605 선수 만들기의 입력 단계. */
+  createStep?: CreateStep;
   legend: LegendView | null;
   legendBack: AppState['legendBack'];
   /** T-10-130 구단주 팀 안의 화면 · 기록실 팀 랭킹에서 연 팀 프로필. */
@@ -40,7 +43,10 @@ const legendId = (v: LegendView | null) => {
 /** 기록 하나로 치는 단위. 값이 바뀌면 새 기록을 쌓는다. */
 export function navKey(s: AppState): string {
   const screen = s.screen;
-  if (screen === 'create') return s.candidates ? 'create:cand' : 'create';
+  if (screen === 'create') {
+    if (s.candidates) return 'create:cand';
+    return s.createStep && s.createStep !== 'pos' ? `create:${s.createStep}` : 'create';
+  }
   if (screen === 'board') return `board:${s.board}:${s.boardOpenId ?? ''}`;
   if (screen === 'legend') return `legend:${legendId(s.legend)}`;
   // 팀·시즌 업적은 같은 화면의 탭이라 한 기록으로 친다.
@@ -57,6 +63,7 @@ export function navSnapshot(s: AppState, y: number): NavEntry {
     y,
     board: s.board,
     post: s.boardOpenId,
+    createStep: s.createStep,
     cand: s.candidates
       ? { list: s.candidates, open: [...s.candidatesOpen], pick: s.candidatePick }
       : null,
@@ -82,6 +89,7 @@ export function navRestore(s: AppState, e: NavEntry): Screen {
     s.candidates = e.cand?.list ?? null;
     s.candidatesOpen = e.cand?.open ?? [];
     s.candidatePick = e.cand?.pick ?? null;
+    s.createStep = e.createStep ?? 'pos';
   }
   if (screen === 'board') {
     s.board = e.board;

@@ -93,6 +93,9 @@ export type Screen =
   | 'shared';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 
+/** T-11-605 선수 만들기의 입력 단계(create-steps.ts). extra는 정보 단계에서 들어가는 선택 단계다. */
+export type CreateStep = 'pos' | 'focus' | 'trait' | 'info' | 'extra';
+
 export interface DraftCharacter {
   name: string;
   number: number;
@@ -172,6 +175,12 @@ export function savedDraftIdentity(): DraftIdentity | null {
 export const draftIdentity = (): DraftIdentity =>
   savedDraftIdentity() ?? { name: randomName(), number: randomNumber() };
 
+/** T-11-605 비워 둔 이름 · 등번호를 후보를 보기 전에 채운다. 시작할 때 몰래 정하지 않고, 후보 화면에서 정해진 값을 보여 준다. */
+export function fillDraftIdentity(C: Pick<DraftCharacter, 'name' | 'number'>): void {
+  if (!C.name.trim()) C.name = randomName();
+  if (!C.number) C.number = randomNumber();
+}
+
 /** T-10-005 은퇴 선수 상세 화면에 띄울 대상. 내 선수(로컬 ft_hof)면 `own`이 있고 이름 공개를 바꿀 수 있다. */
 export interface LegendView {
   name: string;
@@ -235,6 +244,7 @@ export interface AppState {
   lastRetired: HofEntry | null;
   legend: LegendView | null;
   C: DraftCharacter;
+  createStep: CreateStep;
   /** T-10-002. 선수 생성 후보 카드 3장(같은 능력치 총합, 다른 분포) — 생성 화면을 벗어나면 null. */
   candidates: Candidate[] | null;
   candidatesOpen: boolean[];
@@ -292,6 +302,7 @@ export const initialAppState = (): AppState => ({
     weight: null,
     look: {},
   },
+  createStep: 'pos',
   candidates: null,
   candidatesOpen: [],
   candidatePick: null,
