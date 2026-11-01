@@ -74,6 +74,32 @@ describe('API error request IDs', () => {
     });
   });
 
+  it.each([null, 0, false, 'invalid', [], {}])(
+    'preserves HTTP error fallback behavior for a JSON body without an envelope: %j',
+    async (body) => {
+      vi.stubGlobal('fetch', async () => response(body, 503));
+      const result = await apiFetch('/v1/items');
+      expect(result).toMatchObject({
+        ok: false,
+        error: { code: 'INVALID_RESPONSE', retryable: true },
+      });
+      if (!result.ok) expect(result.error).not.toHaveProperty('requestId');
+    },
+  );
+
+  it.each([false, 0, ''])(
+    'keeps falsy JSON error values on the existing UNKNOWN path: %j',
+    async (value) => {
+      vi.stubGlobal('fetch', async () =>
+        response({ error: value, meta: { requestId: 'req_unknown' } }, 503),
+      );
+      expect(await apiFetch('/v1/items')).toMatchObject({
+        ok: false,
+        error: { code: 'UNKNOWN', retryable: false, requestId: 'req_unknown' },
+      });
+    },
+  );
+
   it('does not add metadata to successful results', async () => {
     vi.stubGlobal('fetch', async () =>
       response({ data: { n: 1 }, meta: { requestId: 'req_ok' } }, 200),

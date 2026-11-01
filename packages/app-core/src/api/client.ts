@@ -70,19 +70,13 @@ function failure<T>(
   code: ApiErrorCode,
   message: string,
   retryable: boolean,
-  reason?: string,
   requestId?: unknown,
+  reason?: string,
 ): ApiResult<T> {
-  return {
-    ok: false,
-    error: {
-      code,
-      message,
-      retryable,
-      ...(reason ? { reason } : {}),
-      ...(typeof requestId === 'string' && requestId.trim() ? { requestId } : {}),
-    },
-  };
+  const error: ApiError = { code, message, retryable };
+  if (reason) error.reason = reason;
+  if (typeof requestId === 'string' && requestId.trim()) error.requestId = requestId;
+  return { ok: false, error };
 }
 
 // T-10-015. 공개 조회 결과를 메모리에 잠깐 두고, 같은 요청이 동시에 나가면 하나로 합친다 — 화면을 오갈
@@ -227,31 +221,30 @@ export async function apiFetch<T>(
   // Optional chaining also tolerates primitive/null metadata; failure validates the ID itself.
   const requestId = (json as { meta?: { requestId?: unknown } } | null)?.meta?.requestId;
   if (!response.ok) {
-    if (json && typeof json === 'object' && 'error' in json) {
-      const e = (
-        json as {
-          error: {
-            code?: string;
-            message?: string;
-            retryable?: boolean;
-            details?: { reason?: unknown };
-          };
-        }
-      ).error;
+    const e = (
+      json as {
+        error?: {
+          code?: string;
+          message?: string;
+          retryable?: boolean;
+          details?: { reason?: unknown };
+        };
+      } | null
+    )?.error;
+    if (e !== undefined) {
       const reason = typeof e.details?.reason === 'string' ? e.details.reason : undefined;
       if (e.code === 'PROFILE_REQUIRED') noteSession(false);
-      return failure(e.code ?? 'UNKNOWN', e.message ?? L.failed, !!e.retryable, reason, requestId);
+      return failure(e.code ?? 'UNKNOWN', e.message ?? L.failed, !!e.retryable, requestId, reason);
     }
     return failure(
       'INVALID_RESPONSE',
       L.failedStatus({ status: response.status }),
       response.status >= 500,
-      undefined,
       requestId,
     );
   }
   if (typeof json !== 'object' || json === null || !('data' in json)) {
-    return failure('INVALID_RESPONSE', L.badShape, false, undefined, requestId);
+    return failure('INVALID_RESPONSE', L.badShape, false, requestId);
   }
   return { ok: true, data: (json as { data: unknown }).data as T };
 }
