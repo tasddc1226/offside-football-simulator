@@ -1,0 +1,34 @@
+{
+  "id": "t-11-603-rank-queue",
+  "title": "랭크 매칭 찾기",
+  "items": [
+    "랭크 경기에서 매칭 찾기를 누르면 상대를 찾는 화면을 거쳐 상대가 공개돼요",
+    "내 디비전 · 승률 · 최근 랭크 전적을 먼저 보고, 상대가 정해지면 이번 경기에 걸린 RP와 승격 · 강등 여부도 볼 수 있어요",
+    "상대가 정해지면 상대와 내 팀의 스쿼드 · 선발 명단을 바로 볼 수 있어요"
+  ],
+  "en": {
+    "title": "Find ranked matches",
+    "items": [
+      "Tap Find match in ranked play to search, then see your opponent revealed.",
+      "See your division, win rate and recent ranked results first. Once matched, check the RP at stake and whether you could move up or down.",
+      "Once matched, check both teams' squads and starting lineups right away."
+    ]
+  },
+  "ja": {
+    "title": "ランクマッチを探す",
+    "items": [
+      "ランク戦で「マッチを探す」を押すと、検索画面のあとに相手が表示されます。",
+      "先にディビジョン・勝率・最近のランク戦績を確認でき、相手が決まるとこの試合のRPと昇格・降格の有無も分かります。",
+      "相手が決まると、相手と自分のチームのスカッド・先発メンバーをすぐに確認できます。"
+    ]
+  },
+  "zh": {
+    "title": "尋找排位對手",
+    "items": [
+      "在排位賽按下「尋找對手」，經過搜尋畫面後就會揭曉對手。",
+      "可先查看分級、勝率與最近的排位戰績；配對後還能看到本場 RP 增減，以及是否會升降級。",
+      "配對後可立即查看雙方的陣容與先發名單。"
+    ]
+  },
+  "availability": "web-app"
+}
