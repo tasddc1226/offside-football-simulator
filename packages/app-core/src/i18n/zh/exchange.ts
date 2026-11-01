@@ -89,7 +89,7 @@ export const exchange: Translation<ExchangeMsgs> = {
   noCards: '沒有可交出的退役球員。',
   lockLocked: '已鎖定',
   lockListed: '上架中',
-  lockStarter: '先發',
+  lockStarter: '先發・盃賽陣容',
   lockNotFit: '不符條件',
   lockBought: '買入',
   cardLine: (p) => `${p.pos} · 最高 OVR ${p.peak}`,

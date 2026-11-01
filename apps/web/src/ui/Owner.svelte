@@ -27,6 +27,7 @@
   import { go } from './nav.js';
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
+  import { hallDotLabel, hallSeason } from '@offside/app-core/hallEntry';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
   import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
@@ -104,6 +105,13 @@
   const funds = $derived(market ? fundsText(market.balance) : '–');
   /** 받은 친구 신청(T-11-142)이나 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 친구 · 업적 탭으로. */
   const teamDot = $derived(ownerDotLabel({ friendReq: appState.friendReq, achNew: appState.achNew }));
+  // T-11-604 안 본 새 시즌 결산이 있으면 명예관 칸에도 점, 누르면 그 시즌 결산부터 연다(하단 '구단주' 탭 점이 꺼진다).
+  const hallDot = $derived(hallDotLabel(appState.recapNew));
+  async function openHall() {
+    const season = await hallSeason(appState.recapNew);
+    if (season !== null) appState.honorsSeason = season;
+    go('honors');
+  }
   function openMyTeam() {
     const to = myTeamTarget(appState);
     if (to === 'friends') openFriends();
@@ -245,8 +253,9 @@
         <button class="owner-tile" data-act="manager" data-owner-manager aria-label={MG.entryAria} onclick={() => go('manager')}>
           <b>{MG.entryTitle}<span class="pill good" data-owner-manager-new>{MG.entryNew}</span></b><span>{L.tileManager}</span>
         </button>
-        <button class="owner-tile" data-act="open-owner-hall" data-owner-hall-entry aria-label={`${H.openHall} · ${H.hallNew}`} onclick={() => go('honors')}>
+        <button class="owner-tile" data-act="open-owner-hall" data-owner-hall-entry aria-label={`${H.openHall} · ${hallDot ?? H.hallNew}`} onclick={() => void openHall()}>
           <b>{H.hallTitle}<span class="pill good" data-owner-hall-new>{H.hallNew}</span></b><span>{L.tileHall}</span>
+          {#if hallDot}<span class="btn-dot" data-hall-dot></span>{/if}
         </button>
         <button class="owner-tile" data-act="shop" data-owner-shop aria-label={L.shopTitle} onclick={() => go('shop')}>
           <b>{L.shopTitle}</b><span>{L.tileShop}</span>
@@ -453,6 +462,7 @@
     gap: 8px;
   }
   .owner-tile {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: flex-start;

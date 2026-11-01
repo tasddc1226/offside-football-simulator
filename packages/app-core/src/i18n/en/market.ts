@@ -131,7 +131,7 @@ export const market: Translation<MarketMsgs> = {
     `Release ${plural(p.count, 'player')} and receive ${p.amount} in club funds. Released players can't be brought back. Their Hall of Fame records stay.`,
   lockBought: "Signed players can't be released",
   lockListed: 'Listed for sale. Take it down to release',
-  lockStarter: 'In the starting lineup. Remove from the team to release',
+  lockStarter: 'In the starting or cup lineup. Remove from the lineup to release',
   lockPlayerLocked: 'Locked',
   playerUnlock: 'Unlock',
   toastListed: 'Listed on the market.',
