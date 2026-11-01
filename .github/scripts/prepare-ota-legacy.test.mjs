@@ -53,7 +53,9 @@ for (const [name, { source, skia }] of Object.entries(targets)) {
     const repo = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
     // PR 검사는 얕은 체크아웃이라 기준 커밋이 없다. 운영 배포 OTA 잡은 fetch-depth: 0으로 받는다.
     try {
-      execFileSync('git', ['-C', repo, 'cat-file', '-e', `${source}^{commit}`], { stdio: 'ignore' });
+      execFileSync('git', ['-C', repo, 'cat-file', '-e', `${source}^{commit}`], {
+        stdio: 'ignore',
+      });
     } catch {
       return t.skip(`reviewed ${name} commit is not in this shallow checkout`);
     }
@@ -70,7 +72,8 @@ for (const [name, { source, skia }] of Object.entries(targets)) {
       assert.equal(JSON.parse(readFileSync(join(root, APP_JSON), 'utf8')).expo.version, name);
       const after = JSON.parse(readFileSync(join(root, MOBILE_PACKAGE), 'utf8'));
       // 1.1.7에서 더한 Meta 앱 이벤트 모듈 · 플러그인은 모든 옛 경로가 뺀다.
-      for (const path of LOCAL_NATIVE_IN_NEW) assert.equal(existsSync(join(root, path)), false, path);
+      for (const path of LOCAL_NATIVE_IN_NEW)
+        assert.equal(existsSync(join(root, path)), false, path);
       if (skia) {
         // 1.1.6 빌드에는 Skia가 있으니 의존성과 라운지 필드 입구는 그대로 둔다.
         assert.deepEqual(after, before);
@@ -94,7 +97,7 @@ test('the deploy workflow publishes each legacy lane with its own runtime check'
     'utf8',
   );
   const job = workflow.split('  app-update:')[1].split('  release-tag:')[0];
-  assert.match(job, /target: \[current, '1\.1\.5', '1\.1\.4'\]/);
+  assert.match(job, /target: \[current, '1\.1\.6', '1\.1\.5', '1\.1\.4'\]/);
   assert.doesNotMatch(job, /prepare-ota-11[2-4]/);
   assert.match(
     job,
@@ -102,5 +105,8 @@ test('the deploy workflow publishes each legacy lane with its own runtime check'
   );
   assert.match(job, /prepare-ota-legacy\.mjs check "\$OTA_TARGET" "\$PLATFORM" "\$FP"/);
   // overlay가 바뀌면 같은 커밋이라도 다시 게시해야 하므로 변경 판정에 넣는다.
-  assert.match(job, /git diff --quiet[^;]*prepare-ota-legacy\.mjs[^;]*deploy-production\.yml; then/);
+  assert.match(
+    job,
+    /git diff --quiet[^;]*prepare-ota-legacy\.mjs[^;]*deploy-production\.yml; then/,
+  );
 });

@@ -41,7 +41,10 @@ export const FIELD_ENTRY = 'apps/mobile/src/screens/chat/lounge/index.ts';
 /** npm native modules the builds without Skia (1.1.5 and older) do not contain. */
 export const NATIVE_ONLY_IN_NEW = ['@shopify/react-native-skia'];
 /** Local native pieces added in 1.1.7 that every legacy lane removes. */
-export const LOCAL_NATIVE_IN_NEW = ['apps/mobile/modules/meta-app-events', 'apps/mobile/plugins/withMetaAppEvents.js'];
+export const LOCAL_NATIVE_IN_NEW = [
+  'apps/mobile/modules/meta-app-events',
+  'apps/mobile/plugins/withMetaAppEvents.js',
+];
 export const FIELD_STUB =
   '// T-11-600 prepare-ota-legacy.mjs: this store build has no Skia, so the lounge shows the chat list only.\n' +
   'export const LoungeField = null;\n';
@@ -70,7 +73,8 @@ export function prepare(root, name) {
   }
   const appJson = git('show', `${t.source}:${APP_JSON}`);
   writeFileSync(resolve(root, APP_JSON), appJson);
-  for (const path of LOCAL_NATIVE_IN_NEW) rmSync(resolve(root, path), { recursive: true, force: true });
+  for (const path of LOCAL_NATIVE_IN_NEW)
+    rmSync(resolve(root, path), { recursive: true, force: true });
   const removed = [...LOCAL_NATIVE_IN_NEW];
   if (!t.skia) {
     const pkgPath = resolve(root, MOBILE_PACKAGE);
@@ -80,7 +84,9 @@ export function prepare(root, name) {
     writeFileSync(resolve(root, FIELD_ENTRY), FIELD_STUB);
     removed.push(...NATIVE_ONLY_IN_NEW);
   }
-  console.log(`Prepared ${name} overlay (app.json from ${t.source.slice(0, 7)}, without ${removed.join(', ')})`);
+  console.log(
+    `Prepared ${name} overlay (app.json from ${t.source.slice(0, 7)}, without ${removed.join(', ')})`,
+  );
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [cmd, name, platform, fp] = process.argv.slice(2);
