@@ -67,9 +67,15 @@ pnpm --filter @offside/api exec vitest run src/team/seasonCloseRecovery.test.ts 
 - 결산: 7단계 × 4개 실패 지점 + 2개 실제 batch 롤백, 기존 5개 포함 35개 통과.
 - 같은 시각 재시도에 신규 자격 팀이 섞이는 동시 실행도 기존 지급은 보존하고 신규 보상만 1회 지급.
 - 앱 코어 전체 138파일/1,343개 통과. 게임 55파일/573개 통과, 기존 2개 skip 유지, golden 갱신 없음.
-- 전체 lint/typecheck와 dependency/i18n/format 검사 통과. 웹 번들 146.80KB/147KB 통과.
+- 전체 lint/typecheck와 dependency/i18n/format 검사 통과. 웹 기본 설정 번들 146.80KB, 운영 설정·CI 7자리 버전 번들 146.97KB/147KB 통과.
+- iOS·Android 전체 Expo export가 Hermes 바이트코드로 성공했다.
 - iOS/Android Expo Babel 변환 후 Hermes 런타임의 새 리포트 변환·옛 저장 필드 누락 probe 통과.
 - 초기 직접 Vite 번들 probe는 Babel 변환 없는 반복문 closure 때문에 기존 사전 getter 실행이 실패했다. 앱과 같은 Expo Babel 설정을 거친 두 플랫폼 probe로 보정했다. 이 때문에 제품 코드를 바꾸지 않았다.
 - 초기 테스트 fixture의 잘못된 설정/Best XI 열, D1 대량 bind 한도, 업적 재계산이 필요 없는 fixture는 수정했다. 제품 실패와 구분한다.
 
 운영 데이터·실기기 화면/OTA 적용·운영 성능은 이번 로컬 검증 범위 밖이다. 운영 배포는 수행하지 않는다.
+
+최초 PR CI의 운영 설정 번들은 147.00KB로 반올림되지만 바이트 기준 한도를 초과했다.
+새 리포트 모듈의 import를 기존 national/clubs 의존 위치·순서에 맞춰 첫 화면 청크 순서를 보존했고,
+순수 변환 함수 본문은 그대로 유지했다. 같은 운영 설정과 CI 7자리 버전 재검증은 146.97KB다.
+예산·검사 대상·지연 로딩 경계는 바꾸지 않았다.

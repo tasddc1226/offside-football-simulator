@@ -1,6 +1,6 @@
 import type { CompGame } from '@offside/game/comps';
-import { clubById } from '@offside/game/clubs';
 import { scoreLine, type NatTourResult } from '@offside/game/national';
+import { clubById } from '@offside/game/clubs';
 import type { PhaseResult } from '@offside/game/turn';
 import { tn } from '@offside/game/i18n/names';
 import { gameActionsText as L } from './i18n/ko/gameActions';
