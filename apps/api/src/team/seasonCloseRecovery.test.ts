@@ -126,17 +126,15 @@ async function seed(ctx: TestD1) {
       createdAt: BEFORE,
       lastSeenAt: BEFORE,
     });
-    await ctx.db
-      .insert(ownerAchievements)
-      .values({
-        profileId: id,
-        season: 1,
-        score: 100,
-        done: 1,
-        players: 1,
-        reachedAt: NOW,
-        updatedAt: NOW,
-      });
+    await ctx.db.insert(ownerAchievements).values({
+      profileId: id,
+      season: 1,
+      score: 100,
+      done: 1,
+      players: 1,
+      reachedAt: NOW,
+      updatedAt: NOW,
+    });
     await ctx.db.insert(careers).values({
       id: `career-${id}`,
       profileId: id,
