@@ -98,7 +98,7 @@ const ko = {
   noCards: '낼 수 있는 은퇴 선수가 없어요.',
   lockLocked: '잠김',
   lockListed: '판매 중',
-  lockStarter: '선발',
+  lockStarter: '선발 · 컵 명단',
   lockNotFit: '조건 밖',
   lockBought: '영입',
   cardLine: (p: { pos: string; peak: number }) => `${p.pos} · 최고 OVR ${p.peak}`,

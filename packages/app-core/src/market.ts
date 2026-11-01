@@ -254,11 +254,17 @@ export function staleListingNext(
   return { toast: L.staleRecheck };
 }
 
-/** 지금 시즌 선발(판매 · 방출을 막는다). 지난 시즌 팀은 고칠 수 없어 막지 않는다. */
+/**
+ * 지금 시즌 선발(판매 · 방출 · 카드 과제를 막는다). 지난 시즌 팀은 고칠 수 없어 막지 않는다.
+ * T-11-604 컵 명단 프리셋 선수도 막는다(빠지면 컵 경기에 빈자리로 나간다, 서버 lockedIdsOf와 같다).
+ */
 export const lineupOf = (d: OwnerTeamResponse): ReadonlySet<string> =>
   new Set(
     d.season === d.current && d.team
-      ? d.team.slots.flatMap((s) => (s.careerId ? [s.careerId] : []))
+      ? [
+          ...d.team.slots.flatMap((s) => (s.careerId ? [s.careerId] : [])),
+          ...(d.team.presets?.find((p) => p.cup)?.slots ?? []).flatMap((id) => (id ? [id] : [])),
+        ]
       : [],
   );
 

@@ -90,7 +90,7 @@ export const exchange: Translation<ExchangeMsgs> = {
   noCards: 'No retired players can be handed in.',
   lockLocked: 'Locked',
   lockListed: 'Listed',
-  lockStarter: 'Starter',
+  lockStarter: 'Starter · cup lineup',
   lockNotFit: "Doesn't fit",
   lockBought: 'Signed',
   cardLine: (p) => `${p.pos} · Peak OVR ${p.peak}`,

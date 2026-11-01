@@ -140,6 +140,13 @@ export const cupPresetOf = (row: Pick<OwnerTeamRow, 'presetsJson'>) =>
   presetsOf(row).find((p) => p.cup) ?? null;
 
 /**
+ * T-11-604 카드를 없애는 동작(카드 과제 · 판매 등록 · 방출)이 막는 선수: 선발과 컵 명단 프리셋. 컵 명단 선수가 빠지면 컵 경기에
+ * 빈자리로 나가므로 선발처럼 명단에서 뺀 뒤에만 낸다.
+ */
+export const lockedIdsOf = (row: Pick<OwnerTeamRow, 'slotsJson' | 'presetsJson'>): Set<string> =>
+  new Set([...slotIdsOf(row), ...(cupPresetOf(row)?.slots ?? [])].filter((x): x is string => !!x));
+
+/**
  * T-11-570 컵 경기 · 예상 · 신청 · 잠금이 읽는 팀 행. 컵 명단 프리셋이 있으면 포메이션 · 선발 · 배치 · OVR을 그 프리셋 것으로
  * 바꾸고(이름 · 로고 · 감독은 팀 것), 없으면 팀 그대로다.
  */

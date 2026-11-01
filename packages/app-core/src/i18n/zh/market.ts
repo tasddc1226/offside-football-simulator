@@ -124,7 +124,7 @@ export const market: Translation<MarketMsgs> = {
     `釋出${p.count}名球員，獲得俱樂部資金${p.amount}。釋出的球員無法再找回來。名人堂紀錄會保留。`,
   lockBought: '簽下的球員無法釋出',
   lockListed: '出售中，撤下後才能釋出',
-  lockStarter: '先發球員，移出球隊後才能釋出',
+  lockStarter: '先發或盃賽陣容球員，移出陣容後才能釋出',
   lockPlayerLocked: '已鎖定的球員',
   playerUnlock: '解除鎖定',
   toastListed: '已上架到市場。',
