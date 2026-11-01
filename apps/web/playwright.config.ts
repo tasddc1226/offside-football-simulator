@@ -41,6 +41,11 @@ export default defineConfig({
             { name: 'ft_first_guide', value: '["items","save"]' },
             { name: 'ft_tutorial', value: '{"i":-1}' },
             { name: 'ft_reveal_short', value: 'true' },
+            // T-11-423 아마축구 홈 팝업(11-01~12-31 KST)이 다른 화면 테스트의 클릭을 가리지 않게 '오늘 하루 보지 않기'로 시작한다.
+            {
+              name: 'ft_partner_amachuggu_hide',
+              value: new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10),
+            },
           ],
         },
       ],
