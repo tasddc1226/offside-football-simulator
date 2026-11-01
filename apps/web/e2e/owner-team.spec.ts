@@ -2406,8 +2406,6 @@ test('T-11-375 · T-11-510 시즌 2 디비전 — 머리 카드 · 승격 띠 ·
 }) => {
   await page.clock.setFixedTime(new Date('2026-10-12T00:00:00.000Z'));
   await stubOwner(page, true);
-  // T-11-603 큐를 보는 테스트가 아니라 움직임 줄이기로 찾는 시간을 건너뛴다.
-  await page.emulateMedia({ reducedMotion: 'reduce' });
   // T-11-510 디비전은 RP 사다리 시즌(2부터) 팀에만 보인다.
   const seasons = [...SEASONS, { id: 2, name: '시즌 2' }];
   const mine = {
@@ -2573,7 +2571,8 @@ test('T-11-375 · T-11-510 시즌 2 디비전 — 머리 카드 · 승격 띠 ·
 
   await page.locator('[data-team-tab="opponents"]').click();
   await page.locator('[data-act="team-find-match"]').click();
-  await page.locator('[data-act="team-challenge"]').click();
+  // T-11-603 찾는 시간이 최대 10초다.
+  await page.locator('[data-act="team-challenge"]').click({ timeout: 12_000 });
   await page.locator('[data-team-live] [data-act="live-skip"]').click();
   const shift = page.locator('[data-team-result] [data-division-shift]');
   await expect(shift).toHaveAttribute('data-division-shift', 'up');
