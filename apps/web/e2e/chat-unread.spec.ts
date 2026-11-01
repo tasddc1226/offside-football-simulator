@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
-import { API, ok } from './helpers.js';
+import { API, ok, useChatListView } from './helpers.js';
+
+test.beforeEach(({ page }) => useChatListView(page));
 
 test('새 채팅 수를 표시하고 읽으면 지우며 화면 이동에는 연결을 재사용한다', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

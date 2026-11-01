@@ -24,6 +24,7 @@ import {
   type ChatRejectCode,
   type ChatServerEvent,
 } from '@offside/contracts/chat';
+import type { FieldClientEvent } from '@offside/contracts/lounge-field';
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
 import { storage } from '@offside/game/storage';
 import { kstParts } from '../boardText.js';
@@ -285,6 +286,11 @@ export type ChatSession = {
   unblock(author: string): void;
   /** 내가 신고한 줄을 화면에서 뺀다(다시 붙어도 빠진다). */
   drop(id: string): void;
+  /**
+   * T-11-600 라운지 필드 이벤트를 보낸다. 소켓이 열려 있지 않으면 false. 다시 붙은 새 소켓은 필드를 모르므로
+   * 필드 화면이 채팅이 다시 열릴 때 필드를 다시 연다(첫 화면 번들을 줄이려고 필드 일은 필드 쪽에 둔다).
+   */
+  field(e: FieldClientEvent): boolean;
   close(): void;
 };
 
@@ -297,6 +303,8 @@ export function openChat(
   onChange: (v: ChatView) => void,
   onReject: (code: ChatRejectCode, restore: string | null) => void = () => {},
   room: ChatRoomKey = currentChatRoom(),
+  /** T-11-600 받은 이벤트를 먼저 본다. true면 필드 이벤트라 채팅 상태에 넣지 않는다(화면을 매번 다시 그리지 않게). */
+  onField: (e: ChatServerEvent) => boolean = () => false,
 ): ChatSession {
   let view = EMPTY_CHAT;
   /** 보냈지만 아직 방에서 돌아오지 않은 줄. */
@@ -341,6 +349,7 @@ export function openChat(
       } catch {
         return;
       }
+      if (onField(e)) return;
       if (e.t === 'msg' && e.m.author === view.me?.author) pending = '';
       set(applyChat(view, e, skip));
       if (e.t === 'err') {
@@ -389,6 +398,11 @@ export function openChat(
     drop(id) {
       dropped.add(id);
       refilter();
+    },
+    field(e) {
+      if (!ws || view.status !== 'open') return false;
+      ws.send(JSON.stringify(e satisfies ChatClientEvent));
+      return true;
     },
     close() {
       stopped = true;

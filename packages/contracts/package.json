@@ -8,6 +8,7 @@
     "./headers": "./src/headers.ts",
     "./board-limits": "./src/board-limits.ts",
     "./chat": "./src/chat-limits.ts",
+    "./lounge-field": "./src/lounge-field.ts",
     "./balance": "./src/balance-spec.ts",
     "./balance-text": "./src/balance-text.ts",
     "./hof-rules": "./src/hof-rules.ts",

@@ -1,5 +1,7 @@
 import { expect, test, type Page, type WebSocketRoute } from '@playwright/test';
-import { API, ok } from './helpers.js';
+import { API, ok, useChatListView } from './helpers.js';
+
+test.beforeEach(({ page }) => useChatListView(page));
 
 // T-11-573 라운지 답장 — 남의 줄 아래 '답장'으로 원문을 인용해 보내고, 인용을 누르면 원문으로 올라간다.
 // 원문이 가려지면 인용은 '볼 수 없는 메시지'로 바뀐다.

@@ -1,0 +1,39 @@
+{
+  "id": "t-11-600-lounge-field",
+  "title": "라운지 필드",
+  "items": [
+    "라운지를 축구장으로 볼 수 있어요. 같은 방 사람들이 선수가 되어 함께 뛰어요",
+    "조이스틱으로 움직이고 공 차기 · 태클 · 개인기 · 이모트를 쓸 수 있어요",
+    "골을 넣으면 모두의 화면에 골 장면이 나오고 오늘의 득점에 이름이 올라가요",
+    "위의 필드 · 채팅 버튼으로 보기를 바꾸고, 마지막에 고른 보기로 다시 열려요"
+  ],
+  "en": {
+    "title": "Lounge field",
+    "items": [
+      "You can now view the lounge as a football pitch. Everyone in the room runs around as a player.",
+      "Move with the joystick, then kick, tackle, do tricks and send emotes.",
+      "Score and everyone sees the goal, and your name goes up on today's scorers.",
+      "Switch between field and chat at the top. The lounge reopens in the view you picked last."
+    ]
+  },
+  "ja": {
+    "title": "ラウンジフィールド",
+    "items": [
+      "ラウンジをサッカー場として見られます。同じルームの人が選手になって一緒に走ります。",
+      "ジョイスティックで動き、キック・タックル・テクニック・エモートが使えます。",
+      "ゴールを決めるとみんなの画面にゴールシーンが流れ、今日の得点に名前が載ります。",
+      "上のフィールド・チャットボタンで表示を切り替えられ、最後に選んだ表示で開きます。"
+    ]
+  },
+  "zh": {
+    "title": "休息室球場",
+    "items": [
+      "休息室可以用足球場來看了。同一房間的人都會化身球員一起奔跑。",
+      "用搖桿移動，還能射門、鏟球、花式動作和傳送表情。",
+      "進球後所有人的畫面都會播放進球畫面，名字也會登上今日進球榜。",
+      "用上方的球場・聊天按鈕切換顯示，下次會以最後選的顯示開啟。"
+    ]
+  },
+  "availability": "web-app-pending",
+  "appVersion": "1.1.6"
+}
