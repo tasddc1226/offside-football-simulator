@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { createStep } from './helpers.js';
 
 // T-11-437 선수 생성 · 첫 안내 다듬기(UX 점검 중간 지적 A2~A5 · A7).
 test('비주력 능력치도 성장 감소를 보이고, 후보 단계는 안내를 소개 아래에 두고 도구 안내를 접는다', async ({
@@ -6,6 +7,7 @@ test('비주력 능력치도 성장 감소를 보이고, 후보 단계는 안내
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
+  await createStep(page, 'focus');
   // A3 공격수 기본 주력(슈팅 · 드리블) 밖의 능력치는 시작 보정과 함께 성장 -10%를 보인다.
   await expect(page.locator('[data-set="focus"][data-val="sho"] small')).toContainText('성장 +20%');
   await expect(page.locator('[data-set="focus"][data-val="pas"] small')).toContainText('성장 -10%');
@@ -22,8 +24,6 @@ test('비주력 능력치도 성장 감소를 보이고, 후보 단계는 안내
   });
   expect(order).toEqual([true, true]);
 
-  // A4 로그인 흔적이 없으면 무엇을 쓸 수 있는지 한 줄과 로그인 입구를 보인다.
-  await expect(page.locator('[data-login-tools]')).toContainText('로그인하면');
   // A5 쓸 도구가 없으면 상점 위치 · 능력치 설명은 '더 보기' 안에 접혀 있다.
   const more = page.locator('[data-more-tools]');
   await expect(more).toHaveCount(1);
@@ -31,6 +31,8 @@ test('비주력 능력치도 성장 감소를 보이고, 후보 단계는 안내
   await expect(page.locator('[data-act="ovr-guide-toggle"]')).toHaveCount(0);
   await page.locator('[data-act="more-tools-toggle"]').click();
   await expect(more.getByTestId('ovr-guide')).toBeVisible();
+  // A4 로그인 흔적이 없으면 무엇을 쓸 수 있는지 한 줄과 로그인 입구를 보인다(T-11-605 더 보기 안).
+  await expect(page.locator('[data-login-tools]')).toContainText('로그인하면');
 
   await page.locator('[data-act="login-tools-go"]').click();
   // 계정 패널(로그인 버튼)이 있는 구단주 화면으로 간다.

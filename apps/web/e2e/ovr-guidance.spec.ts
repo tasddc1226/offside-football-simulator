@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createStep } from './helpers.js';
 
 test('OVR guidance follows selected role and remains visible when comparing candidates', async ({
   page,
@@ -8,11 +9,15 @@ test('OVR guidance follows selected role and remains visible when comparing cand
   await page.goto('/');
   await page.locator('[data-act="new"]').click();
   const guide = page.getByTestId('ovr-guide');
+  await createStep(page, 'focus');
   await expect(guide).toContainText('수비(헤딩)');
   await expect(guide).toContainText('헤딩 정확도만');
+  await createStep(page, 'pos');
   await page.locator('[data-set="dpos"][data-val="LW"]').click();
+  await createStep(page, 'focus');
   await expect(guide).not.toContainText('수비(헤딩)');
   await expect(guide).toContainText('크로스');
+  await createStep(page, 'pos');
   await page.locator('[data-set="dpos"][data-val="ST"]').click();
   await page.locator('[data-act="next-candidates"]').click();
   await expect(guide).toContainText('수비(헤딩)');

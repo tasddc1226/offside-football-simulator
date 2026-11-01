@@ -26,9 +26,11 @@ export const CUP_CHAMPION_SEEN = 'ft_cup_champion_seen';
 /** 이 기기에 보여 줄 우승. 없거나(끝난 대회 없음) 그 대회를 다시 보지 않기로 했으면 null. */
 export function cupChampionToShow(
   home: Pick<CupHomeResponse, 'champion'> | null | undefined,
+  /** T-11-605 커리어도 계정도 없는 처음 온 사람에게는 띄우지 않는다. 아직 모르는 대회 소식이 첫 화면을 가린다. */
+  familiar = true,
 ): CupChampion | null {
   const champion = home?.champion;
-  if (!champion) return null;
+  if (!champion || !familiar) return null;
   try {
     if (storage().getItem(CUP_CHAMPION_SEEN) === champion.cupId) return null;
   } catch {

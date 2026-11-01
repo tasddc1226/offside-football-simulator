@@ -10,7 +10,7 @@ test('revealed candidate ranges survive reload and the selected potential reache
   await page.locator('[data-act="new"]').click();
   await page.locator('[data-act="next-candidates"]').click();
   await page.locator('[data-cand="0"]').click();
-  await expect(page.locator('[data-cand="0"]')).toContainText('잠재력 등급 범위 미확인');
+  await expect(page.locator('[data-cand="0"]')).toContainText('잠재력 비공개');
   await page.evaluate(() =>
     localStorage.setItem('ft_scout_reveal', localStorage.getItem('ft_scout_seed')!),
   );

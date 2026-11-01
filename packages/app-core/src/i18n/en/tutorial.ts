@@ -15,10 +15,10 @@ export const tutorial: Translation<TutorialMsgs> = {
   focusTitle: (p) => `Pick ${p.n} focus attributes`,
   focusBody: 'The combination sets your player type and tilts your starting attributes that way.',
   candidatesTitle: 'See the candidates',
-  candidatesBody: 'Once you have picked your focus attributes, tap this button.',
-  candsTitle: 'Pick one of three candidates',
+  candidatesBody: 'Leave the rest on defaults and tap here to see your candidates.',
+  candsTitle: 'Tap a candidate card to pick',
   candsBody:
-    'They share the same attribute total but differ in spread and potential. Rerolls draw new candidates, and premium scout tickets find better ones.',
+    'They share the same attribute total but differ in spread. Tapping a card opens and selects it.',
   startTitle: 'Start your career',
   startBody: 'Your pick heads into the first season.',
   goTitle: 'Play the season',

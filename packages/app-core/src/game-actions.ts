@@ -90,6 +90,7 @@ import {
   randomNumber,
   draftIdentity,
   DRAFT_IDENTITY_KEY,
+  fillDraftIdentity,
   type AppState,
   type Screen,
 } from './state.js';
@@ -940,6 +941,7 @@ export function createGameActions(host: GameHost) {
     saveKey(DRAFT_IDENTITY_KEY, { name: finalName, number: finalNumber });
     appState.tab = 'season';
     appState.candidates = null;
+    appState.createStep = 'pos';
     rolled = null;
     // T-11-234 킵한 후보로 시작했을 때만 킵을 푼다. 다른 후보로 시작하면 다음 커리어 후보에도 그대로 남는다.
     const k = loadKey<KeptCandidate>(SCOUT_KEEP);
@@ -999,6 +1001,7 @@ export function createGameActions(host: GameHost) {
 
   function rollCandidates() {
     applyLatestBalance();
+    fillDraftIdentity(appState.C);
     appState.candidatePotentialOpen = loadKey<number>(SCOUT_REVEAL) === scoutSeed();
     const batch: Candidate[] = generateCandidates(
       appState.C.pos,

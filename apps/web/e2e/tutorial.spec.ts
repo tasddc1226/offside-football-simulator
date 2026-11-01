@@ -29,6 +29,11 @@ test.describe('처음 온 기기', () => {
     await expect(bubble).toHaveAttribute('data-coach-step', 'cands', { timeout: 15_000 });
     // 본 단계를 적어 둬 다시 열면 거기서 이어진다.
     expect(await page.evaluate(() => localStorage.getItem('ft_tutorial'))).toBe('{"i":4}');
+    // T-11-605 다음 버튼 없이 후보 카드를 누르면 선택되고, 그제야 켜진 시작 버튼을 비춘다.
+    await expect(page.locator('[data-act="coach-next"]')).toHaveCount(0);
+    await page.locator('[data-cand="0"]').click();
+    await expect(bubble).toHaveAttribute('data-coach-step', 'start');
+    await expect(page.locator('[data-coach="start"]')).toBeEnabled();
   });
 
   test('T-11-481 동의 창 같은 다른 창이 떠 있으면 그 뒤 자리를 비추지 않고, 닫히면 뜬다', async ({

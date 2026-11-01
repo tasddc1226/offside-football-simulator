@@ -15,10 +15,9 @@ const ko = {
   focusTitle: (p: { n: number }) => `주력 능력치 ${p.n}개를 골라요`,
   focusBody: '고른 조합으로 선수 유형이 정해지고, 처음 능력치도 그쪽으로 쏠려요.',
   candidatesTitle: '후보를 봐요',
-  candidatesBody: '주력 능력치를 다 골랐으면 이 버튼을 눌러요.',
-  candsTitle: '세 후보 중 한 명을 골라요',
-  candsBody:
-    '능력치 총합은 같고 분포와 잠재력이 달라요. 리롤권으로 다시 뽑고, 프리미엄 스카우트권으로 더 좋은 후보를 찾을 수 있어요.',
+  candidatesBody: '나머지는 기본값으로 두고 이 버튼으로 후보를 볼 수 있어요.',
+  candsTitle: '후보 카드를 눌러 골라요',
+  candsBody: '세 후보는 능력치 총합이 같고 분포가 달라요. 누르면 열리면서 바로 선택돼요.',
   startTitle: '커리어를 시작해요',
   startBody: '고른 후보로 첫 시즌에 들어가요.',
   goTitle: '시즌을 진행해요',

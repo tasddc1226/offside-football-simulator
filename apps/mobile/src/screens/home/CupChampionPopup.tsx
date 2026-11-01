@@ -7,6 +7,8 @@ import { Animated, Easing, Modal, Pressable, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { fetchCupHome, type CupChampion } from '@offside/app-core/api/cup';
 import { cupChampionToShow, dismissCupChampion } from '@offside/app-core/cupHome';
+import { playedBefore } from '@offside/app-core/tutorial';
+import { hasSessionHint } from '@offside/app-core/api/client';
 import { claimHomePopup, homePopupTurn, passHomePopup } from '@offside/app-core/homePopup';
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { divisionLabel } from '@offside/app-core/cupDivision';
@@ -41,7 +43,7 @@ export function CupChampionPopup() {
       // T-11-417 이용 분석 동의 창이 떠 있으면 이번 실행에는 띄우지 않는다(iOS는 창 두 개를 함께 띄우지 못한다).
       const next =
         alive && r.ok && !shownThisLaunch && !analyticsAskPending()
-          ? cupChampionToShow(r.data)
+          ? cupChampionToShow(r.data, playedBefore() || hasSessionHint())
           : null;
       if (!next) return passHomePopup('cup');
       // T-11-423c 출석 창이 띄울지 정할 때까지 기다리고, 출석 창이 먼저 떴으면 이번 실행에는 띄우지 않는다.
