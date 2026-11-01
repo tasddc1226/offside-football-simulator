@@ -57,7 +57,8 @@ import { parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { kstDay, kstDays } from '../time.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { kstTodayStart, requireOwner } from './ownerTeam.js';
+import { kstTodayStart } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import {
   conflictError,
   fundsShort,

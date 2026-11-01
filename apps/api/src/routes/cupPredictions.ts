@@ -13,7 +13,7 @@ import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
 import { cupKo } from '../cupText.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, nowIso, ok, readBody, NO_STORE } from './shared.js';
 
 export function registerCupPredictionRoutes(

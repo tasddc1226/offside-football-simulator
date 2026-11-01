@@ -40,7 +40,7 @@ import {
 import { reqLang } from '../lang.js';
 import { WEB_PAY_WEBHOOK_PATH } from '../middleware/originGuard.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { enforceLimit, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
 
 // T-11-454 웹 결제(엑솔라 Pay Station). 웹이 주문을 부탁하면 서버가 엑솔라 결제 토큰을 만들어 결제창 주소를 돌려준다. 나라별

@@ -1,3 +1,4 @@
+import { requireOwner } from '../middleware/requireOwner.js';
 import { activeCupSeasonsQuery } from '../team/cup.js';
 import { checkCupLineup } from './cup.js';
 import {
@@ -96,7 +97,6 @@ import {
   leagueFatigueFrom,
   pastSalaryBudgetOf,
 } from '../db/repos/balance.js';
-import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { leagueMatches, ownerTeams } from '../db/schema.js';
 import { FATIGUE_LOOKBACK, startStreaks } from '../team/fatigue.js';
 import { and, desc, eq, isNotNull, or } from 'drizzle-orm';
@@ -105,7 +105,7 @@ import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
-import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { requireProfile } from '../middleware/requireProfile.js';
 import { refreshAfterChange, refreshOwnerAchievements } from '../team/ownerAchievements.js';
 import {
   buildLineup,
@@ -169,19 +169,6 @@ async function finishOpenLive(db: Db, ids: string[], now: string, lang: Lang) {
 const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
 const coachNotEligible = () =>
   conflictError('감독 커리어를 끝낸 감독만 감독 칸에 넣을 수 있어요.', 'COACH_NOT_ELIGIBLE');
-
-/** 구글 로그인한(삭제되지 않은) 프로필만 구단주다. 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED — 웹이 로그인 안내를 띄운다. */
-export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
-  const profile = await getProfile(getDb(c), getSessionOrThrow(c).profileId);
-  if (!profile || !hasAccount(profile) || profile.deletedAt) {
-    throw new AppError({
-      code: 'FORBIDDEN',
-      message: '로그인하면 팀을 만들 수 있어요.',
-      details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
-    });
-  }
-  return profile;
-}
 
 const PAST_SEASON_TEXT = '지난 시즌 팀은 고칠 수 없어요.';
 

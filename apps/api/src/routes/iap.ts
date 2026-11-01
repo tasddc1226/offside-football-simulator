@@ -15,7 +15,7 @@ import { handleAppleNotification } from '../iap/refunds.js';
 import { iapAccount, iapStores, verifyIapClaim, type IapRejection } from '../iap/verify.js';
 import { APPLE_IAP_NOTIFY_PATH } from '../middleware/originGuard.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, NO_STORE, nowIso, ok, readBody, readJson, enforceLimit } from './shared.js';
 
 // T-11-174 인앱 상품(소모성): 리롤권 · 잠재력 강화권 묶음. 앱이 스토어에서 산 거래를 보내면 스토어 기준으로 확인하고

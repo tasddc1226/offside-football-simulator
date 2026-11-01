@@ -25,7 +25,7 @@ import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
 import { getDb, type AppEnv } from '../env.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
 
 // T-11-374 카드 바치기 과제. 오늘의 과제 목록은 코드 묶음이라 화면이 직접 그리고, 서버는 내 낸 횟수와 내기만 다룬다.
