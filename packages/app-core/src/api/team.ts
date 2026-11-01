@@ -143,6 +143,9 @@ export const fetchMyAchRank = (season: number | undefined) =>
   );
 /** 팀 프로필(좋아요 여부가 사람마다 달라 메모하지 않는다). */
 export const fetchTeamProfile = (id: string) => apiFetch<TeamProfileResponse>(`/v1/teams/${id}`);
+/** T-11-603 매칭 전 스쿼드 보기(조회수를 올리지 않는다). 탭을 오가도 다시 부르지 않게 메모하고, 경기를 치르면 메모가 비워진다. */
+export const fetchTeamScout = (id: string) =>
+  cachedGet<TeamProfileResponse>(`/v1/teams/${id}`, 60_000);
 /** T-11-290 팀 프로필의 스쿼드 댓글(보는 사람이 신고·차단한 것은 빠진다). 지우기·신고·차단은 api/boards의 함수를 그대로 쓴다. */
 export const fetchTeamComments = (id: string) =>
   apiFetch<TeamCommentsResponse>(`/v1/teams/${id}/comments`);

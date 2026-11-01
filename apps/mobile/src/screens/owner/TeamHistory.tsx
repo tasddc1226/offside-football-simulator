@@ -7,16 +7,26 @@ import type { TeamMatch, TeamRecord } from '@offside/app-core/api/team';
 import { kstMonthDayTime } from '@offside/app-core/boardText';
 import { outcomeLabel, outcomeOf } from '@offside/app-core/teamOwner';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
-import { recordText } from '@offside/app-core/teamText';
+import { recordText, signedNum } from '@offside/app-core/teamText';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Press, Txt } from '../../ui';
 
 /** 경기 한 줄(최근 경기 · 친선전 목록이 같이 쓴다). 친선전은 '도전' 대신 '친선전'으로 적는다. */
-export function MatchRow({ m, open }: { m: TeamMatch; open: (m: TeamMatch) => void }) {
+/** showRp: 그 경기의 RP 변화를 오른쪽에 보인다(T-11-603 랭크 매칭의 최근 전적). */
+export function MatchRow({
+  m,
+  open,
+  showRp = false,
+}: {
+  m: TeamMatch;
+  open: (m: TeamMatch) => void;
+  showRp?: boolean;
+}) {
   const c = useColors();
   const opp = m[m.mine === 'home' ? 'away' : 'home'];
   const out = outcomeOf(m);
+  const rp = showRp ? m[m.mine].ratingChange : null;
   return (
     <Press
       scale={0.985}
@@ -53,6 +63,15 @@ export function MatchRow({ m, open }: { m: TeamMatch; open: (m: TeamMatch) => vo
           {`${m.friendly ? L.kindFriendly : m.mine === 'home' ? L.kindChallenge : L.kindChallenged} · ${opp.owner} · ${kstMonthDayTime(m.createdAt)}`}
         </Txt>
       </View>
+      {rp !== null && rp !== undefined ? (
+        <Txt
+          bold
+          testID={`match-rp-${m.id}`}
+          style={{ color: rp < 0 ? c.bad : c.good, fontVariant: ['tabular-nums'] }}
+        >
+          {`${signedNum(rp)} ${L.oppRp}`}
+        </Txt>
+      ) : null}
     </Press>
   );
 }
