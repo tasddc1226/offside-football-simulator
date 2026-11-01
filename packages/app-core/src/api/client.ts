@@ -71,7 +71,7 @@ function failure<T>(
   message: string,
   retryable: boolean,
   reason?: string,
-  requestId?: string,
+  requestId?: unknown,
 ): ApiResult<T> {
   return {
     ok: false,
@@ -80,17 +80,9 @@ function failure<T>(
       message,
       retryable,
       ...(reason ? { reason } : {}),
-      ...(requestId ? { requestId } : {}),
+      ...(typeof requestId === 'string' && requestId.trim() ? { requestId } : {}),
     },
   };
-}
-
-/** Metadata is optional; malformed or older responses retain their existing error shape. */
-function responseRequestId(body: unknown): string | undefined {
-  if (!body || typeof body !== 'object' || !('meta' in body)) return;
-  const meta = body.meta;
-  if (!meta || typeof meta !== 'object' || !('requestId' in meta)) return;
-  return typeof meta.requestId === 'string' && meta.requestId.trim() ? meta.requestId : undefined;
 }
 
 // T-10-015. 공개 조회 결과를 메모리에 잠깐 두고, 같은 요청이 동시에 나가면 하나로 합친다 — 화면을 오갈
@@ -232,7 +224,8 @@ export async function apiFetch<T>(
     return failure('INVALID_RESPONSE', L.badResponse, false);
   }
 
-  const requestId = responseRequestId(json);
+  // Optional chaining also tolerates primitive/null metadata; failure validates the ID itself.
+  const requestId = (json as { meta?: { requestId?: unknown } } | null)?.meta?.requestId;
   if (!response.ok) {
     if (json && typeof json === 'object' && 'error' in json) {
       const e = (
