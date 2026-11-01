@@ -41,7 +41,6 @@ import { eventById } from '@offside/game/events-data';
 import { applyLatestBalance, choiceOdds } from '@offside/game/balance';
 import { offsetToRoll, tapOffset, timingNote, zoneLabel, zoneWidth } from '@offside/game/minigame';
 import { isHiddenEvent } from '@offside/game/dexGroups';
-import { compGameViews, natViews, tourView } from './game-report.js';
 import { bracketLine } from './bracket.js';
 import { isMilOption, milAbroad, sangmuChance } from '@offside/game/military';
 import {
@@ -95,6 +94,8 @@ import {
   type Screen,
 } from './state.js';
 import { type PhaseReport, type TickerRow } from './sheets.js';
+
+import { compGameViews, natViews, tourView } from './game-report.js';
 
 export interface GameHost {
   state: AppState;
