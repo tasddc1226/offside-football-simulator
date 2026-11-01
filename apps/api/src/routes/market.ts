@@ -48,7 +48,7 @@ import {
   setCardLocked,
 } from '../db/repos/market.js';
 import { myFundsSpends } from '../db/repos/itemShop.js';
-import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
+import { lockedIdsOf, myTeamIn } from '../db/repos/ownerTeams.js';
 import { checkCupListing, checkCupRelease } from './cup.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
@@ -267,8 +267,8 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     if (card.manager) throw cardManager();
     if (card.openListing) throw conflictError('이미 내놓은 선수예요.', 'CARD_LISTED');
     if (card.locked) throw cardLocked();
-    // T-11-474 지금 시즌 선발은 팀에서 뺀 뒤에 내놓는다(팔기 탭에도 보이지 않는다).
-    if (team && slotIdsOf(team).includes(input.careerId)) throw inLineup();
+    // T-11-474 지금 시즌 선발은 팀에서 뺀 뒤에 내놓는다(팔기 탭에도 보이지 않는다). T-11-604 컵 명단 프리셋도 같다.
+    if (team && lockedIdsOf(team).has(input.careerId)) throw inLineup();
     await checkCupListing(db, me.id, input.careerId);
     const band = priceBand(card.cardValue, rules);
     if (input.price < band.min || input.price > band.max)
@@ -353,7 +353,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       season === null ? Promise.resolve([]) : myTeamIn(db, me.id, season),
       marketRules(db),
     ]);
-    const lineup = new Set(team ? slotIdsOf(team) : []);
+    const lineup = team ? lockedIdsOf(team) : new Set<string>();
     if (input.careerIds.some((id) => lineup.has(id))) throw inLineup();
     await checkCupRelease(db, me.id, input.careerIds);
     const res = await releaseCards(db, {

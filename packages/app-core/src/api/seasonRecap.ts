@@ -26,8 +26,13 @@ export const fetchOwnerHonors = () => cachedGet<OwnerHonorsResponse>('/v1/owner/
 
 /** 하단 '구단주' 탭 점 — 끝난 시즌 결산이 나왔는데 이 기기에서 아직 안 열어 봤는가. 이미 본 시즌이면 묻지 않는다. */
 export async function recapUnseen(now = new Date().toISOString()): Promise<boolean> {
+  return (await recapUnseenSeason(now)) !== null;
+}
+
+/** T-11-604 아직 안 열어 본 결산의 시즌(없으면 null). 명예관 칸을 누르면 이 시즌부터 연다. */
+export async function recapUnseenSeason(now = new Date().toISOString()): Promise<number | null> {
   const season = lastClosedSeason(now);
-  if (season === null || recapSeen(season)) return false;
+  if (season === null || recapSeen(season)) return null;
   const r = await cachedGet<OwnerRecapStatus>('/v1/owner/recap-status', 60_000);
-  return r.ok && r.data.tier !== null && !recapSeen(r.data.tier.season);
+  return r.ok && r.data.tier !== null && !recapSeen(r.data.tier.season) ? r.data.tier.season : null;
 }

@@ -369,4 +369,33 @@ describe('카드 바치기 과제 (T-11-374)', () => {
     expect(await reason(res)).toBe('IN_LINEUP');
     expect(await owned(ids)).toBe(ids.length);
   });
+  it('T-11-604 컵 명단 프리셋에 든 선수도 명단에서 뺀 뒤 낸다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const def = easy();
+    const ids = await addCards(owner.profileId, def);
+    const put = await call('PUT', '/v1/owner-team', {
+      cookie: owner.cookie,
+      body: { name: '우리 FC', manager: '김감독', formation: '4-3-3', slots: Array(11).fill(null) },
+    });
+    expect(put.status).toBe(200);
+    const preset = await call('PUT', '/v1/owner-team/presets', {
+      cookie: owner.cookie,
+      body: {
+        presets: [
+          {
+            name: '컵 명단',
+            formation: '4-3-3',
+            slots: [ids[0]!, ...Array<null>(10).fill(null)],
+            layout: null,
+            cup: true,
+          },
+        ],
+      },
+    });
+    expect(preset.status).toBe(200);
+    const res = await claim(owner.cookie, def.id, ids);
+    expect(res.status).toBe(409);
+    expect(await reason(res)).toBe('IN_LINEUP');
+    expect(await owned(ids)).toBe(ids.length);
+  });
 });
