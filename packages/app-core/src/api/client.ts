@@ -56,7 +56,14 @@ export type Profile = Pick<
 
 export type ApiErrorCode = string;
 /** reason: 서버가 error.details.reason에 담아 보내는 세부 사유(예: HOF_NOT_FOUND). */
-export type ApiError = { code: ApiErrorCode; message: string; retryable: boolean; reason?: string };
+export type ApiError = {
+  code: ApiErrorCode;
+  message: string;
+  retryable: boolean;
+  reason?: string;
+  /** ID of the original server response, including when a denial is reused from cache. */
+  requestId?: string;
+};
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: ApiError };
 
 function failure<T>(
@@ -64,8 +71,26 @@ function failure<T>(
   message: string,
   retryable: boolean,
   reason?: string,
+  requestId?: string,
 ): ApiResult<T> {
-  return { ok: false, error: { code, message, retryable, ...(reason ? { reason } : {}) } };
+  return {
+    ok: false,
+    error: {
+      code,
+      message,
+      retryable,
+      ...(reason ? { reason } : {}),
+      ...(requestId ? { requestId } : {}),
+    },
+  };
+}
+
+/** Metadata is optional; malformed or older responses retain their existing error shape. */
+function responseRequestId(body: unknown): string | undefined {
+  if (!body || typeof body !== 'object' || !('meta' in body)) return;
+  const meta = body.meta;
+  if (!meta || typeof meta !== 'object' || !('requestId' in meta)) return;
+  return typeof meta.requestId === 'string' && meta.requestId.trim() ? meta.requestId : undefined;
 }
 
 // T-10-015. 공개 조회 결과를 메모리에 잠깐 두고, 같은 요청이 동시에 나가면 하나로 합친다 — 화면을 오갈
@@ -207,6 +232,7 @@ export async function apiFetch<T>(
     return failure('INVALID_RESPONSE', L.badResponse, false);
   }
 
+  const requestId = responseRequestId(json);
   if (!response.ok) {
     if (json && typeof json === 'object' && 'error' in json) {
       const e = (
@@ -221,16 +247,18 @@ export async function apiFetch<T>(
       ).error;
       const reason = typeof e.details?.reason === 'string' ? e.details.reason : undefined;
       if (e.code === 'PROFILE_REQUIRED') noteSession(false);
-      return failure(e.code ?? 'UNKNOWN', e.message ?? L.failed, !!e.retryable, reason);
+      return failure(e.code ?? 'UNKNOWN', e.message ?? L.failed, !!e.retryable, reason, requestId);
     }
     return failure(
       'INVALID_RESPONSE',
       L.failedStatus({ status: response.status }),
       response.status >= 500,
+      undefined,
+      requestId,
     );
   }
   if (typeof json !== 'object' || json === null || !('data' in json)) {
-    return failure('INVALID_RESPONSE', L.badShape, false);
+    return failure('INVALID_RESPONSE', L.badShape, false, undefined, requestId);
   }
   return { ok: true, data: (json as { data: unknown }).data as T };
 }
