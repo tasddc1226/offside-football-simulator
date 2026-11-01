@@ -2358,9 +2358,20 @@ test('T-11-603 랭크 매칭 큐 — 내 팀 정보를 먼저 보고, 눌러야 
   // 다시 누르면 시간이 지난 뒤 상대가 나오고, 걸린 RP와 승격 안내를 보여 준다(1390 + 승리면 프로 II).
   await page.locator('[data-act="team-find-match"]').click();
   const found = page.locator('[data-queue-phase="found"]');
+  // 등장 애니메이션 중간의 흐린 글자를 접근성 검사가 대비 위반으로 잡지 않게 끝나길 기다린다.
+  const revealDone = () =>
+    found.evaluate((el) =>
+      Promise.all(
+        el
+          .getAnimations({ subtree: true })
+          .filter((a) => a.effect?.getTiming().iterations !== Infinity)
+          .map((a) => a.finished),
+      ).then(() => undefined),
+    );
   await expect(found.locator('[data-opponent]')).toContainText('라이벌 FC', { timeout: 12_000 });
   await expect(found.locator('[data-stake-promote]')).toContainText('프로 II');
   await expect(found.locator('[data-stake-win]')).toHaveText('+20');
+  await revealDone();
   await expectNoA11yViolations(page);
 
   // 취소한 다시 찾기는 횟수를 쓰지 않고, 끝낸 다시 찾기만 쓴다.
@@ -2391,6 +2402,7 @@ test('T-11-603 랭크 매칭 큐 — 내 팀 정보를 먼저 보고, 눌러야 
   await squad.locator('[data-squad-side="opp"]').click();
   await expect(squad.locator('[data-squad-team]')).toContainText('상대 스쿼드 FC');
   expect(scouted).toHaveLength(scoutedBefore + 1);
+  await revealDone();
   await expectNoA11yViolations(page);
 
   // 다른 탭을 다녀와도 찾은 상대가 남고 다시 부르지 않는다.
