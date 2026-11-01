@@ -17,7 +17,6 @@ import {
   PAST_SALARY_BUDGET,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
-  RANK_MATCH_REPICKS,
   TEAM_RATING_START,
   YOUTH_NAME,
   YOUTH_OVR,
@@ -104,6 +103,8 @@ import { TeamHistory } from './TeamHistory';
 import { TeamStats } from './TeamStats';
 import { TeamLive } from './TeamLive';
 import { TeamOpponents } from './TeamOpponents';
+import { TeamRankInfo } from './TeamRankInfo';
+import { TeamRankQueue } from './TeamRankQueue';
 import { OvrBadge } from './TeamParts';
 import { TeamLineup } from './TeamLineup';
 import { SalaryBar } from './SalaryGuide';
@@ -222,6 +223,8 @@ export default function Team() {
   /** T-11-510 시즌 2 자동 매칭에서 이번 경기의 '다른 상대 찾기' 횟수(경기를 치르면 0으로). */
   const [oppPick, setOppPick] = useState(0);
   const oppPickRef = useRef(0);
+  /** T-11-603 큐에서 찾은 상대(경기를 치르거나 상대가 무효가 되면 비운다). 탭을 다녀와도 남는다. */
+  const [rankFound, setRankFound] = useState<TeamOpponent | null>(null);
   const [opponents, setOpponents] = useState<TeamOpponent[]>([]);
   const [oppStatus, setOppStatus] = useState<LoadStatus>('loading');
   const [playing, setPlaying] = useState(false);
@@ -594,10 +597,19 @@ export default function Team() {
   }
 
   async function saveAndFind() {
-    if (await save()) await loadOpponents();
+    if ((await save()) && !usesRankLadder(team?.season ?? 0)) await loadOpponents();
   }
 
   // ───────── 경기 ─────────
+  /** 지난 경기 결과를 연다(기록 탭 · T-11-603 랭크 매칭의 최근 전적). */
+  function openHistoryMatch(m: TeamMatch) {
+    setResultOrigin('history');
+    setDivisionShift(null);
+    setResult(m);
+    setLiveMoments(undefined);
+    setLive(false);
+    show('result');
+  }
   async function loadOpponents(silent = false) {
     oppLoaded.current = true;
     if (!silent) setOppStatus('loading');
@@ -617,11 +629,16 @@ export default function Team() {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') setMatchesLeft(0);
       if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT')
         setOpponents((list) => list.filter((x) => x.teamId !== o.teamId));
+      if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT') setRankFound(null);
       // T-11-510 상대 RP가 그새 멀어졌다 — 같은 횟수로 새 상대를 받는다.
-      if (r.error.reason === 'TEAM_OPPONENT_STALE') void loadOpponents();
+      if (r.error.reason === 'TEAM_OPPONENT_STALE') {
+        if (usesRankLadder(team?.season ?? 0)) setRankFound(null);
+        else void loadOpponents();
+      }
       return toast(r.error.message);
     }
     oppPickRef.current = 0;
+    setRankFound(null);
     setOppPick(0);
     setResultOrigin('opponents');
     setResult(r.data.match);
@@ -673,7 +690,8 @@ export default function Team() {
   function pickOppTab(t: OppTab) {
     setOppTab(t);
     if (t === 'friends') friends.ensure();
-    else if (!oppLoaded.current && !matchHint) void loadOpponents();
+    else if (!oppLoaded.current && !matchHint && !usesRankLadder(team?.season ?? 0))
+      void loadOpponents();
   }
 
   // ───────── 시즌 업적 ─────────
@@ -726,7 +744,8 @@ export default function Team() {
     opponents: () =>
       destination.friends || oppTab === 'friends'
         ? friends.ensure()
-        : matchHint
+        : // T-11-603 시즌 2는 매칭 찾기를 누를 때 상대를 받는다.
+          matchHint || usesRankLadder(team?.season ?? 0)
           ? undefined
           : loadOpponents(),
     achievements: () => loadAchievements(),
@@ -1200,12 +1219,36 @@ export default function Team() {
             reload={() => void loadOpponents()}
             challenge={(o) => void challenge(o)}
             ladder={usesRankLadder(team?.season ?? 0)}
-            repicksLeft={RANK_MATCH_REPICKS - oppPick}
-            repick={() => {
-              oppPickRef.current += 1;
-              setOppPick(oppPickRef.current);
-              void loadOpponents();
-            }}
+            queue={
+              team && usesRankLadder(team.season) ? (
+                <TeamRankQueue
+                  team={team}
+                  logo={logo}
+                  matchesLeft={matchesLeft}
+                  perDay={perDay}
+                  playing={playing}
+                  found={rankFound}
+                  setFound={setRankFound}
+                  pick={oppPick}
+                  addPick={() => {
+                    oppPickRef.current += 1;
+                    setOppPick(oppPickRef.current);
+                  }}
+                  challenge={(o) => void challenge(o)}
+                  openMatch={openHistoryMatch}
+                />
+              ) : undefined
+            }
+            info={
+              team && usesRankLadder(team.season) ? (
+                <TeamRankInfo
+                  team={team}
+                  matchesLeft={matchesLeft}
+                  perDay={perDay}
+                  open={openHistoryMatch}
+                />
+              ) : undefined
+            }
             hint={matchHint}
             toTeam={editable ? () => switchView('team') : undefined}
             saveAndFind={
@@ -1266,14 +1309,7 @@ export default function Team() {
         history={history}
         status={histStatus}
         reload={() => void loadHistory()}
-        open={(m) => {
-          setResultOrigin('history');
-          setDivisionShift(null);
-          setResult(m);
-          setLiveMoments(undefined);
-          setLive(false);
-          show('result');
-        }}
+        open={openHistoryMatch}
         record={team?.record ?? null}
         seasonName={seasonName}
         more={!!histNext}

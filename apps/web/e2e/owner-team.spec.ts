@@ -2243,11 +2243,171 @@ test('T-11-358 팀 프로필에서 경기 통계를 열면 흐름 요약과 경�
   expect(statsAsked).toBe(1);
 });
 
+test('T-11-603 랭크 매칭 큐 — 내 팀 정보를 먼저 보고, 눌러야 상대를 찾고, 취소 · 다시 찾기를 하고, 찾으면 두 팀 스쿼드가 바로 보인다', async ({
+  page,
+}) => {
+  // 찾는 시간이 최대 10초라 찾기를 여러 번 하는 이 테스트는 시간을 넉넉히 둔다.
+  test.setTimeout(90_000);
+  await page.clock.setFixedTime(new Date('2026-10-12T00:00:00.000Z'));
+  await stubOwner(page, true);
+  const seasons = [...SEASONS, { id: 2, name: '시즌 2' }];
+  const mine = {
+    ...teamFrom({
+      name: '우리 동네 FC',
+      formation: '4-3-3',
+      slots: ['00000000-0000-4000-8000-000000000012', ...Array(9).fill(null)],
+    }),
+    season: 2,
+    rating: 1390,
+    division: 2,
+    record: { w: 6, d: 2, l: 2 },
+  };
+  await page.route(ownerTeamUrl, (route) =>
+    route.fulfill(ownerTeam({ season: 2, current: 2, seasons, team: mine })),
+  );
+  const side = (teamId: string, goals: number, ratingChange: number | null = null) => ({
+    teamId,
+    name: '상대',
+    owner: '감독',
+    formation: '4-4-2',
+    ovr: 60,
+    goals,
+    ratingChange,
+  });
+  await page.route(
+    (u) => u.href.startsWith(API) && u.pathname === '/v1/owner-team/matches',
+    (route) =>
+      route.fulfill(
+        ok({
+          items: [2, 2, 0].map((goals, i) => ({
+            id: `m${i}`,
+            home: side(MY_TEAM, goals, goals ? 20 : -14),
+            away: side('tem_00000000-0000-4000-8000-000000000002', 1),
+            events: [],
+            mine: 'home',
+            createdAt: '2026-10-11T00:00:00.000Z',
+          })),
+        }),
+      ),
+  );
+  const picks: string[] = [];
+  await page.route(`${API}/v1/owner-team/opponents*`, (route) => {
+    const pick = new URL(route.request().url()).searchParams.get('pick') ?? '0';
+    picks.push(pick);
+    return route.fulfill(
+      ok({
+        items: [
+          {
+            teamId: `tem_00000000-0000-4000-8000-00000000000${Number(pick) + 2}`,
+            name: pick === '0' ? '라이벌 FC' : '새 상대 FC',
+            owner: '라이벌 감독',
+            formation: '4-4-2',
+            ovr: 55,
+            rating: 1395,
+            record: { w: 3, d: 1, l: 2 },
+          },
+        ],
+      }),
+    );
+  });
+
+  const scouted: string[] = [];
+  await page.route(`${API}/v1/teams/tem_*`, (route) => {
+    const id = new URL(route.request().url()).pathname.split('/').pop()!;
+    scouted.push(id);
+    return route.fulfill(
+      ok({
+        team: { ...mine, id, name: id === MY_TEAM ? mine.name : '상대 스쿼드 FC', players: [] },
+        liked: false,
+        mine: id === MY_TEAM,
+      }),
+    );
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
+
+  // 탭을 열어도 상대를 부르지 않고 내 팀 정보만 보인다.
+  const info = page.locator('[data-rank-info]');
+  await expect(info.locator('[data-rank-division]')).toHaveText('세미프로 I');
+  await expect(info.locator('[data-rank-rp]')).toHaveAttribute('data-rank-rp', '1390');
+  await expect(info.locator('[data-rank-winrate]')).toHaveText('60%');
+  await expect(info.locator('[data-rank-left]')).toHaveText('10/10');
+  await expect(info.locator('[data-rank-form]')).toHaveAttribute('data-rank-form', 'wwl');
+  await expect(info.locator('[data-rank-streak]')).toContainText('2');
+  const recent = page.locator('[data-rank-recent]');
+  await expect(recent.locator('[data-team-match]')).toHaveCount(3);
+  await expect(recent.locator('[data-match-rp]').first()).toHaveText(/\+20/);
+  await expect(recent.locator('[data-match-rp]').last()).toHaveText(/-14/);
+  await expect(page.locator('[data-act="team-challenge"]')).toHaveCount(0);
+  expect(picks).toEqual([]);
+  expect(scouted).toEqual([]);
+  await expectNoA11yViolations(page);
+
+  // 찾는 중에 취소하면 응답이 와도 상대를 보여 주지 않는다.
+  await page.locator('[data-act="team-find-match"]').click();
+  await expect(page.locator('[data-queue-phase="searching"]')).toBeVisible();
+  await expect(page.locator('[data-queue-clock]')).toHaveText('00:00');
+  await expectNoA11yViolations(page);
+  await page.locator('[data-act="team-queue-cancel"]').click();
+  await expect(page.locator('[data-rank-info]')).toBeVisible();
+  await expect(page.locator('[data-queue-phase="found"]')).toHaveCount(0);
+
+  // 다시 누르면 시간이 지난 뒤 상대가 나오고, 걸린 RP와 승격 안내를 보여 준다(1390 + 승리면 프로 II).
+  await page.locator('[data-act="team-find-match"]').click();
+  const found = page.locator('[data-queue-phase="found"]');
+  await expect(found.locator('[data-opponent]')).toContainText('라이벌 FC', { timeout: 12_000 });
+  await expect(found.locator('[data-stake-promote]')).toContainText('프로 II');
+  await expect(found.locator('[data-stake-win]')).toHaveText('+20');
+  await expectNoA11yViolations(page);
+
+  // 취소한 다시 찾기는 횟수를 쓰지 않고, 끝낸 다시 찾기만 쓴다.
+  const repick = page.locator('[data-act="team-repick"]');
+  await expect(repick).toContainText('3/3');
+  await repick.click();
+  await page.locator('[data-act="team-queue-cancel"]').click();
+  await expect(found.locator('[data-opponent]')).toContainText('라이벌 FC');
+  await expect(repick).toContainText('3/3');
+  await repick.click();
+  await expect(found.locator('[data-opponent]')).toContainText('새 상대 FC', { timeout: 12_000 });
+  await expect(repick).toContainText('2/3');
+
+  // 경기 시작 · 다른 상대 찾기는 한 줄이다.
+  const start = await page.locator('[data-act="team-challenge"]').boundingBox();
+  const again = await repick.boundingBox();
+  expect(start!.y).toBe(again!.y);
+  expect(start!.height).toBe(again!.height);
+
+  // 상대 스쿼드는 찾으면 바로 보인다. 내 팀은 탭을 누를 때 부르고, 탭을 오가도 다시 부르지 않는다.
+  const squad = page.locator('[data-rank-squad]');
+  await expect(squad.locator('[data-squad-team]')).toContainText('상대 스쿼드 FC');
+  await expect(squad.locator('[data-squad-lineup] li')).toHaveCount(11);
+  await expect(squad.locator('[data-slot]')).toHaveCount(11);
+  const scoutedBefore = scouted.length;
+  await squad.locator('[data-squad-side="me"]').click();
+  await expect(squad.locator('[data-squad-team]')).toContainText('우리 동네 FC');
+  await squad.locator('[data-squad-side="opp"]').click();
+  await expect(squad.locator('[data-squad-team]')).toContainText('상대 스쿼드 FC');
+  expect(scouted).toHaveLength(scoutedBefore + 1);
+  await expectNoA11yViolations(page);
+
+  // 다른 탭을 다녀와도 찾은 상대가 남고 다시 부르지 않는다.
+  const asked = picks.length;
+  await page.locator('[data-team-tab="team"]').click();
+  await page.locator('[data-team-tab="opponents"]').click();
+  await expect(found.locator('[data-opponent]')).toContainText('새 상대 FC');
+  expect(picks).toHaveLength(asked);
+});
+
 test('T-11-375 · T-11-510 시즌 2 디비전 — 머리 카드 · 승격 띠 · 받은 경기 알림 · 디비전 탭 랭킹', async ({
   page,
 }) => {
   await page.clock.setFixedTime(new Date('2026-10-12T00:00:00.000Z'));
   await stubOwner(page, true);
+  // T-11-603 큐를 보는 테스트가 아니라 움직임 줄이기로 찾는 시간을 건너뛴다.
+  await page.emulateMedia({ reducedMotion: 'reduce' });
   // T-11-510 디비전은 RP 사다리 시즌(2부터) 팀에만 보인다.
   const seasons = [...SEASONS, { id: 2, name: '시즌 2' }];
   const mine = {
@@ -2412,6 +2572,7 @@ test('T-11-375 · T-11-510 시즌 2 디비전 — 머리 카드 · 승격 띠 ·
     await card.screenshot({ path: `${process.env.SHOT_DIR}/web-team-division.png` });
 
   await page.locator('[data-team-tab="opponents"]').click();
+  await page.locator('[data-act="team-find-match"]').click();
   await page.locator('[data-act="team-challenge"]').click();
   await page.locator('[data-team-live] [data-act="live-skip"]').click();
   const shift = page.locator('[data-team-result] [data-division-shift]');
