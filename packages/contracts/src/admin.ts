@@ -179,6 +179,8 @@ export const AnomalyReasonSchema = z.enum([
   'jump',
   /** 레전드 점수가 정상 상위권을 넘음(검토). */
   'legend',
+  /** T-11-613 구단주의 높은 잠재력 선수 수가 허용치를 조금 넘음(검토). */
+  'potential',
 ]);
 export type AnomalyReason = z.infer<typeof AnomalyReasonSchema>;
 

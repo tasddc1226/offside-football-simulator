@@ -246,13 +246,14 @@ export async function sweepAnomaliesPage(d1: D1Database, now: number, cursor?: A
       hidden.slice(i, i + HIDE_CHUNK).flatMap((f) => hideCareerStatements(db, f.info.id)),
     );
   for (const info of legends) note(found, info, 'legend');
-  await recordFound(db, found);
-  // T-11-462 훑은 커리어에 높은 잠재력이 있으면 그 구단주를 다시 판정한다.
-  const farmed = await sweepFarmedPotential(
+  // T-11-462 훑은 커리어에 높은 잠재력이 있으면 그 구단주를 다시 판정한다. T-11-613 조금 넘은 구단주는 검토 목록에 남긴다.
+  const { hidden: farmed, review: potential } = await sweepFarmedPotential(
     db,
     rows.map((r) => r.id),
     new Date(now).toISOString(),
   );
+  for (const info of potential) note(found, info, 'potential');
+  await recordFound(db, found);
   const done = rows.length < 100;
   if (done) await setMeta(db, SWEPT_AT_KEY, cursor.through);
   const tail = rows.at(-1);

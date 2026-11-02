@@ -360,12 +360,12 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       });
     const hiddenOf = async (id: string) =>
       (await ctx.db.select().from(careers).where(eq(careers.id, id)))[0]!.hidden;
-    const ids = Array.from({ length: 12 }, () => crypto.randomUUID());
+    const ids = Array.from({ length: 14 }, () => crypto.randomUUID());
     for (const id of ids) expect((await send(id, 96)).status).toBe(200);
-    // 여유(10명) 안은 그대로, 넘은 뒤부터 숨긴다. 보통 선수는 묻지 않는다.
-    expect(await hiddenOf(ids[9]!)).toBe(0);
-    expect(await hiddenOf(ids[10]!)).toBe(1);
-    expect(await hiddenOf(ids[11]!)).toBe(1);
+    // T-11-613 허용치(10명 + 3%)를 조금 넘을 때는 그대로, 1.2배를 넘은 뒤부터 숨긴다. 보통 선수는 묻지 않는다.
+    expect(await hiddenOf(ids[11]!)).toBe(0);
+    expect(await hiddenOf(ids[12]!)).toBe(1);
+    expect(await hiddenOf(ids[13]!)).toBe(1);
     const normal = crypto.randomUUID();
     expect((await send(normal, 75)).status).toBe(200);
     expect(await hiddenOf(normal)).toBe(0);
