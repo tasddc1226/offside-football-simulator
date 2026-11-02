@@ -28,7 +28,7 @@
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
   import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, planPremiumScout, revealCandidatePotential, keepCandidate, keptDraft, restoreKeptDraft } from './actions.js';
-  import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
+  import { clubBlock, clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import type { RewardShopResponse } from '@offside/contracts';
@@ -245,6 +245,7 @@
     void loadClubShop().then((r) => (club = r));
   });
   const clubCand = $derived(appState.candidatePotentialOpen ? null : clubOffer(club, 'candidates'));
+  const clubLock = $derived(appState.candidatePotentialOpen ? null : clubBlock(club, 'candidates'));
   async function revealWithClub() {
     const o = clubCand;
     if (clubBusy || !o) return;
@@ -526,7 +527,11 @@
     </div>
   {:else if appState.candidates}
     <div class="row cand-intro">
-      <p class="muted">{L.candIntro}</p>
+      {#if guest && !appState.candidatePotentialOpen}
+        <p class="muted" data-cand-login>{L.potentialLogin} <button class="link-btn" data-act="potential-login-go" onclick={() => go('owner')}>{L.potentialLoginGo}</button></p>
+      {:else}
+        <p class="muted">{L.candIntro}</p>
+      {/if}
       {#if appState.candidatesOpen.some((o) => !o)}
         <button class="icon-btn" data-act="open-all" onclick={openAll}>{L.openAll}</button>
       {/if}
@@ -616,6 +621,12 @@
     {/if}
     {#if guest && !quiet}
       {@render loginTools()}
+    {/if}
+    <!-- T-11-610 잠재력을 왜 못 보는지 접지 않고 보인다. 구단주는 모자란 자금 · 오늘 상한(비로그인은 맨 위 소개에서 안내). -->
+    {#if clubLock}
+      <p class="muted fs-sm" data-cand-club-lock={clubLock.reason}>
+        {clubLock.reason === 'short' ? L.potentialClubShort({ price: fundsText(clubLock.price), balance: fundsText(clubLock.balance) }) : L.potentialClubCapped}
+      </p>
     {/if}
     {#if appState.candidatePotentialOpen}
       <p class="muted fs-sm">{premium ? SL.premiumHelp : L.potentialHelp}</p>
