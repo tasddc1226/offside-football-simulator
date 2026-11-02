@@ -3,6 +3,7 @@ import { ns } from '../core';
 
 const ko = {
   newCareer: '새 커리어 킥오프 →',
+  myClub: '내 구단 만들기',
   seeHof: '명예의 전당 보기',
   play: '커리어 재생',
   stop: '멈춤',
