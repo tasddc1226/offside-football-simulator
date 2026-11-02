@@ -181,6 +181,13 @@ describe('디스코드 메시지 → 역할 일', () => {
       '999',
     );
     expect(discordTasks(env, 'd', ok.ev, false)).toEqual([]);
+    // T-11-616 유저가 쓴 이름이 든 신고 알림은 에이전트에게 넘기지 않는다.
+    const report = toSlackEvent(
+      msg({ channel_id: '900', webhook_id: '77', content: '**새 신고** (KST 12:00~12:05)' }),
+      '',
+      '999',
+    );
+    expect(discordTasks(env, 'd', report.ev, false)).toEqual([]);
   });
 });
 
