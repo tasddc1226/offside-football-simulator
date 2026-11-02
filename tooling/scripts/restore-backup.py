@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import sqlite3
 import time
+import zlib
 
 
 def restore(source, destination, chunks, expected_tables, expected_rows):
@@ -49,7 +50,7 @@ def restore(source, destination, chunks, expected_tables, expected_rows):
         result = {'chunks': chunks, 'tables': len(tables), 'rows': rows,
                   'integrityOk': integrity == ['ok'], 'foreignKeyViolations': foreign_keys,
                   'expectedTables': expected_tables, 'expectedRows': expected_rows,
-                  'countsMatch': len(tables) == expected_tables and rows == expected_rows,
+                  'countsMatch': (expected_tables is None or len(tables) == expected_tables) and (expected_rows is None or rows == expected_rows),
                   'restoreSeconds': round(time.monotonic() - started, 2),
                   'databaseBytes': destination.stat().st_size}
         # Never include SQL, table names, keys or row contents in reports.
@@ -70,7 +71,7 @@ def main():
         result = restore(args.source, args.destination, args.chunks, args.tables, args.rows)
         print(json.dumps(result))
         return 0 if result['integrityOk'] and result['countsMatch'] and result['foreignKeyViolations'] == 0 else 1
-    except (ValueError, OSError, sqlite3.Error):
+    except (ValueError, OSError, EOFError, zlib.error, sqlite3.Error):
         # SQLite error text can include SQL/row values. Keep private dumps off stdout/CI.
         print(json.dumps({'error': 'Local restore failed; inspect private input and destination.'}))
         return 1
