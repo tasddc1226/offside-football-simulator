@@ -1,5 +1,9 @@
 // T-11-098 친구 초대 링크(`/?friend=코드`)와 팀 화면 '경기' 탭의 랭크 경기 · 친구 전환. 첫 화면 번들에 들어간다.
-import { FRIEND_INVITE_PARAM, normalizeFriendCode } from '@offside/contracts/friend-code';
+import {
+  FRIEND_INVITE_PARAM,
+  FRIEND_INVITE_PATH,
+  normalizeFriendCode,
+} from '@offside/contracts/friend-code';
 import { go } from './nav.js';
 import { appState } from './state.svelte.js';
 
@@ -47,11 +51,14 @@ export function openFriends() {
 
 /** 앱 시작 때 한 번: 초대 링크로 들어왔으면 코드를 기억하고 주소를 정리한 뒤 친구 화면을 연다. */
 export function routeFriendInvite() {
-  const raw = new URLSearchParams(window.location.search).get(FRIEND_INVITE_PARAM);
+  const fromPath = FRIEND_INVITE_PATH.exec(window.location.pathname)?.[1];
+  const raw = fromPath ?? new URLSearchParams(window.location.search).get(FRIEND_INVITE_PARAM);
   if (raw === null) return;
   const code = normalizeFriendCode(raw);
   const url = new URL(window.location.href);
+  if (fromPath !== undefined) url.pathname = '/';
   url.searchParams.delete(FRIEND_INVITE_PARAM);
+  url.searchParams.delete('lang'); // 미리보기 언어 표시일 뿐이다.
   window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`);
   if (!code) return;
   memo = code;

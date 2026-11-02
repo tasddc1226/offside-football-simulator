@@ -13,6 +13,10 @@ const ko = {
   }) => `${p.age}세 은퇴 · ${p.apps}경기 ${p.goals}골 ${p.assists}도움 · 트로피 ${p.trophies}개`,
   /** 마지막 소속(설명 끝). 저장된 구단 이름이 한국어라 한국어 미리보기에만 붙인다. */
   club: (p: { club: string }) => ` · 마지막 소속 ${p.club}`,
+  /** T-11-621 친구 초대 링크(/?friend=코드) 미리보기. */
+  inviteTitle: '친구가 오프사이드 팀 대결에 초대했어요',
+  inviteDescription: (p: { code: string }) =>
+    `친구 코드 ${p.code} · 링크를 열면 친구 신청 화면으로 이어져요`,
 };
 
 export type ShareMetaMsgs = typeof ko;

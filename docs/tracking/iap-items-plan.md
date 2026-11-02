@@ -7,16 +7,17 @@
 App Store Connect · Play Console에 같은 ID로 소모성(Consumable · 일회성 관리 상품)으로 만든다. 정본은
 `packages/contracts/src/cup.ts`의 `IAP_PRODUCTS`다.
 
-| 상품 ID                        | 지급                    | 가격(KRW) |
-| ------------------------------ | ----------------------- | --------- |
-| `com.offsidelab.app.reroll_5`  | 리롤권 5장              | ₩1,100    |
-| `com.offsidelab.app.reroll_15` | 리롤권 15장             | ₩2,200    |
-| `com.offsidelab.app.reroll_40` | 리롤권 40장             | ₩5,500    |
-| `com.offsidelab.app.boost_3`   | 잠재력 강화권 3장       | ₩1,100    |
-| `com.offsidelab.app.boost_10`  | 잠재력 강화권 10장      | ₩2,200    |
-| `com.offsidelab.app.boost_100` | 잠재력 강화권 100장 | ₩19,800 |
-| `com.offsidelab.app.scout_1`   | 프리미엄 스카우트권 1장 | ₩1,100    |
-| `com.offsidelab.app.scout_5`   | 프리미엄 스카우트권 5장 | ₩4,400    |
+| 상품 ID                        | 지급                     | 가격(KRW) |
+| ------------------------------ | ------------------------ | --------- |
+| `com.offsidelab.app.reroll_5`  | 리롤권 5장               | ₩1,100    |
+| `com.offsidelab.app.reroll_15` | 리롤권 15장              | ₩2,200    |
+| `com.offsidelab.app.reroll_40` | 리롤권 40장              | ₩5,500    |
+| `com.offsidelab.app.boost_3`   | 잠재력 강화권 3장        | ₩1,100    |
+| `com.offsidelab.app.boost_10`  | 잠재력 강화권 10장       | ₩2,200    |
+| `com.offsidelab.app.boost_100` | 잠재력 강화권 100장      | ₩19,800   |
+| `com.offsidelab.app.scout_1`   | 프리미엄 스카우트권 1장  | ₩1,100    |
+| `com.offsidelab.app.scout_5`   | 프리미엄 스카우트권 5장  | ₩4,400    |
+| `com.offsidelab.app.scout_50`  | 프리미엄 스카우트권 50장 | ₩39,500   |
 
 - 로그인한 구단주만 산다(아이템이 구단주 계정에 들어온다). 웹에서는 팔지 않고, 가진 아이템은 웹에서도 쓴다.
 - 스토어가 가격을 알려 준 상품만 보인다. 상품을 등록하기 전에는 아무것도 보이지 않는다.

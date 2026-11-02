@@ -223,7 +223,7 @@ export default function Team() {
   const friends = useFriends();
   useEffect(() => {
     if (status !== 'ready' || needLogin) return;
-    if (destination.friends) {
+    if (destination.friends || destination.invite) {
       setOppTab('friends');
       notificationDestination.friends = false;
       friends.reload();
@@ -232,7 +232,7 @@ export default function Team() {
       notificationDestination.history = false;
       void loadHistory();
     }
-  }, [destination.friends, destination.history, status, needLogin]);
+  }, [destination.friends, destination.invite, destination.history, status, needLogin]);
   const oppLoaded = useRef(false);
   /** T-11-510 시즌 2 자동 매칭에서 이번 경기의 '다른 상대 찾기' 횟수(경기를 치르면 0으로). */
   const [oppPick, setOppPick] = useState(0);

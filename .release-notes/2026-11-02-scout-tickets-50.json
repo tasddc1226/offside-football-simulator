@@ -1,0 +1,30 @@
+{
+  "id": "scout-tickets-50-web",
+  "title": "프리미엄 스카우트권 50장 묶음 추가",
+  "items": [
+    "웹 상점에서 프리미엄 스카우트권 50장을 한 번에 살 수 있어요.",
+    "한국 기준가는 39,500원으로, 5장 묶음보다 장당 약 10% 저렴해요."
+  ],
+  "en": {
+    "title": "50-ticket premium scout bundle",
+    "items": [
+      "You can buy 50 premium scout tickets at once in the web shop.",
+      "The Korean base price is KRW 39,500, about 10% less per ticket than the 5-ticket bundle."
+    ]
+  },
+  "ja": {
+    "title": "プレミアムスカウト券50枚セットを追加",
+    "items": [
+      "ウェブショップでプレミアムスカウト券50枚をまとめて購入できます。",
+      "韓国での基準価格は39,500ウォン。5枚セットより1枚あたり約10%お得です。"
+    ]
+  },
+  "zh": {
+    "title": "新增50張高級球探券組合",
+    "items": [
+      "現在可以在網頁商店一次購買50張高級球探券。",
+      "韓國基準價格為39,500韓元，每張比5張組合便宜約10%。"
+    ]
+  },
+  "availability": "web"
+}

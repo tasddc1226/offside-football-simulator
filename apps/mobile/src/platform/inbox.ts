@@ -11,6 +11,7 @@ import { ensureSession, onSessionChanged } from './session';
 import { go, openBoard } from '../game/nav';
 import { inboxText as L } from '@offside/app-core/i18n/ko/inbox';
 import { appState } from '../store';
+import type { AppLink } from '@offside/app-core/appLink';
 import { notificationDestination } from './notificationDestination';
 import { invalidateApiCache } from '@offside/app-core/api/client';
 import { recheckOwner } from '@offside/app-core/api/friendPending';
@@ -51,6 +52,16 @@ export function openFriends() {
   invalidateApiCache('/v1/friends');
   appState.teamView = 'opponents';
   go('team');
+}
+/** T-11-622 앱 바로 열기 링크를 연다. */
+export function openAppLink(link: AppLink) {
+  if (link.kind === 'career') {
+    appState.sharedCareer = link.id;
+    go('shared');
+    return;
+  }
+  notificationDestination.invite = link.code;
+  openFriends();
 }
 export function openInboxTarget(
   target: NotificationTarget,

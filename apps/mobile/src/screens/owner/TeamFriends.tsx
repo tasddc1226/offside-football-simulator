@@ -37,6 +37,7 @@ import { hofStart } from '@offside/app-core/state';
 import { appState } from '../../store';
 import { go } from '../../game/nav';
 import { checkPushOffer, pushOffer } from '../../platform/pushOffer';
+import { notificationDestination } from '../../platform/notificationDestination';
 import { pushState } from '../../platform/push';
 import { acceptPushAsk, laterPushAsk, trackPushAskView } from '../../platform/pushAsk';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
@@ -374,6 +375,16 @@ export function TeamFriends({
   const c = useColors();
   const { data, status, busy } = friends;
   const [input, setInput] = useState('');
+  // T-11-622 초대 링크로 들어온 코드(웹 TeamFriends와 같은 카드). 내 코드면 쓸 일이 없다.
+  const destination = useSnapshot(notificationDestination);
+  const invite =
+    destination.invite && destination.invite !== data?.code ? destination.invite : null;
+  const dropInvite = () => {
+    notificationDestination.invite = null;
+  };
+  async function sendInvite(code: string) {
+    if (await friends.request({ code })) dropInvite();
+  }
 
   async function copyCode(code: string) {
     try {
@@ -439,6 +450,29 @@ export function TeamFriends({
               </>
             ) : null}
           </Card>
+          {invite ? (
+            <Card gap={10} testID="friend-invite">
+              <Txt>
+                {L.inviteBefore}
+                <Txt style={{ fontFamily: DISPLAY[700] }}>{friendCodeLabel(invite)}</Txt>
+                {L.inviteAfter}
+              </Txt>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Btn
+                  sm
+                  kind="primary"
+                  disabled={busy}
+                  testID="friend-invite-send"
+                  onPress={() => void sendInvite(invite)}
+                >
+                  {L.send}
+                </Btn>
+                <Btn sm onPress={dropInvite}>
+                  {L.close}
+                </Btn>
+              </View>
+            </Card>
+          ) : null}
           {/* T-11-175 이벤트 카드를 맨 위에: 홈 타일 · 초대 알림으로 들어오면 바로 보이게. */}
           {data.invite ? <InviteEvent invite={data.invite} /> : null}
           <PushNudge />

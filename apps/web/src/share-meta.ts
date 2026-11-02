@@ -14,11 +14,10 @@ import { shareMeta as zh } from '@offside/app-core/i18n/zh/shareMeta';
 import { TRANSLATED_LOCALES, type Locale } from '@offside/contracts/i18n';
 import { anonName } from '@offside/game/pos-label';
 import { hashStr } from '@offside/game/hash';
-import { ogCardPath } from './share-path.js';
+import { OG_SITE_IMAGE, OG_VERSION, ogCardPath } from './share-path.js';
 import { escXml } from '@offside/game/xml';
 
-/** scripts/seo.mjs BRAND_VERSION과 같다(미리보기 이미지 파일명). */
-export const OG_VERSION = 'v7';
+export { OG_VERSION };
 
 /** 선수 카드를 굽지 못했을 때 쓰는 레전드 등급별 정적 카드. */
 export const bandCardPath = (score: number, dpos: string | null | undefined) =>
@@ -59,6 +58,18 @@ export function careerShareMeta(e: PublicHofEntry, origin: string, lang: Locale 
     description: `${T.description({ age: e.retireAge, apps: e.apps, goals: e.goals, assists: e.assists, trophies: e.trophies })}${club}.`,
     image: `${origin}${ogCardPath(e.id)}?v=${cardVersion(e)}`,
     url: `${origin}/career/${e.id}${lang === 'ko' ? '' : `?lang=${lang}`}`,
+  };
+}
+
+/** T-11-621 친구 초대 링크(/invite/코드, 옛 /?friend=코드) 미리보기. 공개 정보(코드)만 쓰고 API를 부르지 않는다. */
+export function inviteShareMeta(code: string, origin: string, lang: Locale = 'ko'): ShareMeta {
+  const T = TEXT[lang];
+  const label = `${code.slice(0, 4)}-${code.slice(4)}`;
+  return {
+    title: T.inviteTitle,
+    description: T.inviteDescription({ code: label }),
+    image: `${origin}${OG_SITE_IMAGE}`,
+    url: `${origin}/invite/${code}${lang === 'ko' ? '' : `?lang=${lang}`}`,
   };
 }
 
