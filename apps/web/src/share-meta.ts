@@ -61,7 +61,7 @@ export function careerShareMeta(e: PublicHofEntry, origin: string, lang: Locale 
   };
 }
 
-/** T-11-621 친구 초대 링크(/?friend=코드) 미리보기. 공개 정보(코드)만 쓰고 API를 부르지 않는다. */
+/** T-11-621 친구 초대 링크(/invite/코드, 옛 /?friend=코드) 미리보기. 공개 정보(코드)만 쓰고 API를 부르지 않는다. */
 export function inviteShareMeta(code: string, origin: string, lang: Locale = 'ko'): ShareMeta {
   const T = TEXT[lang];
   const label = `${code.slice(0, 4)}-${code.slice(4)}`;
@@ -69,7 +69,7 @@ export function inviteShareMeta(code: string, origin: string, lang: Locale = 'ko
     title: T.inviteTitle,
     description: T.inviteDescription({ code: label }),
     image: `${origin}${OG_SITE_IMAGE}`,
-    url: `${origin}/?friend=${code}${lang === 'ko' ? '' : `&lang=${lang}`}`,
+    url: `${origin}/invite/${code}${lang === 'ko' ? '' : `?lang=${lang}`}`,
   };
 }
 

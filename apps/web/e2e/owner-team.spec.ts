@@ -1589,9 +1589,10 @@ test('친구 초대 링크로 들어오면 친구 화면에서 그 구단주에�
     return route.fulfill(ok({ state: 'sent', friend: person('ABCD2345', '초대한 감독') }, 201));
   });
 
-  await page.goto('/?friend=abcd-2345');
+  await page.goto('/invite/abcd-2345?lang=en');
   const card = page.locator('[data-friend-invite]');
   await expect(card).toContainText('ABCD-2345');
+  expect(new URL(page.url()).pathname).toBe('/');
   // 주소에서 초대 코드를 지운다(새로고침해도 다시 열리지 않게).
   expect(new URL(page.url()).search).toBe('');
   // 팀이 없으면 친선전은 못 하지만 친구 신청은 할 수 있다.

@@ -13,6 +13,8 @@ import {
   BarlowCondensed_800ExtraBold,
 } from '@expo-google-fonts/barlow-condensed';
 import { boot } from '../game/boot';
+import { startAppLinks } from '../platform/appLink';
+import { openAppLink } from '../platform/inbox';
 import { startPush } from '../platform/push';
 import { syncAdFree } from '../platform/adFree';
 import { recoverIapItems } from '../platform/iapItems';
@@ -46,6 +48,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (!show) return;
     startPush();
+    startAppLinks(openAppLink);
     void syncAdFree();
     void recoverIapItems();
     void recoverSeasonPass();
