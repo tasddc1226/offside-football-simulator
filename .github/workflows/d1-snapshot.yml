@@ -1,0 +1,75 @@
+name: D1 consistent snapshot (manual)
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        type: choice
+        options: [preflight, capture]
+        default: preflight
+        required: true
+      expected_sha:
+        description: Exact current main SHA
+        type: string
+        required: true
+      maintenance_approved:
+        description: Capture blocks production DB queries; requires an agreed maintenance window
+        type: boolean
+        default: false
+      confirmation:
+        description: 'Capture only: EXPORT_BLOCKS_QUERIES:2cfe462c-204e-4842-805c-5840fc9b1758'
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: cloudflare-production
+  cancel-in-progress: false
+jobs:
+  snapshot:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: production
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      EXPECTED_SHA: ${{ inputs.expected_sha }}
+      MODE: ${{ inputs.mode }}
+      MAINTENANCE_APPROVED: ${{ inputs.maintenance_approved }}
+      OFFSIDE_SNAPSHOT_MAINTENANCE_APPROVED: ${{ inputs.maintenance_approved }}
+      CONFIRMATION: ${{ inputs.confirmation }}
+      DB_ID: 2cfe462c-204e-4842-805c-5840fc9b1758
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.expected_sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Validate exact main and capture gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" = "$EXPECTED_SHA"
+          case "$MODE" in
+            preflight) ;;
+            capture)
+              test "$MAINTENANCE_APPROVED" = 'true'
+              test "$CONFIRMATION" = "EXPORT_BLOCKS_QUERIES:$DB_ID"
+              ;;
+            *) exit 1 ;;
+          esac
+      - name: Capture and verify snapshot or perform read-only preflight
+        run: |
+          umask 077
+          TASK_SNAPSHOT_DIR="$RUNNER_TEMP/offside-snapshot-$GITHUB_RUN_ID"
+          node tooling/scripts/d1-snapshot.mjs --mode "$MODE" --database-id "$DB_ID" \
+            --expected-name offside-production --output "$TASK_SNAPSHOT_DIR" \
+            --confirm "$CONFIRMATION" --timeout-ms 120000
+      # SQL and restored DB contain production data: never upload them as Actions artifacts.
+      - name: Remove private task files
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/offside-snapshot-$GITHUB_RUN_ID"

@@ -1,3 +1,4 @@
+import { inspectBackupRecovery, type BackupRecovery } from './backupRecovery.js';
 import type { Bindings } from '../env.js';
 import { readWorkflowHealth, type WorkflowObservation } from './workflowHealth.js';
 import { DAY_MS } from '../time.js';
@@ -28,6 +29,7 @@ export type InfraHealth = {
   issues: string[];
   samples: Sample[];
   resourceWorkflow?: WorkflowObservation;
+  backupRecovery?: BackupRecovery;
 };
 
 export function assessInfraHealth(
@@ -162,6 +164,9 @@ export async function runInfraHealth(
       if (!object || object.size <= 0) result.issues.push('backup-object-missing-or-unavailable');
     }
   }
+  result.backupRecovery = await inspectBackupRecovery(env.BACKUP, now);
+  if (result.backupRecovery.status !== 'verified')
+    result.issues.push('backup-recovery-' + result.backupRecovery.status);
   const workflow = await readWorkflowHealth(now);
   result.resourceWorkflow = workflow.observation;
   result.issues.push(...workflow.issues);
