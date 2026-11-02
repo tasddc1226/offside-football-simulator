@@ -132,9 +132,8 @@ async function setup(page: Page, pending: unknown = null): Promise<string[]> {
     [SAVE, pending] as const,
   );
   await page.goto('/');
-  // Home's lazy banner and news tabs must mount before a fast test navigates away.
+  // Home's lazy banner must mount before a fast test navigates away.
   await expect.poll(() => requests.includes('GET /v1/cups/home')).toBe(true);
-  await expect.poll(() => requests.includes('GET /v1/boards/notice/posts')).toBe(true);
   return requests;
 }
 

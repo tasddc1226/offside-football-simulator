@@ -15,6 +15,7 @@
   import HomeAppStrip from './HomeAppStrip.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
   import HomeLive from './HomeLive.svelte';
+  import HomeNews from './HomeNews.svelte';
   import ClubBadge from './ClubBadge.svelte';
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
@@ -136,8 +137,8 @@
   </div>
   <!-- T-11-235 앱 안내 카드는 늦게 뜨는 지연 청크라 타일 위에 끼면 첫 화면이 밀린다(CLS) — 타일 아래에 둔다. -->
   {#await import('./AppConversion.svelte') then { default: AppConversion }}<AppConversion context="home" />{/await}
-  <!-- 공지 · 릴리즈 노트를 합친 최근 글. 첫 화면 번들 밖 지연 청크. 순위는 하단 기록실에서 본다. -->
-  {#await import('./HomeNews.svelte') then { default: HomeNews }}<HomeNews />{/await}
+  <!-- 공지 · 릴리즈 노트를 합친 최근 글. 새 소식 확인과 같은 요청을 함께 쓰도록 홈과 같이 그린다. 순위는 하단 기록실에서 본다. -->
+  <HomeNews />
   <!-- 푸터는 홈 맨 아래라 첫 화면 번들 밖 지연 청크로(소식은 앱 시작 때 새 글 점과 같은 요청을 함께 써야 해서 그대로 둔다). -->
   {#await import('./SiteFooter.svelte') then { default: SiteFooter }}<SiteFooter />{/await}
   <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->

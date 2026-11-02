@@ -106,6 +106,7 @@ test('전체 명예의 전당에서 다른 유저의 은퇴 선수 상세를 연
   await page.route(`${API}/v1/careers/mine`, (r) => r.fulfill(ok({ linked: true, entries: [] })));
 
   await page.goto('/');
+  await page.locator('[data-act="hof"]').click();
   const row = page.locator(`[data-hof-id="${ID}"]`);
   await expect(row).toContainText('익명의');
   await row.click();
@@ -161,9 +162,8 @@ test('내 선수 탭: 상세 없는 옛 기록은 요약만 보여 준다', asyn
     );
   });
   await page.goto('/');
-  await expect(page.locator('.card').filter({ hasText: '명예의 전당' })).toContainText(
-    '불러오지 못했어요',
-  );
+  await page.locator('[data-act="hof"]').click();
+  await expect(page.locator('[data-hof="full"]')).toContainText('불러오지 못했어요');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="open-owner-players"]').click();
   await page.locator('[data-my-player="0"]').click();
@@ -235,6 +235,7 @@ test('이 기기에 없는 계정의 내 선수도 공유 버튼이 뜬다', asy
   );
   await page.goto('/');
   // 전체 명예의 전당에서 열어도 내 계정 선수면 뜬다.
+  await page.locator('[data-act="hof"]').click();
   await page.locator(`[data-hof-id="${ID}"]`).click();
   await expect(page.locator('[data-act="share-career"]')).toBeInViewport();
 
