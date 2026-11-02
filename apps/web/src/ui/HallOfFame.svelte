@@ -5,14 +5,13 @@
   import { tn } from '@offside/game/i18n/names';
   // T-10-005 명예의 전당: 모든 유저의 은퇴 선수(서버). 행을 누르면 상세로. 이 기기에서 은퇴한 선수에는
   // '내 선수' 표시를 단다. 내 선수 목록은 구단주 화면으로 옮겼다(T-10-058, MyPlayers).
-  // 홈에서는 레전드 점수 TOP 3만 보여 주고, '전체 보기'(full)에서는 순위 유형(득점·도움·발롱도르…)을 골라
-  // 10명씩 페이지로 나눠 보여 준다. score가 아닌 유형은 그 기록이 0인 선수를 뺀다(서버와 같은 규칙).
-  // T-10-090 전체 보기는 '전체 / 시즌 1'을 고른다. 시즌 순위엔 개막 뒤 새로 만든 선수만 오른다(프리시즌 선수 제외).
-  // T-11-029 '프리시즌' 탭은 개막 전에 만든 선수만 모은다(개막 뒤에 은퇴해도 포함). 홈 미리보기는 지금 시즌 TOP이다.
+  // 순위 유형(득점·도움·발롱도르…)을 골라 10명씩 페이지로 나눠 보여 준다. score가 아닌 유형은 그 기록이 0인 선수를 뺀다(서버와 같은 규칙).
+  // T-10-090 '전체 / 시즌 1'을 고른다. 시즌 순위엔 개막 뒤 새로 만든 선수만 오른다(프리시즌 선수 제외).
+  // T-11-029 '프리시즌' 탭은 개막 전에 만든 선수만 모은다(개막 뒤에 은퇴해도 포함).
   // T-11-018 포지션별 순위 — 레전드 점수 상위권을 공격수가 채우므로 포지션 안에서도 겨루게 한다.
   import type { CareerPos, HofSort, PublicHofEntry } from '@offside/contracts';
   import { POS_GROUPS, POS_LABEL, FILTER_DETAILS_OF, DETAIL_LABEL, type DetailPos } from '@offside/contracts/positions';
-  import { PRESEASON, SERVICE_SEASONS, previewSeasonAt, seasonById } from '@offside/contracts/service-seasons';
+  import { PRESEASON, SERVICE_SEASONS, seasonById } from '@offside/contracts/service-seasons';
   import { kstMonthDayHour } from '@offside/app-core/boardText';
   import { loadHOF } from '@offside/game/hof-store';
   import { getHof } from '@offside/app-core/api/client';
@@ -20,22 +19,19 @@
   import { openPublicLegend } from './legend.js';
   import { fmtValue, playerName } from '@offside/app-core/format';
   import { raiserLabel } from '@offside/app-core/hofRaiser';
-  import { openHof } from './nav.js';
   import HofRow, { type RowStats } from './HofRow.svelte';
   import HofPodium from './HofPodium.svelte';
-  import MoreLink from './MoreLink.svelte';
   import { appState } from './state.svelte.js';
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';
   import { seasonLabel } from '@offside/app-core/seasonName';
 
-  let { full = false }: { full?: boolean } = $props();
   const TOP = 3;
   const PER_PAGE = 10;
   // T-10-101 새로 생긴 순위 유형에 'NEW'를 이때까지 단다.
   const NEW_UNTIL: Partial<Record<HofSort, string>> = { value: '2026-10-14T00:00:00+09:00' };
   const isNew = (k: HofSort) => !!NEW_UNTIL[k] && Date.now() < Date.parse(NEW_UNTIL[k]);
   /** 아직 개막 전인 시즌인지(ISO 문자열 비교). */
-  // T-11-107·110 띄운 채 개막을 넘기면 홈 미리보기 시즌·'개막 예정' 표시를 다시 고른다.
+  // T-11-107·110 띄운 채 개막을 넘기면 '개막 예정' 표시를 다시 고른다.
   const clock = seasonNow();
   const notOpen = (s: { startsAt: string }) => clock.now < s.startsAt;
 
@@ -55,16 +51,14 @@
     peak: { label: L.sortPeak, unit: '', get: (s) => s.peak },
   });
   const SORT_KEYS: HofSort[] = ['score', 'value', 'goals', 'assists', 'ga', 'apps', 'trophies', 'awards', 'ballon', 'caps', 'peak'];
-  // 전체 보기의 페이지·유형은 appState에 둬 선수 상세에서 돌아와도 그대로다.
-  const page = $derived(full ? appState.hof.page : 1);
-  const sort = $derived<HofSort>(full ? appState.hof.sort : 'score');
+  // 페이지·유형은 appState에 둬 선수 상세에서 돌아와도 그대로다.
+  const page = $derived(appState.hof.page);
+  const sort = $derived<HofSort>(appState.hof.sort);
   const by = $derived(sorts()[sort]);
-  // 홈 미리보기는 지금 시즌 고정(개막 전엔 프리시즌 = 전체와 같아 시즌 없이 같은 요청·캐시를 쓴다).
-  const homeSeason = $derived(previewSeasonAt(clock.now));
-  const season = $derived(full ? appState.hof.season : homeSeason);
-  const q = $derived(full ? appState.hof.q : '');
-  const pos = $derived(full ? appState.hof.pos : null);
-  const dpos = $derived(full && season !== 0 ? appState.hof.dpos ?? null : null);
+  const season = $derived(appState.hof.season);
+  const q = $derived(appState.hof.q);
+  const pos = $derived(appState.hof.pos);
+  const dpos = $derived(season !== 0 ? appState.hof.dpos ?? null : null);
   const posLabel = $derived(dpos ? tn(DETAIL_LABEL[dpos]) : pos ? tn(POS_LABEL[pos]) : '');
   const ss = $derived(season === null ? undefined : seasonById(season));
   /** 고른 시즌이 아직 개막 전이면 그 시즌(목록 대신 개막 안내). */
@@ -72,8 +66,6 @@
   /** 문구 앞에 붙는 시즌·포지션 이름('시즌 1 수비수 '). 둘 다 전체면 빈 문자열. */
   const scope = $derived(`${ss ? `${seasonLabel(ss.id, ss.name)} ` : ''}${posLabel ? `${posLabel} ` : ''}`);
   let all = $state<PublicHofEntry[] | null>(null);
-  /** 홈 미리보기의 '전체 보기' — 개막 뒤엔 시즌 은퇴 선수가 아직 없어도 기록실로 가는 길을 남긴다. */
-  const hasAll = $derived(!!all?.length || homeSeason !== null);
   let total = $state(0);
   let failed = $state(false);
   let filtering = $state(false);
@@ -121,7 +113,7 @@
     all = null;
     failed = false;
     if (upcoming) return;
-    void getHof(full ? PER_PAGE : TOP, p, s, se, qq, po, dp).then((r) => {
+    void getHof(PER_PAGE, p, s, se, qq, po, dp).then((r) => {
       if (p !== page || s !== sort || se !== season || qq !== q || po !== pos || dp !== dpos) return; // 더 늦게 고른 페이지·유형·시즌·검색어·포지션의 응답만 쓴다.
       if (r.ok) {
         all = r.data.entries;
@@ -134,7 +126,7 @@
   const offset = $derived((page - 1) * PER_PAGE);
   const pages = $derived(Math.max(1, Math.ceil(total / PER_PAGE)));
   const podium = $derived(
-    full && page === 1 && !q
+    page === 1 && !q
       ? (all ?? []).slice(0, TOP).map((h, i) => ({
           entry: h,
           rank: h.rank ?? i + 1,
@@ -154,7 +146,7 @@
 </script>
 
 {#snippet pager()}
-  {#if full && pages > 1}
+  {#if pages > 1}
     <nav class="hof-pager" aria-label={L.pagerLabel}>
       <button class="icon-btn" data-hof-page="prev" disabled={page <= 1} onclick={() => goPage(page - 1)}>{L.prev}</button>
       <span class="num" aria-live="polite">{page} / {pages}</span>
@@ -186,70 +178,56 @@
       value={by.get(t)}
       unit={by.unit}
       showScore={sort !== 'score'}
-      flow={!full}
-      compact={full}
+      compact
       showPosition={pos === null}
     />
   </button>
 {/snippet}
 
-<section class="card" data-hof={full ? 'full' : 'home'}>
-  {#if !full}
-    <div class="hof-head">
-      <div>
-        <div class="eyebrow">Legends</div>
-        <h2 style="margin-bottom:8px">{L.title}</h2>
-      </div>
-      {#if hasAll}
-        <MoreLink act="hof-all" what={L.title} onclick={openHof} />
-      {/if}
-    </div>
-  {/if}
-  {#if full}
-    <div class="hof-toolbar">
-      <SeasonSelect caption={L.season} label={L.seasonAria} all={L.allSeasons} value={season ?? 'all'} seasons={[PRESEASON, ...SERVICE_SEASONS]} onpick={(v) => pickSeason(v === 'all' ? null : v)} data-hof-season-select />
-      {#if !upcoming}
-        <div class="hof-filter-picker">
-          <span class="hof-filter-label" aria-hidden="true">{L.filter}</span>
-          <button class="hof-filter-trigger" aria-label={L.filterLabel({ pos: posLabel || L.allPositions, sort: by.label })} aria-expanded={filtering} aria-controls="hof-filter-panel" data-hof-filters onclick={() => (filtering = !filtering)}>
-            <span class="hof-filter-current">{posLabel ? `${posLabel} · ` : ''}{by.label}</span>
-            <svg class="hof-filter-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
-          </button>
-        </div>
-        <button class="hof-search-btn" aria-label={L.searchLabel} aria-expanded={searching} data-act="hof-search" onclick={toggleSearch}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
-        </button>
-      {/if}
-    </div>
-  {#if full && searching && !upcoming}
-    <input class="hof-search" type="search" placeholder={L.searchLabel} aria-label={L.searchLabel} maxlength="20" enterkeyhint="search" data-hof-search bind:value={draft} oninput={onSearch} use:focusIn />
-  {/if}
+<section class="card" data-hof="full">
+  <div class="hof-toolbar">
+    <SeasonSelect caption={L.season} label={L.seasonAria} all={L.allSeasons} value={season ?? 'all'} seasons={[PRESEASON, ...SERVICE_SEASONS]} onpick={(v) => pickSeason(v === 'all' ? null : v)} data-hof-season-select />
     {#if !upcoming}
-      <div class="hof-filter-panel" id="hof-filter-panel" hidden={!filtering}>
-        <p class="hof-filter-label">{L.positionGroup}</p>
-        <div class="seg hof-pos" role="group" aria-label={L.positionGroup}>
-          <button class="hof-sort" aria-pressed={pos === null} data-hof-pos="all" onclick={() => pickPos(null)}>{L.all}</button>
-          {#each POS_GROUPS as k (k)}
-            <button class="hof-sort" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{tn(POS_LABEL[k])}</button>
-          {/each}
-        </div>
-        {#if season !== 0 && pos && FILTER_DETAILS_OF[pos].length > 1}
-          <p class="hof-filter-label">{L.detailPositionGroup}</p>
-          <div class="seg hof-pos" role="group" aria-label={L.detailPositionGroup}>
-            <button class="hof-sort" aria-pressed={dpos === null} data-hof-dpos="all" onclick={() => pickDetail(null)}>{L.all}</button>
-            {#each FILTER_DETAILS_OF[pos] as k (k)}
-              <button class="hof-sort" aria-pressed={dpos === k} data-hof-dpos={k} aria-label={tn(DETAIL_LABEL[k])} onclick={() => pickDetail(k)}>{k}</button>
-            {/each}
-          </div>
-        {/if}
-        <p class="hof-filter-label">{L.rankBasis}</p>
-        <div class="hof-sorts" role="group" aria-label={L.sortGroup}>
-          {#each SORT_KEYS as k (k)}
-            <button class="hof-sort" aria-pressed={sort === k} data-hof-sort={k} onclick={() => pickSort(k)}>{sorts()[k].label}{#if isNew(k)}<small class="hof-new" aria-hidden="true">NEW</small>{/if}</button>
-          {/each}
-        </div>
+      <div class="hof-filter-picker">
+        <span class="hof-filter-label" aria-hidden="true">{L.filter}</span>
+        <button class="hof-filter-trigger" aria-label={L.filterLabel({ pos: posLabel || L.allPositions, sort: by.label })} aria-expanded={filtering} aria-controls="hof-filter-panel" data-hof-filters onclick={() => (filtering = !filtering)}>
+          <span class="hof-filter-current">{posLabel ? `${posLabel} · ` : ''}{by.label}</span>
+          <svg class="hof-filter-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+        </button>
       </div>
+      <button class="hof-search-btn" aria-label={L.searchLabel} aria-expanded={searching} data-act="hof-search" onclick={toggleSearch}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>
+      </button>
     {/if}
+  </div>
+  {#if searching && !upcoming}
+  <input class="hof-search" type="search" placeholder={L.searchLabel} aria-label={L.searchLabel} maxlength="20" enterkeyhint="search" data-hof-search bind:value={draft} oninput={onSearch} use:focusIn />
+  {/if}
+  {#if !upcoming}
+    <div class="hof-filter-panel" id="hof-filter-panel" hidden={!filtering}>
+      <p class="hof-filter-label">{L.positionGroup}</p>
+      <div class="seg hof-pos" role="group" aria-label={L.positionGroup}>
+        <button class="hof-sort" aria-pressed={pos === null} data-hof-pos="all" onclick={() => pickPos(null)}>{L.all}</button>
+        {#each POS_GROUPS as k (k)}
+          <button class="hof-sort" aria-pressed={pos === k} data-hof-pos={k} onclick={() => pickPos(k)}>{tn(POS_LABEL[k])}</button>
+        {/each}
+      </div>
+      {#if season !== 0 && pos && FILTER_DETAILS_OF[pos].length > 1}
+        <p class="hof-filter-label">{L.detailPositionGroup}</p>
+        <div class="seg hof-pos" role="group" aria-label={L.detailPositionGroup}>
+          <button class="hof-sort" aria-pressed={dpos === null} data-hof-dpos="all" onclick={() => pickDetail(null)}>{L.all}</button>
+          {#each FILTER_DETAILS_OF[pos] as k (k)}
+            <button class="hof-sort" aria-pressed={dpos === k} data-hof-dpos={k} aria-label={tn(DETAIL_LABEL[k])} onclick={() => pickDetail(k)}>{k}</button>
+          {/each}
+        </div>
+      {/if}
+      <p class="hof-filter-label">{L.rankBasis}</p>
+      <div class="hof-sorts" role="group" aria-label={L.sortGroup}>
+        {#each SORT_KEYS as k (k)}
+          <button class="hof-sort" aria-pressed={sort === k} data-hof-sort={k} onclick={() => pickSort(k)}>{sorts()[k].label}{#if isNew(k)}<small class="hof-new" aria-hidden="true">NEW</small>{/if}</button>
+        {/each}
+      </div>
+    </div>
   {/if}
 
   {#if upcoming}
@@ -262,28 +240,21 @@
   {:else if failed}
     <p class="empty">{L.loadFailed}</p>
   {:else if all && all.length}
-    {#if full}<p class="muted hof-source">{L.source({ scope, q, sort: by.label, isScore: sort === 'score', total })}</p>{/if}
-    {#if full && hofBasisNote(sort)}<p class="muted fs-xs hof-basis" data-hof-basis>{hofBasisNote(sort)}</p>{/if}
-    {#if !full && ss}<p class="muted hof-source">{L.homeSource({ season: seasonLabel(ss.id, ss.name) })}</p>{/if}
+    <p class="muted hof-source">{L.source({ scope, q, sort: by.label, isScore: sort === 'score', total })}</p>
+    {#if hofBasisNote(sort)}<p class="muted fs-xs hof-basis" data-hof-basis>{hofBasisNote(sort)}</p>{/if}
     {#if podium.length}
       <HofPodium players={podium} label={by.label} unit={by.unit} showPosition={pos === null} />
     {/if}
-    {#if full}
-      {#if all.length > podium.length}
-        <div class="hof-list-head"><span>{L.listHead}</span><span>{by.label}</span></div>
-      {/if}
-      <ol class="hof-ranking-list" start={offset + podium.length + 1}>
-        {#each all as h, i (h.id)}
-          {#if !podiumIds.has(h.id)}
-            <li>{@render playerRow(h, i)}</li>
-          {/if}
-        {/each}
-      </ol>
-    {:else}
-      {#each all as h, i (h.id)}
-        {@render playerRow(h, i)}
-      {/each}
+    {#if all.length > podium.length}
+      <div class="hof-list-head"><span>{L.listHead}</span><span>{by.label}</span></div>
     {/if}
+    <ol class="hof-ranking-list" start={offset + podium.length + 1}>
+      {#each all as h, i (h.id)}
+        {#if !podiumIds.has(h.id)}
+          <li>{@render playerRow(h, i)}</li>
+        {/if}
+      {/each}
+    </ol>
     {@render pager()}
   {:else}
     <p class="empty">{emptyText}</p>

@@ -18,22 +18,24 @@
 
 {#if data && leagueOnHome(data)}
   <button type="button" class="card league-banner" aria-label={`${L.seasonTitle({ season: data.league.season })} · ${L.open}`} data-league-banner data-league-phase={data.phase} data-act="league-open" onclick={onopen}>
+    <span class="pill" class:good={leaguePhaseActive(data.phase)}>{leaguePhaseLabel(data.phase)}</span>
     <div class="lb-who">
       <small class="eyebrow">Offside League</small>
       <strong class="lb-title">{L.seasonTitle({ season: data.league.season })}</strong>
       <span class="muted fs-sm" data-league-line>{leagueLine(data)}</span>
     </div>
-    <span class="pill" class:good={leaguePhaseActive(data.phase)}>{leaguePhaseLabel(data.phase)}</span>
   </button>
 {/if}
 
 <style>
   .league-banner {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    flex-direction: column;
+    gap: 8px;
     width: 100%;
+    min-width: 0;
+    padding: 14px;
+    box-sizing: border-box;
     border: 0;
     text-align: left;
     color: var(--ink);
@@ -50,11 +52,13 @@
     min-width: 0;
   }
   .lb-title {
-    font-size: var(--fs-title2);
+    font-size: var(--fs-body1);
     line-height: 1.3;
     overflow-wrap: anywhere;
   }
+  /* 트로피 줄이 있는 컵 배너와 글자 시작선을 맞춘다. */
   .league-banner .pill {
-    flex: none;
+    align-self: flex-end;
+    margin-bottom: 10px;
   }
 </style>

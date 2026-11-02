@@ -37,6 +37,8 @@ export const home: Translation<HomeMsgs> = {
   releaseTitle: 'Release notes',
   more: 'More',
   moreAria: (p) => `More ${p.what}`,
+  newsTagNotice: 'Notice',
+  newsTagRelease: 'Update',
   newsFailed: "Couldn't load the news.",
   newsEmpty: 'No posts yet.',
   pinned: 'Pinned',

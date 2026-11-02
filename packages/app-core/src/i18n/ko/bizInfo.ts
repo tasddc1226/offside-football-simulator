@@ -7,8 +7,6 @@ const ko = {
   owner: '대표자',
   regNo: '사업자등록번호',
   mailOrder: '통신판매업 신고',
-  address: '주소',
-  phone: '전화',
   check: '사업자 정보 확인',
 };
 
