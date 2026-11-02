@@ -315,11 +315,9 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
     return r.fulfill(ok({ entries, total: TOTAL }));
   });
   await page.goto('/');
-  const home = page.locator('[data-hof="home"]');
-  await expect(home.locator('.hof-row')).toHaveCount(3);
-  expect(asked).toEqual(['?limit=3']);
+  expect(asked).toEqual([]);
 
-  await home.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   const full = page.locator('[data-hof="full"]');
   await expect(full.locator('h1')).toHaveCount(0);
   await expect(page.getByRole('tab', { name: '명예의 전당' })).toHaveAttribute(
@@ -345,9 +343,6 @@ test('명예의 전당: 홈 TOP 3 → 전체 보기 10명씩 페이지', async (
   await page.goBack();
   await expect(full.locator('.hof-pager')).toContainText('2 / 2');
   await expect(full.locator('.hof-row').first().locator('.hof-rank')).toHaveText('11');
-
-  await page.locator('[data-act="home"]').click();
-  await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(3);
 });
 
 test('구단주 내 선수: 별도 화면에서 전체 목록을 본다', async ({ page }) => {
@@ -408,8 +403,7 @@ test('명예의 전당: 전체 보기에서 순위 유형(득점·발롱도르)�
     return r.fulfill(ok({ entries, total: entries.length }));
   });
   await page.goto('/');
-  await expect(page.locator('[data-hof="home"] [data-hof-sort]')).toHaveCount(0);
-  await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   const full = page.locator('[data-hof="full"]');
   await full.locator('[data-hof-filters]').click();
   await expect(full.locator('[data-hof-sort="score"]')).toHaveAttribute('aria-pressed', 'true');
@@ -464,7 +458,7 @@ test('명예의 전당 이름 검색', async ({ page }) => {
     return r.fulfill(ok({ entries, total: entries.length }));
   });
   await page.goto('/');
-  await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   const full = page.locator('[data-hof="full"]');
   // T-10-105 검색 칸은 돋보기를 눌러야 열린다(열리면 바로 입력).
   const search = full.locator('[data-hof-search]');
@@ -502,7 +496,7 @@ test('명예의 전당: 은퇴 가치 칩에 NEW 표시(기한까지만)', async
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
   await page.clock.setFixedTime(new Date('2026-10-01T00:00:00+09:00'));
   await page.goto('/');
-  await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   await page.locator('[data-hof-filters]').click();
   const chip = page.locator('[data-hof="full"] [data-hof-sort="value"]');
   await expect(chip.locator('.hof-new')).toHaveText('NEW');
@@ -510,7 +504,7 @@ test('명예의 전당: 은퇴 가치 칩에 NEW 표시(기한까지만)', async
 
   await page.clock.setFixedTime(new Date('2026-10-14T00:00:00+09:00'));
   await page.reload();
-  await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   await page.locator('[data-hof-filters]').click();
   await expect(chip).toBeVisible();
   await expect(chip.locator('.hof-new')).toHaveCount(0);
@@ -521,7 +515,7 @@ test('명예의 전당: 컴팩트 시즌 선택에서 개막 예정 시즌을 �
   await page.route(HOF_LIST, (r) => r.fulfill(ok({ entries: [entry], total: 1 })));
   await page.clock.setFixedTime(new Date('2026-10-01T00:00:00+09:00'));
   await page.goto('/');
-  await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   const full = page.locator('[data-hof="full"]');
   const season = full.locator('[data-hof-season-select]');
   await expect(season.locator('option[value="1"]')).toContainText('개막 예정');
@@ -532,7 +526,7 @@ test('명예의 전당: 컴팩트 시즌 선택에서 개막 예정 시즌을 �
 
   await page.clock.setFixedTime(new Date('2026-10-06T00:00:00+09:00'));
   await page.reload();
-  await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   await expect(season.locator('option[value="1"]')).not.toContainText('개막 예정');
 });
 
@@ -547,17 +541,15 @@ test('홈 ↔ 전체 보기 ↔ 상세를 오가도 같은 목록을 다시 요�
   await page.route(`${API}/v1/hof/${ID}`, (r) => r.fulfill(ok({ entry, snapshot })));
   await page.route(`${API}/v1/boards/**`, (r) => r.fulfill(ok({ posts: [], hasMore: false })));
   await page.goto('/');
-  await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(1);
   for (let i = 0; i < 2; i++) {
-    await page.locator('[data-act="hof-all"]').click();
+    await page.locator('[data-act="hof"]').click();
     await page.locator(`[data-hof="full"] [data-hof-id="${ID}"]`).click();
     await expect(page.locator('.film-open h1')).toBeVisible();
     await page.goBack();
     await page.locator('[data-act="home"]').click();
-    await expect(page.locator('[data-hof="home"] .hof-row')).toHaveCount(1);
   }
   const count = (p: string) => asked.filter((a) => a === p).length;
-  expect(count('/v1/hof?limit=3')).toBe(1);
+  expect(count('/v1/hof?limit=3')).toBe(0);
   expect(count('/v1/hof?limit=10')).toBe(1);
   expect(count(`/v1/hof/${ID}`)).toBe(1);
   expect(count('/v1/boards/notice/posts')).toBe(1);
@@ -684,7 +676,7 @@ for (const width of [320, 1024]) {
       return r.fulfill(ok({ entries: [entry], total: 1 }));
     });
     await page.goto('/');
-    await page.locator('[data-act="hof-all"]').click();
+    await page.locator('[data-act="hof"]').click();
     await page.locator('[data-hof-filters]').click();
     await page.locator('[data-hof-pos="MF"]').click();
     await expect(page.locator('[data-hof-dpos="CM"]')).toBeVisible();

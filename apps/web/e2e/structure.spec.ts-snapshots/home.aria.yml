@@ -25,14 +25,8 @@
                 - time: /\d+분 전/
     - button "Server firsts 서버 최초 기록 모든 플레이어 중 첫 기록 보기 →"
     - button "Events 확률 이벤트 선택지별 성공 확률 보기 →"
-    - text: Legends
-    - heading "명예의 전당" [level=2]
-    - paragraph: 명예의 전당을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
-    - text: Notice
-    - heading "공지사항" [level=2]
-    - paragraph: 소식을 불러오지 못했어요.
-    - text: Release notes
-    - heading "릴리즈 노트" [level=2]
+    - text: News
+    - heading "소식" [level=2]
     - paragraph: 소식을 불러오지 못했어요.
 - navigation "메인 메뉴":
     - button "기록실"
