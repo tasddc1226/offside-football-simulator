@@ -101,6 +101,13 @@ export const create: Translation<CreateMsgs> = {
   potentialHelp:
     '初期ポテンシャルのランク範囲です。トレーニングや強化で変わることがあります。ポテンシャルはすべてのユーザーに同じ確率で決まり、Sランクはとても珍しいです。',
   potentialWeb: 'アプリでリワード広告を見ると、候補3人の初期ポテンシャルのランク範囲を見られます。',
+  potentialLogin:
+    '3人は能力値の合計が同じです。ログインするとクラブ資金でポテンシャルを見られます。',
+  potentialLoginGo: 'ログイン',
+  potentialClubShort: (p: { price: string; balance: string }) =>
+    `候補のポテンシャルを見るにはクラブ資金${p.price}が必要です。今は${p.balance}あります。`,
+  potentialClubCapped:
+    '今日はクラブ資金で候補のポテンシャルをこれ以上見られません。明日また見られます。',
   potentialSaveFailed: '公開結果を保存できませんでした。保存容量を確認してください。',
   candIntro: '3人は能力値の合計が同じです。ポテンシャルは非公開なので、配分を見て選びましょう。',
   loginTools:

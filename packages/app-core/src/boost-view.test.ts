@@ -3,7 +3,7 @@ import { newGame } from '@offside/game/engine';
 import { createRng, setActiveRng } from '@offside/game/rng';
 import type { CareerRecord } from '@offside/game/types';
 import { boostHidden, boostView, doBoost } from './boost-view.js';
-import { clubOffer } from './club-reward.js';
+import { clubBlock, clubOffer } from './club-reward.js';
 
 function player(o: { seasons?: number; money?: number; age?: number } = {}) {
   setActiveRng(createRng(3));
@@ -88,6 +88,18 @@ describe('T-11-083 잠재력 강화 카드', () => {
         boost: { price, bought: 0, cap: 5 },
       },
     });
+    // T-11-610 못 받는 이유: 자금 부족 · 오늘 상한. 값이 없거나 팔지 않으면 이유도 없다.
+    expect(clubBlock(null, 'boost')).toBeNull();
+    expect(clubBlock(offer(500_000, 400_000), 'boost')).toEqual({
+      reason: 'short',
+      price: 500_000,
+      balance: 400_000,
+    });
+    expect(clubBlock(offer(500_000, 500_000), 'boost')).toBeNull();
+    expect(clubBlock(offer(null, 9_000_000), 'boost')).toBeNull();
+    const spent = offer(null, 9_000_000);
+    spent.offers.boost = { price: null, bought: 5, cap: 5 };
+    expect(clubBlock(spent, 'boost')).toEqual({ reason: 'capped' });
     expect(clubOffer(null, 'boost')).toBeNull();
     expect(clubOffer(offer(null, 9_000_000), 'boost')).toBeNull();
     expect(clubOffer(offer(500_000, 400_000), 'boost')).toBeNull();
