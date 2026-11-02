@@ -28,11 +28,8 @@
     preseasonTeamLine,
   } from '@offside/app-core/friendText';
   import { friendText as L } from '@offside/app-core/i18n/ko/friend';
-  import { shareMetaText as LM } from '@offside/app-core/i18n/ko/shareMeta';
-  import { OG_SITE_IMAGE } from '../../share-path.js';
   import { toast } from '../helpers.js';
   import { copyText } from '../inapp-open.js';
-  import { kakaoAvailable, preloadKakao, shareKakao } from '../share/kakao.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import { clearInvite, pendingInvite } from '../friendInvite.svelte.js';
   import { go } from '../nav.js';
@@ -147,26 +144,6 @@
     const copied = await copyText(friendInviteUrl(data.code, window.location.origin));
     toast(copied ? L.linkCopied : L.shareFail);
   }
-  // T-11-621 카카오톡 카드 공유. 미리보기 문구는 링크 미리보기와 같은 곳(shareMeta)을 쓴다.
-  const showKakao = kakaoAvailable();
-  $effect(() => {
-    if (showKakao) preloadKakao();
-  });
-  async function shareToKakao() {
-    if (!data) return;
-    const url = friendInviteUrl(data.code, window.location.origin);
-    try {
-      await shareKakao({
-        title: LM.inviteTitle,
-        description: LM.inviteDescription({ code: friendCodeLabel(data.code) }),
-        imageUrl: `${window.location.origin}${OG_SITE_IMAGE}`,
-        url,
-        button: L.shareKakaoOpen,
-      });
-    } catch {
-      toast(L.shareKakaoFail);
-    }
-  }
   async function copyCode() {
     if (!data) return;
     toast((await copyText(friendCodeLabel(data.code))) ? L.codeCopied : L.codeCopyFail);
@@ -225,7 +202,6 @@
         <b class="fr-code-value" data-friend-code>{friendCodeLabel(data.code)}</b>
         <div class="fr-row-actions">
           <button class="btn btn-sm" onclick={share} data-act="friend-share">{L.shareLink}</button>
-          {#if showKakao}<button class="btn btn-sm" onclick={shareToKakao} data-act="friend-share-kakao">{L.shareKakao}</button>{/if}
           <button class="btn btn-sm" onclick={copyCode}>{L.copyCode}</button>
         </div>
       </div>

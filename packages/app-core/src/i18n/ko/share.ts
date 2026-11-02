@@ -11,9 +11,6 @@ const ko = {
   making: '링크 만드는 중…',
   recopy: '링크 다시 복사',
   shareCareer: '커리어 공유하기',
-  shareKakao: '카카오톡',
-  shareKakaoFail: '카카오톡으로 공유하지 못했어요',
-  shareKakaoOpen: '오프사이드 열기',
   // 링크 확인(shareLink.ts)
   linkTitle: '오프사이드 은퇴 커리어',
   linkText: '내 선수의 축구 인생. 오프사이드 offside-lab.com',
