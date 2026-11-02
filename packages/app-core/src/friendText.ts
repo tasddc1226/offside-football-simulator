@@ -5,12 +5,7 @@ import type {
   FriendsResponse,
   InviteStatus,
 } from '@offside/contracts';
-import {
-  FRIEND_INVITE_PARAM,
-  INVITE_REROLLS,
-  INVITE_REWARD_MAX,
-  INVITE_SCOUTS,
-} from '@offside/contracts/owner-team';
+import { INVITE_REROLLS, INVITE_REWARD_MAX, INVITE_SCOUTS } from '@offside/contracts/owner-team';
 import { getLocale } from './i18n/core.js';
 import { friendText as L } from './i18n/ko/friend.js';
 import { teamCoreText } from './i18n/ko/teamCore.js';
@@ -23,7 +18,7 @@ export const friendCodeLabel = (code: string) => `${code.slice(0, 4)}-${code.sli
 
 /** 초대 링크(`/?friend=코드`). */
 export const friendInviteUrl = (code: string, origin = FRIEND_INVITE_ORIGIN, lang = getLocale()) =>
-  `${origin}/?${FRIEND_INVITE_PARAM}=${code}${lang === 'ko' ? '' : `&lang=${lang}`}`;
+  `${origin}/invite/${code}${lang === 'ko' ? '' : `?lang=${lang}`}`;
 
 /** 공유 문구(카톡 등). */
 export const friendInviteText = (code: string, origin?: string) =>

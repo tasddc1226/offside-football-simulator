@@ -129,9 +129,9 @@ describe('T-11-621 친구 초대 미리보기', () => {
     const ko = inviteShareMeta('ABCDEFGH', 'https://offside-lab.com');
     expect(ko.description).toContain('ABCD-EFGH');
     expect(ko.image).toBe('https://offside-lab.com/og-offside-v7.png');
-    expect(ko.url).toBe('https://offside-lab.com/?friend=ABCDEFGH');
+    expect(ko.url).toBe('https://offside-lab.com/invite/ABCDEFGH');
     const en = inviteShareMeta('ABCDEFGH', 'https://offside-lab.com', 'en');
     expect(en.title).toMatch(/invited/);
-    expect(en.url).toBe('https://offside-lab.com/?friend=ABCDEFGH&lang=en');
+    expect(en.url).toBe('https://offside-lab.com/invite/ABCDEFGH?lang=en');
   });
 });

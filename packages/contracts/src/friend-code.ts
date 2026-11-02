@@ -13,3 +13,6 @@ export function normalizeFriendCode(raw: string): string | null {
 
 /** 친구 초대 링크의 쿼리 이름(`/?friend=코드`). */
 export const FRIEND_INVITE_PARAM = 'friend';
+
+/** T-11-622 초대 링크 경로(`/invite/코드`). 앱 링크가 경로로만 앱을 고를 수 있어 쿼리 대신 쓴다. 옛 쿼리 링크도 계속 열린다. */
+export const FRIEND_INVITE_PATH = /^\/invite\/([^/]+)\/?$/;

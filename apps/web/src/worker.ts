@@ -11,7 +11,11 @@ import {
 import { NEWS_ID } from './news-id.js';
 import { resolveApiBaseUrl } from './api/base-url.js';
 import { fetchHofEntry } from './hof-entry.js';
-import { normalizeFriendCode, FRIEND_INVITE_PARAM } from '@offside/contracts/friend-code';
+import {
+  FRIEND_INVITE_PARAM,
+  FRIEND_INVITE_PATH,
+  normalizeFriendCode,
+} from '@offside/contracts/friend-code';
 import { careerShareMeta, injectShareMeta, inviteShareMeta, shareLang } from './share-meta.js';
 import { OG_CARD_PATH, SHARE_PATH } from './share-path.js';
 
@@ -172,7 +176,39 @@ const SHORT_LINKS: Record<string, string> = {
     '/?utm_source=youtube&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_short',
 };
 
+// T-11-622 앱 바로 열기 검증 파일. Apple · Google이 주소 그대로 가져가므로 리다이렉트 없이 JSON으로 내린다.
+const APP_LINK_FILES: Record<string, unknown> = {
+  '/.well-known/apple-app-site-association': {
+    applinks: {
+      details: [
+        {
+          appIDs: ['WK93KW2348.com.offsidelab.app'],
+          components: [{ '/': '/invite/*' }, { '/': '/career/*' }],
+        },
+      ],
+    },
+  },
+  '/.well-known/assetlinks.json': [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.offsidelab.app',
+        // Play 앱 서명 키(첫 값이 지금 키, 나머지는 교체 전 키. 옛 키로 설치한 기기도 검증되게 모두 둔다).
+        sha256_cert_fingerprints: [
+          '6F:1D:DC:1E:3A:21:30:23:DC:62:E9:73:91:E3:F4:5A:D2:55:4C:0A:12:3B:6C:56:AC:11:FC:DA:C8:36:4C:D6',
+          '57:CC:CB:11:24:BA:DB:8A:3E:C6:72:D1:8C:E2:B9:8B:B4:F9:47:DE:87:5E:D9:9C:CC:C5:DB:56:73:13:26:1C',
+          '4D:08:15:29:17:A4:58:88:1F:5D:C0:91:CD:E1:02:52:66:04:BF:18:1A:93:3B:60:20:3A:B7:24:2D:CB:A8:5A',
+        ],
+      },
+    },
+  ],
+};
+
 async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Response> {
+  const appLinkFile = APP_LINK_FILES[url.pathname];
+  if (appLinkFile)
+    return Response.json(appLinkFile, { headers: { 'Cache-Control': 'public, max-age=3600' } });
   if (url.pathname === '/get' || url.pathname === '/get/')
     return new Response(null, {
       status: 302,
@@ -230,9 +266,12 @@ async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Re
   const shareId = asset.status === 404 ? SHARE_PATH.exec(url.pathname)?.[1] : undefined;
   if (shareId)
     return withRobots(await withShareMeta(appShell(), shareId, url), 'noindex, nofollow');
+  const inviteRaw =
+    FRIEND_INVITE_PATH.exec(url.pathname)?.[1] ??
+    (url.pathname === '/' ? url.searchParams.get(FRIEND_INVITE_PARAM) : null);
   const inviteCode =
-    url.pathname === '/' && ['GET', 'HEAD'].includes(request.method)
-      ? normalizeFriendCode(url.searchParams.get(FRIEND_INVITE_PARAM) ?? '')
+    inviteRaw !== null && ['GET', 'HEAD'].includes(request.method)
+      ? normalizeFriendCode(inviteRaw)
       : null;
   if (inviteCode)
     return withRobots(await withInviteMeta(appShell(), inviteCode, url), 'noindex, nofollow');
