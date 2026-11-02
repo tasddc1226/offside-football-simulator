@@ -25,6 +25,8 @@ export function customLeagues(): League[] {
   return LEAGUES.filter((l) => !l.added || open);
 }
 const PUSH_DELAY_MS = 1500;
+/** T-11-607 importClubCustom: 파일은 멀쩡한데 기기 저장 공간이 모자랐다(형식 오류 -1과 구분한다). */
+export const CLUB_IMPORT_NO_SPACE = -2;
 
 /** local: 세션 없음(이 기기에만 저장) · syncing: 맞추는 중 · synced: 계정과 같음 · error: 네트워크/서버 오류 ·
  * full: 이미지 합계가 서버 한도를 넘어 보내지 않음(이 기기에는 남는다). */
@@ -125,7 +127,7 @@ export function createClubCustom(
   }
 
   const exportClubCustom = (): string => JSON.stringify({ v: 1, clubs: clubCustom.map }, null, 1);
-  /** 가져온 파일로 통째로 바꾼다. 적용된 클럽 수를 돌려준다(형식이 틀리면 -1). */
+  /** 가져온 파일로 통째로 바꾼다. 적용된 클럽 수를 돌려준다(형식이 틀리면 -1, 저장 공간이 모자라면 CLUB_IMPORT_NO_SPACE). */
   function importClubCustom(text: string): number {
     let raw: unknown;
     try {
@@ -136,7 +138,7 @@ export function createClubCustom(
     const clubs =
       raw && typeof raw === 'object' && 'clubs' in raw ? (raw as { clubs: unknown }).clubs : raw;
     const map = sanitizeClubCustom(clubs);
-    return commitLocal(map) ? Object.keys(map).length : -1;
+    return commitLocal(map) ? Object.keys(map).length : CLUB_IMPORT_NO_SPACE;
   }
 
   // ───────── 서버 동기화 ─────────
