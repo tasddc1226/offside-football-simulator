@@ -263,6 +263,7 @@ export async function verifyStorageAccess(env, fetcher = fetch) {
       ...(value && { body: value }),
       signal: AbortSignal.timeout(15_000),
     });
+  let failure;
   try {
     const put = await call('PUT', body);
     if (!put.ok || (await put.json()).success !== true)
@@ -270,10 +271,16 @@ export async function verifyStorageAccess(env, fetcher = fetch) {
     const read = await call('GET');
     if (!read.ok || (await read.text()) !== body)
       throw new Error('Snapshot destination readback failed');
-  } finally {
+  } catch (error) {
+    failure = error;
+  }
+  try {
     const removed = await call('DELETE');
     if (!removed.ok) throw new Error('Snapshot destination probe cleanup failed');
+  } catch (error) {
+    failure ??= error; // Preserve the first failure even when cleanup also fails.
   }
+  if (failure) throw failure;
 }
 
 export async function capture(

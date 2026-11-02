@@ -235,7 +235,7 @@ it('proves R2 read/write/delete permissions with an owned probe before capture',
       { CLOUDFLARE_ACCOUNT_ID: 'test', CLOUDFLARE_API_TOKEN: 'private' },
       async (_url, init) => {
         failed.push(init.method);
-        return new Response('', { status: init.method === 'DELETE' ? 200 : 403 });
+        return new Response('', { status: 403 });
       },
     ),
   ).rejects.toThrow('permission');
