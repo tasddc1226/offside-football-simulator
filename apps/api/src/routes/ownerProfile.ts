@@ -3,6 +3,7 @@
 import {
   OwnerProfileResponseSchema,
   OwnerArchiveResponseSchema,
+  OwnerHallVisitResponseSchema,
   OwnerTitleBackfillBodySchema,
   OwnerTitleBackfillResponseSchema,
   OwnerTitlesResponseSchema,
@@ -14,7 +15,12 @@ import { TITLE_NONE, titlesOf } from '@offside/contracts/owner-title';
 import { desc, eq, inArray } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
-import { permanentTitlesOf, backfillOwnerTitles } from '../db/repos/ownerTitles.js';
+import type { Db } from '../db/client.js';
+import {
+  earnedPermanentTitleIds,
+  permanentTitlesOf,
+  backfillOwnerTitles,
+} from '../db/repos/ownerTitles.js';
 import { appMeta, ownerTitleAwards } from '../db/schema.js';
 import { requireAdmin } from '../auth/admin.js';
 import { and } from 'drizzle-orm';
@@ -25,7 +31,7 @@ import { getDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
-import { purgeEdge } from '../edgeCache.js';
+import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { reqLang } from '../lang.js';
 import { cupHonorsOf } from '../team/cup.js';
@@ -41,6 +47,30 @@ import { honorsOf } from './seasonRecap.js';
 import { requireOwner } from '../middleware/requireOwner.js';
 import { NO_STORE, conflictError, nowIso, ok, readBody, teamNotFound } from './shared.js';
 
+/** T-11-618 남의 명예관 엣지 캐시. */
+const OWNER_HALL_TTL_SEC = 300;
+
+const closedSeasons = (now: string) => openTeamSeasons(now).filter((s) => teamSeasonClosed(s, now));
+
+/** 마감 집계가 끝난 시즌의 close 키. */
+async function finishedCloseKeys(db: Db, closed: readonly number[]) {
+  const states = closed.length
+    ? await db
+        .select()
+        .from(appMeta)
+        .where(inArray(appMeta.key, closed.map(closeMetaKey)))
+    : [];
+  return new Set(
+    states.flatMap((s) => {
+      try {
+        return JSON.parse(s.value).step === 'done' ? [s.key] : [];
+      } catch {
+        return [];
+      }
+    }),
+  );
+}
+
 export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
   // No team required: the archive belongs to the authenticated owner, including owners who only raise players.
   app.get('/v1/owner/archive', requireProfile, async (c) => {
@@ -48,26 +78,12 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const lang = reqLang(c);
-    const closed = openTeamSeasons(now).filter((s) => teamSeasonClosed(s, now));
-    const [owner, honors, states] = await Promise.all([
+    const closed = closedSeasons(now);
+    const [owner, honors, done] = await Promise.all([
       ownerProfileOf(db, me, now, lang),
       honorsOf(db, me.id),
-      closed.length
-        ? db
-            .select()
-            .from(appMeta)
-            .where(inArray(appMeta.key, closed.map(closeMetaKey)))
-        : [],
+      finishedCloseKeys(db, closed),
     ]);
-    const done = new Set(
-      states.flatMap((s) => {
-        try {
-          return JSON.parse(s.value).step === 'done' ? [s.key] : [];
-        } catch {
-          return [];
-        }
-      }),
-    );
     const pendingSeasons = closed.filter((s) => !done.has(closeMetaKey(s)));
     // Always give a new owner a current-season starting point; never synthesize final results.
     const current = teamSeasonAt(now) ?? 0;
@@ -123,6 +139,31 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
       200,
       NO_STORE,
     );
+  });
+
+  // T-11-618 남의 명예관(읽기 전용). 세션을 보지 않고 쓰기도 하지 않는다 — 진행도를 다시 세는 permanentTitlesOf를 쓰지 않는다.
+  // 받은 칭호는 언제든 늘 수 있어 TTL로만 새로 읽는다. 본인도 같은 응답을 받는다(고르기 · 진행도는 내 명예관에서).
+  app.get('/v1/owners/by-team/:teamId/hall', async (c) => {
+    const id = parseWithAppError(TeamIdSchema, c.req.param('teamId'));
+    const data = await edgeCached(c, EDGE.ownerHall(id), OWNER_HALL_TTL_SEC, async () => {
+      const db = getDb(c);
+      const [found] = await liveTeam(db, id);
+      if (!found) throw teamNotFound();
+      const profileId = found.team.profileId;
+      const [honors, done, cups, leagues, permanent] = await Promise.all([
+        honorsOf(db, profileId),
+        finishedCloseKeys(db, closedSeasons(nowIso())),
+        cupHonorsOf(db, profileId),
+        leagueChampionSeasons(db, profileId),
+        earnedPermanentTitleIds(db, profileId),
+      ]);
+      return {
+        // 마감 집계가 끝나지 않은 시즌의 배지는 내 명예관처럼 보이지 않는다.
+        honors: honors.filter((h) => done.has(closeMetaKey(h.season))),
+        titles: [...titlesOf(cups, leagues), ...permanent],
+      };
+    });
+    return ok(c, OwnerHallVisitResponseSchema, data);
   });
 
   // Admin preview is read-only; apply requires dryRun:false. Bounded cursor batches are resumable.

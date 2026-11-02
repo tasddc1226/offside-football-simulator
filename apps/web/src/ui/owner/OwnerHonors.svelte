@@ -1,7 +1,7 @@
 <script lang="ts">
   import Skeleton from '../Skeleton.svelte';
   import { onMount } from 'svelte';
-  import { fetchOwnerArchive, type OwnerArchiveResponse } from '@offside/app-core/api/ownerProfile';
+  import { fetchOwnerArchive, fetchOwnerHallByTeam, fetchOwnerProfileByTeam, type OwnerArchiveResponse } from '@offside/app-core/api/ownerProfile';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import { honorViews } from '@offside/app-core/seasonRecap';
   import { titleLabel } from '@offside/app-core/ownerTitle';
@@ -9,18 +9,26 @@
   import { appState } from '../state.svelte.js';
   import { motionOK } from '../motion.js';
   import OwnerHall from './OwnerHall.svelte';
+  import OwnerHallVisit from './OwnerHallVisit.svelte';
+  import { go } from '../nav.js';
+  import { goBack } from '../history.svelte.js';
+  import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
   import OwnerArchive from './OwnerArchive.svelte';
   import LockerArt from './LockerArt.svelte';
   import HonorEmblem from '../HonorEmblem.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
 
+  // T-11-618 visitTeam이 있으면 그 구단주의 명예관을 읽기 전용으로 — 명패와 트로피장 두 칸만 연다.
+  const { visitTeam = null }: { visitTeam?: string | null } = $props();
+  const firstZone = $derived(visitTeam ? 1 : 0);
   type Panel = 'records' | 'titles' | 'trophies';
   const panels: Panel[] = ['records', 'titles', 'trophies'];
   let zone = $state(1);
   let drag = $state(0);
   let grabbing = $state(false);
-  let data = $state<OwnerArchiveResponse | null>(null);
+  let data = $state<Pick<OwnerArchiveResponse, 'owner' | 'honors'> | null>(null);
+  let titles = $state<string[]>([]);
   let failed = $state(false);
   let panel = $state<Panel>('titles');
   let visited = $state({ records: false, titles: true, trophies: false });
@@ -30,24 +38,30 @@
   let swiped = false;
   let alive = true;
   const names = $derived([L.roomSeasons, L.roomOwner, L.roomTrophies]);
-  const notes = $derived([L.roomSeasonsNote, L.roomOwnerNote, L.roomTrophiesNote]);
+  const notes = $derived([L.roomSeasonsNote, visitTeam ? L.visitOwnerNote : L.roomOwnerNote, L.roomTrophiesNote]);
   const badges = $derived(honorViews(data?.honors ?? []));
   const latestSeason = $derived(Math.max(0, ...(data?.owner.seasons.map((s) => s.season) ?? [])));
   const awards = $derived(badges.length + (data?.owner.cupHonors.length ?? 0));
   async function load() {
     failed = false;
+    if (visitTeam) {
+      const [p, h] = await Promise.all([fetchOwnerProfileByTeam(visitTeam), fetchOwnerHallByTeam(visitTeam)]);
+      if (!alive) return;
+      if (p.ok && h.ok) { data = { owner: p.data.owner, honors: h.data.honors }; titles = h.data.titles; } else failed = true;
+      return;
+    }
     const r = await fetchOwnerArchive();
     if (!alive) return;
     if (r.ok) data = r.data; else failed = true;
   }
   onMount(() => { alive = true; void load(); return () => { alive = false; }; });
   function turn(next: number) {
-    if (next < 0 || next >= panels.length) return;
+    if (next < firstZone || next >= panels.length) return;
     zone = next;
     drag = 0;
     panel = panels[next]!;
     visited[panel] = true;
-    if (panel !== 'trophies') appState.honorsView = panel;
+    if (panel !== 'trophies' && !visitTeam) appState.honorsView = panel;
   }
   function start(e: PointerEvent) {
     if (e.button !== 0 || pointer !== null) return;
@@ -70,7 +84,7 @@
 
 <div class="locker-page" data-owner-honors-screen>
   <div class="room-scene">
-  <header class="locker-heading"><div><h1>{L.hallTitle}</h1><p>{data?.owner.team?.name ?? L.roomTitle}</p></div><span class="locker-mark" aria-hidden="true">◈</span></header>
+  <header class="locker-heading"><div><h1>{L.hallTitle}</h1><p>{data?.owner.team?.name ?? L.roomTitle}</p></div>{#if visitTeam}<button class="btn btn-sm" data-act="owner-hall-visit-back" onclick={() => goBack(() => go('hof'))}>{shellMoreText.back}</button>{:else}<span class="locker-mark" aria-hidden="true">◈</span>{/if}</header>
   <div class="locker-stage" class:still={!motionOK} class:grabbing role="group" aria-label={L.roomTitle} onpointerdown={start} onpointermove={move} onpointerup={end} onpointercancel={() => { grabbing = false; pointer = null; drag = 0; }}>
     <div class="room-ceiling" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="room-floor" aria-hidden="true"><div class="floor-crest"><span>◈</span></div></div>
@@ -90,19 +104,19 @@
     <p class="room-gesture">{L.roomHint}</p>
   </div>
   <div class="room-controls">
-    <div class="room-navigation"><button class="room-arrow" aria-label={L.roomPrev} disabled={zone === 0} onclick={() => turn(zone-1)}>‹</button><div class="room-caption" aria-live="polite"><h2>{names[zone]}</h2><p>{notes[zone]}</p></div><button class="room-arrow" aria-label={L.roomNext} disabled={zone === 2} onclick={() => turn(zone+1)}>›</button></div>
-    <div class="room-dots" role="group" aria-label={L.roomTitle}>{#each names as name,i (i)}<button aria-label={name} aria-pressed={zone === i} data-room-zone={i} onclick={() => turn(i)}><span></span></button>{/each}</div>
-    {#if failed}<p class="room-status" role="status">{L.archiveError} <button onclick={() => void load()}>{L.retry}</button></p>{:else if !data}<p class="room-status" role="status">{L.roomLoading}</p>{/if}
+    <div class="room-navigation"><button class="room-arrow" aria-label={L.roomPrev} disabled={zone === firstZone} onclick={() => turn(zone-1)}>‹</button><div class="room-caption" aria-live="polite"><h2>{names[zone]}</h2><p>{notes[zone]}</p></div><button class="room-arrow" aria-label={L.roomNext} disabled={zone === 2} onclick={() => turn(zone+1)}>›</button></div>
+    <div class="room-dots" role="group" aria-label={L.roomTitle}>{#each names as name,i (i)}{#if i >= firstZone}<button aria-label={name} aria-pressed={zone === i} data-room-zone={i} onclick={() => turn(i)}><span></span></button>{/if}{/each}</div>
+    {#if failed}<p class="room-status" role="status">{visitTeam ? L.visitLoadFail : L.archiveError} <button onclick={() => void load()}>{L.retry}</button></p>{:else if !data}<p class="room-status" role="status">{L.roomLoading}</p>{/if}
   </div>
   </div>
   <section class="room-list" aria-label={names[zone]} data-room-list={panel}>
   <div class="detail-body">
     {#if visited.records}<div hidden={panel !== 'records'}><OwnerArchive /></div>{/if}
-    {#if visited.titles}<div hidden={panel !== 'titles'}><OwnerHall onpick={(title) => { if (data) data = { ...data, owner: { ...data.owner, title } }; }} /></div>{/if}
+    {#if visitTeam}{#if panel === 'titles' && data}<OwnerHallVisit title={data.owner.title} {titles} />{/if}{:else if visited.titles}<div hidden={panel !== 'titles'}><OwnerHall onpick={(title) => { if (data) data = { ...data, owner: { ...data.owner, title } }; }} /></div>{/if}
     {#if panel === 'trophies'}
       <div class="trophy-gallery" data-trophy-gallery>
-        {#if !data}{#if failed}<p class="muted">{L.archiveError}</p>{:else}<Skeleton rows={4} />{/if}{#if failed}<button class="btn" onclick={() => void load()}>{L.retry}</button>{/if}
-        {:else if !awards}<p class="muted">{L.roomEmptyAwards}</p>
+        {#if !data}{#if failed}<p class="muted">{visitTeam ? L.visitLoadFail : L.archiveError}</p>{:else}<Skeleton rows={4} />{/if}{#if failed}<button class="btn" onclick={() => void load()}>{L.retry}</button>{/if}
+        {:else if !awards}<p class="muted">{visitTeam ? L.visitNoAwards : L.roomEmptyAwards}</p>
         {:else}
           {#if badges.length}<h2>{L.roomBadgeCount} <span>{badges.length}</span></h2><div class="gallery-badges">{#each badges as h (`${h.season}-${h.kind}`)}<div class="gallery-badge medal {h.medal}"><div><HonorEmblem {h} /></div><b>{h.title}</b><small>{teamSeasonLabel(h.season)}</small><p>{h.detail}</p></div>{/each}</div>{/if}
           {#if data.owner.cupHonors.length}<h2>{L.roomCupCount}</h2><CupHonors honors={data.owner.cupHonors} />{/if}

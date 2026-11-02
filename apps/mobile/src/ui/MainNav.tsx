@@ -40,7 +40,7 @@ function open(k: (typeof MAIN_SCREENS)[number]) {
 let recapChecked = false;
 
 export function MainNav() {
-  const { screen, achNew, recapNew, friendReq } = useSnapshot(appState);
+  const { screen, achNew, recapNew, friendReq, honorsVisit } = useSnapshot(appState);
   const ownerDot = ownerDotLabel({ friendReq, achNew, recapNew });
   // T-11-128 새 시즌 결산(안 열어 본 결산이 있으면 구단주 탭에 점). 앱을 열 때 한 번.
   useEffect(() => {
@@ -55,7 +55,11 @@ export function MainNav() {
       items={MAIN_SCREENS.map((k) => ({
         key: k,
         label: label(k),
-        active: screen === k || (k === 'owner' && (screen === 'honors' || screen === 'recap')),
+        active:
+          screen === k ||
+          (honorsVisit
+            ? k === 'hof' && screen === 'honors'
+            : k === 'owner' && (screen === 'honors' || screen === 'recap')),
         onPress: () => open(k),
         ...(k === 'owner'
           ? { dot: ownerDot ? 1 : 0, ...(ownerDot ? { dotLabel: ownerDot } : {}) }

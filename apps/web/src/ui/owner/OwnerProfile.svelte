@@ -14,7 +14,7 @@
   import CupHonors from '../cup/CupHonors.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
   import { appState } from '../state.svelte.js';
-  import { go } from '../nav.js';
+  import { go, openOwnerHallVisit } from '../nav.js';
 
   let { teamId }: { teamId: string } = $props();
 
@@ -73,7 +73,7 @@
           <div><dt>{L.statRetired}</dt><dd>{num(owner.stats.retired)}</dd></div>
           <div><dt>{L.statBestRank}</dt><dd>{rank(owner.stats.bestTeamRank)}</dd></div>
         </dl>
-        {#if mine}<button class="btn btn-sm" data-act="owner-hall" onclick={() => go('honors')}>{L.manage}</button>{/if}
+        {#if mine}<button class="btn btn-sm" data-act="owner-hall" onclick={() => go('honors')}>{L.manage}</button>{:else}<button class="btn btn-sm" data-act="owner-hall-visit" onclick={() => openOwnerHallVisit(teamId)}>{L.openHall}</button>{/if}
       </section>
 
       {#if owner.cupHonors.length}
