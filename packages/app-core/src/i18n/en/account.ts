@@ -31,7 +31,7 @@ export const account: Translation<AccountMsgs> = {
   unlinkFail: "Couldn't unlink your Google account. Try again in a moment.",
   deleteAccount: 'Delete account',
   deleteBody:
-    "Delete your account and the player records, teams, comments and chat saved on the server? This can't be undone. Game progress on this device stays.",
+    "Delete your account and the player records, teams, comments and chat saved on the server? This can't be undone. Payment records are kept for 5 years as required by law. Game progress on this device stays.",
   deleteConfirm: 'Delete',
   deleteDone: 'Your account was deleted. Game progress on this device stays.',
   deleteFail: "Couldn't delete your account. Try again in a moment.",

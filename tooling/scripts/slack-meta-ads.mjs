@@ -115,7 +115,7 @@ const change = (cur, prev) =>
   prev ? `${cur >= prev ? '+' : ''}${Math.round(((cur - prev) / prev) * 100)}%` : '전주 없음';
 const per = (spend, n, currency) => (n ? `${fmt(Math.round(spend / n))} ${currency}` : '-');
 /**
- * T-11-610 주간 성과: 지난 완결 주(계정 시간대 월~일) 광고별 지출 · 랜딩 조회와, 같은 주 우리 서버 1차 유입
+ * T-11-617 주간 성과: 지난 완결 주(계정 시간대 월~일) 광고별 지출 · 랜딩 조회와, 같은 주 우리 서버 1차 유입
  * (acquisition_sessions, utm_source=meta · facebook)의 방문 · 커리어 시작 · 스토어 클릭을 전주와 비교한다.
  */
 async function weeklyReport(db, env, api, info, prefix, link, now, fetcher) {

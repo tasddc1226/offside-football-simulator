@@ -175,7 +175,7 @@ export function inspectInfraHealth(state, now = Date.now()) {
   return {
     failed: state.issues.length > 0,
     warning: state.sizeBytes >= policy.d1IncludedStorageBytes * policy.storageWarningFraction,
-    summary: `D1 storage (including reusable pages): ${gib(state.sizeBytes)} GiB. Growth: ${Number.isFinite(state.growthBytesPerDay) ? (state.growthBytesPerDay / 1e6).toFixed(1) + ' MB/day' : 'unknown'}; days to 10 GB limit: ${Number.isFinite(state.daysToLimit) ? state.daysToLimit.toFixed(1) : 'unknown or no growth'}. The 5 GB included storage reference is account-wide, not a database limit.\nIssues: ${state.issues.join(', ') || 'none'}.\n`,
+    summary: `D1 storage (including reusable pages): ${gib(state.sizeBytes)} GiB. R2 recovery assurance: ${state.backupRecovery?.status ?? 'unknown (older report)'}. Live-copy completion alone does not prove recoverability. Growth: ${Number.isFinite(state.growthBytesPerDay) ? (state.growthBytesPerDay / 1e6).toFixed(1) + ' MB/day' : 'unknown'}; days to 10 GB limit: ${Number.isFinite(state.daysToLimit) ? state.daysToLimit.toFixed(1) : 'unknown or no growth'}. The 5 GB included storage reference is account-wide, not a database limit.\nIssues: ${state.issues.join(', ') || 'none'}.\n`,
   };
 }
 

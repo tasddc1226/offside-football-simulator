@@ -3,7 +3,7 @@ on:
   schedule:
     - cron: '37 * * * *'
     - cron: '5 0 * * *'
-    # T-11-610 매주 월요일 09:15 KST 주간 성과
+    # T-11-617 매주 월요일 09:15 KST 주간 성과
     - cron: '15 0 * * 1'
   workflow_dispatch:
     inputs:

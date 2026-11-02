@@ -2,7 +2,8 @@
 import { useMemo } from 'react';
 import { useSnapshot } from 'valtio';
 import { viewFromGame } from '../../game/host';
-import { goHome, goNew } from '../../game/nav';
+import { go, goHome, goNew } from '../../game/nav';
+import { loadHOF } from '@offside/game/hof-store';
 import { appState } from '../../store';
 import { Btn } from '../../ui/Btn';
 import { Topbar } from '../../ui/Topbar';
@@ -19,6 +20,8 @@ export default function Retired() {
   const hasG = !!snap.G;
   // 스냅숏(snap.G)이 바뀔 때만 다시 만든다 — viewFromGame은 원본 세이브를 읽는다.
   const v = useMemo(() => (hasG ? viewFromGame(appState.G!) : null), [snap.G]);
+  // T-11-611 첫 은퇴에만 내 구단으로 가는 길을 함께 보여 준다(서버 요청 없이 기기 기록으로 판단).
+  const firstRetire = useMemo(() => loadHOF().length <= 1, []);
   if (!v) return null;
   return (
     <CreditScreen footer={v.shareId ? <ShareBar id={v.shareId} /> : null}>
@@ -34,6 +37,11 @@ export default function Retired() {
             <Btn kind="primary" block testID="new" onPress={goNew}>
               {L.newCareer}
             </Btn>
+            {firstRetire ? (
+              <Btn block testID="my-club" onPress={() => go('owner')}>
+                {L.myClub}
+              </Btn>
+            ) : null}
             <Btn block testID="home" onPress={goHome}>
               {L.seeHof}
             </Btn>

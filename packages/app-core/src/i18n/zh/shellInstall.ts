@@ -6,6 +6,7 @@ export const shellInstall: Translation<ShellInstallMsgs> = {
   conversionShopBody: '進階商品需在 App 中購買。重抽券在網頁上也能用球隊資金購買。',
   conversionTitle: '在 App 中暢玩 OFFSIDE',
   conversionMilestone: '累積的紀錄，在 App 中也能管理',
+  conversionRetireTitle: '下一位球員就在 App 培養吧',
   conversionBenefit:
     '在 App 中可透過獎勵廣告確認潛力、獲得額外強化機會。依使用條件與廣告供應情況而定。',
   conversionTransfer: '進行中的生涯不會自動轉移。請在設定中複製備份碼，再匯入 App。',

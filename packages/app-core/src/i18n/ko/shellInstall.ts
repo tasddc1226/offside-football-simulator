@@ -7,6 +7,7 @@ const ko = {
     '프리미엄 상품 결제는 앱에서 제공해요. 리롤권은 웹에서도 구단 자금으로 살 수 있어요.',
   conversionTitle: '앱에서 오프사이드를 즐겨요',
   conversionMilestone: '쌓은 기록, 앱에서도 관리해요',
+  conversionRetireTitle: '다음 선수는 앱에서 키워요',
   conversionBenefit:
     '앱에서는 보상형 광고로 잠재력 확인과 추가 강화 기회를 받을 수 있어요. 이용 조건과 광고 제공 여부에 따라 달라요.',
   conversionTransfer:

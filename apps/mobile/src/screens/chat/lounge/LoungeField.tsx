@@ -5,9 +5,13 @@ import {
   View,
   Text,
   StyleSheet,
-  type GestureResponderEvent,
   type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
 } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import { useSnapshot } from 'valtio';
+import { prefs } from '../../../store';
 import { Canvas, Picture, Skia, createPicture, type SkPicture } from '@shopify/react-native-skia';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
@@ -41,7 +45,6 @@ import {
 import { drawPitch, drawScene, drawWorld } from '@offside/app-core/lounge/draw';
 import { EMOTES, drawEmote, type EmoteKey, type IconKey } from '@offside/app-core/lounge/emotes';
 import { broadcastFocus, drawStands } from '@offside/app-core/lounge/stadium';
-import { Press } from '../../../ui/Press';
 
 /** 받침 반지름 · 손잡이가 끝까지 기우는 거리. */
 const STICK_BASE = 56;
@@ -69,6 +72,52 @@ function Icon({ name, size = 24 }: { name: IconKey; size?: number }) {
   );
 }
 
+/**
+ * T-11-612 RN 터치 응답자는 한 번에 하나뿐이라 조이스틱을 잡으면 다른 버튼이 눌리지 않는다. 필드 버튼은 제스처 핸들러로 받아
+ * 손가락마다 따로 동작하게 하고, 게임 입력이라 손을 뗄 때가 아니라 닿는 순간 처리한다.
+ */
+function FieldPress(props: {
+  testID?: string;
+  accessibilityLabel: string;
+  onPress: () => void;
+  style: StyleProp<ViewStyle>;
+  children: React.ReactNode;
+}) {
+  const { motionOK } = useSnapshot(prefs);
+  const [down, setDown] = useState(false);
+  const onPress = useRef(props.onPress);
+  onPress.current = props.onPress;
+  const tap = useMemo(
+    () =>
+      Gesture.Tap()
+        .runOnJS(true)
+        .onBegin(() => {
+          setDown(true);
+          onPress.current();
+        })
+        .onFinalize(() => setDown(false)),
+    [],
+  );
+  return (
+    <GestureDetector gesture={tap}>
+      <View
+        collapsable={false}
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={props.accessibilityLabel}
+        onAccessibilityTap={props.onPress}
+        testID={props.testID}
+        style={[
+          props.style,
+          down && { opacity: 0.88, ...(motionOK ? { transform: [{ scale: 0.97 }] } : {}) },
+        ]}
+      >
+        {props.children}
+      </View>
+    </GestureDetector>
+  );
+}
+
 function RoundBtn(props: {
   label: string;
   testID: string;
@@ -77,14 +126,14 @@ function RoundBtn(props: {
   children: React.ReactNode;
 }) {
   return (
-    <Press
+    <FieldPress
       testID={props.testID}
       accessibilityLabel={props.label}
       onPress={props.onPress}
       style={[s.btn, props.pressed ? s.btnOn : null]}
     >
       {props.children}
-    </Press>
+    </FieldPress>
   );
 }
 
@@ -224,25 +273,25 @@ export function LoungeField(props: {
   }));
   const [emoteOpen, setEmoteOpen] = useState(false);
 
-  const onGrant = (e: GestureResponderEvent) => {
-    const { locationX: sx, locationY: sy } = e.nativeEvent;
+  const onGrant = (sx: number, sy: number): boolean => {
     const hit = pickActor(world, view, sx, sy, meIdRef.current);
     if (hit) {
       if (!hit.id.startsWith('bot-')) props.onPick(hit.id);
-      return;
+      return false;
     }
-    if (!meIdRef.current) return;
+    if (!meIdRef.current) return false;
     const ox = clamp(sx, STICK_BASE, view.w - STICK_BASE);
     const oy = clamp(sy, STICK_BASE, view.h - STICK_BASE);
     stickRef.current = { x: 0, y: 0, on: true, ox, oy };
     knob.value = { x: 0, y: 0 };
     setBase({ ox, oy });
+    return true;
   };
-  const onMove = (e: GestureResponderEvent) => {
+  const onMove = (x: number, y: number) => {
     const st = stickRef.current;
     if (!st.on) return;
-    let dx = (e.nativeEvent.locationX - st.ox) / STICK_REACH;
-    let dy = (e.nativeEvent.locationY - st.oy) / STICK_REACH;
+    let dx = (x - st.ox) / STICK_REACH;
+    let dy = (y - st.oy) / STICK_REACH;
     const n = Math.hypot(dx, dy);
     if (n > 1) {
       dx /= n;
@@ -257,6 +306,55 @@ export function LoungeField(props: {
     knob.value = { x: 0, y: 0 };
     setBase(null);
   };
+  // T-11-612 첫 손가락만 조이스틱을 잡는다. 필드에 닿은 다른 손가락은 무시한다(받침이 튀지 않게).
+  const stickInput = useRef({ onGrant, onMove, onRelease });
+  stickInput.current = { onGrant, onMove, onRelease };
+  const pad = useMemo(() => {
+    const touching = new Set<number>();
+    let stickTouch: number | null = null;
+    const release = () => {
+      touching.clear();
+      if (stickTouch === null) return;
+      stickTouch = null;
+      stickInput.current.onRelease();
+    };
+    const lift = (ids: number[], finish: () => void) => {
+      for (const id of ids) {
+        touching.delete(id);
+        if (id === stickTouch) {
+          stickTouch = null;
+          stickInput.current.onRelease();
+        }
+      }
+      if (touching.size === 0) finish();
+    };
+    return Gesture.Manual()
+      .runOnJS(true)
+      .onTouchesDown((e, state) => {
+        state.activate();
+        for (const t of e.changedTouches) {
+          touching.add(t.id);
+          if (stickTouch === null && stickInput.current.onGrant(t.x, t.y)) stickTouch = t.id;
+        }
+      })
+      .onTouchesMove((e) => {
+        const t = e.allTouches.find((c) => c.id === stickTouch);
+        if (t) stickInput.current.onMove(t.x, t.y);
+      })
+      .onTouchesUp((e, state) => {
+        lift(
+          e.changedTouches.map((t) => t.id),
+          () => state.end(),
+        );
+      })
+      .onTouchesCancelled((e, state) => {
+        lift(
+          e.changedTouches.map((t) => t.id),
+          () => state.fail(),
+        );
+      })
+      .onFinalize(release);
+  }, []);
 
   const mine = () => (meIdRef.current ? world.actors.get(meIdRef.current) : undefined);
   const doKick = () => {
@@ -467,20 +565,13 @@ export function LoungeField(props: {
 
   return (
     <View style={s.field} onLayout={onLayout} testID="lounge-field">
-      <View
-        style={StyleSheet.absoluteFill}
-        accessibilityLabel={L.fieldLabel}
-        onStartShouldSetResponder={() => true}
-        onMoveShouldSetResponder={() => true}
-        onResponderGrant={onGrant}
-        onResponderMove={onMove}
-        onResponderRelease={onRelease}
-        onResponderTerminate={onRelease}
-      >
-        <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
-          <Picture picture={picture} />
-        </Canvas>
-      </View>
+      <GestureDetector gesture={pad}>
+        <View style={StyleSheet.absoluteFill} collapsable={false} accessibilityLabel={L.fieldLabel}>
+          <Canvas style={StyleSheet.absoluteFill} pointerEvents="none">
+            <Picture picture={picture} />
+          </Canvas>
+        </View>
+      </GestureDetector>
 
       {recent.length ? (
         <View style={s.log} pointerEvents="none">
@@ -521,7 +612,7 @@ export function LoungeField(props: {
       ) : null}
 
       <View style={s.camera}>
-        <Press
+        <FieldPress
           testID="field-camera"
           accessibilityLabel={L.camera}
           onPress={() => setCamera(cam.index + 1)}
@@ -538,7 +629,7 @@ export function LoungeField(props: {
             <Circle cx={12} cy={13} r={3.2} fill="none" stroke="#fff" strokeWidth={2} />
           </Svg>
           <Text style={s.camName}>{L[`camera_${camera.key}`]}</Text>
-        </Press>
+        </FieldPress>
         {(
           [
             ['⟲', L.rotateLeft, () => rotateBy(-1)],
@@ -547,9 +638,9 @@ export function LoungeField(props: {
             ['+', L.zoomIn, () => zoomBy(1)],
           ] as const
         ).map(([t, label, fn]) => (
-          <Press key={label} accessibilityLabel={label} onPress={fn} style={s.camBtn}>
+          <FieldPress key={label} accessibilityLabel={label} onPress={fn} style={s.camBtn}>
             <Text style={s.camGlyph}>{t}</Text>
-          </Press>
+          </FieldPress>
         ))}
       </View>
 
@@ -558,7 +649,7 @@ export function LoungeField(props: {
           {emoteOpen ? (
             <View style={s.emotes}>
               {EMOTES.map((k) => (
-                <Press
+                <FieldPress
                   key={k}
                   testID={`field-emote-${k}`}
                   accessibilityLabel={L[`emote_${k}`]}
@@ -566,7 +657,7 @@ export function LoungeField(props: {
                   style={s.emoteBtn}
                 >
                   <Icon name={k} />
-                </Press>
+                </FieldPress>
               ))}
             </View>
           ) : null}
