@@ -1,10 +1,20 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { Env } from './env.ts';
-import { checkStoreVersions, compareVersions, playVersion, versionNotes } from './storeVersion.ts';
+import {
+  checkStoreVersions,
+  compareVersions,
+  iosLiveVersion,
+  playVersion,
+  versionNotes,
+} from './storeVersion.ts';
 
 const post = vi.hoisted(() => vi.fn(async () => ({})));
 vi.mock('./chat.ts', () => ({ chatClient: () => post }));
-vi.mock('./reviews.ts', () => ({ playAccount: () => ({ email: 'x', key: 'k' }) }));
+vi.mock('./reviews.ts', () => ({
+  ascReady: () => true,
+  ascToken: async () => 'asc',
+  playAccount: () => ({ email: 'x', key: 'k' }),
+}));
 vi.mock('./google.ts', () => ({ serviceAccountToken: async () => 'g' }));
 
 const ok = (body: unknown) => new Response(JSON.stringify(body), { status: 200 });
@@ -26,8 +36,18 @@ function stubs(opts: { latest?: string; ios?: string; playFails?: boolean } = {}
           android: { latest: opts.latest ?? '1.1.6' },
         },
       });
-    if (url.includes('itunes.apple.com'))
-      return ok({ results: [{ version: opts.ios ?? '1.1.6' }] });
+    if (url.includes('appstoreconnect'))
+      return ok({
+        data: [
+          {
+            attributes: {
+              versionString: opts.ios ?? '1.1.6',
+              appVersionState: 'READY_FOR_DISTRIBUTION',
+            },
+          },
+          { attributes: { versionString: '1.1.5', appVersionState: 'READY_FOR_DISTRIBUTION' } },
+        ],
+      });
     if (opts.playFails) return new Response('no', { status: 403 });
     if (init?.method === 'DELETE') {
       deleted.push(url);
@@ -55,6 +75,21 @@ describe('스토어 출시 감지 (T-11-609)', () => {
       ]),
     ).toEqual({ version: '1.1.6', staged: { version: '1.1.7', fraction: 0.2 } });
     expect(playVersion([{ name: '이름 없음', status: 'completed' }])).toBeNull();
+  });
+
+  it('App Store는 출시된 버전만 보고, 심사 중 · 수동 출시 대기는 세지 않는다', () => {
+    const v = (versionString: string, appVersionState: string) => ({
+      attributes: { versionString, appVersionState },
+    });
+    expect(
+      iosLiveVersion([
+        v('1.1.8', 'WAITING_FOR_REVIEW'),
+        v('1.1.7', 'PENDING_DEVELOPER_RELEASE'),
+        v('1.1.5', 'READY_FOR_DISTRIBUTION'),
+        v('1.1.6', 'READY_FOR_DISTRIBUTION'),
+      ]),
+    ).toEqual({ version: '1.1.6' });
+    expect(iosLiveVersion([v('1.1.7', 'IN_REVIEW')])).toBeNull();
   });
 
   it('같으면 조용하고, 단계적 출시 중에는 올리라고 하지 않는다', () => {
