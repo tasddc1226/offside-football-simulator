@@ -1,17 +1,18 @@
 import { Hono } from 'hono';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { AppEnv } from '../env.js';
-import { INFO_LOG_SAMPLE_RATE, logger } from './logger.js';
+import { INFO_LOG_SAMPLE_RATE, SLOW_REQUEST_MS, logger } from './logger.js';
 
 /** T-11-252 요청 로그 샘플링. 운영에서만 정상 응답 줄을 줄이고, 경고·오류와 다른 환경은 그대로 남긴다. */
-function build(environment: string) {
+function build(environment: string, elapsed = 0) {
   const app = new Hono<AppEnv>();
   app.use('*', async (c, next) => {
-    c.set('startedAt', Date.now());
+    c.set('startedAt', Date.now() - elapsed);
     c.set('requestId', 'req_test');
     await next();
   });
   app.use('*', logger);
+  app.get('/career/:id', (c) => c.text('ok'));
   app.get('/ok', (c) => c.text('ok'));
   app.get('/missing', (c) => c.text('missing', 404));
   return (path: string) =>
@@ -39,6 +40,23 @@ describe('요청 로그 샘플링', () => {
     expect(logSpy).toHaveBeenCalledTimes(1);
     const entry = JSON.parse(String(logSpy.mock.calls[0]?.[0]));
     expect(entry).toMatchObject({ level: 'info', status: 200, sampleRate: INFO_LOG_SAMPLE_RATE });
+  });
+
+  it('retains successful slow requests at the threshold and records the matched route', async () => {
+    logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    vi.spyOn(Math, 'random').mockReturnValue(0.99);
+    vi.spyOn(Date, 'now').mockReturnValue(100_000);
+    await build('production', SLOW_REQUEST_MS - 1)('/career/private-id');
+    expect(logSpy).not.toHaveBeenCalled();
+    await build('production', SLOW_REQUEST_MS)('/career/private-id');
+    const entry = JSON.parse(String(logSpy.mock.calls[0]?.[0]));
+    expect(entry).toMatchObject({
+      slow: true,
+      status: 200,
+      route: '/career/:id',
+      durationMs: 2000,
+    });
+    expect(entry.sampleRate).toBeUndefined();
   });
 
   it('운영의 경고·오류 응답은 전부 남긴다', async () => {

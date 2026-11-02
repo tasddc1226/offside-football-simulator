@@ -27,7 +27,7 @@
     what,
     who,
   } from '@offside/app-core/homeLive';
-  import { openPublicLegendById } from './legend.js';
+  import { openPublicLegendById } from './openLegend.js';
   import { motionOK } from './motion.js';
   import CountUp from './CountUp.svelte';
   import ClubMark from './ClubMark.svelte';

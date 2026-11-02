@@ -17,7 +17,7 @@
   import { loadHOF } from '@offside/game/hof-store';
   import { getHof } from '@offside/app-core/api/client';
   import { seasonNow } from './seasonNow.svelte.js';
-  import { openPublicLegend } from './legend.js';
+  import { openPublicLegend } from './openLegend.js';
   import { fmtValue, playerName } from '@offside/app-core/format';
   import { raiserLabel } from '@offside/app-core/hofRaiser';
   import { openHof } from './nav.js';
