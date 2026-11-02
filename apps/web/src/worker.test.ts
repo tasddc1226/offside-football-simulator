@@ -151,3 +151,31 @@ describe('T-11-597 동의 지역 쿠키', () => {
     expect((await at('/assets/index-abc.js', 'KR')).headers.get('Set-Cookie')).toBeNull();
   });
 });
+
+describe('T-11-621 친구 초대 링크 미리보기', () => {
+  const shell =
+    '<title>기본</title><meta name="description" content="기본" /><meta property="og:title" content="기본" /><meta property="og:description" content="기본" /><meta property="og:image" content="기본" />';
+  const withShell = {
+    fetch: async (req: Request) =>
+      new URL(req.url).pathname === '/app-shell'
+        ? new Response(shell, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+        : assets.fetch(req),
+  };
+  const open = (path: string) =>
+    worker.fetch(new Request(`https://offside-lab.com${path}`), { ASSETS: withShell }, ctx);
+
+  it('올바른 코드면 셸의 미리보기를 초대 문구로 바꾸고 색인하지 않는다', async () => {
+    const res = await open('/?friend=ABCD2345');
+    const html = await res.text();
+    expect(html).toContain('친구가 오프사이드 팀 대결에 초대했어요');
+    expect(html).toContain('ABCD-2345');
+    expect(html).toContain('og-offside-v7.png');
+    expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+    expect(await (await open('/?friend=ABCD2345&lang=en')).text()).toMatch(/invited you/);
+  });
+
+  it('형식이 틀린 코드는 평소 첫 화면이다', async () => {
+    const html = await (await open('/?friend=<script>')).text();
+    expect(html).toBe('<!doctype html>');
+  });
+});

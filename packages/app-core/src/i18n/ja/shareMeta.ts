@@ -6,4 +6,6 @@ export const shareMeta: Translation<ShareMetaMsgs> = {
   description: (p) =>
     `${p.age}歳で引退 · ${p.apps}試合${p.goals}ゴール${p.assists}アシスト · トロフィー${p.trophies}個`,
   club: (p) => ` · 最後の所属 ${p.club}`,
+  inviteTitle: '友だちがOFFSIDEのチーム対決に招待しました',
+  inviteDescription: (p) => `フレンドコード ${p.code} ・リンクを開くとフレンド申請画面に進みます`,
 };
