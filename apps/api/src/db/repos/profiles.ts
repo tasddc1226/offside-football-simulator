@@ -116,11 +116,13 @@ export async function setNickname(
   db: Db,
   id: string,
   nickname: string,
+  now = new Date().toISOString(),
 ): Promise<ProfileRecord | 'taken'> {
   try {
+    // T-11-616 nicknameSetAt은 새 이름 점검이 "마지막 점검 뒤에 정한 닉네임"을 찾는 기준이다.
     const [row] = await db
       .update(profiles)
-      .set({ nickname })
+      .set({ nickname, nicknameSetAt: now })
       .where(eq(profiles.id, id))
       .returning();
     return toRecord(row!);
