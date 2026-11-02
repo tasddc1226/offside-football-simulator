@@ -181,7 +181,7 @@ test('D5 명예의 전당 순위 기준 아래에 뜻이 바로 보이지 않는
     ),
   );
   await page.goto('/');
-  await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   const full = page.locator('[data-hof="full"]');
   await expect(full.locator('[data-hof-basis]')).toContainText('레전드 점수는');
   await full.locator('[data-hof-filters]').click();

@@ -26,7 +26,7 @@
     <p class="biz-info" data-testid="business-info">
       {B.name} {biz.name} · {B.owner} {biz.owner} · {B.regNo} {biz.regNo}
       (<a href={businessCheckUrl(biz.regNo)} target="_blank" rel="noopener noreferrer">{B.check}</a>)
-      · {B.mailOrder} {biz.mailOrderNo} · {B.address} {biz.address} · {B.phone} {biz.phone}
+      · {B.mailOrder} {biz.mailOrderNo}
     </p>
   {/if}
 </footer>

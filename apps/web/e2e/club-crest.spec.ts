@@ -103,6 +103,7 @@ test('홈 라이브 · 명예의 전당 · 은퇴 리포트에 클럽 엠블럼�
   await stub(page);
   await page.goto('/');
   await expect(page.locator('[data-home-live] .live-row svg.crest').first()).toBeVisible();
+  await page.locator('[data-act="hof"]').click();
   const hof = page.locator(`[data-hof-id="${ID}"]`);
   await expect(hof.locator('svg.crest')).toHaveCount(1);
   await hof.click();

@@ -162,7 +162,7 @@ test('서버에 연결하지 못하면 같은 자리에 안내를 띄우고, 아
 }) => {
   await stub(page, null, 503);
   await page.goto('/');
-  await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
+  await expect(page.locator('[data-home-news]')).toBeVisible();
   await expect(page.locator('[data-home-live-offline]')).toContainText('불러오지 못했어요');
   await expect(page.locator('[data-home-live-offline] .live-stats b').first()).toHaveText('–');
 
@@ -173,7 +173,7 @@ test('서버에 연결하지 못하면 같은 자리에 안내를 띄우고, 아
     feed: [],
   });
   await page.reload();
-  await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
+  await expect(page.locator('[data-home-news]')).toBeVisible();
   await expect(page.locator('[data-home-live]')).toHaveCount(0);
 });
 

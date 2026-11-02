@@ -14,7 +14,6 @@
   import Laurel from './Laurel.svelte';
   import ClubMark from './ClubMark.svelte';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-  import { motionOK } from './motion.js';
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';
   import { tn } from '@offside/game/i18n/names';
   import { intlLocale } from '@offside/contracts/i18n';
@@ -37,7 +36,6 @@
     wall = null,
     nation = null,
     showNation = true,
-    flow = false,
     compact = false,
     showPosition = true,
     showClub = false,
@@ -72,7 +70,6 @@
     /** 국적을 모르는 옛 로컬 기록에는 국기를 표시하지 않는다. */
     showNation?: boolean;
     /** T-10-125 기록 요약이 칸보다 길면 말줄임 대신 홈 전광판처럼 오른쪽에서 왼쪽으로 흘린다. */
-    flow?: boolean;
     compact?: boolean;
     showPosition?: boolean;
     /** 기록 요약 앞에 은퇴 시점 소속 구단 이름을 적는다(명예의 전당). */
@@ -90,12 +87,6 @@
   const [valueHead, valueSub] = $derived(typeof value === 'string' ? value.split(' ') : []);
   const clubName = $derived(showClub && club ? tn(club) : null);
   const stats = $derived(L.rowStats({ ...t, score: showScore ? t.score : null }));
-  // 흐를 때 두 벌을 이어 붙여 -50%까지 민다(HomeTicker와 같은 방식). 한 벌 = 글 + 뒤 여백(FLOW_GAP).
-  const FLOW_SPEED = 28; // px/초
-  const FLOW_GAP = 32;
-  let boxW = $state(0);
-  let copyW = $state(0);
-  const flowing = $derived(flow && motionOK && copyW - FLOW_GAP > boxW + 1);
 </script>
 
 {#snippet clubLabel()}
@@ -120,13 +111,7 @@
   {/if}
 </div>
 <div class="num hof-value" class:hof-value-text={typeof value === 'string'}>{#if valueSub}{valueHead} <small class="hof-value-sub">{valueSub}</small>{:else}{compact && typeof value === 'number' ? value.toLocaleString(intlLocale()) : value}{/if}{#if unit}<small>{unit}</small>{/if}</div>
-{#if flow}
-  <div class="muted fs-xs hof-stats" class:flowing bind:clientWidth={boxW}>
-    <div class="hof-flow" style:animation-duration={flowing ? `${copyW / FLOW_SPEED}s` : null}>
-      <span bind:clientWidth={copyW} style:padding-right="{FLOW_GAP}px">{#if clubName}{@render clubLabel()} · {/if}{#if owner}<span class="hof-owner" data-hof-owner>{L.raiserN({ owner })}</span> · {/if}{stats}</span>{#if flowing}<span aria-hidden="true" style:padding-right="{FLOW_GAP}px">{#if clubName}{@render clubLabel()} · {/if}{#if owner}<span class="hof-owner" data-hof-owner>{L.raiserN({ owner })}</span> · {/if}{stats}</span>{/if}
-    </div>
-  </div>
-{:else if compact}
+{#if compact}
   <div class="muted hof-stats hof-stats-compact">
     {#if clubName}{@render clubLabel()}{/if}{#if owner}<span class="hof-owner" data-hof-owner>{L.raiserN({ owner })}</span>{/if}{#if retireAge != null}<span>{L.retireAgeN({ n: retireAge })}</span><i class="hof-stats-break" aria-hidden="true"></i>{/if}<span>{L.appsN({ n: t.apps.toLocaleString(intlLocale()) })}</span><span>{L.goalsN({ n: t.goals.toLocaleString(intlLocale()) })}</span><span>{L.assistsN({ n: t.assists.toLocaleString(intlLocale()) })}</span>{#if retireAge != null}<span>{L.peakN({ n: t.peak })}</span>{#if t.ballon}<span class="hof-ballon">{L.ballonN({ n: t.ballon })}</span>{/if}{/if}
   </div>
