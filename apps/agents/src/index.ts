@@ -11,6 +11,7 @@ import { threadOf, type Task } from './thread.ts';
 import { discordInteraction } from './discordRoutes.ts';
 import { bridgeOf } from './bridge.ts';
 import { afterDeploy, approvalsBundle, captainMorning, watchStatus } from './team.ts';
+import { checkStoreVersions } from './storeVersion.ts';
 
 export { AgentThread } from './thread.ts';
 export { AgentLedger } from './ledger.ts';
@@ -49,6 +50,14 @@ export default {
             if (x.error) console.error('kpi ingest failed', x.source, x.day, x.error);
         }, log('kpi ingest')),
       );
+      // T-11-609 스토어에 새 버전이 열렸는데 앱 안내 버전(APP_VERSIONS.latest)이 그대로면 운영 채널에 알린다.
+      if (enabled(env, 'ops'))
+        ctx.waitUntil(
+          checkStoreVersions(env).then(
+            (r) => r.errors.forEach((e) => console.error('store version', e)),
+            log('store version'),
+          ),
+        );
       // T-11-395 · T-11-397 Threads · Instagram 토큰은 60일이면 끝나니 하루 한 번 보고 7일마다 갱신한다.
       for (const kind of ['threads', 'instagram'] as const)
         ctx.waitUntil(
@@ -187,6 +196,11 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   if (job === 'reviews')
     return Response.json(
       await scanReviews(env, Date.now(), undefined, url.searchParams.get('dry') === '1'),
+    );
+  // T-11-609 스토어 버전 비교: dry=1이면 알리지 않고 결과만 돌려준다.
+  if (job === 'store-version')
+    return Response.json(
+      await checkStoreVersions(env, { dry: url.searchParams.get('dry') === '1' }),
     );
   if (job === 'report') {
     await morningReport(env, Date.now(), `report:manual:${Date.now()}`);
