@@ -55,6 +55,18 @@ describe('navKey', () => {
       navKey(state({ screen: 'hof', hof: { ...hof, tab: 'teams', team: 't1', owner: true } })),
     ).toBe('hof:t1:owner');
   });
+  it('T-11-618 남의 명예관은 내 명예관과 따로 한 기록이고, 되살리면 다시 그 명예관이다', () => {
+    expect(navKey(state({ screen: 'honors' }))).toBe('honors');
+    const visit = state({ screen: 'honors', honorsVisit: 't1' });
+    expect(navKey(visit)).toBe('honors:t1');
+    const entry = navSnapshot(visit, 0);
+    const s = state({ screen: 'home' });
+    expect(navRestore(s, entry)).toBe('honors');
+    expect(s.honorsVisit).toBe('t1');
+    // 다른 화면 기록으로 돌아가면 방문 상태가 남지 않는다.
+    navRestore(s, navSnapshot(state({ screen: 'settings' }), 0));
+    expect(s.honorsVisit).toBeNull();
+  });
   it('나머지 화면은 화면 이름 그대로', () => {
     expect(navKey(state({ screen: 'settings' }))).toBe('settings');
     expect(navKey(state({ screen: 'game' }))).toBe('game');

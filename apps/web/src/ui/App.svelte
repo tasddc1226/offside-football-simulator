@@ -97,7 +97,7 @@
   $effect(() => {
     if (appState.screen === 'players' && !OwnerPlayers) void import('./owner/OwnerPlayers.svelte').then((m) => (OwnerPlayers = m.default));
   });
-  let OwnerHonors = $state<Component<Record<string, never>> | null>(null);
+  let OwnerHonors = $state<Component<{ visitTeam?: string | null }> | null>(null);
   $effect(() => {
     if ((appState.screen === 'honors' || appState.screen === 'recap') && !OwnerHonors) void import('./owner/OwnerHonors.svelte').then((m) => (OwnerHonors = m.default));
   });
@@ -218,7 +218,7 @@
     {:else if appState.screen === 'players'}
       {#if OwnerPlayers}<OwnerPlayers />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'honors'}
-      {#if OwnerHonors}<OwnerHonors />{:else}{@render waiting()}{/if}
+      {#if OwnerHonors}{#key appState.honorsVisit}<OwnerHonors visitTeam={appState.honorsVisit} />{/key}{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'team'}
       {#if Team}<Team />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'market'}

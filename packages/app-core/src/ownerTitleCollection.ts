@@ -5,11 +5,11 @@ import {
 } from '@offside/contracts/owner-title';
 import type { OwnerTitlesResponse } from './api/ownerProfile.js';
 import { ownerProfileText as L } from './i18n/ko/ownerProfile.js';
-import { parseTitle, permanentTitleOf, titleLabel } from './ownerTitle.js';
+import { parseHonorTitle, parseTitle, permanentTitleOf, titleLabel } from './ownerTitle.js';
 import { divisionName } from './teamDivision.js';
 
 type Permanent = OwnerTitlesResponse['permanent'][number];
-export type TitleGroupKey = TitleCategory | 'trophy';
+export type TitleGroupKey = TitleCategory | 'trophy' | 'honor';
 
 /**
  * One selectable card per earned title; nearest unfinished goals first, ties keep catalog order.
@@ -18,7 +18,7 @@ export type TitleGroupKey = TitleCategory | 'trophy';
 export function titleCollection(hall: Pick<OwnerTitlesResponse, 'titles' | 'permanent'>) {
   const earned = [
     ...new Set([...hall.permanent.filter((t) => t.earnedAt).map((t) => t.id), ...hall.titles]),
-  ].filter((id) => permanentTitleOf(id) || parseTitle(id));
+  ].filter((id) => permanentTitleOf(id) || parseTitle(id) || parseHonorTitle(id));
   const metricSeen = new Set<string>();
   const locked = hall.permanent
     .filter((t) => !t.earnedAt)
@@ -40,8 +40,9 @@ export function titleCollection(hall: Pick<OwnerTitlesResponse, 'titles' | 'perm
 /** T-11-556 Hall groups: permanent categories in catalog order, trophies (cup · league) last. Empty groups are dropped. */
 export function titleGroups(hall: Pick<OwnerTitlesResponse, 'titles' | 'permanent'>) {
   const { earned, locked } = titleCollection(hall);
-  const keys: TitleGroupKey[] = [...TITLE_CATEGORIES, 'trophy'];
-  const groupOf = (id: string): TitleGroupKey => permanentTitleOf(id)?.category ?? 'trophy';
+  const keys: TitleGroupKey[] = [...TITLE_CATEGORIES, 'trophy', 'honor'];
+  const groupOf = (id: string): TitleGroupKey =>
+    permanentTitleOf(id)?.category ?? (parseHonorTitle(id) ? 'honor' : 'trophy');
   return {
     earned: keys
       .map((key) => ({ key, ids: earned.filter((id) => groupOf(id) === key) }))
