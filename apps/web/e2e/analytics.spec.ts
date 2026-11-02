@@ -21,6 +21,54 @@ async function grantAnalytics(page: Page) {
     localStorage.setItem('offside_acquisition_choice_v1', 'denied');
   }, consentKey);
 }
+// T-11-615 두 탭 중복이 CI에서만 드물게 나와 원인을 못 잡았다. 실패하면 장부 읽기 · 쓰기 · 잠금 순서를 로그에 남긴다(커리어 ID는 남기지 않는다).
+async function traceMetricsLedger(page: Page, tab: string) {
+  await page.addInitScript((tab) => {
+    if (!navigator.locks) return;
+    const key = 'offside_player_metrics_v1';
+    const trace: unknown[] = [];
+    Reflect.set(window, '__ledgerTrace', trace);
+    const note = (op: string, raw?: string | null) => {
+      const ledger = raw ? JSON.parse(raw) : null;
+      trace.push({
+        tab,
+        at: performance.timeOrigin + performance.now(),
+        op,
+        ...(ledger && {
+          firstPlay: ledger.firstPlay ?? null,
+          phases: ledger.marks.map((m: { phase: number }) => m.phase),
+        }),
+      });
+    };
+    const { getItem, setItem } = Storage.prototype;
+    Storage.prototype.getItem = function (k) {
+      const raw = getItem.call(this, k);
+      if (k === key) note('read', raw);
+      return raw;
+    };
+    Storage.prototype.setItem = function (k, v) {
+      setItem.call(this, k, v);
+      if (k === key) note('write', v);
+    };
+    const request = navigator.locks.request.bind(navigator.locks) as (
+      name: string,
+      callback: LockGrantedCallback<unknown>,
+    ) => Promise<unknown>;
+    Reflect.set(
+      navigator.locks,
+      'request',
+      (name: string, callback: LockGrantedCallback<unknown>) => {
+        note('lock-ask');
+        return request(name, (lock: Lock | null) => {
+          note('lock-got');
+          const result = callback(lock);
+          note('lock-done');
+          return result;
+        });
+      },
+    );
+  }, tab);
+}
 async function prepare(page: Page) {
   await page.route(`${API}/**`, (r) => r.fulfill({ status: 503, body: '' }));
   await page.route('https://www.googletagmanager.com/**', (r) =>
@@ -245,6 +293,7 @@ test('two tabs completing the same half and repeated clicks emit one player mile
   context,
 }) => {
   await prepare(page);
+  await traceMetricsLedger(page, 'A');
   await grantAnalytics(page);
   await startCareer(page);
   await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
@@ -257,6 +306,7 @@ test('two tabs completing the same half and repeated clicks emit one player mile
   await clearPendingEvent(page);
   const tab = await context.newPage();
   await prepare(tab);
+  await traceMetricsLedger(tab, 'B');
   await tab.goto('/');
   await tab.locator('[data-act="continue"]').click();
   await expect(tab.locator('script[data-offside-analytics]')).toHaveCount(1);
@@ -271,17 +321,27 @@ test('two tabs completing the same half and repeated clicks emit one player mile
     ),
   );
   const combined = async () => [...(await commands(page)), ...(await commands(tab))];
-  await expect
-    .poll(async () => (await combined()).filter((x) => x[1] === 'play_complete').length)
-    .toBe(1);
-  const all = await combined();
-  expect(all.filter((x) => x[1] === 'player_first_play')).toHaveLength(1);
-  expect(
-    all.filter(
-      (x) => x[1] === 'game_operation' && (x[2] as { operation: string }).operation === 'progress',
-    ),
-  ).toHaveLength(3);
-  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).phase)).toBe(2);
+  try {
+    await expect
+      .poll(async () => (await combined()).filter((x) => x[1] === 'play_complete').length)
+      .toBe(1);
+    const all = await combined();
+    expect(all.filter((x) => x[1] === 'player_first_play')).toHaveLength(1);
+    expect(
+      all.filter(
+        (x) =>
+          x[1] === 'game_operation' && (x[2] as { operation: string }).operation === 'progress',
+      ),
+    ).toHaveLength(3);
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).phase)).toBe(2);
+  } catch (error) {
+    const traces = await Promise.all(
+      [page, tab].map((p) => p.evaluate(() => Reflect.get(window, '__ledgerTrace') as unknown[])),
+    );
+    const order = (traces.flat() as { at: number }[]).sort((a, b) => a.at - b.at);
+    console.log(`[metrics ledger trace] ${JSON.stringify(order)}`);
+    throw error;
+  }
 });
 
 for (const [source, campaign, content] of [

@@ -10,6 +10,11 @@ const ko = {
   roomTrophies: '트로피장',
   roomSeasonsNote: '시즌마다 쌓인 선수와 기록',
   roomOwnerNote: '내 이름 옆에 남길 칭호',
+  // T-11-618 남의 명예관.
+  visitOwnerNote: '이 구단주가 받은 칭호',
+  visitNoTitles: '아직 받은 칭호가 없어요.',
+  visitNoAwards: '아직 전시한 기록이 없어요.',
+  visitLoadFail: '명예관을 불러오지 못했어요.',
   roomTrophiesNote: '경쟁에서 남긴 배지와 컵 성적',
   roomPrev: '왼쪽 공간으로',
   roomNext: '오른쪽 공간으로',
@@ -138,7 +143,7 @@ const ko = {
   relatedExchange: '하루 카드 과제를 모두 마칠 때마다 오르는 칭호',
   viewAchievements: '시즌 업적',
   titleBridge:
-    '시즌 업적은 이번 시즌의 도전이에요. 영구 칭호는 여러 시즌의 반복 육성이나 확정된 최초 기록 배지로 받아요. 업적 점수를 그대로 합산하지는 않아요.',
+    '시즌 업적은 이번 시즌의 도전이에요. 영구 칭호는 여러 시즌의 반복 육성이나 확정된 최초 기록 배지로 받아요. 업적 점수를 그대로 합산하지는 않아요. 시즌 마감 순위 보상은 칭호가 아니라 기록 배지예요. 명예관 트로피장에서 볼 수 있어요.',
   titleFounder: '창단 멤버',
   conditionFounder: '프리시즌에 직접 키운 선수 1명 이상 은퇴 · 숨김 처리된 기록 제외',
   relatedPreseason: '프리시즌 참여 기념 칭호',

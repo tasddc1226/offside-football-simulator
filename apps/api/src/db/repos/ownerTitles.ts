@@ -4,7 +4,7 @@ import {
   CAREER_FEATS,
 } from '@offside/contracts/owner-title';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
-import type { TitleMetric } from '@offside/contracts/owner-title';
+import type { PermanentTitleId, TitleMetric } from '@offside/contracts/owner-title';
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { ownerTitleAwards, ownerTitleProgress, profiles, careers } from '../schema.js';
@@ -147,6 +147,19 @@ export async function permanentTitlesOf(db: Db, profileId: string, now: string) 
       isNew: !!award && !award.seenAt,
     };
   });
+}
+
+/** T-11-618 남의 명예관용 받은 칭호(목록 순서). permanentTitlesOf와 달리 진행도를 다시 세지 않아 읽기만 한다. */
+export async function earnedPermanentTitleIds(
+  db: Db,
+  profileId: string,
+): Promise<PermanentTitleId[]> {
+  const held = await db
+    .select({ id: ownerTitleAwards.titleId })
+    .from(ownerTitleAwards)
+    .where(eq(ownerTitleAwards.profileId, profileId));
+  const ids = new Set(held.map((a) => a.id));
+  return PERMANENT_TITLES.filter((t) => ids.has(t.id)).map((t) => t.id);
 }
 
 /** Bounded admin batch: no background sweep or per-screen full scan. Cursor can be reused after failure. */

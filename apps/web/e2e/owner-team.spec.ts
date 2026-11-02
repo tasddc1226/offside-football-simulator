@@ -568,7 +568,8 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expectNoA11yViolations(page);
   // Freeze after the accessibility scan; browser/CI work must not spend the choice budget.
   const now = await page.evaluate(() => Date.now());
-  await page.clock.pauseAt(new Date(now + 100));
+  // The target must stay ahead of the running clock until pauseAt arrives, even on a slow CI runner.
+  await page.clock.pauseAt(new Date(now + 1_000));
   await card.locator('[data-moment-choice="round"]').click();
   await expect.poll(() => picks).toEqual([{ choice: 'round' }]);
   await expect(card).toHaveCount(0);

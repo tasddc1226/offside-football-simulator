@@ -9,6 +9,11 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   roomTrophies: '獎盃櫃',
   roomSeasonsNote: '每個賽季累積的球員與紀錄',
   roomOwnerNote: '掛在名字旁的稱號',
+  // T-11-618 남의 명예관.
+  visitOwnerNote: '這位球隊老闆獲得的稱號',
+  visitNoTitles: '還沒有獲得稱號。',
+  visitNoAwards: '還沒有展示的紀錄。',
+  visitLoadFail: '無法載入榮譽館。',
   roomTrophiesNote: '在競爭中留下的徽章與盃賽成績',
   roomPrev: '看左邊',
   roomNext: '看右邊',
@@ -135,7 +140,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   relatedExchange: '每完成一天所有卡片任務就會晉升的稱號',
   viewAchievements: '賽季成就',
   titleBridge:
-    '賽季成就是本賽季的挑戰。永久稱號要靠多個賽季反覆培養，或確定的首創紀錄徽章來獲得，不是直接加總成就分數。',
+    '賽季成就是本賽季的挑戰。永久稱號要靠多個賽季反覆培養，或確定的首創紀錄徽章來獲得，不是直接加總成就分數。賽季結束的排名獎勵不是稱號，而是紀錄徽章，可在獎盃櫃查看。',
   titleFounder: '創隊成員',
   conditionFounder: '季前賽親手培養的球員有 1 名以上退役 · 不含已隱藏的紀錄',
   relatedPreseason: '紀念參與季前賽的稱號',
