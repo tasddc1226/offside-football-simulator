@@ -47,6 +47,14 @@ export const ChatBlockListResponseSchema = z.strictObject({
 export type ChatBlockListResponse = z.infer<typeof ChatBlockListResponseSchema>;
 
 /** T-11-344 채팅 사용자 창의 '프로필 보기' — 작성자의 가장 최근 시즌 팀(구단주 프로필을 팀 id로 연다). 팀이 없으면 null. */
+/** `POST /v1/chat/share`. 팀은 내 지금 팀, 선수는 내가 가진 카드만 올린다. */
+export const ChatShareInputSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('team') }),
+  z.strictObject({ kind: z.literal('player'), careerId: z.string().min(1).max(64) }),
+]);
+export type ChatShareInput = z.infer<typeof ChatShareInputSchema>;
+export const ChatShareResponseSchema = z.strictObject({ id: z.string() });
+export type ChatShareResponse = z.infer<typeof ChatShareResponseSchema>;
 export const ChatOwnerResponseSchema = z.strictObject({ teamId: z.string().nullable() });
 export type ChatOwnerResponse = z.infer<typeof ChatOwnerResponseSchema>;
 

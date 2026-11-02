@@ -126,6 +126,9 @@ export const MARKET_RECENT = 10;
  * GET /v1/market — 열린 등록(T-11-425부터 모든 시즌 카드). 시즌 사이 휴식기면 season null · 빈 목록. 모두에게 같은 응답이라 엣지에
  * 담는다 — 내 등록인지는 화면이 /v1/market/me의 listings와 id로 맞춘다.
  */
+/** `GET /v1/market/listings/:id` 열린 등록 하나(라운지 공유에서 구매창을 연다). 없으면 409 LISTING_GONE. */
+export const MarketListingResponseSchema = z.strictObject({ listing: MarketListingSchema });
+export type MarketListingResponse = z.infer<typeof MarketListingResponseSchema>;
 export const MarketListResponseSchema = z.strictObject({
   season: z.number().int().min(0).nullable(),
   items: z.array(MarketListingSchema),

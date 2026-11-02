@@ -9,12 +9,15 @@ import {
   ChatMessageIdSchema,
   ChatMuteInputSchema,
   ChatOwnerResponseSchema,
+  ChatShareInputSchema,
+  ChatShareResponseSchema,
   ChatTicketResponseSchema,
   CommentReportInputSchema,
 } from '@offside/contracts';
 import type { Context, Hono } from 'hono';
 import { getViewer, requireAdmin } from '../auth/admin.js';
 import { chatAuthor } from '../chat/rules.js';
+import { buildChatShare } from '../chat/share.js';
 import { chatRoom, chatRoomKey, chatRooms } from '../chat/socket.js';
 import { blockAuthor, listBlocks } from '../db/repos/boards.js';
 import {
@@ -148,6 +151,46 @@ export function registerChatRoutes(app: Hono<AppEnv>) {
       200,
       NO_STORE,
     );
+  });
+
+  // 내 팀 · 선수를 라운지에 올린다. 내용은 서버가 D1에서 만들고, 소켓이 아니라 여기서 쓰기 권한을 다시 본다.
+  app.post('/v1/chat/share', requireProfile, async (c) => {
+    const input = readBody(c, ChatShareInputSchema);
+    const key = chatRoomKey(c.req.query('room'));
+    const chat = room(c, key);
+    const { profileId } = getSessionOrThrow(c);
+    const db = getDb(c);
+    const iso = nowIso();
+    const [viewer, author, muted] = await Promise.all([
+      getViewer(c),
+      chatAuthor(profileId),
+      getMutedUntil(db, profileId, iso),
+    ]);
+    const reason = !viewer.google
+      ? 'login'
+      : !viewer.nickname
+        ? 'nickname'
+        : muted && !viewer.admin
+          ? 'muted'
+          : null;
+    if (reason) throw new AppError({ code: 'FORBIDDEN', message: reason, details: { reason } });
+    const built = await buildChatShare(db, profileId, input, key, iso);
+    if (!built) throw notFoundError('share target not found', 'CHAT_SHARE_NOT_FOUND');
+    const id = await chat.postShare(
+      {
+        profileId,
+        author,
+        nickname: viewer.nickname!,
+        admin: viewer.admin,
+        tier: (await ownerTierOfProfile(db, profileId, iso))?.tier ?? null,
+        title: viewer.title,
+        avatarId: viewer.avatarId ?? null,
+      },
+      built.body,
+      built.share,
+    );
+    if (!id) throw new AppError({ code: 'RATE_LIMITED', message: 'share rate' });
+    return ok(c, ChatShareResponseSchema, { id }, 201);
   });
 
   // T-11-167 차단 목록은 사람마다 달라 엣지 캐시하지 않는다. 화면에서 목록을 열 때만 부른다.

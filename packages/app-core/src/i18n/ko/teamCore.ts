@@ -20,6 +20,8 @@ const ko = {
   hintDirty: '바꾼 편성을 저장해야 경기할 수 있어요.',
   hintNoStarters: '은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.',
   hintNoMatches: '오늘 경기는 모두 치렀어요. 한국 시각 자정에 다시 열려요.',
+  hintNoMatchesNext: (p: { time: string }) =>
+    `오늘 경기는 모두 치렀어요. ${p.time}에 1경기가 더 열려요.`,
   hintRest: '시즌 사이 휴식기예요. 다음 시즌이 열리면 경기할 수 있어요.',
   hintPast: '지난 시즌 팀은 보기만 할 수 있어요. 지금 시즌을 고르면 경기할 수 있어요.',
   // 업적 표기

@@ -1,0 +1,39 @@
+{
+  "id": "lounge-share-rank-recharge",
+  "title": "라운지 공유와 랭크 경기 충전",
+  "items": [
+    "내 팀과 선수를 라운지에 올릴 수 있어요. 이적시장에 내놓은 선수를 올리면 다른 구단주가 바로 구매창을 열 수 있어요.",
+    "영구결번이 나오면 라운지 대화 사이에 배너로 알려요. 눌러서 그 선수의 커리어를 볼 수 있어요.",
+    "하루 랭크 경기 10번을 다 쓰면 3시간마다 1번씩 다시 생겨요. 다음 날 0시까지 쌓여요.",
+    "그라운드 화면과 이적시장 구매창을 보기 편하게 정리했어요."
+  ],
+  "en": {
+    "title": "Lounge sharing and ranked match recharge",
+    "items": [
+      "You can post your team and players in the Lounge. If you post a player you've listed, other owners can open the purchase sheet right away.",
+      "Retired numbers now appear as banners between Lounge messages. Tap one to see that player's career.",
+      "After using all 10 daily ranked matches, you get 1 more every 3 hours. They add up until midnight.",
+      "The ground screen and the market purchase sheet are easier to read."
+    ]
+  },
+  "ja": {
+    "title": "ラウンジ共有とランク戦の回復",
+    "items": [
+      "自分のチームと選手をラウンジに投稿できます。移籍市場に出品した選手を投稿すると、他のオーナーがすぐ購入画面を開けます。",
+      "永久欠番が出るとラウンジの会話の間にバナーで表示されます。タップするとその選手のキャリアを見られます。",
+      "1日10回のランク戦を使い切ると、3時間ごとに1回ずつ回復します。翌日0時まで貯まります。",
+      "グラウンド画面と移籍市場の購入画面を見やすく整理しました。"
+    ]
+  },
+  "zh": {
+    "title": "休息室分享與排名賽恢復",
+    "items": [
+      "可以把自己的球隊和球員分享到休息室。分享上架中的球員時，其他老闆能直接開啟購買畫面。",
+      "出現永久退役背號時，會以橫幅顯示在休息室對話之間。點一下就能查看該球員的生涯。",
+      "每天10場排名賽用完後，每3小時恢復1場，可累積到當天午夜。",
+      "整理了球場畫面和轉會市場購買畫面，看起來更清楚。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

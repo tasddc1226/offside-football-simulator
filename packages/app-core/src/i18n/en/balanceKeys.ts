@@ -50,6 +50,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   leagueHomeAdv: 'League home advantage',
   pastSalaryBudget: 'Past-season player salary budget',
   pastSalaryBudgetStep: 'Salary budget increase per season',
+  teamMatchRechargeMin: 'Ranked match recharge interval (min)',
   rerollPrice: 'Reroll ticket price',
   rerollPriceGrowth: 'Reroll ticket price growth',
   rerollDailyCap: 'Reroll tickets per day',

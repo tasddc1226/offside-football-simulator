@@ -189,8 +189,8 @@ const PATTERNS: [RegExp, (m: RegExpExecArray) => string][] = [
     (m) => `You've played all of today's friendlies (${m[1]} a day). They reopen at midnight KST.`,
   ],
   [
-    /^오늘 경기는 모두 치렀어요\(하루 (\d+)경기\)\. 한국 시각 자정에 다시 열려요\.$/,
-    (m) => `You've played all of today's matches (${m[1]} a day). They reopen at midnight KST.`,
+    /^오늘 경기는 모두 치렀어요\(하루 (\d+)경기\)\. 시간이 지나면 1경기씩 더 열려요\.$/,
+    (m) => `You've played all of today's matches (${m[1]} a day). One more opens as time passes.`,
   ],
   [
     /^지난 시즌 선수 급여가 예산을 넘어요\((\d+)\/(\d+)\)\. 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요\.$/,

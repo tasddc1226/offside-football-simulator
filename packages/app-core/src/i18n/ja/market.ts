@@ -56,7 +56,7 @@ export const market: Translation<MarketMsgs> = {
   notEnough: '足りません',
   buyNote:
     '獲得した選手はすぐにチームに入れられます。再び売ることはできますが、放出して資金に換えることはできません。',
-  ownListing: '自分が出品した選手です。',
+  ownListing: '自分が出品した選手です',
   buyShort: (p) =>
     `クラブ資金が${p.short}足りません。自分で育てた選手を放出すると資金が手に入ります。`,
   unlist: '出品を取り下げる',

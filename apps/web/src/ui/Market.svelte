@@ -21,6 +21,7 @@
   import {
     buyListing,
     cancelListing,
+    fetchListing,
     createListing,
     fetchMarket,
     fetchMarketChart,
@@ -91,10 +92,12 @@
   import MarketChart from './MarketChart.svelte';
   import MarketFind from './MarketFind.svelte';
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
-  import { go, takeFocus } from './nav.js';
+  import { go, takeFocus, takeMarketListing } from './nav.js';
   import { dur } from './motion.js';
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
   import { toast } from './helpers.js';
+  import { shareToLounge } from './team/loungeShare.js';
+  import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
   import { marketText as L } from '@offside/app-core/i18n/ko/market';
   import { RELEASE_MAX } from '@offside/contracts/market-value';
 
@@ -226,6 +229,13 @@
 
   // 시트: 영입 · 방출 확인.
   let buying = $state<MarketListing | null>(null);
+  // 라운지 공유 카드에서 왔으면 그 선수의 구매창부터 연다.
+  const sharedListing = takeMarketListing();
+  if (sharedListing)
+    void fetchListing(sharedListing).then((r) => {
+      if (r.ok) buying = r.data.listing;
+      else toast(LC.shareListingGone);
+    });
   let confirmRelease = $state(false);
 
   function open(v: MarketView) {
@@ -599,6 +609,7 @@
                   <span class="mk-name">{marketName(l.card, local)}</span>
                   <small>{@render styleTag(l.card)}{L.listedAgo({ price: fmtValue(l.price), ago: agoKo(Date.now() - Date.parse(l.createdAt)) })}</small>
                 </span>
+                <button class="icon-btn" data-act="listing-lounge-share" aria-label={LC.sharePlayerAria({ name: marketName(l.card, local) })} title={LC.sharePlayerAct} onclick={() => void shareToLounge({ kind: 'player', careerId: l.card.careerId })}><svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>
                 <button class="icon-btn" disabled={busy} data-act="cancel-listing" onclick={() => run(() => cancelListing(l.id), MARKET_TOAST.unlisted)}>{L.unlistBtn}</button>
               </li>
             {:else}
@@ -616,10 +627,12 @@
 </div>
 
 {#if buying && (me || guest)}
-  {@const block = !me ? null : myListingIds.has(buying.id) ? L.ownListing : buyBlock(buying.price, me.balance)}
+  {@const own = !!me && myListingIds.has(buying.id)}
+  {@const block = !me || own ? null : buyBlock(buying.price, me.balance)}
   {@const diff = priceDiff(buying.price, buying.card.cardValue)}
   <button class="mk-scrim" aria-label={L.close} onclick={closeSheets}></button>
   <div class="mk-sheet" role="dialog" aria-modal="true" aria-label={L.sheetBuy}>
+    <button class="mk-x" aria-label={L.close} data-act="market-sheet-close" onclick={closeSheets}><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
     <div class="mk-detail">
       <div class="mk-detail-card">
         <PlayerCard player={asPlayer(buying.card)} name={marketName(buying.card, local)} rating={buying.card.peak} role={detailPosOf(buying.card)} />
@@ -632,25 +645,25 @@
       <p class="mk-salary" data-market-salary>{TC.salaryLabel} · {marketSalaryText(buying.card, season)}</p>
     </div>
     <div class="mk-confirm">
-      <h2>{me ? L.buyTitle : L.loginTitle}</h2>
+      <h2>{own ? L.ownListing : me ? L.buyTitle : L.loginTitle}</h2>
       <dl class="mk-lines">
         <div><dt>{L.baseLine}</dt><dd>{fmtValue(buying.card.cardValue)}</dd></div>
         <div class="big"><dt>{L.price}</dt><dd>{fmtValue(buying.price)} <small class="mk-{diff.tone}">{diff.text}</small></dd></div>
-        {#if me}
+        {#if me && !own}
           <div class="rule"></div>
           <div><dt>{L.fundsNow}</dt><dd>{fundsText(me.balance)}</dd></div>
           <div class="strong"><dt>{L.fundsAfter}</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough}</dd></div>
         {/if}
       </dl>
       <MarketChart card={buying.card} />
-      <p class="mk-note" data-market-login={!me ? '' : undefined}>{me ? L.buyNote : L.loginToBuy}</p>
+      {#if !own}<p class="mk-note" data-market-login={!me ? '' : undefined}>{me ? L.buyNote : L.loginToBuy}</p>{/if}
       {#if block}<p class="mk-err">{block}</p>{/if}
       {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
-      <div class="mk-actions">
-        <button class="btn" onclick={closeSheets}>{L.close}</button>
+      <div class="mk-actions mk-foot" class:pair={own}>
         {#if !me}
           <LoginButtons act="market-login" back={{ market: true }} />
-        {:else if myListingIds.has(buying.id)}
+        {:else if own}
+          <button class="btn" data-act="listing-lounge-share" onclick={() => void shareToLounge({ kind: 'player', careerId: buying!.card.careerId })}>{LC.sharePlayerAct}</button>
           <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), MARKET_TOAST.unlisted)}>{L.unlist}</button>
         {:else}
           <button class="btn btn-accent" data-act="buy" disabled={busy || !!block} onclick={() => run(() => buyListing(buying!.id, buying!.price), MARKET_TOAST.bought)}>
@@ -1656,6 +1669,44 @@
   }
   .mk-actions .btn {
     min-height: 50px;
+  }
+  /* 구매창: 닫기는 오른쪽 위에 늘 보이고, 구매 · 로그인 버튼은 스크롤해도 아래에 붙어 있다. */
+  .mk-x {
+    position: sticky;
+    top: 8px;
+    z-index: 2;
+    flex: none;
+    display: grid;
+    place-items: center;
+    align-self: flex-end;
+    width: 44px;
+    height: 44px;
+    margin: 8px 8px -52px 0;
+    border: 0;
+    border-radius: 50%;
+    background: color-mix(in srgb, var(--surface) 80%, transparent);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .mk-x:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  .mk-foot {
+    position: sticky;
+    bottom: 0;
+    grid-template-columns: minmax(0, 1fr);
+    margin: 0 -20px calc(-16px - var(--safe-b));
+    padding: 12px 20px calc(12px + var(--safe-b));
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .mk-foot.pair {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .mk-foot :global(.login-btns-block) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   }
   .mk-err {
     color: var(--bad);

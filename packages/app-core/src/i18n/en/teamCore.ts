@@ -18,6 +18,8 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   hintDirty: 'Save your lineup changes to play matches.',
   hintNoStarters: 'Add at least one retired player to play matches.',
   hintNoMatches: "You've played all of today's matches. They reopen at midnight Korea time.",
+  hintNoMatchesNext: (p: { time: string }) =>
+    `You've played all of today's matches. One more opens at ${p.time}.`,
   hintRest: 'The off-season break. You can play once the next season opens.',
   hintPast: 'Past-season teams are view only. Pick the current season to play.',
   achOneClubHint:

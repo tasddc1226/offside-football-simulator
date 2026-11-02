@@ -55,7 +55,7 @@ export const market: Translation<MarketMsgs> = {
   fundsAfter: '簽下後剩餘資金',
   notEnough: '不足',
   buyNote: '簽下的球員可以馬上放進球隊。可以再次出售，但無法釋出換成資金。',
-  ownListing: '這是你上架的球員。',
+  ownListing: '這是你上架的球員',
   buyShort: (p) => `俱樂部資金還差${p.short}。釋出親手培養的球員就能獲得資金。`,
   unlist: '撤下上架',
   buyFor: (p) => `以${p.price}簽下`,

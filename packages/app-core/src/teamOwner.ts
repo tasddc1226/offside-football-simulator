@@ -1,5 +1,6 @@
 // T-10-092 구단주 팀 화면의 순수 로직(웹 team/Team.svelte · 앱 screens/owner/Team.tsx 공용, T-11-005).
 // 편성(자동 배치·자리 바꾸기)·선수 고르기 후보·업적 표기·경기 결과 표기처럼 화면이 그리기 전에 계산하는 것만 둔다.
+import { intlLocale } from '@offside/contracts/i18n';
 import {
   LEAGUE_FATIGUE_MAX_STEPS,
   leagueFatiguePenalty,
@@ -405,6 +406,7 @@ export function playHintOf(
   team: OwnerTeam | null,
   dirty: boolean,
   matchesLeft: number,
+  matchesNextAt?: string | null,
 ): string | null {
   return !team
     ? L.hintNoTeam
@@ -412,9 +414,16 @@ export function playHintOf(
       ? L.hintDirty
       : team.slots.every((s) => s.careerId === null)
         ? L.hintNoStarters
-        : matchesLeft === 0
-          ? L.hintNoMatches
-          : null;
+        : matchesLeft > 0
+          ? null
+          : matchesNextAt
+            ? L.hintNoMatchesNext({
+                time: new Date(matchesNextAt).toLocaleTimeString(intlLocale(), {
+                  hour: 'numeric',
+                  minute: '2-digit',
+                }),
+              })
+            : L.hintNoMatches;
 }
 
 // ───────── 시즌 업적 ─────────
@@ -625,12 +634,13 @@ export function matchHintOf(
   season: number,
   current: number | null,
   cupSeason?: number | null,
+  matchesNextAt?: string | null,
 ): string | null {
   if (current === null) return L.hintRest;
   if (isPreseasonLegacy(season, current)) return L.hintPreseason;
   if (season > 0 && season === cupSeason) return L.hintCupTeam;
   if (season !== current) return L.hintPast;
-  return playHintOf(team, dirty, matchesLeft);
+  return playHintOf(team, dirty, matchesLeft, matchesNextAt);
 }
 
 // ───────── 경기 결과 ─────────

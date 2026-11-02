@@ -4,7 +4,7 @@
   // T-10-092 팀 프로필(라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 · 좋아요/조회수 · 팀 히스토리
   // 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
   // T-11-335 감독 칸에 앉힌 감독(이름 · 등급 · 포메이션 효과)과 줄 힘의 감독 보정을 내 팀 화면처럼 보인다.
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import {
     fetchPublicTeamStats,
     fetchTeamProfile,
@@ -71,12 +71,25 @@
     ({ team, liked, mine } = r.data);
     friend = r.data.friend ?? null;
     status = 'ready';
+    if (appState.hof.squad) {
+      appState.hof.squad = false;
+      void tick().then(scrollToSquad);
+    }
     if (!mine) {
       team.views += 1;
       void viewTeam(id);
     }
   }
   onMount(() => void load());
+
+  /** 위에 붙는 기록실 탭에 가리지 않게 그라운드를 화면 위쪽에 맞춘다. */
+  function scrollToSquad() {
+    const pitch = document.querySelector('[data-pitch-frame]');
+    if (!pitch) return;
+    const tabs = document.querySelector<HTMLElement>('.hof-tabs');
+    const stuck = tabs ? tabs.offsetHeight + (parseFloat(getComputedStyle(tabs).top) || 0) : 0;
+    window.scrollTo({ top: scrollY + pitch.getBoundingClientRect().top - stuck - 8, behavior: 'instant' });
+  }
 
   /** T-11-150 이 팀 구단주의 프로필(뒤로 가면 이 팀 프로필로). */
   function openOwner() {

@@ -50,6 +50,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   leagueHomeAdv: '聯賽主場優勢',
   pastSalaryBudget: '過去賽季球員薪資預算',
   pastSalaryBudgetStep: '每賽季薪資預算增加',
+  teamMatchRechargeMin: '排名賽恢復間隔（分鐘）',
   rerollPrice: '重抽券價格',
   rerollPriceGrowth: '重抽券價格上漲倍率',
   rerollDailyCap: '每日重抽券購買數',
