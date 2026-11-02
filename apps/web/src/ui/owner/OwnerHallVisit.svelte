@@ -1,6 +1,6 @@
 <script lang="ts">
   // T-11-618 남의 명예관의 칭호 칸 — 받은 칭호만 묶음별로 보여 준다(고르기 · 진행도는 내 명예관에만 있다).
-  import { titleLabel, titleCondition, permanentTitleOf, titleGradeLabel, titleCategoryLabel } from '@offside/app-core/ownerTitle';
+  import { titleLabel, titleCondition, permanentTitleOf, titleKindLabel, titleCategoryLabel } from '@offside/app-core/ownerTitle';
   import { titleGroups, titleTierText } from '@offside/app-core/ownerTitleCollection';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from '../cup/TitleBadge.svelte';
@@ -19,7 +19,7 @@
           <div class="visit-head">
             <span aria-hidden="true"><TitleBadge title={id} size="icon" /></span>
             <strong>{titleLabel(id)}</strong>
-            <small class="muted">{def ? titleGradeLabel(def.grade) : L.titleCup}{#if titleTierText(id)} · {titleTierText(id)}{/if}</small>
+            <small class="muted">{titleKindLabel(id)}{#if titleTierText(id)} · {titleTierText(id)}{/if}</small>
             {#if title === id}<small class="visit-using">✓ {L.titleUsing}</small>{/if}
           </div>
           {#if def}<p class="muted fs-sm">{titleCondition(id)}</p>{/if}

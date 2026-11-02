@@ -123,6 +123,15 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   categoryLegacy: 'Club legacy',
   categoryTeam: 'Owner team',
   categoryTrophy: 'Trophies',
+  categoryHonor: 'Record badges',
+  titleHonorAchievements: 'Achievements',
+  titleHonorTeam: 'Team rating',
+  titleHonorHof: 'Hall of Fame',
+  titleHonorFirstPlace: '#1',
+  titleHonorTop: (p: { band: number }) => `Top ${p.band}`,
+  titleHonorRank: (p: { season: string; name: string; rank: string }) =>
+    `${p.season} ${p.name} ${p.rank}`,
+  titleHonorFirst: (p: { season: string }) => `${p.season} Server first`,
   tierStep: (p: { step: number; steps: number }) => `Tier ${p.step}/${p.steps}`,
   nextTier: (p: { name: string; progress: string }) => `Next tier · ${p.name} ${p.progress}`,
   divisionNone: 'None yet',
@@ -144,7 +153,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   relatedExchange: "Earned by finishing all of a day's card challenges",
   viewAchievements: 'Season achievements',
   titleBridge:
-    'Season achievements are challenges for this season. Permanent titles reward repeated development across seasons or finalized season-first honors. Achievement points are not added toward titles. Season-end ranking rewards are record badges, not titles. You can find them in the Trophy cabinet.',
+    'Season achievements are challenges for this season. Permanent titles reward repeated development across seasons or finalized season-first honors. Achievement points are not added toward titles. Season-end ranking rewards are record badges, not titles. Ranking badges and server firsts can be equipped from this list.',
   titleFounder: 'Founding member',
   conditionFounder:
     'Retire at least 1 player you developed in preseason, excluding hidden records.',

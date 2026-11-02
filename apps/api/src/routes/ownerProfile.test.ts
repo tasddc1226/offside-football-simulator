@@ -122,6 +122,45 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
   const putTitle = (cookie: string, title: string | null) =>
     call('PUT', '/v1/owner/title', { cookie, body: { title } });
 
+  it('T-11-619 마감이 끝난 시즌의 순위 배지 · 최초 기록만 대표 칭호로 달 수 있다', async () => {
+    const a = await owner('알파');
+    vi.setSystemTime(new Date('2026-12-30T00:00:00.000Z')); // 프리시즌이 끝난 뒤
+    const insert = (kind: 'achievements' | 'first' | 'wall-of-honor', band: number | null) =>
+      ctx.db.insert(ownerHonors).values({
+        profileId: a.profileId,
+        season: 0,
+        kind,
+        band,
+        rank: band,
+        value: band === null ? 1 : null,
+        grantedAt: AT,
+      });
+    await insert('achievements', 100);
+    await insert('first', null);
+    await insert('wall-of-honor', null);
+    const put = (t: string) => putTitle(a.cookie, t);
+    // 프리시즌 마감 집계가 끝나기 전에는 목록에 없고 달 수도 없다.
+    expect((await put('honor-0-achievements-100')).status).toBe(409);
+    await ctx.db
+      .insert(appMeta)
+      .values({ key: 'season-close:0', value: JSON.stringify({ step: 'done' }) });
+    const my = MyRes.parse(
+      await (await call('GET', '/v1/owner/title', { cookie: a.cookie })).json(),
+    ).data;
+    expect(my.titles).toEqual(
+      expect.arrayContaining(['honor-0-achievements-100', 'honor-0-first']),
+    );
+    expect(my.titles.some((t) => t.includes('wall-of-honor'))).toBe(false);
+    // 받지 않은 단계 · 달 수 없는 종류는 거절한다.
+    expect((await put('honor-0-achievements-1')).status).toBe(409);
+    expect((await put('honor-0-wall-of-honor')).status).toBe(400);
+    expect((await put('honor-0-achievements-100')).status).toBe(200);
+    const pub = OwnerRes.parse(
+      await (await call('GET', `/v1/owners/by-team/${a.team.id}`)).json(),
+    ).data;
+    expect(pub.owner.title).toBe('honor-0-achievements-100');
+  });
+
   it('팀 id로 남의 구단주 프로필을 보고, 받은 칭호 가운데서만 대표 칭호를 고른다', async () => {
     const a = await owner('알파');
     await honor(a, 1, 'champion');
