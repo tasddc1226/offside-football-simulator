@@ -210,9 +210,14 @@ export const profiles = sqliteTable(
     title: text('title'),
     titlePinned: integer('title_pinned').notNull().default(0),
     avatarId: text('avatar_id'),
+    /** T-11-616 닉네임을 정한(바꾼) 시각. 새 이름 점검(apps/agents)이 마지막 점검 뒤에 생긴 닉네임만 읽는 기준이다. 옛 닉네임은 null. */
+    nicknameSetAt: text('nickname_set_at'),
   },
   (table) => [
     index('profiles_created_idx').on(table.createdAt),
+    index('profiles_nickname_set_idx')
+      .on(table.nicknameSetAt)
+      .where(sql`${table.nicknameSetAt} is not null`),
     index('profiles_last_seen_idx').on(table.lastSeenAt),
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
     uniqueIndex('profiles_friend_code_unique').on(table.friendCode),
@@ -869,6 +874,8 @@ export const boardCommentReports = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.commentId, table.profileId] }),
     index('board_comment_reports_profile_idx').on(table.profileId),
+    // T-11-616 신고 알림이 마지막 알림 뒤에 들어온 신고만 읽는다.
+    index('board_comment_reports_created_idx').on(table.createdAt),
   ],
 );
 
@@ -948,6 +955,7 @@ export const teamCommentReports = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.commentId, table.profileId] }),
     index('team_comment_reports_profile_idx').on(table.profileId),
+    index('team_comment_reports_created_idx').on(table.createdAt),
   ],
 );
 
@@ -1175,9 +1183,14 @@ export const ownerTeams = sqliteTable(
     coachId: text('coach_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    /** T-11-616 구단 이름 · 감독 이름이 새로 생기거나 바뀐 시각(새 이름 점검 기준). 옛 팀은 null. */
+    nameChangedAt: text('name_changed_at'),
   },
   (table) => [
     uniqueIndex('owner_teams_profile_season_unique').on(table.profileId, table.season),
+    index('owner_teams_name_changed_idx')
+      .on(table.nameChangedAt)
+      .where(sql`${table.nameChangedAt} is not null`),
     // 상대 목록: 같은 시즌에서 내 팀 OVR 위아래로 가까운 팀을 찾는다.
     index('owner_teams_season_ovr_idx').on(table.season, table.ovr),
     // 라이브 랭킹(팀 랭킹).

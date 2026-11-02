@@ -29,6 +29,7 @@ import { consumeCommunityPush } from './push/communityQueue.js';
 import { runCup } from './team/cup.js';
 import { finishStaleLive } from './team/liveMatch.js';
 import { runCupAutopilot } from './team/cupAutopilot.js';
+import { alertNewReports } from './cron/reportAlert.js';
 import { runLeague } from './team/league.js';
 import { alertLeagueStalls } from './team/leagueAlert.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
@@ -165,6 +166,10 @@ export default {
           .catch(logged('league-alert'));
       // T-11-251 다음 회차 만들기 → 접수 시작 알림 → 밀린 단계 슬랙 경보(15분마다).
       await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
+      // T-11-616 새 신고(이름 · 채팅 · 댓글)를 5분 단위로 묶어 운영 알림 채널에 알린다. 실패해도 신고와 다음 단계는 그대로다.
+      await alertNewReports(env, controller.scheduledTime)
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'report-alert', ...r })))
+        .catch(logged('report-alert'));
       // A cron round can commit before a later step fails; purge even on a partial run.
       if (env.PUBLIC_API_ORIGIN)
         await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, STALE.cupChanged()).catch((e) =>

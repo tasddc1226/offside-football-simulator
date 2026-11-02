@@ -12,6 +12,8 @@ import { discordInteraction } from './discordRoutes.ts';
 import { bridgeOf } from './bridge.ts';
 import { afterDeploy, approvalsBundle, captainMorning, watchStatus } from './team.ts';
 import { checkStoreVersions } from './storeVersion.ts';
+import { checkNewNames } from './nameCheck.ts';
+import { chatClient } from './chat.ts';
 
 export { AgentThread } from './thread.ts';
 export { AgentLedger } from './ledger.ts';
@@ -56,6 +58,19 @@ export default {
           checkStoreVersions(env).then(
             (r) => r.errors.forEach((e) => console.error('store version', e)),
             log('store version'),
+          ),
+        );
+      // T-11-616 마지막 점검 뒤에 새로 정하거나 바뀐 닉네임 · 구단 이름 · 감독 이름을 분류해 의심되는 것만 운영자에게 보인다(가리지 않는다).
+      if (enabled(env, 'ops'))
+        ctx.waitUntil(
+          checkNewNames(env).then(
+            (r) =>
+              r.names &&
+              console.log(
+                'name check',
+                JSON.stringify({ ...r, costUsd: Number(r.costUsd.toFixed(4)) }),
+              ),
+            nameCheckFailed(env),
           ),
         );
       // T-11-395 · T-11-397 Threads · Instagram 토큰은 60일이면 끝나니 하루 한 번 보고 7일마다 갱신한다.
@@ -106,6 +121,16 @@ export default {
     if (enabled(env, 'plan')) ctx.waitUntil(scanReactions(env));
   },
 } satisfies ExportedHandler<Env>;
+
+/** 새 이름 점검이 실패하면 로그(오류 글만, 이름 없음)와 운영자 채널에 한 줄을 남긴다. 알리지 못해도 조용히 넘어간다. */
+const nameCheckFailed = (env: Env) => async (e: unknown) => {
+  const why = String(e).slice(0, 200);
+  console.error('name check failed', why);
+  await chatClient(env, 'ops')('chat.postMessage', {
+    channel: env.DESK_CHANNEL,
+    text: `*새 이름 점검에 실패했어요* ${why}\n다음 점검(내일 아침)에 같은 이름부터 다시 봐요.`,
+  }).catch(() => undefined);
+};
 
 /** wrangler.jsonc triggers와 같은 값. */
 export const REPORT_CRON = '50 23 * * *';
@@ -202,6 +227,9 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
     return Response.json(
       await checkStoreVersions(env, { dry: url.searchParams.get('dry') === '1' }),
     );
+  // T-11-616 새 이름 점검: dry=1이면 읽기만 한다(모델 · 글 · 커서 없이 읽은 이름 수만 돌려준다).
+  if (job === 'name-check')
+    return Response.json(await checkNewNames(env, { dry: url.searchParams.get('dry') === '1' }));
   if (job === 'report') {
     await morningReport(env, Date.now(), `report:manual:${Date.now()}`);
     return Response.json({ queued: 'report' });

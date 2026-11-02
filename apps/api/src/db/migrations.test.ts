@@ -453,6 +453,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   ],
   profiles: [
     'avatar_id',
+    // T-11-616 새 이름 점검 기준 시각.
+    'nickname_set_at',
     'id',
     'recovery_code_hash',
     'recovery_code_issued_at',
@@ -749,6 +751,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'lineup_value_closed',
     // T-11-570 컵 명단 프리셋 OVR.
     'cup_ovr',
+    // T-11-616 구단 · 감독 이름이 새로 생기거나 바뀐 시각.
+    'name_changed_at',
   ],
   team_lineup_cards: ['team_id', 'slot', 'career_id'],
   team_likes: ['team_id', 'profile_id', 'created_at'],
