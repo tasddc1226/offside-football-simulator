@@ -8,6 +8,7 @@ import {
   bandCardPath,
   careerShareMeta,
   injectShareMeta,
+  inviteShareMeta,
   OG_VERSION,
   shareLang,
 } from './share-meta.js';
@@ -120,5 +121,17 @@ describe('injectShareMeta', () => {
     expect(html).toContain(`<meta property="og:title" content="A$'B$&amp;C$1 · `);
     expect(html.match(/<title>/g)).toHaveLength(1);
     expect(html.length).toBeLessThan(shell.length + 1000);
+  });
+});
+
+describe('T-11-621 친구 초대 미리보기', () => {
+  it('코드를 읽기 쉽게 보여 주고 언어를 링크에 남긴다', () => {
+    const ko = inviteShareMeta('ABCDEFGH', 'https://offside-lab.com');
+    expect(ko.description).toContain('ABCD-EFGH');
+    expect(ko.image).toBe('https://offside-lab.com/og-offside-v7.png');
+    expect(ko.url).toBe('https://offside-lab.com/?friend=ABCDEFGH');
+    const en = inviteShareMeta('ABCDEFGH', 'https://offside-lab.com', 'en');
+    expect(en.title).toMatch(/invited/);
+    expect(en.url).toBe('https://offside-lab.com/?friend=ABCDEFGH&lang=en');
   });
 });

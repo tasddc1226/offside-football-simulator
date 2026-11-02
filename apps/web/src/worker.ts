@@ -11,7 +11,8 @@ import {
 import { NEWS_ID } from './news-id.js';
 import { resolveApiBaseUrl } from './api/base-url.js';
 import { fetchHofEntry } from './hof-entry.js';
-import { careerShareMeta, injectShareMeta, shareLang } from './share-meta.js';
+import { normalizeFriendCode, FRIEND_INVITE_PARAM } from '@offside/contracts/friend-code';
+import { careerShareMeta, injectShareMeta, inviteShareMeta, shareLang } from './share-meta.js';
 import { OG_CARD_PATH, SHARE_PATH } from './share-path.js';
 
 interface Fetcher {
@@ -99,6 +100,22 @@ async function withShareMeta(shellP: Promise<Response>, id: string, url: URL): P
   } catch {
     return shell;
   }
+}
+
+// T-11-621 친구 초대 링크 미리보기(카카오톡 · 앱 공유 시트 등). 코드 형식만 보고 API는 부르지 않는다.
+async function withInviteMeta(
+  shellP: Promise<Response>,
+  code: string,
+  url: URL,
+): Promise<Response> {
+  const shell = await shellP;
+  if (!shell.ok) return shell;
+  const meta = inviteShareMeta(code, url.origin, shareLang(url.searchParams.get('lang')));
+  const html = injectShareMeta(await shell.text(), meta);
+  const headers = new Headers(shell.headers);
+  headers.delete('Content-Length');
+  headers.delete('ETag');
+  return new Response(html, { status: shell.status, headers });
 }
 
 // T-10-037: 연결 미리 열기를 HTML이 아니라 응답 헤더로 알린다 — Cloudflare가 HTML의 fonts preconnect 태그를
@@ -213,6 +230,12 @@ async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Re
   const shareId = asset.status === 404 ? SHARE_PATH.exec(url.pathname)?.[1] : undefined;
   if (shareId)
     return withRobots(await withShareMeta(appShell(), shareId, url), 'noindex, nofollow');
+  const inviteCode =
+    url.pathname === '/' && ['GET', 'HEAD'].includes(request.method)
+      ? normalizeFriendCode(url.searchParams.get(FRIEND_INVITE_PARAM) ?? '')
+      : null;
+  if (inviteCode)
+    return withRobots(await withInviteMeta(appShell(), inviteCode, url), 'noindex, nofollow');
   let indexingEnabled = false;
   try {
     const policyUrl = new URL('/seo-policy.json', url.origin);

@@ -1,0 +1,22 @@
+{
+  "id": "friend-invite-link-preview",
+  "title": "친구 초대 링크 미리보기",
+  "items": ["메신저에 친구 초대 링크를 보내면 초대 문구와 친구 코드가 미리보기로 보여요."],
+  "en": {
+    "title": "Friend invite link preview",
+    "items": [
+      "Friend invite links now show the invitation and friend code as a preview in messengers."
+    ]
+  },
+  "ja": {
+    "title": "フレンド招待リンクのプレビュー",
+    "items": [
+      "メッセンジャーでフレンド招待リンクを送ると、招待文とフレンドコードがプレビューに表示されます。"
+    ]
+  },
+  "zh": {
+    "title": "好友邀請連結預覽",
+    "items": ["在通訊軟體傳送好友邀請連結時，預覽會顯示邀請文字和好友碼。"]
+  },
+  "availability": "web-app"
+}

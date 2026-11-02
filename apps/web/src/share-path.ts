@@ -4,3 +4,8 @@ export const SHARE_PATH = /^\/career\/([0-9a-f-]{36})\/?$/i;
 /** T-10-068 선수별 공유 미리보기 카드 이미지(`/og/career/<커리어 UUID>.png`). 웹 워커·카드 워커가 함께 쓴다. */
 export const OG_CARD_PATH = /^\/og\/career\/([0-9a-f-]{36})\.png$/i;
 export const ogCardPath = (id: string) => `/og/career/${id}.png`;
+
+/** scripts/seo.mjs BRAND_VERSION과 같다(미리보기 이미지 파일명). */
+export const OG_VERSION = 'v7';
+/** 사이트 기본 미리보기 그림. */
+export const OG_SITE_IMAGE = `/og-offside-${OG_VERSION}.png`;
