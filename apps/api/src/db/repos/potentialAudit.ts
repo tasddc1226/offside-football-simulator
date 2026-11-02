@@ -9,6 +9,8 @@ import { runBatch } from './batch.js';
 // 잠재력 93 이상을 81.6%, 스카우트권 · 리롤권 0장으로 만들었다). 한 커리어만 봐서는 정상 선수와 구분할 수 없으니, 구단주가 최근
 // 만든 높은 잠재력 선수 수가 쓴 스카우트권 · 리롤권으로 설명할 수 있는 수를 크게 넘으면 그 계정의 높은 잠재력 선수를 숨긴다.
 // 운영 실측(2026-09-22~10-22, 높은 잠재력 5명 이상 구단주 전원): 정상은 이 기준 아래였고, 조작 계정 2개만 넘었다.
+// T-11-613 2026-11 커리어를 많이 만드는 앱 구단주가 허용치를 0.4명 넘어 은퇴 선수가 말없이 사라졌다. 조금 넘으면 숨기지 않고 운영자
+// 검토로 넘기고, 크게 넘을 때만 숨긴다. 실측(11-02 기준 30일): 조작 계정은 허용치의 1.26~16배, 그 구단주는 1.003배, 나머지는 1배 아래.
 
 export const POTENTIAL_AUDIT = {
   /** 이 이상 스카우트 평가를 '높은 잠재력'으로 센다. */
@@ -20,21 +22,21 @@ export const POTENTIAL_AUDIT = {
   rate: 0.03,
   /** 운으로 몰릴 수 있는 여유. */
   margin: 10,
+  /** 허용치의 이 배수를 넘으면 숨긴다. 그 아래로 허용치만 넘으면 운영자 검토다. */
+  hideRatio: 1.2,
 } as const;
 
 const since = (now: string) =>
   new Date(Date.parse(now) - POTENTIAL_AUDIT.windowDays * 86_400_000).toISOString();
 
-/** 높은 잠재력 선수 수가 설명할 수 있는 수를 넘으면 true. 프리미엄 스카우트권은 장마다 확정 후보 하나를 줄 수 있어 그대로 더한다. */
-export function potentialFarmed(o: {
-  careers: number;
-  high: number;
-  scouts: number;
-  rerolls: number;
-}): boolean {
+type PotentialCounts = { careers: number; high: number; scouts: number; rerolls: number };
+
+/** 높은 잠재력 선수 수를 설명할 수 있는 수와 비교한다. 프리미엄 스카우트권은 장마다 확정 후보 하나를 줄 수 있어 그대로 더한다. */
+export function potentialVerdict(o: PotentialCounts): 'ok' | 'review' | 'hide' {
   const allowed =
     o.scouts + POTENTIAL_AUDIT.rate * (o.careers + o.rerolls) + POTENTIAL_AUDIT.margin;
-  return o.high > allowed;
+  if (o.high > allowed * POTENTIAL_AUDIT.hideRatio) return 'hide';
+  return o.high > allowed ? 'review' : 'ok';
 }
 
 /** 구단주의 최근 커리어 수 · 높은 잠재력 수와 쓴 스카우트권 · 리롤권(프로필 인덱스 한 번 + 기본 키 두 줄). */
@@ -76,12 +78,12 @@ export async function farmedOnUpload(
 ): Promise<boolean> {
   if (pot === undefined || pot < POTENTIAL_AUDIT.high) return false;
   const n = await profileCounts(db, profileId, now);
-  return potentialFarmed({ ...n, careers: n.careers + 1, high: n.high + 1 });
+  return potentialVerdict({ ...n, careers: n.careers + 1, high: n.high + 1 }) === 'hide';
 }
 
 /** 구단주를 다시 판정해, 넘으면 최근 높은 잠재력 커리어 중 아직 보이는 것을 숨긴다. 운영자가 되돌린 커리어는 두다. 숨긴 수를 돌려준다. */
 export async function hideFarmedPotential(db: Db, profileId: string, now: string): Promise<number> {
-  if (!potentialFarmed(await profileCounts(db, profileId, now))) return 0;
+  if (potentialVerdict(await profileCounts(db, profileId, now)) !== 'hide') return 0;
   const rows = await db
     .select({ id: careers.id })
     .from(careers)
@@ -102,11 +104,26 @@ export async function hideFarmedPotential(db: Db, profileId: string, now: string
   return rows.length;
 }
 
-/** 매일 점검: 이번에 훑은 커리어 중 높은 잠재력이 보이는 구단주만 다시 판정한다. */
+/** 매일 점검: 이번에 훑은 커리어 중 높은 잠재력이 보이는 구단주만 다시 판정한다. 크게 넘으면 숨기고, 조금 넘으면 훑은 커리어를
+ * 운영자 검토로 돌려준다(그 구단주의 높은 잠재력 전부를 올리면 목록이 한 사람으로 찬다). */
 export async function sweepFarmedPotential(db: Db, careerIds: string[], now: string) {
-  if (!careerIds.length) return 0;
-  const owners = await db
-    .selectDistinct({ profileId: careers.profileId })
+  const review: {
+    id: string;
+    status: 'active' | 'retired';
+    legend_score: number | null;
+    peak: number | null;
+    hidden: number;
+  }[] = [];
+  if (!careerIds.length) return { hidden: 0, review };
+  const rows = await db
+    .select({
+      id: careers.id,
+      profileId: careers.profileId,
+      status: careers.status,
+      legend_score: careers.legendScore,
+      peak: careers.peak,
+      hidden: careers.hidden,
+    })
     .from(careers)
     .where(
       and(
@@ -117,6 +134,12 @@ export async function sweepFarmedPotential(db: Db, careerIds: string[], now: str
       ),
     );
   let hidden = 0;
-  for (const o of owners) hidden += await hideFarmedPotential(db, o.profileId, now);
-  return hidden;
+  for (const profileId of new Set(rows.map((r) => r.profileId))) {
+    const verdict = potentialVerdict(await profileCounts(db, profileId, now));
+    if (verdict === 'hide') hidden += await hideFarmedPotential(db, profileId, now);
+    if (verdict === 'review')
+      for (const { profileId: owner, ...info } of rows)
+        if (owner === profileId) review.push({ ...info, hidden: info.hidden ?? 0 });
+  }
+  return { hidden, review };
 }
