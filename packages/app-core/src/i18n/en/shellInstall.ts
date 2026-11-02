@@ -10,6 +10,7 @@ export const shellInstall: Translation<ShellInstallMsgs> = {
     'Premium purchases are available in the app. You can still buy reroll tickets with club funds on the web.',
   conversionTitle: 'Play OFFSIDE in the app',
   conversionMilestone: 'Manage your records in the app',
+  conversionRetireTitle: 'Raise your next player in the app',
   conversionBenefit:
     'In the app, rewarded ads can unlock potential checks and extra boost tries. Eligibility and ad availability apply.',
   conversionTransfer:

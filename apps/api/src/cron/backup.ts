@@ -29,6 +29,9 @@ const KEEP_DAYS = 30;
 const DAY_START_MS = 19 * 60 * 60_000;
 
 export type BackupResult = {
+  /** Multi-tick secondary copy, never a point-in-time snapshot. */
+  consistency: 'live-copy';
+  restoreVerified: false;
   /** 조각 객체들의 접두사 `d1/<env>/<day>/`. */
   key: string;
   day: string;
@@ -366,6 +369,8 @@ const finished = async (
   now: number,
 ): Promise<BackupResult> => ({
   key: state.key,
+  consistency: 'live-copy',
+  restoreVerified: false,
   day: state.day,
   tables: state.tables.length,
   rows: state.rows,

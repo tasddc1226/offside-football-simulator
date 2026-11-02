@@ -1,0 +1,30 @@
+{
+  "id": "t-11-611-retire-next-step",
+  "title": "은퇴 뒤 다음 걸음 안내",
+  "items": [
+    "첫 은퇴를 마치면 은퇴 화면에서 내 구단으로 바로 갈 수 있어요",
+    "웹에서는 은퇴 화면에 앱 안내가 함께 나와요. 닫으면 7일 동안 보이지 않아요"
+  ],
+  "en": {
+    "title": "Next steps after retirement",
+    "items": [
+      "After your first retirement, you can go straight to your club from the retirement screen.",
+      "On the web, the retirement screen also shows an app guide. Close it to hide it for 7 days."
+    ]
+  },
+  "ja": {
+    "title": "引退後の次の一歩をご案内",
+    "items": [
+      "初めての引退のあと、引退画面からマイクラブへすぐ移動できます。",
+      "ウェブでは引退画面にアプリの案内も表示します。閉じると7日間表示されません。"
+    ]
+  },
+  "zh": {
+    "title": "退役後的下一步指引",
+    "items": [
+      "首次退役後，可從退役畫面直接前往我的球隊。",
+      "網頁版的退役畫面也會顯示 App 指引，關閉後 7 天內不再顯示。"
+    ]
+  },
+  "availability": "web-app"
+}
