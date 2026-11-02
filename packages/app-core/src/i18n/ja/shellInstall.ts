@@ -7,6 +7,7 @@ export const shellInstall: Translation<ShellInstallMsgs> = {
     'プレミアム商品の購入はアプリで利用できます。リロール券はウェブでもクラブ資金で購入できます。',
   conversionTitle: 'アプリでオフサイドを楽しもう',
   conversionMilestone: '積み重ねた記録をアプリでも管理',
+  conversionRetireTitle: '次の選手はアプリで育てましょう',
   conversionBenefit:
     'アプリではリワード広告でポテンシャルの確認や追加強化の機会を得られます。利用条件や広告の配信状況によって異なります。',
   conversionTransfer:
