@@ -218,7 +218,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
         details: { reason: 'BLOCKED_WORD' },
       });
     }
-    const updated = await setNickname(db, profile.id, nickname);
+    const updated = await setNickname(db, profile.id, nickname, nowIso());
     if (updated === 'taken') {
       throw conflictError('이미 쓰고 있는 닉네임이에요.', 'NICKNAME_TAKEN');
     }
