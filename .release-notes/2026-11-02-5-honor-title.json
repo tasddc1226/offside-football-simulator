@@ -1,0 +1,30 @@
+{
+  "id": "t-11-619-honor-title",
+  "title": "기록 배지를 대표 칭호로 달 수 있어요",
+  "items": [
+    "시즌 순위 배지(업적 · 팀 레이팅 · 명예의 전당)와 서버 최초 기록을 대표 칭호 자리에 하나 달 수 있어요",
+    "명예관 칭호 목록의 기록 배지 묶음에서 고르면 닉네임 옆에 바로 보여요"
+  ],
+  "en": {
+    "title": "Equip record badges as your title",
+    "items": [
+      "You can now equip one season ranking badge (achievements, team rating, Hall of Fame) or server-first badge in your title slot.",
+      "Pick one from the Record badges group in the Hall's title list, and it shows next to your nickname."
+    ]
+  },
+  "ja": {
+    "title": "記録バッジを代表称号にできます",
+    "items": [
+      "シーズン順位バッジ(実績・チームレーティング・殿堂)とサーバー初記録を、代表称号の枠に一つ付けられます。",
+      "殿堂の称号一覧にある記録バッジから選ぶと、ニックネームの横に表示されます。"
+    ]
+  },
+  "zh": {
+    "title": "紀錄徽章可設為代表稱號",
+    "items": [
+      "賽季排名徽章（成就・球隊積分・名人堂）與伺服器首次紀錄，可擇一放在代表稱號的位置。",
+      "在榮譽館稱號清單的紀錄徽章分組中選擇後，就會顯示在暱稱旁。"
+    ]
+  },
+  "availability": "web-app"
+}

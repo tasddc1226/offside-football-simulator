@@ -5,7 +5,7 @@ import {
   titleLabel,
   titleCondition,
   permanentTitleOf,
-  titleGradeLabel,
+  titleKindLabel,
   titleCategoryLabel,
 } from '@offside/app-core/ownerTitle';
 import { titleGroups, titleTierText } from '@offside/app-core/ownerTitleCollection';
@@ -57,7 +57,7 @@ export function OwnerHallVisit({
                   </View>
                   <Txt bold>{titleLabel(id)}</Txt>
                   <Txt tone="muted" style={small}>
-                    {def ? titleGradeLabel(def.grade) : L.titleCup}
+                    {titleKindLabel(id)}
                     {tier ? ` · ${tier}` : ''}
                   </Txt>
                   {title === id ? (

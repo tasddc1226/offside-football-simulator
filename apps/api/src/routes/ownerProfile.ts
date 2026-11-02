@@ -11,7 +11,12 @@ import {
   PutOwnerTitleResponseSchema,
   TeamIdSchema,
 } from '@offside/contracts';
-import { TITLE_NONE, titlesOf } from '@offside/contracts/owner-title';
+import {
+  TITLE_NONE,
+  honorTitleIdsOf,
+  parseHonorTitle,
+  titlesOf,
+} from '@offside/contracts/owner-title';
 import { desc, eq, inArray } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
@@ -69,6 +74,15 @@ async function finishedCloseKeys(db: Db, closed: readonly number[]) {
       }
     }),
   );
+}
+
+/** 마감 집계가 끝난 시즌의 기록 배지. 집계 중인 시즌의 배지는 보여 주지도 달게 하지도 않는다. */
+async function finishedHonorsOf(db: Db, profileId: string) {
+  const [honors, done] = await Promise.all([
+    honorsOf(db, profileId),
+    finishedCloseKeys(db, closedSeasons(nowIso())),
+  ]);
+  return honors.filter((h) => done.has(closeMetaKey(h.season)));
 }
 
 export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
@@ -150,17 +164,15 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
       const [found] = await liveTeam(db, id);
       if (!found) throw teamNotFound();
       const profileId = found.team.profileId;
-      const [honors, done, cups, leagues, permanent] = await Promise.all([
-        honorsOf(db, profileId),
-        finishedCloseKeys(db, closedSeasons(nowIso())),
+      const [closedHonors, cups, leagues, permanent] = await Promise.all([
+        finishedHonorsOf(db, profileId),
         cupHonorsOf(db, profileId),
         leagueChampionSeasons(db, profileId),
         earnedPermanentTitleIds(db, profileId),
       ]);
       return {
-        // 마감 집계가 끝나지 않은 시즌의 배지는 내 명예관처럼 보이지 않는다.
-        honors: honors.filter((h) => done.has(closeMetaKey(h.season))),
-        titles: [...titlesOf(cups, leagues), ...permanent],
+        honors: closedHonors,
+        titles: [...titlesOf(cups, leagues), ...permanent, ...honorTitleIdsOf(closedHonors)],
       };
     });
     return ok(c, OwnerHallVisitResponseSchema, data);
@@ -178,10 +190,11 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/owner/title', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const [honors, leagues, permanent, [latest]] = await Promise.all([
+    const [honors, leagues, permanent, recordBadges, [latest]] = await Promise.all([
       cupHonorsOf(db, me.id),
       leagueChampionSeasons(db, me.id),
       permanentTitlesOf(db, me.id, nowIso()),
+      finishedHonorsOf(db, me.id),
       db
         .select({ id: ownerTeams.id })
         .from(ownerTeams)
@@ -197,6 +210,7 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
         titles: [
           ...titlesOf(honors, leagues),
           ...permanent.filter((t) => t.earnedAt).map((t) => t.id),
+          ...honorTitleIdsOf(recordBadges),
         ],
         permanent,
         pinned: me.titlePinned,
@@ -212,13 +226,19 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const db = getDb(c);
     const { title } = readBody(c, PutOwnerTitleBodySchema);
-    const [honors, leagues, permanent] = await Promise.all([
+    // T-11-619 기록 배지를 고를 때만 배지를 읽는다.
+    const [honors, leagues, permanent, recordBadges] = await Promise.all([
       cupHonorsOf(db, me.id),
       leagueChampionSeasons(db, me.id),
       permanentTitlesOf(db, me.id, nowIso()),
+      parseHonorTitle(title) ? finishedHonorsOf(db, me.id) : [],
     ]);
     const cupTitles = titlesOf(honors, leagues);
-    const titles = [...cupTitles, ...permanent.filter((t) => t.earnedAt).map((t) => t.id)];
+    const titles = [
+      ...cupTitles,
+      ...permanent.filter((t) => t.earnedAt).map((t) => t.id),
+      ...honorTitleIdsOf(recordBadges),
+    ];
     if (title && title !== TITLE_NONE && !titles.includes(title))
       throw conflictError(cupKo('titleNotOwned'), 'TITLE_NOT_OWNED');
     const next =
