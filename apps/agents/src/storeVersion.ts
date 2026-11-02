@@ -1,13 +1,15 @@
 // T-11-609 스토어 출시 감지. 앱 업데이트 팝업은 서버의 APP_VERSIONS.latest(apps/api/src/routes/appVersion.ts)를 보는데, 이 값은
 // 사람이 올린다. 매일 스토어에 공개된 버전과 비교해 다르면 운영 채널에 알린다. 값은 바꾸지 않고, 모델도 부르지 않는다.
-// - App Store: 공개 조회 API(사용자가 실제로 받는 버전, 키 불필요)
+// - App Store: App Store Connect API(리뷰와 같은 키). 공개 조회 API(itunes lookup)는 CDN이 옛 버전을 돌려줘 잘못 알렸다.
 // - Google Play: 출시 트랙(리뷰와 같은 서비스 계정). 읽으려면 임시 편집을 열어야 해서 저장하지 않고 바로 지운다.
 import { chatClient } from './chat.ts';
 import type { Env } from './env.ts';
 import { serviceAccountToken } from './google.ts';
-import { playAccount } from './reviews.ts';
+import { ascReady, ascToken, playAccount } from './reviews.ts';
 
-const LOOKUP = 'https://itunes.apple.com/lookup';
+const ASC = 'https://api.appstoreconnect.apple.com/v1';
+/** 사용자가 받을 수 있는 상태(appVersionState, 옛 이름 appStoreState). 수동 출시를 기다리는 PENDING_DEVELOPER_RELEASE는 아직 아니다. */
+const ASC_LIVE = new Set(['READY_FOR_DISTRIBUTION', 'READY_FOR_SALE']);
 const PLAY = 'https://androidpublisher.googleapis.com/androidpublisher/v3/applications';
 const PLAY_SCOPE = 'https://www.googleapis.com/auth/androidpublisher';
 
@@ -81,14 +83,30 @@ async function okJson<T>(r: Response, label: string): Promise<T> {
   return (await r.json()) as T;
 }
 
-async function iosVersion(env: Env, fetcher: typeof fetch): Promise<StoreVersion | null> {
-  if (!env.ASC_APP_ID) return null;
-  const d = await okJson<{ results?: { version?: string }[] }>(
-    await fetcher(`${LOOKUP}?id=${env.ASC_APP_ID}&country=kr`),
-    'App Store lookup',
+export type AscVersion = {
+  attributes: { versionString: string; appVersionState?: string; appStoreState?: string };
+};
+
+/** 출시된 버전 중 가장 높은 것. 없으면 null. */
+export function iosLiveVersion(versions: AscVersion[]): StoreVersion | null {
+  const version = highest(
+    versions
+      .filter(({ attributes: a }) => ASC_LIVE.has(a.appVersionState ?? a.appStoreState ?? ''))
+      .map(({ attributes: a }) => a.versionString),
   );
-  const version = d.results?.[0]?.version;
   return version ? { version } : null;
+}
+
+async function iosVersion(env: Env, fetcher: typeof fetch): Promise<StoreVersion | null> {
+  if (!ascReady(env)) return null;
+  const d = await okJson<{ data?: AscVersion[] }>(
+    await fetcher(
+      `${ASC}/apps/${env.ASC_APP_ID}/appStoreVersions?filter[platform]=IOS&limit=10&fields[appStoreVersions]=versionString,appVersionState,appStoreState`,
+      { headers: { Authorization: `Bearer ${await ascToken(env)}` } },
+    ),
+    'App Store Connect',
+  );
+  return iosLiveVersion(d.data ?? []);
 }
 
 async function androidVersion(env: Env, fetcher: typeof fetch): Promise<StoreVersion | null> {
