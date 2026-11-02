@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { createStep } from './helpers.js';
 
 // T-10-008: 선수 생성에서 유형 대신 주력 능력치 두 개를 고른다.
 test('주력 능력치 두 개를 골라야 후보를 볼 수 있고, 고른 주력이 선수 화면에 표시된다', async ({
@@ -6,6 +7,7 @@ test('주력 능력치 두 개를 골라야 후보를 볼 수 있고, 고른 주
 }) => {
   await page.goto('/');
   await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
+  await createStep(page, 'focus');
   const focus = (k: string) => page.locator(`[data-set="focus"][data-val="${k}"]`);
   const next = page.locator('[data-act="next-candidates"]');
 

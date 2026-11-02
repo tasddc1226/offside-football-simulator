@@ -52,7 +52,7 @@
     {:else if appState.hof.tab === 'ach'}
       <AchievementRanking />
     {:else}
-      <HallOfFame full />
+      <HallOfFame />
     {/if}
   </div>
 </div>

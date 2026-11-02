@@ -149,7 +149,7 @@ const ko = {
     `${p.count}명을 방출하고 구단 자금 ${withEulReul(p.amount)} 받아요. 방출한 선수는 다시 데려올 수 없어요. 명예의 전당 기록은 그대로 남아요.`,
   lockBought: '영입한 선수는 방출할 수 없어요',
   lockListed: '판매 중이에요. 내린 뒤 방출할 수 있어요',
-  lockStarter: '선발이에요. 팀에서 뺀 뒤 방출할 수 있어요',
+  lockStarter: '선발이나 컵 명단이에요. 명단에서 뺀 뒤 방출할 수 있어요',
   lockPlayerLocked: '잠긴 선수예요',
   playerUnlock: '잠금 풀기',
   // 알림

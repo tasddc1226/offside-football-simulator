@@ -318,6 +318,21 @@ describe('T-11-128 시즌 결산', () => {
       // 다시 돌아도(다른 시각) 두 번 주지 않는다.
       expect(await closeDivisions(ctx.db, SEASON, CUT, '2026-11-01T00:05:00.000Z')).toBe(0);
       expect(await rerolls(master.profileId)).toBe(6);
+      // Reusing the original timestamp must not repay old honors, even when a
+      // previously ineligible team becomes eligible in the same batch.
+      expect(await closeDivisions(ctx.db, SEASON, CUT, NOW)).toBe(0);
+      expect(await rerolls(master.profileId)).toBe(6);
+      await ctx.db.run(
+        sql`update owner_teams set division = 3 where profile_id = ${semi.profileId}`,
+      );
+      const concurrent = await Promise.all([
+        closeDivisions(ctx.db, SEASON, CUT, NOW),
+        closeDivisions(ctx.db, SEASON, CUT, NOW),
+      ]);
+      expect(concurrent.reduce((sum, n) => sum + n, 0)).toBe(1);
+      expect(await rerolls(semi.profileId)).toBe(1);
+      expect(await rerolls(master.profileId)).toBe(6);
+      expect(await rerolls(pro2.profileId)).toBe(6);
     });
 
     it('보상 시작 시즌 전(시즌 1)에는 아무것도 주지 않는다', async () => {

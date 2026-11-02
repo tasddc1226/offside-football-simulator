@@ -3,6 +3,13 @@ import { createTestD1, type TestD1 } from '../test/d1.js';
 import { DAILY_META_KEY } from './daily.js';
 import { INFRA_HEALTH_META_KEY } from './infraHealth.js';
 
+vi.mock('./workflowHealth.js', () => ({
+  readWorkflowHealth: vi.fn(async (at: number) => ({
+    observation: { at, completedAt: at, conclusion: 'success' },
+    issues: [],
+  })),
+}));
+
 vi.mock('../seasonSchedule.js', async (original) => ({
   ...(await original<typeof import('../seasonSchedule.js')>()),
   loadSeasonSchedule: vi.fn().mockResolvedValue(undefined),

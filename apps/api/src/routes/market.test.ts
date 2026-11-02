@@ -314,6 +314,41 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect((await list(owner.cookie, a, 1_000_000)).status).toBe(201);
   });
 
+  it('T-11-604 컵 명단 프리셋에 든 선수는 내놓거나 방출할 수 없다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const a = await addCard(owner.profileId);
+    const put = await call('PUT', '/v1/owner-team', {
+      cookie: owner.cookie,
+      body: { name: '우리 FC', manager: '김감독', formation: '4-3-3', slots: Array(11).fill(null) },
+    });
+    expect(put.status).toBe(200);
+    const preset = await call('PUT', '/v1/owner-team/presets', {
+      cookie: owner.cookie,
+      body: {
+        presets: [
+          {
+            name: '컵 명단',
+            formation: '4-3-3',
+            slots: [...Array(9).fill(null), a, null],
+            layout: null,
+            cup: true,
+          },
+        ],
+      },
+    });
+    expect(preset.status).toBe(200);
+    const listed = await list(owner.cookie, a, 1_000_000);
+    expect(listed.status).toBe(409);
+    expect(await reason(listed)).toBe('IN_LINEUP');
+    const released = await call('POST', '/v1/cards/release', {
+      cookie: owner.cookie,
+      headers: idem(),
+      body: { careerIds: [a] },
+    });
+    expect(released.status).toBe(409);
+    expect(await reason(released)).toBe('IN_LINEUP');
+  });
+
   it('T-11-188 잠긴 선수는 내놓거나 방출할 수 없고, 판매 중인 선수는 내린 뒤 잠근다', async () => {
     const owner = await issueGoogleCookie(ctx);
     const other = await issueGoogleCookie(ctx);

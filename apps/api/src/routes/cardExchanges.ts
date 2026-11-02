@@ -21,11 +21,12 @@ import {
   myClaimCounts,
 } from '../db/repos/cardExchanges.js';
 import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
-import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
+import { lockedIdsOf, myTeamIn } from '../db/repos/ownerTeams.js';
+import { checkCupRelease } from './cup.js';
 import { getDb, type AppEnv } from '../env.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
 
 // T-11-374 카드 바치기 과제. 오늘의 과제 목록은 코드 묶음이라 화면이 직접 그리고, 서버는 내 낸 횟수와 내기만 다룬다.
@@ -67,10 +68,11 @@ export function registerCardExchangeRoutes(app: Hono<AppEnv>): void {
       );
     if (cards.some((k) => !k.raised))
       throw conflictError('직접 키워 은퇴시킨 선수만 낼 수 있어요.', 'EXCHANGE_NOT_RAISED');
-    // 컵 명단도 지금 시즌 선발 안에 있다 — 선발 선수는 방출처럼 팀에서 뺀 뒤 낸다.
-    const lineup = new Set(team ? slotIdsOf(team) : []);
+    // T-11-604 선발과 컵 명단 프리셋 선수는 방출처럼 명단에서 뺀 뒤 낸다. 컵 참가 중이면 신청한 컵 명단(지난 시즌 포함)도 막는다.
+    const lineup = team ? lockedIdsOf(team) : new Set<string>();
     if (careerIds.some((id) => lineup.has(id)))
       throw conflictError('선발에 든 선수는 팀에서 뺀 뒤 낼 수 있어요.', 'IN_LINEUP');
+    await checkCupRelease(db, me.id, careerIds);
     if (!exchangeMet(def.rule, cards))
       throw conflictError('과제 조건에 맞지 않는 선수가 있어요.', 'EXCHANGE_UNMET');
     let res: Awaited<ReturnType<typeof claimExchange>>;

@@ -8,7 +8,7 @@ import { draftCid } from '@offside/app-core/state';
 import { createAvatarSpec } from '@offside/game/avatar';
 import type { CreateLookItem } from '@offside/game/look';
 import { useEffect } from 'react';
-import { View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
@@ -63,10 +63,14 @@ export function CreateLook() {
               <Txt bold style={{ fontSize: rem(FONT.body2) }}>
                 {r.name}
               </Txt>
-              <View
+              {/* T-11-605 항목마다 한 줄로 두고 옆으로 넘긴다(더 꾸미기가 한 화면에 들어오게). */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                keyboardShouldPersistTaps="handled"
                 accessibilityRole="radiogroup"
                 accessibilityLabel={r.name}
-                style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
+                contentContainerStyle={{ flexDirection: 'row', gap: 6, paddingRight: 8 }}
               >
                 <Press
                   testID={`create-look-${r.item}-auto`}
@@ -116,7 +120,7 @@ export function CreateLook() {
                     </Press>
                   );
                 })}
-              </View>
+              </ScrollView>
             </View>
           ))}
         </View>

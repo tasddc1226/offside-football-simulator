@@ -39,6 +39,17 @@ export function clubOffer(shop: RewardShopResponse | null, kind: RewardKind): Cl
   };
 }
 
+/** T-11-610 구단주인데 지금 구단 자금으로 받을 수 없는 이유. 자금이 모자라거나 오늘 상한을 다 썼을 때만 값이 있다(팔지 않으면 null). */
+export function clubBlock(
+  shop: RewardShopResponse | null,
+  kind: RewardKind,
+): { reason: 'short'; price: number; balance: number } | { reason: 'capped' } | null {
+  if (!shop) return null;
+  const { price, bought, cap } = shop.offers[kind];
+  if (price == null) return cap > 0 && bought >= cap ? { reason: 'capped' } : null;
+  return shop.balance < price ? { reason: 'short', price, balance: shop.balance } : null;
+}
+
 // 한 번의 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 쓰지 않는다.
 const keys = new Map<RewardKind, string>();
 

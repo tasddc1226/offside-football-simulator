@@ -35,6 +35,8 @@ export const home: Translation<HomeMsgs> = {
   releaseTitle: '更新資訊',
   more: '查看更多',
   moreAria: (p) => `查看更多${p.what}`,
+  newsTagNotice: '公告',
+  newsTagRelease: '更新',
   newsFailed: '無法載入公告。',
   newsEmpty: '還沒有貼文。',
   pinned: '置頂',

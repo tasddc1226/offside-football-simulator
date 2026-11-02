@@ -6,6 +6,7 @@ import {
   inspectR2Storage,
   checkResourceHealth,
   inspectDnssec,
+  inspectBillingOutbox,
 } from './infra-health.mjs';
 
 const NOW = Date.parse('2026-10-08T01:17:00Z');
@@ -94,6 +95,25 @@ describe('read-only infrastructure monitoring', () => {
       true,
     );
   });
+  it('keeps notification backlog distinct from purchase fulfillment and rejects unknown/stale outbox state', () => {
+    expect(inspectBillingOutbox({ pending: 0, oldest_at: null }, NOW).failed).toBe(false);
+    expect(
+      inspectBillingOutbox(
+        { pending: 2, oldest_at: new Date(NOW - 2 * 3600000).toISOString() },
+        NOW,
+      ).failed,
+    ).toBe(true);
+    expect(
+      inspectBillingOutbox({ pending: 1, oldest_at: new Date(NOW).toISOString() }, NOW).failed,
+    ).toBe(false);
+    for (const row of [
+      null,
+      { pending: -1 },
+      { pending: 1, oldest_at: null },
+      { pending: 1, oldest_at: 'bad' },
+    ])
+      expect(() => inspectBillingOutbox(row, NOW)).toThrow();
+  });
   it('uses only database lookup and SELECT, and never includes API error bodies in failures', async () => {
     const calls = [];
     const report = { ...healthy, at: Date.now() };
@@ -102,9 +122,11 @@ describe('read-only infrastructure monitoring', () => {
       return Response.json({
         success: true,
         result:
-          calls.length === 1
-            ? [{ name: 'offside-production', uuid: 'test-db' }]
-            : [{ success: true, results: [{ value: JSON.stringify(report) }] }],
+          calls.length === 3
+            ? [{ success: true, results: [{ pending: 0, oldest_at: null }] }]
+            : calls.length === 1
+              ? [{ name: 'offside-production', uuid: 'test-db' }]
+              : [{ success: true, results: [{ value: JSON.stringify(report) }] }],
       });
     };
     const log = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -113,7 +135,7 @@ describe('read-only infrastructure monitoring', () => {
         { CLOUDFLARE_ACCOUNT_ID: 'test-account', CLOUDFLARE_API_TOKEN: 'never-print-token' },
         fetcher,
       );
-      expect(calls).toHaveLength(2);
+      expect(calls).toHaveLength(3);
       expect(JSON.parse(calls[1].init.body).sql).toBe(
         "SELECT value FROM app_meta WHERE key='cron:infra-health:last'",
       );

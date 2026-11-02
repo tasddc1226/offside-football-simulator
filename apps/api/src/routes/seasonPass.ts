@@ -22,7 +22,7 @@ import { recordBillingAlert } from '../iap/alerts.js';
 import { iapAccount, iapStores, verifyIapClaim, type IapRejection } from '../iap/verify.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
 
 // T-11-511 시즌 패스. 로그인한 구단주만(아니면 403 GOOGLE_LOGIN_REQUIRED). 화면을 열 때 한 번 읽고(구단주마다 달라 캐시하지

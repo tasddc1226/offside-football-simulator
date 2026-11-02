@@ -128,7 +128,7 @@ export const market: Translation<MarketMsgs> = {
     `${p.count}人を放出して、クラブ資金${p.amount}を受け取ります。放出した選手は二度と呼び戻せません。殿堂の記録はそのまま残ります。`,
   lockBought: '獲得した選手は放出できません',
   lockListed: '出品中です。取り下げてから放出できます',
-  lockStarter: '先発です。チームから外してから放出できます',
+  lockStarter: '先発かカップメンバーです。メンバーから外してから放出できます',
   lockPlayerLocked: 'ロック中です',
   playerUnlock: 'ロック解除',
   toastListed: '市場に出品しました。',

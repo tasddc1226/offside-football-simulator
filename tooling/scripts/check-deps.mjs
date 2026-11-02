@@ -8,9 +8,8 @@ import { fileURLToPath } from 'node:url';
  * @type {Record<string, string[]>}
  */
 export const ALLOWED_DEPENDENCIES = {
-  // T-9-001c: T-9-001a/b가 @offside/domain·content·engine-client·fixtures·ui·platform을 모두
-  // 삭제했다. 남은 워크스페이스는 web(클라이언트 전용, localStorage 저장)·api(프로필/Google 로그인)·
-  // contracts뿐이다.
+  // 운영 어드민도 별도 클라이언트다. API는 HTTP로만 호출하고 계약만 공유한다.
+  '@offside/admin': ['@offside/contracts'],
   '@offside/web': ['@offside/contracts', '@offside/game', '@offside/app-core'],
   // T-11-004 Expo 네이티브 앱. 웹과 같은 엔진·계약을 쓴다.
   '@offside/mobile': ['@offside/contracts', '@offside/game', '@offside/app-core'],
@@ -77,12 +76,28 @@ export function findDependencyViolations(repoRoot) {
         continue;
       }
 
-      if (!pkg.name || !(pkg.name in ALLOWED_DEPENDENCIES)) continue;
+      if (typeof pkg.name !== 'string' || !pkg.name.startsWith('@offside/')) continue;
+      // apps/packages의 새 워크스페이스는 빈 의존 목록이어도 정책을 먼저 등록해야 한다.
+      // 이 표는 tooling 디렉터리의 개발 도구나 외부 이름의 임시 패키지를 다루지 않는다.
+      if (!Object.hasOwn(ALLOWED_DEPENDENCIES, pkg.name)) {
+        violations.push({
+          package: pkg.name,
+          dependency: '<workspace>',
+          reason: 'unregistered workspace: add an explicit dependency policy',
+        });
+        continue;
+      }
 
       const allowed = new Set(ALLOWED_DEPENDENCIES[pkg.name]);
 
-      violations.push(...checkDeps(pkg.name, pkg.dependencies, allowed));
-      violations.push(...checkDeps(pkg.name, pkg.devDependencies, allowed));
+      for (const field of [
+        'dependencies',
+        'devDependencies',
+        'peerDependencies',
+        'optionalDependencies',
+      ]) {
+        violations.push(...checkDeps(pkg.name, pkg[field], allowed));
+      }
     }
   }
 

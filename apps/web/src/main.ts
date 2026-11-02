@@ -12,7 +12,7 @@ import SheetChrome from './ui/SheetChrome.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
 import { keepStorage } from './ui/helpers.js';
 import { hasSessionHint } from '@offside/app-core/api/client';
-import { routeSharedCareer } from './ui/legend.js';
+import { routeSharedCareer } from './ui/sharedCareerRoute.js';
 import { routeFriendInvite } from './ui/friendInvite.svelte.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
 import { watchRetiredNumberAlerts, watchRetiredNumbers } from './ui/retiredNumber.svelte.js';

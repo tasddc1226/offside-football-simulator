@@ -24,7 +24,15 @@ import {
   runInfraHealth,
 } from './infraHealth.js';
 import { DAILY_META_KEY } from './daily.js';
+import { readWorkflowHealth } from './workflowHealth.js';
 import { DAY_MS } from '../time.js';
+
+vi.mock('./workflowHealth.js', () => ({
+  readWorkflowHealth: vi.fn(async (at: number) => ({
+    observation: { at, completedAt: at, conclusion: 'success' },
+    issues: [],
+  })),
+}));
 
 const NOW = Date.parse('2026-10-08T01:00:00Z');
 const OLD = new Date(NOW - 8 * DAY_MS).toISOString();
@@ -423,6 +431,19 @@ describe('capacity safeguards', () => {
     ).rejects.toThrow('part failed');
     expect(abort).toHaveBeenCalledOnce();
   }, 10_000);
+
+  it('persists independent workflow failures into hourly operational issues', async () => {
+    vi.mocked(readWorkflowHealth).mockResolvedValueOnce({
+      observation: { at: null, completedAt: null, conclusion: null },
+      issues: ['resource-workflow-observation-unavailable'],
+    });
+    const health = await runInfraHealth(env(), NOW);
+    expect(health!.issues).toContain('resource-workflow-observation-unavailable');
+    const row = await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key=?')
+      .bind(INFRA_HEALTH_META_KEY)
+      .first<{ value: string }>();
+    expect(JSON.parse(row!.value).issues).toContain('resource-workflow-observation-unavailable');
+  });
 
   it('hourly health uses supported D1 metadata and ignores partial-day growth estimates', async () => {
     await run(

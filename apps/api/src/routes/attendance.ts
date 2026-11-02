@@ -6,7 +6,7 @@ import { isMember } from '../db/repos/memberships.js';
 import { getDb, type AppEnv } from '../env.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, NO_STORE, nowIso, ok } from './shared.js';
 
 // T-11-360 출석 체크 1단계. 로그인한 구단주만(아니면 403 GOOGLE_LOGIN_REQUIRED) 하루(KST) 한 번 출석한다. 조회는 PK 한 번이고

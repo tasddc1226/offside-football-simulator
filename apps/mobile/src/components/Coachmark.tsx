@@ -18,7 +18,7 @@ import {
 } from '@offside/app-core/tutorial';
 import { tutorialText as T } from '@offside/app-core/i18n/ko/tutorial';
 import { FOCUS_PICK } from '@offside/game/data';
-import { prefs, sheetState } from '../store';
+import { appState, prefs, sheetState } from '../store';
 import { useColors } from '../theme/useColors';
 import { scrollToView } from '../ui/scroll';
 import { Btn } from '../ui/Btn';
@@ -48,6 +48,9 @@ const targets = new Map<CoachId, { view: View; layer: Layer; enabled: () => bool
 
 function next(i: number) {
   if (i + 1 >= COACH_STEPS.length) return skip();
+  // T-11-605 주력 안내로 넘어가면 선수 만들기 화면도 주력 단계로 같이 넘어간다(자리가 없으면 안내가 다음 단계로 건너뛴다).
+  if (COACH_STEPS[i + 1]!.id === 'focus' && appState.createStep === 'pos')
+    appState.createStep = 'focus';
   coachState.i = i + 1;
   coachAt(i + 1);
 }

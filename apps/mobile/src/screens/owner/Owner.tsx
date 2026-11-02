@@ -54,6 +54,7 @@ import { teamHomeText as T } from '@offside/app-core/i18n/ko/teamHome';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
 import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
+import { hallDotLabel, hallSeason } from '@offside/app-core/hallEntry';
 
 function openTeam(v: TeamView = 'team') {
   appState.teamView = v;
@@ -131,6 +132,7 @@ function Tile({
   title,
   sub,
   fresh,
+  dot,
   onPress,
 }: {
   testID: string;
@@ -138,6 +140,8 @@ function Tile({
   title: string;
   sub: string;
   fresh?: string;
+  /** T-11-604 오른쪽 위 빨간 점(Btn dot과 같은 모양). 뜻은 label에 적는다. */
+  dot?: boolean;
   onPress: () => void;
 }) {
   const c = useColors();
@@ -168,6 +172,22 @@ function Tile({
           {sub}
         </Txt>
       </View>
+      {dot ? (
+        <View
+          testID={`${testID}-dot`}
+          style={{
+            position: 'absolute',
+            top: 6,
+            right: 8,
+            width: 10,
+            height: 10,
+            borderRadius: RADIUS.xs,
+            backgroundColor: c.bad,
+            borderWidth: 2,
+            borderColor: c.surface,
+          }}
+        />
+      ) : null}
     </Press>
   );
 }
@@ -224,8 +244,15 @@ export default function Owner() {
   // T-11-567 계정 카드가 설정으로 옮겨 가서, 로그인 여부는 이 화면이 직접 확인한다(5분 메모).
   useEffect(ensureAccount, []);
   // 받은 친구 신청(T-11-142)이나 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 친구 · 업적 탭으로.
-  const { achNew, friendReq } = useSnapshot(appState);
+  const { achNew, friendReq, recapNew } = useSnapshot(appState);
   const teamDot = ownerDotLabel({ friendReq, achNew });
+  // T-11-604 안 본 새 시즌 결산이 있으면 명예관 칸에도 점, 누르면 그 시즌 결산부터 연다(하단 '구단주' 탭 점이 꺼진다).
+  const hallDot = hallDotLabel(recapNew);
+  const openHall = async () => {
+    const season = await hallSeason(recapNew);
+    if (season !== null) appState.honorsSeason = season;
+    go('honors');
+  };
   const teamBtn = {
     dot: !!teamDot,
     onPress: () => {
@@ -555,11 +582,12 @@ export default function Owner() {
               />
               <Tile
                 testID="open-owner-hall"
-                label={`${H.openHall} · ${H.hallNew}`}
+                label={`${H.openHall} · ${hallDot ?? H.hallNew}`}
                 title={H.hallTitle}
                 sub={L.tileHall}
                 fresh={H.hallNew}
-                onPress={() => go('honors')}
+                dot={!!hallDot}
+                onPress={() => void openHall()}
               />
               <Tile
                 testID="shop"

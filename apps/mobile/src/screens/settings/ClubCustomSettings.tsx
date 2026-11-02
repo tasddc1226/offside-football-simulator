@@ -10,7 +10,7 @@ import { useSnapshot } from 'valtio';
 import { LEAGUES } from '@offside/game/data';
 import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
 import { clubsIn } from '@offside/game/engine';
-import { CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
+import { CLUB_IMPORT_NO_SPACE, CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
 import {
   exportClubCustom,
   importClubCustom,
@@ -257,7 +257,7 @@ export function ClubCustomSettings() {
   }
   function doImport(text: string) {
     const n = importClubCustom(text);
-    toast(n < 0 ? T.badFile : T.imported({ n }));
+    toast(n === CLUB_IMPORT_NO_SPACE ? T.noSpace : n < 0 ? T.badFile : T.imported({ n }));
     if (n >= 0) {
       setPasted('');
       setImportOpen(false);

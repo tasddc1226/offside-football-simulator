@@ -6,7 +6,5 @@ export const bizInfo: Translation<BizInfoMsgs> = {
   owner: 'Representative',
   regNo: 'Business registration no.',
   mailOrder: 'Mail-order business no.',
-  address: 'Address',
-  phone: 'Phone',
   check: 'Verify business',
 };

@@ -6,13 +6,16 @@ const full = {
   owner: 'Hong',
   regNo: '000-00-00000',
   mailOrderNo: 'no-1',
-  address: 'addr',
-  phone: '010',
 };
 
 describe('parseBusinessInfo (T-11-589)', () => {
   it('칸이 모두 있으면 다듬어 돌려준다', () => {
     expect(parseBusinessInfo(JSON.stringify({ ...full, name: ' Offside Lab ' }))).toEqual(full);
+  });
+  it('푸터에 쓰지 않는 주소 · 전화는 버린다', () => {
+    expect(parseBusinessInfo(JSON.stringify({ ...full, address: 'addr', phone: '010' }))).toEqual(
+      full,
+    );
   });
   it('비었거나 깨졌거나 칸이 빠지면 null', () => {
     expect(parseBusinessInfo(undefined)).toBeNull();

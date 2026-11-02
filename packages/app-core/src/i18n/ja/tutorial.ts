@@ -15,10 +15,10 @@ export const tutorial: Translation<TutorialMsgs> = {
   focusTitle: (p) => `主力能力値を${p.n}つ選びます`,
   focusBody: '選んだ組み合わせで選手タイプが決まり、最初の能力値もそちらに寄ります。',
   candidatesTitle: '候補を見ます',
-  candidatesBody: '主力能力値を選び終えたら、このボタンをタップします。',
-  candsTitle: '3人の候補からひとりを選びます',
+  candidatesBody: '残りは初期設定のまま、このボタンで候補を見られます。',
+  candsTitle: '候補カードをタップして選びます',
   candsBody:
-    '能力値の合計は同じで、配分と潜在能力が違います。リロール券で引き直し、プレミアムスカウト券でもっと良い候補を探せます。',
+    '3人は能力値の合計が同じで、配分が違います。タップすると開いて、そのまま選択されます。',
   startTitle: 'キャリアを始めます',
   startBody: '選んだ候補で最初のシーズンに入ります。',
   goTitle: 'シーズンを進めます',

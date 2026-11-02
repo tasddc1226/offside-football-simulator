@@ -14,7 +14,7 @@ import { AppError } from '../errors.js';
 import { verifyMembershipClaim, type MembershipRejection } from '../iap/membership.js';
 import { iapAccount, iapStores } from '../iap/verify.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, NO_STORE, nowIso, ok, readBody } from './shared.js';
 
 // T-11-512 클럽 멤버십. 로그인한 구단주만(아니면 403 GOOGLE_LOGIN_REQUIRED). 멤버십 화면을 열 때 · 앱이 구독 거래를 보낼 때만

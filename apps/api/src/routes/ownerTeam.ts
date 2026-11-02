@@ -1,3 +1,10 @@
+import {
+  saveOwnerTeam,
+  coachNotEligible,
+  checkEditableSeason,
+  checkLineupPlayers,
+} from '../team/saveOwnerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { activeCupSeasonsQuery } from '../team/cup.js';
 import { checkCupLineup } from './cup.js';
 import {
@@ -22,18 +29,14 @@ import {
   TeamMatchesResponseSchema,
   TeamOpponentsResponseSchema,
   TeamStatsResponseSchema,
-  type OwnerTeam,
   type TeamOpponent,
 } from '@offside/contracts';
-import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
 import {
   TEAM_MATCHES_PER_DAY,
   TEAM_REPEAT_WINDOW_DAYS,
   achTierByRank,
   matchScore,
   usesRankLadder,
-  pastSalaryOverText,
-  pastSalarySum,
   shapeOf,
   type FormationId,
 } from '@offside/contracts/owner-team';
@@ -62,7 +65,6 @@ import {
   eligibleMap,
   foundersOf,
   friendlyTeamOf,
-  type FriendlyLineup,
   listEligibleCareers,
   listMyTeams,
   listOpponentCandidates,
@@ -78,13 +80,11 @@ import {
   slotIdsOf,
   layoutOf,
   logoOf,
-  presetsOf,
   cupPresetOf,
   cupTeamOf,
   setTeamPresets,
   teamPlayerCard,
   toLineupCareer,
-  type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
 import { membersOf } from '../db/repos/memberships.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
@@ -94,9 +94,7 @@ import {
   balanceVersionOf,
   pastSalaryBudgetFrom,
   leagueFatigueFrom,
-  pastSalaryBudgetOf,
 } from '../db/repos/balance.js';
-import { getProfile, hasAccount, type ProfileRecord } from '../db/repos/profiles.js';
 import { leagueMatches, ownerTeams } from '../db/schema.js';
 import { FATIGUE_LOOKBACK, startStreaks } from '../team/fatigue.js';
 import { and, desc, eq, isNotNull, or } from 'drizzle-orm';
@@ -105,16 +103,9 @@ import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
-import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
+import { requireProfile } from '../middleware/requireProfile.js';
 import { refreshAfterChange, refreshOwnerAchievements } from '../team/ownerAchievements.js';
-import {
-  buildLineup,
-  filledCount,
-  lineupOvr,
-  rankedAtkK,
-  simulateMatch,
-  type LineupSlot,
-} from '../team/sim.js';
+import { buildLineup, filledCount, lineupOvr, rankedAtkK, simulateMatch } from '../team/sim.js';
 import { lineupsOf, matchDetailOf, matchNotice, matchViews, playedMatch } from '../team/match.js';
 import { teamStatsView } from '../team/stats.js';
 import {
@@ -138,7 +129,7 @@ import {
 } from '../team/liveMatch.js';
 import { insertLive, liveById, openLiveSince, saveLiveState } from '../db/repos/teamLive.js';
 import type { Db } from '../db/client.js';
-import { linesOf, recordOf, seasonOptions, slotsOf } from '../team/view.js';
+import { toOwnerTeam, recordOf, seasonOptions } from '../team/view.js';
 import { localizeAchievements } from '../team/achievementsText.js';
 import { reqLang, type Lang } from '../lang.js';
 
@@ -167,44 +158,6 @@ async function finishOpenLive(db: Db, ids: string[], now: string, lang: Lang) {
 }
 
 const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
-const coachNotEligible = () =>
-  conflictError('감독 커리어를 끝낸 감독만 감독 칸에 넣을 수 있어요.', 'COACH_NOT_ELIGIBLE');
-
-/** 구글 로그인한(삭제되지 않은) 프로필만 구단주다. 익명 프로필은 403 GOOGLE_LOGIN_REQUIRED — 웹이 로그인 안내를 띄운다. */
-export async function requireOwner(c: Context<AppEnv>): Promise<ProfileRecord> {
-  const profile = await getProfile(getDb(c), getSessionOrThrow(c).profileId);
-  if (!profile || !hasAccount(profile) || profile.deletedAt) {
-    throw new AppError({
-      code: 'FORBIDDEN',
-      message: '로그인하면 팀을 만들 수 있어요.',
-      details: { reason: 'GOOGLE_LOGIN_REQUIRED' },
-    });
-  }
-  return profile;
-}
-
-const PAST_SEASON_TEXT = '지난 시즌 팀은 고칠 수 없어요.';
-
-/**
- * 지금 시즌 팀만 고친다(프리시즌 팀은 친선전용으로). T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌 팀은 컵 명단으로
- * 고친다(시즌 1 제3회 컵은 시즌 2 개막 뒤에도 시즌 1 팀으로 치른다). 컵 팀이면 true.
- */
-async function checkEditableSeason(
-  db: Db,
-  profileId: string,
-  season: number,
-  current: number | null,
-) {
-  if (season === current || season === 0) return false;
-  if (
-    current !== null &&
-    season < current &&
-    (await activeCupSeasonsQuery(db, profileId)).some((r) => r.season === season)
-  )
-    return true;
-  throw conflictError(PAST_SEASON_TEXT, 'SEASON_CLOSED');
-}
-
 /** 지금 고치고 겨루는 팀 시즌. 시즌 사이 휴식기면 409 SEASON_CLOSED. */
 export function currentSeasonOrThrow(now: string): number {
   const season = teamSeasonAt(now);
@@ -220,25 +173,6 @@ export function currentSeasonOrThrow(now: string): number {
 const seasonQuery = (c: Context<AppEnv>, now: string) =>
   teamSeasonParam(c.req.query('season'), now);
 
-/** 팀·감독 이름 검사(욕설·운영자 사칭). */
-function checkName(value: string, what: string) {
-  // '로고 글자'처럼 받침이 없는 이름도 오므로 문장은 조사 없이 잇는다(errorText의 번역 패턴과 같이 바꾼다).
-  if (isReservedNickname(value)) {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      message: `${what}에 '운영자'처럼 운영진으로 보이는 말은 쓸 수 없어요.`,
-      details: { reason: 'RESERVED_NAME' },
-    });
-  }
-  if (!isAcceptablePublicName(value)) {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      message: `${what}에 쓸 수 없는 말이 들어 있어요.`,
-      details: { reason: 'BLOCKED_WORD' },
-    });
-  }
-}
-
 /** 오늘(한국 시각 자정부터)의 시작 UTC ISO. */
 /** 한국 시각 오늘 0시(UTC ISO). 하루 경기·영입 상한의 기준. */
 export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
@@ -247,84 +181,6 @@ const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WI
 
 /** T-11-310 감독 칸에 든 내 감독(끝낸 감독만, 없으면 null). */
 const coachOf = teamCoachOf;
-
-function toOwnerTeam(
-  row: OwnerTeamRow,
-  lineup: LineupSlot[],
-  players: ReadonlyMap<string, { nation?: string | null }>,
-  lang: Lang,
-  coach: OwnerTeam['coach'] = null,
-): OwnerTeam {
-  return {
-    id: row.id,
-    season: row.season,
-    name: row.name,
-    manager: row.manager,
-    formation: row.formation as FormationId,
-    slots: slotsOf(lineup, players, lang),
-    layout: layoutOf(row),
-    logo: logoOf(row),
-    ovr: lineupOvr(lineup),
-    lines: linesOf(lineup, row.season),
-    rating: row.rating,
-    // T-11-510 디비전은 RP 사다리 시즌(2부터)에만 있다.
-    ...(usesRankLadder(row.season) ? { division: row.division } : {}),
-    record: recordOf(row),
-    likes: row.likes,
-    views: row.views,
-    presets: presetsOf(row),
-    coach,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-  };
-}
-
-/**
- * 저장할 선발 검사(팀 저장 · T-11-570 컵 명단 프리셋): 한 선수는 한 자리, 지금 가진 내 선수만, 지난 시즌 선수 급여 예산 안.
- */
-async function checkLineupPlayers(
-  db: Db,
-  profileId: string,
-  season: number,
-  current: number | null,
-  slots: readonly (string | null)[],
-) {
-  const ids = slots.filter((x): x is string => x !== null);
-  if (new Set(ids).size !== ids.length) {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      message: '한 선수는 한 자리에만 넣을 수 있어요.',
-      details: { reason: 'DUPLICATE_PLAYER' },
-    });
-  }
-  const eligible = eligibleMap(await careersByIds(db, ids), profileId, season, true);
-  if (ids.some((id) => !eligible.has(id))) {
-    throw new AppError({
-      code: 'VALIDATION_FAILED',
-      message:
-        season === current
-          ? '지금 가진 내 선수만 팀에 넣을 수 있어요.'
-          : '지금 가진 프리시즌 선수만 프리시즌 팀에 넣을 수 있어요.',
-      details: { reason: 'PLAYER_NOT_ELIGIBLE' },
-    });
-  }
-  // T-11-376 지난 시즌 선수는 급여(최고 OVR) 합이 예산 안에서만. 지난 시즌 선수가 없으면 밸런스를 읽지 않는다.
-  const salary = pastSalarySum(
-    ids.map((id) => eligible.get(id)),
-    season,
-  );
-  if (salary > 0) {
-    const budget = await pastSalaryBudgetOf(db, season);
-    if (salary > budget) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        message: pastSalaryOverText(salary, budget),
-        details: { reason: 'PAST_SALARY_BUDGET', salary, budget },
-      });
-    }
-  }
-  return { ids, eligible };
-}
 
 /**
  * T-11-571 내 팀의 리그 체력(켜져 있을 때만). 이 팀의 최근 리그 경기 몇 판의 선발로 다음 라운드 기준 연속 선발 수를 센다.
@@ -452,97 +308,22 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const input = readBody(c, PutOwnerTeamBodySchema);
     const now = nowIso();
-    const current = teamSeasonAt(now);
-    const season = input.season ?? currentSeasonOrThrow(now);
-    const cupTeam = await checkEditableSeason(db, me.id, season, current);
-    const friendly = season !== current && !cupTeam;
-    checkName(input.name, '팀 이름');
-    checkName(input.manager, '감독 이름');
-    if (input.logo?.text) checkName(input.logo.text, '로고 글자');
-    const { ids, eligible } = await checkLineupPlayers(db, me.id, season, current, input.slots);
-    // 이전 클라이언트가 좌표를 보내지 않으면 기존 자유 편성을 보존한다.
-    // 포메이션을 바꾼 요청만 새 기본 배치로 돌아간다. T-11-570 컵 명단 프리셋이 있는지도 이 행에서 본다.
-    const [stored] = await myTeamIn(db, me.id, season);
-    const previous = stored ? friendlyTeamOf(stored) : null;
-    // T-11-310 감독 칸: 보내지 않으면(옛 클라이언트) 그대로 둔다. 끝낸 내 감독만 넣는다.
-    const coachId = input.coach === undefined ? (previous?.coachId ?? null) : input.coach;
-    const coach = coachId ? await coachOf(db, { coachId, profileId: me.id }) : null;
-    if (input.coach && !coach) throw coachNotEligible();
-    const layout =
-      input.layout === undefined
-        ? previous?.formation === input.formation
-          ? layoutOf(previous)
-          : null
-        : input.layout;
-    const lineup = buildLineup(input.formation, input.slots, eligible, layout);
-    // T-11-570 컵 명단 프리셋이 따로 있으면 팀 명단은 컵에 나가지 않으므로 리그 잠금만 본다.
-    if (!friendly)
-      await checkCupLineup(db, me.id, season, ids, filledCount(lineup), now, lineupOvr(lineup), {
-        cup: !(stored && cupPresetOf(stored)),
-      });
-    const values = {
-      name: input.name,
-      manager: input.manager,
-      formation: input.formation,
-      slotsJson: JSON.stringify(input.slots),
-      layoutJson: layout ? JSON.stringify(layout) : null,
-      // 로고를 모르는 이전 클라이언트의 저장은 기존 로고를 보존한다.
-      ...(input.logo !== undefined
-        ? { logoJson: input.logo ? JSON.stringify(input.logo) : null }
-        : {}),
-      filled: filledCount(lineup),
-      ovr: lineupOvr(lineup),
-      coachId: coach ? coachId : null,
-    };
-    if (friendly) {
-      const lineupJson = JSON.stringify({
-        logoJson: previous?.logoJson ?? null,
-        ...values,
-      } satisfies FriendlyLineup);
-      const [row] = await db
-        .insert(ownerTeams)
-        .values({
-          id: newId('tem'),
-          profileId: me.id,
-          season,
-          name: input.name,
-          manager: input.manager,
-          formation: input.formation,
-          slotsJson: JSON.stringify(input.slots.map(() => null)),
-          filled: 0,
-          ovr: 0,
-          friendlyJson: lineupJson,
-          createdAt: now,
-          updatedAt: now,
-        })
-        .onConflictDoUpdate({
-          target: [ownerTeams.profileId, ownerTeams.season],
-          set: { friendlyJson: lineupJson },
-        })
-        .returning();
-      return ok(c, PutOwnerTeamResponseSchema, {
-        team: toOwnerTeam(friendlyTeamOf(row!), lineup, eligible, reqLang(c), coach),
-      });
+    const { row, lineup, eligible, coach, season, friendly } = await saveOwnerTeam(
+      db,
+      me.id,
+      input,
+      now,
+      {
+        currentSeasonOrThrow,
+        checkCupLineup,
+      },
+    );
+    if (!friendly) {
+      purgeEdge(c, STALE.teamSaved(season));
+      waitUntil(c, refreshAfterChange(db, me.id, season));
     }
-    const [row] = await db
-      .insert(ownerTeams)
-      .values({
-        id: newId('tem'),
-        profileId: me.id,
-        season,
-        createdAt: now,
-        updatedAt: now,
-        ...values,
-      })
-      .onConflictDoUpdate({
-        target: [ownerTeams.profileId, ownerTeams.season],
-        set: { ...values, updatedAt: now },
-      })
-      .returning();
-    purgeEdge(c, STALE.teamSaved(season));
-    waitUntil(c, refreshAfterChange(db, me.id, season));
     return ok(c, PutOwnerTeamResponseSchema, {
-      team: toOwnerTeam(row!, lineup, eligible, reqLang(c), coach),
+      team: toOwnerTeam(row, lineup, eligible, reqLang(c), coach),
     });
   });
 

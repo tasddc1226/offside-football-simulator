@@ -90,7 +90,7 @@ export const exchange: Translation<ExchangeMsgs> = {
   noCards: '出せる引退選手がいません。',
   lockLocked: 'ロック中',
   lockListed: '出品中',
-  lockStarter: 'スタメン',
+  lockStarter: 'スタメン・カップ',
   lockNotFit: '条件外',
   lockBought: '獲得',
   cardLine: (p) => `${p.pos} · 最高OVR ${p.peak}`,
