@@ -1,0 +1,30 @@
+{
+  "id": "t-11-618-owner-hall-visit",
+  "title": "다른 구단주의 명예관 구경하기",
+  "items": [
+    "구단주 프로필의 명예관 보기로 그 구단주가 받은 칭호와 기록 배지를 볼 수 있어요",
+    "칭호 안내에 시즌 순위 보상이 기록 배지라는 설명을 더했어요"
+  ],
+  "en": {
+    "title": "Visit other owners' halls",
+    "items": [
+      "Use View Hall on an owner profile to see the titles and record badges that owner has earned.",
+      "The title guide now explains that season ranking rewards are record badges."
+    ]
+  },
+  "ja": {
+    "title": "ほかのオーナーの名誉の殿堂を見る",
+    "items": [
+      "オーナープロフィールから、そのオーナーの称号と記録バッジを見られます。",
+      "称号の案内に、シーズン順位の報酬は記録バッジだという説明を加えました。"
+    ]
+  },
+  "zh": {
+    "title": "參觀其他球隊老闆的榮譽館",
+    "items": [
+      "可從球隊老闆檔案查看對方獲得的稱號與紀錄徽章。",
+      "稱號指引新增說明：賽季排名獎勵是紀錄徽章。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -113,6 +113,13 @@ export const OwnerTitleBackfillResponseSchema = z.strictObject({
 });
 
 /** Private archive: one summary read, season details remain on-demand. */
+/** T-11-618 남의 명예관(읽기 전용). 프로필 응답에 없는 기록 배지와 받은 칭호만 싣는다 — 사람마다 같아 엣지에 담는다. */
+export const OwnerHallVisitResponseSchema = z.strictObject({
+  honors: z.array(OwnerHonorSchema),
+  titles: z.array(OwnerTitleSchema),
+});
+export type OwnerHallVisitResponse = z.infer<typeof OwnerHallVisitResponseSchema>;
+
 export const OwnerArchiveResponseSchema = z.strictObject({
   owner: OwnerProfileSchema,
   honors: z.array(OwnerHonorSchema),

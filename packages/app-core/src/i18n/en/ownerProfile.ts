@@ -9,6 +9,11 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   roomTrophies: 'Trophy cabinet',
   roomSeasonsNote: 'Players and records from every season',
   roomOwnerNote: 'A title to display beside your name',
+  // T-11-618 남의 명예관.
+  visitOwnerNote: 'Titles this owner has earned',
+  visitNoTitles: 'No titles earned yet.',
+  visitNoAwards: 'Nothing on display yet.',
+  visitLoadFail: 'Could not load this hall.',
   roomTrophiesNote: 'Badges and results earned in competition',
   roomPrev: 'Look left',
   roomNext: 'Look right',
@@ -139,7 +144,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   relatedExchange: "Earned by finishing all of a day's card challenges",
   viewAchievements: 'Season achievements',
   titleBridge:
-    'Season achievements are challenges for this season. Permanent titles reward repeated development across seasons or finalized season-first honors. Achievement points are not added toward titles.',
+    'Season achievements are challenges for this season. Permanent titles reward repeated development across seasons or finalized season-first honors. Achievement points are not added toward titles. Season-end ranking rewards are record badges, not titles. You can find them in the Trophy cabinet.',
   titleFounder: 'Founding member',
   conditionFounder:
     'Retire at least 1 player you developed in preseason, excluding hidden records.',

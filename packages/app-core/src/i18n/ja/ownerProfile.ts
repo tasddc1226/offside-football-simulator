@@ -9,6 +9,11 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   roomTrophies: 'トロフィー棚',
   roomSeasonsNote: 'シーズンごとに積み重ねた選手と記録',
   roomOwnerNote: '自分の名前に添える称号',
+  // T-11-618 남의 명예관.
+  visitOwnerNote: 'このオーナーが獲得した称号',
+  visitNoTitles: 'まだ称号がありません。',
+  visitNoAwards: 'まだ展示された記録がありません。',
+  visitLoadFail: '名誉の殿堂を読み込めませんでした。',
   roomTrophiesNote: '競争で獲得したバッジとカップ成績',
   roomPrev: '左を見る',
   roomNext: '右を見る',
@@ -137,7 +142,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   relatedExchange: 'その日のカード課題をすべて達成するたびに進む称号',
   viewAchievements: 'シーズン実績',
   titleBridge:
-    'シーズン実績は今シーズンの挑戦です。永久称号は複数シーズンにわたる育成の積み重ねや確定した初記録の勲章で獲得します。実績ポイントの合算ではありません。',
+    'シーズン実績は今シーズンの挑戦です。永久称号は複数シーズンにわたる育成の積み重ねや確定した初記録の勲章で獲得します。実績ポイントの合算ではありません。シーズン終了時の順位報酬は称号ではなく記録バッジです。トロフィー棚で確認できます。',
   titleFounder: '創設メンバー',
   conditionFounder: 'プレシーズンに自分で育てた選手が1人以上引退（非表示の記録を除く）',
   relatedPreseason: 'プレシーズン参加を記念する称号',
