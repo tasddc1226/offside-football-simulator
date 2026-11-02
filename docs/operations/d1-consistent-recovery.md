@@ -44,7 +44,7 @@ SQL 원문·복원 DB는 Actions artifact에 올리지 않으며 workflow 종료
 - `cron:infra-health:last.backupRecovery`는 운영 포인터·manifest 해시·출처·시각을 확인한다.
 - 검증 자료 없음/오류는 `backup-recovery-unverified`, snapshot 시작 시각이 30시간 초과면 `backup-recovery-stale` 이슈다.
 - 여기서 30시간은 검증된 R2 사본의 신선도 기준이다. Time Travel 장애 판정이나 서비스 장애율을 의미하지 않는다.
-- 시간별 검사는 작은 포인터/manifest만 확인한다. 매 시간 전체 조각을 재복원했다는 뜻은 아니다.
+- 시간별 검사는 작은 포인터/manifest와 조각 목록의 존재·크기를 확인한다(최대 11페이지). 조각별 HEAD나 전체 payload 다운로드는 하지 않는다. 매 시간 전체 조각을 재복원했다는 뜻은 아니다.
   전체 재검증은 capture 시 수행했으며 이후 정기 훈련을 별도로 해야 한다.
 - 운영 snapshot 전까지 이 이슈가 남는 것이 의도된 동작이다. 기존 live-copy 완료만으로 지우지 않는다.
 

@@ -51,7 +51,7 @@ export async function inspectBackupRecovery(
       databaseId: string;
       createdAt: number;
       verified: boolean;
-      chunks: unknown[];
+      chunks: { object: string; bytes: number; sha256: string }[];
     };
     if (
       manifest.format !== marker.format ||
@@ -63,6 +63,39 @@ export async function inspectBackupRecovery(
       !manifest.chunks.length
     )
       return unknown;
+    if (manifest.chunks.length > 10000) return unknown;
+    const prefix = marker.manifestKey.slice(0, -'manifest.json'.length);
+    const expected = new Map<string, number>();
+    for (const [i, chunk] of manifest.chunks.entries()) {
+      if (
+        chunk.object !== `${String(i + 1).padStart(4, '0')}.sql.gz` ||
+        !Number.isSafeInteger(chunk.bytes) ||
+        chunk.bytes <= 0 ||
+        chunk.bytes > 64 * 1024 * 1024 ||
+        !/^[a-f0-9]{64}$/.test(chunk.sha256)
+      )
+        return unknown;
+      expected.set(prefix + chunk.object, chunk.bytes);
+    }
+    // One bounded paginated listing, not one HEAD per chunk or a full payload download every hour.
+    let cursor: string | undefined;
+    let complete = false;
+    for (let page = 0; page < 11; page++) {
+      const listed = await bucket.list({ prefix, limit: 1000, ...(cursor ? { cursor } : {}) });
+      for (const item of listed.objects) {
+        if (expected.has(item.key)) {
+          if (expected.get(item.key) !== item.size) return unknown;
+          expected.delete(item.key);
+        }
+      }
+      if (!listed.truncated) {
+        complete = true;
+        break;
+      }
+      cursor = listed.cursor;
+      if (!cursor) return unknown;
+    }
+    if (!complete || expected.size) return unknown;
     return {
       status: now - marker.at > SNAPSHOT_STALE_MS ? 'stale' : 'verified',
       snapshotAt: marker.at,

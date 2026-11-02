@@ -8,13 +8,14 @@ export async function putVerifiedRecovery(bucket: R2Bucket, at: number) {
     databaseId: '2cfe462c-204e-4842-805c-5840fc9b1758',
     createdAt: at,
     verified: true,
-    chunks: [{}],
+    chunks: [{ object: '0001.sql.gz', bytes: 7, sha256: '0'.repeat(64) }],
   });
   const hash = [
     ...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(content))),
   ]
     .map((v) => v.toString(16).padStart(2, '0'))
     .join('');
+  await bucket.put('d1-snapshots/production/fixture/0001.sql.gz', 'fixture');
   await bucket.put(manifestKey, content);
   await bucket.put(
     RECOVERY_MARKER_KEY,

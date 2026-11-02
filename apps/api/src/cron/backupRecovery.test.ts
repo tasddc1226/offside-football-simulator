@@ -20,6 +20,9 @@ describe('backup recovery assurance', () => {
     const bucket = ctx.env.BACKUP!;
     await putVerifiedRecovery(bucket, NOW);
     expect((await inspectBackupRecovery(bucket, NOW)).status).toBe('verified');
+    await bucket.delete('d1-snapshots/production/fixture/0001.sql.gz');
+    expect((await inspectBackupRecovery(bucket, NOW)).status).toBe('unverified');
+    await putVerifiedRecovery(bucket, NOW);
     expect((await inspectBackupRecovery(bucket, NOW + 31 * 3600000)).status).toBe('stale');
     await bucket.put('d1-snapshots/production/fixture/manifest.json', '{"verified":true}');
     expect((await inspectBackupRecovery(bucket, NOW)).status).toBe('unverified');
