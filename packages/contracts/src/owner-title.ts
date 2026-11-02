@@ -37,6 +37,39 @@ export function parseTitle(
   return { edition: Number(m[1]), stage: m[3] as TitleStage, ...(division ? { division } : {}) };
 }
 
+/**
+ * T-11-619 대표 칭호로 달 수 있는 시즌 기록 배지: 순위 배지(업적 · 팀 레이팅 · 명예의 전당)와 서버 최초 기록.
+ * 'honor-1-achievements-100' · 'honor-1-first'. 흔한 배지(시즌 완주 · 명예의 벽 · 영구결번)와 디비전은 달 수 없다.
+ */
+const HONOR_TITLE_RE =
+  /^honor-(0|[1-9]\d{0,3})-(?:(first)|(achievements|team|hof)-([1-9]\d{0,2}))$/;
+export type HonorTitleKind = 'achievements' | 'team' | 'hof' | 'first';
+
+export function parseHonorTitle(
+  id: string | null | undefined,
+): { season: number; kind: HonorTitleKind; band: number | null } | null {
+  const m = id ? HONOR_TITLE_RE.exec(id) : null;
+  if (!m) return null;
+  return m[2]
+    ? { season: Number(m[1]), kind: 'first', band: null }
+    : { season: Number(m[1]), kind: m[3] as HonorTitleKind, band: Number(m[4]) };
+}
+
+/** 받은 기록 배지 중 달 수 있는 것의 칭호 id(최근 시즌 먼저, 같은 시즌은 높은 순위 먼저). */
+export function honorTitleIdsOf(
+  honors: readonly { season: number; kind: string; band: number | null }[],
+): OwnerTitle[] {
+  return honors
+    .filter(
+      (h) => h.kind === 'first' || (h.band !== null && /^(achievements|team|hof)$/.test(h.kind)),
+    )
+    .slice()
+    .sort((a, b) => b.season - a.season || (a.band ?? 1000) - (b.band ?? 1000))
+    .map((h) =>
+      h.kind === 'first' ? `honor-${h.season}-first` : `honor-${h.season}-${h.kind}-${h.band}`,
+    );
+}
+
 const STAGE_RANK: Record<TitleStage, number> = { champion: 0, runnerup: 1, sf: 2 };
 
 /**
@@ -398,7 +431,8 @@ export type TitleMetric = PermanentTitle['metric'];
 export const TITLE_CRITERIA_VERSION = 4;
 export const permanentTitleOf = (id: string | null | undefined) =>
   PERMANENT_TITLES.find((t) => t.id === id);
-export const isOwnerTitle = (id: string): boolean => !!parseTitle(id) || !!permanentTitleOf(id);
+export const isOwnerTitle = (id: string): boolean =>
+  !!parseTitle(id) || !!permanentTitleOf(id) || !!parseHonorTitle(id);
 
 /** T-11-556 같은 metric 칭호의 단계(target 순). step은 1부터. */
 export function titleLadderOf(id: string) {

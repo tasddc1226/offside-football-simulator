@@ -33,9 +33,17 @@
     font-weight: 800;
     color: var(--ink);
     white-space: nowrap;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     background: color-mix(in srgb, var(--tb-light) 30%, var(--surface-2));
     box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tb-base) 55%, transparent);
     vertical-align: middle;
+  }
+  .title-badge > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .title-badge :global(svg) {
     flex: none;

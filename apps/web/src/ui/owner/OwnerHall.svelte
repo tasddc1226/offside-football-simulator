@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { fetchOwnerTitles, putOwnerTitle, type OwnerTitlesResponse } from '@offside/app-core/api/ownerProfile';
-  import { TITLE_NONE, titleLabel, titleCondition, permanentTitleOf, titleGradeLabel, titleRelated, titleCategoryLabel } from '@offside/app-core/ownerTitle';
+  import { TITLE_NONE, titleLabel, titleCondition, permanentTitleOf, titleRelated, titleCategoryLabel, titleKindLabel } from '@offside/app-core/ownerTitle';
   import { titleCollection, titleGroups, titleNextTier, titleProgressText, titleTierText } from '@offside/app-core/ownerTitleCollection';
   import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from '../cup/TitleBadge.svelte';
@@ -38,7 +38,7 @@
 {#snippet identity(id: string, isNew = false)}
   <span class="oh-title-identity">
     <span class="oh-title-art" aria-hidden="true"><TitleBadge title={id} size="icon" /></span>
-    <span class="oh-title-name"><strong>{titleLabel(id)}</strong><span class="oh-title-meta">{permanentTitleOf(id) ? titleGradeLabel(permanentTitleOf(id)!.grade) : L.titleCup}{#if titleTierText(id)}<span>{titleTierText(id)}</span>{/if}{#if isNew}<span class="oh-title-new">{L.newTitle}</span>{/if}</span></span>
+    <span class="oh-title-name"><strong>{titleLabel(id)}</strong><span class="oh-title-meta">{titleKindLabel(id)}{#if titleTierText(id)}<span>{titleTierText(id)}</span>{/if}{#if isNew}<span class="oh-title-new">{L.newTitle}</span>{/if}</span></span>
   </span>
 {/snippet}
 
