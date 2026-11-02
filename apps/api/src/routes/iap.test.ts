@@ -1,5 +1,6 @@
 import { OwnerItemsResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { grantIapPurchase, ownerItemsOf, revokeIapPurchase } from '../db/repos/iap.js';
 import { iapPurchases, ownerItems } from '../db/schema.js';
 import { resetGoogleTokenCache } from '../iap/google.js';
 import { syncGoogleVoided } from '../iap/refunds.js';
@@ -381,14 +382,40 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect(items.data).toMatchObject({ reroll: 0, scout: 2, mileage: 1 });
   });
 
-  it('계정을 지우면 아이템과 구매 원장도 지운다', async () => {
+  it('T-11-614 계정을 지우면 아이템은 지우고 구매 원장은 남긴다', async () => {
     const me = await issueGoogleCookie(ctx);
     appleTx.current = appleFor(me.profileId);
     await claim(me.cookie, { store: 'apple', productId: REROLL_5, token: 'jws' });
-    expect(await ctx.db.select().from(iapPurchases)).toHaveLength(1);
     await deleteProfile(ctx.env, me.cookie, 'iap-delete');
-    expect(await ctx.db.select().from(iapPurchases)).toHaveLength(0);
     expect(await ctx.db.select().from(ownerItems)).toHaveLength(0);
+    expect(await ctx.db.select().from(iapPurchases)).toMatchObject([
+      { transactionId: '2000000001', profileId: me.profileId, refundedAt: null },
+    ]);
+
+    // 같은 거래를 다른 계정이 받지 못하고, 탈퇴 뒤 온 환불은 원장에 남는다(회수할 아이템은 없다).
+    const other = await issueGoogleCookie(ctx);
+    const now = new Date().toISOString();
+    expect(
+      await grantIapPurchase(ctx.db, {
+        store: 'apple',
+        transactionId: '2000000001',
+        profileId: other.profileId,
+        productId: REROLL_5,
+        item: 'reroll',
+        qty: 5,
+        test: false,
+        now,
+      }),
+    ).toBeNull();
+    expect((await ownerItemsOf(ctx.db, other.profileId)).reroll).toBe(0);
+    expect(await revokeIapPurchase(ctx.db, 'apple', '2000000001', now)).toMatchObject({
+      found: true,
+      already: false,
+      profileId: me.profileId,
+      revoked: 0,
+    });
+    expect(await ctx.db.select().from(ownerItems)).toHaveLength(0);
+    expect((await ctx.db.select().from(iapPurchases))[0]?.refundedAt).toBe(now);
   });
 
   it('로그인하지 않은 프로필은 살 수 없다', async () => {

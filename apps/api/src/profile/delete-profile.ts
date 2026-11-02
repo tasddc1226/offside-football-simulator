@@ -17,8 +17,6 @@ import { deleteOwnerTeamsStatements } from '../db/repos/ownerTeams.js';
 import {
   boardComments,
   careers,
-  iapPurchases,
-  iapAdFreePurchases,
   acquisitionSessions,
   acquisitionConsents,
   idempotency,
@@ -145,7 +143,6 @@ export async function executeProfileDeletion(
         friendCode: null,
       })
       .where(eq(profiles.id, input.profileId)),
-    db.delete(iapAdFreePurchases).where(eq(iapAdFreePurchases.profileId, input.profileId)),
     db.delete(acquisitionConsents).where(eq(acquisitionConsents.profileId, input.profileId)),
     db.delete(acquisitionSessions).where(eq(acquisitionSessions.profileId, input.profileId)),
     // T-9-009: profiles는 소프트 삭제(deletedAt만 세팅)라 FK ON DELETE CASCADE가 트리거되지 않는다.
@@ -161,7 +158,9 @@ export async function executeProfileDeletion(
     ...deleteFriendsStatements(db, input.profileId),
     // T-11-171 친구 초대 기록(초대한 줄 · 초대받은 줄).
     ...deleteReferralsStatements(db, input.profileId),
-    // T-11-174 구단주 아이템과 인앱 구매 원장. 같은 거래를 다른 계정이 받는 일은 구단주 표시 확인이 막는다.
+    // T-11-614 구매 원장(iap_purchases · iap_ad_free_purchases)은 지우지 않는다. 전자상거래법 결제 기록 5년 보존 대상이고,
+    // 프로필 행은 식별 정보를 비운 채 남으니 구단주 ID만 남는다. 유입 연결은 acquisition_sessions 삭제 때 FK로 비워진다.
+    // 원장이 남아 같은 거래를 다른 계정이 다시 받을 수 없고, 탈퇴 뒤 온 환불도 원장에 표시된다.
     db.delete(profileAvatars).where(eq(profileAvatars.profileId, input.profileId)),
     db.delete(ownerTitleAwards).where(eq(ownerTitleAwards.profileId, input.profileId)),
     db.delete(ownerTitleProgress).where(eq(ownerTitleProgress.profileId, input.profileId)),
@@ -174,7 +173,6 @@ export async function executeProfileDeletion(
     db.delete(ownerAttendance).where(eq(ownerAttendance.profileId, input.profileId)),
     db.delete(ownerAttendanceDays).where(eq(ownerAttendanceDays.profileId, input.profileId)),
     db.delete(rerollMileage).where(eq(rerollMileage.profileId, input.profileId)),
-    db.delete(iapPurchases).where(eq(iapPurchases.profileId, input.profileId)),
     ...deleteBoardActivityStatements(db, input.profileId),
     ...deleteTeamCommentActivityStatements(db, input.profileId),
     ...deleteChatActivityStatements(db, input.profileId),
