@@ -1,11 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { API, fail, ok, useChatListView } from './helpers.js';
+import { API, fail, ok } from './helpers.js';
 
 // T-11-618 남의 구단주 프로필에서 그 구단주의 명예관을 읽기 전용으로 연다(명패 · 트로피장 두 칸).
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
-test.beforeEach(({ page }) => useChatListView(page));
-
 async function expectNoA11yViolations(page: Page) {
   const { violations } = await new AxeBuilder({ page }).analyze();
   expect(violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);

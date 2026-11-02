@@ -1,6 +1,7 @@
 // T-10-092 팀 프로필(웹 team/TeamProfile.svelte, 라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 ·
 // 좋아요/조회수 · 팀 히스토리 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
 // 웹의 '← 랭킹'(BackBar)은 화면(Hof)이 아래 고정 막대로 그린다.
+import { scrollTo, scrollY } from '../../../ui/scroll';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -167,6 +168,17 @@ export default function TeamProfile({ id }: { id: string }) {
       setPeek({ i, origin: pitchPeekOrigin(px, py, w, h, pos) });
     });
   }
+  // 라운지 공유 카드에서 왔으면 그라운드가 화면 위쪽에 오게 내린다.
+  const teamLoaded = !!team;
+  useEffect(() => {
+    if (!teamLoaded || !appState.hof.squad) return;
+    appState.hof.squad = false;
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() =>
+        pitch.current?.measureInWindow((_x, y) => scrollTo(Math.max(0, scrollY() + y - 60))),
+      ),
+    );
+  }, [teamLoaded]);
   const peekPlayer = peek ? players.get(team?.slots[peek.i]?.careerId ?? '') : undefined;
 
   return (

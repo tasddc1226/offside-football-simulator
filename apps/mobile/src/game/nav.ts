@@ -39,6 +39,17 @@ export const goMarketRelease = () => goFocus('market', 'marketRelease');
 export const goTypeDex = () => goFocus('dex', 'types');
 // T-11-437 게임 화면 저장 위치 안내 → 설정의 백업 코드 카드로.
 export const goBackup = () => goFocus('settings', 'backup');
+// 라운지 공유 카드 → 그 선수의 구매창.
+let pendingListing: string | null = null;
+export function goMarketListing(id: string) {
+  pendingListing = id;
+  go('market');
+}
+export function takeMarketListing(): string | null {
+  const id = pendingListing;
+  pendingListing = null;
+  return id;
+}
 export function takeFocus(focus: Focus): boolean {
   const hit = pending === focus;
   if (hit) pending = null;

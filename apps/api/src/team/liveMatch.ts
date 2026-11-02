@@ -51,6 +51,8 @@ export type LivePayload = {
   names: Record<string, string>;
   /** 이 경기 뒤 오늘 남은 경기 수. */
   left: number;
+  /** 다음 충전 시각. 이 값을 넣기 전에 시작한 경기엔 없다. */
+  nextAt?: string | null;
 };
 
 export function livePayload(
@@ -61,11 +63,12 @@ export function livePayload(
   lineups: Lineups,
   met: number,
   left: number,
+  nextAt: string | null,
 ): LivePayload {
   const names: Record<string, string> = {};
   for (const s of [...lineups.home, ...lineups.away])
     if (s.careerId && s.publicName) names[s.careerId] = s.publicName;
-  return { v: 1, season, state, snap, filled, met, names, left };
+  return { v: 1, season, state, snap, filled, met, names, left, nextAt };
 }
 
 const labelOf = (p: LivePayload, lang: Lang) => (ref: PlayerRef) =>
@@ -135,6 +138,7 @@ export function liveStartResponse(
     record: { w: mine.wins, d: mine.draws, l: mine.losses },
     rating: mine.rating,
     matchesLeft: p.left,
+    matchesNextAt: p.nextAt ?? null,
     live: {
       moments: p.state.moments.flatMap((m, i) =>
         m.shown && m.picked === undefined ? [liveMomentView(p, i, lang)] : [],
@@ -228,6 +232,7 @@ export async function finalizeLive(
         }
       : {}),
     matchesLeft: p.left,
+    matchesNextAt: p.nextAt ?? null,
   };
   try {
     await commitNotifiedEvent(

@@ -50,6 +50,7 @@ const ko = {
   leagueHomeAdv: '리그 홈 이점',
   pastSalaryBudget: '지난 시즌 선수 급여 예산',
   pastSalaryBudgetStep: '시즌당 급여 예산 증가',
+  teamMatchRechargeMin: '랭크 경기 충전 간격(분)',
   rerollPrice: '리롤권 가격',
   rerollPriceGrowth: '리롤권 가격 상승 배율',
   rerollDailyCap: '하루 리롤권 구매 수',

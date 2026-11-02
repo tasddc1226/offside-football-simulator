@@ -3,12 +3,16 @@ import type { OwnerTier } from '@offside/contracts/owner-tier';
 import {
   CHAT_HISTORY,
   CHAT_KEEP_MS,
+  CHAT_NOTICE_MERGE_MS,
   CHAT_REPLY_SNIPPET,
+  CHAT_SHARE_GAP_MS,
   CHAT_TICKET_MS,
   type ChatMessage,
+  type ChatNotice,
   type ChatRejectCode,
   type ChatReply,
   type ChatServerEvent,
+  type ChatShare,
 } from '@offside/contracts/chat';
 import { LIVE_PING, LIVE_PONG } from '@offside/contracts/polling';
 import {
@@ -24,6 +28,7 @@ import {
   type FieldPeer,
   type FieldServerEvent,
 } from '@offside/contracts/lounge-field';
+import type { LiveRetiredNumber } from '@offside/contracts';
 import type { Bindings } from '../env.js';
 import { MAX_SOCKETS } from '../live/hub.js';
 import { checkSend } from './rules.js';
@@ -96,6 +101,7 @@ const toMessage = (r: Row): StoredMessage => ({
           )
         : null,
   }),
+  ...(r.share_json != null && { share: JSON.parse(String(r.share_json)) as ChatShare }),
   profileId: String(r.profile_id),
 });
 const publicOf = ({ profileId: _, ...m }: StoredMessage): ChatMessage => m;
@@ -143,6 +149,9 @@ export class ChatRoom extends DurableObject<Bindings> {
     // T-11-573 답장한 원문 id.
     if (!cols.some((c) => c.name === 'reply_to'))
       this.sql.exec('ALTER TABLE messages ADD COLUMN reply_to TEXT');
+    // 라운지에 올린 팀 · 선수(ChatShare JSON).
+    if (!cols.some((c) => c.name === 'share_json'))
+      this.sql.exec('ALTER TABLE messages ADD COLUMN share_json TEXT');
     this.sql.exec('CREATE INDEX IF NOT EXISTS messages_profile ON messages (profile_id)');
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS community_push_outbox (id TEXT PRIMARY KEY REFERENCES messages(id), at INTEGER NOT NULL)`,
@@ -153,6 +162,11 @@ export class ChatRoom extends DurableObject<Bindings> {
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, expires INTEGER NOT NULL, writer TEXT NOT NULL)`,
     );
+    // 대화 사이에 끼는 영구결번 배너(ChatNotice JSON).
+    this.sql.exec(
+      `CREATE TABLE IF NOT EXISTS notices (id TEXT PRIMARY KEY, at INTEGER NOT NULL, notice TEXT NOT NULL)`,
+    );
+    this.sql.exec('CREATE INDEX IF NOT EXISTS notices_at ON notices (at)');
     // T-11-600 라운지 필드 오늘의 득점(KST 날짜 · 작성자마다 한 줄). first_at은 같은 골 수일 때 먼저 넣은 사람이 위.
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS field_goals (day TEXT NOT NULL, author TEXT NOT NULL, nickname TEXT NOT NULL,
@@ -254,15 +268,6 @@ export class ChatRoom extends DurableObject<Bindings> {
     if (!check) return;
     if (!check.ok) return this.reject(ws, check.code);
     ws.serializeAttachment({ ...att, sent: check.sent } satisfies Attachment);
-    const {
-      profileId,
-      author,
-      nickname,
-      admin,
-      tier = null,
-      title = null,
-      avatarId = null,
-    } = att.w;
     // T-11-573 답장은 가려지지 않은 원문에만 단다. 원문이 없으면 보통 메시지로 올린다.
     const [parent] =
       typeof replyTo === 'string' && replyTo
@@ -282,22 +287,91 @@ export class ChatRoom extends DurableObject<Bindings> {
           String(parent.body),
         )
       : null;
+    this.post(att.w, check.body, now, reply);
+  }
+
+  /** 영구결번 배너를 끼운다. 바로 앞 배너가 CHAT_NOTICE_MERGE_MS 안이면 거기에 합쳐 센다. */
+  postNotice(item: LiveRetiredNumber): void {
+    const now = Date.now();
+    const [last] = this.sql
+      .exec<Row>(
+        'SELECT notice FROM notices WHERE at > ? ORDER BY at DESC LIMIT 1',
+        now - CHAT_NOTICE_MERGE_MS,
+      )
+      .toArray();
+    const prev = last ? (JSON.parse(String(last.notice)) as ChatNotice) : null;
+    const notice: ChatNotice = prev
+      ? { ...prev, n: prev.n + 1 }
+      : {
+          id: crypto.randomUUID(),
+          at: now,
+          kind: 'retiredNumber',
+          n: 1,
+          careerId: item.careerId,
+          name: item.name,
+          pos: item.pos,
+          club: item.club,
+          number: item.number,
+          season: item.season,
+        };
+    this.sql.exec(
+      'INSERT INTO notices (id, at, notice) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET notice = excluded.notice',
+      notice.id,
+      notice.at,
+      JSON.stringify(notice),
+    );
+    this.sql.exec('DELETE FROM notices WHERE at < ?', now - CHAT_KEEP_MS);
+    this.broadcast({ t: 'notice', notice });
+  }
+
+  /** 라운지에 팀 · 선수를 올린다(API가 내용을 만들어 부른다). 올렸으면 메시지 id, 너무 잦으면 null. */
+  postShare(writer: ChatWriter, body: string, share: ChatShare): string | null {
+    const now = Date.now();
+    const [recent] = this.sql
+      .exec<Row>(
+        'SELECT 1 FROM messages WHERE profile_id = ? AND share_json IS NOT NULL AND at > ? LIMIT 1',
+        writer.profileId,
+        now - CHAT_SHARE_GAP_MS,
+      )
+      .toArray();
+    if (recent && !writer.admin) return null;
+    return this.post(writer, body, now, null, share);
+  }
+
+  /** 한 줄을 적고 모두에게 보낸다. */
+  private post(
+    writer: ChatWriter,
+    body: string,
+    now: number,
+    reply: ChatReply | null,
+    share?: ChatShare,
+  ): string {
+    const {
+      profileId,
+      author,
+      nickname,
+      admin,
+      tier = null,
+      title = null,
+      avatarId = null,
+    } = writer;
     const m: ChatMessage = {
       id: crypto.randomUUID(),
       at: now,
       author,
       nickname,
-      body: check.body,
+      body,
       admin,
       tier,
       title,
       avatarId,
       ...(reply ? { replyTo: reply.id, reply } : {}),
+      ...(share ? { share } : {}),
     };
     const notify = !admin && !!communityOwnerEmail(this.env);
     this.ctx.storage.transactionSync(() => {
       this.sql.exec(
-        'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier, title, avatar_id, reply_to) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO messages (id, at, profile_id, author, nickname, body, admin, tier, title, avatar_id, reply_to, share_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
         m.id,
         m.at,
         profileId,
@@ -309,6 +383,7 @@ export class ChatRoom extends DurableObject<Bindings> {
         title,
         avatarId,
         reply?.id ?? null,
+        share ? JSON.stringify(share) : null,
       );
       if (notify)
         this.sql.exec('INSERT INTO community_push_outbox (id, at) VALUES (?, ?)', m.id, now);
@@ -318,6 +393,7 @@ export class ChatRoom extends DurableObject<Bindings> {
     // No await between SQL and setAlarm: storage write coalescing persists both atomically.
     if (notify) this.ctx.waitUntil(this.ctx.storage.setAlarm(now));
     this.broadcast({ t: 'msg', m });
+    return m.id;
   }
 
   private async ensureCommunityAlarm() {
@@ -565,7 +641,23 @@ export class ChatRoom extends DurableObject<Bindings> {
    * 가려지지 않은 줄 CHAT_HISTORY개(오래된 순)와 그 이전 줄이 더 있는지. before(메시지 id)가 있으면 그 줄보다 이전
    * 줄(T-11-180 위로 올리기, 같은 시각이면 먼저 들어온 줄)이고, before가 지워졌으면 빈 페이지다.
    */
-  private page(before?: string): { messages: ChatMessage[]; more: boolean } {
+  /** 메시지 한 페이지가 차지하는 시간 안의 배너. 더 이전 줄이 없으면 아래 끝이 없다. */
+  private noticesBetween(from: number, to: number): ChatNotice[] {
+    return this.sql
+      .exec<Row>(
+        'SELECT notice FROM notices WHERE at >= ? AND at < ? ORDER BY at LIMIT 100',
+        from,
+        to,
+      )
+      .toArray()
+      .map((r) => JSON.parse(String(r.notice)) as ChatNotice);
+  }
+
+  private page(before?: string): {
+    messages: ChatMessage[];
+    more: boolean;
+    notices?: ChatNotice[];
+  } {
     const rows = this.sql
       .exec<Row>(
         `${WITH_REPLY} WHERE m.hidden = 0${
@@ -575,13 +667,19 @@ export class ChatRoom extends DurableObject<Bindings> {
         CHAT_HISTORY + 1,
       )
       .toArray();
-    return {
-      messages: rows
-        .slice(0, CHAT_HISTORY)
-        .reverse()
-        .map((r) => publicOf(toMessage(r))),
-      more: rows.length > CHAT_HISTORY,
-    };
+    const more = rows.length > CHAT_HISTORY;
+    const messages = rows
+      .slice(0, CHAT_HISTORY)
+      .reverse()
+      .map((r) => publicOf(toMessage(r)));
+    const until = before
+      ? Number(
+          this.sql.exec<Row>('SELECT at FROM messages WHERE id = ?', before).toArray()[0]?.at ?? 0,
+        )
+      : Number.MAX_SAFE_INTEGER;
+    const notices = this.noticesBetween(more ? (messages[0]?.at ?? 0) : 0, until);
+    // 배너가 없으면 응답 모양은 그대로다.
+    return { messages, more, ...(notices.length ? { notices } : {}) };
   }
 
   private reject(ws: WebSocket, code: ChatRejectCode) {

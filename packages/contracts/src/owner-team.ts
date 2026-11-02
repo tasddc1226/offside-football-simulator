@@ -107,6 +107,31 @@ export const YOUTH_OVR = 50;
 export const YOUTH_NAME = '유스 선수';
 /** 구단주 한 명이 한국 시각 하루(자정 기준)에 치를 수 있는 경기 수. */
 export const TEAM_MATCHES_PER_DAY = 10;
+/** 하루 경기를 다 치른 뒤 1경기가 더 열리는 간격(분). BALANCE_SPEC.teamMatchRechargeMin.def와 같다. */
+export const TEAM_MATCH_RECHARGE_MIN = 180;
+/**
+ * 오늘 남은 랭크 경기와 다음 충전 시각. 하루 경기를 다 치른 순간부터 간격마다 1경기씩 쌓이고, 자정에 처음으로 돌아간다. 따로
+ * 저장하지 않고 오늘 건 경기 시각으로 센다. 자정 전에 더 열리지 않으면 nextAt은 null이다. 간격이 0이면 충전하지 않는다.
+ */
+export function teamMatchAllowance(
+  playedAt: readonly string[],
+  now: string,
+  dayStart: string,
+  rechargeMin: number,
+): { left: number; nextAt: string | null } {
+  const used = playedAt.length;
+  if (used < TEAM_MATCHES_PER_DAY) return { left: TEAM_MATCHES_PER_DAY - used, nextAt: null };
+  if (rechargeMin <= 0) return { left: 0, nextAt: null };
+  const ms = playedAt.map((t) => Date.parse(t)).sort((a, b) => a - b);
+  const from = ms[TEAM_MATCHES_PER_DAY - 1]!;
+  const gap = rechargeMin * 60_000;
+  const earned = Math.max(0, Math.floor((Date.parse(now) - from) / gap));
+  const next = from + (earned + 1) * gap;
+  return {
+    left: Math.max(0, TEAM_MATCHES_PER_DAY + earned - used),
+    nextAt: next < Date.parse(dayStart) + 86_400_000 ? new Date(next).toISOString() : null,
+  };
+}
 /** 한 팀의 선발 인원. */
 export const LINEUP_SIZE = 11;
 /** 팀 시즌보다 앞 시즌 카드면 지난 시즌 선수(T-11-114). 시즌을 모르는 옛 응답은 그 시즌 선수로 본다. */

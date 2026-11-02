@@ -7,11 +7,16 @@
   import PlayerCard from './PlayerCard.svelte';
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+  import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
 
   /** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다. */
-  let { player, name, rating, slot, nation, season, fit, origin, onclose }:
-    { player: TeamPlayer; name: string; rating: number; slot: DetailPos; nation?: string | null | undefined; season?: number | undefined;
-      fit: number; origin: HTMLElement; onclose: () => void } = $props();
+  let { player, name, rating, slot, nation, season, fit, origin, onclose, onshare }:
+    { player: TeamPlayer; name: string; rating: number;
+      /** 그라운드의 자리와 적합도. 라운지처럼 자리가 없는 곳에서는 안 준다. */
+      slot?: DetailPos | undefined; fit?: number | undefined;
+      nation?: string | null | undefined; season?: number | undefined; origin: HTMLElement; onclose: () => void;
+      /** 내 팀 그라운드에서만 준다. 라운지에 이 선수를 올린다. */
+      onshare?: ((careerId: string) => void) | undefined } = $props();
   let card = $state<HTMLElement>();
   let closeButton = $state<HTMLButtonElement>();
   let closing = false;
@@ -63,8 +68,11 @@
     <div class="peek-card" bind:this={card} style:transform={rest} style:--grow="{(cardH * (zoom - 1)) / 2}px" style:--grow-x="{(CARD_W * (zoom - 1)) / 2}px">
       <PlayerCard {player} {name} {nation} {season} rating={player.peak} role={detailPosOf(player)} />
     </div>
-    <p class="peek-slot"><b>{tn(DETAIL_LABEL[slot])}</b>{L.pitchRatingFull({ peak: player.peak, rating, fit })}</p>
-    <button class="peek-close" bind:this={closeButton} onclick={close}>{L.close}</button>
+    {#if slot != null && fit != null}<p class="peek-slot"><b>{tn(DETAIL_LABEL[slot])}</b>{L.pitchRatingFull({ peak: player.peak, rating, fit })}</p>{/if}
+    <div class="peek-actions">
+      {#if onshare}<button class="peek-close peek-share" data-act="player-lounge-share" onclick={() => onshare(player.careerId)}>{LC.sharePlayerAct}</button>{/if}
+      <button class="peek-close" bind:this={closeButton} onclick={close}>{L.close}</button>
+    </div>
   </div>
 </div>
 
@@ -80,6 +88,8 @@
   .peek-slot {margin:0;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;color:#fff;font-size:12px;line-height:1.5;opacity:.9;}
   .peek-slot b {font-size:14px;}
   .peek-close {min-width:120px;min-height:44px;padding:0 18px;border:1px solid #ffffff55;border-radius:var(--radius-pill);background:#0006;color:#fff;font:inherit;font-weight:600;cursor:pointer;animation:peek-fade .25s ease-out;}
+  .peek-actions {display:flex;flex-wrap:wrap;justify-content:center;gap:8px;}
+  .peek-share {background:var(--accent);border-color:var(--accent);color:var(--on-accent,#10231a);}
   .peek-close:focus-visible {outline:3px solid var(--accent);outline-offset:3px;}
   @keyframes peek-fade {from {opacity:0;}}
   @media(prefers-reduced-motion:reduce) { .peek-backdrop,.peek-close {animation:none;} }

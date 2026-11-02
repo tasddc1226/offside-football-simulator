@@ -46,6 +46,9 @@ export const pastSalaryBudgetFrom = (row: Row | undefined, teamSeason: number) =
   const b = resolveBalance(row && toVersion(row).values);
   return seasonSalaryBudget(b.pastSalaryBudget, b.pastSalaryBudgetStep, teamSeason);
 };
+/** 랭크 경기 충전 간격(분, 0이면 끔). */
+export const matchRechargeFrom = (row: Row | undefined) =>
+  resolveBalance(row && toVersion(row).values).teamMatchRechargeMin;
 /** T-11-571 리그 체력 비율(0이면 끔). */
 export const leagueFatigueFrom = (row: Row | undefined) =>
   resolveBalance(row && toVersion(row).values).leagueFatigue;

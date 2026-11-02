@@ -50,6 +50,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   leagueHomeAdv: 'リーグのホームアドバンテージ',
   pastSalaryBudget: '過去シーズン選手の年俸予算',
   pastSalaryBudgetStep: 'シーズンごとの年俸予算増加',
+  teamMatchRechargeMin: 'ランク戦の回復間隔（分）',
   rerollPrice: 'リロールチケットの価格',
   rerollPriceGrowth: 'リロールチケットの値上がり倍率',
   rerollDailyCap: '1日のリロールチケット購入数',

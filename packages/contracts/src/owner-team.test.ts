@@ -36,6 +36,9 @@ import {
   teamOvr,
   achGradeOf,
   PAST_SALARY_BUDGET_STEP,
+  TEAM_MATCH_RECHARGE_MIN,
+  TEAM_MATCHES_PER_DAY,
+  teamMatchAllowance,
   seasonSalaryBudget,
 } from './owner-team.js';
 import {
@@ -351,6 +354,7 @@ describe('T-11-376 지난 시즌 선수 급여', () => {
   it('예산 기본값 80 = 밸런스 기본값, 급여 최대 20 선수 4명까지 예산 안', () => {
     expect(BALANCE_SPEC.pastSalaryBudget.def).toBe(PAST_SALARY_BUDGET);
     expect(BALANCE_SPEC.pastSalaryBudgetStep.def).toBe(PAST_SALARY_BUDGET_STEP);
+    expect(BALANCE_SPEC.teamMatchRechargeMin.def).toBe(TEAM_MATCH_RECHARGE_MIN);
     const max = Math.max(...PAST_SALARY_TABLE.map((t) => t.salary));
     expect(max * 4).toBeLessThanOrEqual(PAST_SALARY_BUDGET);
     // 예산 정확히 80은 되고 81은 넘는다.
@@ -453,5 +457,29 @@ describe('T-11-510 RP 사다리', () => {
     expect(rankPoints(1000, 1000, 1, 0, true)).toBe(20);
     expect(rankPoints(5, 1000, 0, 0)).toBe(-5);
     expect(rankPoints(0, 0, 0, 0)).toBe(0);
+  });
+});
+
+describe('teamMatchAllowance', () => {
+  const dayStart = '2026-11-01T15:00:00.000Z'; // 한국 시각 11월 2일 0시
+  const at = (h: number) => new Date(Date.parse(dayStart) + h * 3_600_000).toISOString();
+  const played = (n: number, hour = 1) => Array.from({ length: n }, () => at(hour));
+
+  it('하루 경기를 다 치르기 전에는 충전하지 않는다', () => {
+    expect(teamMatchAllowance(played(3), at(5), dayStart, 180)).toEqual({ left: 7, nextAt: null });
+  });
+
+  it('다 치른 순간부터 간격마다 1경기씩 쌓이고 쓴 만큼 줄어든다', () => {
+    const ten = played(TEAM_MATCHES_PER_DAY);
+    expect(teamMatchAllowance(ten, at(1), dayStart, 180)).toEqual({ left: 0, nextAt: at(4) });
+    expect(teamMatchAllowance(ten, at(4), dayStart, 180)).toEqual({ left: 1, nextAt: at(7) });
+    expect(teamMatchAllowance(ten, at(10), dayStart, 180)).toEqual({ left: 3, nextAt: at(13) });
+    expect(teamMatchAllowance([...ten, at(10)], at(10), dayStart, 180)).toEqual({ left: 2, nextAt: at(13) });
+  });
+
+  it('자정 전에 더 열리지 않으면 다음 시각이 없고, 간격이 0이면 충전하지 않는다', () => {
+    const late = played(TEAM_MATCHES_PER_DAY, 22);
+    expect(teamMatchAllowance(late, at(22), dayStart, 180)).toEqual({ left: 0, nextAt: null });
+    expect(teamMatchAllowance(played(TEAM_MATCHES_PER_DAY), at(23), dayStart, 0)).toEqual({ left: 0, nextAt: null });
   });
 });

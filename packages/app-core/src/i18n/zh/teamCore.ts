@@ -17,6 +17,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   hintDirty: '儲存變更後的陣容才能比賽。',
   hintNoStarters: '至少放入一名退役球員才能比賽。',
   hintNoMatches: '今天的比賽都踢完了。韓國時間午夜（台灣時間晚上 11 點）重新開放。',
+  hintNoMatchesNext: (p: { time: string }) => `今天的比賽都踢完了。${p.time} 會再開放 1 場。`,
   hintRest: '目前是賽季間的休息期。下個賽季開始後即可比賽。',
   hintPast: '過去賽季的球隊只能查看。選擇目前賽季即可比賽。',
   achOneClubHint:

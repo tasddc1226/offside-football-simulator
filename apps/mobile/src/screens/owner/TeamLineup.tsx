@@ -1,5 +1,7 @@
+import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
+import { ShareIcon } from '../../components/ShareIcon';
 import { RADIUS } from '@offside/app-core/design-tokens';
-import { useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { Keyboard, View, useWindowDimensions } from 'react-native';
 import {
   positionRole,
@@ -61,6 +63,8 @@ export function TeamLineup({
   synApplied,
   synCaption,
   onLock,
+  onShare,
+  belowPitch,
   focusSlot = null,
   onFocused,
   season,
@@ -86,6 +90,10 @@ export function TeamLineup({
   synCaption: string | null;
   /** T-11-188 선수 잠금·풀기. */
   onLock?: ((p: TeamPlayer) => void) | undefined;
+  /** 저장된 내 팀이면 준다. 라운지에 이 선수를 올린다. */
+  onShare?: ((careerId: string) => void) | undefined;
+  /** 그라운드 바로 아래에 놓는 것(라인 힘 · 시너지). */
+  belowPitch?: ReactNode;
   /** T-11-379 경기 리포트 '고칠 곳'으로 고른 자리 — 골라 두고 맞는 선수 순으로 라커룸을 정렬한다. */
   focusSlot?: number | null;
   onFocused?: () => void;
@@ -349,6 +357,7 @@ export function TeamLineup({
           </Btn>
         </View>
       ) : null}
+      {belowPitch}
       {editable ? (
         <View ref={locker} collapsable={false}>
           <Card gap={12}>
@@ -514,6 +523,17 @@ export function TeamLineup({
                             : TC.salaryChip({ n: pay })}
                         </Txt>
                       ) : null}
+                      {onShare ? (
+                        <Press
+                          testID={`player-lounge-share-${p.careerId}`}
+                          accessibilityRole="button"
+                          accessibilityLabel={LC.sharePlayerAria({ name: nameOf(p) })}
+                          hitSlop={8}
+                          onPress={() => onShare(p.careerId)}
+                        >
+                          <ShareIcon color={c.muted} size={15} />
+                        </Press>
+                      ) : null}
                       {stamina ? (
                         <View
                           testID={`stamina-${p.careerId}`}
@@ -642,6 +662,7 @@ export function TeamLineup({
                 slot={layout[peek.i]!.slot}
                 origin={peek.origin}
                 onclose={() => setPeek(null)}
+                onshare={onShare}
               />
             ) : null;
           })()

@@ -46,6 +46,7 @@ async function openField(page: Page) {
   });
   await page.goto('/');
   await page.locator('[data-act="chat"]').click();
+  await page.locator('[data-chat-view="field"]').click();
   await expect(page.locator('[data-lounge-field]')).toBeVisible();
   await expect(page.locator('[data-act="field-emote"]')).toBeVisible();
 }

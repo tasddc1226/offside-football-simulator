@@ -33,6 +33,7 @@ import {
 } from '@offside/contracts';
 import {
   TEAM_MATCHES_PER_DAY,
+  teamMatchAllowance,
   TEAM_REPEAT_WINDOW_DAYS,
   achTierByRank,
   matchScore,
@@ -60,8 +61,8 @@ import { kstDays } from '../time.js';
 import { commitNotifiedEvent } from '../push/events.js';
 import {
   careersByIds,
+  challengedAtSince,
   challengedSince,
-  countMatchesSince,
   eligibleMap,
   foundersOf,
   friendlyTeamOf,
@@ -92,6 +93,7 @@ import { teamCoachOf } from '../db/repos/managers.js';
 import {
   activeBalanceQuery,
   balanceVersionOf,
+  matchRechargeFrom,
   pastSalaryBudgetFrom,
   leagueFatigueFrom,
 } from '../db/repos/balance.js';
@@ -179,6 +181,21 @@ export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso
 /** 재대결 감쇠를 세는 기간의 시작(오늘 포함 TEAM_REPEAT_WINDOW_DAYS일, 한국 시각 자정 기준). */
 const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WINDOW_DAYS).startIso;
 
+/** 오늘 건 경기로 센 남은 경기 수와 다음 충전 시각(응답에 그대로 펼친다). */
+const matchAllowance = (
+  played: readonly { createdAt: string }[],
+  now: string,
+  rechargeMin: number,
+) => {
+  const { left, nextAt } = teamMatchAllowance(
+    played.map((m) => m.createdAt),
+    now,
+    kstTodayStart(now),
+    rechargeMin,
+  );
+  return { matchesLeft: left, matchesNextAt: nextAt };
+};
+
 /** T-11-310 감독 칸에 든 내 감독(끝낸 감독만, 없으면 null). */
 const coachOf = teamCoachOf;
 
@@ -222,15 +239,18 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const season = seasonQuery(c, now);
-    const [teams, players, [played], founder, [balance], member, cupSeasons] = await db.batch([
-      listMyTeams(db, me.id),
-      listEligibleCareers(db, me.id, season),
-      countMatchesSince(db, me.id, kstTodayStart(now)),
-      foundersOf(db, [me.id]),
-      activeBalanceQuery(db),
-      membersOf(db, [me.id], now),
-      activeCupSeasonsQuery(db, me.id),
-    ]);
+    const todayStart = kstTodayStart(now);
+    const [teams, players, played, openLive, founder, [balance], member, cupSeasons] =
+      await db.batch([
+        listMyTeams(db, me.id),
+        listEligibleCareers(db, me.id, season),
+        challengedAtSince(db, me.id, todayStart),
+        openLiveSince(db, me.id, todayStart),
+        foundersOf(db, [me.id]),
+        activeBalanceQuery(db),
+        membersOf(db, [me.id], now),
+        activeCupSeasonsQuery(db, me.id),
+      ]);
     const current = teamSeasonAt(now);
     // T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(시즌 1 제3회 컵). 그 시즌 팀은 컵 명단으로 고친다.
     const cupSeason =
@@ -286,7 +306,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
-        matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - Number(played?.n ?? 0)),
+        ...matchAllowance([...played, ...openLive], now, matchRechargeFrom(balance)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
         pastSalaryBudget: pastSalaryBudgetFrom(balance, season),
         founder: founder.length > 0,
@@ -473,14 +493,13 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     // T-11-375 디비전 경계 · 강등 보호는 활성 밸런스에서 — 같은 batch로 읽어 왕복을 늘리지 않는다.
     const [[mine], recorded, open, [opp], [active]] = await db.batch([
       myTeamIn(db, me.id, season),
-      challengedSince(db, me.id, kstTodayStart(now)),
+      challengedAtSince(db, me.id, kstTodayStart(now)),
       openLiveSince(db, me.id, kstTodayStart(now)),
       liveTeam(db, input.opponentTeamId),
       activeBalanceQuery(db),
     ]);
-    const divisions = divisionRules(
-      resolveBalance(active ? balanceVersionOf(active).values : undefined),
-    );
+    const activeBalance = resolveBalance(active ? balanceVersionOf(active).values : undefined);
+    const divisions = divisionRules(activeBalance);
     if (!mine) throw teamRequired();
     // T-11-387 아직 끝나지 않은 장면 경기도 오늘 경기로 센다. 떠난 경기는 여기서 자동 선택으로 마감한다(cron보다 먼저).
     if (open.length)
@@ -494,10 +513,10 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         ),
       );
     const challenged = [...recorded, ...open];
-    const usedToday = challenged.length;
-    if (usedToday >= TEAM_MATCHES_PER_DAY) {
+    const rechargeMin = activeBalance.teamMatchRechargeMin;
+    if (matchAllowance(challenged, now, rechargeMin).matchesLeft === 0) {
       throw rateLimited(
-        `오늘 경기는 모두 치렀어요(하루 ${TEAM_MATCHES_PER_DAY}경기). 한국 시각 자정에 다시 열려요.`,
+        `오늘 경기는 모두 치렀어요(하루 ${TEAM_MATCHES_PER_DAY}경기). 시간이 지나면 1경기씩 더 열려요.`,
         'TEAM_MATCH_DAILY_LIMIT',
       );
     }
@@ -540,6 +559,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (filledCount(lineups.away) === 0) throw teamNotFound();
 
     const id = newId('mat');
+    // 이 경기까지 친 뒤의 남은 경기와 다음 충전 시각.
+    const after = matchAllowance([...challenged, { createdAt: now }], now, rechargeMin);
     if (input.live) {
       // T-11-387 장면 경기: 일반 골과 장면을 굴려 두고, 마지막 장면을 고르거나 마감할 때 경기를 남긴다.
       const state = startLiveMatch(id, lineups.home, lineups.away, season, {
@@ -556,7 +577,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         { home: filledCount(lineups.home), away: filledCount(lineups.away) },
         lineups,
         Number(met?.n ?? 0),
-        Math.max(0, TEAM_MATCHES_PER_DAY - usedToday - 1),
+        after.matchesLeft,
+        after.matchesNextAt,
       );
       const row = {
         id,
@@ -660,7 +682,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
               },
             }
           : {}),
-        matchesLeft: Math.max(0, TEAM_MATCHES_PER_DAY - usedToday - 1),
+        ...after,
       },
       201,
     );

@@ -1,7 +1,7 @@
 <script lang="ts">
   // SNS 공유 이미지 시트(팀 편성 · 시즌 결산). 열면 make()로 한 장을 그려 미리 보여 주고, 휴대폰은 공유 시트로 바로,
   // 공유 시트가 없는 브라우저는 PNG로 저장한다. 바텀 시트(넓은 화면은 가운데 대화창).
-  import { onMount } from 'svelte';
+  import { onMount, type Snippet } from 'svelte';
   import { lockScroll } from '../scrollLock.js';
 
   export type ShareSheetText = {
@@ -26,6 +26,7 @@
     note,
     act,
     onclose,
+    extra,
   }: {
     make: () => Promise<File>;
     text: ShareSheetText;
@@ -36,6 +37,8 @@
     /** data-act · data 속성 접두사(team-share · recap-share). */
     act: string;
     onclose: () => void;
+    /** 이미지 저장 · 공유 위에 놓는 동작(라운지에 올리기). */
+    extra?: Snippet | undefined;
   } = $props();
   const uid = $props.id();
   let dialog: HTMLDialogElement;
@@ -102,6 +105,7 @@
     {#if note}<p class="note">{note}</p>{/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   </div>
+  {#if extra}<div class="extra">{@render extra()}</div>{/if}
   <footer>
     {#if shot}<button class="btn" data-act="{act}-save" onclick={save}>{text.save}</button>{#if shot.canShare}<button class="btn btn-primary" data-act="{act}-send" onclick={share}>{text.share}</button>{/if}
     {:else}<button class="btn btn-primary" onclick={build} disabled={busy}>{busy ? text.makingBtn : text.remake}</button>{/if}
@@ -109,6 +113,7 @@
 </dialog>
 
 <style>
+  .extra {display:grid;padding:0 16px 8px;}
   dialog {width:100%;max-width:480px;max-height:92dvh;margin:auto auto 0;padding:0;border: 1px solid transparent;border-radius:var(--radius-lg) var(--radius-lg) 0 0;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);overflow:hidden;}
   dialog[open] {display:flex;flex-direction:column;}
   dialog::backdrop {background:#0009;}

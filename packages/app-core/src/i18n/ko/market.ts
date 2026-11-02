@@ -68,7 +68,7 @@ const ko = {
   notEnough: '모자라요',
   buyNote:
     '영입한 선수는 바로 팀에 넣을 수 있어요. 다시 팔 수는 있지만 방출해서 자금으로 바꿀 수는 없어요.',
-  ownListing: '내가 내놓은 선수예요.',
+  ownListing: '내가 내놓은 선수예요',
   buyShort: (p: { short: string }) =>
     `구단 자금이 ${p.short} 모자라요. 직접 키운 선수를 방출하면 자금이 생겨요.`,
   unlist: '판매 내리기',

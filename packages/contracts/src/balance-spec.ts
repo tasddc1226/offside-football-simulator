@@ -322,6 +322,13 @@ export const BALANCE_SPEC = {
     max: 50,
     step: 1,
   },
+  // 하루 랭크 경기를 다 치른 뒤 1경기가 더 열리는 간격(분, 0이면 끔).
+  teamMatchRechargeMin: {
+    def: 180,
+    min: 0,
+    max: 1440,
+    step: 30,
+  },
   // T-11-418e 오프사이드 리그 홈 팀의 기대 득점 배율(랭크 경기 · 친선과 같은 값에서 시작, 컵은 중립이라 없음).
   leagueHomeAdv: {
     def: 1.08,

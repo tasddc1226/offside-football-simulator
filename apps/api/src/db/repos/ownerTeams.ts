@@ -366,7 +366,7 @@ export const myTeamIn = (db: Db, profileId: string, season: number) =>
  * 예산(pastSalaryBudget) 안에서만 선발에 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
  * 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
  */
-export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
+function eligibleQuery(db: Db, profileId: string, only: SQL | undefined) {
   return db
     .select({
       id: cards.careerId,
@@ -403,24 +403,26 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
     .where(
       and(
         eq(cards.ownerId, profileId),
-        lte(cards.serviceSeason, season),
+        only,
         // T-11-310 감독으로 분류된 카드는 선수 목록에서 빠진다.
         eq(cards.manager, false),
         sql`coalesce(${careers.hidden}, 0) = 0`,
       ),
-    )
+    );
+}
+
+export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
+  return eligibleQuery(db, profileId, lte(cards.serviceSeason, season))
     .orderBy(desc(cards.peak))
     .limit(limit);
 }
 
-/** 오늘(한국 시각) 이 구단주가 건 경기 수. sinceIso는 한국 시각 자정의 UTC ISO. */
-export function countMatchesSince(db: Db, profileId: string, sinceIso: string) {
-  return db
-    .select({ n: sql<number>`count(*)` })
-    .from(teamMatches)
-    .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
+/** 내가 가진 선수 카드 한 장(라운지 공유). 없으면 빈 배열. */
+export function eligibleCareer(db: Db, profileId: string, careerId: string) {
+  return eligibleQuery(db, profileId, eq(cards.careerId, careerId)).limit(1);
 }
 
+/** 오늘(한국 시각) 이 구단주가 건 경기 수. sinceIso는 한국 시각 자정의 UTC ISO. */
 /**
  * T-10-095 두 팀이 sinceIso 이후 치른 경기(누가 걸었든). 오늘 같은 상대에게 이미 걸었는지와 최근 재대결 횟수(레이팅 감쇠)를
  * 함께 센다. batch에 넣을 수 있게 쿼리로 돌려준다.
@@ -446,6 +448,13 @@ export const meetingsSince = (db: Db, teamA: string, teamB: string, sinceIso: st
 export const challengedSince = (db: Db, profileId: string, sinceIso: string) =>
   db
     .select({ teamId: teamMatches.awayTeamId })
+    .from(teamMatches)
+    .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
+
+/** challengedSince에 건 시각을 더한 목록(랭크 경기 충전을 센다). */
+export const challengedAtSince = (db: Db, profileId: string, sinceIso: string) =>
+  db
+    .select({ teamId: teamMatches.awayTeamId, createdAt: teamMatches.createdAt })
     .from(teamMatches)
     .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
 

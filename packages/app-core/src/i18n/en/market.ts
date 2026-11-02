@@ -58,7 +58,7 @@ export const market: Translation<MarketMsgs> = {
   notEnough: 'Not enough',
   buyNote:
     "A signed player can join your team right away. You can sell them again, but you can't release them for funds.",
-  ownListing: 'You listed this player.',
+  ownListing: 'You listed this player',
   buyShort: (p) =>
     `You're ${p.short} short on club funds. Release a player you raised to free up funds.`,
   unlist: 'Take down listing',

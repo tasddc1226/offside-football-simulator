@@ -15,7 +15,7 @@ export const liveById = (db: Db, id: string) =>
 /** 내가 오늘 시작해서 아직 끝나지 않은 장면 경기(하루 경기 수 · 같은 상대 하루 한 번에 센다). */
 export const openLiveSince = (db: Db, profileId: string, sinceIso: string) =>
   db
-    .select({ id: teamLiveMatches.id, teamId: teamLiveMatches.awayTeamId })
+    .select({ id: teamLiveMatches.id, teamId: teamLiveMatches.awayTeamId, createdAt: teamLiveMatches.createdAt })
     .from(teamLiveMatches)
     .where(
       and(

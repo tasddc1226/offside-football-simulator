@@ -25,18 +25,20 @@ import {
   CHAT_BODY_MAX,
   CHAT_MUTE_DAYS,
   CHAT_ROOMS,
+  type ChatNotice,
   type ChatRoomKey,
 } from '@offside/contracts/chat';
 import { LOCALE_NAMES } from '@offside/contracts/i18n';
 import { lastClosedSeason } from '@offside/contracts/service-seasons';
 import * as api from '@offside/app-core/api/chat';
-import { currentLoungeView, setLoungeView, type LoungeView } from '@offside/app-core/lounge/view';
+import type { LoungeView } from '@offside/app-core/lounge/view';
 import { unblock as unblockApi } from '@offside/app-core/api/boards';
 import type { ChatBlockResponse } from '@offside/contracts';
 import {
   CHAT_REJECT_TEXT,
   EMPTY_CHAT,
   chatMutedText,
+  chatTimeline,
   chatTime,
   type ChatMessage,
   type ChatSession,
@@ -44,12 +46,14 @@ import {
 } from '@offside/app-core/api/chat';
 import type { ApiResult } from '@offside/app-core/api/client';
 import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
+import { ChatNoticeBanner } from '../../components/ChatNoticeBanner';
+import { ChatShareCard } from '../../components/ChatShareCard';
 import { NicknameForm } from '../../components/NicknameForm';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
 import { TitleBadge } from '../../components/TitleBadge';
-import { toast } from '../../game/host';
-import { go, goBack, goHome } from '../../game/nav';
+import { openPublicLegendById, toast } from '../../game/host';
+import { go, goBack, goHome, goMarketListing } from '../../game/nav';
 import { hofStart } from '@offside/app-core/state';
 import { appState } from '../../store';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
@@ -206,11 +210,7 @@ export default function Chat() {
   const session = useRef<ChatSession | null>(null);
   const list = useRef<ScrollView>(null);
   /** T-11-600 필드 보기 · 폰 입력창 접기. */
-  const [mode, setModeState] = useState<LoungeView>(() => (FIELD ? currentLoungeView() : 'chat'));
-  const setMode = (v: LoungeView) => {
-    setModeState(v);
-    setLoungeView(v);
-  };
+  const [mode, setMode] = useState<LoungeView>('chat');
   const [composerOpen, setComposerOpen] = useState(true);
   /** T-11-600 머리줄 언어 방 메뉴. */
   const [langOpen, setLangOpen] = useState(false);
@@ -222,6 +222,7 @@ export default function Chat() {
   const entering = useRef(true);
   /** 지난번에 그린 메시지 배열 — 줄이 바뀔 때만 따라 내려간다(접속자 수만 바뀌면 그대로). */
   const shown = useRef(EMPTY_CHAT.messages);
+  const shownNotices = useRef(EMPTY_CHAT.notices);
   useEffect(() => {
     // 키보드 애니메이션으로 목록 높이가 줄어든 뒤 최신 메시지를 입력칸 바로 위에 둔다.
     const opened = Keyboard.addListener('keyboardDidShow', () => {
@@ -237,11 +238,16 @@ export default function Chat() {
       (v) => {
         const grew = v.messages !== shown.current;
         shown.current = v.messages;
+        const noticed = v.notices !== shownNotices.current;
+        shownNotices.current = v.notices;
         setView(v);
         // T-11-440 이 화면에서 받은 줄은 읽은 것으로 남겨 홈 채팅 버튼의 안 읽음 수를 비운다.
         if (v.status === 'open') markChatRead(v.messages);
         const fromMe = v.messages.at(-1)?.author === v.me?.author;
-        if (grew && (entering.current || atBottom.current || fromMe))
+        if (
+          (grew && (entering.current || atBottom.current || fromMe)) ||
+          (noticed && atBottom.current)
+        )
           requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
       },
       (code, restore) => {
@@ -350,6 +356,19 @@ export default function Chat() {
     if (!r.data.teamId) return toast(L.noProfile);
     setSelected(null);
     appState.hof = { ...hofStart(), tab: 'teams', team: r.data.teamId, owner: true };
+    go('hof');
+  }
+  function openTeam(team: string) {
+    appState.hof = { ...hofStart(), tab: 'teams', team, owner: false, squad: true };
+    go('hof');
+  }
+  /** 한 건이면 그 선수의 상세 커리어로, 합친 배너면 기록실의 영구결번으로 간다. */
+  function openNotice(notice: ChatNotice) {
+    if (notice.n === 1) {
+      void openPublicLegendById(notice.careerId);
+      return;
+    }
+    appState.hof = { ...hofStart(), tab: 'rn' };
     go('hof');
   }
   async function mute(m: ChatMessage, days: (typeof CHAT_MUTE_DAYS)[number]) {
@@ -681,159 +700,188 @@ export default function Chat() {
                 {L.loadingOlder}
               </Txt>
             ) : null}
-            {view.messages.length ? (
-              view.messages.map((m) => (
-                <View
-                  key={m.id}
-                  testID={`chat-msg-${m.id}`}
-                  onLayout={(e) => rowY.current.set(m.id, e.nativeEvent.layout.y)}
-                  style={{
-                    alignSelf: mine(m) ? 'flex-end' : 'flex-start',
-                    alignItems: mine(m) ? 'flex-end' : 'flex-start',
-                    maxWidth: '85%',
-                    borderRadius: RADIUS.lg,
-                    backgroundColor: flash === m.id ? alpha(c.pitch, 0.18) : undefined,
-                  }}
-                >
+            {view.messages.length || view.notices.length ? (
+              chatTimeline(view.messages, view.notices).map((row) => {
+                if ('notice' in row)
+                  return <ChatNoticeBanner key={row.id} notice={row.notice} onopen={openNotice} />;
+                const m = row.m;
+                return (
                   <View
-                    style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 5 }}
-                  >
-                    <Press
-                      testID="chat-who"
-                      disabled={!canAct(m)}
-                      accessibilityRole={canAct(m) ? 'button' : undefined}
-                      accessibilityLabel={canAct(m) ? L.moreLabel({ nick: m.nickname }) : undefined}
-                      onPress={() => toggle(m)}
-                      hitSlop={6}
-                      style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 }}
-                    >
-                      <OwnerAvatar avatarId={m.avatarId} name={m.nickname} />
-                      {m.admin ? (
-                        <Pill tone="good">{ADMIN_NICKNAME}</Pill>
-                      ) : (
-                        <Txt bold tone={mine(m) ? 'accent' : 'ink'}>
-                          {m.nickname}
-                        </Txt>
-                      )}
-                    </Press>
-                    {m.admin ? null : (
-                      <>
-                        {m.tier ? <TierBadge tag={{ tier: m.tier, season: tierSeason }} /> : null}
-                        {m.title ? <TitleBadge title={m.title} size="sm" /> : null}
-                      </>
-                    )}
-                    {canAct(m) ? (
-                      <Press
-                        testID="chat-more"
-                        accessibilityLabel={L.moreLabel({ nick: m.nickname })}
-                        onPress={() => toggle(m)}
-                        hitSlop={12}
-                        style={{
-                          width: 24,
-                          height: 24,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}
-                      >
-                        <Txt
-                          tone={selected === m.id ? 'ink' : 'muted'}
-                          style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}
-                        >
-                          ⋯
-                        </Txt>
-                      </Press>
-                    ) : null}
-                  </View>
-                  {m.replyTo ? (
-                    m.reply ? (
-                      <Press
-                        testID="chat-quote"
-                        accessibilityRole="button"
-                        accessibilityLabel={L.replyJump({ nick: quoteName(m.reply) })}
-                        onPress={() => jump(m.reply!.id)}
-                        style={[quote, { borderLeftColor: c.pitch, backgroundColor: c.surface2 }]}
-                      >
-                        <Txt bold style={small}>
-                          {quoteName(m.reply)}
-                        </Txt>
-                        <Txt tone="muted" numberOfLines={1} style={[small, { flexShrink: 1 }]}>
-                          {m.reply.body}
-                        </Txt>
-                      </Press>
-                    ) : (
-                      <View
-                        testID="chat-quote-gone"
-                        style={[quote, { borderLeftColor: c.line, backgroundColor: c.surface2 }]}
-                      >
-                        <Txt tone="muted" style={small}>
-                          {L.replyGone}
-                        </Txt>
-                      </View>
-                    )
-                  ) : null}
-                  {/* 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). */}
-                  <View
+                    key={m.id}
+                    testID={`chat-msg-${m.id}`}
+                    onLayout={(e) => rowY.current.set(m.id, e.nativeEvent.layout.y)}
                     style={{
-                      flexDirection: mine(m) ? 'row-reverse' : 'row',
-                      alignItems: 'flex-end',
-                      gap: 6,
-                      maxWidth: '100%',
+                      alignSelf: mine(m) ? 'flex-end' : 'flex-start',
+                      alignItems: mine(m) ? 'flex-end' : 'flex-start',
+                      maxWidth: '85%',
+                      borderRadius: RADIUS.lg,
+                      backgroundColor: flash === m.id ? alpha(c.pitch, 0.18) : undefined,
                     }}
                   >
                     <View
                       style={{
-                        flexShrink: 1,
-                        paddingVertical: 10,
-                        paddingHorizontal: 13,
-                        borderWidth: 1,
-                        borderColor: mine(m) ? c.pitch : c.line,
-                        backgroundColor: mine(m) ? c.pitch : c.surface2,
-                        borderRadius: RADIUS.lg,
-                        borderTopLeftRadius: mine(m) ? 16 : 4,
-                        borderTopRightRadius: mine(m) ? 4 : 16,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        marginBottom: 5,
                       }}
                     >
-                      <Txt
-                        style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(FONT.body1) }}
-                      >
-                        {tr.text(m.id, m.body)}
-                      </Txt>
-                    </View>
-                    <Txt tone="muted" style={small}>
-                      {chatTime(m.at)}
-                    </Txt>
-                    {view.write && !mine(m) ? (
-                      // T-11-575 답장은 시각 옆 아이콘.
                       <Press
-                        testID="chat-reply"
-                        accessibilityRole="button"
-                        accessibilityLabel={L.replyTo({ nick: quoteName(m) })}
-                        onPress={() => startReply(m)}
-                        hitSlop={8}
+                        testID="chat-who"
+                        disabled={!canAct(m)}
+                        accessibilityRole={canAct(m) ? 'button' : undefined}
+                        accessibilityLabel={
+                          canAct(m) ? L.moreLabel({ nick: m.nickname }) : undefined
+                        }
+                        onPress={() => toggle(m)}
+                        hitSlop={6}
                         style={{
-                          width: 28,
-                          height: 28,
-                          marginLeft: -4,
+                          flexDirection: 'row',
                           alignItems: 'center',
-                          justifyContent: 'center',
+                          gap: 6,
+                          flexShrink: 1,
                         }}
                       >
-                        <Svg width={16} height={16} viewBox="0 0 24 24" accessible={false}>
-                          <Path
-                            d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"
-                            stroke={c.muted}
-                            strokeWidth={2}
-                            fill="none"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </Svg>
+                        <OwnerAvatar avatarId={m.avatarId} name={m.nickname} />
+                        {m.admin ? (
+                          <Pill tone="good">{ADMIN_NICKNAME}</Pill>
+                        ) : (
+                          <Txt bold tone={mine(m) ? 'accent' : 'ink'}>
+                            {m.nickname}
+                          </Txt>
+                        )}
                       </Press>
+                      {m.admin ? null : (
+                        <>
+                          {m.tier ? <TierBadge tag={{ tier: m.tier, season: tierSeason }} /> : null}
+                          {m.title ? <TitleBadge title={m.title} size="sm" /> : null}
+                        </>
+                      )}
+                      {canAct(m) ? (
+                        <Press
+                          testID="chat-more"
+                          accessibilityLabel={L.moreLabel({ nick: m.nickname })}
+                          onPress={() => toggle(m)}
+                          hitSlop={12}
+                          style={{
+                            width: 24,
+                            height: 24,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Txt
+                            tone={selected === m.id ? 'ink' : 'muted'}
+                            style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}
+                          >
+                            ⋯
+                          </Txt>
+                        </Press>
+                      ) : null}
+                    </View>
+                    {m.replyTo ? (
+                      m.reply ? (
+                        <Press
+                          testID="chat-quote"
+                          accessibilityRole="button"
+                          accessibilityLabel={L.replyJump({ nick: quoteName(m.reply) })}
+                          onPress={() => jump(m.reply!.id)}
+                          style={[quote, { borderLeftColor: c.pitch, backgroundColor: c.surface2 }]}
+                        >
+                          <Txt bold style={small}>
+                            {quoteName(m.reply)}
+                          </Txt>
+                          <Txt tone="muted" numberOfLines={1} style={[small, { flexShrink: 1 }]}>
+                            {m.reply.body}
+                          </Txt>
+                        </Press>
+                      ) : (
+                        <View
+                          testID="chat-quote-gone"
+                          style={[quote, { borderLeftColor: c.line, backgroundColor: c.surface2 }]}
+                        >
+                          <Txt tone="muted" style={small}>
+                            {L.replyGone}
+                          </Txt>
+                        </View>
+                      )
                     ) : null}
+                    {/* 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). */}
+                    <View
+                      style={{
+                        flexDirection: mine(m) ? 'row-reverse' : 'row',
+                        alignItems: 'flex-end',
+                        gap: 6,
+                        maxWidth: '100%',
+                      }}
+                    >
+                      {m.share ? (
+                        <ChatShareCard
+                          share={m.share}
+                          label={m.body}
+                          onteam={openTeam}
+                          onlisting={goMarketListing}
+                        />
+                      ) : (
+                        <View
+                          style={{
+                            flexShrink: 1,
+                            paddingVertical: 10,
+                            paddingHorizontal: 13,
+                            borderWidth: 1,
+                            borderColor: mine(m) ? c.pitch : c.line,
+                            backgroundColor: mine(m) ? c.pitch : c.surface2,
+                            borderRadius: RADIUS.lg,
+                            borderTopLeftRadius: mine(m) ? 16 : 4,
+                            borderTopRightRadius: mine(m) ? 4 : 16,
+                          }}
+                        >
+                          <Txt
+                            style={{
+                              color: mine(m) ? c.onPitch : c.ink,
+                              fontSize: rem(FONT.body1),
+                            }}
+                          >
+                            {tr.text(m.id, m.body)}
+                          </Txt>
+                        </View>
+                      )}
+                      <Txt tone="muted" style={small}>
+                        {chatTime(m.at)}
+                      </Txt>
+                      {view.write && !mine(m) ? (
+                        // T-11-575 답장은 시각 옆 아이콘.
+                        <Press
+                          testID="chat-reply"
+                          accessibilityRole="button"
+                          accessibilityLabel={L.replyTo({ nick: quoteName(m) })}
+                          onPress={() => startReply(m)}
+                          hitSlop={8}
+                          style={{
+                            width: 28,
+                            height: 28,
+                            marginLeft: -4,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          <Svg width={16} height={16} viewBox="0 0 24 24" accessible={false}>
+                            <Path
+                              d="M9 14 4 9l5-5M4 9h10.5a5.5 5.5 0 0 1 0 11H11"
+                              stroke={c.muted}
+                              strokeWidth={2}
+                              fill="none"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </Svg>
+                        </Press>
+                      ) : null}
+                    </View>
+                    {!mine(m) && !m.share ? tr.button(m.id, m.body) : null}
                   </View>
-                  {!mine(m) ? tr.button(m.id, m.body) : null}
-                </View>
-              ))
+                );
+              })
             ) : view.status === 'open' ? (
               <Txt tone="muted" style={{ margin: 'auto', fontSize: rem(FONT.label) }}>
                 {L.emptyOpen}

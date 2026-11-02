@@ -6,14 +6,15 @@
   // 운영자는 메시지를 가리고 작성자를 정지한다. 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
   import { flushSync, onMount, tick } from 'svelte';
   import { ADMIN_NICKNAME, COMMENT_REPORT_REASONS, type CommentReportReason } from '@offside/contracts/board-limits';
-  import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
+  import { CHAT_BODY_MAX, CHAT_MUTE_DAYS, type ChatNotice } from '@offside/contracts/chat';
   import * as api from '@offside/app-core/api/chat';
-  import { currentLoungeView, setLoungeView, type LoungeView } from '@offside/app-core/lounge/view';
+  import type { LoungeView } from '@offside/app-core/lounge/view';
   import { unblock as unblockApi } from '@offside/app-core/api/boards';
   import type { ChatBlockResponse } from '@offside/contracts';
   import {
     CHAT_REJECT_TEXT,
     EMPTY_CHAT,
+    chatTimeline,
     chatMutedText,
     chatTime,
     type ChatMessage,
@@ -28,6 +29,9 @@
   import TitleBadge from './cup/TitleBadge.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
   import PopSheet from './PopSheet.svelte';
+  import ChatShareCard from './ChatShareCard.svelte';
+  import ChatNoticeBanner from './ChatNoticeBanner.svelte';
+  import { openPublicLegendById } from './openLegend.js';
 
   /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(툴팁)은 지금 기준 지난 시즌으로 보인다. */
   const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
@@ -36,19 +40,16 @@
   import { createTranslations } from './translations.svelte.js';
   import { canTranslate } from '@offside/app-core/userTranslate';
   import { getLocale } from '@offside/contracts/i18n';
-  import { go, goHome } from './nav.js';
+  import { go, goHome, goMarketListing } from './nav.js';
   import { appState, hofStart } from './state.svelte.js';
   import { trackViewport } from './viewport.js';
   import { chatSession, chatState, listenChat, markChatRead, switchChatRoom } from './chat-state.svelte.js';
   import { CHAT_ROOMS } from '@offside/contracts/chat';
   import { LOCALE_NAMES } from '@offside/contracts/i18n';
 
-  // T-11-600 라운지 필드: 같은 방을 축구장으로 본다. 마지막으로 고른 보기(처음에는 필드)로 연다.
-  let mode = $state<LoungeView>(currentLoungeView());
-  function pickView(v: LoungeView) {
-    mode = v;
-    setLoungeView(v);
-  }
+  // T-11-600 라운지 필드: 같은 방을 축구장으로 본다. 라운지에 들어오면 늘 채팅부터 보인다.
+  let mode = $state<LoungeView>('chat');
+  const pickView = (v: LoungeView) => (mode = v);
   /** 필드에서 선수를 누르면 그 사람의 가장 최근 줄로 사람 창을 연다. */
   function pickAuthor(author: string) {
     const m = view.messages.findLast((x) => x.author === author);
@@ -116,7 +117,7 @@
       (v) => {
         const grew = v.messages !== view.messages;
         const initial = entering && v.status === 'open';
-        const follow = initial || (grew && (nearBottom() || v.messages.at(-1)?.author === v.me?.author));
+        const follow = initial || (grew && (nearBottom() || v.messages.at(-1)?.author === v.me?.author)) || (v.notices !== view.notices && nearBottom());
         if (initial) entering = false;
         // T-11-180 이전 줄이 위에 붙으면 보던 줄이 그 자리에 머물게 늘어난 높이만큼 내린다.
         const prepended = !follow && view.loadingOlder && !v.loadingOlder;
@@ -239,8 +240,21 @@
     busy = false;
     if (!r.ok) return toast(r.error.message);
     if (!r.data.teamId) return toast(L.noProfile);
+    openTeam(r.data.teamId, true);
+  }
+  /** owner면 구단주 프로필, 아니면 팀 프로필(스쿼드)을 연다. 공유 카드는 팀 쪽으로 간다. */
+  /** 한 건이면 그 선수의 상세 커리어로, 합친 배너면 기록실의 영구결번으로 간다. */
+  function openNotice(notice: ChatNotice) {
+    if (notice.n === 1) {
+      void openPublicLegendById(notice.careerId);
+      return;
+    }
+    appState.hof = { ...hofStart(), tab: 'rn' };
+    go('hof');
+  }
+  function openTeam(team: string, owner = false) {
     selected = null;
-    appState.hof = { ...hofStart(), tab: 'teams', team: r.data.teamId, owner: true };
+    appState.hof = { ...hofStart(), tab: 'teams', team, owner, squad: !owner };
     go('hof');
   }
   const hide = (m: ChatMessage) => run(api.adminHideChat(m.id), L.hiddenToast);
@@ -333,7 +347,11 @@
     {:else}
     <ol class="chat-list" bind:this={list} onscroll={onListScroll} data-chat-list>
       {#if view.loadingOlder}<li class="muted fs-sm chat-older">{L.loadingOlder}</li>{/if}
-      {#each view.messages as m (m.id)}
+      {#each chatTimeline(view.messages, view.notices) as row (row.id)}
+        {#if 'notice' in row}
+          <li class="chat-notice-row"><ChatNoticeBanner notice={row.notice} onopen={openNotice} /></li>
+        {:else}
+        {@const m = row.m}
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="chat-meta">
             {#snippet who()}<OwnerAvatar avatarId={m.avatarId} name={m.nickname} />{#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{/if}{/snippet}
@@ -356,7 +374,11 @@
           {/if}
           <!-- 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). -->
           <div class="chat-body-row">
-            <p class="chat-bubble" lang={tr.translated(m.id) ? getLocale() : undefined}>{tr.text(m.id, m.body)}</p>
+            {#if m.share}
+              <ChatShareCard share={m.share} label={m.body} onteam={openTeam} onlisting={goMarketListing} />
+            {:else}
+              <p class="chat-bubble" lang={tr.translated(m.id) ? getLocale() : undefined}>{tr.text(m.id, m.body)}</p>
+            {/if}
             <time class="muted chat-time num" datetime={new Date(m.at).toISOString()}>{chatTime(m.at)}</time>
             {#if view.write && !mine(m)}
               <!-- T-11-575 답장은 시각 옆 아이콘. -->
@@ -365,10 +387,11 @@
               </button>
             {/if}
           </div>
-          {#if !mine(m) && canTranslate(m.body)}
+          {#if !mine(m) && !m.share && canTranslate(m.body)}
             <button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
           {/if}
         </li>
+        {/if}
       {:else}
         {#if view.status === 'open'}<li class="muted fs-sm chat-empty">{L.emptyOpen}</li>{:else}<li class="chat-wait"><Skeleton rows={4} /></li>{/if}
       {/each}
@@ -553,6 +576,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .chat-notice-row {align-self:stretch;margin:4px 0;}
   :global(.chat-msg.chat-flash) {
     border-radius: var(--radius-lg);
     animation: chat-flash 1.2s ease-out;

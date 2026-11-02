@@ -98,6 +98,18 @@ const toListing = (r: ListingRow): MarketListing => ({
 const notHidden = sql`coalesce(${careers.hidden}, 0) = 0`;
 
 /** 열린 등록 한 페이지(하나 더 읽어 다음 페이지가 있는지 본다). T-11-425부터 모든 시즌 카드를 함께 본다. */
+/** 열린 등록 하나. 팔렸거나 내렸으면 null. */
+export async function openListing(db: Db, id: string): Promise<MarketListing | null> {
+  const [row] = await db
+    .select(listingCols)
+    .from(marketListings)
+    .innerJoin(cards, eq(cards.careerId, marketListings.careerId))
+    .leftJoin(careers, eq(careers.id, marketListings.careerId))
+    .where(and(eq(marketListings.id, id), eq(marketListings.status, 'open'), notHidden))
+    .limit(1);
+  return row ? toListing(row) : null;
+}
+
 export async function listOpenListings(
   db: Db,
   q: {

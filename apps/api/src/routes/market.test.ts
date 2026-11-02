@@ -100,6 +100,23 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
   const list = (cookie: string, careerId: string, price: number) =>
     call('POST', '/v1/market/listings', { cookie, headers: idem(), body: { careerId, price } });
 
+  it('등록 하나는 로그인 없이 열리고, 팔렸거나 내리면 LISTING_GONE이다', async () => {
+    const seller = await issueGoogleCookie(ctx);
+    const id = await addCard(seller.profileId);
+    const created = await list(seller.cookie, id, 1_200_000);
+    const { listing } = ((await created.json()) as { data: { listing: { id: string } } }).data;
+    const path = `/v1/market/listings/${listing.id}`;
+    const open = await call('GET', path);
+    expect(open.status).toBe(200);
+    expect(
+      ((await open.json()) as { data: { listing: { price: number } } }).data.listing.price,
+    ).toBe(1_200_000);
+    await call('DELETE', path, { cookie: seller.cookie, headers: idem() });
+    const gone = await call('GET', path);
+    expect(gone.status).toBe(409);
+    expect(await reason(gone)).toBe('LISTING_GONE');
+  });
+
   it('선수 카드 초상은 공개 시장에서도 은퇴 때 저장한 꾸미기를 유지한다', async () => {
     const seller = await issueGoogleCookie(ctx);
     const id = await addCard(seller.profileId);

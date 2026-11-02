@@ -251,6 +251,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   /** 오늘(한국 시각) 남은 경기 수. */
   matchesLeft: z.number().int().min(0),
   matchesPerDay: z.number().int().min(1),
+  /** 하루 경기를 다 치렀을 때 다음 1경기가 열리는 시각. 배포 전 응답엔 없다. */
+  matchesNextAt: z.string().nullable().optional(),
   /** T-11-376 지난 시즌 선수 급여 예산(운영 도구 밸런스 활성 값). 배포 전 응답엔 없다 — 화면은 PAST_SALARY_BUDGET을 쓴다. */
   pastSalaryBudget: z.number().int().min(0).optional(),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
@@ -435,6 +437,8 @@ export const PlayTeamMatchResponseSchema = z.strictObject({
   /** T-11-375 이 경기 전후 내 디비전(같으면 승강 없음). 배포 전 응답엔 없다. */
   division: z.strictObject({ from: TeamDivisionSchema, to: TeamDivisionSchema }).optional(),
   matchesLeft: z.number().int().min(0),
+  /** 하루 경기를 다 치렀을 때 다음 1경기가 열리는 시각. 배포 전 응답엔 없다. */
+  matchesNextAt: z.string().nullable().optional(),
   /**
    * T-11-387 장면 경기를 시작했으면 고를 장면들. 이때 match는 장면을 뺀 지금까지의 골만 담고, record · rating은 경기 전
    * 값이다. 마지막 장면을 고르거나 마감하면 TeamMomentResponse.final로 결과가 온다.
