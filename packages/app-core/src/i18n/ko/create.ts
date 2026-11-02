@@ -109,6 +109,10 @@ const ko = {
   potentialHelp:
     '초기 잠재력 등급 범위예요. 훈련과 강화로 달라질 수 있어요. 잠재력은 모든 유저에게 같은 확률로 정해지고, S 등급은 아주 드물어요.',
   potentialWeb: '앱에서 보상형 광고를 보면 후보 3명의 초기 잠재력 등급 범위를 볼 수 있어요.',
+  potentialClubShort: (p: { price: string; balance: string }) =>
+    `후보 잠재력을 보려면 구단 자금 ${p.price}이 필요해요. 지금은 ${p.balance} 있어요.`,
+  potentialClubCapped:
+    '오늘은 구단 자금으로 후보 잠재력을 더 볼 수 없어요. 내일 다시 볼 수 있어요.',
   potentialSaveFailed: '공개 결과를 저장하지 못했어요. 저장 공간을 확인해 주세요.',
   candIntro:
     '세 후보는 능력치 총합이 같아요. 잠재력은 가려져 있으니 분포를 보고 어울리는 선수를 골라요.',

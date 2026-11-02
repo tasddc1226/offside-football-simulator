@@ -28,7 +28,7 @@
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
   import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, planPremiumScout, revealCandidatePotential, keepCandidate, keptDraft, restoreKeptDraft } from './actions.js';
-  import { clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
+  import { clubBlock, clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import type { RewardShopResponse } from '@offside/contracts';
@@ -245,6 +245,7 @@
     void loadClubShop().then((r) => (club = r));
   });
   const clubCand = $derived(appState.candidatePotentialOpen ? null : clubOffer(club, 'candidates'));
+  const clubLock = $derived(appState.candidatePotentialOpen ? null : clubBlock(club, 'candidates'));
   async function revealWithClub() {
     const o = clubCand;
     if (clubBusy || !o) return;
@@ -614,8 +615,14 @@
         {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
       </p>
     {/if}
-    {#if guest && !quiet}
+    <!-- T-11-610 잠재력을 왜 못 보는지 접지 않고 보인다. 비로그인은 로그인 안내, 구단주는 모자란 자금 · 오늘 상한. -->
+    {#if guest}
       {@render loginTools()}
+    {/if}
+    {#if clubLock}
+      <p class="muted fs-sm" data-cand-club-lock={clubLock.reason}>
+        {clubLock.reason === 'short' ? L.potentialClubShort({ price: fundsText(clubLock.price), balance: fundsText(clubLock.balance) }) : L.potentialClubCapped}
+      </p>
     {/if}
     {#if appState.candidatePotentialOpen}
       <p class="muted fs-sm">{premium ? SL.premiumHelp : L.potentialHelp}</p>
@@ -637,7 +644,6 @@
       <details class="card more-tools" data-more-tools>
         <summary class="disc-row" data-act="more-tools-toggle">{L.moreTools}<span class="disc-chev" aria-hidden="true"></span></summary>
         <div class="stack more-body">
-          {#if guest}{@render loginTools()}{/if}
           {#if picked}<p class="muted fs-sm">{L.keepHelp}</p>{/if}
           {#if !appState.candidatePotentialOpen}<p class="muted fs-sm">{L.potentialWeb}</p>{/if}
           <ItemsHint />

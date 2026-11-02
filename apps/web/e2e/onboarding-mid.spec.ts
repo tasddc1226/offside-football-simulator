@@ -31,8 +31,10 @@ test('비주력 능력치도 성장 감소를 보이고, 후보 단계는 안내
   await expect(page.locator('[data-act="ovr-guide-toggle"]')).toHaveCount(0);
   await page.locator('[data-act="more-tools-toggle"]').click();
   await expect(more.getByTestId('ovr-guide')).toBeVisible();
-  // A4 로그인 흔적이 없으면 무엇을 쓸 수 있는지 한 줄과 로그인 입구를 보인다(T-11-605 더 보기 안).
+  // A4 로그인 흔적이 없으면 무엇을 쓸 수 있는지 한 줄과 로그인 입구를 접지 않고 보인다(T-11-610).
+  await expect(page.locator('[data-login-tools]')).toBeVisible();
   await expect(page.locator('[data-login-tools]')).toContainText('로그인하면');
+  await expect(more.locator('[data-login-tools]')).toHaveCount(0);
 
   await page.locator('[data-act="login-tools-go"]').click();
   // 계정 패널(로그인 버튼)이 있는 구단주 화면으로 간다.
