@@ -7,6 +7,8 @@ import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 
 export const EDGE = {
   cupHome: '/v1/cups/home',
+  /** T-11-618 남의 명예관(기록 배지 · 받은 칭호). 팀마다 하나, 버튼을 누를 때만 찬다. TTL로만 새로 읽는다. */
+  ownerHall: (teamId: string) => `/v1/owners/by-team/${teamId}/hall`,
   cupCurrent: '/v1/cups/current',
   /** T-11-418 오프사이드 리그(일정 · 신청 수). TTL로만 새로 읽는다. */
   leagueCurrent: '/v1/leagues/current',

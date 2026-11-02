@@ -47,6 +47,8 @@ export function decide(env: Env, role: Role, eventId: string, ev: SlackEvent): T
   ) {
     // 정상 복구 알림은 정리할 원인이 없다.
     if (text.trimStart().startsWith('✅')) return null;
+    // T-11-616 새 신고 알림은 운영자가 직접 처리한다. 유저가 쓴 이름이 들어 있어 에이전트에게 넘기지 않는다.
+    if (text.trimStart().startsWith('**새 신고**')) return null;
     return { ...base, kind: 'alert', threadTs: ev.ts, text };
   }
   // 한글로 부른 글(`@이운재 …`)은 부른 역할만 멘션으로 받는다. 다른 역할을 불렀으면 스레드 주인도 답하지 않는다.

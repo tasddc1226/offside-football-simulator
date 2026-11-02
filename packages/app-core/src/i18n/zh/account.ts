@@ -28,7 +28,7 @@ export const account: Translation<AccountMsgs> = {
   unlinkFail: '無法解除 Google 連結，請稍後再試。',
   deleteAccount: '刪除帳號',
   deleteBody:
-    '要刪除帳號以及伺服器上儲存的球員紀錄・球隊・留言・聊天嗎？此操作無法復原。這台裝置的遊戲進度會保留。',
+    '要刪除帳號以及伺服器上儲存的球員紀錄・球隊・留言・聊天嗎？此操作無法復原。付款紀錄會依法保存 5 年。這台裝置的遊戲進度會保留。',
   deleteConfirm: '刪除',
   deleteDone: '已刪除帳號。這台裝置的遊戲進度會保留。',
   deleteFail: '無法刪除帳號，請稍後再試。',

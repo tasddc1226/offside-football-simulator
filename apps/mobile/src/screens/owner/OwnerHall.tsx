@@ -10,10 +10,9 @@ import {
   TITLE_NONE,
   titleLabel,
   titleCondition,
-  permanentTitleOf,
-  titleGradeLabel,
   titleRelated,
   titleCategoryLabel,
+  titleKindLabel,
 } from '@offside/app-core/ownerTitle';
 import {
   titleCollection,
@@ -89,7 +88,6 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
     toast(L.saved);
   }
   const identity = (id: string, isNew = false) => {
-    const grade = permanentTitleOf(id)?.grade;
     return (
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
         <View
@@ -112,7 +110,7 @@ export function OwnerHall({ onpick }: { onpick?: (title: string | null) => void 
           </Txt>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             <Txt tone="muted" style={small}>
-              {grade ? titleGradeLabel(grade) : L.titleCup}
+              {titleKindLabel(id)}
             </Txt>
             {titleTierText(id) ? (
               <Txt tone="muted" style={small}>

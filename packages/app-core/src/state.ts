@@ -275,6 +275,8 @@ export interface AppState {
   /** Local navigation state for the unified archive (not a career save). */
   honorsView: 'records' | 'titles';
   honorsSeason: number | null;
+  /** T-11-618 남의 명예관을 볼 때 그 구단주의 팀 id. null이면 내 명예관. */
+  honorsVisit: string | null;
   /** T-11-142 받은 친구 신청 수 — 하단 '구단주'·내 팀 '경기' 탭·'친구' 버튼의 점(friendPending). */
   friendReq: number;
 }
@@ -322,5 +324,6 @@ export const initialAppState = (): AppState => ({
   recapNew: false,
   honorsView: 'records',
   honorsSeason: null,
+  honorsVisit: null,
   friendReq: 0,
 });

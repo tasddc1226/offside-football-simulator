@@ -93,6 +93,31 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
   const items = async (cookie: string) =>
     ItemsRes.parse(await (await call('GET', '/v1/items', { cookie })).json()).data;
 
+  it('T-11-620 스카우트권 50장 묶음을 팔고 결제마다 50장을 한 번만 주고 남은 장수만 회수한다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const productId = 'com.offsidelab.app.scout_50';
+    const calls = stubXsolla();
+    expect(
+      ConfigRes.parse(await (await call('GET', '/v1/web-pay/config', { cookie: me.cookie })).json())
+        .data.products,
+    ).toContainEqual({ productId, item: 'scout', qty: 50, amount: 39500 });
+    await order(me.cookie, productId);
+    expect(JSON.parse(String(calls[0]?.init?.body)).purchase.items[0].sku).toBe(productId);
+    const event = paid(1050, me.profileId, {
+      items: [{ sku: productId, type: 'virtual_good', quantity: 1, amount: '39500' }],
+    });
+    expect((await hook(ctx, event)).status).toBe(204);
+    expect((await hook(ctx, event)).status).toBe(204);
+    expect((await items(me.cookie)).scout).toBe(50);
+    await ctx.env.DB.prepare("UPDATE owner_items SET qty = 20 WHERE item = 'scout'").run();
+    const refund = { ...event, notification_type: 'order_canceled' };
+    expect((await hook(ctx, refund)).status).toBe(204);
+    expect((await items(me.cookie)).scout).toBe(0);
+    expect(await ctx.db.select().from(iapPurchases)).toMatchObject([
+      { productId, item: 'scout', qty: 50, revokedQty: 20 },
+    ]);
+  });
+
   it('opens the 100-ticket pack only after catalog readiness and grants it once', async () => {
     const me = await issueGoogleCookie(ctx);
     const productId = 'com.offsidelab.app.boost_100';

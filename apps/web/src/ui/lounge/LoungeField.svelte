@@ -217,6 +217,14 @@
     const kind = a ? trick(world, a, Date.now()) : null;
     if (a && kind) sync.act(kind, a.move?.side);
   }
+  /** T-11-612 다른 손가락으로 조이스틱을 잡고 있으면 브라우저가 click을 만들지 않아, 누르는 순간 바로 처리한다.
+   * 키보드 · 보조 기기의 click(detail 0)만 onclick으로 받는다. */
+  const pressed = (fn: () => void) => ({
+    onpointerdown: fn,
+    onclick: (e: MouseEvent) => {
+      if (e.detail === 0) fn();
+    },
+  });
   function doEmote(e: EmoteKey) {
     const a = meId ? world.actors.get(meId) : undefined;
     if (a) {
@@ -255,6 +263,8 @@
     return { sx: e.clientX - r.left, sy: e.clientY - r.top };
   }
   function onCanvasPointer(e: PointerEvent) {
+    // T-11-612 조이스틱을 잡은 채 필드에 닿은 다른 손가락은 무시한다(받침이 그 자리로 튀지 않게).
+    if (stickId !== -1) return;
     const { sx, sy } = local(e);
     const hit = pickActor(world, view, sx, sy, meId);
     if (hit) {
@@ -478,14 +488,14 @@
   {/if}
 
   <div class="field-camera" role="group" aria-label={L.camera}>
-    <button type="button" class="field-cam-name" data-act="field-camera" title={coarse ? undefined : 'V'} onclick={() => setCamera(cameraIndex + 1)}>
+    <button type="button" class="field-cam-name" data-act="field-camera" title={coarse ? undefined : 'V'} {...pressed(() => setCamera(cameraIndex + 1))}>
       <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M4 8h3l2-2h6l2 2h3v11H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2" /></svg>
       {cameraName(camera.key)}
     </button>
-    <button type="button" aria-label={L.rotateLeft} title={coarse ? undefined : 'Q'} data-act="field-rotate-left" onclick={() => rotateBy(-1)}>⟲</button>
-    <button type="button" aria-label={L.rotateRight} title={coarse ? undefined : 'E'} data-act="field-rotate-right" onclick={() => rotateBy(1)}>⟳</button>
-    <button type="button" aria-label={L.zoomOut} title={coarse ? undefined : '-'} data-act="field-zoom-out" onclick={() => zoomBy(-1)}>−</button>
-    <button type="button" aria-label={L.zoomIn} title={coarse ? undefined : '+'} data-act="field-zoom-in" onclick={() => zoomBy(1)}>+</button>
+    <button type="button" aria-label={L.rotateLeft} title={coarse ? undefined : 'Q'} data-act="field-rotate-left" {...pressed(() => rotateBy(-1))}>⟲</button>
+    <button type="button" aria-label={L.rotateRight} title={coarse ? undefined : 'E'} data-act="field-rotate-right" {...pressed(() => rotateBy(1))}>⟳</button>
+    <button type="button" aria-label={L.zoomOut} title={coarse ? undefined : '-'} data-act="field-zoom-out" {...pressed(() => zoomBy(-1))}>−</button>
+    <button type="button" aria-label={L.zoomIn} title={coarse ? undefined : '+'} data-act="field-zoom-in" {...pressed(() => zoomBy(1))}>+</button>
   </div>
 
   {#if meId}
@@ -493,18 +503,18 @@
       {#if emoteOpen}
         <div class="field-emotes" role="group" aria-label={L.emotes}>
           {#each EMOTES as e, i (e)}
-            <button type="button" aria-label={L[`emote_${e}`]} data-emote={e} onclick={() => doEmote(e)} title={coarse ? undefined : `${L[`emote_${e}`]} (${i + 1})`}><EmoteIcon name={e} /></button>
+            <button type="button" aria-label={L[`emote_${e}`]} data-emote={e} {...pressed(() => doEmote(e))} title={coarse ? undefined : `${L[`emote_${e}`]} (${i + 1})`}><EmoteIcon name={e} /></button>
           {/each}
         </div>
       {/if}
-      <button type="button" class="field-btn" aria-label={L.emotes} aria-expanded={emoteOpen} data-act="field-emote" onclick={() => (emoteOpen = !emoteOpen)}><EmoteIcon name="smile" size={28} /></button>
+      <button type="button" class="field-btn" aria-label={L.emotes} aria-expanded={emoteOpen} data-act="field-emote" {...pressed(() => (emoteOpen = !emoteOpen))}><EmoteIcon name="smile" size={28} /></button>
       <div class="field-play">
-        <button type="button" class="field-btn" aria-label={L.trick} data-act="field-trick" title={coarse ? undefined : `${L.trick} (R)`} onclick={doTrick}><EmoteIcon name="trick" size={28} /></button>
-        <button type="button" class="field-btn" aria-label={L.tackle} data-act="field-tackle" title={coarse ? undefined : `${L.tackle} (F)`} onclick={doTackle}><EmoteIcon name="tackle" size={28} /></button>
-        <button type="button" class="field-btn" aria-label={L.kick} data-act="field-kick" title={coarse ? undefined : `${L.kick} (Space)`} onclick={doKick}><EmoteIcon name="ball" size={28} /></button>
+        <button type="button" class="field-btn" aria-label={L.trick} data-act="field-trick" title={coarse ? undefined : `${L.trick} (R)`} {...pressed(doTrick)}><EmoteIcon name="trick" size={28} /></button>
+        <button type="button" class="field-btn" aria-label={L.tackle} data-act="field-tackle" title={coarse ? undefined : `${L.tackle} (F)`} {...pressed(doTackle)}><EmoteIcon name="tackle" size={28} /></button>
+        <button type="button" class="field-btn" aria-label={L.kick} data-act="field-kick" title={coarse ? undefined : `${L.kick} (Space)`} {...pressed(doKick)}><EmoteIcon name="ball" size={28} /></button>
       </div>
       {#if coarse}
-        <button type="button" class="field-btn" aria-label={L.chatInput} aria-pressed={chatOpen} data-act="field-chat" onclick={onchat}>
+        <button type="button" class="field-btn" aria-label={L.chatInput} aria-pressed={chatOpen} data-act="field-chat" {...pressed(onchat)}>
           <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M4 5h16v11H9l-5 4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" /></svg>
         </button>
       {/if}
@@ -696,6 +706,10 @@
     color: #fff;
     font-size: 22px;
     cursor: pointer;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
   }
   /* 입력창이 펼쳐져 있으면 켜진 버튼처럼 밝게. */
   .field-btn[aria-pressed='true'] {

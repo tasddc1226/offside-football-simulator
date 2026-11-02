@@ -568,7 +568,8 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expectNoA11yViolations(page);
   // Freeze after the accessibility scan; browser/CI work must not spend the choice budget.
   const now = await page.evaluate(() => Date.now());
-  await page.clock.pauseAt(new Date(now + 100));
+  // The target must stay ahead of the running clock until pauseAt arrives, even on a slow CI runner.
+  await page.clock.pauseAt(new Date(now + 1_000));
   await card.locator('[data-moment-choice="round"]').click();
   await expect.poll(() => picks).toEqual([{ choice: 'round' }]);
   await expect(card).toHaveCount(0);
@@ -1588,9 +1589,10 @@ test('친구 초대 링크로 들어오면 친구 화면에서 그 구단주에�
     return route.fulfill(ok({ state: 'sent', friend: person('ABCD2345', '초대한 감독') }, 201));
   });
 
-  await page.goto('/?friend=abcd-2345');
+  await page.goto('/invite/abcd-2345?lang=en');
   const card = page.locator('[data-friend-invite]');
   await expect(card).toContainText('ABCD-2345');
+  expect(new URL(page.url()).pathname).toBe('/');
   // 주소에서 초대 코드를 지운다(새로고침해도 다시 열리지 않게).
   expect(new URL(page.url()).search).toBe('');
   // 팀이 없으면 친선전은 못 하지만 친구 신청은 할 수 있다.

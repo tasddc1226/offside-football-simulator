@@ -1,5 +1,6 @@
 // T-11-150 대표 칭호 표시 — 칭호 id('cup-3-champion')에서 회차와 단계를 읽어 문구와 트로피를 고른다.
 import {
+  parseHonorTitle,
   parseTitle,
   permanentTitleOf,
   type PermanentTitleId,
@@ -9,8 +10,14 @@ import {
 } from '@offside/contracts/owner-title';
 import { divisionLabel } from './cupDivision.js';
 import { ownerProfileText as L } from './i18n/ko/ownerProfile.js';
+import { teamSeasonLabel } from './seasonName.js';
 
-export { parseTitle, TITLE_NONE, permanentTitleOf } from '@offside/contracts/owner-title';
+export {
+  parseHonorTitle,
+  parseTitle,
+  TITLE_NONE,
+  permanentTitleOf,
+} from '@offside/contracts/owner-title';
 
 const LABEL: Record<TitleStage, (p: { n: number; d?: string | undefined }) => string> = {
   champion: (p) => L.titleChampion(p),
@@ -20,6 +27,21 @@ const LABEL: Record<TitleStage, (p: { n: number; d?: string | undefined }) => st
 
 /** '제3회 챔피언'(지금 언어). 알 수 없는 id면 null. */
 export function titleLabel(id: string | null | undefined): string | null {
+  const honor = parseHonorTitle(id);
+  if (honor) {
+    const season = teamSeasonLabel(honor.season);
+    if (honor.band === null) return L.titleHonorFirst({ season });
+    const name = {
+      achievements: L.titleHonorAchievements,
+      team: L.titleHonorTeam,
+      hof: L.titleHonorHof,
+    }[honor.kind as 'achievements' | 'team' | 'hof'];
+    return L.titleHonorRank({
+      season,
+      name,
+      rank: honor.band === 1 ? L.titleHonorFirstPlace : L.titleHonorTop({ band: honor.band }),
+    });
+  }
   const t = parseTitle(id);
   const permanent = permanentTitleOf(id);
   return t
@@ -433,8 +455,20 @@ const PIXEL_PATHS = Object.fromEntries(
       .join(''),
   ]),
 );
-export const titleIconPath = (id: string): string =>
-  PIXEL_PATHS[TITLE_ICON_OF[id as PermanentTitleId] ?? id] ?? '';
+/** T-11-619 기록 배지는 뜻이 가까운 칭호 그림을 함께 쓴다. */
+const HONOR_ICON = {
+  achievements: 'owner-star-maker',
+  team: 'owner-division-elite',
+  hof: 'owner-legend-home',
+  first: 'owner-pioneer',
+} as const;
+export const titleIconPath = (id: string): string => {
+  const honor = parseHonorTitle(id);
+  return (
+    PIXEL_PATHS[honor ? HONOR_ICON[honor.kind] : (TITLE_ICON_OF[id as PermanentTitleId] ?? id)] ??
+    ''
+  );
+};
 
 export const titleGradeLabel = (grade: TitleGrade): string =>
   ({ entry: L.gradeEntry, skilled: L.gradeSkilled, honor: L.gradeHonor, legend: L.gradeLegend })[
@@ -460,7 +494,12 @@ export const titleRelated = (id: string): string | null => {
       }[t.related]
     : null;
 };
-export const titleCategoryLabel = (category: TitleCategory | 'trophy'): string =>
+/** 칭호 이름 아래 작은 글자: 영구 칭호는 등급, 기록 배지는 '기록 배지', 컵 · 리그는 '컵'. */
+export const titleKindLabel = (id: string): string => {
+  const grade = permanentTitleOf(id)?.grade;
+  return grade ? titleGradeLabel(grade) : parseHonorTitle(id) ? L.categoryHonor : L.titleCup;
+};
+export const titleCategoryLabel = (category: TitleCategory | 'trophy' | 'honor'): string =>
   ({
     growth: L.categoryGrowth,
     position: L.categoryPosition,
@@ -468,9 +507,17 @@ export const titleCategoryLabel = (category: TitleCategory | 'trophy'): string =
     legacy: L.categoryLegacy,
     team: L.categoryTeam,
     trophy: L.categoryTrophy,
+    honor: L.categoryHonor,
   })[category];
 /** Matching metal accents on light and dark backgrounds; grade is also expressed in text. */
 export const titleGradeColor = (id: string): string =>
   ({ entry: '#93A49A', skilled: '#6EAA8C', honor: '#80A8C9', legend: '#D7AF54' })[
-    permanentTitleOf(id)?.grade ?? 'entry'
+    permanentTitleOf(id)?.grade ?? honorGrade(id)
   ];
+/** T-11-619 기록 배지 색: 1위 금 · 상위 10과 최초 기록 은 · 그 아래 초록. */
+function honorGrade(id: string): TitleGrade {
+  const h = parseHonorTitle(id);
+  if (!h) return 'entry';
+  if (h.band === 1) return 'legend';
+  return h.band === null || h.band <= 10 ? 'honor' : 'skilled';
+}

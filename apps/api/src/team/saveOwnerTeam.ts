@@ -206,6 +206,7 @@ export async function saveOwnerTeam(
         friendlyJson: lineupJson,
         createdAt: now,
         updatedAt: now,
+        nameChangedAt: now,
       })
       .onConflictDoUpdate({
         target: [ownerTeams.profileId, ownerTeams.season],
@@ -229,11 +230,19 @@ export async function saveOwnerTeam(
       season,
       createdAt: now,
       updatedAt: now,
+      nameChangedAt: now,
       ...values,
     })
     .onConflictDoUpdate({
       target: [ownerTeams.profileId, ownerTeams.season],
-      set: { ...values, updatedAt: now },
+      // T-11-616 이름이나 감독 이름이 바뀐 저장만 새 이름 점검 대상으로 표시한다(선발만 고친 저장은 건드리지 않는다).
+      set: {
+        ...values,
+        updatedAt: now,
+        ...(stored && stored.name === input.name && stored.manager === input.manager
+          ? {}
+          : { nameChangedAt: now }),
+      },
     })
     .returning();
   return { row: row!, lineup, eligible, coach, season, friendly };

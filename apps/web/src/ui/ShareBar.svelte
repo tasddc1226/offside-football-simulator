@@ -17,6 +17,8 @@
   import { goHome } from './nav.js';
   import { shareUrl } from './legend.js';
   import ActionBar from './ActionBar.svelte';
+  import { ogCardPath } from '../share-path.js';
+  import { KakaoShareError, kakaoAvailable, preloadKakao, shareKakao } from './share/kakao.js';
 
   const { id, home = true, inline = false }: { id: string; home?: boolean; inline?: boolean } = $props();
   let busy = $state(false);
@@ -76,6 +78,33 @@
     }
   }
 
+  // T-11-621 카카오톡 카드 공유(선수 카드 그림 + 링크). 한 번 확인한 링크는 다시 묻지 않는다.
+  const showKakao = kakaoAvailable();
+  $effect(() => {
+    if (showKakao) preloadKakao();
+  });
+  async function toKakao() {
+    if (busy) return;
+    busy = true;
+    trackShareClick();
+    try {
+      const link = url ?? (await checkLink());
+      url = link;
+      await shareKakao({
+        title: shareLinkTitle(),
+        description: shareLinkText(),
+        imageUrl: `${window.location.origin}${ogCardPath(id)}`,
+        url: link,
+        button: L.shareKakaoOpen,
+      });
+      trackShareSuccess();
+    } catch (e) {
+      toast(e instanceof KakaoShareError ? L.shareKakaoFail : (e as Error).message);
+    } finally {
+      busy = false;
+    }
+  }
+
   async function copy() {
     if (busy) return;
     busy = true;
@@ -132,6 +161,9 @@
     <button class="btn btn-primary" data-act="share-career" disabled={busy} onclick={copy}>
       {busy ? L.making : url ? L.recopy : L.shareCareer}
     </button>
+    {#if showKakao}
+      <button class="btn" style={home ? 'grid-column: 1 / -1' : undefined} data-act="share-career-kakao" disabled={busy} onclick={toKakao}>{L.shareKakao}</button>
+    {/if}
   </div>
 </ActionBar>
 
