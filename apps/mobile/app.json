@@ -26,6 +26,7 @@
         "tinted": "./assets/images/icon-tinted.png"
       },
       "usesAppleSignIn": true,
+      "associatedDomains": ["applinks:offside-lab.com"],
       "infoPlist": {
         "CFBundleName": "OFFSIDE",
         "CFBundleAllowMixedLocalizations": true
@@ -40,7 +41,18 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            { "scheme": "https", "host": "offside-lab.com", "pathPrefix": "/invite/" },
+            { "scheme": "https", "host": "offside-lab.com", "pathPrefix": "/career/" }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "output": "static",
