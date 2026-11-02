@@ -76,7 +76,7 @@ python3 tooling/scripts/snapshot-backup.py verify \
   --source "$SNAPSHOT_DIR" --destination "$SNAPSHOT_DIR/new-restored.sqlite"
 ```
 
-이 검증은 SQLite 복원이다. 별도 원격 D1 재수입·앱 smoke 검증과 운영 전환을 대신하지 않는다.
+snapshot verify 명령은 SQLite 복원이다. 격리 drill은 작은 전용 자료의 원격 D1 재수입도 검사하지만, 운영 전체 D1 재수입·앱 smoke 검증·운영 전환을 대신하지 않는다.
 
 ## 실제 격리 훈련 결과 (2026-11-02 KST)
 
@@ -86,7 +86,8 @@ python3 tooling/scripts/snapshot-backup.py verify \
 - 값을 20으로 바꾼 뒤 **테스트 DB 자신만** Time Travel restore하여 10으로 돌아온 것을 확인했다.
 - 공식 export → 새 로컬 SQLite 검사 → R2 저장 → 재다운로드 → 새 SQLite 복원을 통과했다. FK 위반 0건.
 - 원본 테스트 DB를 다시 99로 바꾼 뒤에도 R2 스냅샷 재복원 값은 10으로 유지됐다.
-- 테스트 export 시간은 최초 **2,562ms**, 최종 코드 재검증 **3,823ms**다. 운영 4.5GB의 export 시간·RTO·서비스 영향은 아직 측정하지 않았다.
+- 마지막 검증에서는 전용 D1의 이 두 fixture 테이블만 비우고 R2 SQL을 재수입해 값 10과 `PRAGMA foreign_key_check` 0건을 원격 D1에서도 확인했다.
+- 테스트 export 시간은 최초 **2,562ms**, 재검증 **3,823ms**, 원격 D1 재수입 포함 훈련 **2,824ms**다. 운영 4.5GB의 export 시간·RTO·서비스 영향은 아직 측정하지 않았다.
 - 이 훈련은 플랫폼 경로의 동작 증거이며, 운영 전체 DB의 복구 정합성 검증 성공은 아니다.
 
 관련 파일: `d1-snapshot.mjs`(capture/publish), `snapshot-backup.py`(pack/verify),

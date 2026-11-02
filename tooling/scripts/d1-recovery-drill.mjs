@@ -1,3 +1,4 @@
+import { gunzipSync } from 'node:zlib';
 import { parseArgs } from 'node:util';
 import { pathToFileURL } from 'node:url';
 import { mkdir, readFile } from 'node:fs/promises';
@@ -68,12 +69,34 @@ r=m.verify(sys.argv[2],sys.argv[3]);c=sqlite3.connect(sys.argv[3]);assert c.exec
     ],
     { stdio: ['ignore', 'pipe', 'pipe'] },
   );
+  // The fixture was created by this invocation in an empty isolated DB. Re-import R2 bytes into it too.
+  if (manifest.chunks.length !== 1) throw new Error('Unexpected drill fixture size');
+  const storedSql = gunzipSync(
+    await readFile(join(output, 'snapshot', 'packed', 'roundtrip', '0001.sql')),
+  ).toString('utf8');
+  if (Buffer.byteLength(storedSql) > 64 * 1024)
+    throw new Error('Drill SQL exceeds remote query bound');
+  await query('DROP TABLE child; DROP TABLE parent;');
+  await query(storedSql);
+  const imported = await query(
+    'SELECT p.balance,c.amount FROM parent p JOIN child c ON c.parent_id=p.id',
+  );
+  if (
+    imported[0]?.results?.length !== 1 ||
+    imported[0].results[0].balance !== 10 ||
+    imported[0].results[0].amount !== 10
+  )
+    throw new Error('Remote D1 re-import did not preserve the snapshot');
+  const foreignKeys = await query('PRAGMA foreign_key_check');
+  if (foreignKeys.some((block) => block.results.length))
+    throw new Error('Remote D1 re-import has foreign key violations');
   return {
     databaseId: id,
     databaseName: expectedName,
     timeTravelRestored: true,
     r2RoundtripVerified: true,
     independentSnapshotPreserved: true,
+    remoteD1ReimportVerified: true,
     tables: manifest.tables,
     rows: manifest.rows,
     prefix: result.prefix,
