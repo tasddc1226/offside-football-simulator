@@ -527,7 +527,11 @@
     </div>
   {:else if appState.candidates}
     <div class="row cand-intro">
-      <p class="muted">{L.candIntro}</p>
+      {#if guest && !appState.candidatePotentialOpen}
+        <p class="muted" data-cand-login>{L.potentialLogin} <button class="link-btn" data-act="potential-login-go" onclick={() => go('owner')}>{L.potentialLoginGo}</button></p>
+      {:else}
+        <p class="muted">{L.candIntro}</p>
+      {/if}
       {#if appState.candidatesOpen.some((o) => !o)}
         <button class="icon-btn" data-act="open-all" onclick={openAll}>{L.openAll}</button>
       {/if}
@@ -615,10 +619,10 @@
         {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
       </p>
     {/if}
-    <!-- T-11-610 잠재력을 왜 못 보는지 접지 않고 보인다. 비로그인은 로그인 안내, 구단주는 모자란 자금 · 오늘 상한. -->
-    {#if guest}
+    {#if guest && !quiet}
       {@render loginTools()}
     {/if}
+    <!-- T-11-610 잠재력을 왜 못 보는지 접지 않고 보인다. 구단주는 모자란 자금 · 오늘 상한(비로그인은 맨 위 소개에서 안내). -->
     {#if clubLock}
       <p class="muted fs-sm" data-cand-club-lock={clubLock.reason}>
         {clubLock.reason === 'short' ? L.potentialClubShort({ price: fundsText(clubLock.price), balance: fundsText(clubLock.balance) }) : L.potentialClubCapped}
@@ -644,6 +648,7 @@
       <details class="card more-tools" data-more-tools>
         <summary class="disc-row" data-act="more-tools-toggle">{L.moreTools}<span class="disc-chev" aria-hidden="true"></span></summary>
         <div class="stack more-body">
+          {#if guest}{@render loginTools()}{/if}
           {#if picked}<p class="muted fs-sm">{L.keepHelp}</p>{/if}
           {#if !appState.candidatePotentialOpen}<p class="muted fs-sm">{L.potentialWeb}</p>{/if}
           <ItemsHint />

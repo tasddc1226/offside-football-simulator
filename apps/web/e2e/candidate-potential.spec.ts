@@ -72,6 +72,17 @@ async function openAsOwner(
   await page.locator('[data-act="next-candidates"]').click();
 }
 
+test('로그인하지 않으면 잠재력 로그인 입구가 접히지 않고 구단주 화면으로 데려간다', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.locator('[data-act="new"]').click();
+  await page.locator('[data-act="next-candidates"]').click();
+  await expect(page.locator('[data-cand-login]')).toBeVisible();
+  await page.locator('[data-act="potential-login-go"]').click();
+  await expect(page.getByRole('heading', { level: 1, name: '내 구단' })).toBeVisible();
+});
+
 test('자금이 충분한 구단주는 버튼을 보고 이유 줄은 보지 않는다', async ({ page }) => {
   await openAsOwner(page, { balance: 500_000, price: 300_000, bought: 0 });
   await expect(page.locator('[data-act="candidate-potential-club"]')).toContainText('30억');

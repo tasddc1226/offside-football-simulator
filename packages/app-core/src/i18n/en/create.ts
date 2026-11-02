@@ -103,6 +103,9 @@ export const create: Translation<CreateMsgs> = {
   potentialHelp:
     'Starting potential grade range. Training and boosts can change it. Potential is drawn with the same odds for every player, and grade S is very rare.',
   potentialWeb: 'Watch a rewarded ad in the app to reveal all 3 starting potential grade ranges.',
+  potentialLogin:
+    'All three candidates have the same attribute total. Log in to reveal potential with club funds.',
+  potentialLoginGo: 'Log in',
   potentialClubShort: (p: { price: string; balance: string }) =>
     `Revealing candidate potential takes ${p.price} in club funds. You have ${p.balance}.`,
   potentialClubCapped:
