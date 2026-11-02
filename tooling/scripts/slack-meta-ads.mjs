@@ -30,6 +30,37 @@ export function accountYesterday(zone, now = Date.now()) {
     .toISOString()
     .slice(0, 10);
 }
+const day = (ymd, add) => {
+  const d = new Date(`${ymd}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + add);
+  return d.toISOString().slice(0, 10);
+};
+/** 광고 계정 시간대로 지난 완결 주(월~일)와 그 전 주. 월요일에 돌면 어제(일요일)까지가 지난주다. */
+export function accountLastWeek(zone, now = Date.now()) {
+  const yesterday = accountYesterday(zone, now);
+  const until = day(yesterday, -new Date(`${yesterday}T00:00:00Z`).getUTCDay());
+  const since = day(until, -6);
+  return { since, until, prevSince: day(since, -7), prevUntil: day(until, -7) };
+}
+/** 계정 시간대 날짜의 0시를 UTC ISO로(acquisition_sessions.received_at 비교용). */
+export function accountDayStartUtc(zone, ymd) {
+  const guess = Date.parse(`${ymd}T00:00:00Z`);
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: zone,
+      hourCycle: 'h23',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+      .formatToParts(guess)
+      .map((x) => [x.type, x.value]),
+  );
+  const local = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
+  return new Date(guess - (local - guess)).toISOString();
+}
 export function metaClient(env, fetcher = fetch) {
   if (
     !/^\d+$/.test(env.META_AD_ACCOUNT_ID ?? '') ||
@@ -69,8 +100,121 @@ export function metaClient(env, fetcher = fetch) {
   return { account, get, list };
 }
 const fmt = (n) => Number(n).toLocaleString('ko-KR', { maximumFractionDigits: 2 });
+const number = (v) => {
+  const n = Number(v);
+  if (v == null || !Number.isFinite(n) || n < 0) throw new Error('Invalid insight metric');
+  return n;
+};
+const lpvOf = (actions) => {
+  if (actions != null && !Array.isArray(actions)) throw new Error('Invalid insight actions');
+  return (actions ?? [])
+    .filter((a) => a.action_type === 'landing_page_view')
+    .reduce((n, a) => n + number(a.value), 0);
+};
+const change = (cur, prev) =>
+  prev ? `${cur >= prev ? '+' : ''}${Math.round(((cur - prev) / prev) * 100)}%` : '전주 없음';
+const per = (spend, n, currency) => (n ? `${fmt(Math.round(spend / n))} ${currency}` : '-');
+/**
+ * T-11-610 주간 성과: 지난 완결 주(계정 시간대 월~일) 광고별 지출 · 랜딩 조회와, 같은 주 우리 서버 1차 유입
+ * (acquisition_sessions, utm_source=meta · facebook)의 방문 · 커리어 시작 · 스토어 클릭을 전주와 비교한다.
+ */
+async function weeklyReport(db, env, api, info, prefix, link, now, fetcher) {
+  const w = accountLastWeek(info.timezone_name, now),
+    key = `${prefix}:weekly`;
+  if ((await db.get(key))?.version === w.since) return;
+  const ads = async (since, until) =>
+    (
+      await api.list('/insights', {
+        fields: 'ad_id,ad_name,adset_name,spend,actions,date_start,date_stop',
+        level: 'ad',
+        time_range: JSON.stringify({ since, until }),
+      })
+    ).map((r) => {
+      if (
+        !/^\d+$/.test(r.ad_id ?? '') ||
+        typeof r.ad_name !== 'string' ||
+        r.date_start !== since ||
+        r.date_stop !== until
+      )
+        throw new Error('Invalid insight period');
+      return {
+        name: `${String(r.adset_name ?? '').slice(0, 40)} / ${r.ad_name.slice(0, 40)}`,
+        spend: number(r.spend),
+        lpv: lpvOf(r.actions),
+      };
+    });
+  const visits = async (since, until) => {
+    const rows = await db.query(
+      `SELECT campaign, count(*) n, sum(started_at IS NOT NULL) started, sum(store_clicked_at IS NOT NULL) store
+       FROM acquisition_sessions WHERE received_at >= ? AND received_at < ? GROUP BY campaign LIMIT 500`,
+      [
+        accountDayStartUtc(info.timezone_name, since),
+        accountDayStartUtc(info.timezone_name, day(until, 1)),
+      ],
+    );
+    const by = new Map();
+    for (const r of rows) {
+      const q = new URLSearchParams(String(r.campaign).replace(/^\?/, ''));
+      if (!['meta', 'facebook'].includes(q.get('utm_source') ?? '')) continue;
+      const c = q.get('utm_content') || '(없음)';
+      const o = by.get(c) ?? { content: c, n: 0, started: 0, store: 0 };
+      o.n += number(r.n);
+      o.started += number(r.started);
+      o.store += number(r.store);
+      by.set(c, o);
+    }
+    return [...by.values()].sort((a, b) => b.n - a.n);
+  };
+  const sum = (rows, ...keys) =>
+    Object.fromEntries(keys.map((k) => [k, rows.reduce((s, r) => s + r[k], 0)]));
+  const [cur, prev, srv, srvPrev] = await Promise.all([
+    ads(w.since, w.until),
+    ads(w.prevSince, w.prevUntil),
+    visits(w.since, w.until),
+    visits(w.prevSince, w.prevUntil),
+  ]);
+  const t = sum(cur, 'spend', 'lpv'),
+    p = sum(prev, 'spend', 'lpv'),
+    s = sum(srv, 'n', 'started', 'store'),
+    sp = sum(srvPrev, 'n', 'started', 'store'),
+    c = info.currency;
+  await deliverOnce(
+    db,
+    key,
+    w.since,
+    env.SLACK_DAILY_WEBHOOK,
+    slackMessage(
+      `📊 ${w.since}~${w.until} 메타 광고 주간 성과`,
+      [
+        `${info.name} · 광고 계정 시간대 ${info.timezone_name} · 전주 ${w.prevSince}~${w.prevUntil}`,
+        `지출 ${fmt(Math.round(t.spend))} ${c} (${change(t.spend, p.spend)}) · 랜딩 조회 ${fmt(t.lpv)} (${change(t.lpv, p.lpv)}) · 조회당 ${per(t.spend, t.lpv, c)} (전주 ${per(p.spend, p.lpv, c)})`,
+        `서버 기준 방문 ${fmt(s.n)} · 커리어 시작 ${fmt(s.started)} · 스토어 클릭 ${fmt(s.store)} (전주 ${fmt(sp.n)} · ${fmt(sp.started)} · ${fmt(sp.store)})`,
+        `방문당 ${per(t.spend, s.n, c)} · 시작당 ${per(t.spend, s.started, c)} · 스토어 클릭당 ${per(t.spend, s.store, c)} (전주 ${per(p.spend, sp.n, c)} · ${per(p.spend, sp.started, c)} · ${per(p.spend, sp.store, c)})`,
+        '광고별 (지출순):',
+        ...cur
+          .filter((r) => r.spend > 0)
+          .sort((a, b) => b.spend - a.spend)
+          .slice(0, 8)
+          .map(
+            (r) =>
+              `- ${r.name}: ${fmt(Math.round(r.spend))} ${c} · 랜딩 ${fmt(r.lpv)} · 조회당 ${per(r.spend, r.lpv, c)}`,
+          ),
+        'utm_content별 서버 유입:',
+        ...srv
+          .slice(0, 6)
+          .map(
+            (r) =>
+              `- ${r.content.slice(0, 40)}: 방문 ${fmt(r.n)} · 시작 ${fmt(r.started)} · 스토어 ${fmt(r.store)}`,
+          ),
+        '서버 기준은 우리 1차 유입 기록(acquisition_sessions)이고 Meta 크롤러 방문이 섞일 수 있습니다. 광고·예산은 바꾸지 않습니다.',
+      ],
+      [link],
+    ),
+    fetcher,
+  );
+}
 export async function metaAds(db, env, mode, now = Date.now(), fetcher = fetch) {
-  if (!['daily', 'monitor'].includes(mode)) throw new Error('Unknown Meta mode');
+  if (!['daily', 'weekly', 'monitor'].includes(mode)) throw new Error('Unknown Meta mode');
   const api = metaClient(env, fetcher);
   const link = {
     label: '광고 관리자',
@@ -103,21 +247,12 @@ export async function metaAds(db, env, mode, now = Date.now(), fetcher = fetch) 
         r.date_stop !== day
       )
         throw new Error('Invalid insight period');
-      const number = (v) => {
-        const n = Number(v);
-        if (v == null || !Number.isFinite(n) || n < 0) throw new Error('Invalid insight metric');
-        return n;
-      };
-      if (r.actions != null && !Array.isArray(r.actions))
-        throw new Error('Invalid insight actions');
       return {
         name: r.campaign_name.slice(0, 100),
         spend: number(r.spend),
         impressions: number(r.impressions),
         clicks: number(r.clicks),
-        lpv: (r.actions ?? [])
-          .filter((a) => a.action_type === 'landing_page_view')
-          .reduce((n, a) => n + number(a.value), 0),
+        lpv: lpvOf(r.actions),
       };
     });
     const total = records.reduce(
@@ -150,6 +285,8 @@ export async function metaAds(db, env, mode, now = Date.now(), fetcher = fetch) 
       ),
       fetcher,
     );
+  } else if (mode === 'weekly') {
+    await weeklyReport(db, env, api, info, prefix, link, now, fetcher);
   } else {
     const rows = await api.list('/ads', { fields: 'id,name,effective_status' });
     const current = {};
