@@ -474,12 +474,18 @@ describe('teamMatchAllowance', () => {
     expect(teamMatchAllowance(ten, at(1), dayStart, 180)).toEqual({ left: 0, nextAt: at(4) });
     expect(teamMatchAllowance(ten, at(4), dayStart, 180)).toEqual({ left: 1, nextAt: at(7) });
     expect(teamMatchAllowance(ten, at(10), dayStart, 180)).toEqual({ left: 3, nextAt: at(13) });
-    expect(teamMatchAllowance([...ten, at(10)], at(10), dayStart, 180)).toEqual({ left: 2, nextAt: at(13) });
+    expect(teamMatchAllowance([...ten, at(10)], at(10), dayStart, 180)).toEqual({
+      left: 2,
+      nextAt: at(13),
+    });
   });
 
   it('자정 전에 더 열리지 않으면 다음 시각이 없고, 간격이 0이면 충전하지 않는다', () => {
     const late = played(TEAM_MATCHES_PER_DAY, 22);
     expect(teamMatchAllowance(late, at(22), dayStart, 180)).toEqual({ left: 0, nextAt: null });
-    expect(teamMatchAllowance(played(TEAM_MATCHES_PER_DAY), at(23), dayStart, 0)).toEqual({ left: 0, nextAt: null });
+    expect(teamMatchAllowance(played(TEAM_MATCHES_PER_DAY), at(23), dayStart, 0)).toEqual({
+      left: 0,
+      nextAt: null,
+    });
   });
 });
