@@ -1,4 +1,5 @@
 import type { Bindings } from '../env.js';
+import { readWorkflowHealth, type WorkflowObservation } from './workflowHealth.js';
 import { DAY_MS } from '../time.js';
 
 const GROWTH_WINDOW_MS = 3 * DAY_MS;
@@ -26,6 +27,7 @@ export type InfraHealth = {
   daysToLimit: number | null;
   issues: string[];
   samples: Sample[];
+  resourceWorkflow?: WorkflowObservation;
 };
 
 export function assessInfraHealth(
@@ -160,6 +162,9 @@ export async function runInfraHealth(
       if (!object || object.size <= 0) result.issues.push('backup-object-missing-or-unavailable');
     }
   }
+  const workflow = await readWorkflowHealth(now);
+  result.resourceWorkflow = workflow.observation;
+  result.issues.push(...workflow.issues);
   // Compare-and-set the complete report, including samples. Concurrent triggers can
   // inspect R2, but only one commits; failed writes leave the hour retryable.
   const saved = await env.DB.prepare(
