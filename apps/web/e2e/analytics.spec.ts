@@ -52,17 +52,21 @@ async function traceMetricsLedger(page: Page, tab: string) {
     };
     const request = navigator.locks.request.bind(navigator.locks) as (
       name: string,
-      callback: LockGrantedCallback,
+      callback: LockGrantedCallback<unknown>,
     ) => Promise<unknown>;
-    Reflect.set(navigator.locks, 'request', (name: string, callback: LockGrantedCallback) => {
-      note('lock-ask');
-      return request(name, (lock) => {
-        note('lock-got');
-        const result = callback(lock);
-        note('lock-done');
-        return result;
-      });
-    });
+    Reflect.set(
+      navigator.locks,
+      'request',
+      (name: string, callback: LockGrantedCallback<unknown>) => {
+        note('lock-ask');
+        return request(name, (lock: Lock | null) => {
+          note('lock-got');
+          const result = callback(lock);
+          note('lock-done');
+          return result;
+        });
+      },
+    );
   }, tab);
 }
 async function prepare(page: Page) {
