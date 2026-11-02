@@ -17,7 +17,7 @@ test('계정 영역: 홈이 아니라 설정 화면에 있다 — 로그아웃 �
   );
 
   await page.goto('/');
-  await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
+  await expect(page.locator('[data-home-news]')).toBeVisible();
   await expect(page.locator('#account-slot')).toHaveCount(0);
   await page.locator('[data-act="settings"]').click();
   const account = page.locator('#account-slot');
@@ -302,7 +302,9 @@ test('소식에서 댓글을 쓰려고 로그인하면, 돌아와서 보던 글�
       return route.fulfill(ok({ admin: false, google: false, nickname: null }));
     if (path === `/v1/boards/posts/${POST}`)
       return route.fulfill(ok({ post: { ...summary, body: '본문' }, comments: [] }));
-    return route.fulfill(ok({ posts: [summary], hasMore: false }));
+    return route.fulfill(
+      ok({ posts: path === '/v1/boards/release/posts' ? [summary] : [], hasMore: false }),
+    );
   });
   // 구글 로그인 시작은 콜백 결과로 곧장 돌려보낸다(실제로는 구글을 거친다).
   await page.route(`${API}/v1/auth/google/start`, (route) =>
@@ -313,7 +315,7 @@ test('소식에서 댓글을 쓰려고 로그인하면, 돌아와서 보던 글�
   );
 
   await page.goto('/');
-  await page.locator(`[data-home-news="release"] [data-post-row="${POST}"]`).click();
+  await page.locator(`[data-home-news] [data-post-row="${POST}"]`).click();
   await page.locator('[data-act="comment-login"]').click();
   await expect(page.locator('#toast')).toContainText('구글 계정을 연결했어요');
   await expect(page.locator('[data-board]')).toHaveAttribute('data-board', 'release');

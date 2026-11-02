@@ -35,6 +35,8 @@ export const home: Translation<HomeMsgs> = {
   releaseTitle: 'アップデート情報',
   more: 'もっと見る',
   moreAria: (p) => `${p.what}をもっと見る`,
+  newsTagNotice: 'お知らせ',
+  newsTagRelease: '更新',
   newsFailed: 'お知らせを読み込めませんでした。',
   newsEmpty: 'まだ投稿はありません。',
   pinned: '固定',

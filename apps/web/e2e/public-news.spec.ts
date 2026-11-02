@@ -124,7 +124,7 @@ test('home links preserve game board double-click/back and public discussion dee
   await link.dblclick();
   await expect(page.locator(`[data-post="${id}"]`)).toBeVisible();
   await page.goBack();
-  await expect(page.locator('[data-home-news="release"]')).toBeVisible();
+  await expect(page.locator('[data-home-news]')).toBeVisible();
   await page.goto(`/news/${id}/`);
   await page.getByRole('link', { name: '게임에서 글과 댓글 보기' }).click();
   await expect(page.locator(`[data-post="${id}"]`)).toBeVisible();
