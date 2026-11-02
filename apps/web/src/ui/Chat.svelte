@@ -4,11 +4,10 @@
   // T-11-015 라운지 채팅 — 모두가 보는 실시간 공개 채팅. 누구나 읽고, 구글로 로그인하고 닉네임을 정하면 쓴다.
   // 남의 메시지는 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 여럿이 신고하면 모두의 화면에서 가려진다.
   // 운영자는 메시지를 가리고 작성자를 정지한다. 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
-  import { flushSync, onMount, tick } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { ADMIN_NICKNAME, COMMENT_REPORT_REASONS, type CommentReportReason } from '@offside/contracts/board-limits';
   import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
   import * as api from '@offside/app-core/api/chat';
-  import { currentLoungeView, setLoungeView, type LoungeView } from '@offside/app-core/lounge/view';
   import { unblock as unblockApi } from '@offside/app-core/api/boards';
   import type { ChatBlockResponse } from '@offside/contracts';
   import {
@@ -43,23 +42,6 @@
   import { CHAT_ROOMS } from '@offside/contracts/chat';
   import { LOCALE_NAMES } from '@offside/contracts/i18n';
 
-  // T-11-600 라운지 필드: 같은 방을 축구장으로 본다. 마지막으로 고른 보기(처음에는 필드)로 연다.
-  let mode = $state<LoungeView>(currentLoungeView());
-  function pickView(v: LoungeView) {
-    mode = v;
-    setLoungeView(v);
-  }
-  /** 필드에서 선수를 누르면 그 사람의 가장 최근 줄로 사람 창을 연다. */
-  function pickAuthor(author: string) {
-    const m = view.messages.findLast((x) => x.author === author);
-    if (m && canAct(m)) selected = m.id;
-  }
-  // 폰의 필드 보기에서도 입력창은 늘 띄워 두고, 필드 오른쪽 아래 버튼으로만 접고 편다(필드를 넓게 보고 싶을 때).
-  let composerOpen = $state(true);
-  function toggleComposer() {
-    composerOpen = !composerOpen;
-    if (!composerOpen) input?.blur();
-  }
   // 언어 방 메뉴: 고르거나 바깥을 누르거나 Esc면 닫는다.
   let langMenu = $state<HTMLDetailsElement>();
   function pickRoom(r: (typeof CHAT_ROOMS)[number]) {
@@ -70,11 +52,6 @@
     if (!langMenu?.open) return;
     if (e instanceof KeyboardEvent ? e.key === 'Escape' : !langMenu.contains(e.target as Node)) langMenu.open = false;
   }
-  // 채팅 보기로 돌아오면 맨 아래 줄부터 보인다.
-  $effect(() => {
-    if (mode === 'chat' && list) void tick().then(() => list?.scrollTo({ top: list.scrollHeight }));
-  });
-
   // 상태는 통째로 바꿔 끼우므로 깊은 반응성이 필요 없다.
   let view = $state.raw<ChatView>(EMPTY_CHAT);
   let text = $state('');
@@ -165,7 +142,6 @@
   $effect(() => {
     const el = input;
     void text;
-    void composerOpen;
     if (el) void tick().then(() => fitInput(el));
   });
   function focusInput() {
@@ -186,7 +162,6 @@
   function startReply(m: ChatMessage) {
     replyTo = m;
     // 접혀 있으면 먼저 펼친다. 펼침을 먼저 그려야 같은 탭 안에서 iOS 키보드가 뜬다.
-    if (!composerOpen) flushSync(() => (composerOpen = true));
     input?.focus();
   }
   const quoteName = (r: { admin: boolean; nickname: string }) => (r.admin ? ADMIN_NICKNAME : r.nickname);
@@ -253,8 +228,7 @@
 <svelte:window onclick={closeLangMenu} onkeydown={closeLangMenu} />
 
 <div class="wrap chat-wrap" bind:this={wrap}>
-  <section class="card chat-card" class:field-mode={mode === 'field'}
-    class:composer-off={!composerOpen} data-chat>
+  <section class="card chat-card" data-chat>
     <header class="chat-head">
       <button class="icon-btn chat-back" data-act="home" aria-label={L.back} onclick={() => goBack(goHome)}>
         <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="m14 5-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
@@ -308,29 +282,6 @@
         </div>
       </details>
     </header>
-    <div class="chat-view" role="group" aria-label={L.viewLabel}>
-      <button aria-pressed={mode === 'field'} data-chat-view="field" onclick={() => pickView('field')}>
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 5v14" stroke="currentColor" stroke-width="1.8" /><circle cx="12" cy="12" r="2.6" fill="none" stroke="currentColor" stroke-width="1.8" /></svg>
-        {L.viewField}
-      </button>
-      <button aria-pressed={mode === 'chat'} data-chat-view="chat" onclick={() => pickView('chat')}>
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H10l-4.5 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
-        {L.viewChat}
-      </button>
-    </div>
-
-    {#if mode === 'field'}
-      {#await import('./lounge/LoungeField.svelte') then F}
-        <F.default
-          messages={view.messages}
-          live={view.status === 'open'}
-          me={view.write && view.me?.author ? { author: view.me.author, nickname: view.me.nickname ?? '' } : null}
-          onpick={pickAuthor}
-          chatOpen={composerOpen}
-          onchat={toggleComposer}
-        />
-      {/await}
-    {:else}
     <ol class="chat-list" bind:this={list} onscroll={onListScroll} data-chat-list>
       {#if view.loadingOlder}<li class="muted fs-sm chat-older">{L.loadingOlder}</li>{/if}
       {#each view.messages as m (m.id)}
@@ -373,7 +324,6 @@
         {#if view.status === 'open'}<li class="muted fs-sm chat-empty">{L.emptyOpen}</li>{:else}<li class="chat-wait"><Skeleton rows={4} /></li>{/if}
       {/each}
     </ol>
-    {/if}
 
     <div class="chat-composer">
       {#if view.write}
@@ -478,12 +428,6 @@
 {/if}
 
 <style>
-  /* T-11-600 폰의 필드 보기에서 입력창 접기(필드 오른쪽 아래 버튼). */
-  @media (pointer: coarse) {
-    .field-mode.composer-off .chat-composer {
-      display: none;
-    }
-  }
   /* T-11-573 답장 — 말풍선 위 인용 한 줄, 입력창 위 답장 중 표시. */
   .chat-quote {
     display: flex;

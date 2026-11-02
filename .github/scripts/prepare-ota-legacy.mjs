@@ -1,8 +1,8 @@
 // Only run in a disposable checkout. Older store builds keep receiving current JS through this overlay:
 // - T-11-516 1.1.5 only raised the app version (no native change), so 1.1.4 builds get app.json in its reviewed 1.1.4 shape.
 // - T-11-600 1.1.6 added @shopify/react-native-skia (native) for the lounge field. 1.1.5 and 1.1.4 builds do not have it,
-//   so the overlay removes the dependency (native fingerprint back to the reviewed build) and replaces the lounge field
-//   entry with null (the bundle never resolves Skia; the chat screen shows the chat list only).
+//   so the overlay removes the dependency (native fingerprint back to the reviewed build).
+//   T-11-624 removed the lounge field, so no JS imports Skia any more. The package stays for the 1.1.6 fingerprint.
 import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -27,12 +27,8 @@ export const targets = Object.freeze({
 });
 export const APP_JSON = 'apps/mobile/app.json';
 export const MOBILE_PACKAGE = 'apps/mobile/package.json';
-export const FIELD_ENTRY = 'apps/mobile/src/screens/chat/lounge/index.ts';
 /** Native modules the older builds do not contain. */
 export const NATIVE_ONLY_IN_NEW = ['@shopify/react-native-skia'];
-export const FIELD_STUB =
-  '// T-11-600 prepare-ota-legacy.mjs: this store build has no Skia, so the lounge shows the chat list only.\n' +
-  'export const LoungeField = null;\n';
 
 function target(name) {
   const t = targets[name];
@@ -62,8 +58,9 @@ export function prepare(root, name) {
   for (const dep of NATIVE_ONLY_IN_NEW) delete pkg.dependencies?.[dep];
   writeFileSync(resolve(root, APP_JSON), appJson);
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
-  writeFileSync(resolve(root, FIELD_ENTRY), FIELD_STUB);
-  console.log(`Prepared ${name} overlay (app.json from ${t.source.slice(0, 7)}, without ${NATIVE_ONLY_IN_NEW})`);
+  console.log(
+    `Prepared ${name} overlay (app.json from ${t.source.slice(0, 7)}, without ${NATIVE_ONLY_IN_NEW})`,
+  );
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [cmd, name, platform, fp] = process.argv.slice(2);
