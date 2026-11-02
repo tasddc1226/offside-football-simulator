@@ -7,8 +7,11 @@ test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true
 
 type Point = { x: number; y: number; id: number };
 
-const touch = (cdp: CDPSession, type: string, touchPoints: Point[]) =>
-  cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
+const touch = (
+  cdp: CDPSession,
+  type: 'touchStart' | 'touchMove' | 'touchEnd',
+  touchPoints: Point[],
+) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints });
 
 async function openField(page: Page) {
   await page.route(`${API}/v1/profile`, (route) =>
