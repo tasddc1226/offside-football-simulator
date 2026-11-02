@@ -1,0 +1,30 @@
+{
+  "id": "t-11-604-cup-lineup-recap-dot",
+  "title": "컵 명단 보호 · 구단주 알림 점 수정",
+  "items": [
+    "컵 명단에 든 선수는 카드 과제에 내거나 판매 · 방출할 수 없어요. 명단에서 뺀 뒤 낼 수 있어요",
+    "구단주 탭의 빨간 점이 꺼지지 않던 문제를 고쳤어요. 새 시즌 결산이 있으면 명예관에도 점이 뜨고, 누르면 그 결산부터 열려요"
+  ],
+  "en": {
+    "title": "Cup lineup protection and owner dot fix",
+    "items": [
+      "Players in your cup lineup can no longer be handed in for card quests, listed or released. Remove them from the lineup first.",
+      "Fixed the red dot on the Owner tab that would not go away. When a new season recap is waiting, the Hall shows a dot too and opens that recap first."
+    ]
+  },
+  "ja": {
+    "title": "カップメンバー保護・オーナー通知の修正",
+    "items": [
+      "カップメンバーに入っている選手は、カード課題への提出・販売・放出ができなくなりました。メンバーから外してから出せます。",
+      "オーナータブの赤い点が消えない問題を直しました。新しいシーズン総括があると殿堂にも点が付き、押すとその総括から開きます。"
+    ]
+  },
+  "zh": {
+    "title": "盃賽陣容保護・老闆提示紅點修正",
+    "items": [
+      "盃賽陣容中的球員無法再提交到卡片任務、上架出售或釋出，請先將其移出陣容。",
+      "修正老闆分頁紅點不會消失的問題。有新賽季總結時，名人堂也會出現紅點，點擊後會先打開該總結。"
+    ]
+  },
+  "availability": "web-app"
+}
