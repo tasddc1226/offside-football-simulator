@@ -6,8 +6,6 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   APP_JSON,
-  FIELD_ENTRY,
-  FIELD_STUB,
   MOBILE_PACKAGE,
   NATIVE_ONLY_IN_NEW,
   assertRuntime,
@@ -52,7 +50,9 @@ for (const [name, { source }] of Object.entries(targets)) {
     const repo = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
     // PR 검사는 얕은 체크아웃이라 기준 커밋이 없다. 운영 배포 OTA 잡은 fetch-depth: 0으로 받는다.
     try {
-      execFileSync('git', ['-C', repo, 'cat-file', '-e', `${source}^{commit}`], { stdio: 'ignore' });
+      execFileSync('git', ['-C', repo, 'cat-file', '-e', `${source}^{commit}`], {
+        stdio: 'ignore',
+      });
     } catch {
       return t.skip(`reviewed ${name} commit is not in this shallow checkout`);
     }
@@ -72,7 +72,6 @@ for (const [name, { source }] of Object.entries(targets)) {
       // 옛 빌드에 없는 모듈만 빼고 나머지 의존성은 그대로다.
       for (const dep of NATIVE_ONLY_IN_NEW) delete before.dependencies[dep];
       assert.deepEqual(after, before);
-      assert.equal(readFileSync(join(root, FIELD_ENTRY), 'utf8'), FIELD_STUB);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -93,5 +92,8 @@ test('the deploy workflow publishes each legacy lane with its own runtime check'
   );
   assert.match(job, /prepare-ota-legacy\.mjs check "\$OTA_TARGET" "\$PLATFORM" "\$FP"/);
   // overlay가 바뀌면 같은 커밋이라도 다시 게시해야 하므로 변경 판정에 넣는다.
-  assert.match(job, /git diff --quiet[^;]*prepare-ota-legacy\.mjs[^;]*deploy-production\.yml; then/);
+  assert.match(
+    job,
+    /git diff --quiet[^;]*prepare-ota-legacy\.mjs[^;]*deploy-production\.yml; then/,
+  );
 });

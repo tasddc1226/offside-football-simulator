@@ -7,7 +7,6 @@ import type { DetailPos, PosGroup } from './positions.js';
 import type { FormationId } from './owner-team.js';
 import type { TeamLogo } from './team-logo.js';
 import type { TeamPlayer } from './teams.js';
-import type { FieldClientEvent, FieldServerEvent } from './lounge-field.js';
 export const CHAT_SOCKET_PATH = '/v1/chat/ws';
 export const CHAT_ROOM = 'lounge';
 /** T-11-583 언어별 라운지 방. 화면 언어 방으로 들어가고 다른 방도 고를 수 있다. */
@@ -142,18 +141,14 @@ export type ChatServerEvent =
   | { t: 'online'; n: number }
   | { t: 'err'; code: ChatRejectCode }
   /** T-11-180 'older' 요청의 답(그 소켓에만) — before보다 이전 줄을 오래된 순으로. more가 거짓이면 더 없다. */
-  | { t: 'older'; messages: ChatMessage[]; more: boolean; notices?: ChatNotice[] }
-  /** T-11-600 라운지 필드(필드를 연 소켓에만). */
-  | FieldServerEvent;
+  | { t: 'older'; messages: ChatMessage[]; more: boolean; notices?: ChatNotice[] };
 
 /** 클라이언트 → 서버(핑은 LIVE_PING 문자열 그대로). */
 export type ChatClientEvent =
   /** replyTo(T-11-573): 답장할 원문 id. 원문이 없거나 가려졌으면 보통 메시지로 올라간다. */
   | { t: 'send'; body: string; replyTo?: string }
   /** T-11-180 위로 올리면 before(메시지 id)보다 이전 줄을 CHAT_HISTORY개씩 부른다. 옛 방은 무시한다. */
-  | { t: 'older'; before: string }
-  /** T-11-600 라운지 필드. */
-  | FieldClientEvent;
+  | { t: 'older'; before: string };
 
 /** 입장권을 못 받는 이유 — login: 계정 로그인 전, nickname: 닉네임을 아직 안 정함, muted: 채팅 정지 중. */
 export const CHAT_DENY_REASONS = ['login', 'nickname', 'muted'] as const;
