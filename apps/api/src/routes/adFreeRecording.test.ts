@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { issueGoogleCookie, callJson } from '../test/http.js';
+import { issueGoogleCookie, callJson, deleteProfile } from '../test/http.js';
 import { recordAdFreePurchase, markPurchaseRefund } from '../db/repos/adFreePurchases.js';
 import { grantIapPurchase } from '../db/repos/iap.js';
 import { acquisitionReport } from '../db/repos/acquisition.js';
@@ -149,6 +149,38 @@ describe('ad removal verified recording', () => {
     expect(
       (await ctx.env.DB.prepare('SELECT * FROM iap_ad_free_purchases').all()).results,
     ).toHaveLength(0);
+  });
+  it('T-11-614 keeps the ad-free ledger row after account deletion and clears only its touch links', async () => {
+    const a = await issueGoogleCookie(ctx);
+    await grant(a.cookie);
+    tx.value = {
+      transactionId: 'ad-kept',
+      bundleId: 'com.offsidelab.app',
+      productId,
+      type: 'Non-Consumable',
+      environment: 'Production',
+      appAccountToken: a.profileId.replace(/^prf_/, ''),
+      purchaseDate: Date.now(),
+      price: 6600000,
+      currency: 'KRW',
+      storefront: 'KOR',
+    };
+    expect((await post(a.cookie)).status).toBe(204);
+    await deleteProfile(ctx.env, a.cookie, 'ad-free-delete');
+    expect(
+      await ctx.env.DB.prepare(
+        'SELECT profile_id,price_milliunits,first_touch_id,last_touch_id FROM iap_ad_free_purchases',
+      ).all(),
+    ).toMatchObject({
+      results: [
+        {
+          profile_id: a.profileId,
+          price_milliunits: 6600000,
+          first_touch_id: null,
+          last_touch_id: null,
+        },
+      ],
+    });
   });
   it('never grants consumables when a verified refund marker arrived before an old purchase replay', async () => {
     const a = await issueGoogleCookie(ctx);
