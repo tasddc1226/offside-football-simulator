@@ -209,3 +209,35 @@ it('refuses production capture outside the reviewed workflow before any export P
   ).rejects.toThrow('maintenance workflow');
   expect(calls).toEqual(['GET', 'GET']);
 });
+
+it('proves R2 read/write/delete permissions with an owned probe before capture', async () => {
+  const { verifyStorageAccess } = await import('./d1-snapshot.mjs');
+  const calls = [];
+  let stored;
+  await verifyStorageAccess(
+    { CLOUDFLARE_ACCOUNT_ID: 'test', CLOUDFLARE_API_TOKEN: 'private' },
+    async (url, init) => {
+      calls.push({ url: String(url), method: init.method });
+      if (init.method === 'PUT') {
+        stored = init.body;
+        return Response.json({ success: true });
+      }
+      return init.method === 'GET' ? new Response(stored) : Response.json({ success: true });
+    },
+  );
+  expect(calls.map((c) => c.method)).toEqual(['PUT', 'GET', 'DELETE']);
+  expect(calls.every((c) => decodeURIComponent(c.url).includes('/d1-snapshots/probes/'))).toBe(
+    true,
+  );
+  const failed = [];
+  await expect(
+    verifyStorageAccess(
+      { CLOUDFLARE_ACCOUNT_ID: 'test', CLOUDFLARE_API_TOKEN: 'private' },
+      async (_url, init) => {
+        failed.push(init.method);
+        return new Response('', { status: init.method === 'DELETE' ? 200 : 403 });
+      },
+    ),
+  ).rejects.toThrow('permission');
+  expect(failed).toEqual(['PUT', 'DELETE']);
+});

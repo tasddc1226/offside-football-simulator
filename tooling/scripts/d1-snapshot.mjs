@@ -248,6 +248,34 @@ export async function publishSnapshot(env, output, prefix, fetcher = fetch) {
   };
 }
 
+/** Prove destination read/write/delete permissions before any query-blocking export begins. */
+export async function verifyStorageAccess(env, fetcher = fetch) {
+  const key = 'd1-snapshots/probes/' + randomUUID() + '.json';
+  const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(env.CLOUDFLARE_ACCOUNT_ID)}/r2/buckets/offside-d1-backup/objects/${encodeURIComponent(key)}`;
+  const body = JSON.stringify({ probe: randomUUID() });
+  const call = (method, value) =>
+    fetcher(url, {
+      method,
+      headers: {
+        Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+        ...(value && { 'Content-Type': 'application/octet-stream' }),
+      },
+      ...(value && { body: value }),
+      signal: AbortSignal.timeout(15_000),
+    });
+  try {
+    const put = await call('PUT', body);
+    if (!put.ok || (await put.json()).success !== true)
+      throw new Error('Snapshot destination write permission unavailable');
+    const read = await call('GET');
+    if (!read.ok || (await read.text()) !== body)
+      throw new Error('Snapshot destination readback failed');
+  } finally {
+    const removed = await call('DELETE');
+    if (!removed.ok) throw new Error('Snapshot destination probe cleanup failed');
+  }
+}
+
 export async function capture(
   { env = process.env, id, expectedName, output, confirm, timeoutMs = 120_000 },
   fetcher = fetch,
@@ -276,6 +304,7 @@ export async function capture(
     space.bavail * space.bsize < info.sizeBytes * 4 + 1024 ** 3
   )
     throw new Error('Insufficient private workspace capacity');
+  await verifyStorageAccess(env, fetcher);
   const snapshotAt = Date.now();
   const snapshot = await exportSnapshot(api, id, confirm, { timeoutMs });
   const sql = join(output, 'native.sql');

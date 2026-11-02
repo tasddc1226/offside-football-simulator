@@ -21,7 +21,9 @@
 1. DB UUID와 원격 이름을 대조한다. preflight는 DB 정보와 현재 Time Travel bookmark GET만 수행한다.
 2. capture는 `EXPORT_BLOCKS_QUERIES:<UUID>` 확인값을 요구한다. 운영은 main의 `D1 consistent snapshot (manual)` 워크플로와
    `maintenance_approved=true`에서만 실행한다. 일반 로컬 CLI는 운영 capture를 거절한다.
-3. 한 번 시작한 export bookmark를 유지하고 변경되면 실패한다. 기본 120초, 허용 최대 300초 안에 poll한다.
+3. capture는 export 전에 전용 R2 probe 객체의 쓰기·읽기·삭제 권한을 먼저 검증한다. 읽기 전용 preflight는 이 probe를 실행하지 않는다.
+   토큰에는 D1 읽기/export 및 R2 객체 읽기·쓰기·삭제 권한이 필요하다.
+   한 번 시작한 export bookmark를 유지하고 변경되면 실패한다. 기본 120초, 허용 최대 300초 안에 poll한다.
    제한에 걸리면 더 이상 poll하지 않는다. Cloudflare의 자동 취소가 즉시 완료된다는 보장은 없으므로 실제 DB 응답을 확인해야 한다.
 4. signed URL은 인증 헤더 없이 HTTPS로 다운로드하며 URL·SQL·인증 값은 로그에 넣지 않는다.
    작업 파일은 전용 비공개 디렉터리에만 두고 덮어쓰지 않는다. 사전 여유 공간은 DB 크기 × 4 + 1GiB 이상을 요구한다.
