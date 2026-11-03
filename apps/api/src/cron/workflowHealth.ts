@@ -1,11 +1,13 @@
-/** Independent of Actions scheduling: read public workflow metadata once per infra-health hour.
- * No token, dispatch, polling loop or notification delivery from the Worker. */
+/** The Worker checks the scheduled resource step independently, even when Actions stops.
+ * Read one private R2 heartbeat; no GitHub token or public API request from the Worker. */
+export const WORKFLOW_HEARTBEAT_KEY = 'operations/production/infra-resource-workflow.json';
 export const WORKFLOW_STALE_MS = 3 * 60 * 60_000;
-const REPO = 'tasddc1226/offside-football-simulator';
 export type WorkflowObservation = {
   at: number | null;
   completedAt: number | null;
   conclusion: string | null;
+  source?: 'r2-resource-step';
+  error?: 'missing' | 'invalid' | 'unavailable';
 };
 export function inspectWorkflowRuns(
   value: unknown,
@@ -47,21 +49,65 @@ export function inspectWorkflowRuns(
     issues,
   };
 }
-export async function readWorkflowHealth(now: number, fetcher: typeof fetch = fetch) {
+export async function readWorkflowHealth(
+  now: number,
+  bucket?: R2Bucket,
+): Promise<{ observation: WorkflowObservation; issues: string[] }> {
+  const unavailable = (error: 'missing' | 'invalid' | 'unavailable') => ({
+    observation: {
+      at: null,
+      completedAt: null,
+      conclusion: null,
+      source: 'r2-resource-step' as const,
+      error,
+    },
+    issues: ['resource-workflow-observation-unavailable'],
+  });
   try {
-    const response = await fetcher(
-      `https://api.github.com/repos/${REPO}/actions/workflows/infra-health.yml/runs?branch=main&event=schedule&per_page=10`,
+    if (!bucket) return unavailable('unavailable');
+    const object = await bucket.get(WORKFLOW_HEARTBEAT_KEY);
+    if (!object) return unavailable('missing');
+    if (object.size > 4096) {
+      await object.body.cancel();
+      return unavailable('invalid');
+    }
+    const value = (await object.json()) as Record<string, unknown> | null;
+    if (
+      !value ||
+      value.version !== 1 ||
+      value.repository !== 'tasddc1226/offside-football-simulator' ||
+      value.event !== 'schedule' ||
+      value.branch !== 'main' ||
+      typeof value.runId !== 'string' ||
+      !/^[1-9][0-9]*$/.test(value.runId) ||
+      typeof value.createdAt !== 'string' ||
+      typeof value.completedAt !== 'string' ||
+      !['success', 'failure', 'cancelled', 'skipped'].includes(String(value.conclusion)) ||
+      !Number.isFinite(Date.parse(value.createdAt)) ||
+      !Number.isFinite(Date.parse(value.completedAt)) ||
+      Date.parse(value.completedAt) < Date.parse(value.createdAt)
+    )
+      return unavailable('invalid');
+    const result = inspectWorkflowRuns(
       {
-        headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'offside-infra-health' },
-        signal: AbortSignal.timeout(10_000),
+        workflow_runs: [
+          {
+            event: value.event,
+            head_branch: value.branch,
+            created_at: value.createdAt,
+            updated_at: value.completedAt,
+            status: 'completed',
+            conclusion: value.conclusion,
+          },
+        ],
       },
+      now,
     );
-    if (!response.ok) throw new Error('Workflow observation unavailable');
-    return inspectWorkflowRuns(await response.json(), now);
-  } catch {
     return {
-      observation: { at: null, completedAt: null, conclusion: null },
-      issues: ['resource-workflow-observation-unavailable'],
+      ...result,
+      observation: { ...result.observation, source: 'r2-resource-step' as const },
     };
+  } catch {
+    return unavailable('unavailable');
   }
 }

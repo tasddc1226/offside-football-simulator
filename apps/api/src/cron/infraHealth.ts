@@ -167,7 +167,7 @@ export async function runInfraHealth(
   result.backupRecovery = await inspectBackupRecovery(env.BACKUP, now);
   if (result.backupRecovery.status !== 'verified')
     result.issues.push('backup-recovery-' + result.backupRecovery.status);
-  const workflow = await readWorkflowHealth(now);
+  const workflow = await readWorkflowHealth(now, env.BACKUP);
   result.resourceWorkflow = workflow.observation;
   result.issues.push(...workflow.issues);
   // Compare-and-set the complete report, including samples. Concurrent triggers can

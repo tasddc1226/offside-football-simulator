@@ -89,6 +89,7 @@ jobs:
       - name: Repository-wide checks
         run: |
           node --test .github/scripts/*.test.mjs
+          pnpm --filter @offside/api exec vitest run --root "$GITHUB_WORKSPACE/tooling/scripts" --config "$GITHUB_WORKSPACE/tooling/scripts/vitest.config.ts"
           pnpm format:check
           pnpm lint:deps
           pnpm lint:i18n
