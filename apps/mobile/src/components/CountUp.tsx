@@ -7,10 +7,14 @@ import { prefs } from '../store';
 
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
 
-export function useCountUp(value: number, { animate = true, run = true, ms = 1200 } = {}): number {
+/** fromValue면 처음엔 0부터 세지 않고 값이 바뀔 때만 이어 간다. */
+export function useCountUp(
+  value: number,
+  { animate = true, run = true, ms = 1200, fromValue = false } = {},
+): number {
   const { motionOK } = useSnapshot(prefs);
   const instant = !animate || !motionOK;
-  const [cur, setCur] = useState(instant ? value : 0);
+  const [cur, setCur] = useState(instant || fromValue ? value : 0);
   /** 지금 화면에 보이는 값 — 애니메이션이 끊겨도(새 값이 와도) 여기서 이어 간다. */
   const shown = useRef(cur);
   useEffect(() => {
@@ -46,6 +50,7 @@ export function CountUp({
   animate?: boolean;
   run?: boolean;
   ms?: number;
+  fromValue?: boolean;
 }) {
   return <>{useCountUp(value, opt).toFixed(decimals)}</>;
 }

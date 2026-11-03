@@ -56,7 +56,7 @@ export const create: Translation<CreateMsgs> = {
   noName: '名前未定',
   focusTag: (p) => `主力 ${p.list}`,
   ovrStart: '開始',
-  ovrEst: '予想',
+  ovrEst: '予想OVR',
   foot: (p) => FOOT[p.v] ?? p.v,
   name: '名前',
   randomName: '名前をランダムに変える',
@@ -82,7 +82,8 @@ export const create: Translation<CreateMsgs> = {
   focusDown: (p) => `開始 ${p.d} · 成長 -${p.pct}%`,
   focusNone: (p) => `開始 変化なし · 成長 -${p.pct}%`,
   trait: '成長タイプ',
-  potentialNote: 'ポテンシャルの評価は引退時に公開されます。',
+  potentialNote:
+    '実際のポテンシャルは引退時に公開されます。候補を選ぶときは初期ランクの範囲だけ先に見られます。',
   cancel: 'キャンセル',
   checkBody: '身長・体重を確認してください',
   focusMore: (p) => `主力能力値をあと${p.n}個選んでください`,
@@ -101,18 +102,23 @@ export const create: Translation<CreateMsgs> = {
   potentialHelp:
     '初期ポテンシャルのランク範囲です。トレーニングや強化で変わることがあります。ポテンシャルはすべてのユーザーに同じ確率で決まり、Sランクはとても珍しいです。',
   potentialWeb: 'アプリでリワード広告を見ると、候補3人の初期ポテンシャルのランク範囲を見られます。',
-  potentialLogin: '3人は能力値の合計が同じです。ポテンシャルはクラブ資金かアプリ広告で見られます。',
+  potentialLogin:
+    '3人は能力値の合計が同じで、配分が違います。初期ポテンシャルのランク範囲はクラブ資金かアプリ広告で見られます。',
   potentialLoginGo: 'ログイン',
   potentialClubShort: (p: { price: string; balance: string }) =>
     `候補のポテンシャルを見るにはクラブ資金${p.price}が必要です。今は${p.balance}あります。`,
   potentialClubCapped:
     '今日はクラブ資金で候補のポテンシャルをこれ以上見られません。明日また見られます。',
   potentialSaveFailed: '公開結果を保存できませんでした。保存容量を確認してください。',
-  candIntro: '3人は能力値の合計が同じです。ポテンシャルは非公開なので、配分を見て選びましょう。',
+  candIntro:
+    '3人は能力値の合計が同じで、配分が違います。このポジションの主要能力値が高いほどOVRも高くなります。',
   loginTools:
     'ログインすると、リロール券・プレミアムスカウト券で候補を引き直し、クラブ資金でポテンシャルを見られます。',
   loginToolsGo: 'ログインする',
   moreTools: 'ショップ・能力値の案内をもっと見る',
+  toolsPicked: '選んだ候補',
+  toolsChange: '別の候補を探す',
+  toolsPotential: '候補のポテンシャルを確かめる',
   openAll: 'すべて開く',
   candNo: (p) => `候補${p.n}`,
   picked: '✓ 選択',
@@ -125,7 +131,7 @@ export const create: Translation<CreateMsgs> = {
     `キープした候補がいます。${p.pos}・主力 ${p.focus}で引くと出てきます。ほかの候補をキープするとこの候補は消えます。`,
   keptRestore: 'キープした候補の条件に合わせる',
   scoutMemo: (p) => `スカウトメモ：隠れた武器は${p.k}`,
-  tapToOpen: 'タップして開く',
+  tapToOpen: '開いて選ぶ',
   candOpenA11y: (p) => `候補${p.n}、OVR ${p.ovr}、${p.line}`,
   candClosedA11y: (p) => `候補${p.n}、スカウトメモ：隠れた武器は${p.k}。タップして開く`,
   archetype: (p) => ARCHETYPE[p.pos][p.k],
@@ -142,7 +148,7 @@ export const create: Translation<CreateMsgs> = {
   scannedAfter: '人',
   scanCand: '候補',
   scanDone: '候補3人の選定完了！',
-  scanSkip: 'タップでスキップ',
+  scanSkip: '押すとスキップ',
   nationSearchPlaceholder: '国名で検索',
   nationListLabel: '国籍',
   nationEmpty: '該当する国がありません',

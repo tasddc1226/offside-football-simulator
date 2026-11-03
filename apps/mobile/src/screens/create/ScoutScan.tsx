@@ -1,6 +1,6 @@
 // "후보 3명 보기"를 누르면 약 3초 동안 화면을 가리고 스카우트가 후보를 추리는 연출을 보여 준다(웹 ScoutScan.svelte).
 // 스캔 빔이 피치를 훑으며 선수 점을 찍고, 마지막 훑기에서 내 포지션 구역의 세 명이 금색으로 확정된다.
-// 연출용 난수는 Math.random이다(게임 RNG를 건드리지 않는다). 탭하면 건너뛸 수 있고, 동작 줄이기면
+// 연출용 난수는 Math.random이다(게임 RNG를 건드리지 않는다). 누르면 건너뛸 수 있고, 동작 줄이기면
 // 빔 없이 짧게 단계만 넘긴다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
@@ -246,7 +246,6 @@ export function ScoutScan({
             shadow,
           ]}
         >
-          <Txt v="eyebrow">Scouting</Txt>
           <Txt v="h2" accessibilityRole="header" style={{ fontSize: rem(FONT.title3) }}>
             {L.scanTitle}
           </Txt>

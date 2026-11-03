@@ -17,7 +17,7 @@
   import { clearCreateDraft, restoreCreateDraft, saveCreateDraft } from './createDraft.js';
   import { watchDetailOpening } from '@offside/app-core/season-opening';
   import { cubicOut } from 'svelte/easing';
-  import { fly } from 'svelte/transition';
+  import { fly, slide } from 'svelte/transition';
   import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
   import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
   import { baseline, candidatePotentialGrades } from '@offside/game/candidates';
@@ -253,6 +253,9 @@
   // T-11-628 웹에서도 볼 수 있는데 앱 안내가 떠서 웹에는 없는 기능으로 읽혔다. 비로그인은 맨 위 소개, 자금 버튼 · 못 보는 이유가 있으면 그 안내로
   // 충분하다. 구단 자금 값을 받지 못했거나 팔지 않을 때만 앱 안내를 둔다.
   const appPotentialHint = $derived(!appState.candidatePotentialOpen && owner && clubLoaded && !clubCand && !clubLock);
+  // 카드 아래 도구 묶음: 쓸 수 있는 도구가 있는 묶음만 보인다.
+  const hasChangeTools = $derived(scouts > 0 || pity.used > 0 || rerolls > 0 || owner);
+  const hasPotentialTools = $derived(appState.candidatePotentialOpen || (!quiet && appPotentialHint) || !!clubLock || !!clubCand || !!clubMsg);
   async function revealWithClub() {
     const o = clubCand;
     if (clubBusy || !o) return;
@@ -326,8 +329,14 @@
     potWas = open;
   });
   // 카드가 세로축으로 뒤집히며 열린다. 감속 모션이면 duration 0(즉시 표시). 대박은 뒷면에서 한 박자 쉬고 뒤집힌다.
-  function flipIn(_node: Element, delay = 0) {
-    return { delay, duration: dur(360), easing: cubicOut, css: (t: number) => `transform: perspective(800px) rotateY(${(1 - t) * 90}deg); opacity: ${Math.min(1, t * 2)}` };
+  // 닫힌 카드 높이에서 열린 높이로 함께 자라, 아래 카드가 한 프레임에 밀리지 않는다.
+  function flipIn(node: Element, delay = 0) {
+    const h = node.getBoundingClientRect().height;
+    return { delay, duration: dur(360), easing: cubicOut, css: (t: number) => `transform: perspective(800px) rotateY(${(1 - t) * 90}deg); opacity: ${Math.min(1, t * 2)}; height: ${closedH + (h - closedH) * t}px; overflow: hidden` };
+  }
+  let closedH = 60;
+  function closedSize(node: HTMLElement) {
+    closedH = node.offsetHeight;
   }
 </script>
 {#snippet loginTools()}
@@ -373,7 +382,7 @@
       </div>
       <div class="lc-side">
         <MiniRadar pos={C.pos} attrs={cardAttrs} size={44} />
-        <span class="lc-ovr">{L.ovrEst} <b class="num">{startOvr(C.pos, cardAttrs)}</b></span>
+        <span class="lc-ovr">{L.ovrEst} <b class="num"><CountUp value={startOvr(C.pos, cardAttrs)} animate={false} ms={280} /></b></span>
       </div>
     </section>
 
@@ -509,7 +518,8 @@
       {/if}
     </section>
 
-    {#if !lastForm}
+    <!-- 주력을 덜 고르면 아래 버튼이 같은 안내를 하므로 빠른 링크를 두지 않는다. -->
+    {#if !lastForm && !(appState.createStep === 'focus' && blocker === L.focusMore({ n: focusLeft }))}
       <div class="cw-quick">
         <button class="link-btn" data-act="next-candidates" data-coach="candidates" disabled={!!blocker} onclick={() => (scouting = true)}>{blocker ?? L.quickCandidates}</button>
         <span class="muted fs-sm">{L.quickNote}</span>
@@ -574,6 +584,7 @@
             {/if}
             <span class="cc-scout">“{scoutLine(C.pos, cand.attrs)}”</span>
             {#if appState.candidatePick === i}
+            <span class="cc-detail" transition:slide={{ duration: dur(360), easing: cubicOut }}>
             <span class="muted fs-sm" data-cand-edge={i}>{candidateEdge(C.pos, appState.candidates, i)}</span>
             <span class="cc-body">
               <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />
@@ -588,10 +599,11 @@
                 {/each}
               </span>
             </span>
+            </span>
             {/if}
           </button>
         {:else}
-          <button class="cand-card" data-cand={i} onclick={() => pick(i)} in:fly|global={{ y: 14, duration: dur(280), delay: dur(90 * i) }}>
+          <button class="cand-card" data-cand={i} use:closedSize onclick={() => pick(i)} in:fly|global={{ y: 14, duration: dur(280), delay: dur(90 * i) }}>
             <span class="cand-n">?</span>
             <span class="cc-closed">
               <b>{L.candNo({ n: i + 1 })}</b>
@@ -602,54 +614,74 @@
         {/if}
       {/each}
     </div>
-    {#if picked}
-      {@const n = appState.candidatePick! + 1}
-      <button class="btn btn-sm self-start" data-act="keep-candidate" aria-pressed={!!picked.kept} onclick={() => keepCandidate(picked.kept ? null : appState.candidatePick)}>
-        {picked.kept ? L.unkeepBtn({ n }) : L.keepBtn({ n })}
-      </button>
-      {#if !quiet}<p class="muted fs-sm">{L.keepHelp}</p>{/if}
-    {/if}
-    {#if scouts > 0}
-      <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
-      <p class="muted fs-sm">{scoutWhatText()}</p>
-      <ScoutPityGauge {pity} />
-      <ScoutOdds />
-    {:else if pity.used > 0}
-      <ScoutPityGauge {pity} empty />
-    {/if}
     {#if premium}<p class="muted fs-sm" data-premium-note>{SL.premiumNote}</p>{/if}
-    {#if rerolls > 0}
-      <button class="btn btn-sm self-start" data-act="reroll-candidates" disabled={rerolling} onclick={reroll}>{rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}</button>
-      <p class="muted fs-sm" data-reroll-mileage>{CL.rerollMileage({ n: rerollMileageLeft(mileage), need: REROLL_MILEAGE })}</p>
-    {:else if owner}
-      <p class="muted fs-sm" data-reroll-hint>
-        {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
-      </p>
+    <!-- 카드 아래 도구를 고른 후보 · 다른 후보 찾기 · 잠재력 확인으로 묶는다. -->
+    {#if picked || hasChangeTools || hasPotentialTools}
+      <section class="card cand-tools" data-cand-tools>
+        {#if picked}
+          {@const n = appState.candidatePick! + 1}
+          <div class="tool-group" data-tools="picked">
+            <div class="tool-row">
+              <h2 class="tool-h">{L.toolsPicked}</h2>
+              <button class="btn btn-sm" data-act="keep-candidate" aria-pressed={!!picked.kept} onclick={() => keepCandidate(picked.kept ? null : appState.candidatePick)}>
+                {picked.kept ? L.unkeepBtn({ n }) : L.keepBtn({ n })}
+              </button>
+            </div>
+            {#if !quiet}<p class="muted fs-sm">{L.keepHelp}</p>{/if}
+          </div>
+        {/if}
+        {#if hasChangeTools}
+          <div class="tool-group" data-tools="change">
+            <h2 class="tool-h">{L.toolsChange}</h2>
+            {#if scouts > 0}
+              <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
+              <p class="muted fs-sm">{scoutWhatText()}</p>
+              <ScoutPityGauge {pity} />
+              <ScoutOdds />
+            {:else if pity.used > 0}
+              <ScoutPityGauge {pity} empty />
+            {/if}
+            {#if rerolls > 0}
+              <button class="btn btn-sm self-start" data-act="reroll-candidates" disabled={rerolling} onclick={reroll}>{rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}</button>
+              <p class="muted fs-sm" data-reroll-mileage>{CL.rerollMileage({ n: rerollMileageLeft(mileage), need: REROLL_MILEAGE })}</p>
+            {:else if owner}
+              <p class="muted fs-sm" data-reroll-hint>
+                {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
+              </p>
+            {/if}
+          </div>
+        {/if}
+        {#if hasPotentialTools}
+          <div class="tool-group" data-tools="potential">
+            <h2 class="tool-h">{L.toolsPotential}</h2>
+            {#if clubCand}
+              <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
+                {clubBusy ? B.clubBusy : B.clubCandidates({ price: fundsText(clubCand.price) })}
+              </button>
+            {/if}
+            <!-- T-11-610 잠재력을 왜 못 보는지 접지 않고 보인다. 구단주는 모자란 자금 · 오늘 상한(비로그인은 맨 위 소개에서 안내). -->
+            {#if clubLock}
+              <p class="muted fs-sm" data-cand-club-lock={clubLock.reason}>
+                {clubLock.reason === 'short' ? L.potentialClubShort({ price: fundsText(clubLock.price), balance: fundsText(clubLock.balance) }) : L.potentialClubCapped}
+              </p>
+            {/if}
+            {#if appState.candidatePotentialOpen}
+              <p class="muted fs-sm">{premium ? SL.premiumHelp : L.potentialHelp}</p>
+            {:else if !quiet && appPotentialHint}
+              <p class="muted fs-sm" data-cand-app-hint>{L.potentialWeb}</p>
+            {/if}
+            {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
+          </div>
+        {/if}
+      </section>
     {/if}
     {#if guest && !quiet}
       {@render loginTools()}
-    {/if}
-    <!-- T-11-610 잠재력을 왜 못 보는지 접지 않고 보인다. 구단주는 모자란 자금 · 오늘 상한(비로그인은 맨 위 소개에서 안내). -->
-    {#if clubLock}
-      <p class="muted fs-sm" data-cand-club-lock={clubLock.reason}>
-        {clubLock.reason === 'short' ? L.potentialClubShort({ price: fundsText(clubLock.price), balance: fundsText(clubLock.balance) }) : L.potentialClubCapped}
-      </p>
-    {/if}
-    {#if appState.candidatePotentialOpen}
-      <p class="muted fs-sm">{premium ? SL.premiumHelp : L.potentialHelp}</p>
-    {:else if !quiet && appPotentialHint}
-      <p class="muted fs-sm" data-cand-app-hint>{L.potentialWeb}</p>
     {/if}
     {#if !quiet}
       <!-- T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지) -->
       <ItemsHint />
     {/if}
-    {#if clubCand}
-      <button class="btn btn-sm self-start" data-act="candidate-potential-club" disabled={clubBusy} onclick={revealWithClub}>
-        {clubBusy ? B.clubBusy : B.clubCandidates({ price: fundsText(clubCand.price) })}
-      </button>
-    {/if}
-    {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
     {#if quiet}
       <!-- T-11-437 쓸 도구가 없으면 상점 위치 · 능력치 설명을 한 번에 접어 둔다. -->
       <details class="card more-tools" data-more-tools>
@@ -688,14 +720,19 @@
 
 <style>
 /* T-11-605 단계 머리 · 작은 미리보기: 360×780에서 한 단계가 스크롤 없이 들어온다. */
-.create-wizard { gap: 10px; }
+.create-wizard { gap: 10px; --progress: var(--pitch); --sel: var(--pitch); }
+/* 금색은 후보의 강점 · 공개 연출에만 쓴다. 다크 모드 초록은 배경에 묻혀 선택지(.opt)와 같은 금색을 쓴다. */
+:global(:root[data-theme='dark']) .create-wizard { --progress: var(--ink); --sel: var(--accent); }
+@media (prefers-color-scheme: dark) {
+  :global(:root:not([data-theme='light'])) .create-wizard { --progress: var(--ink); --sel: var(--accent); }
+}
 .create-wizard { padding-top: calc(10px + var(--safe-t)); }
 .cw-head { display: flex; flex-direction: column; gap: 4px; }
 .cw-head h1 { margin: 0; font-size: var(--fs-title2); line-height: 1.25; outline: none; word-break: keep-all; }
 .cw-steps { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; }
 .cw-step { display: flex; flex-direction: column; justify-content: flex-end; gap: 4px; min-height: 36px; padding: 0; border: 0; background: none; color: var(--muted); font-size: var(--fs-caption2); font-weight: 600; text-align: left; word-break: keep-all; }
 .cw-step i { display: block; height: 4px; border-radius: 2px; background: var(--line); }
-.cw-step.done i, .cw-step.on i { background: var(--accent); }
+.cw-step.done i, .cw-step.on i { background: var(--progress); }
 .cw-step.on { color: var(--ink); }
 .cw-note { margin: 0; }
 .live-card.compact { padding: 8px 12px; gap: 10px; box-shadow: none; }
@@ -713,7 +750,7 @@
 :global(html[lang='en']) .pos-grid, :global(html[lang='ja']) .pos-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .dpos-grid { gap: 6px; }
 .dpos-opt { align-items: center; padding: 4px 6px; text-align: center; font-size: var(--fs-label); line-height: 1.2; word-break: keep-all; }
-.dpos-panel { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 3px solid var(--accent); font-size: var(--fs-label); line-height: 1.4; }
+.dpos-panel { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 3px solid var(--progress); font-size: var(--fs-label); line-height: 1.4; }
 .focus-opt b.ovr-core { text-decoration: underline; text-underline-offset: 3px; }
 .ovr-more .stack { gap: 6px; padding-bottom: 8px; }
 .ovr-more p { margin: 0; }
@@ -740,14 +777,25 @@
   .cand-note { display: none; }
   .create-wizard.extra .live-card { display: none; }
 }
+.cand-card.open.picked:not(.rv-good.rv-land, .rv-jackpot.rv-land, .rv-jackpot.rv-run) { border-color: var(--sel); box-shadow: inset 0 0 0 1.5px var(--sel), var(--shadow); }
+.cc-detail { display: flex; flex-direction: column; gap: 4px; }
+.cand-tools { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+.tool-group { display: flex; flex-direction: column; gap: 6px; }
+.tool-group p { margin: 0; }
+.tool-group + .tool-group { padding-top: 12px; border-top: 1px solid var(--line); }
+.tool-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.tool-h { margin: 0; font-size: var(--fs-label); font-weight: 600; color: var(--muted); }
 .ovr-guide-box, .position-guide-box, .more-tools { padding-block: 0; }
 .more-body { padding-bottom: 14px; }
 .cand-note { margin: 0; }
 .position-guide-box :global(.position-guide) { border-top: 0; }
 .ovr-guide-box .ovr-guide { margin-top: 0; }
-.ovr-guide { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 12px 0; font-size: var(--fs-label); line-height: 1.5; }
+.ovr-guide { border-left: 3px solid var(--progress); padding: 4px 0 4px 12px; margin: 12px 0; font-size: var(--fs-label); line-height: 1.5; }
 .ovr-guide p { margin: 4px 0 0; overflow-wrap: anywhere; }
-.cc-bar .ovr-core { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+/* .cc-bar span의 overflow: hidden이 밑줄을 자르지 않게 아래 여백을 넓히되 줄 높이는 그대로 둔다. */
+.cc-bar .ovr-core { font-weight: 700; text-decoration: underline; text-underline-offset: 3px; padding-bottom: 3px; margin-bottom: -3px; }
+/* 비활성 버튼이 다음 할 일을 문장으로 알려 주므로 흐리지 않고 옅은 면에 진한 글자로 둔다. */
+.action-bar .btn-primary:disabled { opacity: 1; background: var(--surface-2); border-color: var(--line); color: var(--ink); }
 /* T-11-371 공개 연출: 단서 단계에 능력치 막대가 0부터 차오르고, 결과에 강도별 테두리 빛. */
 .rv-run .cc-bar em { animation: rv-fill var(--rv-hint) cubic-bezier(.22,.61,.36,1) var(--rv-delay) both; }
 .rv-good.rv-land, .rv-jackpot.rv-land { box-shadow: 0 0 0 2px var(--accent), 0 0 18px 2px color-mix(in srgb, var(--accent) 45%, transparent); animation: rv-land .5s ease-out; }

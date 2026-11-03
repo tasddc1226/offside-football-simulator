@@ -57,7 +57,7 @@ const ko = {
   noName: '이름 미정',
   focusTag: (p: { list: string }) => `주력 ${p.list}`,
   ovrStart: '시작',
-  ovrEst: '예상',
+  ovrEst: '예상 OVR',
   /** 주발 저장값(오른발·왼발·양발)을 화면 문구로. */
   foot: (p: { v: string }) => p.v,
   // 입력 칸
@@ -86,7 +86,8 @@ const ko = {
   focusDown: (p: { d: number; pct: number }) => `시작 ${p.d} · 성장 -${p.pct}%`,
   focusNone: (p: { pct: number }) => `시작 변화 없음 · 성장 -${p.pct}%`,
   trait: '성장 특성',
-  potentialNote: '잠재력 평가는 은퇴할 때 공개돼요.',
+  potentialNote:
+    '실제 잠재력은 은퇴할 때 공개돼요. 후보를 고를 때는 초기 등급 범위만 미리 볼 수 있어요.',
   // 하단 버튼
   cancel: '취소',
   checkBody: '키·몸무게를 확인해 주세요',
@@ -109,7 +110,8 @@ const ko = {
   potentialHelp:
     '초기 잠재력 등급 범위예요. 훈련과 강화로 달라질 수 있어요. 잠재력은 모든 유저에게 같은 확률로 정해지고, S 등급은 아주 드물어요.',
   potentialWeb: '앱에서 보상형 광고를 보면 후보 3명의 초기 잠재력 등급 범위를 볼 수 있어요.',
-  potentialLogin: '세 후보는 능력치 총합이 같아요. 잠재력은 구단 자금이나 앱 광고로 볼 수 있어요.',
+  potentialLogin:
+    '세 후보는 능력치 총합이 같고 분포가 달라요. 초기 잠재력 등급 범위는 구단 자금이나 앱 광고로 볼 수 있어요.',
   potentialLoginGo: '로그인',
   potentialClubShort: (p: { price: string; balance: string }) =>
     `후보 잠재력을 보려면 구단 자금 ${p.price}이 필요해요. 지금은 ${p.balance} 있어요.`,
@@ -117,12 +119,15 @@ const ko = {
     '오늘은 구단 자금으로 후보 잠재력을 더 볼 수 없어요. 내일 다시 볼 수 있어요.',
   potentialSaveFailed: '공개 결과를 저장하지 못했어요. 저장 공간을 확인해 주세요.',
   candIntro:
-    '세 후보는 능력치 총합이 같아요. 잠재력은 가려져 있으니 분포를 보고 어울리는 선수를 골라요.',
+    '세 후보는 능력치 총합이 같고 분포가 달라요. 이 포지션의 주요 능력치가 높을수록 OVR도 높아요.',
   // T-11-437 웹 비로그인 후보 단계 · 도구 접기
   loginTools:
     '로그인하면 리롤권 · 프리미엄 스카우트권으로 후보를 다시 뽑고, 구단 자금으로 잠재력을 볼 수 있어요.',
   loginToolsGo: '로그인하러 가기',
   moreTools: '상점 · 능력치 안내 더 보기',
+  toolsPicked: '고른 후보',
+  toolsChange: '다른 후보 찾기',
+  toolsPotential: '후보 잠재력 확인',
   openAll: '모두 열기',
   candNo: (p: { n: number }) => `후보 ${p.n}`,
   picked: '✓ 선택',
@@ -137,7 +142,7 @@ const ko = {
     `킵한 후보가 있어요. ${p.pos} · 주력 ${p.focus}로 뽑으면 나와요. 다른 후보를 킵하면 이 후보는 사라져요.`,
   keptRestore: '킵한 후보 조건으로 맞추기',
   scoutMemo: (p: { k: string }) => `스카우트 메모: 숨은 무기는 ${p.k}`,
-  tapToOpen: '탭해서 열기',
+  tapToOpen: '열고 고르기',
   candOpenA11y: (p: { n: number; ovr: number; line: string }) =>
     `후보 ${p.n}, OVR ${p.ovr}, ${p.line}`,
   candClosedA11y: (p: { n: number; k: string }) =>
@@ -160,7 +165,7 @@ const ko = {
   scannedAfter: '명',
   scanCand: '후보',
   scanDone: '후보 3명 선정 완료!',
-  scanSkip: '탭하면 건너뛰기',
+  scanSkip: '누르면 건너뛰기',
   // 국적 고르기
   nationSearchPlaceholder: '나라 이름이나 초성(ㅂㄹㅈ)',
   nationListLabel: '국적',

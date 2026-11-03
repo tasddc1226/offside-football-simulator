@@ -15,11 +15,14 @@ test('주력 능력치 두 개를 골라야 후보를 볼 수 있고, 고른 주
   await expect(focus('sho')).toHaveAttribute('aria-pressed', 'true');
   await expect(focus('dri')).toHaveAttribute('aria-pressed', 'true');
 
+  // 덜 고르면 아래 버튼이 안내하고, 같은 안내를 하는 빠른 링크는 숨는다.
+  const stepNext = page.locator('[data-act="step-next"]');
   await focus('dri').click();
-  await expect(next).toBeDisabled();
+  await expect(stepNext).toBeDisabled();
+  await expect(next).toHaveCount(0);
 
   await focus('pac').click();
-  await expect(next).toBeEnabled();
+  await expect(stepNext).toBeEnabled();
   // 세 번째를 고르면 먼저 고른 쪽(슈팅)이 빠진다.
   await focus('phy').click();
   await expect(focus('sho')).toHaveAttribute('aria-pressed', 'false');

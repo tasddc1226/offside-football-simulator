@@ -31,7 +31,7 @@ export function ScoutOdds() {
                 {r.label}
               </Txt>
               <Txt style={{ ...small, fontVariant: ['tabular-nums'] }}>
-                {r.cells.map((x) => `${x.grade} ${x.pct}`).join('   ')}
+                {r.cells.map((x) => `${x.grade}\u00a0${x.pct}`).join('   ')}
               </Txt>
             </View>
           ))}
