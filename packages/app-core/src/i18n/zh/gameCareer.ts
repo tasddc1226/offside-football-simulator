@@ -23,9 +23,22 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   rnOutside: '已達標準，但貢獻度較高的俱樂部會優先審查。',
   rnTakenHint: '這家俱樂部的號碼已被先登記。可以查看其他候選俱樂部。',
   rnRules:
-    '同一服務賽季中，各俱樂部的背號由所有玩家共享。可在符合條件的前 2 家俱樂部中的 1 家獲得。',
+    '須公開球員名字並在 30 歲以上退役才會接受審查。同一服務賽季中，各俱樂部的背號由所有玩家共享。可在符合條件的前 2 家俱樂部中的 1 家獲得。',
   rnNote:
     '貢獻度是假設在目前俱樂部退役、以 10% 為單位的參考值。轉到其他俱樂部可能會下降。號碼無法預約。在公開球員名字的狀態下退役，經審查後確定。',
+  legendTrackTitle: '卡片等級預測',
+  legendTrackNow: (p) => `以目前紀錄是${p.tier}卡。`,
+  legendTrackScore: (p) => `傳奇分數 ${p.score}`,
+  legendTrackNext: (p) => `距離${p.tier}卡還差 ${p.remaining} 分`,
+  legendTrackTop: '這是最高等級。',
+  legendTrackRules: (p) =>
+    `傳奇分數 ${p.icon} 以上是 ICON，${p.legend} 以上是傳奇卡。低於此分數時依最高 OVR 區分：菁英 ${p.elite}、金卡 ${p.gold}、銀卡 ${p.silver} 以上，其餘為銅卡。`,
+  legendTrackNote:
+    '分數由生涯紀錄、獎盃與獎項累積。即使 OVR 很高，分數不足也不會成為 ICON 或傳奇卡。',
+  legendTierName: (p) =>
+    ({ icon: 'ICON', legend: '傳奇', elite: '菁英', gold: '金卡', silver: '銀卡', bronze: '銅卡' })[
+      p.tier
+    ],
   totalsTitle: '生涯總計',
   apps: '出賽',
   goals: '進球',

@@ -2245,6 +2245,7 @@ test('T-11-603 랭크 매칭 큐 — 내 팀 정보를 먼저 보고, 눌러야 
           {
             teamId: `tem_00000000-0000-4000-8000-00000000000${Number(pick) + 2}`,
             name: pick === '0' ? '라이벌 FC' : '새 상대 FC',
+            odds: { win: 48, draw: 24, loss: 28 },
             owner: '라이벌 감독',
             formation: '4-4-2',
             ovr: 55,
@@ -2316,6 +2317,9 @@ test('T-11-603 랭크 매칭 큐 — 내 팀 정보를 먼저 보고, 눌러야 
   await expect(found.locator('[data-opponent]')).toContainText('라이벌 FC', { timeout: 12_000 });
   await expect(found.locator('[data-stake-promote]')).toContainText('프로 II');
   await expect(found.locator('[data-stake-win]')).toHaveText('+20');
+  // T-11-627 경기 전 예상 승 · 무 · 패.
+  await expect(found.locator('[data-odds-win]')).toHaveText('48%');
+  await expect(found.locator('[data-rank-odds]')).toHaveAttribute('aria-label', /승 48%.*패 28%/);
   await revealDone();
   await expectNoA11yViolations(page);
 

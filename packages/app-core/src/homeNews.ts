@@ -6,7 +6,7 @@ export function pickHomeNews<T extends { board: string; createdAt: string }>(
   posts: readonly T[],
   shown = HOME_NEWS_SHOWN,
 ): T[] {
-  const latest = posts.toSorted((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const latest = [...posts].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   const notice = latest.find((p) => p.board === 'notice');
   if (!notice) return latest.slice(0, shown);
   return [notice, ...latest.filter((p) => p !== notice)].slice(0, shown);

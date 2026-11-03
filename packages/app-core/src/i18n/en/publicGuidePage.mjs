@@ -277,7 +277,7 @@ export default (guideCopy) => {
     ],
     [
       'What do the player card colors mean?',
-      'They are card grades. A legend score of 1,800 or more is Icon (navy), 1,100 or more is Legend (dark green), and below that cards are split by peak OVR into Elite (85 or more), Gold (75 or more), Silver (65 or more) and Bronze. A pale light-green card is a youth player filling an empty spot.',
+      "They are card grades. A legend score of 1,800 or more is Icon (navy), 1,100 or more is Legend (dark green), and below that cards are split by peak OVR into Elite (85 or more), Gold (75 or more), Silver (65 or more) and Bronze. A pale light-green card is a youth player filling an empty spot. During a career, the Career tab's card grade outlook shows your current legend score and the points left to the next grade.",
     ],
     [
       'What changes if I buy Remove Ads?',

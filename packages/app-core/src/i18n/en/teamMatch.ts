@@ -29,6 +29,13 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
     `We pick a team with similar RP and strength. You can look for a different opponent up to ${p.n} times per match.`,
   matchGapNote:
     'The number under RP is the gap to your team. Beat a higher-RP team to gain more, and lose less if you fall short.',
+  oddsTitle: 'Expected win · draw · loss',
+  oddsWin: 'Win',
+  oddsDraw: 'Draw',
+  oddsLoss: 'Loss',
+  oddsAria: (p) => `Expected: win ${p.win}%, draw ${p.draw}%, loss ${p.loss}%`,
+  oddsNote:
+    'Odds over 90 minutes from both current lineups. A stronger team can still lose, and your choices during the match can change them.',
   oppRp: 'RP',
   matchStart: 'Start match',
   matchStartAria: (p) => `Start a match against ${p.name}`,

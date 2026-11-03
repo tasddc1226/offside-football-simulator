@@ -1720,6 +1720,28 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(picks[3]).toEqual(picks[2]);
     });
 
+    it('T-11-627 매칭된 상대에 경기 전 예상을 붙이고, 공격 계수 설정을 따른다', async () => {
+      const me = await ownerWithTeam(3, 90, null, 2);
+      await ownerWithTeam(3, 70, null, 2);
+      const odds = async () => {
+        const res = await call('GET', '/v1/owner-team/opponents', { cookie: me.cookie });
+        return OppRes.parse(await res.json()).data.items[0]!.odds!;
+      };
+      const before = await odds();
+      expect(before.win + before.draw + before.loss).toBe(100);
+      expect(before.win).toBeGreaterThan(before.loss);
+      const now = new Date().toISOString();
+      await ctx.db.insert(balanceVersions).values({
+        status: 'active',
+        valuesJson: JSON.stringify({ rankAtkK: 0.9 }),
+        createdBy: 'test',
+        createdAt: now,
+        updatedAt: now,
+        activatedAt: now,
+      });
+      expect(await odds()).not.toEqual(before);
+    });
+
     it('고른 상대 RP가 그새 멀어지면 409 TEAM_OPPONENT_STALE', async () => {
       const me = await ownerWithTeam(1, 80, null, 2);
       const near = await Promise.all(

@@ -26,9 +26,27 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   rnOutside: 'Criteria met, but clubs with greater contributions are reviewed first.',
   rnTakenHint: 'This club has already retired your number. Check your other candidate clubs.',
   rnRules:
-    'Each club’s numbers are shared by all users within a service season. You can receive one at one of your top two qualifying clubs.',
+    "To be reviewed, retire at age 30 or older with the player's name public. Each club’s numbers are shared by all users within a service season. You can receive one at one of your top two qualifying clubs.",
   rnNote:
     'Contribution is a guide in 10% steps that assumes you retire at your current club. It can drop if you move to another club. Numbers are not reserved. Final awards are decided at retirement with the player’s name made public.',
+  legendTrackTitle: 'Card grade outlook',
+  legendTrackNow: (p) => `At this record, it's a ${p.tier} card.`,
+  legendTrackScore: (p) => `Legend score ${p.score}`,
+  legendTrackNext: (p) => `${p.remaining} points to ${p.tier}`,
+  legendTrackTop: 'This is the highest grade.',
+  legendTrackRules: (p) =>
+    `A legend score of ${p.icon} or more makes an Icon card, and ${p.legend} or more a Legend card. Below that, peak OVR decides: Elite ${p.elite}, Gold ${p.gold}, Silver ${p.silver} or more, and Bronze otherwise.`,
+  legendTrackNote:
+    'Score builds from career stats, trophies and awards. Even with a high OVR, a card stays below Legend and Icon until the score is there.',
+  legendTierName: (p) =>
+    ({
+      icon: 'Icon',
+      legend: 'Legend',
+      elite: 'Elite',
+      gold: 'Gold',
+      silver: 'Silver',
+      bronze: 'Bronze',
+    })[p.tier],
   totalsTitle: 'Career totals',
   apps: 'Apps',
   goals: 'Goals',
