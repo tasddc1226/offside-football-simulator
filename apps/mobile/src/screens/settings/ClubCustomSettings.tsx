@@ -1,7 +1,6 @@
 // 설정 화면의 '구단 이름·엠블럼 변경' 카드(웹 ClubCustomSettings.svelte, T-10-009) — 리그별 클럽 이름·엠블럼 편집,
 // 에디트 파일 내보내기/가져오기. 저장·동기화는 웹과 같은 @offside/app-core/clubCustom(host의 set·reset·export·import).
-// 앱과 다른 곳: ① 엠블럼 이미지 올리기는 이미지 선택 라이브러리가 없어 뺐다(이미 계정에서 받은 이미지는 '이미지 빼기'만
-// 된다). ② 색은 색 선택 칸 대신 #rrggbb 입력 + 색 견본 고르기. ③ 에디트 파일은 파일 대신 공유 시트(JSON 글) · 붙여넣기.
+// 앱과 다른 곳: ① 색은 색 선택 칸 대신 #rrggbb 입력 + 색 견본 고르기. ② 에디트 파일은 파일 대신 공유 시트(JSON 글) · 붙여넣기.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { Alert, Share, View } from 'react-native';
@@ -10,6 +9,7 @@ import { useSnapshot } from 'valtio';
 import { LEAGUES } from '@offside/game/data';
 import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
 import { clubsIn } from '@offside/game/engine';
+import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
 import { CLUB_IMPORT_NO_SPACE, CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
 import {
   exportClubCustom,
@@ -22,6 +22,7 @@ import { clubCustom as clubCustomState } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Btn, ClubBadge, Press, Row, Txt } from '../../ui';
+import { pickClubEmblem } from './clubEmblemImage';
 import { SelectField, SettingsCard, SettingsLabel, SettingsTrigger, TextField } from './parts';
 import { clubText as T } from '@offside/app-core/i18n/ko/club';
 import { tn } from '@offside/game/i18n/names';
@@ -180,6 +181,24 @@ function ClubRow({
     delete next.img;
     if (!setClubCustom(club.id, { logo: next })) fail();
   };
+  const [picking, setPicking] = useState(false);
+  async function upload() {
+    if (picking) return;
+    setPicking(true);
+    try {
+      const picked = await pickClubEmblem();
+      if (picked.kind === 'tooLarge' || picked.kind === 'complex') toast(T.imgComplex);
+      if (picked.kind !== 'ok') return;
+      const others =
+        clubImgTotal(clubCustomState.map) - (clubCustomState.map[club.id]?.logo?.img?.length ?? 0);
+      if (others + picked.img.length > CLUB_CUSTOM_IMG_TOTAL_MAX) return toast(T.imgFull);
+      editLogo({ img: picked.img });
+    } catch {
+      toast(T.imgReadFail);
+    } finally {
+      setPicking(false);
+    }
+  }
   return (
     <View
       testID={`club-${club.id}`}
@@ -222,6 +241,9 @@ function ClubRow({
           <ColorField label={T.bg} value={logo.bg} onCommit={(hex) => editLogo({ bg: hex })} />
           <ColorField label={T.fg} value={logo.fg} onCommit={(hex) => editLogo({ fg: hex })} />
           <Row gap={8}>
+            <Btn sm testID="club-emblem-upload" disabled={picking} onPress={() => void upload()}>
+              {T.uploadImage}
+            </Btn>
             {logo.img ? (
               <Btn sm onPress={dropImage}>
                 {T.dropImage}

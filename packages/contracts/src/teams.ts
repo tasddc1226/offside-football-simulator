@@ -324,6 +324,14 @@ export const TeamOpponentSchema = z.strictObject({
   record: TeamRecordSchema,
   /** T-11-150 구단주 대표 칭호. */
   title: titleField,
+  /** T-11-627 경기 전 예상(내 팀 기준 정수 %, 합 100). 시즌 2 자동 매칭의 한 팀에만 온다. */
+  odds: z
+    .strictObject({
+      win: z.number().int().min(0).max(100),
+      draw: z.number().int().min(0).max(100),
+      loss: z.number().int().min(0).max(100),
+    })
+    .optional(),
 });
 export type TeamOpponent = z.infer<typeof TeamOpponentSchema>;
 

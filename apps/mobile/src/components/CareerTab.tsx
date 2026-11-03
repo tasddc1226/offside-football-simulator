@@ -9,6 +9,8 @@ import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
 import { careerGoals, goalsNote } from '@offside/app-core/career-feedback';
 import { gameCareerText as L } from '@offside/app-core/i18n/ko/gameCareer';
 import { peakValue, seasonValue } from '@offside/contracts/market-value';
+import { legendScore } from '@offside/game/legend';
+import { legendTrack } from '@offside/app-core/legendTrack';
 import { prefs } from '../store';
 import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
@@ -25,6 +27,47 @@ const COL = { season: 100, club: 184, n: 46, rating: 52 };
 
 // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
 // chart: 몸값 그래프·최고 몸값 줄. 은퇴 크레딧은 자기 '몸값 흐름' 장면이 있어 끈다(T-10-106).
+/** T-11-627 은퇴하기 전에 카드 등급 기준을 보여 준다(웹 tabs/CareerTab.svelte). */
+function LegendTrack({ s }: { s: GameState }) {
+  const c = useColors();
+  const t = legendTrack(legendScore(s), s.peak);
+  return (
+    <Card testID={`legend-track-${t.tier}`}>
+      <View>
+        <Txt v="eyebrow">Card Grade</Txt>
+        <Txt v="h2" accessibilityRole="header">
+          {L.legendTrackTitle}
+        </Txt>
+      </View>
+      <Txt v="sm">
+        <Txt v="sm" bold>
+          {t.now}
+        </Txt>{' '}
+        {t.score}
+      </Txt>
+      <View style={{ gap: 6 }}>
+        <Txt v="sm" bold>
+          {t.next}
+        </Txt>
+        <View
+          accessibilityRole="progressbar"
+          accessibilityLabel={t.next}
+          accessibilityValue={{ min: 0, max: 100, now: t.pct }}
+          style={{ height: 6, borderRadius: 3, overflow: 'hidden', backgroundColor: c.line }}
+        >
+          <View style={{ height: 6, width: `${t.pct}%`, backgroundColor: c.accent }} />
+        </View>
+      </View>
+      <Txt v="sm" tone="muted">
+        {t.rules}
+      </Txt>
+      <Txt v="xs" tone="muted">
+        {L.legendTrackNote}
+      </Txt>
+    </Card>
+  );
+}
+
 export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; chart?: boolean }) {
   const c = useColors();
   const t = totals(s);
@@ -91,6 +134,7 @@ export function CareerTab({ s, chart = true }: { s: LegendSource | GameState; ch
           </>
         ) : null}
       </Card>
+      {'attrs' in s && !s.retired ? <LegendTrack s={s} /> : null}
       {'attrs' in s && !s.retired ? <RetiredNumberGuide s={s} /> : null}
       {next.length ? (
         <Card>

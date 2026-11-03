@@ -2,6 +2,7 @@
 // 이정표·수상·소속·리그 이름과 '다음 목표' 이름은 게임이 만든 문구라 옮기지 않는다.
 import { ns } from '../core';
 import { iGa } from '../../format';
+import type { CardTier } from '@offside/contracts/card-tier';
 
 const ko = {
   rnTitle: '영구결번 도전',
@@ -27,9 +28,34 @@ const ko = {
   rnOutside: '기준은 충족했지만 기여도가 더 높은 구단이 먼저 심사돼요.',
   rnTakenHint: '이 구단의 번호는 먼저 등록됐어요. 다른 후보 구단이 있는지 확인할 수 있어요.',
   rnRules:
-    '같은 서비스 시즌의 구단별 번호를 모든 유저가 공유해요. 자격을 갖춘 상위 2개 구단 중 한 곳에서 받을 수 있어요.',
+    '이름을 공개하고 만 30세 이상에 은퇴해야 심사를 받아요. 같은 서비스 시즌의 구단별 번호를 모든 유저가 공유해요. 자격을 갖춘 상위 2개 구단 중 한 곳에서 받을 수 있어요.',
   rnNote:
     '기여도는 지금 뛰는 구단에서 은퇴한다고 보고 낸 10% 단위의 참고치예요. 다른 구단으로 옮기면 낮아질 수 있어요. 번호는 예약되지 않고, 이름을 공개한 선수의 은퇴 심사에서 최종 확정돼요.',
+  legendTrackTitle: '카드 등급 전망',
+  legendTrackNow: (p: { tier: string }) => `지금 기록이면 ${p.tier} 카드예요.`,
+  legendTrackScore: (p: { score: string }) => `레전드 점수 ${p.score}`,
+  legendTrackNext: (p: { tier: string; remaining: string }) =>
+    `${p.tier} 카드까지 ${p.remaining}점`,
+  legendTrackTop: '가장 높은 등급이에요.',
+  legendTrackRules: (p: {
+    icon: string;
+    legend: string;
+    elite: number;
+    gold: number;
+    silver: number;
+  }) =>
+    `레전드 점수 ${p.icon} 이상이면 아이콘, ${p.legend} 이상이면 레전드 카드예요. 그 아래는 최고 OVR로 나뉘어요. 엘리트 ${p.elite}, 골드 ${p.gold}, 실버 ${p.silver} 이상이고 그 밖은 브론즈예요.`,
+  legendTrackNote:
+    '점수는 통산 기록 · 트로피 · 수상으로 쌓여요. OVR이 높아도 점수가 모자라면 아이콘 · 레전드 카드가 되지 않아요.',
+  legendTierName: (p: { tier: CardTier }) =>
+    ({
+      icon: '아이콘',
+      legend: '레전드',
+      elite: '엘리트',
+      gold: '골드',
+      silver: '실버',
+      bronze: '브론즈',
+    })[p.tier],
   totalsTitle: '통산 기록',
   apps: '경기',
   goals: '골',
