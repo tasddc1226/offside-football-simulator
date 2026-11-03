@@ -9,6 +9,8 @@ import type {
   ChatBlockResponse,
   ChatMuteInput,
   ChatOwnerResponse,
+  ChatShareInput,
+  ChatShareResponse,
   ChatTicketResponse,
   CommentReportInput,
 } from '@offside/contracts';
@@ -21,10 +23,10 @@ import {
   type ChatClientEvent,
   type ChatRoomKey,
   type ChatMessage,
+  type ChatNotice,
   type ChatRejectCode,
   type ChatServerEvent,
 } from '@offside/contracts/chat';
-import type { FieldClientEvent } from '@offside/contracts/lounge-field';
 import { LIVE_PING, LIVE_PING_SEC } from '@offside/contracts/polling';
 import { storage } from '@offside/game/storage';
 import { kstParts } from '../boardText.js';
@@ -60,6 +62,15 @@ export const chatTicket = (room: ChatRoomKey = currentChatRoom()) =>
   withProfile(() =>
     apiFetch<ChatTicketResponse>(`/v1/chat/ticket?${inRoom(room)}`, {
       method: 'POST',
+      keepCache: true,
+    }),
+  );
+/** 내 팀 · 선수를 라운지에 올린다. 메시지는 소켓으로 온다. */
+export const shareToChat = (input: ChatShareInput, room: ChatRoomKey = currentChatRoom()) =>
+  withProfile(() =>
+    apiFetch<ChatShareResponse>(`/v1/chat/share?${inRoom(room)}`, {
+      method: 'POST',
+      body: JSON.stringify(input),
       keepCache: true,
     }),
   );
@@ -171,6 +182,8 @@ export const chatSocketUrl = (
 export type ChatView = {
   status: 'connecting' | 'open' | 'retrying';
   messages: ChatMessage[];
+  /** 대화 사이에 끼는 배너(시간순). */
+  notices: ChatNotice[];
   online: number;
   write: boolean;
   /** 입장권 응답 — 내 작성자 키·닉네임·운영자 여부·못 쓰는 이유. 받지 못했으면 null. */
@@ -183,6 +196,7 @@ export type ChatView = {
 export const EMPTY_CHAT: ChatView = {
   status: 'connecting',
   messages: [],
+  notices: [],
   online: 0,
   write: false,
   me: null,
@@ -191,6 +205,30 @@ export const EMPTY_CHAT: ChatView = {
 };
 /** 화면에 들고 있는 최대 줄 수(오래된 줄부터 버린다). 이전 줄은 이만큼 찼으면 더 부르지 않는다. */
 const KEEP = 300;
+
+/** 화면에 들고 있는 최대 배너 수. */
+const KEEP_NOTICES = 100;
+/** 같은 id면 새 값으로 바꾸고 시간순으로 둔다. 더할 게 없으면 같은 배열을 돌려준다. */
+function mergeNotices(have: ChatNotice[], add: ChatNotice[] | undefined): ChatNotice[] {
+  if (!add?.length) return have;
+  const byId = new Map(have.map((n) => [n.id, n]));
+  for (const n of add) byId.set(n.id, n);
+  return [...byId.values()].sort((a, b) => a.at - b.at).slice(-KEEP_NOTICES);
+}
+
+/** 메시지와 배너를 시간순으로 엮는다. 같은 시각이면 메시지가 먼저다. */
+export type ChatRow = { id: string; m: ChatMessage } | { id: string; notice: ChatNotice };
+export function chatTimeline(messages: ChatMessage[], notices: ChatNotice[]): ChatRow[] {
+  const rows: ChatRow[] = [];
+  let i = 0;
+  for (const m of messages) {
+    while (i < notices.length && notices[i]!.at < m.at)
+      rows.push({ id: notices[i]!.id, notice: notices[i++]! });
+    rows.push({ id: m.id, m });
+  }
+  while (i < notices.length) rows.push({ id: notices[i]!.id, notice: notices[i++]! });
+  return rows;
+}
 
 /**
  * skip이 참인 줄은 빼고, T-11-573 답장의 원문이 skip 대상(차단한 작성자·내가 신고한 줄)이면 원문을 비운다.
@@ -225,6 +263,7 @@ export function applyChat(
         ...view,
         status: 'open',
         messages: [...kept, ...cleanChat(e.messages, skip)].slice(-KEEP),
+        notices: mergeNotices(view.notices, e.notices),
         online: e.online,
         write: e.write,
         more: kept.length ? view.more : (e.more ?? e.messages.length >= CHAT_HISTORY),
@@ -236,12 +275,20 @@ export function applyChat(
       const add = cleanChat(e.messages, skip).filter((m) => !have.has(m.id));
       // 한 페이지가 통째로 빠지면(차단한 작성자뿐) 맨 위 줄이 그대로라 같은 페이지를 다시 부르게 되니 멈춘다.
       const more = e.more && add.length > 0;
-      return { ...view, messages: [...add, ...view.messages], more, loadingOlder: false };
+      return {
+        ...view,
+        messages: [...add, ...view.messages],
+        notices: mergeNotices(view.notices, e.notices),
+        more,
+        loadingOlder: false,
+      };
     }
     case 'msg':
       return skip(e.m)
         ? view
         : { ...view, messages: [...view.messages, ...cleanChat([e.m], skip)].slice(-KEEP) };
+    case 'notice':
+      return { ...view, notices: mergeNotices(view.notices, [e.notice]) };
     case 'avatar':
       return {
         ...view,
@@ -286,11 +333,6 @@ export type ChatSession = {
   unblock(author: string): void;
   /** 내가 신고한 줄을 화면에서 뺀다(다시 붙어도 빠진다). */
   drop(id: string): void;
-  /**
-   * T-11-600 라운지 필드 이벤트를 보낸다. 소켓이 열려 있지 않으면 false. 다시 붙은 새 소켓은 필드를 모르므로
-   * 필드 화면이 채팅이 다시 열릴 때 필드를 다시 연다(첫 화면 번들을 줄이려고 필드 일은 필드 쪽에 둔다).
-   */
-  field(e: FieldClientEvent): boolean;
   close(): void;
 };
 
@@ -303,8 +345,6 @@ export function openChat(
   onChange: (v: ChatView) => void,
   onReject: (code: ChatRejectCode, restore: string | null) => void = () => {},
   room: ChatRoomKey = currentChatRoom(),
-  /** T-11-600 받은 이벤트를 먼저 본다. true면 필드 이벤트라 채팅 상태에 넣지 않는다(화면을 매번 다시 그리지 않게). */
-  onField: (e: ChatServerEvent) => boolean = () => false,
 ): ChatSession {
   let view = EMPTY_CHAT;
   /** 보냈지만 아직 방에서 돌아오지 않은 줄. */
@@ -349,7 +389,6 @@ export function openChat(
       } catch {
         return;
       }
-      if (onField(e)) return;
       if (e.t === 'msg' && e.m.author === view.me?.author) pending = '';
       set(applyChat(view, e, skip));
       if (e.t === 'err') {
@@ -398,11 +437,6 @@ export function openChat(
     drop(id) {
       dropped.add(id);
       refilter();
-    },
-    field(e) {
-      if (!ws || view.status !== 'open') return false;
-      ws.send(JSON.stringify(e satisfies ChatClientEvent));
-      return true;
     },
     close() {
       stopped = true;

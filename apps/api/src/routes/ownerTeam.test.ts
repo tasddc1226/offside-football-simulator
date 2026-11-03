@@ -23,6 +23,7 @@ import {
 } from '@offside/contracts';
 import {
   FRIENDLY_MATCHES_PER_DAY,
+  TEAM_MATCH_RECHARGE_MIN,
   TEAM_MATCHES_PER_DAY,
   YOUTH_OVR,
   matchScore,
@@ -1335,6 +1336,39 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(ErrorEnvelopeSchema.parse(await res.json()).error.details).toEqual({
       reason: 'TEAM_EMPTY',
     });
+  });
+
+  it('하루 경기를 다 치른 뒤 충전 간격이 지나면 1경기가 더 열린다', async () => {
+    const me = await ownerWithTeam(1);
+    const rival = await ownerWithTeam(1);
+    const other = await ownerWithTeam(1);
+    // 간격만큼 지난 시각에 하루 경기를 다 치른 것으로 둔다(시계는 하루 한가운데로 고정).
+    const now = Date.now();
+    const gap = TEAM_MATCH_RECHARGE_MIN * 60_000;
+    const tenth = now - gap;
+    await ctx.db.insert(teamMatches).values(
+      Array.from({ length: TEAM_MATCHES_PER_DAY }, (_, i) => ({
+        id: `mat_seed-${i}`,
+        profileId: me.profileId,
+        homeTeamId: me.team.id,
+        awayTeamId: other.team.id,
+        homeGoals: 0,
+        awayGoals: 0,
+        detailJson: '{"home":{},"away":{},"events":[]}',
+        createdAt: new Date(tenth).toISOString(),
+      })),
+    );
+    const data = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(data.matchesLeft).toBe(1);
+    const res = await call('POST', '/v1/owner-team/matches', {
+      cookie: me.cookie,
+      headers: idem(),
+      body: { opponentTeamId: rival.team.id },
+    });
+    expect(res.status).toBe(201);
+    expect(PlayRes.parse(await res.json()).data.matchesLeft).toBe(0);
   });
 
   it('한국 시각 하루 경기 수를 넘으면 429 TEAM_MATCH_DAILY_LIMIT', async () => {

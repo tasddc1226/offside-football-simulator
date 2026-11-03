@@ -7,6 +7,7 @@ import type {
   MarketChartRange,
   MarketChartResponse,
   MarketFacetsResponse,
+  MarketListingResponse,
   MarketFundsResponse,
   MarketListResponse,
   MarketMeResponse,
@@ -55,6 +56,9 @@ export const fetchMarket = (
   );
 };
 /** T-11-500 '국적 · 팀' 시트의 고를 거리(매물이 있는 국적 · 리그 · 클럽과 수). 시트를 열 때만. 서버가 1분 엣지 캐시한다. */
+/** 열린 등록 하나(라운지 공유에서 구매창을 연다). 팔렸는지 봐야 해서 메모를 짧게 둔다. */
+export const fetchListing = (id: string) =>
+  cachedGet<MarketListingResponse>(`/v1/market/listings/${id}`, 5_000);
 export const fetchMarketFacets = () => cachedGet<MarketFacetsResponse>('/v1/market/facets', 60_000);
 /** 시세 차트(T-11-080f). pos·band가 없으면 시장 전체. 서버가 1분 엣지 캐시하니 메모도 1분. */
 export const fetchMarketChart = (

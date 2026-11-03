@@ -93,6 +93,16 @@
   let team = $state<OwnerTeam | null>(null);
   let players = $state<TeamPlayer[]>([]);
   let matchesLeft = $state(0);
+  let matchesNextAt = $state<string | null>(null);
+  // 충전 시각이 되면 경기를 다시 열어 준다(서버가 다시 확인한다). 다음 시각은 경기 응답으로 받는다.
+  $effect(() => {
+    if (matchesLeft > 0 || !matchesNextAt) return;
+    const timer = setTimeout(() => {
+      matchesLeft = 1;
+      matchesNextAt = null;
+    }, Date.parse(matchesNextAt) - Date.now());
+    return () => clearTimeout(timer);
+  });
   let perDay = $state(0);
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   let season = $state(0);
@@ -234,7 +244,7 @@
       return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p, player: p, salary: p ? salaryIn(p, season) : 0 };
     }),
   );
-  const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current, cupSeason));
+  const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current, cupSeason, matchesNextAt));
 
   const draftValue = () => ({ name, manager, logo, formation, layout, slots });
   function preserveDraft() {
@@ -327,6 +337,7 @@
       return;
     }
     ({ season, current, seasons, lastManager, players, matchesLeft } = r.data);
+    matchesNextAt = r.data.matchesNextAt ?? null;
     cupSeason = r.data.cupSeason ?? null;
     perDay = r.data.matchesPerDay;
     budget = budgetOf(r.data);
@@ -497,6 +508,7 @@
     resultOrigin = 'opponents';
     live = true;
     matchesLeft = r.data.matchesLeft;
+    matchesNextAt = r.data.matchesNextAt ?? null;
     divisionNotice = null;
     applyPlayed(r.data);
     show('result');
@@ -521,6 +533,7 @@
     result = r.match;
     liveMoments = undefined;
     matchesLeft = r.matchesLeft;
+    matchesNextAt = r.matchesNextAt ?? null;
     applyPlayed(r);
   }
 

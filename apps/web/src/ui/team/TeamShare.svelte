@@ -2,15 +2,26 @@
   import ShareSheet from '../share/ShareSheet.svelte';
   import type { TeamShareData } from './teamShareCard.js';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
+  import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
+  import { shareToLounge } from './loungeShare.js';
 
   let { data, onclose }: { data: TeamShareData; onclose: () => void } = $props();
 
   // 그리는 코드는 시트를 열 때 불러온다(첫 화면 번들 밖).
   const make = async () => (await import('./teamShareCard.js')).makeTeamShareFile(data);
+  let posting = $state(false);
+  async function toLounge() {
+    posting = true;
+    if (await shareToLounge({ kind: 'team' })) onclose();
+    posting = false;
+  }
 </script>
+
+{#snippet lounge()}<button class="btn btn-block" disabled={posting} data-act="team-lounge-share" onclick={toLounge}>{LC.shareTeamAct}</button>{/snippet}
 
 <ShareSheet
   {make}
+  extra={data.lounge ? lounge : undefined}
   {onclose}
   act="team-share"
   alt={L.shareAltWeb({ name: data.name })}

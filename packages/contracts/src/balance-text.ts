@@ -254,6 +254,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '시즌당 급여 예산 증가',
     desc: '팀 시즌이 하나 지날 때마다 급여 예산에 더하는 값. 시즌 n 예산 = 기준 예산 + 이 값 × (n - 1)',
   },
+  teamMatchRechargeMin: {
+    group: 'team',
+    label: '랭크 경기 충전 간격(분)',
+    desc: '하루 랭크 경기를 다 치른 뒤 이 시간마다 1경기가 더 열린다. 자정에 처음으로 돌아간다. 0이면 충전하지 않는다',
+  },
   leagueHomeAdv: {
     group: 'team',
     label: '리그 홈 이점',

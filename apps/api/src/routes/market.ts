@@ -17,6 +17,7 @@ import {
   MarketListQuerySchema,
   MarketFundsResponseSchema,
   MarketListResponseSchema,
+  MarketListingResponseSchema,
   MarketMeResponseSchema,
   ReleaseCardsBodySchema,
   ReleaseCardsResponseSchema,
@@ -36,6 +37,7 @@ import {
   getListing,
   insertListing,
   listOpenListings,
+  openListing,
   marketChart,
   marketFacets,
   marketFunds,
@@ -141,6 +143,14 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         ? await edgeCached(c, EDGE.marketList(season, q.sort, q), LIST_TTL, load)
         : await load();
     return ok(c, MarketListResponseSchema, data, 200, CACHE);
+  });
+
+  // 라운지 공유에서 구매창을 연다(공개 · 세션 조회 없음). 팔렸는지 바로 알아야 해서 엣지에 담지 않는다. 기본키 한 줄 조회다.
+  app.get('/v1/market/listings/:listingId', async (c) => {
+    const listing =
+      teamSeasonAt(nowIso()) === null ? null : await openListing(getDb(c), listingIdOf(c));
+    if (!listing) throw listingGone();
+    return ok(c, MarketListingResponseSchema, { listing }, 200, NO_STORE);
   });
 
   // T-11-500 '국적 · 팀' 시트의 고를 거리(공개 · 세션 조회 없음). 열린 매물이 있는 국적 · 리그 · 클럽과 매물 수. 시즌마다 키 하나.

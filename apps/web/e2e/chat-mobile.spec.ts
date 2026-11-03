@@ -1,7 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { API, ok, useChatListView } from './helpers.js';
-
-test.beforeEach(({ page }) => useChatListView(page));
+import { API, ok } from './helpers.js';
 
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
 

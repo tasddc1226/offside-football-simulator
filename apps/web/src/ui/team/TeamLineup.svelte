@@ -15,11 +15,13 @@
   import TeamPitch from './TeamPitch.svelte';
   import PlayerCard from './PlayerCard.svelte';
   import TeamShare from './TeamShare.svelte';
+  import { shareToLounge } from './loungeShare.js';
   import type { TeamShareData } from './teamShareCard.js';
   import type { TeamLogo } from '@offside/contracts/team-logo';
   import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+  import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
 
   let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, salary = null, fatigue = null, budget, onassign, onauto, onsave, onlock, onpresets, focusSlot = $bindable(null) }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
@@ -78,7 +80,7 @@
     selectedSlot = null;
     shareData = { name: teamName || L.myTeam, manager: managerName, seasonName, formation,
       logo: teamLogo ? { ...teamLogo } : null,
-      layout: positions.map((p) => ({ ...p })), cells: cells.map((c) => ({ ...c })), lines: { ...lines }, draft: dirty };
+      layout: positions.map((p) => ({ ...p })), cells: cells.map((c) => ({ ...c })), lines: { ...lines }, draft: dirty, lounge: !!team && !dirty };
   }
   function moveSlot(i: number, x: number, y: number) {
     const next = positions.map((p) => ({ ...p }));
@@ -171,8 +173,9 @@
     <header class="ground-head">
       <div><h2>{L.groundTitle}</h2><p class="muted">{L.startersCount({ n: filled, max: LINEUP_SIZE })}{#if layout}{L.freeLayout}{/if}</p></div>
       <div class="ground-actions">
-        {#if editable}<button class="text-button ground-auto" onclick={onauto} disabled={!players.length} data-act="team-auto">{L.autoPlace}</button>{/if}
-        <button class="ground-share" aria-label={L.shareMakeAria} data-act="team-share-make" onclick={openShare}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V2m-4 4 4-4 4 4M5 9H3v8h14V9h-2" /></svg><span>{L.share}</span></button>
+        {#if editable}<button class="ground-tool ground-auto" onclick={onauto} disabled={!players.length} data-act="team-auto">{L.autoPlace}</button>{/if}
+        {#if editable && onpresets}<button class="ground-tool" aria-haspopup="dialog" onclick={onpresets} data-act="team-presets">{L.tpButton}</button>{/if}
+        <button class="ground-tool ground-share" aria-label={L.shareMakeAria} data-act="team-share-make" onclick={openShare}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V2m-4 4 4-4 4 4M5 9H3v8h14V9h-2" /></svg><span>{L.share}</span></button>
       </div>
     </header>
     {#if salary}
@@ -182,15 +185,12 @@
         <span class="salary-help" aria-hidden="true">?</span>
       </button>
     {/if}
-    {#if editable && onpresets}<div class="preset-bar"><button class="btn btn-sm" aria-haspopup="dialog" onclick={onpresets} data-act="team-presets">{L.tpButton}</button></div>{/if}
-    <div class="hof-sorts ground-presets" role="group" aria-label={L.presetsLabel}>
+    <div class="ground-presets" class:few={season <= 0} role="group" aria-label={L.presetsLabel}>
       {#each FORMATION_IDS as f (f)}<button class="hof-sort" aria-pressed={!layout && formation === f} data-formation={f} disabled={!editable} onclick={() => preset(f)}>{f}</button>{/each}
       {#if season > 0}{#each SHAPE_IDS as id (id)}<button class="hof-sort" aria-pressed={shapeOn === id} data-formation={id} disabled={!editable} onclick={() => shape(id)}>{id}</button>{/each}{/if}
     </div>
-    <TeamPitch {formation} {cells} layout={positions} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} applied={syn.applied} caption={synergyApplies(season) ? syn.caption : null} bind:element={pitch}
+    <TeamPitch onshare={team ? (careerId) => void shareToLounge({ kind: 'player', careerId }) : undefined} {formation} {cells} layout={positions} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} applied={syn.applied} caption={synergyApplies(season) ? syn.caption : null} bind:element={pitch}
       onpick={editable ? pickSlot : undefined} onstart={editable ? (e, i) => start(e, slots[i] ?? null, i) : undefined} onkey={editable ? keyMove : undefined} onplace={editable ? place : undefined} />
-    <div class="ground-strength"><TeamLines {lines} coach={coachBonus} compact /></div>
-    <TeamSynergy {synergy} {season} bind:focus={synFocus} />
     {#if editable}
       <div class="placement-bar" aria-live="polite">
         {#if chosen}
@@ -207,6 +207,8 @@
         {:else}<p class="muted">{L.dragHint}</p>{/if}
       </div>
     {/if}
+    <div class="ground-strength"><TeamLines {lines} coach={coachBonus} compact /></div>
+    <TeamSynergy {synergy} {season} bind:focus={synFocus} />
     <div class="rating-guide">
       <details><summary>{L.guideTitle}</summary>
         <p>{L.guide1Before}<b>{L.guide1Bold1}</b>{L.guide1Mid}<b>{L.guide1Bold2}</b>{L.guide1After}</p>
@@ -248,6 +250,7 @@
               <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? L.rosterStarting({ slot: positions[at]!.slot }) : L.rosterBench}</span>
               {#if pay > 0}<span class="salary-chip" class:over={wontFit} data-salary-chip={pay} data-salary-over={wontFit ? '' : undefined}>{wontFit ? `${TC.salaryChip({ n: pay })} · ${TC.salaryOver}` : TC.salaryChip({ n: pay })}</span>{/if}
               {#if stamina}<span class="stamina" data-stamina={stamina.left} role="img" title={TC.fatigueHint} aria-label={TC.staminaAria({ left: stamina.left, total: STAMINA_CELLS, pct: stamina.pct })}><small aria-hidden="true">{TC.staminaLabel}</small><span class="stamina-bar" aria-hidden="true">{#each { length: STAMINA_CELLS } as _, k (k)}<i class:on={k < stamina.left}></i>{/each}</span></span>{/if}
+              {#if team}<button class="lock-toggle" aria-label={LC.sharePlayerAria({ name: nameOf(p) })} title={LC.sharePlayerAct} data-act="player-lounge-share" onclick={() => void shareToLounge({ kind: 'player', careerId: p.careerId })}><svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>{/if}
               {#if onlock}<button class="lock-toggle" class:on={p.locked} aria-pressed={!!p.locked} aria-label={L.lockerLockAria({ name: nameOf(p) })} data-act="lock" disabled={!lockToggleable(p)} onclick={() => onlock(p)}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d={p.locked ? 'M5.5 7V5a2.5 2.5 0 0 1 5 0v2' : 'M5.5 7V5a2.5 2.5 0 0 1 4.9-.7'} /></svg><span>{p.locked ? L.lockerLocked : p.listing ? L.lockerListed : L.lockerLock}</span></button>{/if}
             </div>
             <button class="drag-handle" aria-label={L.dragAria({ name: nameOf(p) })} onpointerdown={(e) => start(e, p.careerId, null)} onclick={() => pickPlayer(p.careerId)}><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M3 2h2M3 6h2M3 10h2M8 2h2M8 6h2M8 10h2M13 2h2M13 6h2M13 10h2" /></svg><span>{L.dragLabel}</span></button>
@@ -281,24 +284,25 @@
 
 <style>
   .ground-panel {padding:0;background:var(--surface);border: 1px solid transparent;border-radius:var(--radius-lg);overflow:hidden;}
-  .ground-head {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 14px 0;}
+  .ground-head {display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px 12px;padding:14px;}
   .ground-head h2 {font-size:18px;line-height:1.3;}
-  .ground-head p {font-size:12px;margin-top:4px;}
+  .ground-head p {font-size:12px;margin-top:2px;}
   .ground-head > div:first-child {min-width:0;}
-  .ground-actions {display:flex;align-items:center;gap:4px;flex:none;}
-  .ground-share {display:flex;align-items:center;justify-content:center;gap:5px;min-width:64px;min-height:44px;padding:4px 8px;border: 1px solid transparent;border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);font:inherit;font-size:12px;font-weight:600;cursor:pointer;}
-  .ground-share svg {width:16px;height:16px;stroke:currentColor;stroke-width:1.5;fill:none;}
-  .ground-auto {font-size:12px;white-space:nowrap;}
-  .salary-bar {display:flex;align-items:center;gap:10px;width:calc(100% - 28px);margin:10px 14px 0;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);color:var(--ink);font:inherit;text-align:left;cursor:pointer;--salary:var(--good);}
-  .salary-bar[data-state='near'] {--salary:var(--warn);}
-  .salary-bar[data-state='full'] {--salary:var(--warn);border-color:var(--salary);}
-  .salary-bar[data-state='over'] {--salary:var(--bad);border-color:var(--bad);}
-  .salary-text {display:flex;flex-direction:column;gap:1px;flex:none;min-width:0;}
-  .salary-text b {font-size:13px;white-space:nowrap;}
-  .salary-text small {font-size:11px;color:var(--salary);font-weight:600;}
-  .salary-track {flex:1;height:8px;border-radius:999px;background:var(--line);overflow:hidden;min-width:40px;}
+  .ground-actions {display:flex;align-items:center;gap:6px;margin-left:auto;}
+  .ground-tool {position:relative;display:inline-flex;align-items:center;justify-content:center;gap:4px;min-height:36px;padding:0 10px;border:0;border-radius:var(--radius-sm);background:var(--surface-2);color:var(--ink);font:inherit;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;}
+  .ground-tool::after {content:'';position:absolute;inset:-4px 0;}
+  .ground-tool:disabled {opacity:.5;cursor:default;}
+  .ground-auto {color:var(--accent-text);}
+  .ground-share svg {width:15px;height:15px;stroke:currentColor;stroke-width:1.5;fill:none;}
+  .salary-bar {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;min-height:44px;padding:10px 14px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer;--salary:var(--good);}
+  .salary-bar[data-state='near'], .salary-bar[data-state='full'] {--salary:var(--warn);}
+  .salary-bar[data-state='over'] {--salary:var(--bad);}
+  .salary-text {display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:0 8px;min-width:0;}
+  .salary-text b {font-size:13px;font-weight:600;}
+  .salary-text small {font-size:12px;color:var(--salary);font-weight:600;white-space:nowrap;}
+  .salary-track {grid-column:1 / -1;grid-row:2;height:6px;border-radius:999px;background:var(--line);overflow:hidden;}
   .salary-track span {display:block;height:100%;border-radius:inherit;background:var(--salary);}
-  .salary-help {flex:none;display:grid;place-items:center;width:22px;height:22px;border-radius:50%;border:1px solid var(--line);font-size:12px;font-weight:700;color:var(--muted);}
+  .salary-help {display:grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);font-size:11px;font-weight:700;color:var(--muted);}
   .salary-chip {display:inline-block;padding:1px 7px;border-radius:999px;border:1px solid var(--line);font-size:.68rem;font-weight:600;color:var(--muted);white-space:nowrap;}
   .salary-chip.over {border-color:var(--bad);color:var(--bad);}
   .stamina {display:inline-flex;align-items:center;gap:4px;--stamina:var(--good);} .stamina[data-stamina='3'],.stamina[data-stamina='2'] {--stamina:var(--warn);} .stamina[data-stamina='1'] {--stamina:var(--bad);}
@@ -306,15 +310,16 @@
   .stamina-bar {display:inline-flex;gap:2px;} .stamina-bar i {width:7px;height:10px;border-radius:2px;background:var(--line);} .stamina-bar i.on {background:var(--stamina);}
   .locker-player.salary-out .locker-select {opacity:.55;}
   .locker-salary {white-space:nowrap;}
-  .preset-bar {display:flex;justify-content:flex-end;margin:4px 14px 0;}
-  .ground-presets {margin:4px 14px 12px;gap:8px;}
-  .ground-presets .hof-sort {min-height:36px;min-width:64px;position:relative;}
-  .ground-presets .hof-sort::after {content:'';position:absolute;inset:-4px 0;}
+  .ground-presets {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:10px 14px 14px;border-top:1px solid var(--line);}
+  .ground-presets.few {grid-template-columns:repeat(3,minmax(0,1fr));}
+  .ground-presets .hof-sort {position:relative;min-width:0;min-height:36px;padding:0 2px;border-radius:var(--radius-sm);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  @media(max-width:440px) { .ground-presets .hof-sort {font-size:12px;} }
+  .ground-presets .hof-sort::after {content:'';position:absolute;inset:-3px 0;}
   .ground-strength {padding:4px 8px;border-bottom:1px solid var(--line);}
   .ground-panel :global(.pitch-frame) {border-radius:0;border-left:0;border-right:0;}
   .locker-head {display:flex;align-items:center;justify-content:space-between;gap:12px;}
   h2 {margin:0;font-size:var(--fs-title2);} p {margin:4px 0 0;}
-  .placement-bar {display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 14px;font-size:13px;line-height:1.5;}
+  .placement-bar {display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;min-height:48px;padding:8px 14px;border-bottom:1px solid var(--line);font-size:13px;line-height:1.5;}
   .placement-bar p {margin:0;font-size:12px;}
   .rating-guide {font-size:12px;line-height:1.7;border-top:1px solid var(--line);padding:0 14px;}
   .rating-guide summary {min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--accent-text);font-weight:600;}

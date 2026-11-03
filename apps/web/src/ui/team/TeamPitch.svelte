@@ -11,7 +11,7 @@
   type Cell = { rating: number; name: string; youth: boolean; nation?: string | null | undefined; season?: number | undefined; player?: TeamPlayer | undefined;
     /** T-11-376 지난 시즌 선수 급여(0이면 칩 없음 — 이번 시즌 선수 · 유스). */
     salary?: number | undefined };
-  let { formation, cells, layout, selected = null, dragging = null, links = [], focus = null, applied = [], caption = null, element = $bindable(), onpick, onstart, onkey, onplace }:
+  let { formation, cells, layout, selected = null, dragging = null, links = [], focus = null, applied = [], caption = null, element = $bindable(), onpick, onstart, onkey, onplace, onshare }:
     { formation: FormationId; cells: readonly Cell[]; layout?: TeamLayout | null | undefined; selected?: number | null; dragging?: number | null;
       /** T-11-105 시너지 듀오 — 첫 선수에서 나머지로 잇는다. on이면 굵게. */
       links?: readonly { members: readonly number[]; on: boolean }[]; focus?: readonly number[] | null;
@@ -20,7 +20,8 @@
       element?: HTMLElement | undefined;
       /** 편성 중 자리 누름. true면 배치·교체로 끝난 누름이라 카드 팝업을 열지 않는다. */
       onpick?: ((i: number) => boolean | void) | undefined; onstart?: ((e: PointerEvent, i: number) => void) | undefined;
-      onkey?: ((e: KeyboardEvent, i: number) => void) | undefined; onplace?: ((e: MouseEvent) => void) | undefined } = $props();
+      onkey?: ((e: KeyboardEvent, i: number) => void) | undefined; onplace?: ((e: MouseEvent) => void) | undefined;
+      onshare?: ((careerId: string) => void) | undefined } = $props();
   const positions = $derived(layout ?? presetLayout(formation));
   const filled = $derived(cells.filter((c) => !c.youth).length);
   // 카드 팝업 — 누른 자리와 그 버튼(팝업이 커져 나오고 닫히면 돌아갈 곳).
@@ -85,19 +86,23 @@
   {#if peek && peekCell?.player}
     {@const slot = positions[peek.i]!.slot}
     <PlayerPeek player={peekCell.player} name={peekCell.name} rating={peekCell.rating} {slot} nation={peekCell.nation} season={peekCell.season}
-      fit={Math.round(slotFit(slot, peekCell.player, peekCell.rating) * 100)} origin={peek.el} onclose={() => (peek = null)} />
+      fit={Math.round(slotFit(slot, peekCell.player, peekCell.rating) * 100)} origin={peek.el} {onshare} onclose={() => (peek = null)} />
   {/if}
   {#if caption}<p class="syn-caption" class:focused={!!focus} data-synergy-caption aria-live="polite"><span class="syn-pip" aria-hidden="true"></span>{caption}</p>{/if}
 </section>
 
 <style>
-  .pitch-frame {position:relative;isolation:isolate;width:100%;max-width:640px;aspect-ratio:5/6;margin:0 auto;padding:50px 8px;border-radius:var(--radius-md);overflow:hidden;background:repeating-linear-gradient(180deg,var(--pitch) 0 10%,color-mix(in srgb,var(--pitch) 70%,var(--pitch-2)) 10% 20%);border:1px solid color-mix(in srgb,var(--chalk),transparent 30%);}
+  .pitch-frame {position:relative;isolation:isolate;width:100%;max-width:640px;aspect-ratio:4/5;margin:0 auto;padding:40px 8px 44px;border-radius:var(--radius-md);overflow:hidden;background:repeating-linear-gradient(180deg,var(--pitch) 0 10%,color-mix(in srgb,var(--pitch) 70%,var(--pitch-2)) 10% 20%);border:1px solid color-mix(in srgb,var(--chalk),transparent 30%);}
   .tm-pitch {position:relative;width:100%;height:100%;pointer-events:none;}
   .pitch-lines { position:absolute; inset:0; width:100%; height:100%; fill:none; stroke:var(--chalk); stroke-width:.4; pointer-events:none; }
   .pitch-dot { fill:var(--chalk); } .pitch-space { position:absolute; inset:0; width:100%; height:100%; border:0; background:transparent; cursor:crosshair; }
   .attack-direction { position:absolute; top:14px; left:50%; transform:translateX(-50%); color:var(--on-pitch); opacity:.7; font-size:11px; pointer-events:none; }
   .tm-slot { position:absolute; width:clamp(58px,15%,86px); transform:translate(-50%,-50%); padding:0; border:0; background:none; color:inherit; font:inherit; z-index:1; border-radius:var(--radius-md);pointer-events:auto; }
   .tm-slot[data-slot='0'] {z-index:2;}
+  /* 11명이 한 화면에 겹치지 않게 그라운드 안의 카드는 낮게 그린다(라커룸 등 다른 자리의 compact 카드는 그대로). */
+  .tm-slot :global(.compact .card-face) {height:86px;padding:8px 3px 10px;}
+  .tm-slot :global(.compact .card-art) {height:36px;margin-top:6px;}
+  .tm-slot :global(.compact.deployed .card-art) {height:26px;}
   button.tm-slot.peekable {cursor:zoom-in;touch-action:manipulation;}
   button.tm-slot:not(.peekable) { cursor:grab; touch-action:none; user-select:none; -webkit-user-select:none; }
   button.tm-slot:active {cursor:grabbing;} .tm-slot.chosen {outline:2px solid var(--pitch-accent);outline-offset:3px;z-index:3;}
@@ -113,5 +118,5 @@
   .syn-links {position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
   .syn-links line {stroke:var(--accent);stroke-width:2px;stroke-dasharray:6 5;opacity:.55;vector-effect:non-scaling-stroke;}
   .syn-links line.on {stroke-width:3.5px;stroke-dasharray:none;opacity:.95;}
-  @media(max-width:440px) { .tm-slot {width:clamp(56px,18%,70px);} .pitch-frame {aspect-ratio:2/3;padding:48px 6px;} .syn-caption {bottom:6px;font-size:11px;} }
+  @media(max-width:440px) { .tm-slot {width:clamp(50px,16%,64px);} .tm-slot :global(.compact .card-face) {height:72px;padding:6px 2px 8px;} .tm-slot :global(.compact .card-art) {height:26px;margin-top:4px;} .tm-slot :global(.compact.deployed .card-art) {height:18px;} .tm-slot :global(.compact .card-name) {font-size:10px;margin-top:1px;} .pitch-frame {aspect-ratio:5/8;padding:36px 4px 40px;} .syn-caption {bottom:6px;font-size:11px;} }
 </style>

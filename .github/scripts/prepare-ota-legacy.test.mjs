@@ -6,8 +6,6 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   APP_JSON,
-  FIELD_ENTRY,
-  FIELD_STUB,
   LOCAL_NATIVE_IN_NEW,
   MOBILE_PACKAGE,
   NATIVE_ONLY_IN_NEW,
@@ -75,15 +73,13 @@ for (const [name, { source, skia }] of Object.entries(targets)) {
       for (const path of LOCAL_NATIVE_IN_NEW)
         assert.equal(existsSync(join(root, path)), false, path);
       if (skia) {
-        // 1.1.6 빌드에는 Skia가 있으니 의존성과 라운지 필드 입구는 그대로 둔다.
+        // 1.1.6 빌드에는 Skia가 있으니 의존성은 그대로 둔다.
         assert.deepEqual(after, before);
-        assert.notEqual(readFileSync(join(root, FIELD_ENTRY), 'utf8'), FIELD_STUB);
       } else {
         for (const dep of NATIVE_ONLY_IN_NEW) assert.equal(after.dependencies[dep], undefined);
         // 옛 빌드에 없는 모듈만 빼고 나머지 의존성은 그대로다.
         for (const dep of NATIVE_ONLY_IN_NEW) delete before.dependencies[dep];
         assert.deepEqual(after, before);
-        assert.equal(readFileSync(join(root, FIELD_ENTRY), 'utf8'), FIELD_STUB);
       }
     } finally {
       rmSync(root, { recursive: true, force: true });

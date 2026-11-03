@@ -1,7 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { API, ok, useChatListView } from './helpers.js';
-
-test.beforeEach(({ page }) => useChatListView(page));
+import { API, ok } from './helpers.js';
 
 // T-11-583 언어별 채팅방: 화면 언어 방으로 들어가고, 다른 방을 고르면 그 방 입장권 · 소켓으로 다시 붙는다.
 test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });

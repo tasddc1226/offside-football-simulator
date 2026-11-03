@@ -42,6 +42,8 @@ export type HofView = {
   teamSort?: TeamRankSort;
   /** T-11-150 team 팀의 구단주 프로필을 연다(팀 프로필 대신). */
   owner?: boolean;
+  /** 팀 프로필을 열면 선발 그라운드까지 내려서 보여 준다(라운지 팀 공유). 한 번 쓰면 지운다. */
+  squad?: boolean;
 };
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({

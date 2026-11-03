@@ -1,8 +1,8 @@
 // Only run in a disposable checkout. Older store builds keep receiving current JS through this overlay:
 // - T-11-516 1.1.5 only raised the app version (no native change), so 1.1.4 builds get app.json in its reviewed 1.1.4 shape.
 // - T-11-600 1.1.6 added @shopify/react-native-skia (native) for the lounge field. 1.1.5 and 1.1.4 builds do not have it,
-//   so the overlay removes the dependency (native fingerprint back to the reviewed build) and replaces the lounge field
-//   entry with null (the bundle never resolves Skia; the chat screen shows the chat list only).
+//   so the overlay removes the dependency (native fingerprint back to the reviewed build).
+//   T-11-624 removed the lounge field, so no JS imports Skia any more. The package stays for the 1.1.6 fingerprint.
 // - T-11-563 1.1.7 added the Meta app events module (Android native: modules/meta-app-events + plugins/withMetaAppEvents.js).
 //   The JS no-ops without it, so every older lane removes those files (app.json from the source commit drops the plugin).
 import { execFileSync } from 'node:child_process';
@@ -37,7 +37,6 @@ export const targets = Object.freeze({
 });
 export const APP_JSON = 'apps/mobile/app.json';
 export const MOBILE_PACKAGE = 'apps/mobile/package.json';
-export const FIELD_ENTRY = 'apps/mobile/src/screens/chat/lounge/index.ts';
 /** npm native modules the builds without Skia (1.1.5 and older) do not contain. */
 export const NATIVE_ONLY_IN_NEW = ['@shopify/react-native-skia'];
 /** Local native pieces added in 1.1.7 that every legacy lane removes. */
@@ -45,9 +44,6 @@ export const LOCAL_NATIVE_IN_NEW = [
   'apps/mobile/modules/meta-app-events',
   'apps/mobile/plugins/withMetaAppEvents.js',
 ];
-export const FIELD_STUB =
-  '// T-11-600 prepare-ota-legacy.mjs: this store build has no Skia, so the lounge shows the chat list only.\n' +
-  'export const LoungeField = null;\n';
 
 function target(name) {
   const t = targets[name];
@@ -81,7 +77,6 @@ export function prepare(root, name) {
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
     for (const dep of NATIVE_ONLY_IN_NEW) delete pkg.dependencies?.[dep];
     writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
-    writeFileSync(resolve(root, FIELD_ENTRY), FIELD_STUB);
     removed.push(...NATIVE_ONLY_IN_NEW);
   }
   console.log(

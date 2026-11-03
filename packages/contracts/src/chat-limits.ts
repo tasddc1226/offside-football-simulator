@@ -3,7 +3,10 @@
  * Durable Object가 같은 값을 쓴다. 방은 언어마다 하나다(T-11-583).
  */
 import type { OwnerTier } from './owner-tier.js';
-import type { FieldClientEvent, FieldServerEvent } from './lounge-field.js';
+import type { DetailPos, PosGroup } from './positions.js';
+import type { FormationId } from './owner-team.js';
+import type { TeamLogo } from './team-logo.js';
+import type { TeamPlayer } from './teams.js';
 export const CHAT_SOCKET_PATH = '/v1/chat/ws';
 export const CHAT_ROOM = 'lounge';
 /** T-11-583 언어별 라운지 방. 화면 언어 방으로 들어가고 다른 방도 고를 수 있다. */
@@ -43,6 +46,55 @@ export type ChatReply = {
   body: string;
 };
 
+/** 라운지 공유는 1분에 한 번(작성자마다). */
+export const CHAT_SHARE_GAP_MS = 60_000;
+/**
+ * 라운지에 올린 팀 · 선수. 올린 때의 모습을 서버가 만들어 메시지에 저장한다(클라이언트가 보낸 값은 믿지 않는다).
+ * 옛 앱은 이 칸을 모르고 body 문장만 그린다.
+ */
+export type ChatShare =
+  | {
+      kind: 'team';
+      teamId: string;
+      name: string;
+      manager: string;
+      formation: FormationId;
+      ovr: number;
+      logo: TeamLogo | null;
+      record: { w: number; d: number; l: number };
+      slots: { slot: DetailPos; name: string; rating: number; youth: boolean }[];
+    }
+  | {
+      kind: 'player';
+      teamId: string | null;
+      teamName: string | null;
+      name: string;
+      player: Omit<TeamPlayer, 'raised' | 'listing'>;
+      /** 올린 때 이적시장에 내놓은 선수면 그 등록. 눌러서 구매창을 연다(만 원). */
+      listing?: { id: string; price: number };
+    };
+
+/** 이 시간 안에 또 나온 영구결번은 앞 배너에 합쳐 센다(시즌 전환 때 몰린다). */
+export const CHAT_NOTICE_MERGE_MS = 5 * 60_000;
+/**
+ * 대화 사이에 끼는 영구결번 배너. 메시지가 아니라 답장 · 신고 · 푸시 · 안 읽은 수와 무관하다. 저장된 이름 그대로 싣고 화면이
+ * 언어에 맞게 옮긴다. n이 2 이상이면 합친 배너다.
+ */
+export type ChatNotice = {
+  id: string;
+  /** epoch ms. */
+  at: number;
+  kind: 'retiredNumber';
+  n: number;
+  /** 첫 결번의 커리어. 한 건일 때 누르면 이 선수의 상세로 간다. */
+  careerId: string;
+  name: string;
+  pos: PosGroup;
+  club: string;
+  number: number;
+  season: number;
+};
+
 /** 방이 보내는 메시지 한 줄. author는 작성자를 가리키는 불투명한 키다(프로필 id는 내보내지 않는다). */
 export type ChatMessage = {
   id: string;
@@ -61,6 +113,8 @@ export type ChatMessage = {
   replyTo?: string | null;
   /** T-11-573 답장한 원문. 원문이 가려졌거나 지워졌으면 null(replyTo는 남는다). */
   reply?: ChatReply | null;
+  /** 라운지에 올린 팀 · 선수. 보통 메시지엔 없다. */
+  share?: ChatShare;
 };
 
 /** 쓰기를 거절한 이유(보낸 사람에게만 간다). */
@@ -69,26 +123,32 @@ export type ChatRejectCode = 'readonly' | 'muted' | 'long' | 'filter' | 'rate';
 /** 서버 → 클라이언트. */
 export type ChatServerEvent =
   /** more(T-11-180): 이보다 이전 줄이 더 있다. 옛 방엔 없다. */
-  | { t: 'hello'; messages: ChatMessage[]; online: number; write: boolean; more?: boolean }
+  | {
+      t: 'hello';
+      messages: ChatMessage[];
+      online: number;
+      write: boolean;
+      more?: boolean;
+      /** 이 메시지들 사이에 끼는 배너. 옛 방엔 없다. */
+      notices?: ChatNotice[];
+    }
   | { t: 'msg'; m: ChatMessage }
+  /** 새 배너이거나, 같은 id면 합쳐져 수가 늘어난 배너. */
+  | { t: 'notice'; notice: ChatNotice }
   | { t: 'avatar'; author: string; avatarId: string | null }
   | { t: 'hide'; id: string }
   /** 접속자 수가 바뀌었다(누가 들어오거나 나갔다). */
   | { t: 'online'; n: number }
   | { t: 'err'; code: ChatRejectCode }
   /** T-11-180 'older' 요청의 답(그 소켓에만) — before보다 이전 줄을 오래된 순으로. more가 거짓이면 더 없다. */
-  | { t: 'older'; messages: ChatMessage[]; more: boolean }
-  /** T-11-600 라운지 필드(필드를 연 소켓에만). */
-  | FieldServerEvent;
+  | { t: 'older'; messages: ChatMessage[]; more: boolean; notices?: ChatNotice[] };
 
 /** 클라이언트 → 서버(핑은 LIVE_PING 문자열 그대로). */
 export type ChatClientEvent =
   /** replyTo(T-11-573): 답장할 원문 id. 원문이 없거나 가려졌으면 보통 메시지로 올라간다. */
   | { t: 'send'; body: string; replyTo?: string }
   /** T-11-180 위로 올리면 before(메시지 id)보다 이전 줄을 CHAT_HISTORY개씩 부른다. 옛 방은 무시한다. */
-  | { t: 'older'; before: string }
-  /** T-11-600 라운지 필드. */
-  | FieldClientEvent;
+  | { t: 'older'; before: string };
 
 /** 입장권을 못 받는 이유 — login: 계정 로그인 전, nickname: 닉네임을 아직 안 정함, muted: 채팅 정지 중. */
 export const CHAT_DENY_REASONS = ['login', 'nickname', 'muted'] as const;

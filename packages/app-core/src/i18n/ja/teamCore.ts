@@ -17,6 +17,8 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   hintDirty: '変更した編成を保存すると試合ができます。',
   hintNoStarters: '引退選手を1人以上入れると試合ができます。',
   hintNoMatches: '今日の試合はすべて終わりました。日本時間の0時に再開します。',
+  hintNoMatchesNext: (p: { time: string }) =>
+    `今日の試合はすべて終わりました。${p.time}にもう1試合できます。`,
   hintRest: 'シーズン間の休止期間です。次のシーズンが始まると試合ができます。',
   hintPast: '過去シーズンのチームは閲覧のみです。今のシーズンを選ぶと試合ができます。',
   achOneClubHint:

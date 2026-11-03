@@ -15,7 +15,7 @@ import {
   type TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 import {
   ADMIN_NICKNAME,
   COMMENT_REPORT_REASONS,
@@ -25,18 +25,19 @@ import {
   CHAT_BODY_MAX,
   CHAT_MUTE_DAYS,
   CHAT_ROOMS,
+  type ChatNotice,
   type ChatRoomKey,
 } from '@offside/contracts/chat';
 import { LOCALE_NAMES } from '@offside/contracts/i18n';
 import { lastClosedSeason } from '@offside/contracts/service-seasons';
 import * as api from '@offside/app-core/api/chat';
-import { currentLoungeView, setLoungeView, type LoungeView } from '@offside/app-core/lounge/view';
 import { unblock as unblockApi } from '@offside/app-core/api/boards';
 import type { ChatBlockResponse } from '@offside/contracts';
 import {
   CHAT_REJECT_TEXT,
   EMPTY_CHAT,
   chatMutedText,
+  chatTimeline,
   chatTime,
   type ChatMessage,
   type ChatSession,
@@ -44,12 +45,14 @@ import {
 } from '@offside/app-core/api/chat';
 import type { ApiResult } from '@offside/app-core/api/client';
 import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
+import { ChatNoticeBanner } from '../../components/ChatNoticeBanner';
+import { ChatShareCard } from '../../components/ChatShareCard';
 import { NicknameForm } from '../../components/NicknameForm';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
 import { TitleBadge } from '../../components/TitleBadge';
-import { toast } from '../../game/host';
-import { go, goBack, goHome } from '../../game/nav';
+import { openPublicLegendById, toast } from '../../game/host';
+import { go, goBack, goHome, goMarketListing } from '../../game/nav';
 import { hofStart } from '@offside/app-core/state';
 import { appState } from '../../store';
 import { startAppleLogin, startGoogleLogin } from '../../platform/auth';
@@ -57,8 +60,8 @@ import { openWeb } from '../../platform/openWeb';
 import { markChatRead } from '../../platform/chatUnread';
 import { chatText as L } from '@offside/app-core/i18n/ko/chat';
 import { rem } from '../../theme/type';
-import { alpha, mix } from '../../theme/colors';
-import { useColors, useIsDark } from '../../theme/useColors';
+import { alpha } from '../../theme/colors';
+import { useColors } from '../../theme/useColors';
 import { AppleLoginButton, useAppleLogin } from '../../ui/AppleLoginButton';
 import { Btn } from '../../ui/Btn';
 import { Pill } from '../../ui/bits';
@@ -68,12 +71,6 @@ import { Txt } from '../../ui/Txt';
 import { useTranslations } from '../../ui/Translate';
 import { TextBox, confirmAsync } from '../board/parts';
 import { Skeleton } from '../../ui/Skeleton';
-import type { FieldServerEvent } from '@offside/contracts/lounge-field';
-import { isFieldEvent } from '@offside/app-core/lounge/sync';
-import { LoungeField } from './lounge';
-
-/** T-11-600 라운지 필드. Skia가 없는 옛 스토어 빌드(1.1.5 · 1.1.4 OTA)에서는 채팅만 보인다. */
-const FIELD = LoungeField !== null;
 
 const small = { fontSize: rem(FONT.caption) } as const;
 /** T-11-573 말풍선 위 인용 한 줄 · 입력칸 위 답장 중 표시(색은 화면에서 넣는다). */
@@ -205,23 +202,15 @@ export default function Chat() {
   const [flash, setFlash] = useState<string | null>(null);
   const session = useRef<ChatSession | null>(null);
   const list = useRef<ScrollView>(null);
-  /** T-11-600 필드 보기 · 폰 입력창 접기. */
-  const [mode, setModeState] = useState<LoungeView>(() => (FIELD ? currentLoungeView() : 'chat'));
-  const setMode = (v: LoungeView) => {
-    setModeState(v);
-    setLoungeView(v);
-  };
-  const [composerOpen, setComposerOpen] = useState(true);
   /** T-11-600 머리줄 언어 방 메뉴. */
   const [langOpen, setLangOpen] = useState(false);
-  const dark = useIsDark();
-  const fieldListeners = useRef(new Set<(e: FieldServerEvent) => void>()).current;
   /** 맨 아래 가까이 보고 있을 때만 새 줄을 따라 내려간다. */
   const atBottom = useRef(true);
   /** 첫 메시지 목록의 실제 높이가 정해진 뒤 입장 위치를 맞춘다. */
   const entering = useRef(true);
   /** 지난번에 그린 메시지 배열 — 줄이 바뀔 때만 따라 내려간다(접속자 수만 바뀌면 그대로). */
   const shown = useRef(EMPTY_CHAT.messages);
+  const shownNotices = useRef(EMPTY_CHAT.notices);
   useEffect(() => {
     // 키보드 애니메이션으로 목록 높이가 줄어든 뒤 최신 메시지를 입력칸 바로 위에 둔다.
     const opened = Keyboard.addListener('keyboardDidShow', () => {
@@ -237,11 +226,16 @@ export default function Chat() {
       (v) => {
         const grew = v.messages !== shown.current;
         shown.current = v.messages;
+        const noticed = v.notices !== shownNotices.current;
+        shownNotices.current = v.notices;
         setView(v);
         // T-11-440 이 화면에서 받은 줄은 읽은 것으로 남겨 홈 채팅 버튼의 안 읽음 수를 비운다.
         if (v.status === 'open') markChatRead(v.messages);
         const fromMe = v.messages.at(-1)?.author === v.me?.author;
-        if (grew && (entering.current || atBottom.current || fromMe))
+        if (
+          (grew && (entering.current || atBottom.current || fromMe)) ||
+          (noticed && atBottom.current)
+        )
           requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
       },
       (code, restore) => {
@@ -252,11 +246,6 @@ export default function Chat() {
         }
       },
       to,
-      (e) => {
-        if (!isFieldEvent(e)) return false;
-        for (const h of fieldListeners) h(e);
-        return true;
-      },
     );
   };
   /** T-11-583 다른 언어 방으로 옮긴다 — 지금 소켓을 닫고 그 방에 새로 붙는다. */
@@ -350,6 +339,19 @@ export default function Chat() {
     if (!r.data.teamId) return toast(L.noProfile);
     setSelected(null);
     appState.hof = { ...hofStart(), tab: 'teams', team: r.data.teamId, owner: true };
+    go('hof');
+  }
+  function openTeam(team: string) {
+    appState.hof = { ...hofStart(), tab: 'teams', team, owner: false, squad: true };
+    go('hof');
+  }
+  /** 한 건이면 그 선수의 상세 커리어로, 합친 배너면 기록실의 영구결번으로 간다. */
+  function openNotice(notice: ChatNotice) {
+    if (notice.n === 1) {
+      void openPublicLegendById(notice.careerId);
+      return;
+    }
+    appState.hof = { ...hofStart(), tab: 'rn' };
     go('hof');
   }
   async function mute(m: ChatMessage, days: (typeof CHAT_MUTE_DAYS)[number]) {
@@ -486,90 +488,7 @@ export default function Chat() {
             </Svg>
           </Press>
         </View>
-        {FIELD ? (
-          // T-11-600 필드 · 채팅 보기 전환 — 웹과 같은 한 줄짜리 막대.
-          <View
-            accessibilityLabel={L.viewLabel}
-            style={{
-              flexDirection: 'row',
-              gap: 4,
-              marginHorizontal: 12,
-              marginVertical: 8,
-              padding: 3,
-              borderRadius: RADIUS.pill,
-              backgroundColor: c.surface2,
-            }}
-          >
-            {(['field', 'chat'] as const).map((m) => {
-              const on = mode === m;
-              const tint = on ? (dark ? c.accent : c.pitch) : c.muted;
-              return (
-                <Press
-                  key={m}
-                  testID={`chat-view-${m}`}
-                  accessibilityRole="button"
-                  accessibilityState={{ selected: on }}
-                  onPress={() => setMode(m)}
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 6,
-                    minHeight: 34,
-                    borderRadius: RADIUS.pill,
-                    ...(on
-                      ? {
-                          backgroundColor: dark ? mix(c.accent, c.surface, 0.16) : c.surface,
-                          borderWidth: 1.5,
-                          borderColor: tint,
-                        }
-                      : { borderWidth: 1.5, borderColor: 'transparent' }),
-                  }}
-                >
-                  <Svg width={16} height={16} viewBox="0 0 24 24" accessible={false}>
-                    {m === 'field' ? (
-                      <>
-                        <Rect
-                          x={3}
-                          y={5}
-                          width={18}
-                          height={14}
-                          rx={2}
-                          stroke={tint}
-                          strokeWidth={1.8}
-                          fill="none"
-                        />
-                        <Path d="M12 5v14" stroke={tint} strokeWidth={1.8} />
-                        <Circle
-                          cx={12}
-                          cy={12}
-                          r={2.6}
-                          stroke={tint}
-                          strokeWidth={1.8}
-                          fill="none"
-                        />
-                      </>
-                    ) : (
-                      <Path
-                        d="M5 5h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H10l-4.5 3.5V17H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z"
-                        stroke={tint}
-                        strokeWidth={1.8}
-                        strokeLinejoin="round"
-                        fill="none"
-                      />
-                    )}
-                  </Svg>
-                  <Txt bold style={{ fontSize: rem(FONT.label), color: tint }}>
-                    {m === 'field' ? L.viewField : L.viewChat}
-                  </Txt>
-                </Press>
-              );
-            })}
-          </View>
-        ) : (
-          <View style={{ height: 1, backgroundColor: c.line }} />
-        )}
+        <View style={{ height: 1, backgroundColor: c.line }} />
         {blocks !== undefined ? (
           <View
             testID="chat-blocks"
@@ -618,71 +537,49 @@ export default function Chat() {
             )}
           </View>
         ) : null}
-        {mode === 'field' && LoungeField ? (
-          <LoungeField
-            messages={view.messages}
-            live={view.status === 'open'}
-            me={
-              view.write && view.me?.author
-                ? { author: view.me.author, nickname: view.me.nickname ?? '' }
-                : null
-            }
-            send={(e) => session.current?.field(e) ?? false}
-            listen={(h) => {
-              fieldListeners.add(h);
-              return () => void fieldListeners.delete(h);
-            }}
-            onPick={(author) => {
-              const m = view.messages.findLast((x) => x.author === author);
-              if (m && canAct(m)) setSelected(m.id);
-            }}
-            chatOpen={composerOpen}
-            onChat={() => {
-              if (composerOpen) Keyboard.dismiss();
-              setComposerOpen(!composerOpen);
-            }}
-          />
-        ) : (
-          <ScrollView
-            ref={list}
-            testID="chat-list"
-            keyboardShouldPersistTaps="handled"
-            style={{ flex: 1, minHeight: 0 }}
-            keyboardDismissMode="interactive"
-            // T-11-180 이전 줄이 위에 붙어도 보던 줄이 그 자리에 머문다.
-            maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
-            onContentSizeChange={() => {
-              if (view.status !== 'open') return;
-              if (entering.current || atBottom.current)
-                list.current?.scrollToEnd({ animated: false });
-              entering.current = false;
-            }}
-            onLayout={() => {
-              if (atBottom.current)
-                requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
-            }}
-            contentContainerStyle={{
-              gap: 12,
-              flexGrow: 1,
-              paddingVertical: 14,
-              paddingHorizontal: 12,
-            }}
-            onScroll={(e) => {
-              const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-              atBottom.current =
-                contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
-              // T-11-180 맨 위 가까이 올리면 이전 줄을 부른다.
-              if (contentOffset.y < 120) session.current?.older();
-            }}
-            scrollEventThrottle={64}
-          >
-            {view.loadingOlder ? (
-              <Txt tone="muted" style={{ textAlign: 'center', fontSize: rem(FONT.label) }}>
-                {L.loadingOlder}
-              </Txt>
-            ) : null}
-            {view.messages.length ? (
-              view.messages.map((m) => (
+        <ScrollView
+          ref={list}
+          testID="chat-list"
+          keyboardShouldPersistTaps="handled"
+          style={{ flex: 1, minHeight: 0 }}
+          keyboardDismissMode="interactive"
+          // T-11-180 이전 줄이 위에 붙어도 보던 줄이 그 자리에 머문다.
+          maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+          onContentSizeChange={() => {
+            if (view.status !== 'open') return;
+            if (entering.current || atBottom.current)
+              list.current?.scrollToEnd({ animated: false });
+            entering.current = false;
+          }}
+          onLayout={() => {
+            if (atBottom.current)
+              requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
+          }}
+          contentContainerStyle={{
+            gap: 12,
+            flexGrow: 1,
+            paddingVertical: 14,
+            paddingHorizontal: 12,
+          }}
+          onScroll={(e) => {
+            const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+            atBottom.current = contentSize.height - contentOffset.y - layoutMeasurement.height < 80;
+            // T-11-180 맨 위 가까이 올리면 이전 줄을 부른다.
+            if (contentOffset.y < 120) session.current?.older();
+          }}
+          scrollEventThrottle={64}
+        >
+          {view.loadingOlder ? (
+            <Txt tone="muted" style={{ textAlign: 'center', fontSize: rem(FONT.label) }}>
+              {L.loadingOlder}
+            </Txt>
+          ) : null}
+          {view.messages.length || view.notices.length ? (
+            chatTimeline(view.messages, view.notices).map((row) => {
+              if ('notice' in row)
+                return <ChatNoticeBanner key={row.id} notice={row.notice} onopen={openNotice} />;
+              const m = row.m;
+              return (
                 <View
                   key={m.id}
                   testID={`chat-msg-${m.id}`}
@@ -780,25 +677,34 @@ export default function Chat() {
                       maxWidth: '100%',
                     }}
                   >
-                    <View
-                      style={{
-                        flexShrink: 1,
-                        paddingVertical: 10,
-                        paddingHorizontal: 13,
-                        borderWidth: 1,
-                        borderColor: mine(m) ? c.pitch : c.line,
-                        backgroundColor: mine(m) ? c.pitch : c.surface2,
-                        borderRadius: RADIUS.lg,
-                        borderTopLeftRadius: mine(m) ? 16 : 4,
-                        borderTopRightRadius: mine(m) ? 4 : 16,
-                      }}
-                    >
-                      <Txt
-                        style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(FONT.body1) }}
+                    {m.share ? (
+                      <ChatShareCard
+                        share={m.share}
+                        label={m.body}
+                        onteam={openTeam}
+                        onlisting={goMarketListing}
+                      />
+                    ) : (
+                      <View
+                        style={{
+                          flexShrink: 1,
+                          paddingVertical: 10,
+                          paddingHorizontal: 13,
+                          borderWidth: 1,
+                          borderColor: mine(m) ? c.pitch : c.line,
+                          backgroundColor: mine(m) ? c.pitch : c.surface2,
+                          borderRadius: RADIUS.lg,
+                          borderTopLeftRadius: mine(m) ? 16 : 4,
+                          borderTopRightRadius: mine(m) ? 4 : 16,
+                        }}
                       >
-                        {tr.text(m.id, m.body)}
-                      </Txt>
-                    </View>
+                        <Txt
+                          style={{ color: mine(m) ? c.onPitch : c.ink, fontSize: rem(FONT.body1) }}
+                        >
+                          {tr.text(m.id, m.body)}
+                        </Txt>
+                      </View>
+                    )}
                     <Txt tone="muted" style={small}>
                       {chatTime(m.at)}
                     </Txt>
@@ -831,114 +737,112 @@ export default function Chat() {
                       </Press>
                     ) : null}
                   </View>
-                  {!mine(m) ? tr.button(m.id, m.body) : null}
+                  {!mine(m) && !m.share ? tr.button(m.id, m.body) : null}
                 </View>
-              ))
-            ) : view.status === 'open' ? (
-              <Txt tone="muted" style={{ margin: 'auto', fontSize: rem(FONT.label) }}>
-                {L.emptyOpen}
-              </Txt>
-            ) : (
-              <Skeleton rows={4} />
-            )}
-          </ScrollView>
-        )}
+              );
+            })
+          ) : view.status === 'open' ? (
+            <Txt tone="muted" style={{ margin: 'auto', fontSize: rem(FONT.label) }}>
+              {L.emptyOpen}
+            </Txt>
+          ) : (
+            <Skeleton rows={4} />
+          )}
+        </ScrollView>
 
-        {mode === 'field' && !composerOpen ? null : (
-          <View
-            testID="chat-composer"
-            style={{
-              flexShrink: 0,
-              paddingHorizontal: 12,
-              paddingVertical: 10,
-              borderTopWidth: 1,
-              borderTopColor: c.line,
-            }}
-          >
-            {view.write && replying ? (
-              <View
-                testID="chat-replying"
-                style={[
-                  quote,
-                  {
-                    alignItems: 'center',
-                    maxWidth: '100%',
-                    marginBottom: 8,
-                    paddingVertical: 2,
-                    paddingRight: 0,
-                    borderLeftColor: c.pitch,
-                    backgroundColor: c.surface2,
-                  },
-                ]}
-              >
-                <Txt numberOfLines={1} style={[small, { flex: 1 }]}>
-                  <Txt bold style={small}>
-                    {L.replyTo({ nick: quoteName(replying) })}
-                  </Txt>{' '}
-                  <Txt tone="muted" style={small}>
-                    {replying.body}
-                  </Txt>
+        <View
+          testID="chat-composer"
+          style={{
+            flexShrink: 0,
+            paddingHorizontal: 12,
+            paddingVertical: 10,
+            borderTopWidth: 1,
+            borderTopColor: c.line,
+          }}
+        >
+          {view.write && replying ? (
+            <View
+              testID="chat-replying"
+              style={[
+                quote,
+                {
+                  alignItems: 'center',
+                  maxWidth: '100%',
+                  marginBottom: 8,
+                  paddingVertical: 2,
+                  paddingRight: 0,
+                  borderLeftColor: c.pitch,
+                  backgroundColor: c.surface2,
+                },
+              ]}
+            >
+              <Txt numberOfLines={1} style={[small, { flex: 1 }]}>
+                <Txt bold style={small}>
+                  {L.replyTo({ nick: quoteName(replying) })}
+                </Txt>{' '}
+                <Txt tone="muted" style={small}>
+                  {replying.body}
                 </Txt>
-                <Press
-                  testID="chat-reply-cancel"
-                  accessibilityLabel={L.replyCancel}
-                  onPress={() => setReplyTo(null)}
-                  style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <Svg width={18} height={18} viewBox="0 0 24 24" accessible={false}>
-                    <Path
-                      d="M6 6l12 12M18 6 6 18"
-                      stroke={c.ink}
-                      strokeWidth={2}
-                      strokeLinecap="round"
-                    />
-                  </Svg>
-                </Press>
-              </View>
-            ) : null}
-            {view.write ? (
-              <ChatInput
-                ref={input}
-                onFocus={() => {
-                  atBottom.current = true;
-                  requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
-                }}
-                onResize={() => {
-                  if (atBottom.current)
-                    requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
-                }}
-                send={send}
-              />
-            ) : view.status !== 'open' ? null : !me || me.reason === 'login' ? (
-              <View testID="chat-gate-login" style={gate}>
-                <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
-                  {apple ? L.gateLoginApple : L.gateLogin}
-                </Txt>
-                <GoogleLoginButton
-                  testID="chat-login"
-                  onPress={() => void startGoogleLogin({ chat: true })}
-                />
-                {apple ? (
-                  <AppleLoginButton
-                    testID="chat-login-apple"
-                    onPress={() => void startAppleLogin({ chat: true })}
-                  />
-                ) : null}
-              </View>
-            ) : me.reason === 'nickname' ? (
-              <View testID="chat-gate-nickname" style={gate}>
-                <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
-                  {L.gateNicknameApp}
-                </Txt>
-                <NicknameForm onsaved={() => connect()} />
-              </View>
-            ) : (
-              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }} testID="chat-gate-muted">
-                {chatMutedText(me.mutedUntil)}
               </Txt>
-            )}
-          </View>
-        )}
+              <Press
+                testID="chat-reply-cancel"
+                accessibilityLabel={L.replyCancel}
+                onPress={() => setReplyTo(null)}
+                style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+              >
+                <Svg width={18} height={18} viewBox="0 0 24 24" accessible={false}>
+                  <Path
+                    d="M6 6l12 12M18 6 6 18"
+                    stroke={c.ink}
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                  />
+                </Svg>
+              </Press>
+            </View>
+          ) : null}
+          {view.write ? (
+            <ChatInput
+              ref={input}
+              onFocus={() => {
+                atBottom.current = true;
+                requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
+              }}
+              onResize={() => {
+                if (atBottom.current)
+                  requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
+              }}
+              send={send}
+            />
+          ) : view.status !== 'open' ? null : !me || me.reason === 'login' ? (
+            <View testID="chat-gate-login" style={gate}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
+                {apple ? L.gateLoginApple : L.gateLogin}
+              </Txt>
+              <GoogleLoginButton
+                testID="chat-login"
+                onPress={() => void startGoogleLogin({ chat: true })}
+              />
+              {apple ? (
+                <AppleLoginButton
+                  testID="chat-login-apple"
+                  onPress={() => void startAppleLogin({ chat: true })}
+                />
+              ) : null}
+            </View>
+          ) : me.reason === 'nickname' ? (
+            <View testID="chat-gate-nickname" style={gate}>
+              <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
+                {L.gateNicknameApp}
+              </Txt>
+              <NicknameForm onsaved={() => connect()} />
+            </View>
+          ) : (
+            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }} testID="chat-gate-muted">
+              {chatMutedText(me.mutedUntil)}
+            </Txt>
+          )}
+        </View>
       </View>
       {langOpen ? (
         <>
