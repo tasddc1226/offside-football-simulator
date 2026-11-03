@@ -238,17 +238,24 @@
   }
   // T-11-153 웹은 보상형 광고가 없어 로그인한 구단주가 구단 자금으로 후보 잠재력을 본다. 구단주(장수를 받음)이고 아직 안 봤을 때만 묻는다.
   let club = $state<RewardShopResponse | null>(null);
+  let clubLoaded = $state(false);
   let clubBusy = $state(false);
   let clubMsg = $state('');
   $effect(() => {
     if (step !== 'candidates' || !owner || appState.candidatePotentialOpen) return;
-    void loadClubShop().then((r) => (club = r));
+    void loadClubShop().then((r) => {
+      club = r;
+      clubLoaded = true;
+    });
   });
   const clubCand = $derived(appState.candidatePotentialOpen ? null : clubOffer(club, 'candidates'));
   const clubLock = $derived(appState.candidatePotentialOpen ? null : clubBlock(club, 'candidates'));
+  // T-11-628 웹에서도 볼 수 있는데 앱 안내가 떠서 웹에는 없는 기능으로 읽혔다. 비로그인은 맨 위 소개, 자금 버튼 · 못 보는 이유가 있으면 그 안내로
+  // 충분하다. 구단 자금 값을 받지 못했거나 팔지 않을 때만 앱 안내를 둔다.
+  const appPotentialHint = $derived(!appState.candidatePotentialOpen && owner && clubLoaded && !clubCand && !clubLock);
   // 카드 아래 도구 묶음: 쓸 수 있는 도구가 있는 묶음만 보인다.
   const hasChangeTools = $derived(scouts > 0 || pity.used > 0 || rerolls > 0 || owner);
-  const hasPotentialTools = $derived(appState.candidatePotentialOpen || !quiet || !!clubLock || !!clubCand || !!clubMsg);
+  const hasPotentialTools = $derived(appState.candidatePotentialOpen || (!quiet && appPotentialHint) || !!clubLock || !!clubCand || !!clubMsg);
   async function revealWithClub() {
     const o = clubCand;
     if (clubBusy || !o) return;
@@ -660,8 +667,8 @@
             {/if}
             {#if appState.candidatePotentialOpen}
               <p class="muted fs-sm">{premium ? SL.premiumHelp : L.potentialHelp}</p>
-            {:else if !quiet}
-              <p class="muted fs-sm">{L.potentialWeb}</p>
+            {:else if !quiet && appPotentialHint}
+              <p class="muted fs-sm" data-cand-app-hint>{L.potentialWeb}</p>
             {/if}
             {#if clubMsg}<p class="muted fs-sm" aria-live="polite">{clubMsg}</p>{/if}
           </div>
@@ -682,7 +689,7 @@
         <div class="stack more-body">
           {#if guest}{@render loginTools()}{/if}
           {#if picked}<p class="muted fs-sm">{L.keepHelp}</p>{/if}
-          {#if !appState.candidatePotentialOpen}<p class="muted fs-sm">{L.potentialWeb}</p>{/if}
+          {#if appPotentialHint}<p class="muted fs-sm" data-cand-app-hint>{L.potentialWeb}</p>{/if}
           <ItemsHint />
           {@render ovrGuide()}
           <p class="muted fs-sm">{L.ovrCore}</p>
