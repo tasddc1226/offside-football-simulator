@@ -78,7 +78,8 @@ test('로그인하지 않으면 잠재력 로그인 입구가 접히지 않고 �
   await page.goto('/');
   await page.locator('[data-act="new"]').click();
   await page.locator('[data-act="next-candidates"]').click();
-  await expect(page.locator('[data-cand-login]')).toBeVisible();
+  await expect(page.locator('[data-cand-login]')).toContainText('앱에서는 광고를 보면');
+  await expect(page.locator('[data-cand-app-hint]')).toHaveCount(0);
   await page.locator('[data-act="potential-login-go"]').click();
   await expect(page.getByRole('heading', { level: 1, name: '내 구단' })).toBeVisible();
 });
@@ -87,6 +88,8 @@ test('자금이 충분한 구단주는 버튼을 보고 이유 줄은 보지 않
   await openAsOwner(page, { balance: 500_000, price: 300_000, bought: 0 });
   await expect(page.locator('[data-act="candidate-potential-club"]')).toContainText('30억');
   await expect(page.locator('[data-cand-club-lock]')).toHaveCount(0);
+  // T-11-628 웹에서 볼 수 있는데 앱에서만 된다는 안내를 같이 띄우지 않는다.
+  await expect(page.locator('[data-cand-app-hint]')).toHaveCount(0);
 });
 
 test('자금이 모자란 구단주는 필요한 금액과 지금 자금을 본다', async ({ page }) => {
@@ -95,11 +98,13 @@ test('자금이 모자란 구단주는 필요한 금액과 지금 자금을 본�
   await expect(lock).toBeVisible();
   await expect(lock).toContainText('구단 자금 30억이 필요해요');
   await expect(lock).toContainText('지금은 10억 있어요');
+  await expect(page.locator('[data-cand-app-hint]')).toHaveCount(0);
   await expect(page.locator('[data-act="candidate-potential-club"]')).toHaveCount(0);
 });
 
 test('오늘 상한을 다 쓴 구단주는 내일 다시 볼 수 있다고 본다', async ({ page }) => {
   await openAsOwner(page, { balance: 500_000, price: null, bought: 5 });
   await expect(page.locator('[data-cand-club-lock="capped"]')).toContainText('내일 다시');
+  await expect(page.locator('[data-cand-app-hint]')).toHaveCount(0);
   await expect(page.locator('[data-act="candidate-potential-club"]')).toHaveCount(0);
 });
