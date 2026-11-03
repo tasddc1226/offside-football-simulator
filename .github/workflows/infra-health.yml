@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: infrastructure-health
@@ -24,14 +25,36 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 22.23.1
+      - name: Verify heartbeat destination access
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          node --input-type=module <<'JS'
+          import { verifyStorageAccess } from './tooling/scripts/d1-snapshot.mjs';
+          await verifyStorageAccess(process.env);
+          console.log('Heartbeat destination write/read/delete permissions verified.');
+          JS
       - name: Check storage forecast and completed backups
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node tooling/scripts/infra-health.mjs
       - name: Check dead-letter queues and R2 storage
+        id: resources
         if: success() || failure()
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: node tooling/scripts/infra-health.mjs --resources
+      # Publish resource checks only. Including the DB monitor's own result would
+      # feed a previous failure back into itself forever. The DB step still fails CI.
+      - name: Publish scheduled resource observation
+        if: always() && github.event_name == 'schedule'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          RESOURCE_OUTCOME: ${{ steps.resources.outcome }}
+        run: node tooling/scripts/publish-infra-workflow.mjs
