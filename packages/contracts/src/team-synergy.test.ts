@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FORMATIONS, lineStrength, presetLayout } from './owner-team.js';
+import { SPECIAL_SYNERGIES } from './manager-rules.js';
 import {
   CLUB_EFFECT,
   DUOS,
@@ -11,7 +12,11 @@ import {
   NATION_STYLES,
   CONFED_STYLES,
   SYNERGY_FROM_SEASON,
+  SYNERGY_S2_SEASON,
+  duosFor,
   footBonus,
+  nationStyle,
+  nationStyleById,
   synergyApplies,
   synergyPower,
   teamSynergy,
@@ -34,6 +39,8 @@ const p = (i: number, type: string | null, over: Partial<SynergyPlayer> = {}): S
 const lineup = (types: Record<number, string>, over: Partial<SynergyPlayer> = {}) =>
   Array.from({ length: 11 }, (_, i) => (types[i] ? p(i, types[i]!, over) : null));
 const ids = (s: ReturnType<typeof teamSynergy>) => s.active.map((a) => a.id);
+const duoIds = (s: ReturnType<typeof teamSynergy>) =>
+  s.active.filter((a) => a.kind === 'duo').map((a) => a.id);
 
 describe('T-11-105 듀오', () => {
   it('듀오 id는 겹치지 않는다', () => {
@@ -83,8 +90,128 @@ describe('T-11-105 듀오', () => {
         3: 'libero',
       }),
     );
-    expect(s.lines).toEqual({ atk: 4.5, mid: 3, def: 1.5, gk: 0 });
-    expect(synergyPower(s)).toBe(9);
+    // T-11-542 삼지창(공격 1 · 중원 0.5) + 앵커(수비 0.5)도 함께 켜진다.
+    expect(s.lines).toEqual({ atk: 5.5, mid: 3.5, def: 2, gk: 0 });
+    expect(synergyPower(s)).toBe(11);
+  });
+});
+
+describe('T-11-542 시즌 2 트리오 · 듀오', () => {
+  it('기존 듀오 id는 그대로 남는다(경기 기록 · 감독 특기)', () => {
+    const all = DUOS.map((d) => d.id);
+    for (const id of [
+      'cross',
+      'engine',
+      'wall',
+      'cb_pair',
+      'buildup',
+      'counter',
+      'overlap',
+      'killpass',
+      'guardian',
+    ])
+      expect(all).toContain(id);
+    for (const ids of Object.values(SPECIAL_SYNERGIES))
+      for (const id of ids) expect([...all, 'homegrown']).toContain(id);
+  });
+  it('새 시너지의 줄 효과는 0.5~2 안이다', () => {
+    for (const d of DUOS)
+      for (const v of Object.values(d.effect)) {
+        expect(v).toBeGreaterThanOrEqual(0.5);
+        expect(v).toBeLessThanOrEqual(2);
+      }
+  });
+  it('삼지창은 윙어 + 스트라이커 + 또 한 명의 윙어·스피드스터(겹치는 유형 조건도 찾는다)', () => {
+    // 왼쪽이 스피드스터, 오른쪽이 윙어여도 앞 조건을 되돌려 채운다.
+    const s = teamSynergy(lineup({ 8: 'speed', 9: 'poacher', 10: 'winger' }));
+    expect(s.active.find((a) => a.id === 'trident')?.members).toEqual([8, 9, 10]);
+    expect(duoIds(teamSynergy(lineup({ 8: 'speed', 9: 'poacher', 10: 'speed' })))).not.toContain(
+      'trident',
+    );
+    expect(duoIds(teamSynergy(lineup({ 8: 'winger', 10: 'winger' })))).not.toContain('trident');
+  });
+  it('중원 삼각형은 플레이메이커 · 박스 투 박스 · 윙어가 모두 중원에', () => {
+    const s = teamSynergy(lineup({ 5: 'b2b', 6: 'maker', 7: 'winger' }));
+    expect(duoIds(s)).toEqual(['triangle', 'engine']);
+    expect(s.lines).toEqual({ atk: 0.5, mid: 3, def: 0, gk: 0 });
+    // 윙어가 측면 공격(W)에 서면 중원 삼각형이 아니다.
+    expect(duoIds(teamSynergy(lineup({ 5: 'b2b', 6: 'maker', 8: 'winger' })))).not.toContain(
+      'triangle',
+    );
+  });
+  it('스리백은 빌드업 센터백이 하나 이상 든 센터백 셋', () => {
+    const L352 = presetLayout('3-5-2');
+    const back = (types: string[]) =>
+      teamSynergy(
+        L352.map(({ slot, x }, i) =>
+          i >= 1 && i <= 3
+            ? { slot, x, type: types[i - 1]!, foot: null, nation: 'KR', raised: false }
+            : null,
+        ),
+      );
+    expect(duoIds(back(['stopper', 'libero', 'stopper']))).toEqual(['back_three', 'cb_pair']);
+    expect(duoIds(back(['libero', 'libero', 'libero']))).toEqual(['back_three']);
+    expect(duoIds(back(['stopper', 'stopper', 'stopper']))).not.toContain('back_three');
+  });
+  it('양 날개 · 양쪽 풀백은 반대쪽 측면 둘, 측면 전환은 윙어와 반대쪽 풀백', () => {
+    expect(duoIds(teamSynergy(lineup({ 8: 'winger', 10: 'winger' })))).toContain('wings');
+    expect(duoIds(teamSynergy(lineup({ 1: 'fullback', 4: 'fullback' })))).toContain('wingbacks');
+    const same = lineup({ 1: 'fullback', 4: 'fullback' });
+    same[4] = { ...same[4]!, x: 20 };
+    expect(duoIds(teamSynergy(same))).not.toContain('wingbacks');
+    expect(duoIds(teamSynergy(lineup({ 10: 'winger', 1: 'fullback' })))).toEqual(['switch']);
+    expect(duoIds(teamSynergy(lineup({ 8: 'winger', 1: 'fullback' })))).toEqual(['overlap']);
+  });
+  it('새 듀오는 정해진 자리에서만 켜진다', () => {
+    // 4-3-3 자리 5는 DM, 6은 CM, 7은 AM.
+    expect(duoIds(teamSynergy(lineup({ 5: 'b2b', 2: 'stopper' })))).toEqual(['anchor']);
+    expect(duoIds(teamSynergy(lineup({ 6: 'b2b', 2: 'stopper' })))).toEqual([]);
+    expect(duoIds(teamSynergy(lineup({ 5: 'maker', 3: 'libero' })))).toEqual(['regista']);
+    expect(duoIds(teamSynergy(lineup({ 5: 'b2b', 6: 'b2b' })))).toEqual(['double_pivot']);
+    expect(duoIds(teamSynergy(lineup({ 7: 'winger', 9: 'poacher' })))).toEqual(['shadow']);
+    expect(duoIds(teamSynergy(lineup({ 0: 'sweeper', 4: 'fullback' })))).toEqual(['high_line']);
+    const L442 = presetLayout('4-4-2');
+    const twoUp = L442.map(({ slot, x }, i) =>
+      i === 9 || i === 10
+        ? { slot, x, type: i === 9 ? 'target' : 'poacher', foot: null, nation: 'KR', raised: false }
+        : null,
+    );
+    expect(duoIds(teamSynergy(twoUp))).toEqual(['big_small']);
+  });
+});
+
+describe('T-11-542 시즌 경계', () => {
+  it(`새 트리오 · 듀오는 시즌 ${SYNERGY_S2_SEASON}부터 켜진다(지난 시즌 경기 · 팀은 그 시즌 규칙)`, () => {
+    const players = lineup({ 8: 'winger', 9: 'poacher', 10: 'winger', 6: 'maker', 7: 'maker' });
+    expect(duoIds(teamSynergy(players, SYNERGY_S2_SEASON - 1))).toEqual(['killpass']);
+    expect(duoIds(teamSynergy(players, SYNERGY_S2_SEASON))).toEqual([
+      'trident',
+      'killpass',
+      'wings',
+    ]);
+    expect(duoIds(teamSynergy(players))).toEqual(duoIds(teamSynergy(players, SYNERGY_S2_SEASON)));
+    expect(duosFor(SYNERGY_S2_SEASON - 1).map((d) => d.id)).toEqual([
+      'cross',
+      'engine',
+      'wall',
+      'cb_pair',
+      'buildup',
+      'counter',
+      'overlap',
+      'killpass',
+      'guardian',
+    ]);
+  });
+  it('새 나라 색깔도 시즌 2부터, 그 전 시즌은 대륙연맹 색깔', () => {
+    const be = Array.from({ length: 11 }, (_, i) => p(i, null, { nation: 'BE' }));
+    const s1 = teamSynergy(be, SYNERGY_S2_SEASON - 1).active.find((a) => a.id === 'national');
+    const s2 = teamSynergy(be, SYNERGY_S2_SEASON).active.find((a) => a.id === 'national');
+    expect(s1).toMatchObject({ style: 'uefa', effect: CONFED_STYLES.UEFA.effect });
+    expect(s2).toMatchObject({ style: 'be_golden', effect: NATION_STYLES.BE!.effect });
+    expect(nationStyleById('be_golden')?.name).toBe(NATION_STYLES.BE!.name);
+    expect(nationStyleById('uefa')).toBe(CONFED_STYLES.UEFA);
+    // 원래 있던 나라는 시즌과 상관없이 그대로.
+    expect(nationStyle('KR', 1)).toBe(NATION_STYLES.KR);
   });
 });
 
@@ -136,6 +263,10 @@ describe('T-11-105 팀 색깔', () => {
     // 표에 없는 나라는 대륙연맹 색깔.
     players.forEach((x) => (x.nation = 'NZ'));
     expect(teamSynergy(players).active.find((a) => a.id === 'national')?.style).toBe('ofc');
+  });
+  it('T-11-542 고유 색깔이 있는 나라는 23개(공개 가이드 문구와 같이 고친다)', () => {
+    expect(Object.keys(NATION_STYLES)).toHaveLength(23);
+    expect(new Set(Object.values(NATION_STYLES).map((st) => st.id)).size).toBe(23);
   });
   it('나라별 색깔은 합이 모두 같다', () => {
     for (const st of [...Object.values(NATION_STYLES), ...Object.values(CONFED_STYLES)])

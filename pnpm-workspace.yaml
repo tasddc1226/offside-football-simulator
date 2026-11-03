@@ -14,5 +14,7 @@ allowBuilds:
   # Browser Firebase transitive packages: native analytics does not need their install scripts.
   '@firebase/util': false
   protobufjs: false
+  # T-11-600 라운지 필드 앱 그리기: 설치 때 Skia 네이티브 라이브러리를 받는다.
+  '@shopify/react-native-skia': true
 minimumReleaseAgeExclude:
   - '@sveltejs/vite-plugin-svelte@7.3.1'

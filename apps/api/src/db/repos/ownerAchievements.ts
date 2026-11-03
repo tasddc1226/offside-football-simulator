@@ -159,7 +159,10 @@ export async function listAchievementRanking(db: Db, season: number, page: numbe
   return { rows, total: Number(total?.n ?? 0) };
 }
 
-/** 그 시즌 구단주 활동 — 팀 경기를 건 날 수(한국 시각)와 다른 팀에 누른 좋아요 수. T-11-128 asOf면 그 시각까지만. */
+/**
+ * 그 시즌 구단주 활동 — 팀 경기를 건 날 수(한국 시각)와 다른 팀에 누른 좋아요 수. T-11-128 asOf면 그 시각까지만.
+ * T-11-541 같은 경기 행을 세는 김에 무실점 승리 · 4골 차 이상 승리 · 한 경기 최다 득점도 함께 센다(읽는 행은 그대로).
+ */
 export async function ownerActivityIn(
   db: Db,
   profileId: string,
@@ -183,11 +186,16 @@ export async function ownerActivityIn(
   // 팀이 없으면 건 경기도 없다 — 구단주의 지난 시즌 경기까지 읽지 않게 건너뛴다.
   if (teamId === null) {
     const [l] = await likes;
-    return { matchDays: 0, likesGiven: Number(l?.n ?? 0) };
+    return { matchDays: 0, likesGiven: Number(l?.n ?? 0), cleanWins: 0, bigWins: 0, topScore: 0 };
   }
   const [[m], [l]] = await db.batch([
     db
-      .select({ n: countDistinct(sql`date(${teamMatches.createdAt}, '+9 hours')`) })
+      .select({
+        n: countDistinct(sql`date(${teamMatches.createdAt}, '+9 hours')`),
+        clean: sql<number>`coalesce(sum(${teamMatches.awayGoals} = 0 and ${teamMatches.homeGoals} > 0), 0)`,
+        big: sql<number>`coalesce(sum(${teamMatches.homeGoals} - ${teamMatches.awayGoals} >= 4), 0)`,
+        top: sql<number>`coalesce(max(${teamMatches.homeGoals}), 0)`,
+      })
       .from(teamMatches)
       .where(
         and(
@@ -198,7 +206,13 @@ export async function ownerActivityIn(
       ),
     likes,
   ]);
-  return { matchDays: Number(m?.n ?? 0), likesGiven: Number(l?.n ?? 0) };
+  return {
+    matchDays: Number(m?.n ?? 0),
+    likesGiven: Number(l?.n ?? 0),
+    cleanWins: Number(m?.clean ?? 0),
+    bigWins: Number(m?.big ?? 0),
+    topScore: Number(m?.top ?? 0),
+  };
 }
 
 /**
@@ -258,7 +272,7 @@ export async function claimAchievementRewards(
   db: Db,
   profileId: string,
   season: number,
-  steps: readonly { key: string; boost: number; scout: number }[],
+  steps: readonly { key: string; boost: number; scout: number; reroll?: number }[],
   now: string,
 ): Promise<string[]> {
   const d1 = db.$client;
@@ -269,17 +283,23 @@ export async function claimAchievementRewards(
     params: [profileId, achClaimKey(season, key), claimId],
   });
   if (!steps.length) return [];
+  // T-11-541 점수 보너스는 리롤권도 준다.
+  const itemsOf = (s: (typeof steps)[number]) =>
+    (
+      [
+        ['boost', s.boost],
+        ['scout', s.scout],
+        ['reroll', s.reroll ?? 0],
+      ] as const
+    ).filter(([, n]) => n > 0);
   const results = await d1.batch(
     steps.flatMap((s) => [
       d1
         .prepare(`${insert} VALUES (?, ?, ?, ?)`)
         .bind(profileId, achClaimKey(season, s.key), claimId, now),
-      ...(s.boost > 0
-        ? [grantItemStatement(d1, profileId, 'boost', s.boost, now, mine(s.key))]
-        : []),
-      ...(s.scout > 0
-        ? [grantItemStatement(d1, profileId, 'scout', s.scout, now, mine(s.key))]
-        : []),
+      ...itemsOf(s).map(([item, n]) =>
+        grantItemStatement(d1, profileId, item, n, now, mine(s.key)),
+      ),
     ]),
   );
   // 업적마다 기록 넣기가 첫 문장이다 — 새로 넣었으면(changes 1) 이 batch가 준 것.
@@ -287,7 +307,7 @@ export async function claimAchievementRewards(
   let i = 0;
   for (const s of steps) {
     if (results[i]?.meta.changes) granted.push(s.key);
-    i += 1 + (s.boost > 0 ? 1 : 0) + (s.scout > 0 ? 1 : 0);
+    i += 1 + itemsOf(s).length;
   }
   return granted;
 }

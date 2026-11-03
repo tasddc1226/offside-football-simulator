@@ -7,7 +7,6 @@
   import ShareBar from './ShareBar.svelte';
   import NameReport from './NameReport.svelte';
   import NameReports from './NameReports.svelte';
-  import AdSlot from '../ads/AdSlot.svelte';
   import { motionOK } from './motion.js';
   import { rollCredits } from './creditRoll.js';
   import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
@@ -39,7 +38,6 @@
     <LegendReport {v} />
     {#if v.own?.id}<OwnHofCards {v} />{/if}
     {#if v.reportId}<NameReports><NameReport kind="career" id={v.reportId} name={v.name} /></NameReports>{/if}
-    <AdSlot place="legend-bottom" />
   {/if}
   {#if motionOK && v}
     <button class="career-play" class:on={rolling} data-act="career-play" aria-pressed={rolling} onclick={toggleRoll}>

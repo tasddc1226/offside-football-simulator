@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
-import { resumeWithSave } from './helpers.js';
+import { createStep, resumeWithSave } from './helpers.js';
 
 // T-10-096: 선수 생성에서 국적(전 세계)·키·몸무게를 고른다. 이상한 체격은 막고, 고른 값이 선수 정보에 남는다.
 test('국적·키·몸무게를 입력하고, 범위를 벗어나면 다음으로 넘어가지 못한다', async ({ page }) => {
@@ -10,11 +10,13 @@ test('국적·키·몸무게를 입력하고, 범위를 벗어나면 다음으�
   const note = page.locator('[data-body-note]');
 
   // 기본값: 대한민국 · 포지션 평균 체격
+  await createStep(page, 'extra');
+  await expect(page.locator('#f-height')).toHaveValue('180');
+  await expect(note).toContainText('포지션 평균 체격');
+  await createStep(page, 'info');
   const nation = page.locator('#f-nation');
   await expect(nation).toHaveValue('대한민국');
   await expect(page.locator('[data-nation-note]')).toContainText('병역');
-  await expect(page.locator('#f-height')).toHaveValue('180');
-  await expect(note).toContainText('포지션 평균 체격');
 
   // T-10-099 한글·초성으로 찾는다. 타이핑 중인 글자(블)도 맞고, 키보드로 고를 수 있다.
   await nation.click();
@@ -37,6 +39,7 @@ test('국적·키·몸무게를 입력하고, 범위를 벗어나면 다음으�
   await expect(page.locator('[data-nation-note]')).toContainText('코파 아메리카');
   await expect(page.locator('.live-card')).toContainText('브라질');
 
+  await createStep(page, 'extra');
   await page.locator('#f-height').fill('210');
   await expect(note).toContainText('160~200cm');
   await expect(next).toBeDisabled();

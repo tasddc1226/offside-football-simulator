@@ -14,7 +14,7 @@ import { AppError } from '../errors.js';
 import { verifyMembershipClaim, type MembershipRejection } from '../iap/membership.js';
 import { iapAccount, iapStores } from '../iap/verify.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, NO_STORE, nowIso, ok, readBody } from './shared.js';
 
 // T-11-512 클럽 멤버십. 로그인한 구단주만(아니면 403 GOOGLE_LOGIN_REQUIRED). 멤버십 화면을 열 때 · 앱이 구독 거래를 보낼 때만
@@ -41,7 +41,8 @@ async function memberView(env: Bindings, db: Db, profileId: string): Promise<Mem
   return {
     active: memberActive(row?.until, nowIso()),
     until: row?.until ?? null,
-    autoRenew: row?.autoRenew ?? null,
+    // T-11-591 웹 결제 멤버십은 자동 갱신이 없는 기간권이라 '자동 결제를 껐어요' 대신 끝나는 날만 보이게 null로 보낸다.
+    autoRenew: row?.store === 'xsolla' ? null : (row?.autoRenew ?? null),
     store: row?.store === 'apple' || row?.store === 'google' ? row.store : null,
     stores,
     ...(stores.length ? { account: iapAccount(profileId) } : {}),

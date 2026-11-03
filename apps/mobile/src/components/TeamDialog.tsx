@@ -1,3 +1,4 @@
+import { Toast } from '../ui/Toast';
 import type { ReactNode } from 'react';
 import {
   Keyboard,
@@ -97,6 +98,8 @@ export function TeamDialog({
           ) : null}
         </View>
       </KeyboardAvoidingView>
+      {/* 모달은 앱 위 별도 층이라 알림을 이 안에서도 그린다. */}
+      <Toast />
     </Modal>
   );
 }

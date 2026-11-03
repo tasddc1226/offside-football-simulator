@@ -2,9 +2,10 @@
   // 설정 화면의 "구단 이름·엠블럼 변경" 카드(T-10-009) — 리그별 클럽 이름·엠블럼 편집, 에디트 파일 내보내기/가져오기.
   import { LEAGUES } from '@offside/game/data';
   import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
-  import { CLUB_CUSTOM_IMG_MAX, CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
+  import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
+  import { encodeClubEmblem } from './clubEmblemImage.js';
   import { clubsIn } from '@offside/game/engine';
-  import { CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
+  import { CLUB_IMPORT_NO_SPACE, CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';
@@ -35,22 +36,14 @@
     resetClubCustom([id]);
   }
 
-  // 업로드 이미지는 64×64로 가운데를 잘라 줄인다 — localStorage 용량(약 5MB)에 200개 클럽이 다 들어가게.
   async function upload(club: { id: string; name: string }, e: Event) {
     const input = e.currentTarget as HTMLInputElement;
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
     try {
-      const bmp = await createImageBitmap(file);
-      const side = Math.min(bmp.width, bmp.height);
-      const canvas = document.createElement('canvas');
-      canvas.width = canvas.height = 64;
-      canvas.getContext('2d')!.drawImage(bmp, (bmp.width - side) / 2, (bmp.height - side) / 2, side, side, 0, 0, 64, 64);
-      // WebP 인코딩을 못 하는 브라우저(PNG로 떨어짐)나 한도를 넘으면 JPEG로 다시 줄인다.
-      let img = canvas.toDataURL('image/webp', 0.85);
-      if (!img.startsWith('data:image/webp') || img.length > CLUB_CUSTOM_IMG_MAX) img = canvas.toDataURL('image/jpeg', 0.8);
-      if (img.length > CLUB_CUSTOM_IMG_MAX) return toast(T.imgComplex);
+      const img = encodeClubEmblem(await createImageBitmap(file));
+      if (!img) return toast(T.imgComplex);
       const others = clubImgTotal(clubCustom.map) - (clubCustom.map[club.id]?.logo?.img?.length ?? 0);
       if (others + img.length > CLUB_CUSTOM_IMG_TOTAL_MAX) return toast(T.imgFull);
       editLogo(club, { img });
@@ -71,7 +64,7 @@
     input.value = '';
     if (!file) return;
     const n = importClubCustom(await file.text());
-    toast(n < 0 ? T.badFile : T.imported({ n }));
+    toast(n === CLUB_IMPORT_NO_SPACE ? T.noSpace : n < 0 ? T.badFile : T.imported({ n }));
   }
   function resetLeague() {
     resetClubCustom(clubsIn(leagueId).map((c) => c.id));

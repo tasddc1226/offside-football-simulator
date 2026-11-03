@@ -6,4 +6,6 @@ export const notificationDestination = proxy({
   history: false,
   market: false,
   home: 0,
+  /** T-11-622 초대 링크로 받은 친구 코드. 신청하거나 닫을 때까지 둔다(로그인을 거쳐도 남는다). */
+  invite: null as string | null,
 });

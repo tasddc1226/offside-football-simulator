@@ -73,54 +73,97 @@ export const exchangeReward = (b: {
 
 /** 하루마다 칸별로 다음 과제를 연다(칸마다 묶음 길이가 달라 날마다 조합이 바뀐다). */
 export const EXCHANGE_POOL: Record<ExchangeTier, readonly ExchangeSpec[]> = {
+  // T-11-545 하루에 내는 카드를 11~14장에서 7~9장(평균 약 8장)으로 줄였다(쉬움 1~2 · 보통 3 · 어려움 3~4). 줄이기 전 조건은 POOL_GROWN의 rules.
   easy: [
-    { key: 'keepers', rule: { count: 2, pos: ['GK'] } },
-    { key: 'midWorkers', rule: { count: 3, pos: ['MF'], peakMin: 70, peakMax: 79 } },
-    { key: 'backline', rule: { count: 3, pos: ['DF'], peakMax: 79 } },
+    { key: 'keepers', rule: { count: 1, pos: ['GK'] } },
+    { key: 'midWorkers', rule: { count: 2, pos: ['MF'], peakMin: 70, peakMax: 79 } },
+    { key: 'backline', rule: { count: 2, pos: ['DF'], peakMax: 79 } },
     // T-11-374c 프리시즌 카드 2장(founders)은 새로 만들 수 없어 프리시즌 뒤 시작한 구단주가 오늘 과제를 끝낼 수 없었다. 같은 칸을
     // 누구나 가진 낮은 카드 과제로 바꿔 다른 날의 회전은 그대로 둔다.
-    { key: 'quietFarewell', rule: { count: 3, peakMax: 74 } },
-    { key: 'strikers', rule: { count: 3, pos: ['FW'], peakMax: 79 } },
+    { key: 'quietFarewell', rule: { count: 2, peakMax: 74 } },
+    { key: 'strikers', rule: { count: 2, pos: ['FW'], peakMax: 79 } },
     // i18n-ignore: 주발은 커리어 저장값(한국어) 그대로 비교한다
-    { key: 'leftFoot', rule: { count: 3, foot: '왼발' } },
+    { key: 'leftFoot', rule: { count: 2, foot: '왼발' } },
     // T-11-374d 여기부터 늘린 과제(POOL_GROWN). 묶음 뒤에만 더한다.
     { key: 'centerBacks', rule: { count: 2, dpos: ['CB', 'SW'] } },
     { key: 'wingers', rule: { count: 2, dpos: ['LW', 'RW', 'W', 'LM', 'RM'] } },
     // i18n-ignore: 주발은 커리어 저장값(한국어) 그대로 비교한다
-    { key: 'twoFooted', rule: { count: 2, foot: '양발' } },
+    { key: 'twoFooted', rule: { count: 1, foot: '양발' } },
+    // T-11-545 여기부터 늘린 과제. 누구나 가진 카드로 끝낼 수 있게 넓은 조건만 둔다.
+    { key: 'fullBacks', rule: { count: 2, dpos: ['LB', 'RB', 'LWB', 'RWB', 'FB'] } },
+    // i18n-ignore: 주발은 커리어 저장값(한국어) 그대로 비교한다
+    { key: 'rightFoot', rule: { count: 2, foot: '오른발' } },
   ],
   normal: [
-    { key: 'nationalCall', rule: { count: 4, sameNation: true } },
-    { key: 'spine', rule: { count: 4, shape: { DF: 2, MF: 2 }, avgPeakMin: 75 } },
-    { key: 'frontLine', rule: { count: 4, shape: { MF: 2, FW: 2 }, avgPeakMin: 77 } },
-    { key: 'veterans', rule: { count: 4, peakMin: 80 } },
-    { key: 'seasonOne', rule: { count: 4, seasons: [1] } },
-    { key: 'worldTour', rule: { count: 4, distinctNations: true } },
-    { key: 'leagueMates', rule: { count: 4, sameLeague: true } },
-    { key: 'engineRoom', rule: { count: 4, dpos: ['DM', 'CM'], avgPeakMin: 75 } },
+    { key: 'nationalCall', rule: { count: 3, sameNation: true } },
+    { key: 'spine', rule: { count: 3, shape: { DF: 1, MF: 2 }, avgPeakMin: 75 } },
+    { key: 'frontLine', rule: { count: 3, shape: { MF: 1, FW: 2 }, avgPeakMin: 77 } },
+    { key: 'veterans', rule: { count: 3, peakMin: 80 } },
+    { key: 'seasonOne', rule: { count: 3, seasons: [1] } },
+    { key: 'worldTour', rule: { count: 3, distinctNations: true } },
+    { key: 'leagueMates', rule: { count: 3, sameLeague: true } },
+    { key: 'engineRoom', rule: { count: 3, dpos: ['DM', 'CM'], avgPeakMin: 75 } },
   ],
   hard: [
     {
       key: 'bestEleven',
-      rule: { count: 7, shape: { GK: 1, DF: 2, MF: 2, FW: 2 }, avgPeakMin: 80 },
+      rule: { count: 4, shape: { GK: 1, DF: 1, MF: 1, FW: 1 }, avgPeakMin: 80 },
     },
-    { key: 'legendGift', rule: { count: 5, legendOne: 600, avgPeakMin: 78 } },
-    { key: 'oneNation', rule: { count: 6, sameNation: true, avgPeakMin: 78 } },
-    { key: 'elite', rule: { count: 5, peakMin: 85 } },
-    { key: 'worldSelect', rule: { count: 5, distinctNations: true, avgPeakMin: 80 } },
-    { key: 'leagueStars', rule: { count: 5, sameLeague: true, avgPeakMin: 79 } },
+    { key: 'legendGift', rule: { count: 3, legendOne: 600, avgPeakMin: 78 } },
+    { key: 'oneNation', rule: { count: 3, sameNation: true, avgPeakMin: 78 } },
+    { key: 'elite', rule: { count: 3, peakMin: 85 } },
+    { key: 'worldSelect', rule: { count: 3, distinctNations: true, avgPeakMin: 80 } },
+    { key: 'leagueStars', rule: { count: 3, sameLeague: true, avgPeakMin: 79 } },
   ],
 };
 
 /**
- * T-11-374d 과제를 늘린 날(KST). 그 전 날은 늘리기 전 묶음 길이로 돌아, 배포한 날 이미 연 과제가 하루 중간에 바뀌지 않는다.
- * 늘린 날에는 새로 더한 과제부터 차례로 연다.
- * 묶음을 다시 늘릴 때는 from을 배포 다음 날로 옮기고 before에 지금 길이를 적는다.
+ * 묶음을 고친 날(KST)의 기록. 그 전 날은 고치기 전 묶음 길이(before)와 조건(rules)으로 돌아, 배포한 날 이미 연 과제가
+ * 하루 중간에 바뀌지 않는다. 고친 날에는 새로 더한 과제부터 차례로 연다.
+ * 묶음을 다시 늘리거나 조건을 바꿀 때는 배포 다음 날을 from으로 한 줄을 끝에 더하고, before에 지금 길이를,
+ * rules에 바꾸기 전 조건을 적는다(앞 줄은 고치지 않는다).
  */
-export const POOL_GROWN = {
-  from: '2026-10-27',
-  before: { easy: 6, normal: 5, hard: 4 } satisfies Record<ExchangeTier, number>,
+export type PoolGrowth = {
+  from: string;
+  before: Record<ExchangeTier, number>;
+  /** 이 날 전까지 쓰던 조건(바뀐 과제만, key별). */
+  rules?: Readonly<Record<string, ExchangeRule>>;
 };
+
+export const POOL_GROWN: readonly PoolGrowth[] = [
+  // T-11-374d 과제를 늘린 날.
+  { from: '2026-10-27', before: { easy: 6, normal: 5, hard: 4 } },
+  // T-11-545 시즌 2 개막. 내는 카드를 줄이고 쉬움 과제를 늘렸다.
+  {
+    from: '2026-10-31',
+    before: { easy: 9, normal: 8, hard: 6 },
+    rules: {
+      keepers: { count: 2, pos: ['GK'] },
+      midWorkers: { count: 3, pos: ['MF'], peakMin: 70, peakMax: 79 },
+      backline: { count: 3, pos: ['DF'], peakMax: 79 },
+      quietFarewell: { count: 3, peakMax: 74 },
+      strikers: { count: 3, pos: ['FW'], peakMax: 79 },
+      // i18n-ignore: 주발은 커리어 저장값(한국어) 그대로 비교한다
+      leftFoot: { count: 3, foot: '왼발' },
+      // i18n-ignore: 주발은 커리어 저장값(한국어) 그대로 비교한다
+      twoFooted: { count: 2, foot: '양발' },
+      nationalCall: { count: 4, sameNation: true },
+      spine: { count: 4, shape: { DF: 2, MF: 2 }, avgPeakMin: 75 },
+      frontLine: { count: 4, shape: { MF: 2, FW: 2 }, avgPeakMin: 77 },
+      veterans: { count: 4, peakMin: 80 },
+      seasonOne: { count: 4, seasons: [1] },
+      worldTour: { count: 4, distinctNations: true },
+      leagueMates: { count: 4, sameLeague: true },
+      engineRoom: { count: 4, dpos: ['DM', 'CM'], avgPeakMin: 75 },
+      bestEleven: { count: 7, shape: { GK: 1, DF: 2, MF: 2, FW: 2 }, avgPeakMin: 80 },
+      legendGift: { count: 5, legendOne: 600, avgPeakMin: 78 },
+      oneNation: { count: 6, sameNation: true, avgPeakMin: 78 },
+      elite: { count: 5, peakMin: 85 },
+      worldSelect: { count: 5, distinctNations: true, avgPeakMin: 80 },
+      leagueStars: { count: 5, sameLeague: true, avgPeakMin: 79 },
+    },
+  },
+];
 
 /** 오늘(0시 KST 시작)의 KST 날짜 키와 UTC ISO 경계. */
 export function exchangeDay(nowIso: string): { key: string; startsAt: string; endsAt: string } {
@@ -137,20 +180,34 @@ export function exchangeDay(nowIso: string): { key: string; startsAt: string; en
 /** 1970-01-01부터 센 날 번호. 묶음 순서를 하루마다 하나씩 넘긴다. */
 const dayIndex = (key: string) => Math.round(Date.parse(key) / DAY_MS);
 
+/** 그 날 묶음 안에서 칸별로 몇 번째 과제를 여는지. */
+function poolIndex(tier: ExchangeTier, key: string, n: number): number {
+  let at = -1;
+  POOL_GROWN.forEach((g, i) => {
+    if (g.from <= key) at = i;
+  });
+  if (at < 0) return n % POOL_GROWN[0]!.before[tier];
+  const g = POOL_GROWN[at]!;
+  const len = POOL_GROWN[at + 1]?.before[tier] ?? EXCHANGE_POOL[tier].length;
+  // 고친 날부터는 새 과제(묶음 뒤쪽)부터 연다.
+  return (n - dayIndex(g.from) + g.before[tier]) % len;
+}
+
+/** 그 날 쓰던 조건. 고치기 전 날이면 가장 가까운 기록의 옛 조건을 쓴다. */
+function ruleAt(spec: ExchangeSpec, key: string): ExchangeRule {
+  for (const g of POOL_GROWN) if (key < g.from && g.rules?.[spec.key]) return g.rules[spec.key]!;
+  return spec.rule;
+}
+
 /** 오늘 열린 과제(쉬움 · 보통 · 어려움). */
 export function exchangesAt(nowIso: string): ExchangeDef[] {
   const day = exchangeDay(nowIso);
   const n = dayIndex(day.key);
   return EXCHANGE_TIERS.map((tier) => {
-    const pool = EXCHANGE_POOL[tier];
-    const before = POOL_GROWN.before[tier];
-    // 늘린 날부터는 새 과제(묶음 뒤쪽)부터 연다.
-    const i =
-      day.key < POOL_GROWN.from
-        ? n % before
-        : (n - dayIndex(POOL_GROWN.from) + before) % pool.length;
+    const spec = EXCHANGE_POOL[tier][poolIndex(tier, day.key, n)]!;
     return {
-      ...pool[i]!,
+      ...spec,
+      rule: ruleAt(spec, day.key),
       id: `${day.key}-${tier}`,
       tier,
       startsAt: day.startsAt,

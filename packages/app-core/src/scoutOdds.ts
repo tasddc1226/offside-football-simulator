@@ -1,4 +1,5 @@
 // T-11-196 프리미엄 스카우트 확률 공개표(웹·앱 공용). 게임 엔진이 실제로 뽑는 식(scoutOdds)으로 계산한 값을 그대로 보인다.
+import { BAL } from '@offside/game/balance';
 import { SCOUT_GRADES, scoutOdds, type ScoutGrade } from '@offside/game/premiumScout';
 import { scoutText as L } from './i18n/ko/scout';
 
@@ -23,3 +24,6 @@ export function scoutOddsRows(opened: boolean): ScoutOddsRow[] {
     cells: SCOUT_GRADES.map((grade) => ({ grade, pct: pct(t[grade]) })),
   }));
 }
+
+/** 프리미엄 스카우트 안내 문구. S 배수는 표(scoutOdds)와 같은 지금 밸런스 값이다. */
+export const scoutWhatText = () => L.what({ mult: BAL.premiumSMult });

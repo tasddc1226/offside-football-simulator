@@ -62,10 +62,9 @@ export function OwnerArchive() {
         ? null
         : ownerTierOf({ season: line.season, score: line.achScore });
   const small = { fontSize: rem(FONT.label) };
-  const expand = async (retry = false) => {
-    await archive.expand(retry);
-    if (archive.state.detail?.status === 'ready') appState.recapNew = false;
-  };
+  useEffect(() => {
+    if (state.detail?.status === 'ready') appState.recapNew = false;
+  }, [state.detail]);
   if (state.loading) return <Skeleton rows={4} />;
   if (state.error)
     return (
@@ -109,7 +108,7 @@ export function OwnerArchive() {
             accessibilityState={{ selected: state.season === s.season }}
             onPress={() => {
               appState.honorsSeason = s.season;
-              archive.select(s.season);
+              void archive.select(s.season);
             }}
             style={{
               flexDirection: 'row',
@@ -282,28 +281,6 @@ export function OwnerArchive() {
           </View>
           {line.closed ? (
             <>
-              <Press
-                testID="archive-details"
-                accessibilityState={{ expanded: state.expanded }}
-                onPress={() => void expand()}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  gap: 12,
-                  padding: 16,
-                  minHeight: 52,
-                  borderWidth: 1,
-                  borderColor: 'transparent',
-                  borderRadius: RADIUS.md,
-                  backgroundColor: c.surface,
-                }}
-              >
-                <Txt bold style={{ flex: 1 }}>
-                  {state.expanded ? L.archiveHide : L.archiveDetails}
-                </Txt>
-                <Txt>{state.expanded ? '−' : '+'}</Txt>
-              </Press>
               {state.expanded ? (
                 <View style={{ gap: 14 }}>
                   {state.detailLoading ? (
@@ -311,7 +288,7 @@ export function OwnerArchive() {
                   ) : state.detailError ? (
                     <>
                       <Txt>{L.archiveError}</Txt>
-                      <Btn testID="archive-retry" onPress={() => void expand(true)}>
+                      <Btn testID="archive-retry" onPress={() => void archive.expand(true)}>
                         {L.retry}
                       </Btn>
                     </>

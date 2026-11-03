@@ -73,6 +73,8 @@ export interface MarketFilter {
   nation?: string | undefined;
   league?: string | undefined;
   club?: string | undefined;
+  /** T-11-596 카드가 나온 시즌(0 프리시즌). 포지션과 따로 고른다. */
+  cardSeason?: number | undefined;
 }
 /** 포지션군 안의 세부 포지션(골키퍼처럼 하나뿐이면 고를 것이 없다). */
 export const marketDetailFilters = (pos: CareerPos | undefined): readonly DetailPos[] =>
@@ -96,9 +98,13 @@ const marketFindOnly = (f: MarketFilter): MarketFilter => ({
   nation: f.nation,
   league: f.league,
   club: f.club,
+  cardSeason: f.cardSeason,
 });
 export const marketFiltered = (f: MarketFilter) =>
-  !!(f.pos || f.dpos || f.type || f.nation || f.league || f.club);
+  !!(f.pos || f.dpos || f.type || f.nation || f.league || f.club) || f.cardSeason !== undefined;
+/** T-11-596 시즌 필터에 고를 시즌(프리시즌 0부터 지금 시즌까지). 지금 시즌을 모르면 빈 목록. */
+export const marketSeasonChoices = (current: number | null): number[] =>
+  current === null ? [] : Array.from({ length: current + 1 }, (_, i) => i);
 
 // T-11-500 국적 · 팀으로 찾기. 고를 거리(서버 /v1/market/facets)를 지금 언어 이름으로 바꾸고 시트의 검색창으로 좁힌다.
 export const nationName = (code: string) => tn(NATION_BY_CODE.get(code)?.ko ?? code);
@@ -248,11 +254,17 @@ export function staleListingNext(
   return { toast: L.staleRecheck };
 }
 
-/** 지금 시즌 선발(판매 · 방출을 막는다). 지난 시즌 팀은 고칠 수 없어 막지 않는다. */
+/**
+ * 지금 시즌 선발(판매 · 방출 · 카드 과제를 막는다). 지난 시즌 팀은 고칠 수 없어 막지 않는다.
+ * T-11-604 컵 명단 프리셋 선수도 막는다(빠지면 컵 경기에 빈자리로 나간다, 서버 lockedIdsOf와 같다).
+ */
 export const lineupOf = (d: OwnerTeamResponse): ReadonlySet<string> =>
   new Set(
     d.season === d.current && d.team
-      ? d.team.slots.flatMap((s) => (s.careerId ? [s.careerId] : []))
+      ? [
+          ...d.team.slots.flatMap((s) => (s.careerId ? [s.careerId] : [])),
+          ...(d.team.presets?.find((p) => p.cup)?.slots ?? []).flatMap((id) => (id ? [id] : [])),
+        ]
       : [],
   );
 

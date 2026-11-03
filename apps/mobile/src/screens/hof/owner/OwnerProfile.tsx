@@ -17,7 +17,7 @@ import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { OwnerAvatar } from '../../../components/OwnerAvatar';
 import { TeamLogo } from '../../../components/TeamLogo';
 import { TitleBadge } from '../../../components/TitleBadge';
-import { go } from '../../../game/nav';
+import { go, openOwnerHallVisit } from '../../../game/nav';
 import { appState } from '../../../store';
 import { rem } from '../../../theme/type';
 import { useColors } from '../../../theme/useColors';
@@ -126,7 +126,11 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
               <Btn sm testID="owner-hall" onPress={() => go('honors')}>
                 {L.manage}
               </Btn>
-            ) : null}
+            ) : (
+              <Btn sm testID="owner-hall-visit" onPress={() => openOwnerHallVisit(teamId)}>
+                {L.openHall}
+              </Btn>
+            )}
           </Card>
 
           {owner.cupHonors.length ? (

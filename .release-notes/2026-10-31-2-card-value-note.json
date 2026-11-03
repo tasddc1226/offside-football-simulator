@@ -1,0 +1,26 @@
+{
+  "id": "t-11-598-card-value-note",
+  "title": "카드 기준가 안내",
+  "items": [
+    "구단 가치 설명에 나이 배수 안내를 더했어요. 30세가 넘어 최고 OVR을 찍은 선수는 커리어 최고 몸값보다 기준가가 낮을 수 있어요"
+  ],
+  "en": {
+    "title": "Card base value note",
+    "items": [
+      "The club value info now explains the age multiplier. A player who reached peak OVR after 30 can have a base value below their top career market value."
+    ]
+  },
+  "ja": {
+    "title": "カード基準価格の案内",
+    "items": [
+      "クラブ価値の説明に年齢倍率の案内を追加しました。30歳を過ぎて最高OVRに達した選手は、キャリア最高の市場価値より基準価格が低くなることがあります。"
+    ]
+  },
+  "zh": {
+    "title": "球員卡基準價說明",
+    "items": [
+      "俱樂部價值說明新增年齡倍率介紹。30 歲後才創下最高 OVR 的球員，基準價可能低於生涯最高身價。"
+    ]
+  },
+  "availability": "web-app"
+}

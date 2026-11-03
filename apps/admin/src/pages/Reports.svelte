@@ -24,6 +24,7 @@
   const ANOMALY: Record<string, string> = {
     ovrFar: 'OVR 상한 크게 넘음',
     ovrHigh: 'OVR 상한 조금 넘음',
+    potential: '높은 잠재력 허용치 조금 넘음',
     jump: '한 시즌 급상승',
     legend: '레전드 점수 이상',
   };

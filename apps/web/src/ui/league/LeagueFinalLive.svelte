@@ -6,8 +6,7 @@
   import type { LeagueTableResponse } from '@offside/app-core/api/league';
   import { cupText as C } from '@offside/app-core/i18n/ko/cup';
   import { leagueText as L } from '@offside/app-core/i18n/ko/league';
-  import { LEAGUE_LIVE_END, leagueLive } from '@offside/app-core/leagueView';
-  import { LEAGUE_ROUNDS } from '@offside/contracts/league';
+  import { LEAGUE_LIVE_END, leagueLastRound, leagueLive } from '@offside/app-core/leagueView';
   import PopSheet from '../PopSheet.svelte';
 
   let { table, mineId, onclose }: { table: LeagueTableResponse; mineId: string | null; onclose: () => void } =
@@ -39,7 +38,7 @@
 
   const teams = $derived(new Map(table.teams.map((t) => [t.teamId, t])));
   const name = (id: string) => teams.get(id)?.name ?? C.tbd;
-  const matches = $derived(table.matches.filter((m) => m.round === LEAGUE_ROUNDS));
+  const matches = $derived(table.matches.filter((m) => m.round === leagueLastRound(table)));
   const live = $derived(leagueLive(table, minute));
   const ended = $derived(minute >= LEAGUE_LIVE_END);
   /** 방금(2분 안) 골이 난 경기. */

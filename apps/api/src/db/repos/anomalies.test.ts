@@ -294,6 +294,20 @@ describe('비정상 기록 정기 점검', () => {
     expect(await hiddenOf('legend-page')).toBe(0);
   });
 
+  it('T-11-613 높은 잠재력 허용치를 조금 넘은 구단주의 커리어는 숨기지 않고 검토 목록에 올린다', async () => {
+    for (let i = 0; i < 11; i++)
+      await career(`pot-${i}`, [[18, 60]], {
+        pot: 96,
+        createdAt: new Date(NOW - 86_400_000).toISOString(),
+      });
+    expect(await sweepAnomaliesPage(ctx.env.DB, NOW)).toMatchObject({ done: true, farmed: 0 });
+    const report = await anomalyReport(ctx.env.DB, NOW);
+    expect(report.review).toHaveLength(11);
+    expect(report.review[0]!.reasons).toEqual(['potential']);
+    expect(report.hidden).toEqual([]);
+    expect(await hiddenOf('pot-0')).toBe(0);
+  });
+
   it('은퇴 레전드 점수가 높으면 검토 목록에만 올린다', async () => {
     await career('star', [[18, 60]], {
       status: 'retired',

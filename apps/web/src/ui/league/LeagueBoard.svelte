@@ -13,13 +13,13 @@
     leagueRoundAt,
     leagueZoneLabel,
     leagueFinalReady,
+    leagueLastRound,
     leagueMatchMid,
     leagueRecords,
     leagueRound,
     leagueZone,
     type LeagueClinch,
   } from '@offside/app-core/leagueView';
-  import { LEAGUE_ROUNDS } from '@offside/contracts/league';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import TeamLogo from '../team/TeamLogo.svelte';
   import LeagueFinalLive from './LeagueFinalLive.svelte';
@@ -63,6 +63,7 @@
   const roundAt = $derived(day ? leagueRoundAt(day.matches) : null);
   const scorers = $derived(table?.scorers ?? []);
   const finalReady = $derived(!!table && leagueFinalReady(table));
+  const lastRound = $derived(table ? leagueLastRound(table) : 0);
   let live = $state(false);
 </script>
 
@@ -109,7 +110,7 @@
         <label class="lg-pick">
           <span class="sr-only">{L.roundsTitle}</span>
           <select bind:value={round} data-league-round>
-            {#each Array.from({ length: LEAGUE_ROUNDS }, (_, i) => i + 1) as n (n)}<option value={n}>{L.roundName({ n })}</option>{/each}
+            {#each Array.from({ length: lastRound }, (_, i) => i + 1) as n (n)}<option value={n}>{L.roundName({ n })}</option>{/each}
           </select>
         </label>
       </div>
@@ -130,7 +131,7 @@
         </ul>
         {#each day.resting as t (t.teamId)}<p class="muted fs-sm" data-league-rest>{L.restTeam({ team: t.name })}</p>{/each}
       {/if}
-      {#if round === LEAGUE_ROUNDS && finalReady}
+      {#if round === lastRound && finalReady}
         <button class="btn btn-primary lg-live" data-act="league-final-live" onclick={() => (live = true)}>{L.finalLive}</button>
       {/if}
     </section>

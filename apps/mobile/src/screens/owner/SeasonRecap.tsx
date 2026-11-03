@@ -362,6 +362,7 @@ export default function SeasonRecap({ record }: { record?: SeasonRecapResponse }
             <Squad recap={recap} season={shown} still={embedded} />
             <Numbers recap={recap} />
             <Faces recap={recap} />
+            <Specials recap={recap} />
             <Cards recap={recap} />
             <TeamSection recap={recap} />
             <Ranks recap={recap} />
@@ -679,6 +680,7 @@ function BestFace({ best }: { best: Best }) {
               rating: card.peak,
               number: card.number,
               legendScore: card.legendScore,
+              specials: card.specials,
               attrs: card.attrs,
               attrsEstimated: card.attrsEstimated,
               height: card.height,
@@ -1033,6 +1035,65 @@ function Ranks({ recap }: { recap: Recap }) {
           {`${L.achScore} ${num(recap.achievements.score)} · ${L.achDone({ n: recap.achievements.done })}`}
         </Txt>
       ) : null}
+    </Card>
+  );
+}
+
+/** T-11-372 시즌 특별 카드(모든 구단주) — 개인상 셋 다음에 베스트 11, 내 선수는 강조 테두리(웹 SeasonRecap specials). */
+function Specials({ recap }: { recap: Recap }) {
+  const c = useColors();
+  const best = recap.seasonBest ?? [];
+  if (best.length === 0) return null;
+  const mine = new Set(best.filter((x) => x.mine).map((x) => x.card.careerId)).size;
+  return (
+    <Card gap={10} testID="recap-section-specials">
+      <Sec>{L.secSpecials}</Sec>
+      <Lead>{L.specialsLead}</Lead>
+      {mine > 0 ? (
+        <Txt testID="recap-specials-mine" style={{ fontWeight: '700' }}>
+          {L.specialsMineCount({ n: mine })}
+        </Txt>
+      ) : null}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 12, columnGap: 8 }}>
+        {best.map((x) => (
+          <View
+            key={`${x.special.kind}:${x.card.careerId}`}
+            testID={`recap-special-${x.special.kind}`}
+            style={{
+              width: 74,
+              alignItems: 'center',
+              gap: 3,
+              borderRadius: 6,
+              borderWidth: x.mine ? 2 : 0,
+              borderColor: c.accent,
+              padding: x.mine ? 1 : 3,
+            }}
+          >
+            <PlayerCard
+              compact
+              animate={false}
+              code={detailPosOf(x.card)}
+              cell={{
+                name: playerName(x.card.publicName, x.card.pos, null),
+                careerId: x.card.careerId,
+                look: x.card.look,
+                nation: x.card.nation,
+                season: x.card.season,
+                rating: x.card.peak,
+                number: x.card.number,
+                legendScore: x.card.legendScore,
+                specials: [x.special],
+                youth: false,
+              }}
+            />
+            {x.mine ? (
+              <Txt style={{ color: c.accent, fontSize: rem(0.7), fontWeight: '700' }}>
+                {L.specialsMine}
+              </Txt>
+            ) : null}
+          </View>
+        ))}
+      </View>
     </Card>
   );
 }

@@ -13,7 +13,7 @@ import { grantSportsService } from './military.js';
 import { gNationalText as L } from './i18n/ko/gNational.js';
 import { tn } from './i18n/names.js';
 
-const NT_THRESHOLD = 80;
+export const NT_THRESHOLD = 80;
 const AFC_NT: [string, number][] = [
   ['일본', 77],
   ['이란', 74],
@@ -187,6 +187,13 @@ const CONT_CUP: Record<
     year: (y) => y % 4 === 0,
   },
 };
+/** T-11-543 올해 내 연맹의 대륙컵이 열리면 그 연맹(이벤트 문구가 대회 이름을 고른다), 아니면 null. */
+export function contCupConf(s: GameState): Confed | null {
+  const conf = natSide(s).conf;
+  return CONT_CUP[conf].year(s.year) ? conf : null;
+}
+/** T-11-543 와일드카드(나이 제한을 넘은 선수) 제안에 답한 결과 플래그. true면 명단에 든다, false면 가지 않는다. */
+export const oaFlag = (key: string, year: number) => `oa${key}${year}`;
 /** 대표팀 트로피 이름들(대륙컵·월드컵·올림픽·아시안게임) — 기록의 club을 대표팀으로 적는 데 쓴다. */
 export const NATIONAL_TROPHIES = new Set([...NATIONAL_WINS, '올림픽 은메달', '올림픽 동메달']);
 /** 단계(phase)별 A매치 기간의 달 — 이름은 만들 때 지금 언어로 붙인다. */
@@ -262,11 +269,12 @@ function simIntl(
   comp: string,
   stage = '',
   youth = false,
+  teamBonus = 0,
 ): IntlResult {
   const side = natSide(s);
   const P = scoreRate(s),
     o = ovr(s),
-    teamStr = youth ? side.u23 : side.str;
+    teamStr = (youth ? side.u23 : side.str) + teamBonus;
   let mins = 0;
   if (role === 'starter') mins = chance(0.82) ? 90 : ri(60, 85);
   else if (role === 'sub') mins = chance(0.6) ? ri(10, 35) : 0;
@@ -492,6 +500,10 @@ function squadRole(
   if (s.injury > 0) return { role: 'none', why: L.whyInjury };
   if (T.youth) {
     const young = s.age <= 23;
+    // T-11-543 와일드카드 제안(bigstage-events.ts oa-wildcard)에 답했으면 그대로 따른다 — 구단 허락까지 받은 뒤라 차출 협상도 없다.
+    const oa = young ? undefined : s.flags[oaFlag(key, s.year)];
+    if (oa === false) return { role: 'none', why: '' };
+    if (oa === true) return { role: 'starter', why: L.whyWildcard };
     const need = young ? 68 : 84;
     if (sc < need + gauss() * 1.5) return { role: 'none', why: young ? L.whyCut : '' };
     // 아시안게임·올림픽 남자축구는 의무 차출 대회가 아니라 해외 구단은 거절할 수 있다(T-10-016 올림픽 추가).
@@ -570,7 +582,15 @@ function runTournament(s: GameState, key: string) {
   const { role, why } = squadRole(s, T, key);
   const matches: IntlResult[] = [];
   const play = (opp: [string, number], stage: string) => {
-    const m = simIntl(s, opp, role, T.label(y), stage, T.youth);
+    const m = simIntl(
+      s,
+      opp,
+      role,
+      T.label(y),
+      stage,
+      T.youth,
+      key === 'ag' && isKorean(s) ? BAL.agKoreaBonus : 0,
+    );
     matches.push(m);
     return m;
   };
@@ -684,4 +704,36 @@ export function natSeasonEnd(s: GameState) {
     addStat(s, 'fame', 6);
   }
   return { tours: out, trophies };
+}
+
+/** Tournament calendar, with qualification kept separate from squad selection. */
+export function nationalCalendar(s: GameState) {
+  const side = natSide(s),
+    cont = CONT_CUP[side.conf];
+  const defs = tournaments(side);
+  const rows: {
+    year: number;
+    key: string;
+    name: string;
+    age: number;
+    youth: boolean;
+    qualified: boolean | undefined;
+  }[] = [];
+  for (let year = s.year; year < s.year + 4; year++) {
+    const keys: string[] = [];
+    if (year % 4 === 2) keys.push('wc');
+    if (year % 4 === 2 && side.conf === 'AFC') keys.push('ag');
+    if (cont.year(year)) keys.push(cont.key);
+    if (year % 4 === 0) keys.push('olympic');
+    for (const key of keys)
+      rows.push({
+        year,
+        key,
+        name: defs[key]!.label(year),
+        age: s.age + year - s.year,
+        youth: defs[key]!.youth,
+        qualified: key === 'wc' || key === 'olympic' ? s.nat.qual[year] : undefined,
+      });
+  }
+  return rows;
 }

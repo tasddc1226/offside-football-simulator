@@ -239,7 +239,9 @@ export const STORY_EVENTS: EventDef[] = [
         label: '조기 복귀를 강행한다',
         p: (s) =>
           clamp(
-            (s.story.rehab!.surgery ? 0.6 : 0.4) + (s.attrs.phy - 65) * 0.015 - (s.age - 26) * 0.02,
+            (s.story.rehab!.surgery ? 0.65 : 0.45) +
+              (s.attrs.phy - 65) * 0.015 -
+              (s.age - 26) * 0.02,
             0.15,
             0.85,
           ),
@@ -270,6 +272,7 @@ export const STORY_EVENTS: EventDef[] = [
           fx: (s) => {
             addStat(s, 'cond', 20);
             addAttr(s, 'phy', 1);
+            addStat(s, 'trust', -0.5);
             advanceStory(s, 'rehab', 2);
             schedule(s, 'rehab-3', 1, 12);
           },
@@ -345,7 +348,7 @@ export const STORY_EVENTS: EventDef[] = [
     choices: [
       {
         label: '기자회견에서 공개 사과한다',
-        p: (s) => clamp(0.55 + s.trust * 0.05, 0.3, 0.85),
+        p: (s) => clamp(0.5 + s.trust * 0.05, 0.3, 0.85),
         ok: {
           text: '진심 어린 사과에 여론이 조금씩 돌아서고 있습니다.',
           fx: (s) => {
@@ -369,7 +372,7 @@ export const STORY_EVENTS: EventDef[] = [
       },
       {
         label: '침묵으로 버틴다',
-        p: (s) => clamp(0.85 - s.fame / 120, 0.12, 0.8),
+        p: (s) => clamp(0.9 - s.fame / 160, 0.2, 0.8),
         ok: {
           text: '다른 뉴스에 묻혀 조용히 잊혀졌습니다. 구단도 조용한 처신을 반겼습니다.',
           fx: (s) => {

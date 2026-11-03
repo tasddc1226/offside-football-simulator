@@ -28,6 +28,9 @@ const ko = {
   restoreBusy: '확인 중…',
   restoreNone: '복원할 멤버십이 없어요.',
   adOwned: '광고 제거를 이미 샀다면 멤버십이 끝나도 그대로 유지돼요.',
+  webBuy: (p: { price: string; days: number }) => `웹에서 ${p.days}일 이용권 사기 · ${p.price}원`,
+  webOnce:
+    '웹에서 산 이용권은 자동으로 다시 결제되지 않아요. 기간이 남았을 때 다시 사면 끝나는 날부터 이어져요.',
   notOnSale: '지금은 멤버십 가입을 받지 않아요.',
   webJoin: '가입은 앱에서 할 수 있어요. 앱에서 가입한 멤버십 혜택은 웹에서도 받아요.',
   login: '로그인한 구단주만 클럽 멤버십을 쓸 수 있어요.',

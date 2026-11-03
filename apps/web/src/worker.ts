@@ -1,4 +1,5 @@
 import { withCampaignBanner } from './app-banner.js';
+import { consentRegion, consentRegionCookie } from './consent-region.js';
 import { storeRedirect } from './store-redirect.js';
 import { serveNews, newsSitemap } from './public-news.js';
 import {
@@ -10,7 +11,12 @@ import {
 import { NEWS_ID } from './news-id.js';
 import { resolveApiBaseUrl } from './api/base-url.js';
 import { fetchHofEntry } from './hof-entry.js';
-import { careerShareMeta, injectShareMeta, shareLang } from './share-meta.js';
+import {
+  FRIEND_INVITE_PARAM,
+  FRIEND_INVITE_PATH,
+  normalizeFriendCode,
+} from '@offside/contracts/friend-code';
+import { careerShareMeta, injectShareMeta, inviteShareMeta, shareLang } from './share-meta.js';
 import { OG_CARD_PATH, SHARE_PATH } from './share-path.js';
 
 interface Fetcher {
@@ -100,6 +106,22 @@ async function withShareMeta(shellP: Promise<Response>, id: string, url: URL): P
   }
 }
 
+// T-11-621 친구 초대 링크 미리보기(카카오톡 · 앱 공유 시트 등). 코드 형식만 보고 API는 부르지 않는다.
+async function withInviteMeta(
+  shellP: Promise<Response>,
+  code: string,
+  url: URL,
+): Promise<Response> {
+  const shell = await shellP;
+  if (!shell.ok) return shell;
+  const meta = inviteShareMeta(code, url.origin, shareLang(url.searchParams.get('lang')));
+  const html = injectShareMeta(await shell.text(), meta);
+  const headers = new Headers(shell.headers);
+  headers.delete('Content-Length');
+  headers.delete('ETag');
+  return new Response(html, { status: shell.status, headers });
+}
+
 // T-10-037: 연결 미리 열기를 HTML이 아니라 응답 헤더로 알린다 — Cloudflare가 HTML의 fonts preconnect 태그를
 // 지워 내보내고(존 설정), 헤더는 그대로 둔다. 폰트 파일(gstatic)은 폰트 CSS를 읽은 뒤에야 요청되고, API는
 // 번들이 돈 뒤에 부르므로 둘 다 미리 열어 두면 그만큼 기다리지 않는다. API는 쿠키를 싣는 요청이라 crossorigin 없이.
@@ -113,6 +135,15 @@ function withPreconnect(response: Response, url: URL): Response {
   return result;
 }
 
+// T-11-597 HTML 응답에 접속 나라로 정한 동의 지역 쿠키를 붙인다(화면이 동의 창을 띄울지 정한다).
+function withConsentRegion(response: Response, request: Request): Response {
+  if (!response.headers.get('Content-Type')?.startsWith('text/html')) return response;
+  const country = (request as { cf?: { country?: unknown } }).cf?.country;
+  const result = new Response(response.body, response);
+  result.headers.append('Set-Cookie', consentRegionCookie(consentRegion(country)));
+  return result;
+}
+
 function withCacheControl(response: Response, value: string): Response {
   const result = withRobots(response, 'noindex, nofollow');
   result.headers.set('Cache-Control', value);
@@ -123,9 +154,16 @@ export default {
   async fetch(request: Request, env: Env, ctx: Ctx): Promise<Response> {
     const url = new URL(request.url);
     if (OG_CARD_PATH.test(url.pathname)) return careerCard(request, env, ctx);
-    return withPreconnect(
-      await withCampaignBanner(await route(request, env, url, ctx), url, env.APPLE_PROVIDER_TOKEN),
-      url,
+    return withConsentRegion(
+      withPreconnect(
+        await withCampaignBanner(
+          await route(request, env, url, ctx),
+          url,
+          env.APPLE_PROVIDER_TOKEN,
+        ),
+        url,
+      ),
+      request,
     );
   },
 };
@@ -138,7 +176,39 @@ const SHORT_LINKS: Record<string, string> = {
     '/?utm_source=youtube&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_short',
 };
 
+// T-11-622 앱 바로 열기 검증 파일. Apple · Google이 주소 그대로 가져가므로 리다이렉트 없이 JSON으로 내린다.
+const APP_LINK_FILES: Record<string, unknown> = {
+  '/.well-known/apple-app-site-association': {
+    applinks: {
+      details: [
+        {
+          appIDs: ['WK93KW2348.com.offsidelab.app'],
+          components: [{ '/': '/invite/*' }, { '/': '/career/*' }],
+        },
+      ],
+    },
+  },
+  '/.well-known/assetlinks.json': [
+    {
+      relation: ['delegate_permission/common.handle_all_urls'],
+      target: {
+        namespace: 'android_app',
+        package_name: 'com.offsidelab.app',
+        // Play 앱 서명 키(첫 값이 지금 키, 나머지는 교체 전 키. 옛 키로 설치한 기기도 검증되게 모두 둔다).
+        sha256_cert_fingerprints: [
+          '6F:1D:DC:1E:3A:21:30:23:DC:62:E9:73:91:E3:F4:5A:D2:55:4C:0A:12:3B:6C:56:AC:11:FC:DA:C8:36:4C:D6',
+          '57:CC:CB:11:24:BA:DB:8A:3E:C6:72:D1:8C:E2:B9:8B:B4:F9:47:DE:87:5E:D9:9C:CC:C5:DB:56:73:13:26:1C',
+          '4D:08:15:29:17:A4:58:88:1F:5D:C0:91:CD:E1:02:52:66:04:BF:18:1A:93:3B:60:20:3A:B7:24:2D:CB:A8:5A',
+        ],
+      },
+    },
+  ],
+};
+
 async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Response> {
+  const appLinkFile = APP_LINK_FILES[url.pathname];
+  if (appLinkFile)
+    return Response.json(appLinkFile, { headers: { 'Cache-Control': 'public, max-age=3600' } });
   if (url.pathname === '/get' || url.pathname === '/get/')
     return new Response(null, {
       status: 302,
@@ -196,6 +266,15 @@ async function route(request: Request, env: Env, url: URL, ctx: Ctx): Promise<Re
   const shareId = asset.status === 404 ? SHARE_PATH.exec(url.pathname)?.[1] : undefined;
   if (shareId)
     return withRobots(await withShareMeta(appShell(), shareId, url), 'noindex, nofollow');
+  const inviteRaw =
+    FRIEND_INVITE_PATH.exec(url.pathname)?.[1] ??
+    (url.pathname === '/' ? url.searchParams.get(FRIEND_INVITE_PARAM) : null);
+  const inviteCode =
+    inviteRaw !== null && ['GET', 'HEAD'].includes(request.method)
+      ? normalizeFriendCode(inviteRaw)
+      : null;
+  if (inviteCode)
+    return withRobots(await withInviteMeta(appShell(), inviteCode, url), 'noindex, nofollow');
   let indexingEnabled = false;
   try {
     const policyUrl = new URL('/seo-policy.json', url.origin);

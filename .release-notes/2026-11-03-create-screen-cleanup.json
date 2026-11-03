@@ -1,0 +1,34 @@
+{
+  "id": "t-11-629-create-screen-cleanup",
+  "title": "선수 만들기 화면 정리",
+  "items": [
+    "후보 카드 아래 버튼을 고른 후보 · 다른 후보 찾기 · 잠재력 확인으로 묶었어요.",
+    "후보 화면과 입력 단계의 안내 문구를 다듬고 겹치는 안내를 뺐어요.",
+    "후보 카드가 부드럽게 열려요."
+  ],
+  "en": {
+    "title": "Player creation screen cleanup",
+    "items": [
+      "Buttons below the candidate cards are now grouped into selected candidate, finding other candidates and checking potential.",
+      "Guidance on the candidate and input steps is clearer, and repeated hints are gone.",
+      "Candidate cards now open smoothly."
+    ]
+  },
+  "ja": {
+    "title": "選手作成画面の整理",
+    "items": [
+      "候補カード下のボタンを、選んだ候補・別の候補を探す・ポテンシャルの確認にまとめました。",
+      "候補画面と入力ステップの案内を見直し、重複する案内をなくしました。",
+      "候補カードがなめらかに開くようになりました。"
+    ]
+  },
+  "zh": {
+    "title": "球員創建畫面整理",
+    "items": [
+      "候選卡片下方的按鈕已整理為已選候選、尋找其他候選與查看潛力。",
+      "調整了候選畫面與輸入步驟的說明，並移除重複的提示。",
+      "候選卡片現在會流暢展開。"
+    ]
+  },
+  "availability": "web-app"
+}

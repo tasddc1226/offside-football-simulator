@@ -18,6 +18,8 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   hintDirty: 'Save your lineup changes to play matches.',
   hintNoStarters: 'Add at least one retired player to play matches.',
   hintNoMatches: "You've played all of today's matches. They reopen at midnight Korea time.",
+  hintNoMatchesNext: (p: { time: string }) =>
+    `You've played all of today's matches. One more opens at ${p.time}.`,
   hintRest: 'The off-season break. You can play once the next season opens.',
   hintPast: 'Past-season teams are view only. Pick the current season to play.',
   achOneClubHint:
@@ -38,6 +40,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achRewardGot: (p) => `Received: ${p.items}`,
   achRewardBoost: (p) => plural(p.n, 'potential boost ticket'),
   achRewardScout: (p) => plural(p.n, 'premium scout ticket'),
+  achRewardReroll: (p) => plural(p.n, 'reroll ticket'),
   achRankNone: 'Complete an achievement to join the ranking',
   achRank: (p) => `#${p.rank} of ${p.ranked}`,
   achCatPlayer: 'Player achievements',

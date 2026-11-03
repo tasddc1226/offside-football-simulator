@@ -3,7 +3,7 @@
   // 못한 시도는 같은 멱등 키로 다시 보내 두 번 판정되지 않는다. 결과는 열린 카드(careerId)에만 돌려준다.
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { enhanceCard, fetchEnhanceState, type EnhanceResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
-  import { enhanceErrorText, enhanceKeepKey, enhanceResultText, enhanceView } from '@offside/app-core/cardEnhance';
+  import { enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView } from '@offside/app-core/cardEnhance';
   import { fundsText } from '@offside/app-core/funds';
   import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
   import { lockScroll } from '../scrollLock.js';
@@ -82,22 +82,23 @@
     <dl class="grid">
       <div><dt>{L.now} → {L.next}</dt><dd data-enhance-step>{view.next === null ? `+${view.level}` : `+${view.level} → +${view.next}`}</dd></div>
       <div><dt>{L.rate}</dt><dd data-enhance-rate>{view.next === null ? '-' : view.ratePct}</dd></div>
+      <div><dt>{L.keep}</dt><dd data-enhance-keep>{view.next === null ? '-' : view.keepPct}</dd></div>
+      <div><dt>{L.fail}</dt><dd data-enhance-down>{view.next === null ? '-' : view.downPct}</dd></div>
       <div><dt>{L.cost}</dt><dd data-enhance-cost>{view.costText}</dd></div>
-      <div><dt>{L.tries}</dt><dd data-enhance-tries>{view.triesText}</dd></div>
+      <div><dt>{L.fxLabel}</dt><dd data-enhance-fx>{view.fxText}</dd></div>
     </dl>
     {#if view.ovrText}<p class="ovr" data-enhance-ovr>{view.ovrText}</p>{/if}
-    {#if view.next !== null}
-      <p class="muted fs-sm">{L.failStay}{#if view.ceilingText} <span data-enhance-ceiling>{view.ceilingText}</span>{/if}</p>
-    {/if}
+    {#if view.tierText}<p class="muted fs-sm" data-enhance-tier>{view.tierText}</p>{/if}
+    {#if view.failText}<p class="muted fs-sm" data-enhance-fail-note>{view.failText}</p>{/if}
     {#if result}
-      <p class="result" class:good={result.success} role="status" data-enhance-result={result.success ? 'success' : 'fail'}>{enhanceResultText(result)}</p>
+      <p class="result" class:good={result.success} class:bad={enhanceResultKind(result) === 'down'} role="status" data-enhance-result={enhanceResultKind(result)}>{enhanceResultText(result)}</p>
     {/if}
+    {#if result && enhanceTitleText(result.titles)}<p class="result good" role="status" data-enhance-title>{enhanceTitleText(result.titles)}</p>{/if}
     {#if error}<p class="note" role="alert" data-enhance-error>{error}</p>{/if}
     {#if view.block}<p class="note" data-enhance-block>{view.block}</p>{/if}
     <button class="btn btn-primary btn-block" disabled={busy || !view.body} onclick={go} data-act="enhance-go">{busy ? L.going : L.go}</button>
     <p class="muted fs-xs foot">
       {L.balance} {fundsText(info.balance)}<br />
-      {#if view.next !== null}{view.nextTryText} {/if}{L.triesHow({ n: info.rules.startsPerTry })}<br />
       {L.effectNote}
     </p>
   {/if}
@@ -119,5 +120,6 @@
   .note{padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:13px;line-height:1.6;}
   .result{margin:10px 0;font-weight:600;}
   .result.good{color:var(--good);}
+  .result.bad{color:var(--warn);}
   .foot{margin-top:10px;line-height:1.6;}
 </style>

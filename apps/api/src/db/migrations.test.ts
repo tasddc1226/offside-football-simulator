@@ -118,6 +118,19 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'updated_at',
     // T-11-374 카드 과제를 낸 횟수(헌납의 명가).
     'exchanges',
+    // T-11-556 단계 · 새 칭호.
+    'forwards',
+    'positions',
+    'nations',
+    'cups',
+    'podiums',
+    'seasons',
+    'division',
+    'enhance_tries',
+    'enhance_keeps',
+    'enhance_downs',
+    'enhance_near',
+    'enhance_spent',
   ],
   cup_entries: [
     'cup_id',
@@ -262,6 +275,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'first_touch_id',
     'last_touch_id',
   ],
+  card_specials: ['career_id', 'season', 'kind', 'rank', 'rule_version', 'created_at'],
   cards: [
     'career_id',
     'owner_id',
@@ -288,11 +302,9 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'consumed_in',
     // T-11-548 기록이 지워진 카드의 공개 이름.
     'public_name',
-    // T-11-373 카드 강화 단계 · 그 단계 실패 수 · 쌓아 둔 선발 경기 수 · 쓴 시도권.
+    // T-11-373 카드 강화 단계 · 그 단계 실패 수.
     'enhance',
     'enhance_fails',
-    'enhance_starts',
-    'enhance_used',
   ],
   // T-11-373 카드 강화 시도 기록(구단 자금 지출 원장 · 멱등 키).
   card_enhance_log: [
@@ -305,6 +317,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'fails',
     'success',
     'rate_bp',
+    'down_bp',
     'roll',
     'cost',
     'created_at',
@@ -464,6 +477,8 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   ],
   profiles: [
     'avatar_id',
+    // T-11-616 새 이름 점검 기준 시각.
+    'nickname_set_at',
     'id',
     'recovery_code_hash',
     'recovery_code_issued_at',
@@ -760,8 +775,10 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'lineup_value_closed',
     // T-11-570 컵 명단 프리셋 OVR.
     'cup_ovr',
+    // T-11-616 구단 · 감독 이름이 새로 생기거나 바뀐 시각.
+    'name_changed_at',
   ],
-  team_lineup_cards: ['team_id', 'slot', 'career_id', 'since'],
+  team_lineup_cards: ['team_id', 'slot', 'career_id'],
   team_likes: ['team_id', 'profile_id', 'created_at'],
   // T-11-290 팀 프로필 스쿼드 댓글(게시판 댓글과 같은 열, 글 대신 팀에 달린다).
   team_comments: [

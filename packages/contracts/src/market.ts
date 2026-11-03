@@ -8,7 +8,7 @@ import {
 } from './careers.js';
 import { MARKET_CHART_RANGES, MARKET_TYPES, type MarketType } from './market-value.js';
 import { IsoUtcSchema } from './primitives.js';
-import { ENHANCE_MAX } from './card-enhance.js';
+import { ENHANCE_MAX, ENHANCE_TIERS } from './card-enhance.js';
 import { FUNDS_ITEMS, type FundsItem } from './cup.js';
 import { NATION_BY_CODE } from './nations.js';
 import { LEAGUE_BASE, isAmateurClubId, isDefaultClubId } from './club-names.js';
@@ -108,6 +108,8 @@ export const MarketListQuerySchema = z.strictObject({
     .string()
     .refine((id) => isDefaultClubId(id) && !isAmateurClubId(id))
     .optional(),
+  /** T-11-596 카드가 나온 시즌(0 프리시즌). 없으면 모든 시즌. */
+  cardSeason: z.coerce.number().int().min(0).max(99).optional(),
   sort: z.enum(MARKET_SORTS).default('new'),
   page: z.coerce.number().int().min(0).max(10).default(0),
 });
@@ -127,6 +129,9 @@ export const MARKET_RECENT = 10;
  * GET /v1/market — 열린 등록(T-11-425부터 모든 시즌 카드). 시즌 사이 휴식기면 season null · 빈 목록. 모두에게 같은 응답이라 엣지에
  * 담는다 — 내 등록인지는 화면이 /v1/market/me의 listings와 id로 맞춘다.
  */
+/** `GET /v1/market/listings/:id` 열린 등록 하나(라운지 공유에서 구매창을 연다). 없으면 409 LISTING_GONE. */
+export const MarketListingResponseSchema = z.strictObject({ listing: MarketListingSchema });
+export type MarketListingResponse = z.infer<typeof MarketListingResponseSchema>;
 export const MarketListResponseSchema = z.strictObject({
   season: z.number().int().min(0).nullable(),
   items: z.array(MarketListingSchema),
@@ -292,20 +297,18 @@ export const CardLockResponseSchema = z.strictObject({ locked: z.boolean() });
 
 const enhanceLevelSchema = z.number().int().min(0).max(ENHANCE_MAX);
 
-/** T-11-373 카드 강화 수치(운영 도구 밸런스의 활성 버전). 화면이 확률 · 비용 · 시도권을 card-enhance.ts로 그린다. */
+/** T-11-373 카드 강화 수치(운영 도구 밸런스의 활성 버전). 화면이 확률 · 비용을 card-enhance.ts로 그린다. */
 export const EnhanceRulesSchema = z.strictObject({
   open: z.boolean(),
-  startsPerTry: z.number().int().min(1),
   costScale: z.number(),
   rateScale: z.number(),
 });
 
-/** 카드 하나의 강화 상태. starts는 선발로 뛴 랭크 경기 수, used는 쓴 시도권 수. */
+/** 카드 하나의 강화 상태. */
 export const EnhanceCardStateSchema = z.strictObject({
   level: enhanceLevelSchema,
   fails: z.number().int().min(0),
-  starts: z.number().int().min(0),
-  used: z.number().int().min(0),
+  tier: z.enum(ENHANCE_TIERS),
 });
 
 /** GET /v1/cards/:careerId/enhance — 강화 창을 열 때 한 번. 그 카드 상태 · 잔액 · 수치. */
@@ -317,15 +320,15 @@ export const EnhanceStateResponseSchema = z.strictObject({
 export type EnhanceStateResponse = z.infer<typeof EnhanceStateResponseSchema>;
 
 /**
- * POST /v1/cards/:careerId/enhance — 화면에서 본 단계 · 실패 수 · 쓴 시도권 · 비용 · 확률(만분율)을 함께 보낸다. 그 사이 다른 기기에서
+ * POST /v1/cards/:careerId/enhance — 화면에서 본 단계 · 실패 수 · 비용 · 확률(만분율)을 함께 보낸다. 그 사이 다른 기기에서
  * 강화했거나 운영 수치가 바뀌어 다르면 409(ENHANCE_STALE). 같은 시도의 재시도는 Idempotency-Key를 그대로 보내 한 번만 판정 · 차감한다.
  */
 export const EnhanceBodySchema = z.strictObject({
   level: enhanceLevelSchema,
   fails: z.number().int().min(0),
-  used: z.number().int().min(0),
   cost: man,
   rateBp: z.number().int().min(0).max(10_000),
+  downBp: z.number().int().min(0).max(10_000),
 });
 export type EnhanceBody = z.infer<typeof EnhanceBodySchema>;
 
@@ -337,6 +340,8 @@ export const EnhanceResponseSchema = z.strictObject({
   balance: z.number().int(),
   /** 시도 뒤 카드 상태. */
   card: EnhanceCardStateSchema,
+  /** 이 시도로 새로 받은 칭호(없으면 생략). */
+  titles: z.array(z.string()).optional(),
 });
 export type EnhanceResponse = z.infer<typeof EnhanceResponseSchema>;
 export type CardLockResponse = z.infer<typeof CardLockResponseSchema>;

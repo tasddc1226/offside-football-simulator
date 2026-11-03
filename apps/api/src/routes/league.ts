@@ -9,7 +9,6 @@ import {
 } from '@offside/contracts';
 import {
   LEAGUE_FROM_SEASON,
-  LEAGUE_ROUNDS,
   leagueNextTier,
   leaguePhase,
   leagueReward,
@@ -48,7 +47,7 @@ import { currentLeague } from '../team/leagueSchedule.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { reqLang } from '../lang.js';
 import { filledCount } from '../team/sim.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { conflictError, NO_STORE, notFoundError, nowIso, ok } from './shared.js';
 
 // T-11-418 오프사이드 리그: 일정 · 접수(사전 신청 포함 · 취소 · 준비 상태). T-11-418b 배치 결과 · 순위표 · 경기 상세.
@@ -323,7 +322,9 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
       if (!state || !members.length) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
       // T-11-418d 득점 순위는 골이 하나라도 있어야, 마지막 라운드 골 시각은 그 라운드를 치른 뒤에만 읽는다.
       const anyPlayed = matches.some((m) => m.playedAt && !m.forfeit);
-      const finalPlayed = matches.some((m) => m.round === LEAGUE_ROUNDS && m.playedAt);
+      // T-11-540 마지막 라운드는 시즌 길이에 따라 달라 일정에 남은 가장 큰 라운드로 본다.
+      const finalRound = Math.max(0, ...matches.map((m) => m.round));
+      const finalPlayed = matches.some((m) => m.round === finalRound && m.playedAt);
       const [scorers, finalGoals] = await Promise.all([
         anyPlayed ? leagueScorers(db, season, tier, no) : [],
         finalPlayed ? leagueFinalGoals(db, season, tier, no) : new Map<string, never[]>(),
@@ -372,7 +373,7 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
           homeGoals: m.playedAt ? m.homeGoals : null,
           awayGoals: m.playedAt ? m.awayGoals : null,
           forfeit: m.forfeit !== 0,
-          ...(m.round === LEAGUE_ROUNDS && m.playedAt && !m.forfeit
+          ...(m.round === finalRound && m.playedAt && !m.forfeit
             ? { goals: finalGoals.get(m.id) ?? [] }
             : {}),
         })),

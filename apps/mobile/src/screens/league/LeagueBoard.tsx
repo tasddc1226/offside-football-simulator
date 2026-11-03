@@ -21,6 +21,7 @@ import {
   LEAGUE_LIVE_END,
   leagueClinches,
   leagueFinalReady,
+  leagueLastRound,
   leagueLive,
   leagueLegend,
   leagueMatchMid,
@@ -33,7 +34,6 @@ import {
   type LeaguePick,
 } from '@offside/app-core/leagueView';
 import { cupLiveMatch, firstLive } from '@offside/app-core/teamLive';
-import { LEAGUE_ROUNDS } from '@offside/contracts/league';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { alpha } from '../../theme/colors';
@@ -378,7 +378,7 @@ function FinalLive({
     setMinute(LEAGUE_LIVE_END);
   };
   const live = leagueLive(table, minute);
-  const matches = table.matches.filter((m) => m.round === LEAGUE_ROUNDS);
+  const matches = table.matches.filter((m) => m.round === leagueLastRound(table));
   const name = (id: string) => table.teams.find((t) => t.teamId === id)?.name ?? C.tbd;
   return (
     <Card gap={10} testID="league-live">
@@ -506,7 +506,7 @@ function Rounds({
         {L.roundsTitle}
       </Txt>
       <Chips
-        items={Array.from({ length: LEAGUE_ROUNDS }, (_, i) => i + 1)}
+        items={Array.from({ length: leagueLastRound(table) }, (_, i) => i + 1)}
         on={(n) => n === round}
         label={(n) => L.roundName({ n })}
         keyOf={String}
@@ -578,7 +578,7 @@ function Rounds({
           {L.restTeam({ team: t.name })}
         </Txt>
       ))}
-      {round === LEAGUE_ROUNDS && leagueFinalReady(table) ? (
+      {round === leagueLastRound(table) && leagueFinalReady(table) ? (
         <Btn block kind="primary" onPress={onlive} testID="league-final-live">
           {L.finalLive}
         </Btn>

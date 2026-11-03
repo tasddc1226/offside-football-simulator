@@ -77,7 +77,7 @@ import { completeInvite } from '../db/repos/referrals.js';
 import { renameCareer } from '../db/repos/careerRename.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { cupKo } from '../cupText.js';
-import { requireOwner } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 
 const RENAME_ERROR = {
   NOT_MINE: 'renameNotMine',

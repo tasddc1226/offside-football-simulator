@@ -841,27 +841,6 @@ button.what:active {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* T-10-125 홈 TOP 3 기록 요약이 넘치면 흐른다(HofRow flow). 첫 글자를 읽을 틈을 두고 출발하고, 올려 두면 멈춘다. */
-.hof-flow {
-  display: flex;
-  width: max-content;
-}
-.hof-stats.flowing {
-  text-overflow: clip;
-  mask-image: linear-gradient(90deg, transparent, #000 12px, #000 calc(100% - 12px), transparent);
-}
-.hof-stats.flowing .hof-flow {
-  animation: hof-flow 1s linear 1.2s infinite;
-}
-.hof-row:hover .hof-flow,
-.hof-row:active .hof-flow {
-  animation-play-state: paused;
-}
-@keyframes hof-flow {
-  to {
-    transform: translateX(-50%);
-  }
-}
 .hof-row:first-child {
   border-top: 0;
 }
@@ -1220,12 +1199,6 @@ button.hof-row {
   vertical-align: 1px;
 }
 /* 검색은 제목 옆 돋보기를 눌러야 열린다(T-10-105). */
-.hof-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
 .hof-search-btn {
   display: grid;
   place-items: center;
@@ -3906,7 +3879,8 @@ th.n {
   padding: 10px 16px;
   border-radius: var(--radius-sm);
   font-size: var(--fs-body2);
-  z-index: 20;
+  /* 카드 확대(z-index 80) 같은 맨 위 레이어에서 띄운 알림도 가려지지 않게 가장 위에 둔다. */
+  z-index: 90;
   /* 알림 문구일 뿐이라 아래 버튼(시즌 탭 맨 아래 진행 버튼 등)을 누르는 걸 막지 않는다. */
   pointer-events: none;
 }
@@ -6952,14 +6926,14 @@ button.film-raiser:focus-visible {
 }
 .live-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
 }
 .live-stats div {
   container-type: inline-size;
   background: var(--surface-2);
   border-radius: var(--radius-sm);
-  padding: 8px 10px;
+  padding: 8px;
   display: flex;
   flex-direction: column;
   gap: 1px;
@@ -7236,21 +7210,73 @@ button.what {
   font-size: var(--fs-title3);
   line-height: 1.4;
 }
-/* T-11-583 언어 방 고르기 */
-.chat-rooms {
-  flex: none;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--line);
+/* T-11-583 언어 방 고르기 — 헤더의 작은 메뉴(현재 방 이름 + 펼침). */
+.chat-lang {
+  position: relative;
 }
-.chat-rooms .opt {
-  min-height: 36px;
-  padding: 6px 4px;
+.chat-lang summary {
+  list-style: none;
+  display: inline-flex;
   align-items: center;
-  text-align: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
   font-size: var(--fs-label);
   font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.chat-lang summary::-webkit-details-marker {
+  display: none;
+}
+.chat-lang summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.chat-lang-caret {
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.chat-lang[open] .chat-lang-caret {
+  transform: rotate(180deg);
+}
+.chat-lang-pop {
+  position: absolute;
+  z-index: 3;
+  top: 100%;
+  right: 0;
+  display: grid;
+  gap: 2px;
+  min-width: 156px;
+  margin-top: 6px;
+  padding: 6px;
+  background: var(--surface-2);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow);
+}
+.chat-lang-opt {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  font-weight: 600;
+  text-align: left;
+}
+.chat-lang-opt[aria-pressed='true'] {
+  color: var(--accent);
+}
+@media (hover: hover) {
+  .chat-lang-opt:hover {
+    background: var(--surface);
+  }
 }
 .chat-rules {
   position: relative;
@@ -7493,12 +7519,18 @@ button.what {
   min-height: 44px;
   max-height: 112px;
   margin: 0;
-  padding: 10px 12px;
+  /* 테두리 1px씩을 빼고 한 줄(24px) + 위아래 9px가 44px 안에 꼭 맞아야 넘쳐서 스크롤되지 않는다. */
+  padding: 9px 12px;
   line-height: 1.5;
   border-radius: var(--radius-lg);
   resize: none;
   overflow-y: auto;
+  /* 다섯 줄을 넘겨 안에서 스크롤할 때도 막대는 그리지 않는다. */
+  scrollbar-width: none;
   scroll-margin-block: 12px;
+}
+.chat-form textarea::-webkit-scrollbar {
+  display: none;
 }
 .chat-send {
   width: 44px;

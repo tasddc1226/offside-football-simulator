@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { createStep } from './helpers.js';
 
 // T-10-111·112 스카우트 연출과 리세 방지: 후보는 스카우트 시드로 고정되고(뒤로 가기·새로 고침으로 다시 뽑아도
 // 같은 조건이면 같은 후보), 잠재력 평가는 은퇴 전에는 공개되지 않는다.
@@ -26,6 +27,8 @@ test('다시 뽑아도 같은 후보가 나오고, 시작 직후엔 잠재력 �
 
   // 조건(주력)이 바뀌면 그 조건의 후보를 새로 계산한다.
   await page.locator('[data-act="home"]').click();
+  await expect(page.locator('[data-same-candidates]')).toBeVisible();
+  await createStep(page, 'focus');
   await page.locator('[data-set="focus"][data-val="pac"]').click();
   expect(await scout(page)).not.toBe(first);
 

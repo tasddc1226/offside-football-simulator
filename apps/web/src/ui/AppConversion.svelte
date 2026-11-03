@@ -13,7 +13,12 @@
   let viewed = false;
   let eligible = $state(false);
   let element: HTMLElement | undefined = $state();
-  const visible = $derived(ready && (context === 'shop' || (conversionNotice.until <= Date.now() && eligible)));
+  // T-11-611 은퇴 직후에는 옮길 커리어가 없어 다음 선수를 앱에서 시작하기 좋다. 하루 한 번 제한 없이 은퇴할 때마다 보이고, 닫으면 다른 안내와 함께 7일 숨긴다.
+  const visible = $derived(
+    ready &&
+      (context === 'shop' ||
+        (conversionNotice.until <= Date.now() && (eligible || context === 'retire'))),
+  );
   const milestone = $derived(context === 'home' && playedEnough());
   onMount(() => {
     restoreConversionNotice();
@@ -46,13 +51,13 @@
 
 {#if visible}
   <aside bind:this={element} class="card app-conversion" data-app-conversion={context} aria-label={L.conversionTitle}>
-    <div class="heading"><strong>{milestone ? L.conversionMilestone : L.conversionTitle}</strong>{#if context === 'home'}<button class="icon-btn" aria-label={L.conversionDismiss} onclick={dismiss}>×</button>{/if}</div>
+    <div class="heading"><strong>{context === 'retire' ? L.conversionRetireTitle : milestone ? L.conversionMilestone : L.conversionTitle}</strong>{#if context === 'home' || context === 'retire'}<button class="icon-btn" aria-label={L.conversionDismiss} onclick={dismiss}>×</button>{/if}</div>
     <p class="muted fs-sm">{L.conversionBenefit}</p>
     <div class="actions">
       {#if target !== 'android'}<a class="btn btn-accent" data-act="app-store" href={appStoreUrl()} target="_blank" rel="noopener noreferrer" onclick={() => click('ios')}>{L.conversionStore}</a>{/if}
       {#if target !== 'ios'}<a class="btn btn-accent" data-act="play-store" href={playUrl} target={opensInPlace(playUrl) ? undefined : '_blank'} rel="noopener noreferrer" onclick={() => click('android')}>{L.conversionPlay}</a>{/if}
     </div>
-    <p class="muted fs-sm transfer">{L.conversionTransfer}</p>
+    {#if context !== 'retire'}<p class="muted fs-sm transfer">{L.conversionTransfer}</p>{/if}
   </aside>
 {/if}
 

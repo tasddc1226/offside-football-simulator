@@ -167,12 +167,10 @@ async function mockBoards(
   return Object.assign(sent, { views });
 }
 
-test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 전체 보기는 릴리즈 노트만', async ({
-  page,
-}) => {
+test('소식: 전체 보기 → 글 → 댓글, 릴리즈 노트 탭은 릴리즈 노트만', async ({ page }) => {
   const sent = await mockBoards(page, { google: true, nickname: '팬1' });
   await page.goto('/');
-  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
+  await page.locator('[data-home-news] [data-act="news-all"]').click();
   await expect(page.locator('[data-board]')).toHaveAttribute('data-board', 'notice');
   await expect(page.locator(`[data-post-row="${RELEASE.id}"]`)).toHaveCount(0);
   await expect(page.locator('[data-act="new-post"]')).toHaveCount(0);
@@ -200,7 +198,8 @@ test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 �
   });
 
   await page.locator('[data-act="home"]').click();
-  await page.locator('[data-home-news="release"] [data-act="news-all"]').click();
+  await page.locator('[data-home-news] [data-act="news-all"]').click();
+  await page.locator('[data-board-tab="release"]').click();
   await expect(page.locator('[data-board]')).toHaveAttribute('data-board', 'release');
   await expect(page.locator(`[data-post-row="${RELEASE.id}"]`)).toContainText('v1.4.0');
   await expect(page.locator(`[data-post-row="${NOTICE.id}"]`)).toHaveCount(0);
@@ -209,7 +208,7 @@ test('소식: 공지사항 전체 보기 → 글 → 댓글, 릴리즈 노트 �
 test('소식: 구글 로그인 전엔 댓글 대신 로그인 안내가 뜬다', async ({ page }) => {
   await mockBoards(page);
   await page.goto('/');
-  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
+  await page.locator('[data-home-news] [data-act="news-all"]').click();
   await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
   await expect(page.locator('[data-comment-gate="login"]')).toContainText(
     '구글로 로그인하면 댓글을 쓸 수 있어요',
@@ -221,7 +220,7 @@ test('소식: 구글 로그인 전엔 댓글 대신 로그인 안내가 뜬다',
 test('소식: 닉네임을 정하면 바로 그 이름으로 댓글을 쓴다', async ({ page }) => {
   const sent = await mockBoards(page, { google: true });
   await page.goto('/');
-  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
+  await page.locator('[data-home-news] [data-act="news-all"]').click();
   await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
   const gate = page.locator('[data-comment-gate="nickname"]');
   await expect(gate).toBeVisible();
@@ -250,7 +249,8 @@ test('소식: 닉네임을 정하면 바로 그 이름으로 댓글을 쓴다', 
 test('소식: 관리자는 새 글을 쓴다', async ({ page }) => {
   const sent = await mockBoards(page, { admin: true });
   await page.goto('/');
-  await page.locator('[data-home-news="release"] [data-act="news-all"]').click();
+  await page.locator('[data-home-news] [data-act="news-all"]').click();
+  await page.locator('[data-board-tab="release"]').click();
   await page.locator('[data-act="new-post"]').click();
   await page.locator('#post-title').fill('새 버전');
   await page.locator('#post-version').fill('v1.5.0');
@@ -270,7 +270,7 @@ test('소식: 관리자는 새 글을 쓴다', async ({ page }) => {
 test('소식: 글이 하나도 없어도 전체 보기로 들어가 관리자가 첫 글을 쓴다', async ({ page }) => {
   const sent = await mockBoards(page, { admin: true, empty: true });
   await page.goto('/');
-  const notice = page.locator('[data-home-news="notice"]');
+  const notice = page.locator('[data-home-news]');
   await expect(notice).toContainText('아직 올라온 글이 없어요');
   await notice.locator('[data-act="news-all"]').click();
   await expect(page.locator('[data-board]')).toHaveAttribute('data-board', 'notice');
@@ -291,7 +291,7 @@ test('소식: 글이 하나도 없어도 전체 보기로 들어가 관리자가
 test('소식: 목록·글 화면에 접근성 위반이 없다', async ({ page }) => {
   await mockBoards(page, { admin: true });
   await page.goto('/');
-  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
+  await page.locator('[data-home-news] [data-act="news-all"]').click();
   await expect(page.locator(`[data-post-row="${NOTICE.id}"]`)).toBeVisible();
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
   await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
@@ -299,15 +299,70 @@ test('소식: 목록·글 화면에 접근성 위반이 없다', async ({ page }
   expect((await new AxeBuilder({ page }).analyze()).violations.map((v) => v.id)).toEqual([]);
 });
 
-test('홈: 공지사항·릴리즈 노트 섹션에서 글을 누르면 바로 열린다', async ({ page }) => {
+test('홈: 공지사항·릴리즈 노트를 합친 소식에서 글을 누르면 그 게시판으로 바로 열린다', async ({
+  page,
+}) => {
   await mockBoards(page);
   await page.goto('/');
-  await expect(page.locator('[data-home-news="notice"]')).toContainText('서버 점검 안내');
-  const release = page.locator('[data-home-news="release"]');
-  await expect(release).toContainText('v1.4.0');
-  await release.locator(`[data-post-row="${RELEASE.id}"]`).click();
+  const news = page.locator('[data-home-news]');
+  await expect(news).toContainText('서버 점검 안내');
+  await expect(news).toContainText('v1.4.0');
+  await news.locator(`[data-post-row="${RELEASE.id}"]`).click();
   await expect(page.locator('[data-board]')).toHaveAttribute('data-board', 'release');
   await expect(page.locator(`[data-post="${RELEASE.id}"] h2`)).toHaveText('클럽 동기화');
+});
+
+test('홈 소식: 최근 공지 1개를 맨 위에 두고 나머지는 최신 글로 채운다', async ({ page }) => {
+  await mockBoards(page);
+  const post = (id: string, board: string, createdAt: string, pinned = false) => ({
+    ...(board === 'notice' ? NOTICE : RELEASE),
+    id,
+    title: id,
+    pinned,
+    createdAt,
+    updatedAt: createdAt,
+  });
+  await page.route(`${API}/v1/boards/notice/posts**`, (r) =>
+    r.fulfill(
+      ok({
+        posts: [
+          post('old-pinned', 'notice', '2026-01-01T00:00:00.000Z', true),
+          post('notice-new', 'notice', '2026-03-03T00:00:00.000Z'),
+        ],
+        hasMore: false,
+      }),
+    ),
+  );
+  await page.route(`${API}/v1/boards/release/posts**`, (r) =>
+    r.fulfill(
+      ok({
+        posts: [
+          post('release-new', 'release', '2026-03-04T00:00:00.000Z'),
+          post('release-mid', 'release', '2026-03-02T00:00:00.000Z'),
+        ],
+        hasMore: false,
+      }),
+    ),
+  );
+  await page.goto('/');
+  const rows = page.locator('[data-home-news] [data-post-row]');
+  await expect(rows).toHaveCount(3);
+  expect(await rows.evaluateAll((els) => els.map((e) => e.getAttribute('data-post-row')))).toEqual([
+    'notice-new',
+    'release-new',
+    'release-mid',
+  ]);
+});
+
+test('홈 소식: 한 게시판만 실패하면 불러온 글을 보여 준다', async ({ page }) => {
+  await mockBoards(page);
+  await page.route(`${API}/v1/boards/release/posts**`, (r) =>
+    r.fulfill({ status: 503, contentType: 'application/json', body: '{}' }),
+  );
+  await page.goto('/');
+  const news = page.locator('[data-home-news]');
+  await expect(news).toContainText(NOTICE.title);
+  await expect(news.locator('.empty')).toHaveCount(0);
 });
 
 test('홈 하단 메뉴: 소식 → 릴리즈 노트로 바꾸기 → 기록실 → 구단주 → 설정 → 홈', async ({
@@ -403,7 +458,7 @@ test('새 소식 알림: 마지막으로 본 뒤 올라온 글을 화면 위에 
   await expect(page.locator(`[data-post-row="${id}"] [data-post-new]`)).toHaveCount(0);
   // 다시 열면(다음 실행) 이미 본 글이라 NEW도 알림도 없다.
   await page.goto('/');
-  await expect(page.locator('[data-home-news="notice"]')).toContainText(NOTICE.title);
+  await expect(page.locator('[data-home-news]')).toContainText(NOTICE.title);
   await expect(page.locator('[data-post-new]')).toHaveCount(0);
   await expect(banner).toHaveCount(0);
 });
@@ -413,7 +468,7 @@ test('새 소식 알림: 처음 온 기기에는 지금까지의 글을 알리�
 }) => {
   await mockBoards(page);
   await page.goto('/');
-  await expect(page.locator('[data-home-news="notice"]')).toContainText(NOTICE.title);
+  await expect(page.locator('[data-home-news]')).toContainText(NOTICE.title);
   await expect(page.locator('[data-news-banner]')).toHaveCount(0);
   expect(await page.evaluate(() => localStorage.getItem('ft_news_seen'))).toBe(
     JSON.stringify(NOTICE.createdAt),
@@ -450,7 +505,7 @@ test('새 소식 알림: 본 글이 수정되면 다시 알린다', async ({ pag
     JSON.stringify(edited),
   );
   await page.reload();
-  await expect(page.locator('[data-home-news="release"]')).toContainText(RELEASE.title);
+  await expect(page.locator('[data-home-news]')).toContainText(RELEASE.title);
   await expect(banner).toHaveCount(0);
 });
 
@@ -469,7 +524,7 @@ test('comments display the owner profile thumbnail', async ({ page }) => {
     ),
   );
   await page.goto('/');
-  await page.locator('[data-home-news="notice"] [data-act="news-all"]').click();
+  await page.locator('[data-home-news] [data-act="news-all"]').click();
   await page.locator(`[data-post-row="${NOTICE.id}"]`).click();
   await expect(page.locator(`[data-comment="${COMMENT.id}"] .owner-avatar img`)).toHaveAttribute(
     'src',

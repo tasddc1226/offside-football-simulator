@@ -2,6 +2,7 @@ import type { Translation } from '../core';
 import type { GameActionsMsgs } from '../ko/gameActions';
 
 export const gameActions: Translation<GameActionsMsgs> = {
+  eventLater: 'いったん閉じる',
   natDetail: (p) =>
     `${p.mins}分${p.g ? ` ${p.g}ゴール` : ''}${p.a ? ` ${p.a}アシスト` : ''} · 評価点 ${p.rating}`,
   natBench: 'ベンチ',

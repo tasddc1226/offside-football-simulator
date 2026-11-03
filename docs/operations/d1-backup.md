@@ -72,26 +72,18 @@ D1 Time Travel(30일 시점 복구)과 별개로, D1 밖(R2)에 SQL 사본을 �
 
 ### 복구
 
-빈 D1을 새로 만들어 붓는다(운영 DB에 바로 붓지 않는다 — 확인한 뒤 바꾼다).
+[일관 스냅샷·복구 절차](d1-consistent-recovery.md)를 따른다. 기존 `d1/<env>/<day>/`의 여러 틱에 걸친
+live-copy와 새 `d1-snapshots/production/`의 검증된 공식 export를 구별한다.
+2026-11-02 기존 live-copy 복원은 행 수·물리 무결성이 일치해도 FK 1,711건이 실패했다.
+해당 사본을 검증 없이 운영 D1에 바로 재수입하는 예전 명령 예시는 제거했다.
 
-```bash
-# 조각 수는 cron:backup:last의 chunks(운영 D1 읽기) 또는 R2 대시보드의 d1/production/<day>/ 객체 수.
-DAY=2026-10-15
-N=$(cd apps/api && ./node_modules/.bin/wrangler d1 execute offside-production --env production --remote --json \
-  --command "SELECT json_extract(value,'$.chunks') AS n FROM app_meta WHERE key='cron:backup:last'" | jq '.[0].results[0].n')
-for i in $(seq -f '%04g' 1 "$N"); do
-  wrangler r2 object get "offside-d1-backup/d1/production/$DAY/$i.sql.gz" --remote --file "part-$i.sql"
-done
-cat part-*.sql > dump.sql   # 번호 순 — 첫 조각이 표 생성, 마지막 조각이 인덱스
-wrangler d1 create offside-restore
-wrangler d1 execute offside-restore --remote --file dump.sql
-```
+기존 사본의 로컬 진단에는 `tooling/scripts/restore-backup.py`, 새 스냅샷의 해시·정합성 재검증에는
+`tooling/scripts/snapshot-backup.py verify`를 쓴다. FK 위반·누락 조각·행 수 불일치는 모두 실패로 처리한다.
+검사 결과를 바꾸기 위해 고아 행을 삭제하지 않는다.
 
-2026-10-13 이전의 한 파일 백업은 `wrangler r2 object get offside-d1-backup/d1/production/2026-10-13.sql.gz --remote --file dump.sql`로 받는다.
-
-객체는 gzip으로 저장하지만 `Content-Encoding: gzip`을 달아 둬서, `wrangler r2 object get`(fetch)은 받으면서 풀어 준다.
-이름이 `.sql.gz`여도 받은 파일은 평문 SQL이라 `gunzip`이 `not in gzip format`으로 실패한다. 압축본을 그대로 받는
-도구(S3 API·rclone 등)로 받았을 때만 푼다 — 헷갈리면 `file dump.sql`로 확인한다.
+Time Travel은 같은 DB를 제자리에서 덮어쓴다. 운영 DB에서 훈련하지 않으며 다른 DB로 복제할 수 있다고 가정하지 않는다.
+공식 export도 실행 중 요청을 차단하므로 정비 시간 합의 뒤 명시적으로 실행한다. 현재 자동 live-copy 작업은
+그대로 보존하고, 생성 기록을 `consistency: live-copy`, `restoreVerified: false`로 표시한다.
 
 ## 장애 기록
 

@@ -7,6 +7,8 @@ import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 
 export type TeamShareData = {
+  /** 저장된 내 팀 그대로라 라운지에 올릴 수 있다. */
+  lounge?: boolean;
   name: string;
   logo: TeamLogo | null;
   manager: string;

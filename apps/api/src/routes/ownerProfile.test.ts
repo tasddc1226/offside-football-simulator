@@ -2,6 +2,7 @@ import {
   ErrorEnvelopeSchema,
   OwnerProfileResponseSchema,
   OwnerArchiveResponseSchema,
+  OwnerHallVisitResponseSchema,
   OwnerTitlesResponseSchema,
   PutOwnerTeamResponseSchema,
   PutOwnerTitleResponseSchema,
@@ -16,14 +17,17 @@ import {
   cups,
   ownerSeasonRecords,
   ownerHonors,
+  ownerTitleAwards,
+  ownerTitleProgress,
   appMeta,
 } from '../db/schema.js';
-import { createTestD1, syncCards, type TestD1 } from '../test/d1.js';
+import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
 import { installFakeEdgeCache } from '../test/edgeCache.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 
 const PutTeam = successEnvelope(PutOwnerTeamResponseSchema);
 const OwnerRes = successEnvelope(OwnerProfileResponseSchema);
+const HallRes = successEnvelope(OwnerHallVisitResponseSchema);
 const MyRes = successEnvelope(OwnerTitlesResponseSchema);
 const TitleRes = successEnvelope(PutOwnerTitleResponseSchema);
 const TeamRes = successEnvelope(TeamProfileResponseSchema);
@@ -118,6 +122,45 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
   const putTitle = (cookie: string, title: string | null) =>
     call('PUT', '/v1/owner/title', { cookie, body: { title } });
 
+  it('T-11-619 마감이 끝난 시즌의 순위 배지 · 최초 기록만 대표 칭호로 달 수 있다', async () => {
+    const a = await owner('알파');
+    vi.setSystemTime(new Date('2026-12-30T00:00:00.000Z')); // 프리시즌이 끝난 뒤
+    const insert = (kind: 'achievements' | 'first' | 'wall-of-honor', band: number | null) =>
+      ctx.db.insert(ownerHonors).values({
+        profileId: a.profileId,
+        season: 0,
+        kind,
+        band,
+        rank: band,
+        value: band === null ? 1 : null,
+        grantedAt: AT,
+      });
+    await insert('achievements', 100);
+    await insert('first', null);
+    await insert('wall-of-honor', null);
+    const put = (t: string) => putTitle(a.cookie, t);
+    // 프리시즌 마감 집계가 끝나기 전에는 목록에 없고 달 수도 없다.
+    expect((await put('honor-0-achievements-100')).status).toBe(409);
+    await ctx.db
+      .insert(appMeta)
+      .values({ key: 'season-close:0', value: JSON.stringify({ step: 'done' }) });
+    const my = MyRes.parse(
+      await (await call('GET', '/v1/owner/title', { cookie: a.cookie })).json(),
+    ).data;
+    expect(my.titles).toEqual(
+      expect.arrayContaining(['honor-0-achievements-100', 'honor-0-first']),
+    );
+    expect(my.titles.some((t) => t.includes('wall-of-honor'))).toBe(false);
+    // 받지 않은 단계 · 달 수 없는 종류는 거절한다.
+    expect((await put('honor-0-achievements-1')).status).toBe(409);
+    expect((await put('honor-0-wall-of-honor')).status).toBe(400);
+    expect((await put('honor-0-achievements-100')).status).toBe(200);
+    const pub = OwnerRes.parse(
+      await (await call('GET', `/v1/owners/by-team/${a.team.id}`)).json(),
+    ).data;
+    expect(pub.owner.title).toBe('honor-0-achievements-100');
+  });
+
   it('팀 id로 남의 구단주 프로필을 보고, 받은 칭호 가운데서만 대표 칭호를 고른다', async () => {
     const a = await owner('알파');
     await honor(a, 1, 'champion');
@@ -141,7 +184,8 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
     ).data;
     expect(my).toMatchObject({
       title: null,
-      titles: ['cup-1-champion', 'cup-2-sf', 'owner-founder'],
+      // T-11-556 컵 3개 대회 최종 성적 → 컵 단골.
+      titles: ['cup-1-champion', 'cup-2-sf', 'owner-founder', 'owner-cup-regular'],
       pinned: false,
       teamId: a.team.id,
     });
@@ -174,6 +218,72 @@ describe('/v1/owners · /v1/owner/title (T-11-150 구단주 프로필 · 대표 
       await (await call('GET', `/v1/owners/by-team/${a.team.id}`, { cookie: a.cookie })).json(),
     ).data;
     expect(mine).toMatchObject({ mine: true, owner: { title: 'cup-1-champion' } });
+  });
+
+  describe('남의 명예관 (T-11-618)', () => {
+    const honorRow = (profileId: string, season: number) => ({
+      profileId,
+      season,
+      kind: 'achievements',
+      band: 100,
+      rank: 100,
+      value: null,
+      grantedAt: AT,
+    });
+
+    it('집계가 끝난 시즌의 배지와 받은 칭호만 주고, 진행도를 다시 세지 않는다', async () => {
+      const a = await owner('알파');
+      await honor(a, 1, 'champion');
+      await honor(a, 3, 'qf');
+      await ctx.db.insert(ownerHonors).values(honorRow(a.profileId, 0));
+      await ctx.db.insert(ownerTitleAwards).values({
+        profileId: a.profileId,
+        titleId: 'owner-developer',
+        criteriaVersion: 4,
+        evidence: 10,
+        earnedAt: AT,
+      });
+      const hall = async () =>
+        HallRes.parse(await (await call('GET', `/v1/owners/by-team/${a.team.id}/hall`)).json())
+          .data;
+
+      // 시즌 0이 아직 마감 집계 전이라 배지는 없다. 8강은 칭호가 아니다.
+      expect(await hall()).toEqual({
+        honors: [],
+        titles: ['cup-1-champion', 'owner-developer'],
+      });
+      expect(await ctx.db.select().from(ownerTitleProgress)).toEqual([]);
+
+      await ctx.db.insert(appMeta).values({
+        key: 'season-close:0',
+        value: JSON.stringify({ step: 'done' }),
+      });
+      vi.setSystemTime(new Date('2026-12-30T00:00:00.000Z')); // 프리시즌이 끝난 뒤
+      installFakeEdgeCache(); // 앞선 응답을 비운다
+      expect((await hall()).honors).toMatchObject([{ kind: 'achievements', band: 100, rank: 100 }]);
+      expect(await ctx.db.select().from(ownerTitleProgress)).toEqual([]);
+    });
+
+    it('받은 게 없어도 빈 목록으로 답하고, 없는 팀은 404', async () => {
+      const a = await owner('베타');
+      const res = await call('GET', `/v1/owners/by-team/${a.team.id}/hall`);
+      expect(HallRes.parse(await res.json()).data).toEqual({ honors: [], titles: [] });
+      const missing = await call('GET', `/v1/owners/by-team/tem_${crypto.randomUUID()}/hall`);
+      expect(missing.status).toBe(404);
+    });
+
+    it('쿠키가 있어도 세션을 보지 않고, 같은 팀을 또 열면 DB를 부르지 않는다', async () => {
+      const a = await owner('감마');
+      const { DB, seen } = spyDb(ctx.env.DB);
+      const env = { ...ctx.env, DB };
+      const path = `/v1/owners/by-team/${a.team.id}/hall`;
+      expect((await callJson(env, 'GET', path, { cookie: a.cookie })).status).toBe(200);
+      expect(seen.filter((q) => /"sessions"/.test(q))).toEqual([]);
+      expect(seen.length).toBeGreaterThan(0);
+      const first = seen.length;
+      expect((await callJson(env, 'GET', path, { cookie: a.cookie })).status).toBe(200);
+      expect(seen.length).toBe(first);
+    });
   });
 
   it('없는 팀이면 404, 로그인 안 했으면 명예관을 못 연다', async () => {

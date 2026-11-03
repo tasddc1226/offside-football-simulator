@@ -87,16 +87,19 @@ for (const scheme of ['light', 'dark'] as const) {
       r.fulfill(ok({ entry: hofEntry, snapshot: hofSnapshot })),
     );
     await page.goto('/');
-    await expect(page.locator(`[data-hof-id="${HOF_ID}"]`)).toBeVisible();
+    await expect(page.locator('[data-home-news]')).toBeVisible();
     await expectNoViolations(page, 'home');
+    await page.locator('[data-act="hof"]').click();
+    await expect(page.locator(`[data-hof-id="${HOF_ID}"]`)).toBeVisible();
     await page.locator(`[data-hof-id="${HOF_ID}"]`).click();
     await expect(page.locator('.film-open h1')).toBeVisible();
     await expectNoViolations(page, 'legend');
     await page.goBack();
+    await page.locator('[data-act="home"]').click();
     await page.getByRole('button', { name: /새 커리어 킥오프/ }).click();
     // 처음 열 때 지연 로드되는 생성 화면이 그려진 뒤 접근성을 검사한다.
     await expect(
-      page.getByRole('heading', { level: 1, name: '고교 3학년, 나는 어떤 선수인가' }),
+      page.getByRole('heading', { level: 1, name: '어떤 자리에서 뛸까요' }),
     ).toBeVisible();
     await expectNoViolations(page, 'create-profile');
     await page.locator('[data-act="next-candidates"]').click();

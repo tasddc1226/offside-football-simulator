@@ -47,6 +47,8 @@ const NAMES: Record<string, () => string> = {
   engineRoom: () => L.nameEngineRoom,
   worldSelect: () => L.nameWorldSelect,
   leagueStars: () => L.nameLeagueStars,
+  fullBacks: () => L.nameFullBacks,
+  rightFoot: () => L.nameRightFoot,
 };
 export const exchangeName = (key: string) => NAMES[key]?.() ?? key;
 

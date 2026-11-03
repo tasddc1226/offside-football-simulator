@@ -1,0 +1,34 @@
+{
+  "id": "t-11-605-create-steps",
+  "title": "선수 만들기 개선",
+  "items": [
+    "선수 만들기를 포지션 · 주력 · 특성 · 정보 단계로 나눠 한 화면에 하나씩 고를 수 있어요",
+    "세부 포지션마다 설명과 골 · 도움 비중을 보여 주고, 체격 · 주발 · 외형은 원할 때만 꾸며요",
+    "후보를 눌러 자세히 보고, 세 후보 중 어떤 능력치가 가장 높은지 바로 비교할 수 있어요"
+  ],
+  "en": {
+    "title": "Better player creation",
+    "items": [
+      "Player creation now has separate steps for position, focus, trait and profile, one choice per screen.",
+      "Each specific position shows its own description and goal and assist rates. Build, foot and look are optional.",
+      "Tap a candidate for details and see which attribute leads among the three."
+    ]
+  },
+  "ja": {
+    "title": "選手作成を改善",
+    "items": [
+      "選手作成をポジション・主力・特性・情報のステップに分け、1画面で1つずつ選べるようにしました。",
+      "詳細ポジションごとに説明とゴール・アシストの比重を表示し、体格・利き足・見た目は必要なときだけ変更できます。",
+      "候補をタップすると詳細が開き、3人の中で最も高い能力値をすぐ比べられます。"
+    ]
+  },
+  "zh": {
+    "title": "改善建立球員",
+    "items": [
+      "建立球員分成位置、主力、特質、資料步驟，每個畫面只選一項。",
+      "每個細項位置都會顯示說明與進球・助攻比重，體格、慣用腳和外觀可依需要再自訂。",
+      "點候選即可查看詳情，並馬上比較三人中哪項能力值最高。"
+    ]
+  },
+  "availability": "web-app"
+}

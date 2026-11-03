@@ -13,6 +13,8 @@ import {
   BarlowCondensed_800ExtraBold,
 } from '@expo-google-fonts/barlow-condensed';
 import { boot } from '../game/boot';
+import { startAppLinks } from '../platform/appLink';
+import { openAppLink } from '../platform/inbox';
 import { startPush } from '../platform/push';
 import { syncAdFree } from '../platform/adFree';
 import { recoverIapItems } from '../platform/iapItems';
@@ -22,6 +24,7 @@ import { useColors, useIsDark } from '../theme/useColors';
 import { useSnapshot } from 'valtio';
 import { prefs } from '../store';
 import { RevealEdgeHost } from '../components/RevealFx';
+import { countTouch } from '../platform/playSignals';
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -45,6 +48,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (!show) return;
     startPush();
+    startAppLinks(openAppLink);
     void syncAdFree();
     void recoverIapItems();
     void recoverSeasonPass();
@@ -55,7 +59,7 @@ export default function RootLayout() {
   }, [show]);
   if (!show) return null;
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={{ flex: 1 }} onTouchStart={countTouch}>
       <StatusBar style={dark ? 'light' : 'dark'} />
       <Stack
         key={lang}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { LEAGUE_ROUNDS, leagueFixtures, leaguePyramid } from './league.js';
+import { LEAGUE_CYCLE, leagueFixtures, leaguePyramid } from './league.js';
 
 describe('leaguePyramid (T-11-418b)', () => {
   it('위 부부터 1 · 2 · 4 · 8 …개 리그로, 7 ~ 8팀씩, 8팀 리그를 위로', () => {
@@ -40,7 +40,7 @@ describe('leagueFixtures (T-11-418b)', () => {
   const check = (n: number, games: number) => {
     const ids = Array.from({ length: n }, (_, i) => `t${i}`);
     const rounds = leagueFixtures(ids);
-    expect(rounds).toHaveLength(LEAGUE_ROUNDS);
+    expect(rounds).toHaveLength(LEAGUE_CYCLE);
     const meet = new Map<string, number>();
     const home = new Map<string, number>();
     for (const pairs of rounds) {

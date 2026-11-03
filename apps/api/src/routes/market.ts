@@ -17,6 +17,7 @@ import {
   MarketListQuerySchema,
   MarketFundsResponseSchema,
   MarketListResponseSchema,
+  MarketListingResponseSchema,
   MarketMeResponseSchema,
   ReleaseCardsBodySchema,
   ReleaseCardsResponseSchema,
@@ -37,6 +38,7 @@ import {
   getListing,
   insertListing,
   listOpenListings,
+  openListing,
   marketChart,
   marketFacets,
   marketFunds,
@@ -49,7 +51,7 @@ import {
   setCardLocked,
 } from '../db/repos/market.js';
 import { myFundsSpends } from '../db/repos/itemShop.js';
-import { myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
+import { lockedIdsOf, myTeamIn } from '../db/repos/ownerTeams.js';
 import { checkCupListing, checkCupRelease } from './cup.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
@@ -58,7 +60,8 @@ import { parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { kstDay, kstDays } from '../time.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { kstTodayStart, requireOwner } from './ownerTeam.js';
+import { kstTodayStart } from './ownerTeam.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import {
   conflictError,
   fundsShort,
@@ -111,6 +114,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       nation: c.req.query('nation') || undefined,
       league: c.req.query('league') || undefined,
       club: c.req.query('club') || undefined,
+      cardSeason: c.req.query('cardSeason') || undefined,
       sort: c.req.query('sort') || undefined,
       page: c.req.query('page') || undefined,
     });
@@ -140,6 +144,14 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         ? await edgeCached(c, EDGE.marketList(season, q.sort, q), LIST_TTL, load)
         : await load();
     return ok(c, MarketListResponseSchema, data, 200, CACHE);
+  });
+
+  // 라운지 공유에서 구매창을 연다(공개 · 세션 조회 없음). 팔렸는지 바로 알아야 해서 엣지에 담지 않는다. 기본키 한 줄 조회다.
+  app.get('/v1/market/listings/:listingId', async (c) => {
+    const listing =
+      teamSeasonAt(nowIso()) === null ? null : await openListing(getDb(c), listingIdOf(c));
+    if (!listing) throw listingGone();
+    return ok(c, MarketListingResponseSchema, { listing }, 200, NO_STORE);
   });
 
   // T-11-500 '국적 · 팀' 시트의 고를 거리(공개 · 세션 조회 없음). 열린 매물이 있는 국적 · 리그 · 클럽과 매물 수. 시즌마다 키 하나.
@@ -266,8 +278,8 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     if (card.manager) throw cardManager();
     if (card.openListing) throw conflictError('이미 내놓은 선수예요.', 'CARD_LISTED');
     if (card.locked) throw cardLocked();
-    // T-11-474 지금 시즌 선발은 팀에서 뺀 뒤에 내놓는다(팔기 탭에도 보이지 않는다).
-    if (team && slotIdsOf(team).includes(input.careerId)) throw inLineup();
+    // T-11-474 지금 시즌 선발은 팀에서 뺀 뒤에 내놓는다(팔기 탭에도 보이지 않는다). T-11-604 컵 명단 프리셋도 같다.
+    if (team && lockedIdsOf(team).has(input.careerId)) throw inLineup();
     await checkCupListing(db, me.id, input.careerId);
     const band = priceBand(tradeValue(card.cardValue, card.enhance), rules);
     if (input.price < band.min || input.price > band.max)
@@ -354,7 +366,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       season === null ? Promise.resolve([]) : myTeamIn(db, me.id, season),
       marketRules(db),
     ]);
-    const lineup = new Set(team ? slotIdsOf(team) : []);
+    const lineup = team ? lockedIdsOf(team) : new Set<string>();
     if (input.careerIds.some((id) => lineup.has(id))) throw inLineup();
     await checkCupRelease(db, me.id, input.careerIds);
     const res = await releaseCards(db, {

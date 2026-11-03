@@ -71,17 +71,17 @@
     {#snippet children(r)}
       <div class="stats">
         <Stat
-          label={`${days}일 아이템 + 광고 제거`}
+          label={`${days}일 전체 상품`}
           value={r.total.krw + r.removeAds.krw}
           unit="krw"
           sub="정가 추정 · 환불 반영 · 오늘 포함"
           trend={r.daily.map((x) => x.krw + (x.adKrw ?? 0))}
         />
-        <Stat label="아이템" value={r.total.krw} unit="krw" sub={`${fmt(r.total.count)}건 · 구매자 ${fmt(r.total.buyers)}명`} />
+        <Stat label="아이템·패스·멤버십" value={r.total.krw} unit="krw" sub={`${fmt(r.total.count)}건 · 아이템·패스 구매자 ${fmt(r.total.buyers)}명`} />
         <Stat label="광고 제거" value={r.removeAds.krw} unit="krw" sub={`${fmt(r.removeAds.count)}건 · 환불 ${fmt(r.removeAds.refunds)}`} />
-        <Stat label="첫 구매자" value={r.total.firstBuyers} sub={`아이템 환불 ${fmt(r.total.refunds)}건`} />
+        <Stat label="첫 구매자 (아이템·패스)" value={r.total.firstBuyers} sub={`광고 제거 제외 환불 ${fmt(r.total.refunds)}건`} />
       </div>
-      <p class="note">시즌 패스 · 멤버십 · 광고 수익은 이 합에 없어요. 수익 화면의 일일 수집 지표에서 봐요.</p>
+      <p class="note">시즌 패스·멤버십·광고 제거를 포함한 정가 추정 매출이에요. 광고 수익(AdMob)은 별도예요. 구매자 수는 아이템·패스만 포함하며, 멤버십·광고 제거는 기록된 스토어 알림 기준이에요.</p>
     {/snippet}
   </Load>
 

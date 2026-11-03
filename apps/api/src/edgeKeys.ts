@@ -7,6 +7,8 @@ import { BOARD_KEYS, BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 
 export const EDGE = {
   cupHome: '/v1/cups/home',
+  /** T-11-618 남의 명예관(기록 배지 · 받은 칭호). 팀마다 하나, 버튼을 누를 때만 찬다. TTL로만 새로 읽는다. */
+  ownerHall: (teamId: string) => `/v1/owners/by-team/${teamId}/hall`,
   cupCurrent: '/v1/cups/current',
   /** T-11-418 오프사이드 리그(일정 · 신청 수). TTL로만 새로 읽는다. */
   leagueCurrent: '/v1/leagues/current',
@@ -70,13 +72,18 @@ export const EDGE = {
   /** T-11-080f 시세 차트(시즌 · 기간 · 묶음별). */
   marketChart: (season: number, range: string, group?: { pos: string; band: number }) =>
     `/v1/market/chart?season=${season}&range=${range}${group ? `&pos=${group.pos}&band=${group.band}` : ''}`,
-  /** T-11-080 이적시장 목록은 첫 페이지만 담는다(시즌 · 정렬 · 포지션 · T-11-474 세부 포지션 · 유형별). */
+  /** T-11-080 이적시장 목록은 첫 페이지만 담는다(시즌 · 정렬 · 포지션 · T-11-474 세부 포지션 · 유형 · T-11-596 카드 시즌별). */
   marketList: (
     season: number,
     sort: string,
-    f: { pos?: string | undefined; dpos?: string | undefined; type?: string | undefined } = {},
+    f: {
+      pos?: string | undefined;
+      dpos?: string | undefined;
+      type?: string | undefined;
+      cardSeason?: number | undefined;
+    } = {},
   ) =>
-    `/v1/market?season=${season}&sort=${sort}${f.pos ? `&pos=${f.pos}` : ''}${f.dpos ? `&dpos=${f.dpos}` : ''}${f.type ? `&type=${f.type}` : ''}`,
+    `/v1/market?season=${season}&sort=${sort}${f.pos ? `&pos=${f.pos}` : ''}${f.dpos ? `&dpos=${f.dpos}` : ''}${f.type ? `&type=${f.type}` : ''}${f.cardSeason === undefined ? '' : `&cardSeason=${f.cardSeason}`}`,
   /** T-11-500 열린 매물의 국적 · 리그 · 클럽별 수(시즌별). TTL로만 새로 읽는다. */
   marketFacets: (season: number) => `/v1/market/facets?season=${season}`,
   /** 게시판 목록은 첫 페이지(웹 기본 limit)만 담는다. */

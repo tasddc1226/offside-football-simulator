@@ -8,6 +8,7 @@ import { resumeFixture } from './fixtures/career-save.js';
 
 const REROLL_15 = 'com.offsidelab.app.reroll_15';
 const BOOST_3 = 'com.offsidelab.app.boost_3';
+const BOOST_100 = 'com.offsidelab.app.boost_100';
 const RENAME_5 = 'com.offsidelab.app.rename_5';
 const ORDER = `wp_${'a'.repeat(32)}`;
 const PAY_URL = 'https://sandbox-secure.xsolla.com/paystation4/?token=tok_e2e';
@@ -17,6 +18,7 @@ const config = {
     { productId: 'com.offsidelab.app.reroll_5', item: 'reroll', qty: 5, amount: 1100 },
     { productId: REROLL_15, item: 'reroll', qty: 15, amount: 2200 },
     { productId: BOOST_3, item: 'boost', qty: 3, amount: 1100 },
+    { productId: BOOST_100, item: 'boost', qty: 100, amount: 19800 },
     { productId: 'com.offsidelab.app.scout_1', item: 'scout', qty: 1, amount: 1100 },
     { productId: RENAME_5, item: 'rename', qty: 5, amount: 1100 },
   ],
@@ -91,10 +93,39 @@ test('상점 화면: 아이템마다 앱과 같은 가격의 묶음을 보이고
     '선수 이름 변경권 5장 · 1,100원',
   );
   // 다른 아이템 상품은 섞이지 않는다.
-  await expect(boost.locator('[data-web-pay-product]')).toHaveCount(1);
+  await expect(boost.locator('[data-web-pay-product]')).toHaveCount(2);
   await expect(page.locator('[data-scout-shop]')).not.toContainText('앱에서 살 수 있어요');
   expect(calls()).toBe(1);
 });
+
+for (const width of [320, 390]) {
+  test(`100-ticket pack shows its price and opens the correct order at ${width}px`, async ({
+    page,
+  }, testInfo) => {
+    await page.setViewportSize({ width, height: 844 });
+    await setup(page, config);
+    const orderBody = await fakePayStation(page);
+    await page.goto('/');
+    await page.locator('[data-act="owner"]').click();
+    await page.locator('[data-act="shop"]').click();
+    const button = page.locator(`[data-web-pay-product="${BOOST_100}"]`);
+    await expect(button).toHaveText('잠재력 강화권 100장 · 19,800원');
+    await button.scrollIntoViewIfNeeded();
+    const box = await button.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.x).toBeGreaterThanOrEqual(0);
+    expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', width);
+    await testInfo.attach(`boost-100-${width}px`, {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+    await button.click();
+    await page.waitForURL(/sandbox-secure\.xsolla\.com/);
+    expect(orderBody()).toEqual({ productId: BOOST_100 });
+  });
+}
 
 test('상품을 누르면 서버 주문의 결제창으로 가고, 돌아오면 결제 확인을 기다려 알린다', async ({
   page,
@@ -183,4 +214,43 @@ test('결제 확인이 늦으면 자동으로 들어온다고 알리고, 다음�
   await page.locator('[data-act="shop"]').click();
   await expect(page.getByText('결제가 끝나 아이템이 들어왔어요.')).toBeVisible();
   expect(await page.evaluate(() => localStorage.getItem('ft_webpay_pending'))).toBeNull();
+});
+
+test('T-11-591 클럽 멤버십: 웹 30일 이용권을 사고 돌아오면 멤버십 창을 다시 열어 새 상태를 보인다', async ({
+  page,
+}) => {
+  const MEMBER = 'com.offsidelab.app.club_monthly';
+  await setup(page, { ...config, membership: { productId: MEMBER, amount: 4900, days: 30 } });
+  let paid = false;
+  await page.route(`${API}/v1/membership`, (r) =>
+    r.fulfill(
+      ok(
+        paid
+          ? {
+              active: true,
+              until: '2026-12-01T00:00:00.000Z',
+              autoRenew: null,
+              store: null,
+              stores: [],
+            }
+          : { active: false, until: null, autoRenew: null, store: null, stores: [] },
+      ),
+    ),
+  );
+  await page.route(`${API}/v1/web-pay/orders/${ORDER}`, (r) => r.fulfill(ok({ status: 'PAID' })));
+  const orderBody = await fakePayStation(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="membership"]').click();
+  const buy = page.locator('[data-act="member-web-buy"]');
+  await expect(buy).toContainText('웹에서 30일 이용권 사기 · 4,900원');
+  await buy.click();
+  await page.waitForURL(/sandbox-secure\.xsolla\.com/);
+  expect(orderBody()).toEqual({ productId: MEMBER });
+  paid = true;
+  await page.goto(`/?webpay=${ORDER}`);
+  await expect(page.getByText('결제가 끝나 멤버십 혜택이 시작됐어요.')).toBeVisible();
+  await expect(page.getByText('멤버십을 이용하고 있어요')).toBeVisible();
+  // 웹 이용권 중에도 이어서 살 수 있다.
+  await expect(page.locator('[data-act="member-web-buy"]')).toBeVisible();
 });

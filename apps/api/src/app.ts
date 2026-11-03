@@ -26,6 +26,7 @@ import { registerPushRoutes } from './routes/push.js';
 import { registerNotificationRoutes } from './routes/notifications.js';
 import { registerChatRoutes } from './routes/chat.js';
 import { registerReportRoutes } from './routes/reports.js';
+import { registerAgentNameRoutes } from './routes/agentNames.js';
 import { registerCareerActivityRoutes } from './routes/careerActivity.js';
 import { registerCareerRoutes } from './routes/careers.js';
 import { registerClubCustomRoutes } from './routes/clubCustom.js';
@@ -118,6 +119,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerNotificationRoutes(app);
   registerChatRoutes(app);
   registerReportRoutes(app);
+  registerAgentNameRoutes(app);
   registerBalanceRoutes(app);
   registerClubStrengthRoutes(app);
   registerAdminRoutes(app);

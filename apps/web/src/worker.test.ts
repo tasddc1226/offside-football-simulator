@@ -131,3 +131,77 @@ describe('T-11-585 랜딩 이미지', () => {
     expect(res.headers.get('X-Robots-Tag')).toBeNull();
   });
 });
+
+describe('T-11-597 동의 지역 쿠키', () => {
+  const at = (path: string, country?: string) => {
+    const req = new Request(`https://offside-lab.com${path}`);
+    if (country) Object.defineProperty(req, 'cf', { value: { country } });
+    return worker.fetch(req, { ASSETS: assets }, ctx);
+  };
+  it('HTML 응답에 접속 나라로 정한 지역을 붙인다', async () => {
+    expect((await at('/', 'KR')).headers.get('Set-Cookie')).toMatch(
+      /^offside_consent_region=notice;/,
+    );
+    expect((await at('/', 'DE')).headers.get('Set-Cookie')).toMatch(/^offside_consent_region=ask;/);
+    expect((await at('/settings')).headers.get('Set-Cookie')).toMatch(
+      /^offside_consent_region=ask;/,
+    );
+  });
+  it('정적 파일에는 붙이지 않는다', async () => {
+    expect((await at('/assets/index-abc.js', 'KR')).headers.get('Set-Cookie')).toBeNull();
+  });
+});
+
+describe('T-11-621 친구 초대 링크 미리보기', () => {
+  const shell =
+    '<title>기본</title><meta name="description" content="기본" /><meta property="og:title" content="기본" /><meta property="og:description" content="기본" /><meta property="og:image" content="기본" />';
+  const withShell = {
+    fetch: async (req: Request) =>
+      new URL(req.url).pathname === '/app-shell'
+        ? new Response(shell, { headers: { 'Content-Type': 'text/html; charset=utf-8' } })
+        : assets.fetch(req),
+  };
+  const open = (path: string) =>
+    worker.fetch(new Request(`https://offside-lab.com${path}`), { ASSETS: withShell }, ctx);
+
+  it('올바른 코드면 셸의 미리보기를 초대 문구로 바꾸고 색인하지 않는다', async () => {
+    const res = await open('/invite/ABCD2345');
+    const html = await res.text();
+    expect(html).toContain('친구가 오프사이드 팀 대결에 초대했어요');
+    expect(html).toContain('ABCD-2345');
+    expect(html).toContain('og-offside-v7.png');
+    expect(res.headers.get('X-Robots-Tag')).toBe('noindex, nofollow');
+    expect(await (await open('/invite/ABCD2345?lang=en')).text()).toMatch(/invited you/);
+  });
+
+  it('옛 링크(/?friend=)도 같은 미리보기를 받는다', async () => {
+    expect(await (await open('/?friend=ABCD2345')).text()).toContain('ABCD-2345');
+  });
+
+  it('형식이 틀린 코드는 평소 첫 화면이다', async () => {
+    const html = await (await open('/?friend=<script>')).text();
+    expect(html).toBe('<!doctype html>');
+  });
+});
+
+describe('T-11-622 앱 바로 열기 검증 파일', () => {
+  it('두 파일을 리다이렉트 없이 JSON으로 내린다', async () => {
+    const apple = await get('/.well-known/apple-app-site-association');
+    expect(apple.status).toBe(200);
+    expect(apple.headers.get('Content-Type')).toContain('application/json');
+    const { applinks } = (await apple.json()) as {
+      applinks: { details: { appIDs: string[]; components: unknown[] }[] };
+    };
+    expect(applinks.details[0]!.appIDs).toEqual(['WK93KW2348.com.offsidelab.app']);
+    expect(applinks.details[0]!.components).toEqual([{ '/': '/invite/*' }, { '/': '/career/*' }]);
+    const android = await get('/.well-known/assetlinks.json');
+    expect(android.status).toBe(200);
+    const [link] = (await android.json()) as {
+      target: { package_name: string; sha256_cert_fingerprints: string[] };
+    }[];
+    expect(link!.target.package_name).toBe('com.offsidelab.app');
+    expect(link!.target.sha256_cert_fingerprints).toHaveLength(3);
+    for (const print of link!.target.sha256_cert_fingerprints)
+      expect(print).toMatch(/^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
+  });
+});

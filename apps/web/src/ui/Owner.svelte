@@ -6,7 +6,6 @@
   // Team slots can expand later without duplicating the owner profile, finances or honors.
   import Topbar from './Topbar.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
-  import AdSlot from '../ads/AdSlot.svelte';
   import { fetchOwnerSummary } from '@offside/app-core/api/ownerSummary';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
@@ -28,6 +27,7 @@
   import { go } from './nav.js';
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
+  import { hallDotLabel, hallSeason } from '@offside/app-core/hallEntry';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
   import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
@@ -35,7 +35,6 @@
   import { passEntryOpen } from '@offside/contracts/season-pass';
   import { membershipText as MB } from '@offside/app-core/i18n/ko/membership';
   import { MEMBERSHIP_LIVE } from '@offside/contracts/membership';
-  import { syncMember } from '../ads/ads';
   import type { Component } from 'svelte';
   import { type OwnerTierTag } from '@offside/contracts';
   import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
@@ -43,6 +42,7 @@
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from './cup/TitleBadge.svelte';
+  import { webPay } from './cup/webPay.svelte.js';
 
   // T-10-016: 운영자면 프로필 편집에 운영 도구 표시를 넘긴다(운영 도구 입구는 T-11-567부터 설정 화면의 계정 카드).
   // 관리자는 구글 연결 계정이라, 연결된 계정일 때만 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다).
@@ -88,10 +88,7 @@
   $effect(() => {
     if (!linked) return;
     void fetchOwnerTeam().then((r) => {
-      if (r.ok) {
-        card = ownerTeamCard(r.data);
-        syncMember(card.member);
-      }
+      if (r.ok) card = ownerTeamCard(r.data);
       else cardFailed = true;
     });
   });
@@ -108,6 +105,13 @@
   const funds = $derived(market ? fundsText(market.balance) : '–');
   /** 받은 친구 신청(T-11-142)이나 아직 안 본 새 업적이 있으면 '내 팀' 버튼에 빨간 점, 누르면 바로 친구 · 업적 탭으로. */
   const teamDot = $derived(ownerDotLabel({ friendReq: appState.friendReq, achNew: appState.achNew }));
+  // T-11-604 안 본 새 시즌 결산이 있으면 명예관 칸에도 점, 누르면 그 시즌 결산부터 연다(하단 '구단주' 탭 점이 꺼진다).
+  const hallDot = $derived(hallDotLabel(appState.recapNew));
+  async function openHall() {
+    const season = await hallSeason(appState.recapNew);
+    if (season !== null) appState.honorsSeason = season;
+    go('honors');
+  }
   function openMyTeam() {
     const to = myTeamTarget(appState);
     if (to === 'friends') openFriends();
@@ -134,6 +138,10 @@
     memberOpen = true;
     if (!Member) void import('./owner/Membership.svelte').then((m) => (Member = m.default));
   }
+  // T-11-591 웹 결제창에서 돌아오면 결제를 시작한 시즌 패스 · 멤버십 창을 다시 연다.
+  if (webPay.reopen === 'pass') openPass();
+  else if (webPay.reopen === 'member') openMember();
+  webPay.reopen = null;
   const passEntry = passEntryOpen(new Date().toISOString()) || import.meta.env.DEV;
   const memberEntry = MEMBERSHIP_LIVE || import.meta.env.DEV;
   function openTeam(v: TeamView = 'team') {
@@ -170,7 +178,6 @@
         {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
       </dl>
     </section>
-    <AdSlot place="owner-summary" />
   {/if}
 
   <!-- T-11-338 진행 중인 감독 커리어가 있으면 맨 위에서 이어 한다. -->
@@ -246,8 +253,9 @@
         <button class="owner-tile" data-act="manager" data-owner-manager aria-label={MG.entryAria} onclick={() => go('manager')}>
           <b>{MG.entryTitle}<span class="pill good" data-owner-manager-new>{MG.entryNew}</span></b><span>{L.tileManager}</span>
         </button>
-        <button class="owner-tile" data-act="open-owner-hall" data-owner-hall-entry aria-label={`${H.openHall} · ${H.hallNew}`} onclick={() => go('honors')}>
+        <button class="owner-tile" data-act="open-owner-hall" data-owner-hall-entry aria-label={`${H.openHall} · ${hallDot ?? H.hallNew}`} onclick={() => void openHall()}>
           <b>{H.hallTitle}<span class="pill good" data-owner-hall-new>{H.hallNew}</span></b><span>{L.tileHall}</span>
+          {#if hallDot}<span class="btn-dot" data-hall-dot></span>{/if}
         </button>
         <button class="owner-tile" data-act="shop" data-owner-shop aria-label={L.shopTitle} onclick={() => go('shop')}>
           <b>{L.shopTitle}</b><span>{L.tileShop}</span>
@@ -454,6 +462,7 @@
     gap: 8px;
   }
   .owner-tile {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: flex-start;

@@ -1,0 +1,38 @@
+{
+  "id": "t-11-627-match-odds-card-outlook",
+  "title": "경기 전 예상 확률 · 카드 등급 전망 · 앱 엠블럼 이미지",
+  "items": [
+    "랭크 경기 상대가 잡히면 예상 승 · 무 · 패 확률을 경기 전에 볼 수 있어요.",
+    "커리어 탭에서 지금 레전드 점수와 아이콘 · 레전드 카드까지 남은 점수를 볼 수 있어요.",
+    "영구결번 도전에 심사 조건(이름 공개 · 만 30세 이상 은퇴)을 적었어요.",
+    "앱 설정의 구단 이름 · 엠블럼 변경에서 엠블럼 이미지를 올릴 수 있어요."
+  ],
+  "en": {
+    "title": "Match odds, card outlook and app emblem images",
+    "items": [
+      "Once a ranked opponent is found, you can see the expected win, draw and loss odds before kickoff.",
+      "The Career tab now shows your legend score and the points left to a Legend or Icon card.",
+      "The retired number challenge now states the review conditions: public name and retirement at age 30 or older.",
+      "You can upload emblem images under club name and emblem settings in the app."
+    ]
+  },
+  "ja": {
+    "title": "試合前の予想確率・カード等級の見通し・アプリのエンブレム画像",
+    "items": [
+      "ランク戦の相手が決まると、試合前に勝ち・引き分け・負けの予想確率を確認できます。",
+      "キャリアタブで今のレジェンドスコアと、アイコン・レジェンドカードまでの残り点数を確認できます。",
+      "永久欠番への挑戦に審査条件(選手名の公開・30歳以上での引退)を記載しました。",
+      "アプリのクラブ名・エンブレム設定でエンブレム画像をアップロードできます。"
+    ]
+  },
+  "zh": {
+    "title": "賽前預測機率、卡片等級預測與 App 隊徽圖片",
+    "items": [
+      "排位賽配對到對手後，可在賽前查看預測的勝・和・負機率。",
+      "生涯分頁現在會顯示傳奇分數，以及距離傳奇卡、ICON 卡還差多少分。",
+      "永久背號挑戰已列出審查條件（公開球員名字、30 歲以上退役）。",
+      "可在 App 的俱樂部名稱・隊徽設定中上傳隊徽圖片。"
+    ]
+  },
+  "availability": "web-app"
+}

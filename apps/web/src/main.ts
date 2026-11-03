@@ -12,7 +12,7 @@ import SheetChrome from './ui/SheetChrome.svelte';
 import { loadGame, syncBalance } from './ui/boot.js';
 import { keepStorage } from './ui/helpers.js';
 import { hasSessionHint } from '@offside/app-core/api/client';
-import { routeSharedCareer } from './ui/legend.js';
+import { routeSharedCareer } from './ui/sharedCareerRoute.js';
 import { routeFriendInvite } from './ui/friendInvite.svelte.js';
 import { watchOwnerConflicts } from './ui/ownerConflict.js';
 import { watchRetiredNumberAlerts, watchRetiredNumbers } from './ui/retiredNumber.svelte.js';
@@ -46,7 +46,7 @@ if (/[?&](google|apple)=/.test(location.search))
 if (/[?&]webpay=/.test(location.search))
   void import('./ui/cup/webPay.svelte.js').then((m) => m.handleWebPayReturn());
 routeSharedCareer();
-// T-11-098 친구 초대 링크(`/?friend=코드`)로 들어왔으면 친구 화면을 연다.
+// T-11-098 친구 초대 링크(`/invite/코드`, 옛 `/?friend=코드`)로 들어왔으면 친구 화면을 연다.
 routeFriendInvite();
 const newsLink = new URLSearchParams(location.search);
 if (newsLink.has('news')) {

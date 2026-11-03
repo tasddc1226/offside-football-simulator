@@ -1,39 +1,45 @@
-// T-11-373 카드 강화 창(웹 team/EnhanceSheet.svelte · 앱 screens/owner/EnhanceSheet.tsx)이 그리는 값. 확률 · 비용 · 천장 · 강화 OVR은
+// T-11-373 카드 강화 창(웹 team/EnhanceSheet.svelte · 앱 screens/owner/EnhanceSheet.tsx)이 그리는 값. 확률 · 비용 · 강화 OVR은
 // contracts card-enhance.ts(서버 판정과 같은 식)에서, 운영 수치와 카드 상태는 GET /v1/cards/:careerId/enhance에서 온다.
 import {
   ENHANCE_MAX,
-  enhanceCeilingLeft,
   enhanceCost,
+  enhanceDownBp,
   enhanceOvr,
   enhanceRateBp,
-  enhanceStartsToNext,
-  enhanceTriesLeft,
+  enhanceTierRules,
   enhanceValue,
   type EnhanceCardState,
   type EnhanceRules,
 } from '@offside/contracts/card-enhance';
 import type { EnhanceBody } from '@offside/contracts';
 import { fmtValue } from './format.js';
+import { titleLabel } from './ownerTitle.js';
 import { cardEnhanceText as L } from './i18n/ko/cardEnhance.js';
 
 /** 카드 배지 — 강화 전이면 null. */
 export const enhanceBadge = (level: number | null | undefined) => (level ? `+${level}` : null);
 
+/** 단계별 효과 이름(+1 잔디 ~ +10 마지막 휘슬). */
+export const enhanceFxName = (level: number): string =>
+  [L.fx1, L.fx2, L.fx3, L.fx4, L.fx5, L.fx6, L.fx7, L.fx8, L.fx9, L.fx10][level - 1] ?? '';
+
 export type EnhanceView = {
   level: number;
   next: number | null;
-  /** 이번 시도 성공 확률(정수 퍼센트 문구, 천장이면 100%). */
+  /** 이번 시도 성공 · 유지 · 실패 확률(정수 퍼센트 문구). */
   ratePct: string;
+  keepPct: string;
+  downPct: string;
+  /** 레전드 · 아이콘 카드의 확률 안내(그 밖에는 null). */
+  tierText: string | null;
+  /** 실패하면 어떻게 되는지(+10이면 null). */
+  failText: string | null;
   cost: number | null;
   costText: string;
   /** 강화 OVR 지금 → 성공하면. */
   ovrText: string | null;
-  /** 확정까지 남은 실패 안내(+5면 null). */
-  ceilingText: string | null;
-  triesLeft: number;
-  triesText: string;
-  /** 다음 시도권까지 남은 선발 경기 안내. */
-  nextTryText: string;
+  /** 성공하면 입는 효과 이름 안내(+10이면 지금 효과). */
+  fxText: string;
   /** 시도를 막는 이유(없으면 null). */
   block: string | null;
   /** 서버에 보낼 본 값(시도할 수 있을 때만). */
@@ -46,12 +52,12 @@ export function enhanceView(
   balance: number,
   listed = false,
 ): EnhanceView {
-  const { level, fails } = card;
+  const { level, fails, tier } = card;
+  const odds = enhanceTierRules(rules, tier);
   const cost = enhanceCost(level, rules);
-  const rateBp = enhanceRateBp(level, fails, rules);
+  const rateBp = enhanceRateBp(level, odds);
+  const downBp = enhanceDownBp(level, odds);
   const next = level < ENHANCE_MAX ? level + 1 : null;
-  const triesLeft = enhanceTriesLeft(card, rules);
-  const left = enhanceCeilingLeft(level, fails);
   const block =
     next === null
       ? L.max
@@ -59,30 +65,42 @@ export function enhanceView(
         ? L.closed
         : listed
           ? L.listed
-          : triesLeft < 1
-            ? L.noTry
-            : cost !== null && balance < cost
-              ? L.short
-              : null;
+          : cost !== null && balance < cost
+            ? L.short
+            : null;
   return {
     level,
     next,
     ratePct: `${rateBp / 100}%`,
+    keepPct: `${(10_000 - rateBp - downBp) / 100}%`,
+    downPct: `${downBp / 100}%`,
+    tierText:
+      next === null || tier === 'normal' ? null : tier === 'icon' ? L.tierIcon : L.tierLegend,
+    failText: next === null ? null : downBp > 0 ? L.failNote({ lv: level - 1 }) : L.failSafe,
     cost,
     costText: cost === null ? '-' : fmtValue(cost),
     ovrText: next === null ? null : L.ovr({ now: enhanceOvr(level), next: enhanceOvr(next) }),
-    ceilingText: left === null ? null : left === 0 ? L.sure : L.ceiling({ n: left }),
-    triesLeft,
-    triesText: L.triesN({ n: triesLeft }),
-    nextTryText: L.nextTry({ n: enhanceStartsToNext(card, rules) }),
+    fxText: enhanceFxName(next ?? level),
     block,
-    body: block === null && cost !== null ? { level, fails, used: card.used, cost, rateBp } : null,
+    body: block === null && cost !== null ? { level, fails, cost, rateBp, downBp } : null,
   };
 }
 
 /** 시도 결과 한 줄. */
-export const enhanceResultText = (r: { success: boolean; to: number }) =>
-  r.success ? L.success({ lv: r.to }) : L.failKeep({ lv: r.to });
+export const enhanceResultText = (r: { success: boolean; from: number; to: number }) =>
+  r.success
+    ? L.success({ lv: r.to })
+    : r.to < r.from
+      ? L.failDown({ from: r.from, to: r.to })
+      : L.failKeep({ lv: r.to });
+
+/** 결과 종류(화면 표시 · 테스트 표식). */
+export const enhanceResultKind = (r: { success: boolean; from: number; to: number }) =>
+  r.success ? 'success' : r.to < r.from ? 'down' : 'keep';
+
+/** 새로 받은 칭호 안내(없으면 null). */
+export const enhanceTitleText = (titles: readonly string[] | undefined) =>
+  titles?.length ? L.newTitle({ names: titles.map(titleLabel).join(', ') }) : null;
 
 /** 판매 시트 안내: 강화 가치가 판매 가격 범위에 더해진다(강화 전이면 null). */
 export const enhanceSellNote = (level: number | null | undefined) =>
@@ -93,14 +111,14 @@ export function enhanceErrorText(e: { reason?: string | undefined; message?: str
   switch (e.reason) {
     case 'FUNDS_SHORT':
       return L.short;
-    case 'ENHANCE_NO_TRY':
-      return L.noTry;
     case 'ENHANCE_CLOSED':
       return L.closed;
     case 'ENHANCE_MAX':
       return L.max;
     case 'CARD_LISTED':
       return L.listed;
+    case 'ENHANCE_SALARY':
+      return L.salary;
     case 'ENHANCE_STALE':
       return L.stale;
     default:

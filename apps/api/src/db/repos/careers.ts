@@ -465,8 +465,6 @@ export async function putRetirement(
             publicName: sql<string | null>`null`.as('public_name'),
             enhance: sql<number>`0`.as('enhance'),
             enhanceFails: sql<number>`0`.as('enhance_fails'),
-            enhanceStarts: sql<number>`0`.as('enhance_starts'),
-            enhanceUsed: sql<number>`0`.as('enhance_used'),
             createdAt: sql<string>`${now}`.as('created_at'),
             updatedAt: sql<string>`${now}`.as('updated_at'),
           })

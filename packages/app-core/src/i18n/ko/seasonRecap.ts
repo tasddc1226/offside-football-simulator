@@ -125,6 +125,12 @@ const ko = {
   cardTagline: '고3 축구선수의 한 생을 키우는 게임',
   secSquad: '이 시즌의 선수단',
   squadLead: (p: { n: string }) => `키운 선수 ${p.n}명이 한자리에 모였어요`,
+  // T-11-372 시즌 특별 카드
+  secSpecials: '시즌 특별 카드',
+  specialsLead:
+    '모든 구단주의 이번 시즌 은퇴 선수 가운데 포지션별 베스트 11과 득점왕 · 도움왕 · MVP를 골랐어요. 표식은 카드에 영구히 남아요.',
+  specialsMine: '내 선수',
+  specialsMineCount: (p: { n: number }) => `내 선수 ${p.n}명이 뽑혔어요`,
   photoCaption: (p: { season: string }) => `${p.season} 선수단`,
   photoMore: (p: { n: number }) => `외 ${p.n}명`,
   photoAria: (p: { season: string; names: string }) => `${p.season} 선수단 단체사진: ${p.names}`,

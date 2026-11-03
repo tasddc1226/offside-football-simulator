@@ -1,4 +1,4 @@
-import { LEAGUE_ROUNDS, planLeague } from '@offside/contracts/league';
+import { LEAGUE_CYCLE, planLeague } from '@offside/contracts/league';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { postStallAlerts } from './cupAutopilot.js';
@@ -6,7 +6,8 @@ import { leagueStalls } from './leagueAlert.js';
 
 // T-11-445 리그 자동 진행 경보: 배치 · 경기 · 알림 · 결산이 밀리면 문제마다 한 번 슬랙에 알린다.
 
-const L = planLeague(2, '2026-10-30T15:00:00.000Z');
+// 시즌 2가 11/19 00:00 KST에 끝나면 14라운드(11/5 ~ 11/18).
+const L = planLeague(2, '2026-10-30T15:00:00.000Z', '2026-11-18T15:00:00.000Z');
 const at = (iso: string, min: number) => new Date(Date.parse(iso) + min * 60_000).toISOString();
 
 describe('리그 자동 진행 경보 (T-11-445)', () => {
@@ -77,8 +78,8 @@ describe('리그 자동 진행 경보 (T-11-445)', () => {
 
   it('마지막 라운드 뒤 2시간이 지나도 끝나지 않으면 알리고, 끝나면 조용하다', async () => {
     await draw();
-    await matches(LEAGUE_ROUNDS);
-    const last = L.rounds[LEAGUE_ROUNDS - 1]!;
+    await matches(LEAGUE_CYCLE);
+    const last = L.rounds[LEAGUE_CYCLE - 1]!;
     expect(await keys(at(last, 60))).toEqual([]);
     expect(await keys(at(last, 121))).toEqual(['done:2']);
     await d1().prepare('UPDATE league_state SET done_at = ? WHERE season = 2').bind(last).run();

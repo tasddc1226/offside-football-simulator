@@ -76,6 +76,16 @@ const ko = {
   sureButton: (p: { price: string }) => `구단 자금으로 확정 강화 (${p.price} · 100%)`,
   sureNote:
     '구단 자금을 내면 확률 없이 한 단계 올라요. 선수마다 한 번 받을 수 있고, 선수 자금으로 하는 시도는 그대로 남아요.',
+  // T-11-593 대성공(두 단계). lv는 대성공이 없는 마지막 단계.
+  noteGreat: (p: { pct: number; lv: number }) =>
+    `성공하면 ${p.pct}%는 대성공으로 두 단계를 한 번에 올라요. +${p.lv}단계에 도전할 땐 대성공이 없어요.`,
+  lineReadyGreat: (p: { next: number; chance: number; great: number; cost: string }) =>
+    `다음 단계 +${p.next} · 성공 확률 ${p.chance}%(대성공 ${p.great}%) · ${p.cost}`,
+  chanceGreat: (p: { n: number; g: number }) => `성공 확률 ${p.n}% · 대성공 ${p.g}%`,
+  historyGreat: (p: { y: number; lv: number; pct: number; cost: string }) =>
+    `${p.y} · +${p.lv}단계 ${p.pct}% · ${p.cost} · 대성공`,
+  resultGreatTitle: (p: { lv: number }) => `대성공 · +${p.lv}단계`,
+  resultGreat: '두 단계를 한 번에 올랐어요. 성장 한계가 두 뼘 더 올라갔어요.',
 };
 
 export type GameBoostMsgs = typeof ko;

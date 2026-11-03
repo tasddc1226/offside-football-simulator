@@ -12,7 +12,9 @@ import {
 import {
   enhanceErrorText,
   enhanceKeepKey,
+  enhanceResultKind,
   enhanceResultText,
+  enhanceTitleText,
   enhanceView,
 } from '@offside/app-core/cardEnhance';
 import { fundsText } from '@offside/app-core/funds';
@@ -136,26 +138,38 @@ export function EnhanceSheet({
               'enhance-step',
             )}
             {cell(L.rate, view.next === null ? '-' : view.ratePct, 'enhance-rate')}
+            {cell(L.keep, view.next === null ? '-' : view.keepPct, 'enhance-keep')}
+            {cell(L.fail, view.next === null ? '-' : view.downPct, 'enhance-down')}
             {cell(L.cost, view.costText, 'enhance-cost')}
-            {cell(L.tries, view.triesText, 'enhance-tries')}
+            {cell(L.fxLabel, view.fxText, 'enhance-fx')}
           </View>
           {view.ovrText ? (
             <Txt bold testID="enhance-ovr">
               {view.ovrText}
             </Txt>
           ) : null}
-          {view.next !== null ? (
+          {view.tierText ? (
+            <Txt v="sm" tone="muted" testID="enhance-tier">
+              {view.tierText}
+            </Txt>
+          ) : null}
+          {view.failText ? (
             <Txt v="sm" tone="muted">
-              {view.ceilingText ? `${L.failStay} ${view.ceilingText}` : L.failStay}
+              {view.failText}
             </Txt>
           ) : null}
           {result ? (
             <Txt
               bold
-              tone={result.success ? 'good' : 'ink'}
-              testID={`enhance-result-${result.success ? 'success' : 'fail'}`}
+              tone={result.success ? 'good' : enhanceResultKind(result) === 'down' ? 'warn' : 'ink'}
+              testID={`enhance-result-${enhanceResultKind(result)}`}
             >
               {enhanceResultText(result)}
+            </Txt>
+          ) : null}
+          {result && enhanceTitleText(result.titles) ? (
+            <Txt bold tone="good" testID="enhance-title">
+              {enhanceTitleText(result.titles)}
             </Txt>
           ) : null}
           {error ? (
@@ -178,11 +192,7 @@ export function EnhanceSheet({
             {busy ? L.going : L.go}
           </Btn>
           <Txt v="xs" tone="muted">
-            {[
-              `${L.balance} ${fundsText(info.balance)}`,
-              `${view.next !== null ? `${view.nextTryText} ` : ''}${L.triesHow({ n: info.rules.startsPerTry })}`,
-              L.effectNote,
-            ].join('\n')}
+            {[`${L.balance} ${fundsText(info.balance)}`, L.effectNote].join('\n')}
           </Txt>
         </>
       )}

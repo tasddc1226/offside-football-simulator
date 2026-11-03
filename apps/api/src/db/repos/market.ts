@@ -101,6 +101,18 @@ const toListing = (r: ListingRow): MarketListing => ({
 const notHidden = sql`coalesce(${careers.hidden}, 0) = 0`;
 
 /** 열린 등록 한 페이지(하나 더 읽어 다음 페이지가 있는지 본다). T-11-425부터 모든 시즌 카드를 함께 본다. */
+/** 열린 등록 하나. 팔렸거나 내렸으면 null. */
+export async function openListing(db: Db, id: string): Promise<MarketListing | null> {
+  const [row] = await db
+    .select(listingCols)
+    .from(marketListings)
+    .innerJoin(cards, eq(cards.careerId, marketListings.careerId))
+    .leftJoin(careers, eq(careers.id, marketListings.careerId))
+    .where(and(eq(marketListings.id, id), eq(marketListings.status, 'open'), notHidden))
+    .limit(1);
+  return row ? toListing(row) : null;
+}
+
 export async function listOpenListings(
   db: Db,
   q: {
@@ -110,6 +122,7 @@ export async function listOpenListings(
     nation?: string | undefined;
     league?: string | undefined;
     club?: string | undefined;
+    cardSeason?: number | undefined;
     sort: MarketSort;
     page: number;
   },
@@ -131,6 +144,8 @@ export async function listOpenListings(
         q.nation ? sql`coalesce(${cards.nation}, ${DEFAULT_NATION}) = ${q.nation}` : undefined,
         q.league ? eq(careers.mainLeague, q.league) : undefined,
         q.club ? eq(careers.mainClub, q.club) : undefined,
+        // T-11-596 카드가 나온 시즌. 열린 등록만 훑는 조건이라 위와 같이 인덱스를 따로 두지 않는다.
+        q.cardSeason === undefined ? undefined : eq(cards.serviceSeason, q.cardSeason),
       ),
     )
     // T-11-180 OVR 순은 카드 쪽 값이라 인덱스로 받치지 못한다. 열린 등록(2026-10 운영 약 1,600건)만 정렬하고,

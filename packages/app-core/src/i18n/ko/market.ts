@@ -68,7 +68,7 @@ const ko = {
   notEnough: '모자라요',
   buyNote:
     '영입한 선수는 바로 팀에 넣을 수 있어요. 다시 팔 수는 있지만 방출해서 자금으로 바꿀 수는 없어요.',
-  ownListing: '내가 내놓은 선수예요.',
+  ownListing: '내가 내놓은 선수예요',
   buyShort: (p: { short: string }) =>
     `구단 자금이 ${p.short} 모자라요. 직접 키운 선수를 방출하면 자금이 생겨요.`,
   unlist: '판매 내리기',
@@ -123,6 +123,7 @@ const ko = {
   releaseIntro:
     '직접 키운 선수를 내보내면 카드 기준가만큼 구단 자금이 생겨요. 명예의 전당 기록은 그대로 남아요.',
   seasonGroup: '시즌',
+  seasonAll: '모든 시즌',
   pickAll: '전체 선택',
   pickNone: '선택 해제',
   pickAllMax: (p: { n: number }) => `최대 ${p.n}명 선택`,
@@ -148,7 +149,7 @@ const ko = {
     `${p.count}명을 방출하고 구단 자금 ${withEulReul(p.amount)} 받아요. 방출한 선수는 다시 데려올 수 없어요. 명예의 전당 기록은 그대로 남아요.`,
   lockBought: '영입한 선수는 방출할 수 없어요',
   lockListed: '판매 중이에요. 내린 뒤 방출할 수 있어요',
-  lockStarter: '선발이에요. 팀에서 뺀 뒤 방출할 수 있어요',
+  lockStarter: '선발이나 컵 명단이에요. 명단에서 뺀 뒤 방출할 수 있어요',
   lockPlayerLocked: '잠긴 선수예요',
   playerUnlock: '잠금 풀기',
   // 알림

@@ -16,6 +16,7 @@ export default {
       'src/platform/rewarded.test.mjs',
       'src/platform/interstitial.test.mjs',
       'src/platform/iapItems.test.mjs',
+      'src/platform/playSignals.test.mjs',
     ],
   },
 };

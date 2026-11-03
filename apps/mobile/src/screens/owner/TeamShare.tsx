@@ -8,6 +8,8 @@ import type { FormationId, TeamLayout } from '@offside/contracts/owner-team';
 import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
 import type { TeamLines } from '@offside/app-core/api/team';
 import { TeamDialog } from '../../components/TeamDialog';
+import { shareToLounge } from '../../components/loungeShare';
+import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
 import { TeamLogo } from '../../components/TeamLogo';
@@ -25,6 +27,8 @@ export type TeamShareData = {
   lines: TeamLines;
   draft: boolean;
   season: string;
+  /** 저장된 내 팀이면 라운지에도 올릴 수 있다. */
+  lounge?: boolean;
 };
 export function TeamShare({ data, close }: { data: TeamShareData; close: () => void }) {
   const ref = useRef<View>(null);
@@ -34,6 +38,7 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
   const [error, setError] = useState('');
+  const [sharing, setSharing] = useState(false);
   useEffect(
     () => () => {
       mounted.current = false;
@@ -118,6 +123,21 @@ export function TeamShare({ data, close }: { data: TeamShareData; close: () => v
       <Btn testID="team-share-make" disabled={busy || !ready} onPress={() => void make()}>
         {busy ? L.makingBtn : shot ? L.remake : L.makeImageApp}
       </Btn>
+      {data.lounge ? (
+        <Btn
+          testID="team-lounge-share"
+          disabled={sharing}
+          onPress={() => {
+            setSharing(true);
+            void shareToLounge({ kind: 'team' }).then((sent) => {
+              setSharing(false);
+              if (sent) close();
+            });
+          }}
+        >
+          {LC.shareTeamAct}
+        </Btn>
+      ) : null}
       <View
         pointerEvents="none"
         accessibilityElementsHidden

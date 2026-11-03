@@ -109,7 +109,7 @@ test('BEST 11 탭: 잠정 BEST 11을 그라운드에 세우고 자리를 누르�
   });
   await page.route(/\/v1\/best11\?/, (r) => r.fulfill(ok(BODY)));
   await page.goto('/');
-  await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   await page.locator('[data-hof-tab="best11"]').click();
   const card = page.locator('[data-best11]');
   await expect(card.locator('[data-best11-state="provisional"]')).toBeVisible();
@@ -140,7 +140,7 @@ test('BEST 11 탭: 아직 아무도 오르지 않은 시즌은 빈 안내를 보
     ),
   );
   await page.goto('/');
-  await page.locator('[data-act="hof-all"]').click();
+  await page.locator('[data-act="hof"]').click();
   await page.locator('[data-hof-tab="best11"]').click();
   await expect(page.locator('[data-best11-empty]')).toBeVisible();
 });

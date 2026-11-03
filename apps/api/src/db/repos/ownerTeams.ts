@@ -4,7 +4,13 @@ import {
   TeamLogoSchema,
   TeamPresetsSchema,
 } from '@offside/contracts';
-import type { TeamPlayer, TeamPreset, TeamRankItem, TeamRankSort } from '@offside/contracts';
+import type {
+  CardSpecial,
+  TeamPlayer,
+  TeamPreset,
+  TeamRankItem,
+  TeamRankSort,
+} from '@offside/contracts';
 import { anonName } from '@offside/contracts/positions';
 import {
   TEAM_RANK_PER_PAGE,
@@ -13,6 +19,11 @@ import {
 } from '@offside/contracts/owner-team';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import { defaultClubIds, isAmateurClubId } from '@offside/contracts/club-names';
+import {
+  CARD_SPECIAL_KINDS,
+  sortSpecials,
+  type CardSpecialKind,
+} from '@offside/contracts/card-special';
 import { teamSeasonClosed } from '@offside/contracts/service-seasons';
 import type { DivisionRules } from '@offside/contracts/team-division';
 import {
@@ -38,6 +49,7 @@ import {
   notInArray,
   or,
   sql,
+  type AnyColumn,
   type SQL,
 } from 'drizzle-orm';
 import type { Db } from '../client.js';
@@ -128,6 +140,13 @@ export const cupPresetOf = (row: Pick<OwnerTeamRow, 'presetsJson'>) =>
   presetsOf(row).find((p) => p.cup) ?? null;
 
 /**
+ * T-11-604 카드를 없애는 동작(카드 과제 · 판매 등록 · 방출)이 막는 선수: 선발과 컵 명단 프리셋. 컵 명단 선수가 빠지면 컵 경기에
+ * 빈자리로 나가므로 선발처럼 명단에서 뺀 뒤에만 낸다.
+ */
+export const lockedIdsOf = (row: Pick<OwnerTeamRow, 'slotsJson' | 'presetsJson'>): Set<string> =>
+  new Set([...slotIdsOf(row), ...(cupPresetOf(row)?.slots ?? [])].filter((x): x is string => !!x));
+
+/**
  * T-11-570 컵 경기 · 예상 · 신청 · 잠금이 읽는 팀 행. 컵 명단 프리셋이 있으면 포메이션 · 선발 · 배치 · OVR을 그 프리셋 것으로
  * 바꾸고(이름 · 로고 · 감독은 팀 것), 없으면 팀 그대로다.
  */
@@ -201,6 +220,30 @@ export type LiveTeam = Pick<OwnerTeamRow, 'id' | 'season' | 'name' | 'manager' |
   logo: ReturnType<typeof logoOf>;
 };
 
+/**
+ * T-11-372 카드가 받은 시즌 표식(JSON 배열 문자열). card_specials PK 앞자리(career_id)로 카드마다 몇 줄만 읽는다 — 카드를 고르는
+ * 쿼리의 select에 넣어 목록 응답과 한 번에 싣는다(표식만 따로 부르지 않는다).
+ */
+export const specialsJsonOf = (careerId: AnyColumn | SQL) =>
+  sql<string>`(select json_group_array(json_object('season', s.season, 'kind', s.kind, 'rank', s.rank)) from card_specials s where s.career_id = ${careerId})`;
+
+const SPECIAL_KINDS = new Set<string>(CARD_SPECIAL_KINDS);
+
+/** specialsJsonOf 결과 → 표식 목록(띠 순서). 없거나 깨졌으면 빈 배열. */
+export function parseSpecials(json: string | null | undefined): CardSpecial[] {
+  if (!json) return [];
+  try {
+    const rows = JSON.parse(json) as { season: number; kind: string; rank: number }[];
+    return sortSpecials(
+      rows
+        .filter((r) => SPECIAL_KINDS.has(r.kind) && r.season >= 1 && r.rank >= 1)
+        .map((r) => ({ season: r.season, kind: r.kind as CardSpecialKind, rank: r.rank })),
+    );
+  } catch {
+    return [];
+  }
+}
+
 /** 선발 맵에 넣는 커리어 모양(careers 행 → 팀 선수). */
 type LineupRow = {
   look?: string | null;
@@ -224,6 +267,8 @@ type LineupRow = {
   weight?: number | null;
   /** T-11-373 카드 강화 단계. */
   enhance?: number | null;
+  /** T-11-372 specialsJsonOf 결과(표식을 싣는 쿼리만). */
+  specialsJson?: string | null;
 };
 export const toLineupCareer = (
   r: LineupRow,
@@ -280,8 +325,15 @@ export function teamPlayerCard(
     ...bodyOf(r),
     // T-11-373 강화한 카드만 단계를 싣는다(카드 +N 표시 · 자리 실력).
     ...(career.enhance ? { enhance: career.enhance } : {}),
+    ...specialsOf(r.specialsJson),
   };
 }
+
+/** 표식이 있을 때만 싣는다(없는 카드의 응답 모양은 그대로). */
+const specialsOf = (json: string | null | undefined) => {
+  const specials = parseSpecials(json);
+  return specials.length ? { specials } : {};
+};
 
 /** T-11-180 카드에 싣는 키·몸무게 — 둘 다 있을 때만(체격 기능 전 커리어는 없다). */
 export const bodyOf = (r: { height?: number | null; weight?: number | null }) =>
@@ -319,7 +371,7 @@ export const myTeamIn = (db: Db, profileId: string, season: number) =>
  * 예산(pastSalaryBudget) 안에서만 선발에 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
  * 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
  */
-export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
+function eligibleQuery(db: Db, profileId: string, only: SQL | undefined) {
   return db
     .select({
       id: cards.careerId,
@@ -346,6 +398,7 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
       raised: sql<number>`${careers.profileId} = ${profileId}`,
       listingId: marketListings.id,
       listPrice: marketListings.price,
+      specialsJson: specialsJsonOf(cards.careerId),
     })
     .from(cards)
     .leftJoin(careers, eq(careers.id, cards.careerId))
@@ -356,24 +409,26 @@ export function listEligibleCareers(db: Db, profileId: string, season: number, l
     .where(
       and(
         eq(cards.ownerId, profileId),
-        lte(cards.serviceSeason, season),
+        only,
         // T-11-310 감독으로 분류된 카드는 선수 목록에서 빠진다.
         eq(cards.manager, false),
         sql`coalesce(${careers.hidden}, 0) = 0`,
       ),
-    )
+    );
+}
+
+export function listEligibleCareers(db: Db, profileId: string, season: number, limit = 300) {
+  return eligibleQuery(db, profileId, lte(cards.serviceSeason, season))
     .orderBy(desc(cards.peak))
     .limit(limit);
 }
 
-/** 오늘(한국 시각) 이 구단주가 건 경기 수. sinceIso는 한국 시각 자정의 UTC ISO. */
-export function countMatchesSince(db: Db, profileId: string, sinceIso: string) {
-  return db
-    .select({ n: sql<number>`count(*)` })
-    .from(teamMatches)
-    .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
+/** 내가 가진 선수 카드 한 장(라운지 공유). 없으면 빈 배열. */
+export function eligibleCareer(db: Db, profileId: string, careerId: string) {
+  return eligibleQuery(db, profileId, eq(cards.careerId, careerId)).limit(1);
 }
 
+/** 오늘(한국 시각) 이 구단주가 건 경기 수. sinceIso는 한국 시각 자정의 UTC ISO. */
 /**
  * T-10-095 두 팀이 sinceIso 이후 치른 경기(누가 걸었든). 오늘 같은 상대에게 이미 걸었는지와 최근 재대결 횟수(레이팅 감쇠)를
  * 함께 센다. batch에 넣을 수 있게 쿼리로 돌려준다.
@@ -399,6 +454,13 @@ export const meetingsSince = (db: Db, teamA: string, teamB: string, sinceIso: st
 export const challengedSince = (db: Db, profileId: string, sinceIso: string) =>
   db
     .select({ teamId: teamMatches.awayTeamId })
+    .from(teamMatches)
+    .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
+
+/** challengedSince에 건 시각을 더한 목록(랭크 경기 충전을 센다). */
+export const challengedAtSince = (db: Db, profileId: string, sinceIso: string) =>
+  db
+    .select({ teamId: teamMatches.awayTeamId, createdAt: teamMatches.createdAt })
     .from(teamMatches)
     .where(and(eq(teamMatches.profileId, profileId), gte(teamMatches.createdAt, sinceIso)));
 
@@ -464,6 +526,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       caps: careers.caps,
       ballon: careers.ballon,
       rn: retiredNumbers.careerId,
+      specialsJson: specialsJsonOf(cards.careerId),
     })
     .from(cards)
     .leftJoin(careers, eq(careers.id, cards.careerId))
@@ -1197,6 +1260,7 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         nation: careers.nation,
         retireAge: careers.retireAge,
         retiredAt: careers.retiredAt,
+        peak: careers.peak,
         rn: retiredNumbers.careerId,
       })
       .from(careers)
@@ -1213,6 +1277,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         goals: careerSeasons.goals,
         cs: careerSeasons.cs,
         mil: careerSeasons.mil,
+        age: careerSeasons.age,
+        assists: careerSeasons.assists,
       })
       .from(careerSeasons)
       .where(
@@ -1230,6 +1296,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
       goals: r.goals,
       cs: r.cs,
       mil: r.mil === 1,
+      age: r.age,
+      assists: r.assists,
     });
     byCareer.set(r.careerId, list);
   }
@@ -1249,6 +1317,7 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     nation: r.nation,
     retireAge: r.retireAge ?? 0,
     retiredAt: r.retiredAt,
+    peak: r.peak ?? 0,
     seasons: byCareer.get(r.id) ?? [],
   }));
 }

@@ -6,13 +6,14 @@
   // 운영자는 메시지를 가리고 작성자를 정지한다. 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
   import { onMount, tick } from 'svelte';
   import { ADMIN_NICKNAME, COMMENT_REPORT_REASONS, type CommentReportReason } from '@offside/contracts/board-limits';
-  import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
+  import { CHAT_BODY_MAX, CHAT_MUTE_DAYS, type ChatNotice } from '@offside/contracts/chat';
   import * as api from '@offside/app-core/api/chat';
   import { unblock as unblockApi } from '@offside/app-core/api/boards';
   import type { ChatBlockResponse } from '@offside/contracts';
   import {
     CHAT_REJECT_TEXT,
     EMPTY_CHAT,
+    chatTimeline,
     chatMutedText,
     chatTime,
     type ChatMessage,
@@ -27,6 +28,9 @@
   import TitleBadge from './cup/TitleBadge.svelte';
   import OwnerAvatar from './OwnerAvatar.svelte';
   import PopSheet from './PopSheet.svelte';
+  import ChatShareCard from './ChatShareCard.svelte';
+  import ChatNoticeBanner from './ChatNoticeBanner.svelte';
+  import { openPublicLegendById } from './openLegend.js';
 
   /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(툴팁)은 지금 기준 지난 시즌으로 보인다. */
   const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
@@ -35,13 +39,23 @@
   import { createTranslations } from './translations.svelte.js';
   import { canTranslate } from '@offside/app-core/userTranslate';
   import { getLocale } from '@offside/contracts/i18n';
-  import { go, goHome } from './nav.js';
+  import { go, goHome, goMarketListing } from './nav.js';
   import { appState, hofStart } from './state.svelte.js';
   import { trackViewport } from './viewport.js';
   import { chatSession, chatState, listenChat, markChatRead, switchChatRoom } from './chat-state.svelte.js';
   import { CHAT_ROOMS } from '@offside/contracts/chat';
   import { LOCALE_NAMES } from '@offside/contracts/i18n';
 
+  // 언어 방 메뉴: 고르거나 바깥을 누르거나 Esc면 닫는다.
+  let langMenu = $state<HTMLDetailsElement>();
+  function pickRoom(r: (typeof CHAT_ROOMS)[number]) {
+    if (langMenu) langMenu.open = false;
+    switchChatRoom(r);
+  }
+  function closeLangMenu(e: Event) {
+    if (!langMenu?.open) return;
+    if (e instanceof KeyboardEvent ? e.key === 'Escape' : !langMenu.contains(e.target as Node)) langMenu.open = false;
+  }
   // 상태는 통째로 바꿔 끼우므로 깊은 반응성이 필요 없다.
   let view = $state.raw<ChatView>(EMPTY_CHAT);
   let text = $state('');
@@ -83,7 +97,7 @@
       (v) => {
         const grew = v.messages !== view.messages;
         const initial = entering && v.status === 'open';
-        const follow = initial || (grew && (nearBottom() || v.messages.at(-1)?.author === v.me?.author));
+        const follow = initial || (grew && (nearBottom() || v.messages.at(-1)?.author === v.me?.author)) || (v.notices !== view.notices && nearBottom());
         if (initial) entering = false;
         // T-11-180 이전 줄이 위에 붙으면 보던 줄이 그 자리에 머물게 늘어난 높이만큼 내린다.
         const prepended = !follow && view.loadingOlder && !v.loadingOlder;
@@ -121,9 +135,12 @@
   });
 
   function fitInput(el: HTMLTextAreaElement) {
+    // 접혀 있으면(폰 필드 보기) 잴 수 없으니 펼칠 때 다시 잰다.
+    if (!el.offsetParent) return;
     const follow = nearBottom();
     el.style.height = 'auto';
-    el.style.height = `${Math.min(el.scrollHeight, 112)}px`;
+    // scrollHeight에는 테두리가 빠져 있어 그만큼 더해야 한 줄일 때 넘치지 않는다(넘치면 스크롤 막대가 생긴다).
+    el.style.height = `${Math.min(el.scrollHeight + el.offsetHeight - el.clientHeight, 112)}px`;
     if (follow) list?.scrollTo({ top: list.scrollHeight });
   }
   $effect(() => {
@@ -148,6 +165,7 @@
   }
   function startReply(m: ChatMessage) {
     replyTo = m;
+    // 접혀 있으면 먼저 펼친다. 펼침을 먼저 그려야 같은 탭 안에서 iOS 키보드가 뜬다.
     input?.focus();
   }
   const quoteName = (r: { admin: boolean; nickname: string }) => (r.admin ? ADMIN_NICKNAME : r.nickname);
@@ -200,8 +218,21 @@
     busy = false;
     if (!r.ok) return toast(r.error.message);
     if (!r.data.teamId) return toast(L.noProfile);
+    openTeam(r.data.teamId, true);
+  }
+  /** owner면 구단주 프로필, 아니면 팀 프로필(스쿼드)을 연다. 공유 카드는 팀 쪽으로 간다. */
+  /** 한 건이면 그 선수의 상세 커리어로, 합친 배너면 기록실의 영구결번으로 간다. */
+  function openNotice(notice: ChatNotice) {
+    if (notice.n === 1) {
+      void openPublicLegendById(notice.careerId);
+      return;
+    }
+    appState.hof = { ...hofStart(), tab: 'rn' };
+    go('hof');
+  }
+  function openTeam(team: string, owner = false) {
     selected = null;
-    appState.hof = { ...hofStart(), tab: 'teams', team: r.data.teamId, owner: true };
+    appState.hof = { ...hofStart(), tab: 'teams', team, owner, squad: !owner };
     go('hof');
   }
   const hide = (m: ChatMessage) => run(api.adminHideChat(m.id), L.hiddenToast);
@@ -210,6 +241,8 @@
     void run(api.adminMuteChat(m.id, { days }), L.mutedToast({ nick: m.nickname, days }));
   }
 </script>
+
+<svelte:window onclick={closeLangMenu} onkeydown={closeLangMenu} />
 
 <div class="wrap chat-wrap" bind:this={wrap}>
   <section class="card chat-card" data-chat>
@@ -223,6 +256,21 @@
           {#if view.status === 'open'}<span class="chat-dot" aria-hidden="true"></span>{L.online({ n: view.online })}{:else if view.status === 'retrying'}{L.reconnecting}{:else}{L.connecting}{/if}
         </span>
       </div>
+      <details class="chat-lang" bind:this={langMenu}>
+        <summary aria-label={L.roomsLabel} data-act="chat-lang">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M3 12h18M12 3c2.6 2.6 3.8 5.6 3.8 9s-1.2 6.4-3.8 9c-2.6-2.6-3.8-5.6-3.8-9S9.4 5.6 12 3Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" /></svg>
+          <span lang={chatState.room}>{LOCALE_NAMES[chatState.room]}</span>
+          <svg class="chat-lang-caret" viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+        </summary>
+        <div class="chat-lang-pop" role="group" aria-label={L.roomsLabel}>
+          {#each CHAT_ROOMS as r (r)}
+            <button class="chat-lang-opt" lang={r} aria-pressed={chatState.room === r} data-chat-room={r} onclick={() => pickRoom(r)}>
+              {LOCALE_NAMES[r]}
+              {#if chatState.room === r}<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" /></svg>{/if}
+            </button>
+          {/each}
+        </div>
+      </details>
       <details class="chat-rules" ontoggle={(e) => void loadBlocks((e.currentTarget as HTMLDetailsElement).open)}>
         <summary aria-label={L.rulesLabel}>
           <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8" /><path d="M12 11v6M12 7v1" stroke="currentColor" stroke-width="2" stroke-linecap="round" /></svg>
@@ -251,15 +299,13 @@
         </div>
       </details>
     </header>
-    <div class="seg chat-rooms" role="group" aria-label={L.roomsLabel}>
-      {#each CHAT_ROOMS as r (r)}
-        <button class="opt" lang={r} aria-pressed={chatState.room === r} data-chat-room={r} onclick={() => switchChatRoom(r)}>{LOCALE_NAMES[r]}</button>
-      {/each}
-    </div>
-
     <ol class="chat-list" bind:this={list} onscroll={onListScroll} data-chat-list>
       {#if view.loadingOlder}<li class="muted fs-sm chat-older">{L.loadingOlder}</li>{/if}
-      {#each view.messages as m (m.id)}
+      {#each chatTimeline(view.messages, view.notices) as row (row.id)}
+        {#if 'notice' in row}
+          <li class="chat-notice-row"><ChatNoticeBanner notice={row.notice} onopen={openNotice} /></li>
+        {:else}
+        {@const m = row.m}
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="chat-meta">
             {#snippet who()}<OwnerAvatar avatarId={m.avatarId} name={m.nickname} />{#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{/if}{/snippet}
@@ -282,7 +328,11 @@
           {/if}
           <!-- 보낸 시각은 말풍선 옆 아래(남의 말은 오른쪽, 내 말은 왼쪽). -->
           <div class="chat-body-row">
-            <p class="chat-bubble" lang={tr.translated(m.id) ? getLocale() : undefined}>{tr.text(m.id, m.body)}</p>
+            {#if m.share}
+              <ChatShareCard share={m.share} label={m.body} onteam={openTeam} onlisting={goMarketListing} />
+            {:else}
+              <p class="chat-bubble" lang={tr.translated(m.id) ? getLocale() : undefined}>{tr.text(m.id, m.body)}</p>
+            {/if}
             <time class="muted chat-time num" datetime={new Date(m.at).toISOString()}>{chatTime(m.at)}</time>
             {#if view.write && !mine(m)}
               <!-- T-11-575 답장은 시각 옆 아이콘. -->
@@ -291,10 +341,11 @@
               </button>
             {/if}
           </div>
-          {#if !mine(m) && canTranslate(m.body)}
+          {#if !mine(m) && !m.share && canTranslate(m.body)}
             <button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
           {/if}
         </li>
+        {/if}
       {:else}
         {#if view.status === 'open'}<li class="muted fs-sm chat-empty">{L.emptyOpen}</li>{:else}<li class="chat-wait"><Skeleton rows={4} /></li>{/if}
       {/each}
@@ -472,6 +523,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
+  .chat-notice-row {align-self:stretch;margin:4px 0;}
   :global(.chat-msg.chat-flash) {
     border-radius: var(--radius-lg);
     animation: chat-flash 1.2s ease-out;

@@ -84,6 +84,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '커리어당 추가 강화 횟수',
     desc: '자금이 모자란 시즌의 강화 추가 시도 횟수(커리어 전체). 0이면 없다',
   },
+  boostGreat: {
+    group: 'growth',
+    label: '잠재력 강화 대성공 비율',
+    desc: '강화 성공 중 두 단계를 한 번에 올리는 비율(대성공 확률 = 성공 확률 × 이 값). 마지막 단계 시도엔 없다. 0이면 끈다',
+  },
   careCost: {
     group: 'growth',
     label: '몸 관리 비용 배율',
@@ -103,6 +108,36 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'growth',
     label: '스카우트 평가 오차',
     desc: '화면에 보이는 스카우트 평가가 실제 잠재력에서 벗어나는 표준편차 — 0이면 평가가 정확하다',
+  },
+  bloomDrift: {
+    group: 'growth',
+    label: '숨은 잠재력 흔들림',
+    desc: '스카우트 평가에 안 보이는 숨은 잠재력이 해마다 흔들리는 표준편차 — 클수록 재평가에서 크게 오르내린다',
+  },
+  bloomAge: {
+    group: 'growth',
+    label: '숨은 잠재력 고정 나이',
+    desc: '이 나이까지 숨은 잠재력이 해마다 흔들리고, 그 뒤로는 멈춘다',
+  },
+  rescoutShare1: {
+    group: 'growth',
+    label: '21세 재평가 반영 몫',
+    desc: '21세 스카우트 재평가가 그때까지 쌓인 숨은 잠재력 중 평가에 옮기는 비율',
+  },
+  rescoutShare2: {
+    group: 'growth',
+    label: '24세 재평가 반영 몫',
+    desc: '24세 스카우트 재평가가 남은 숨은 잠재력 중 평가에 옮기는 비율',
+  },
+  rescoutDownScale: {
+    group: 'growth',
+    label: '재평가 하락 비율',
+    desc: '재평가가 잠재력을 깎을 때 실제로 깎는 비율 — 1이면 그대로, 0.7이면 30%는 없던 일로 한다',
+  },
+  rescoutDropCap: {
+    group: 'growth',
+    label: '재평가 한 번 최대 하락',
+    desc: '재평가 한 번에 잠재력이 내려가는 최대 폭(99면 제한 없음). 넘는 몫은 없던 일로 한다',
   },
   premiumSMult: {
     group: 'growth',
@@ -148,6 +183,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'national',
     label: 'A대표팀 전력',
     desc: '월드 챔피언십·아시안컵·A매치에서 한국 대표팀 전력',
+  },
+  agKoreaBonus: {
+    group: 'national',
+    label: '아시안게임 한국 전력 보정', // i18n-ignore admin-only copy
+    desc: '아시안게임에서만 한국 U-23 전력에 더한다. 올림픽과 다른 국적에는 적용하지 않는다', // i18n-ignore admin-only copy
   },
   koreaU23: {
     group: 'national',
@@ -214,6 +254,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '시즌당 급여 예산 증가',
     desc: '팀 시즌이 하나 지날 때마다 급여 예산에 더하는 값. 시즌 n 예산 = 기준 예산 + 이 값 × (n - 1)',
   },
+  teamMatchRechargeMin: {
+    group: 'team',
+    label: '랭크 경기 충전 간격(분)',
+    desc: '하루 랭크 경기를 다 치른 뒤 이 시간마다 1경기가 더 열린다. 자정에 처음으로 돌아간다. 0이면 충전하지 않는다',
+  },
   leagueHomeAdv: {
     group: 'team',
     label: '리그 홈 이점',
@@ -228,6 +273,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'team',
     label: '컵 전력 차이 반영',
     desc: '오프사이드 컵 경기에서 공격과 상대 수비벽 10점 차이가 기대 득점에 주는 무게(지수). 0.3이면 2회 컵까지, 0.45면 랭크 경기와 같다. 경기 전 예상에도 같이 쓴다',
+  },
+  rankAtkK: {
+    group: 'team',
+    label: '랭크 전력 차이 반영', // i18n-ignore admin-only copy
+    desc: '시즌 2부터 랭크 경기에서 공격과 상대 수비벽 10점 차이가 기대 득점에 주는 무게(지수). 높일수록 강한 팀이 이변 없이 이긴다. 시작하는 경기부터 적용된다', // i18n-ignore admin-only copy
   },
   rerollPrice: {
     group: 'market',
@@ -358,11 +408,6 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     group: 'team',
     label: '카드 강화 열기',
     desc: '1이면 카드 강화 시도를 받는다. 0이면 닫는다(이미 올린 단계의 효과는 그대로다)',
-  },
-  enhanceStartsPerTry: {
-    group: 'team',
-    label: '카드 강화 시도권 경기 수',
-    desc: '카드가 구단주 팀 선발로 뛴 랭크 경기가 이만큼 쌓일 때마다 그 카드의 강화 시도권 1장을 준다',
   },
   enhanceCostScale: {
     group: 'team',

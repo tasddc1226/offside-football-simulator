@@ -110,9 +110,12 @@ export const filledCount = (lineup: readonly LineupSlot[]) =>
   lineup.filter((s) => s.careerId !== null).length;
 export const lineupOvr = (lineup: readonly LineupSlot[]) => teamOvr(lineup.map((s) => s.rating));
 
-/** 선발의 시너지(T-11-105). */
-export const lineupSynergy = (lineup: readonly LineupSlot[]): TeamSynergy =>
-  teamSynergy(lineup.map((s) => s.syn));
+/** 선발의 시너지(T-11-105). season은 그 경기 · 팀의 서비스 시즌(T-11-542 시즌 2 규칙은 시즌 2부터, 모르면 지금 규칙). */
+export const lineupSynergy = (lineup: readonly LineupSlot[], season?: number): TeamSynergy =>
+  teamSynergy(
+    lineup.map((s) => s.syn),
+    season,
+  );
 
 /**
  * 공격·중원·수비·골키퍼 힘 — 자리마다의 몫과 포메이션의 줄 무게(contracts owner-team.ts lineStrength). synergy를 주면
@@ -141,11 +144,11 @@ export const SIM = {
 } as const;
 
 /**
- * T-11-510 시즌 2부터 랭크 경기만 쓰는 공격 계수 — 전력 차이 10이면 건 쪽 승률이 약 66%에서 75%로 오른다. 리그 · 친선은
- * SIM.atkK 그대로고, 컵은 밸런스 설정 cupAtkK(T-11-409)를 쓴다.
+ * T-11-510 시즌 2부터 랭크 경기만 쓰는 공격 계수. T-11-626 값은 밸런스 설정 rankAtkK다. 리그 · 친선은 SIM.atkK 그대로고,
+ * 컵은 밸런스 설정 cupAtkK(T-11-409)를 쓴다.
  */
-export const RANKED_ATK_K = 0.45;
-export const rankedAtkK = (season: number) => (usesRankLadder(season) ? RANKED_ATK_K : SIM.atkK);
+export const rankedAtkK = (season: number, rankAtkK: number) =>
+  usesRankLadder(season) ? rankAtkK : SIM.atkK;
 
 /** 상대 벽: 수비 라인 70% + 골키퍼 30%. */
 export const wallOf = (l: LineStrength) => 0.7 * l.def + 0.3 * l.gk;
@@ -290,8 +293,8 @@ export function matchSetup(
   if (home.length !== LINEUP_SIZE || away.length !== LINEUP_SIZE)
     throw new Error('선발은 11명이어야 합니다.');
   const on = synergyApplies(season);
-  const hSyn = on ? lineupSynergy(home) : null;
-  const aSyn = on ? lineupSynergy(away) : null;
+  const hSyn = on ? lineupSynergy(home, season) : null;
+  const aSyn = on ? lineupSynergy(away, season) : null;
   const hs = withCoach(lineupLines(home, hSyn), opts.coaches?.home, hSyn);
   const as = withCoach(lineupLines(away, aSyn), opts.coaches?.away, aSyn);
   // T-11-145 컵은 중립 경기 — 홈 이점을 주지 않는다.
@@ -346,6 +349,13 @@ export function matchOdds(
 ) {
   const { homeXg, awayXg } = matchSetup(home, away, season, opts);
   return { ...oddsOfXg(homeXg, awayXg), homeXg, awayXg };
+}
+
+/** 승 · 패 확률을 정수 %로 반올림하고 합이 100이 되게 무승부로 맞춘다. */
+export function oddsPercent(o: { win: number; loss: number }) {
+  const win = Math.round(o.win * 100);
+  const loss = Math.round(o.loss * 100);
+  return { win, draw: Math.max(0, 100 - win - loss), loss };
 }
 
 /** 골 n개의 분 · 득점자 · 도움을 굴려 events에 더한다. */

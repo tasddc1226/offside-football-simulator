@@ -204,6 +204,12 @@ const ko = {
   attributesAria: '선수 능력치',
   footLegend: '레전드 커리어',
   footMine: '나의 커리어',
+  // T-11-372 시즌 특별 카드 띠
+  specialMvp: 'MVP',
+  specialTopScorer: '득점왕',
+  specialTopAssist: '도움왕',
+  specialBest11: '베스트 11',
+  specialAria: (p: { label: string }) => `시즌 특별 카드: ${p.label}`,
   // 선수 고르기
   pickAria: (p: { slot: string }) => `${p.slot} 자리 선수 고르기`,
   pickSortAria: '정렬',

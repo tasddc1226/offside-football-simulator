@@ -1,7 +1,6 @@
 // 시즌 진행 게이지(contracts season-gauge.ts). 5분 cron마다 부르지만 COUNT_EVERY마다 한 번만 센다 — 시즌 커리어 전체를
 // 훑는 집계라 자주 돌 필요가 없다. 센 값으로 상태를 앞으로 밀어 app_meta에 굳힌다(마감을 확정하면 그 뒤로는 바꾸지 않는다).
 // 확정한 마감은 시즌 일정(seasonSchedule.ts)에 다음 시즌과 함께 적는다.
-import { LEAGUE_FROM_SEASON, leagueFinalAt, planLeague } from '@offside/contracts/league';
 import {
   SEASON_GAUGE,
   stepSeasonGauge,
@@ -80,31 +79,6 @@ export async function openCupEndsAt(db: D1Database, season: number): Promise<str
   return last;
 }
 
-/**
- * T-11-418b 그 시즌 리그가 아직 끝나지 않았으면 마지막 라운드 시각(운영 도구로 미룬 일정이 있으면 그 일정). 리그가 없는
- * 시즌 · 끝난 리그(참가가 모자라 열리지 않은 리그 포함)는 null. 컵처럼 시즌 마감을 그 뒤로 미룬다.
- */
-export async function openLeagueEndsAt(
-  db: D1Database,
-  season: { id: number; startsAt: string },
-): Promise<string | null> {
-  if (season.id < LEAGUE_FROM_SEASON) return null;
-  const row = await db
-    .prepare(
-      `SELECT (SELECT rounds_json FROM league_seasons WHERE season = ?1) AS rounds,
-              (SELECT done_at FROM league_state WHERE season = ?1) AS done`,
-    )
-    .bind(season.id)
-    .first<{ rounds: string | null; done: string | null }>();
-  if (row?.done) return null;
-  try {
-    const rounds = row?.rounds ? (JSON.parse(row.rounds) as string[]) : null;
-    return rounds?.at(-1) ?? leagueFinalAt(planLeague(season.id, season.startsAt));
-  } catch {
-    return leagueFinalAt(planLeague(season.id, season.startsAt));
-  }
-}
-
 /** 그 시즌 선수가 은퇴 나이까지 뛰고 은퇴했는가(서버 최초 기록 retirecap) — 다음 시즌 은퇴 나이 +1. */
 async function reachedRetireCap(db: D1Database, season: number): Promise<boolean> {
   const row = await db
@@ -143,19 +117,12 @@ export async function runSeasonGauge(
   let state = await readSeasonGauge(db, season.id);
   let counted = false;
   if (!state || Date.parse(now) - Date.parse(state.updatedAt) >= COUNT_EVERY_MS - 60_000) {
-    const [tally, cupEndsAt, leagueEndsAt] = await Promise.all([
+    const [tally, cupEndsAt] = await Promise.all([
       countSeasonGauge(db, season.id, season.startsAt),
       openCupEndsAt(db, season.id),
-      openLeagueEndsAt(db, season),
     ]);
-    // 컵 · 리그 중 늦게 끝나는 쪽까지 마감을 미룬다.
-    const eventsEndAt =
-      cupEndsAt && leagueEndsAt
-        ? cupEndsAt > leagueEndsAt
-          ? cupEndsAt
-          : leagueEndsAt
-        : (cupEndsAt ?? leagueEndsAt);
-    state = stepSeasonGauge(state, season, tally, now, eventsEndAt);
+    // 끝나지 않은 컵까지 마감을 미룬다. 리그는 마감 전날까지 치르고 마감에 결산해(T-11-540) 마감을 미루지 않는다.
+    state = stepSeasonGauge(state, season, tally, now, cupEndsAt);
     await db
       .prepare(
         'INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',

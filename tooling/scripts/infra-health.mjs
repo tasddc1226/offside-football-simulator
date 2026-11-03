@@ -1,4 +1,5 @@
 import { appendFileSync, readFileSync } from 'node:fs';
+import { auditBillingDlq } from './billing-dlq-audit.mjs';
 import { pathToFileURL } from 'node:url';
 
 const policy = JSON.parse(
@@ -99,6 +100,18 @@ export async function checkResourceHealth(env = process.env, fetcher = fetch) {
     }),
   );
   const report = inspectQueueHealth(observations);
+  const billingQueue = queues.find((q) => q.queue_name === 'offside-billing-production-dlq');
+  if (observations.some((q) => q.name === 'offside-billing-production-dlq' && q.backlog > 0)) {
+    try {
+      const audit = await auditBillingDlq(
+        (path, body) => api(`/accounts/${encodeURIComponent(account)}${path}`, body),
+        billingQueue.queue_id,
+      );
+      report.summary += `Billing DLQ notification sample: ${audit.sampled}; ledger sent ${audit.sent}, unsent ${audit.unsent}, missing ${audit.missing}, invalid ${audit.invalid}. Peek only; no replay or deletion; backlog remains a failure.\n`;
+    } catch {
+      report.summary += 'Billing DLQ ledger reconciliation: unknown. No messages changed.\n';
+    }
+  }
   // Keep DLQ failures visible even if R2 analytics permission is unavailable.
   let r2;
   try {
@@ -162,7 +175,22 @@ export function inspectInfraHealth(state, now = Date.now()) {
   return {
     failed: state.issues.length > 0,
     warning: state.sizeBytes >= policy.d1IncludedStorageBytes * policy.storageWarningFraction,
-    summary: `D1 storage (including reusable pages): ${gib(state.sizeBytes)} GiB.\nIssues: ${state.issues.join(', ') || 'none'}.\n`,
+    summary: `D1 storage (including reusable pages): ${gib(state.sizeBytes)} GiB. R2 recovery assurance: ${state.backupRecovery?.status ?? 'unknown (older report)'}. Live-copy completion alone does not prove recoverability. Growth: ${Number.isFinite(state.growthBytesPerDay) ? (state.growthBytesPerDay / 1e6).toFixed(1) + ' MB/day' : 'unknown'}; days to 10 GB limit: ${Number.isFinite(state.daysToLimit) ? state.daysToLimit.toFixed(1) : 'unknown or no growth'}. The 5 GB included storage reference is account-wide, not a database limit.\nIssues: ${state.issues.join(', ') || 'none'}.\n`,
+  };
+}
+
+export function inspectBillingOutbox(row, now = Date.now()) {
+  const pending = row?.pending;
+  const oldestAt = row?.oldest_at == null ? null : Date.parse(row.oldest_at);
+  if (
+    !Number.isSafeInteger(pending) ||
+    pending < 0 ||
+    (pending > 0 && (!Number.isFinite(oldestAt) || oldestAt > now + 60_000))
+  )
+    throw new Error('Billing notification outbox observation unavailable.');
+  return {
+    failed: pending > 0 && now - oldestAt > 60 * 60_000,
+    summary: `Billing notification outbox: ${pending} unsent; oldest age ${pending ? Math.floor((now - oldestAt) / 60_000) + ' min' : 'n/a'}. This is notification delivery, not purchase fulfillment. DLQ backlog still requires individual ledger reconciliation.\n`,
   };
 }
 
@@ -196,6 +224,13 @@ export async function checkProduction(env = process.env, fetcher = fetch) {
   if (blocks.some((b) => !b.success)) throw new Error('Infrastructure health query failed.');
   const value = blocks[0]?.results?.[0]?.value;
   const report = inspectInfraHealth(value ? JSON.parse(value) : null);
+  const outbox = await api(`/${encodeURIComponent(db.uuid)}/query`, {
+    sql: 'SELECT COUNT(*) AS pending, MIN(created_at) AS oldest_at FROM billing_alerts WHERE sent_at IS NULL',
+  });
+  if (outbox.some((b) => !b.success)) throw new Error('Billing notification outbox query failed.');
+  const billing = inspectBillingOutbox(outbox[0]?.results?.[0]);
+  report.summary += billing.summary;
+  report.failed ||= billing.failed;
   if (env.GITHUB_STEP_SUMMARY) appendFileSync(env.GITHUB_STEP_SUMMARY, report.summary);
   console.log(report.summary);
   if (report.warning && env.GITHUB_ACTIONS === 'true')

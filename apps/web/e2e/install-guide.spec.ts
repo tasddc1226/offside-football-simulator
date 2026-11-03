@@ -26,7 +26,7 @@ test.describe('아이폰 Chrome', () => {
       .not.toBeNull();
     await startCareer(page);
     await page.reload();
-    await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
+    await expect(page.locator('[data-home-news]')).toBeVisible();
     await expect(sheet).toBeHidden();
     await expect(card).toHaveCount(0);
     await page.locator('[data-act="settings"]').click();
@@ -63,7 +63,7 @@ test.describe('아이폰 Chrome', () => {
 
 test('데스크톱 홈 카드 · 설정에는 App Store와 Google Play를 함께 둔다', async ({ page }) => {
   await page.goto('/');
-  await expect(page.locator('[data-home-news="notice"]')).toBeVisible();
+  await expect(page.locator('[data-home-news]')).toBeVisible();
   await expect(page.locator('#sheet')).toBeHidden();
   await expect(page.locator('[data-act="app-store"]')).toBeVisible();
   // T-11-449 Android 정식 출시로 테스터 모집 대신 Google Play로 보낸다.

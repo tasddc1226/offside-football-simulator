@@ -23,6 +23,7 @@ import { useSnapshot } from 'valtio';
 import { EMBLEM_PALETTE, gradeEmblem } from '@offside/app-core/gradeEmblem';
 import type { AchGrade } from '@offside/contracts/owner-team';
 import { prefs } from '../store';
+import { DECOR_MOTION_MIN } from './motion';
 
 const CYCLE: Record<AchGrade['id'], number> = {
   rookie: 9000,
@@ -38,7 +39,9 @@ const STAR = 'M8 0L10 6L16 8L10 10L8 16L6 10L0 8L6 6Z';
 export function GradeEmblem({ id, size = 20 }: { id: string; size?: number }) {
   const grade = (id in EMBLEM_PALETTE ? id : 'rookie') as AchGrade['id'];
   const { layers, palette } = gradeEmblem(grade);
-  const { motionOK } = useSnapshot(prefs);
+  // T-11-602 목록 줄의 작은 엠블럼은 멈춰 그린다(DECOR_MOTION_MIN).
+  const { motionOK: motionPref } = useSnapshot(prefs);
+  const motionOK = motionPref && size >= DECOR_MOTION_MIN;
   const [active, setActive] = useState(AppState.currentState === 'active');
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const phase = useSharedValue(0);

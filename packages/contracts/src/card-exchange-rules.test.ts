@@ -48,7 +48,7 @@ describe('카드 과제 주기 (T-11-374)', () => {
     expect(a[0]!.id).toBe('2026-10-20-easy');
     for (const [t, tier] of (['easy', 'normal', 'hard'] as const).entries()) {
       const pool = EXCHANGE_POOL[tier];
-      const len = POOL_GROWN.before[tier];
+      const len = POOL_GROWN[0]!.before[tier];
       const i = pool.findIndex((s) => s.key === a[t]!.key);
       expect(b[t]!.key).toBe(pool[(i + 1) % len]!.key);
     }
@@ -63,24 +63,60 @@ describe('카드 과제 주기 (T-11-374)', () => {
       'frontLine',
       'bestEleven',
     ]);
+    const [first, second] = POOL_GROWN;
     const before = new Set<string>();
     const after = new Set<string>();
     for (let i = 0; i < 400; i++) {
       const at = (from: string) =>
         exchangesAt(new Date(Date.parse(from) + i * 86_400_000).toISOString());
       for (const d of at('2025-09-01T03:00:00.000Z')) before.add(d.key);
-      for (const d of at(`${POOL_GROWN.from}T03:00:00.000Z`)) after.add(d.key);
+      for (const d of at(`${second!.from}T03:00:00.000Z`)) after.add(d.key);
     }
     // 늘린 날은 새 과제부터 연다.
-    expect(exchangesAt(`${POOL_GROWN.from}T03:00:00.000Z`).map((d) => d.key)).toEqual([
+    expect(exchangesAt(`${first!.from}T03:00:00.000Z`).map((d) => d.key)).toEqual([
       'centerBacks',
       'worldTour',
       'worldSelect',
     ]);
     const all = Object.values(EXCHANGE_POOL).flat();
-    expect(before.size).toBe(Object.values(POOL_GROWN.before).reduce((a, n) => a + n, 0));
+    expect(before.size).toBe(Object.values(first!.before).reduce((a, n) => a + n, 0));
     expect(after.size).toBe(all.length);
     expect(new Set(all.map((s) => s.key)).size).toBe(all.length);
+  });
+
+  it('시즌 2 개막 전 날까지는 예전 회전 · 조건 그대로, 개막일부터 줄인 조건과 새 쉬움 과제 (T-11-545)', () => {
+    // 고치기 전 회전(2026-10-27 기준, 묶음 길이 9 · 8 · 6)과 같은 날 · 같은 조건.
+    expect(exchangesAt('2026-10-30T03:00:00.000Z').map((d) => [d.key, d.rule.count])).toEqual([
+      ['keepers', 2],
+      ['nationalCall', 4],
+      ['legendGift', 5],
+    ]);
+    expect(exchangesAt('2026-10-29T03:00:00.000Z').map((d) => d.key)).toEqual([
+      'twoFooted',
+      'engineRoom',
+      'bestEleven',
+    ]);
+    expect(exchangesAt('2026-10-29T03:00:00.000Z')[2]!.rule.count).toBe(7);
+    // 개막일은 새로 더한 쉬움 과제부터, 조건은 줄인 값.
+    const open = exchangesAt('2026-10-31T03:00:00.000Z');
+    expect(open.map((d) => d.key)).toEqual(['fullBacks', 'nationalCall', 'bestEleven']);
+    expect(open.map((d) => d.rule.count)).toEqual([2, 3, 4]);
+    // 하루에 내는 카드는 7~9장(시즌 1은 11~14장).
+    for (let i = 0; i < 200; i++) {
+      const day = exchangesAt(
+        new Date(Date.parse('2026-10-31T03:00:00.000Z') + i * 86_400_000).toISOString(),
+      );
+      const total = day.reduce((a, d) => a + d.rule.count, 0);
+      expect(total).toBeGreaterThanOrEqual(7);
+      expect(total).toBeLessThanOrEqual(9);
+    }
+    // 옛 조건은 지금 묶음에 있는 과제만 적는다.
+    const keys = new Set(
+      Object.values(EXCHANGE_POOL)
+        .flat()
+        .map((s) => s.key),
+    );
+    for (const k of Object.keys(POOL_GROWN[1]!.rules ?? {})) expect(keys.has(k)).toBe(true);
   });
 
   it('하루 과제는 7장을 넘지 않는다', () => {

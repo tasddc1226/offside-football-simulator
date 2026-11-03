@@ -3,7 +3,7 @@ import { newGame } from '@offside/game/engine';
 import { createRng, setActiveRng } from '@offside/game/rng';
 import type { CareerRecord } from '@offside/game/types';
 import { boostHidden, boostView, doBoost } from './boost-view.js';
-import { clubOffer } from './club-reward.js';
+import { clubBlock, clubOffer } from './club-reward.js';
 
 function player(o: { seasons?: number; money?: number; age?: number } = {}) {
   setActiveRng(createRng(3));
@@ -22,9 +22,18 @@ describe('T-11-083 잠재력 강화 카드', () => {
   it('시도할 수 있으면 버튼에 비용과 확률을 적는다', () => {
     const v = boostView(player());
     expect(v).toMatchObject({ status: 'ready', lv: 0, max: 4 });
-    expect(v.line).toBe('다음 단계 +1 · 성공 확률 50% · 7,000만원');
+    expect(v.line).toBe('다음 단계 +1 · 성공 확률 50%(대성공 10%) · 7,000만원');
     expect(v.button).toBe('7,000만원 내고 강화하기 (50%)');
     expect(v.confirm).toContain('실패하면 돌려받지 못해요');
+  });
+
+  it('T-11-593 대성공이면 두 단계를 올리고 결과 · 기록에 대성공으로 남긴다', () => {
+    const s = player();
+    setActiveRng({ ...createRng(1), next: () => 0 } as ReturnType<typeof createRng>);
+    const out = doBoost(s)!;
+    expect(out).toMatchObject({ ok: true, great: true, up: 2, lv: 2, greatChance: 10 });
+    expect(out.title).toBe('대성공 · +2단계');
+    expect(boostView(s).history[0]).toBe('2026 · +2단계 50% · 7,000만원 · 대성공');
   });
 
   it('시도할 수 없으면 버튼 없이 이유만 보여 준다', () => {
@@ -79,6 +88,18 @@ describe('T-11-083 잠재력 강화 카드', () => {
         boost: { price, bought: 0, cap: 5 },
       },
     });
+    // T-11-610 못 받는 이유: 자금 부족 · 오늘 상한. 값이 없거나 팔지 않으면 이유도 없다.
+    expect(clubBlock(null, 'boost')).toBeNull();
+    expect(clubBlock(offer(500_000, 400_000), 'boost')).toEqual({
+      reason: 'short',
+      price: 500_000,
+      balance: 400_000,
+    });
+    expect(clubBlock(offer(500_000, 500_000), 'boost')).toBeNull();
+    expect(clubBlock(offer(null, 9_000_000), 'boost')).toBeNull();
+    const spent = offer(null, 9_000_000);
+    spent.offers.boost = { price: null, bought: 5, cap: 5 };
+    expect(clubBlock(spent, 'boost')).toEqual({ reason: 'capped' });
     expect(clubOffer(null, 'boost')).toBeNull();
     expect(clubOffer(offer(null, 9_000_000), 'boost')).toBeNull();
     expect(clubOffer(offer(500_000, 400_000), 'boost')).toBeNull();

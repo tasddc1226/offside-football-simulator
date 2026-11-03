@@ -35,6 +35,8 @@ export const seasonPass: Translation<SeasonPassMsgs> = {
   pastLead: '還有未領取的獎勵。',
   aheadTitle: (p) => `已提前擁有賽季 ${p.season} 通行證`,
   aheadLead: '該賽季開始後就會開始累計進度。',
+  webBuyBtn: (p: { price: string }) => `在網頁購買 · ${p.price} 韓元`,
+  webBuyNote: '可用信用卡或各地付款方式購買。付款完成後，本季通行證會立即開啟。',
   notOnSale: '目前不販售通行證。',
   webBuy: '通行證可在 App 中購買，購買後的獎勵在網頁上也能領取。',
   login: '只有已登入的球隊老闆可以使用賽季通行證。',

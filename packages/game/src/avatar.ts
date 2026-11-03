@@ -272,6 +272,25 @@ export function primeAvatarSpec(e: {
   );
 }
 
+/** T-11-545 선수 만들기 미리보기: 만들 커리어 ID의 얼굴에 고른 외형을 입힌 18세 모습(기본 유니폼). */
+export function createAvatarSpec(cid: string, pick: LookState['pick'] = {}): AvatarSpec {
+  const look = lookOf(cid);
+  const club = { id: '', name: '' };
+  return withLook(
+    {
+      look,
+      club,
+      hairStyle: 'fringe',
+      gray: 0,
+      beard: null,
+      expr: null,
+      acc: [],
+      kit: kitOf(club),
+    },
+    pick,
+  );
+}
+
 /** 커리어 상태 → 지금 모습. 나이에 따라 수염·흰머리가 생기고, 부상·입대·은퇴 때 옷과 소품이 바뀐다. */
 export function avatarSpec(s: GameState, side: KitSide = 'home'): AvatarSpec {
   const pick = s.look?.pick ?? {};

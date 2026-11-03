@@ -58,7 +58,7 @@ export const market: Translation<MarketMsgs> = {
   notEnough: 'Not enough',
   buyNote:
     "A signed player can join your team right away. You can sell them again, but you can't release them for funds.",
-  ownListing: 'You listed this player.',
+  ownListing: 'You listed this player',
   buyShort: (p) =>
     `You're ${p.short} short on club funds. Release a player you raised to free up funds.`,
   unlist: 'Take down listing',
@@ -108,6 +108,7 @@ export const market: Translation<MarketMsgs> = {
   releaseIntro:
     'Releasing a player you raised adds their card base price to your club funds. Their Hall of Fame record stays.',
   seasonGroup: 'Season',
+  seasonAll: 'All seasons',
   pickAll: 'Select all',
   pickNone: 'Clear selection',
   pickAllMax: (p) => `Select up to ${p.n}`,
@@ -130,7 +131,7 @@ export const market: Translation<MarketMsgs> = {
     `Release ${plural(p.count, 'player')} and receive ${p.amount} in club funds. Released players can't be brought back. Their Hall of Fame records stay.`,
   lockBought: "Signed players can't be released",
   lockListed: 'Listed for sale. Take it down to release',
-  lockStarter: 'In the starting lineup. Remove from the team to release',
+  lockStarter: 'In the starting or cup lineup. Remove from the lineup to release',
   lockPlayerLocked: 'Locked',
   playerUnlock: 'Unlock',
   toastListed: 'Listed on the market.',

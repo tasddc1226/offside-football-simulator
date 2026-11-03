@@ -46,6 +46,7 @@ export const friend: Translation<FriendMsgs> = {
   codeCopied: 'Code copied',
   codeCopyFail: "Couldn't copy the code",
   acceptAria: (p) => `Accept request from ${p.name}`,
+  profileAria: (p) => `View ${p.name}'s owner profile`,
   rejectAria: (p) => `Decline request from ${p.name}`,
   playAria: (p) => `Play a friendly with ${p.name}`,
   removeAria: (p) => `Unfriend ${p.name}`,

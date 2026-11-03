@@ -1,7 +1,18 @@
 import { RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
-import Svg, { Defs, LinearGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, {
+  Circle,
+  ClipPath,
+  Defs,
+  G,
+  LinearGradient,
+  Path,
+  RadialGradient,
+  Rect,
+  Stop,
+  Text as SvgText,
+} from 'react-native-svg';
 import { useSnapshot } from 'valtio';
 import { cardAvatarSpec } from '@offside/game/avatar';
 import { PixelAvatar } from '../ui/PixelAvatar';
@@ -23,6 +34,9 @@ import {
 import { intlLocale } from '@offside/app-core/i18n/core';
 import { tn } from '@offside/game/i18n/names';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
+import { enhanceFx, type EnhanceFx } from '@offside/app-core/cardEnhanceFx';
+import { SPECIAL_COLORS, specialRibbon, type SpecialRibbon } from '@offside/app-core/cardSpecial';
+import type { CardSpecialMark } from '@offside/contracts/card-special';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -235,11 +249,192 @@ export type PlayerCardData = {
   locked?: boolean | undefined;
   /** T-11-373 카드 강화 단계 — 자물쇠 아래 배지. */
   enhance?: number | undefined;
+  /** T-11-372 시즌 특별 카드 표식 — 테두리 색 · 띠. 없으면 빈 칸. */
+  specials?: readonly CardSpecialMark[] | undefined;
   youth: boolean;
 };
 
+/**
+ * T-11-373 강화 단계 그림(웹 PlayerCard .card-fx와 같은 장면). 목록의 작은 카드가 많아도 부담이 없도록 그림은 멈춰 있고, 큰 카드의 +3 이상만
+ * 빛을 천천히 깜빡인다(EnhanceFxPulse). 목록의 작은 장식을 무한 반복하면 안드로이드 ANR이 늘어서(T-11-602) 작은 카드는 움직이지 않는다.
+ */
+function EnhanceFxArt({ level, uid, shield }: { level: number; uid: string; shield: string }) {
+  const line = `url(#${uid}fx)`;
+  return (
+    <>
+      <Defs>
+        <ClipPath id={`${uid}clip`}>
+          <Path d={shield} />
+        </ClipPath>
+        <RadialGradient id={`${uid}flare`} cx="50%" cy="100%" r="70%">
+          <Stop offset="0" stopColor="#ff6a2b" stopOpacity={0.75} />
+          <Stop offset="1" stopColor="#ff6a2b" stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <G clipPath={`url(#${uid}clip)`}>
+        {level === 1 ? (
+          <Path
+            d="M0 120H12V174H0ZM24 120H36V174H24ZM48 120H60V174H48ZM72 120H84V174H72ZM96 120H100V174H96Z"
+            fill="#35d68a"
+            fillOpacity={0.16}
+          />
+        ) : null}
+        {level === 2 ? (
+          <Path d="M0 0L34 0L0 90ZM100 0L66 0L100 90Z" fill="#ffffff" fillOpacity={0.3} />
+        ) : null}
+        {level === 3 ? (
+          <Rect x={0} y={80} width={100} height={94} fill={`url(#${uid}flare)`} />
+        ) : null}
+        {level === 4 ? (
+          <>
+            <Path
+              d="M17 0V174M33 0V174M50 0V174M67 0V174M83 0V174"
+              stroke="#7a5cff"
+              strokeOpacity={0.3}
+              strokeWidth={0.6}
+            />
+            <Path d="M70 0V174" stroke="#7cf8ff" strokeWidth={1.4} />
+          </>
+        ) : null}
+        {level === 5 || level === 10 ? (
+          <Path
+            d="M-10 70L55 0H78L-10 96ZM20 174L110 80V106L46 174Z"
+            fill={line}
+            fillOpacity={0.28}
+          />
+        ) : null}
+        {level === 6 ? (
+          <Circle
+            cx={50}
+            cy={72}
+            r={44}
+            fill="none"
+            stroke="#fff3b0"
+            strokeOpacity={0.5}
+            strokeWidth={2}
+            strokeDasharray="1 10.5"
+          />
+        ) : null}
+        {level === 7 ? (
+          <>
+            <Path
+              d="M0 20L60 80M0 50L60 110M20 0L100 80M50 0L100 50M100 20L40 80M100 50L40 110M80 0L0 80M50 0L0 50"
+              stroke="#ffffff"
+              strokeOpacity={0.22}
+              strokeWidth={0.6}
+            />
+            <Rect x={0} y={40} width={100} height={90} fill="#ff3b4e" fillOpacity={0.12} />
+          </>
+        ) : null}
+        {level === 8 ? (
+          <Rect x={0} y={0} width={100} height={174} fill="#1d4fff" fillOpacity={0.16} />
+        ) : null}
+        {level === 9 ? (
+          <Rect x={0} y={0} width={100} height={70} fill={line} fillOpacity={0.3} />
+        ) : null}
+        {level === 10 ? (
+          <Path
+            d="M50 72L20 0H34ZM50 72L60 0H74ZM50 72L100 30V48ZM50 72L100 110V128ZM50 72L60 174H42ZM50 72L0 128V110ZM50 72L0 48V30Z"
+            fill="#fff1a8"
+            fillOpacity={0.35}
+          />
+        ) : null}
+        {(level === 5 ? STARS : level >= 8 ? [...STARS, ...STARS_MORE] : []).map(([x, y, r]) => (
+          <Path
+            key={`${x}`}
+            d={`M${x} ${y - r}L${x + r / 5} ${y - r / 5}L${x + r} ${y}L${x + r / 5} ${y + r / 5}L${x} ${y + r}L${x - r / 5} ${y + r / 5}L${x - r} ${y}L${x - r / 5} ${y - r / 5}Z`}
+            fill={level === 8 || level === 9 ? '#ffe27a' : '#ffffff'}
+          />
+        ))}
+        {level === 3 ? (
+          <>
+            <Circle cx={24} cy={128} r={0.9} fill="#fff3b0" />
+            <Circle cx={66} cy={140} r={0.9} fill="#ffd34d" />
+            <Circle cx={80} cy={118} r={0.7} fill="#ffb14d" />
+          </>
+        ) : null}
+      </G>
+      <Path
+        d={shield}
+        fill="none"
+        stroke={line}
+        strokeOpacity={0.3}
+        strokeWidth={Math.min(3 + level, 9)}
+      />
+      <Path
+        d={shield}
+        fill="none"
+        stroke={line}
+        strokeWidth={level >= 10 ? 4.2 : level >= 5 ? 3.4 : level >= 3 ? 2.8 : 2.2}
+      />
+    </>
+  );
+}
+
+/** 별 자리 [x, y, 크기](viewBox 0 0 100 174). */
+const STARS = [
+  [66, 34, 6],
+  [14, 78, 4],
+  [80, 122, 5],
+  [32, 146, 3.5],
+] as const;
+
+const STARS_MORE = [
+  [40, 56, 4.5],
+  [86, 66, 4],
+  [10, 114, 4.5],
+  [58, 152, 5],
+] as const;
+
+/** 큰 카드 +3 이상의 빛 깜빡임. 네이티브 드라이버 투명도 하나만 움직인다. */
+function EnhanceFxPulse({
+  width,
+  height,
+  shield,
+  fx,
+}: {
+  width: number;
+  height: number;
+  shield: string;
+  fx: EnhanceFx;
+}) {
+  const { motionOK } = useSnapshot(prefs);
+  const opacity = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!motionOK) return;
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 1400,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacity, {
+          toValue: 0,
+          duration: 1400,
+          easing: Easing.inOut(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [opacity, motionOK]);
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={{ position: 'absolute', left: 0, top: 0, width, height, opacity }}
+    >
+      <Svg width={width} height={height} viewBox="0 0 100 174" preserveAspectRatio="none">
+        <Path d={shield} fill={fx.glow} fillOpacity={0.14} stroke="#ffffff" strokeWidth={1.2} />
+      </Svg>
+    </Animated.View>
+  );
+}
+
 /** T-11-373 카드 강화 배지(웹 PlayerCard .card-enhance). */
-function EnhanceBadge({ level, compact }: { level: number; compact: boolean }) {
+function EnhanceBadge({ level, compact, fx }: { level: number; compact: boolean; fx: EnhanceFx }) {
   return (
     <View
       testID="card-enhance"
@@ -250,7 +445,7 @@ function EnhanceBadge({ level, compact }: { level: number; compact: boolean }) {
         paddingHorizontal: compact ? 4 : 6,
         paddingVertical: 1,
         borderRadius: 999,
-        backgroundColor: '#f6b73c',
+        backgroundColor: fx.stops[Math.floor((fx.stops.length - 1) / 2)],
         borderWidth: 1,
         borderColor: '#ffffff88',
       }}
@@ -258,7 +453,7 @@ function EnhanceBadge({ level, compact }: { level: number; compact: boolean }) {
       <Text
         maxFontSizeMultiplier={1.1}
         style={{
-          color: '#2b1700',
+          color: fx.badgeInk,
           fontWeight: '800',
           fontSize: compact ? 8 : 11,
           includeFontPadding: false,
@@ -347,6 +542,43 @@ function SeasonBadge({ season, compact }: { season: number; compact: boolean }) 
   );
 }
 
+/** T-11-372 시즌 특별 카드 띠(웹 PlayerCard .card-special) — 작은 카드는 아래쪽에 겹치고, 큰 카드는 맨 아래 줄. */
+function SpecialBadge({ ribbon, compact }: { ribbon: SpecialRibbon; compact: boolean }) {
+  const color = SPECIAL_COLORS[ribbon.kind];
+  return (
+    <View
+      testID="card-special"
+      accessibilityLabel={ribbon.aria}
+      pointerEvents="none"
+      style={
+        compact
+          ? { position: 'absolute', bottom: 3, left: 0, right: 0, alignItems: 'center' }
+          : { width: '100%', alignItems: 'center', marginTop: 4 }
+      }
+    >
+      <Text
+        numberOfLines={1}
+        maxFontSizeMultiplier={1.1}
+        style={{
+          maxWidth: '92%',
+          overflow: 'hidden',
+          paddingHorizontal: compact ? 4 : 8,
+          borderRadius: 3,
+          backgroundColor: color.bg,
+          color: color.ink,
+          fontSize: compact ? 7 : 10,
+          lineHeight: compact ? 10 : 15,
+          fontWeight: '800',
+          letterSpacing: 0.3,
+          includeFontPadding: false,
+        }}
+      >
+        {ribbon.text}
+      </Text>
+    </View>
+  );
+}
+
 const CARD_STATS = {
   field: ['pac', 'sho', 'dri', 'pas', 'def', 'phy'],
   GK: ['def', 'phy', 'pas', 'pac', 'sho', 'dri'],
@@ -407,6 +639,8 @@ export const CARD_HEIGHT = 242;
 export const CARD_STYLE_ROW = 19;
 /** 키 · 몸무게 · 주발 줄 높이. 이 줄이 있으면 위 칸(그림 · LS)과 카드를 그만큼 늘린다(LS 아래로 겹치지 않게). */
 export const CARD_BODY_ROW = 12;
+/** T-11-372 큰 카드의 시즌 특별 카드 띠 줄 높이(표식이 있을 때만). */
+export const CARD_SPECIAL_ROW = 20;
 
 export function PlayerCard({
   cell,
@@ -440,11 +674,20 @@ export function PlayerCard({
   // 플레이스타일(웹 PlayerCard .card-type). 자리가 좁은 compact 카드에는 넣지 않는다.
   const style = !compact && cell.pos ? typeName(cell.pos, cell.type) : null;
   const body = compact ? null : cardBody(cell);
+  const ribbon = cell.youth ? null : specialRibbon(cell.specials);
+  const special = ribbon ? SPECIAL_COLORS[ribbon.kind] : null;
+  // T-11-373 강화 단계 효과(등급 색 위에 입힌다).
+  const level = cell.youth ? 0 : (cell.enhance ?? 0);
+  const fx = enhanceFx(level);
   const height = compact
     ? mini
       ? 68
       : 88
-    : CARD_HEIGHT + (deployed ? 31 : 0) + (style ? CARD_STYLE_ROW : 0) + (body ? CARD_BODY_ROW : 0);
+    : CARD_HEIGHT +
+      (deployed ? 31 : 0) +
+      (style ? CARD_STYLE_ROW : 0) +
+      (body ? CARD_BODY_ROW : 0) +
+      (ribbon ? CARD_SPECIAL_ROW : 0);
   const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
   return (
     <View
@@ -473,8 +716,21 @@ export function PlayerCard({
             <Stop offset="0.5" stopColor={tone.base} />
             <Stop offset="1" stopColor={tone.shade} />
           </LinearGradient>
+          {fx ? (
+            <LinearGradient id={`${uid}fx`} x1="0" y1="0" x2="1" y2="1">
+              {fx.stops.map((c, i) => (
+                <Stop key={i} offset={i / (fx.stops.length - 1)} stopColor={c} />
+              ))}
+            </LinearGradient>
+          ) : null}
         </Defs>
-        <Path d={shield} fill={`url(#${uid}face)`} stroke={tone.line} strokeWidth="1.5" />
+        <Path
+          d={shield}
+          fill={`url(#${uid}face)`}
+          stroke={special ? special.bg : tone.line}
+          strokeWidth={special ? 3 : 1.5}
+        />
+        {fx ? <EnhanceFxArt level={level} uid={uid} shield={shield} /> : null}
         <Path
           d="M7 21H20L28 12L50 8L72 12L80 21H93M8 147L16 157L50 166L84 157L92 147"
           fill="none"
@@ -490,6 +746,9 @@ export function PlayerCard({
           strokeWidth={1}
         />
       </Svg>
+      {fx && level >= 3 && !compact && animate ? (
+        <EnhanceFxPulse width={cardWidth} height={height} shield={shield} fx={fx} />
+      ) : null}
       <View
         style={{
           flexDirection: 'row',
@@ -651,7 +910,7 @@ export function PlayerCard({
         <SeasonBadge season={cell.season} compact={compact} />
       ) : null}
       {cell.locked && !cell.youth ? <LockBadge compact={compact} /> : null}
-      {cell.enhance && !cell.youth ? <EnhanceBadge level={cell.enhance} compact={compact} /> : null}
+      {fx ? <EnhanceBadge level={level} compact={compact} fx={fx} /> : null}
       {mini ? null : (
         <View
           style={{
@@ -717,6 +976,7 @@ export function PlayerCard({
         </View>
       ) : null}
       {!compact ? <CardAttributes cell={cell} color={tone.ink} /> : null}
+      {ribbon ? <SpecialBadge ribbon={ribbon} compact={compact} /> : null}
     </View>
   );
 }

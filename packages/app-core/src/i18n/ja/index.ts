@@ -20,6 +20,7 @@ import { boardLabel } from './boardLabel';
 import { cardEnhance } from './cardEnhance';
 import { careerGuide } from './careerGuide';
 import { careerMoment } from './careerMoment';
+import { careerOverview } from './careerOverview';
 import { chat } from './chat';
 import { chatReject } from './chatReject';
 import { club } from './club';
@@ -144,6 +145,7 @@ export const ja = {
   cardEnhance,
   careerGuide,
   careerMoment,
+  careerOverview,
   chat,
   chatReject,
   club,

@@ -15,7 +15,7 @@ export function onAchDirty(fn: () => void): () => void {
   return () => void listeners.delete(fn);
 }
 
-/** 업적이 바뀌었을 수 있는 쓰기(은퇴 업로드 · 팀 저장 · 경기 · 좋아요 · 닉네임) 뒤에 부른다. */
+/** 업적이 바뀌었을 수 있는 쓰기(은퇴 업로드 · 팀 저장 · 경기 · 좋아요 · 닉네임 · 카드 강화) 뒤에 부른다. */
 export function markAchDirty(): void {
   void saveKey(DIRTY_KEY, true);
   for (const fn of listeners) fn();
@@ -32,7 +32,7 @@ export const achCheckable = (screen: string, teamView: string, sheetOpen: boolea
 
 /** 업적이 바뀔 수 있는 API 쓰기 경로(api/client가 성공한 쓰기마다 묻는다). 은퇴는 업로드 큐가 따로 표시한다. */
 export const touchesAchievements = (path: string): boolean =>
-  /^\/v1\/(owner-team(?:\/matches|\/coach)?|managers\/[^/]+\/finish|teams\/[^/]+\/like|profile\/nickname)(?:\?|$)/.test(
+  /^\/v1\/(owner-team(?:\/matches|\/coach)?|managers\/[^/]+\/finish|teams\/[^/]+\/like|profile\/nickname|cards\/[^/]+\/enhance)(?:\?|$)/.test(
     path,
   );
 

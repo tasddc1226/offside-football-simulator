@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { scoutText as L } from '@offside/app-core/i18n/ko/scout';
+import { scoutWhatText } from '@offside/app-core/scoutOdds';
 import { scoutPityAt } from '@offside/contracts/cup';
 import { useIapItems } from '../../platform/iapItems';
 import { rem } from '../../theme/type';
@@ -47,7 +48,7 @@ export function ScoutShop({ onBought }: { onBought?: (balance: number, spent: nu
       {open ? (
         <>
           <Txt tone="muted" style={small}>
-            {`${L.what} ${L.pityHelp(scoutPityAt())}`}
+            {`${scoutWhatText()} ${L.pityHelp(scoutPityAt())}`}
           </Txt>
           {/* 묶음이 없으면 IapPacks는 '다시 확인' · 로그인 안내 · 받지 못한 결제만 보인다(T-11-434). */}
           <IapPacks item="scout" note={L.shopNote} />

@@ -1,0 +1,10 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "OFFSIDE",
+    "CFBundleName": "OFFSIDE",
+    "NSPhotoLibraryUsageDescription": "請允許存取照片，以便選擇球隊標誌的圖片。"
+  },
+  "android": {
+    "app_name": "OFFSIDE"
+  }
+}

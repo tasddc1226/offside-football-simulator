@@ -28,7 +28,7 @@
   {/each}
 </div>
 {#if v.legend.length}
-  <!-- T-11-438 '안전' · '원터치' 뜻을 터치 화면에서도 보이게 선택지 아래에 둔다(이벤트 시트는 닫을 수 없어 도감을 못 연다). -->
+  <!-- T-11-438 '안전' · '원터치' 뜻을 터치 화면에서도 보이게 선택지 아래에 둔다(시트를 잠시 닫지 않아도 뜻을 확인할 수 있다). -->
   <div class="ec-legend" data-event-legend>
     {#each v.legend as l (l.term)}<p><b>{l.term}</b> {l.text}</p>{/each}
   </div>

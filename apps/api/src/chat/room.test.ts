@@ -1,10 +1,13 @@
 import {
   CHAT_HISTORY,
   CHAT_KEEP_MS,
+  CHAT_NOTICE_MERGE_MS,
   CHAT_REPLY_SNIPPET,
   CHAT_TICKET_MS,
   type ChatServerEvent,
+  type ChatShare,
 } from '@offside/contracts/chat';
+import type { LiveRetiredNumber } from '@offside/contracts';
 import { LIVE_PING, LIVE_PONG } from '@offside/contracts/polling';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fakeRoom, type FakeSocket } from '../test/chatRoom.js';
@@ -221,5 +224,77 @@ describe('T-11-015 ChatRoom', () => {
     expect(last(bob)).toEqual({ t: 'err', code: 'readonly' });
     say(alice, room, '돼요');
     expect(last(alice)).toMatchObject({ t: 'msg' });
+  });
+});
+
+describe('라운지 공유 ChatRoom.postShare', () => {
+  const SHARE: ChatShare = {
+    kind: 'team',
+    teamId: 'tem_1',
+    name: '하늘 FC',
+    manager: '감독',
+    formation: '4-3-3',
+    ovr: 80,
+    logo: null,
+    record: { w: 1, d: 0, l: 2 },
+    slots: [],
+  };
+
+  it('올린 내용이 소켓과 다음 입장에 함께 가고, 작성자마다 1분에 한 번만 올린다', async () => {
+    const { room, join } = fakeRoom();
+    const reader = await join();
+    const id = room.postShare(ALICE, '하늘 FC 팀을 공유했어요. OVR 80', SHARE);
+    expect(id).toBeTruthy();
+    const sent = last(reader) as Extract<ChatServerEvent, { t: 'msg' }>;
+    expect(sent.m).toMatchObject({ id, body: '하늘 FC 팀을 공유했어요. OVR 80', share: SHARE });
+    expect(sent.m).not.toHaveProperty('profileId');
+    expect(room.postShare(ALICE, '또', SHARE)).toBeNull();
+    expect(room.postShare(BOB, '밥의 공유', SHARE)).toBeTruthy();
+    const late = await join();
+    const hello = late.sent[0] as Extract<ChatServerEvent, { t: 'hello' }>;
+    expect(hello.messages.find((m) => m.id === id)?.share).toEqual(SHARE);
+  });
+
+  it('공유 칸은 보통 메시지에 붙지 않고, 보통 전송의 도배 제한과 따로 센다', async () => {
+    const { room, join } = fakeRoom();
+    const alice = await join(room.issueTicket(ALICE));
+    say(alice, room, '안녕');
+    expect((last(alice) as Extract<ChatServerEvent, { t: 'msg' }>).m).not.toHaveProperty('share');
+    expect(room.postShare(ALICE, '공유', SHARE)).toBeTruthy();
+  });
+});
+
+describe('영구결번 배너 ChatRoom.postNotice', () => {
+  const ITEM: LiveRetiredNumber = {
+    careerId: 'car_1',
+    name: '하늘선수',
+    pos: 'FW',
+    clubId: 'c1',
+    club: '하늘 FC',
+    number: 9,
+    seq: 1,
+    season: 2,
+    at: '2026-11-02T00:00:00.000Z',
+  };
+
+  it('메시지가 아니라 배너로 보내고 다음 입장에 함께 주며, 5분 안의 다음 결번은 앞 배너에 합친다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const { room, join } = fakeRoom();
+    const reader = await join();
+    room.postNotice(ITEM);
+    const first = (last(reader) as Extract<ChatServerEvent, { t: 'notice' }>).notice;
+    expect(first).toMatchObject({ n: 1, careerId: 'car_1', club: '하늘 FC', number: 9 });
+    room.postNotice({ ...ITEM, number: 10 });
+    const merged = (last(reader) as Extract<ChatServerEvent, { t: 'notice' }>).notice;
+    expect(merged).toMatchObject({ id: first.id, n: 2, number: 9 });
+    vi.setSystemTime(Date.now() + CHAT_NOTICE_MERGE_MS + 1);
+    room.postNotice({ ...ITEM, number: 11 });
+    const late = await join();
+    const hello = late.sent[0] as Extract<ChatServerEvent, { t: 'hello' }>;
+    expect(hello.messages).toEqual([]);
+    expect(hello.notices?.map((n) => [n.n, n.number])).toEqual([
+      [2, 9],
+      [1, 11],
+    ]);
   });
 });

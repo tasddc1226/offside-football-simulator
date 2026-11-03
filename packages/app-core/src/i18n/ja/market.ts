@@ -56,7 +56,7 @@ export const market: Translation<MarketMsgs> = {
   notEnough: '足りません',
   buyNote:
     '獲得した選手はすぐにチームに入れられます。再び売ることはできますが、放出して資金に換えることはできません。',
-  ownListing: '自分が出品した選手です。',
+  ownListing: '自分が出品した選手です',
   buyShort: (p) =>
     `クラブ資金が${p.short}足りません。自分で育てた選手を放出すると資金が手に入ります。`,
   unlist: '出品を取り下げる',
@@ -105,6 +105,7 @@ export const market: Translation<MarketMsgs> = {
   releaseIntro:
     '自分で育てた選手を放出すると、カードの基準価格分のクラブ資金が手に入ります。殿堂の記録はそのまま残ります。',
   seasonGroup: 'シーズン',
+  seasonAll: 'すべてのシーズン',
   pickAll: 'すべて選択',
   pickNone: '選択を解除',
   pickAllMax: (p) => `最大${p.n}人を選択`,
@@ -127,7 +128,7 @@ export const market: Translation<MarketMsgs> = {
     `${p.count}人を放出して、クラブ資金${p.amount}を受け取ります。放出した選手は二度と呼び戻せません。殿堂の記録はそのまま残ります。`,
   lockBought: '獲得した選手は放出できません',
   lockListed: '出品中です。取り下げてから放出できます',
-  lockStarter: '先発です。チームから外してから放出できます',
+  lockStarter: '先発かカップメンバーです。メンバーから外してから放出できます',
   lockPlayerLocked: 'ロック中です',
   playerUnlock: 'ロック解除',
   toastListed: '市場に出品しました。',

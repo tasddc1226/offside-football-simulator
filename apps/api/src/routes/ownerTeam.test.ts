@@ -23,6 +23,7 @@ import {
 } from '@offside/contracts';
 import {
   FRIENDLY_MATCHES_PER_DAY,
+  TEAM_MATCH_RECHARGE_MIN,
   TEAM_MATCHES_PER_DAY,
   YOUTH_OVR,
   matchScore,
@@ -33,6 +34,7 @@ import {
   FORMATIONS,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
+import * as ids from '../db/ids.js';
 import { resolveBalance } from '@offside/contracts/balance';
 import { divisionRules, nextDivision } from '@offside/contracts/team-division';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -50,6 +52,7 @@ import {
   ownerItems,
   ownerTeams,
   cupEntries,
+  teamLiveMatches,
   teamMatches,
 } from '../db/schema.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
@@ -1337,6 +1340,39 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     });
   });
 
+  it('하루 경기를 다 치른 뒤 충전 간격이 지나면 1경기가 더 열린다', async () => {
+    const me = await ownerWithTeam(1);
+    const rival = await ownerWithTeam(1);
+    const other = await ownerWithTeam(1);
+    // 간격만큼 지난 시각에 하루 경기를 다 치른 것으로 둔다(시계는 하루 한가운데로 고정).
+    const now = Date.now();
+    const gap = TEAM_MATCH_RECHARGE_MIN * 60_000;
+    const tenth = now - gap;
+    await ctx.db.insert(teamMatches).values(
+      Array.from({ length: TEAM_MATCHES_PER_DAY }, (_, i) => ({
+        id: `mat_seed-${i}`,
+        profileId: me.profileId,
+        homeTeamId: me.team.id,
+        awayTeamId: other.team.id,
+        homeGoals: 0,
+        awayGoals: 0,
+        detailJson: '{"home":{},"away":{},"events":[]}',
+        createdAt: new Date(tenth).toISOString(),
+      })),
+    );
+    const data = GetRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    ).data;
+    expect(data.matchesLeft).toBe(1);
+    const res = await call('POST', '/v1/owner-team/matches', {
+      cookie: me.cookie,
+      headers: idem(),
+      body: { opponentTeamId: rival.team.id },
+    });
+    expect(res.status).toBe(201);
+    expect(PlayRes.parse(await res.json()).data.matchesLeft).toBe(0);
+  });
+
   it('한국 시각 하루 경기 수를 넘으면 429 TEAM_MATCH_DAILY_LIMIT', async () => {
     const me = await ownerWithTeam(1);
     const rival = await ownerWithTeam(1);
@@ -1390,10 +1426,16 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
 
   describe('T-11-387 장면 경기', () => {
     const MomentRes = successEnvelope(TeamMomentResponseSchema);
-    /** 장면이 하나 이상 나오는 경기를 시작한다(장면이 없으면 바로 끝나므로 다른 상대로 다시 건다). */
+    /** 고정 seed에서 장면이 나오는 경기. 실제 경기를 재시도하면 장면 없는 경기의
+     * 기록/레이팅/알림이 fixture에 섞이므로 경기 ID만 고정하고 시뮬레이터는 그대로 쓴다. */
     async function startLive(me: Awaited<ReturnType<typeof ownerWithTeam>>) {
-      for (let i = 0; i < 6; i++) {
-        const rival = await ownerWithTeam(5, 82, '라이벌 에이스');
+      const rival = await ownerWithTeam(5, 82, '라이벌 에이스');
+      const original = ids.newId;
+      const fixedId = 'mat_00000000-0000-4000-8000-000000000001';
+      const idSpy = vi
+        .spyOn(ids, 'newId')
+        .mockImplementation((prefix) => (prefix === 'mat' ? fixedId : original(prefix)));
+      try {
         const res = await call('POST', '/v1/owner-team/matches', {
           cookie: me.cookie,
           headers: idem(),
@@ -1401,9 +1443,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
         });
         expect(res.status).toBe(201);
         const data = PlayRes.parse(await res.json()).data;
-        if (data.live?.moments.length) return { rival, data };
+        expect(data.match.id).toBe(fixedId);
+        expect(data.live?.moments.length).toBeGreaterThan(0);
+        return { rival, data };
+      } finally {
+        idSpy.mockRestore();
       }
-      throw new Error('장면이 나오는 경기를 만들지 못했어요');
     }
     const choose = (cookie: string, id: string, index: number, choice: string) =>
       call('POST', `/v1/owner-team/matches/${id}/moments/${index}`, { cookie, body: { choice } });
@@ -1637,6 +1682,37 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(mine.team?.division).toBe(homeRow!.division);
     });
 
+    it('T-11-626 운영 도구의 랭크 공격 계수를 일반 경기와 장면 경기에 바로 쓴다', async () => {
+      const me = await ownerWithTeam(5, 80, null, 2);
+      const play = async (live: boolean) => {
+        const rival = await ownerWithTeam(5, 75, null, 2);
+        const res = await call('POST', '/v1/owner-team/matches', {
+          cookie: me.cookie,
+          headers: idem(),
+          body: { opponentTeamId: rival.team.id, ...(live ? { live: true } : {}) },
+        });
+        expect(res.status).toBe(201);
+        return PlayRes.parse(await res.json()).data;
+      };
+      const liveXg = async (id: string) => {
+        const [row] = await ctx.db.select().from(teamLiveMatches).where(eq(teamLiveMatches.id, id));
+        return JSON.parse(row!.stateJson).state.report.home.xg as number;
+      };
+      const before = (await play(false)).match.home.xg!;
+      const liveBefore = await liveXg((await play(true)).match.id);
+      const now = new Date().toISOString();
+      await ctx.db.insert(balanceVersions).values({
+        status: 'active',
+        valuesJson: JSON.stringify({ rankAtkK: 0.7 }),
+        createdBy: 'test',
+        createdAt: now,
+        updatedAt: now,
+        activatedAt: now,
+      });
+      expect((await play(false)).match.home.xg).toBeGreaterThan(before);
+      expect(await liveXg((await play(true)).match.id)).toBeGreaterThan(liveBefore);
+    });
+
     it('상대는 서버가 한 팀만 골라 주고, 같은 pick이면 같은 상대 · pick은 3까지', async () => {
       const me = await ownerWithTeam(3, 80, null, 2);
       const rivals = await Promise.all([1, 2, 3, 4, 5].map(() => ownerWithTeam(3, 80, null, 2)));
@@ -1652,6 +1728,28 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       const picks = await Promise.all(['?pick=1', '?pick=2', '?pick=3', '?pick=9'].map(get));
       for (const p of picks) expect(p).toHaveLength(1);
       expect(picks[3]).toEqual(picks[2]);
+    });
+
+    it('T-11-627 매칭된 상대에 경기 전 예상을 붙이고, 공격 계수 설정을 따른다', async () => {
+      const me = await ownerWithTeam(3, 90, null, 2);
+      await ownerWithTeam(3, 70, null, 2);
+      const odds = async () => {
+        const res = await call('GET', '/v1/owner-team/opponents', { cookie: me.cookie });
+        return OppRes.parse(await res.json()).data.items[0]!.odds!;
+      };
+      const before = await odds();
+      expect(before.win + before.draw + before.loss).toBe(100);
+      expect(before.win).toBeGreaterThan(before.loss);
+      const now = new Date().toISOString();
+      await ctx.db.insert(balanceVersions).values({
+        status: 'active',
+        valuesJson: JSON.stringify({ rankAtkK: 0.9 }),
+        createdBy: 'test',
+        createdAt: now,
+        updatedAt: now,
+        activatedAt: now,
+      });
+      expect(await odds()).not.toEqual(before);
     });
 
     it('고른 상대 RP가 그새 멀어지면 409 TEAM_OPPONENT_STALE', async () => {
@@ -1983,7 +2081,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
 
       const view = await friendsOf(a.cookie);
       expect(view).toMatchObject({ canPlay: false, canPlayPreseason: true });
-      expect(view.friends[0]).toMatchObject({ name: '창단', founder: true, preseasonTeam: null });
+      expect(view.friends[0]).toMatchObject({
+        name: '창단',
+        founder: true,
+        preseasonTeam: null,
+        profileTeamId: null,
+      });
       const none = await preFriendly(a.cookie, bCode);
       expect(none.status).toBe(409);
       expect(await reason(none)).toBe('FRIEND_TEAM_REQUIRED');
@@ -1993,13 +2096,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect((await putTeam(b.cookie, { season: 2, slots: slots(bPre) })).status).toBe(409);
       const legacy = await putTeam(b.cookie, { season: 0, name: '레전드 FC', slots: slots(bPre) });
       expect(legacy.status).toBe(200);
-      expect(PutRes.parse(await legacy.json()).data.team).toMatchObject({
-        season: 0,
-        name: '레전드 FC',
-      });
-      expect((await friendsOf(a.cookie)).friends[0]!.preseasonTeam).toMatchObject({
-        name: '레전드 FC',
-      });
+      const legacyTeam = PutRes.parse(await legacy.json()).data.team;
+      expect(legacyTeam).toMatchObject({ season: 0, name: '레전드 FC' });
+      const withLegacy = (await friendsOf(a.cookie)).friends[0]!;
+      expect(withLegacy.preseasonTeam).toMatchObject({ name: '레전드 FC' });
+      // T-11-601 이번 시즌 팀이 없어도 가장 최근 팀으로 구단주 프로필을 연다.
+      expect(withLegacy).toMatchObject({ team: null, profileTeamId: legacyTeam!.id });
 
       const played = await preFriendly(a.cookie, bCode);
       expect(played.status).toBe(201);

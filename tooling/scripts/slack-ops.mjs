@@ -4,6 +4,14 @@ import { inspectInfraHealth } from './infra-health.mjs';
 
 const HOUR = 3600000;
 const issueNames = {
+  'backup-recovery-unverified':
+    'R2 사본의 일관된 복구 검증이 없거나 검증 자료를 확인할 수 없습니다. Time Travel 상태와 별개입니다.',
+  'backup-recovery-stale': '복원 검증된 R2 스냅샷이 30시간보다 오래됐습니다.',
+  'resource-workflow-missing-or-stale': 'GitHub 인프라 예약 점검이 3시간 넘게 시작되지 않았습니다.',
+  'resource-workflow-completion-stale': 'GitHub 인프라 점검 완료 기록이 3시간 넘게 지연됐습니다.',
+  'resource-workflow-failed':
+    '최근 GitHub 인프라 예약 점검이 실패했습니다. DLQ·저장소 검사 내역을 확인하세요.',
+  'resource-workflow-observation-unavailable': 'GitHub 인프라 점검 상태를 확인할 수 없습니다.',
   'd1-storage-70-percent': 'D1 할당 용량이 70%를 넘었습니다.',
   'd1-storage-less-than-30-days': '현재 증가 속도라면 D1 한도까지 30일 이하입니다.',
   'daily-job-missing-or-stale': '일일 작업 기록이 없거나 지연됐습니다.',

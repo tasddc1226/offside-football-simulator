@@ -5,6 +5,10 @@ import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Animated, Modal, PanResponder, Pressable, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
+import { shareToLounge } from '../../components/loungeShare';
+import { ShareIcon } from '../../components/ShareIcon';
+import { Toast } from '../../ui/Toast';
 import { useSnapshot } from 'valtio';
 import type { CareerPos } from '@offside/contracts';
 import { tradeValue } from '@offside/contracts/card-enhance';
@@ -13,6 +17,7 @@ import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
 import { detailPosOf, type DetailPos } from '@offside/contracts/positions';
 import {
   buyListing,
+  fetchListing,
   cancelListing,
   createListing,
   fetchMarket,
@@ -39,6 +44,7 @@ import {
   MARKET_POS_FILTERS,
   marketDetailFilters,
   marketFiltered,
+  marketSeasonChoices,
   marketFindChips,
   cardFrom,
   marketTypeFilters,
@@ -82,7 +88,7 @@ import { agoKo, fmtValue } from '@offside/app-core/format';
 import { localCareerNames } from '@offside/game/hof-store';
 import { DPOS, POS } from '@offside/game/data';
 import { prefs } from '../../store';
-import { go, takeFocus } from '../../game/nav';
+import { go, takeFocus, takeMarketListing } from '../../game/nav';
 import { measureShown, scrollToView } from '../../ui/scroll';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { notificationDestination } from '../../platform/notificationDestination';
@@ -90,6 +96,7 @@ import { askPushAfter } from '../../platform/pushAsk';
 import { toast } from '../../game/host';
 import { useColors } from '../../theme/useColors';
 import { mix, type Colors } from '../../theme/colors';
+import { alpha } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar, Btn, Press, Screen, Topbar, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
@@ -110,6 +117,8 @@ type Sent<T> = Promise<
 >;
 
 const SORT_KEYS = Object.keys(MARKET_SORT_LABEL) as MarketSort[];
+/** T-11-596 시즌 필터의 '모든 시즌'(시즌 id와 겹치지 않는 값). */
+const ALL_SEASONS = -1;
 
 /** 목록·고르기용 카드 — 진짜 PlayerCard의 compact·mini판(OVR·자리·시즌·국기·등번호). 폭은 pitch 슬롯(62)과 거의 같은 64. */
 function MiniCard({
@@ -173,15 +182,19 @@ function MarketSheet({
   open,
   label,
   onClose,
+  foot,
   children,
 }: {
   open: boolean;
   label: string;
   onClose: () => void;
+  /** 스크롤과 무관하게 아래에 붙어 있는 버튼들. */
+  foot?: ReactNode;
   children: ReactNode;
 }) {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
+  const insets = useSafeAreaInsets();
   return (
     <Modal
       visible={open}
@@ -216,8 +229,53 @@ function MarketSheet({
           }}
         >
           <ScrollView>{children}</ScrollView>
+          {foot ? (
+            <View
+              style={{
+                gap: 10,
+                paddingHorizontal: 20,
+                paddingTop: 12,
+                paddingBottom: 12 + insets.bottom,
+                borderTopWidth: 1,
+                borderTopColor: c.line,
+                backgroundColor: c.surface,
+              }}
+            >
+              {foot}
+            </View>
+          ) : null}
+          {/* 닫기는 오른쪽 위에 늘 보인다. */}
+          <Press
+            testID="market-sheet-close"
+            accessibilityRole="button"
+            accessibilityLabel={L.close}
+            onPress={onClose}
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: alpha(c.surface, 0.8),
+            }}
+          >
+            <Svg width={18} height={18} viewBox="0 0 20 20" accessible={false}>
+              <Path
+                d="m5 5 10 10M15 5 5 15"
+                stroke={c.ink}
+                strokeWidth={2}
+                fill="none"
+                strokeLinecap="round"
+              />
+            </Svg>
+          </Press>
         </View>
       </View>
+      {/* 모달은 앱 위 별도 층이라 알림을 이 안에서도 그린다. */}
+      <Toast />
     </Modal>
   );
 }
@@ -929,6 +987,15 @@ export default function Market() {
   // 시트: 영입 · 방출 확인.
   const [buying, setBuying] = useState<MarketListing | null>(null);
   const [confirmRelease, setConfirmRelease] = useState(false);
+  // 라운지 공유 카드에서 왔으면 그 선수의 구매창부터 연다.
+  useEffect(() => {
+    const id = takeMarketListing();
+    if (!id) return;
+    void fetchListing(id).then((r) => {
+      if (r.ok) setBuying(r.data.listing);
+      else toast(LC.shareListingGone);
+    });
+  }, []);
 
   const open = (v: MarketView) => {
     setView(v);
@@ -1030,12 +1097,8 @@ export default function Market() {
   const range = me ? sellSlider(me.rules) : null;
   const sellDiff = sellValue ? priceDiff(sellPrice, sellValue) : null;
   const buyDiff = buying ? priceDiff(buying.price, buying.card.cardValue) : null;
-  const buyBlocked =
-    buying && me
-      ? myListingIds.has(buying.id)
-        ? L.ownListing
-        : buyBlock(buying.price, me.balance)
-      : null;
+  const ownBuying = !!buying && !!me && myListingIds.has(buying.id);
+  const buyBlocked = buying && me && !ownBuying ? buyBlock(buying.price, me.balance) : null;
   const box = {
     borderWidth: 1,
     borderColor: 'transparent',
@@ -1363,6 +1426,19 @@ export default function Market() {
                 </View>
                 <FindRow filter={filter} onOpen={() => setFinding(true)} onPick={pickFilter} />
                 {filter.pos ? <SubFilters filter={filter} onPick={pickFilter} /> : null}
+                {season !== null && season > 0 ? (
+                  <SelectField
+                    compact
+                    label={L.seasonGroup}
+                    testID="market-card-season"
+                    value={filter.cardSeason ?? ALL_SEASONS}
+                    options={[
+                      { value: ALL_SEASONS, label: L.seasonAll },
+                      ...seasonOptions(marketSeasonChoices(season)),
+                    ]}
+                    onChange={(v) => pickFilter({ cardSeason: v === ALL_SEASONS ? undefined : v })}
+                  />
+                ) : null}
                 <View
                   style={{
                     flexDirection: 'row',
@@ -1475,6 +1551,27 @@ export default function Market() {
                                 {diff.text}
                               </Txt>
                             </View>
+                            {myListingIds.has(l.id) ? (
+                              <Press
+                                testID="listing-lounge-share"
+                                accessibilityRole="button"
+                                accessibilityLabel={LC.sharePlayerAria({
+                                  name: marketName(l.card, local),
+                                })}
+                                hitSlop={8}
+                                onPress={() =>
+                                  void shareToLounge({ kind: 'player', careerId: l.card.careerId })
+                                }
+                                style={{
+                                  width: 36,
+                                  height: 36,
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                }}
+                              >
+                                <ShareIcon color={c.muted} />
+                              </Press>
+                            ) : null}
                             <AttrStrip card={l.card} />
                           </Press>
                         );
@@ -1783,7 +1880,48 @@ export default function Market() {
         )}
       </Screen>
 
-      <MarketSheet open={!!buying && (!!me || guest)} label={L.sheetBuy} onClose={closeSheets}>
+      <MarketSheet
+        open={!!buying && (!!me || guest)}
+        label={L.sheetBuy}
+        onClose={closeSheets}
+        foot={
+          buying ? (
+            !me ? (
+              <LoginButtons back={{ market: true }} onDone={() => void loadMe()} />
+            ) : ownBuying ? (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Btn
+                  style={{ flex: 1 }}
+                  testID="listing-lounge-share"
+                  onPress={() =>
+                    void shareToLounge({ kind: 'player', careerId: buying.card.careerId })
+                  }
+                >
+                  {LC.sharePlayerAct}
+                </Btn>
+                <Btn
+                  style={{ flex: 1 }}
+                  disabled={busy}
+                  onPress={() => void run(() => cancelListing(buying.id), MARKET_TOAST.unlisted)}
+                >
+                  {L.unlist}
+                </Btn>
+              </View>
+            ) : (
+              <Btn
+                kind="accent"
+                testID="market-buy"
+                disabled={busy || !!buyBlocked}
+                onPress={() =>
+                  void run(() => buyListing(buying.id, buying.price), MARKET_TOAST.bought)
+                }
+              >
+                {L.buyFor({ price: fmtValue(buying.price) })}
+              </Btn>
+            )
+          ) : null
+        }
+      >
         {buying && (me || guest) ? (
           <>
             <View
@@ -1856,7 +1994,7 @@ export default function Market() {
               }}
             >
               <Txt v="h2" accessibilityRole="header">
-                {me ? L.buyTitle : L.loginTitle}
+                {ownBuying ? L.ownListing : me ? L.buyTitle : L.loginTitle}
               </Txt>
               <View style={{ gap: 8 }}>
                 <Line label={L.baseLine} value={fmtValue(buying.card.cardValue)} />
@@ -1876,7 +2014,7 @@ export default function Market() {
                     </Txt>
                   }
                 />
-                {me ? (
+                {me && !ownBuying ? (
                   <>
                     <View style={{ height: 1, backgroundColor: c.line }} />
                     <Line label={L.fundsNow} value={fundsText(me.balance)} />
@@ -1900,54 +2038,24 @@ export default function Market() {
                   >
                     <Txt style={small}>{L.loginToBuy}</Txt>
                   </View>
-                  <LoginButtons back={{ market: true }} onDone={() => void loadMe()} />
-                  <Btn testID="market-sheet-close" onPress={closeSheets}>
-                    {L.close}
-                  </Btn>
                 </View>
               ) : (
                 <>
-                  <View
-                    style={{ padding: 12, borderRadius: RADIUS.sm, backgroundColor: c.surface2 }}
-                  >
-                    <Txt tone="muted" style={tiny}>
-                      {L.buyNote}
-                    </Txt>
-                  </View>
+                  {ownBuying ? null : (
+                    <View
+                      style={{ padding: 12, borderRadius: RADIUS.sm, backgroundColor: c.surface2 }}
+                    >
+                      <Txt tone="muted" style={tiny}>
+                        {L.buyNote}
+                      </Txt>
+                    </View>
+                  )}
                   {buyBlocked ? (
                     <Txt tone="bad" style={{ fontWeight: '600' }}>
                       {buyBlocked}
                     </Txt>
                   ) : null}
                   {errText}
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <Btn style={{ flex: 1 }} testID="market-sheet-close" onPress={closeSheets}>
-                      {L.close}
-                    </Btn>
-                    {myListingIds.has(buying.id) ? (
-                      <Btn
-                        style={{ flex: 2 }}
-                        disabled={busy}
-                        onPress={() =>
-                          void run(() => cancelListing(buying.id), MARKET_TOAST.unlisted)
-                        }
-                      >
-                        {L.unlist}
-                      </Btn>
-                    ) : (
-                      <Btn
-                        style={{ flex: 2 }}
-                        kind="accent"
-                        testID="market-buy"
-                        disabled={busy || !!buyBlocked}
-                        onPress={() =>
-                          void run(() => buyListing(buying.id, buying.price), MARKET_TOAST.bought)
-                        }
-                      >
-                        {L.buyFor({ price: fmtValue(buying.price) })}
-                      </Btn>
-                    )}
-                  </View>
                 </>
               )}
             </View>
@@ -1977,7 +2085,7 @@ export default function Market() {
           <Txt>{releaseConfirmText(pickedPlayers.length, pickedAmount)}</Txt>
           {errText}
           <View style={{ flexDirection: 'row', gap: 8 }}>
-            <Btn style={{ flex: 1 }} testID="market-sheet-close" onPress={closeSheets}>
+            <Btn style={{ flex: 1 }} onPress={closeSheets}>
               {L.close}
             </Btn>
             <Btn

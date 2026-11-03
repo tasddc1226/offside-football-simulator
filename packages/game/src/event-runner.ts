@@ -1,6 +1,7 @@
 import { ATTR_KEYS, type AttrKey, type Pos } from './data.js';
 import { wOf } from './attributes.js';
 import { ri, pick, chance, rnd, weightedIndex } from './rng.js';
+import { hashStr } from './hash.js';
 import { EVENTS, eventById } from './events-data.js';
 import { BAL, choiceOdds, eventWeight } from './balance.js';
 import type { GameState, Choice, EventDef } from './types.js';
@@ -66,7 +67,9 @@ export const EVENT_RULES = {
   /** T-11-224 도전 성공·확정 뒤 능력치가 +1~2 오를 확률은 twist × 이 값. 실패·안전한 선택에는 능력치 반전이 없다
    * (전엔 성공에도 −1이 붙어 "성공했는데 깎였다"는 제보가 이어졌다). 기대 성장은 옛 성공 반전과 비슷하게 맞췄다. */
   twistGain: 0.4,
-  /** 안전한 선택의 대가(셋 중 하나, 폭 안에서 무작위). */
+  /** 안전한 선택의 대가(셋 중 하나, 폭 안에서 무작위). T-11-543 alt는 같은 대가의 다른 장면 — 대가 종류와 폭은 그대로 두고,
+   * 결과 시트에 붙는 이유 한 줄만 선수 이름 · 이벤트 · 구간 해시로 고른다. RNG를 더 쓰지 않아 반전 확률이 그대로고, 커리어 ID는
+   * 무작위(crypto.randomUUID)라 쓰지 않는다(같은 시드의 결과가 테스트마다 흔들린다). */
   safeCost: [
     {
       k: 'morale',
@@ -77,6 +80,9 @@ export const EVENT_RULES = {
       max: 6,
       get why() {
         return L.costMoraleWhy;
+      },
+      get alt() {
+        return [L.costMoraleWhy2, L.costMoraleWhy3];
       },
     },
     {
@@ -89,6 +95,9 @@ export const EVENT_RULES = {
       get why() {
         return L.costTrustWhy;
       },
+      get alt() {
+        return [L.costTrustWhy2];
+      },
     },
     {
       k: 'fame',
@@ -99,6 +108,9 @@ export const EVENT_RULES = {
       max: 4,
       get why() {
         return L.costFameWhy;
+      },
+      get alt() {
+        return [L.costFameWhy2];
       },
     },
   ],
@@ -184,13 +196,14 @@ export function resolveChoice(
   let twist: string | null = null;
   if (safe && chance(EVENT_RULES.twist)) {
     // 폭이 있는 항목만 RNG를 쓴다(원래 호출 순서: 사기 → 명성 → pick).
-    const [k, d, why] = pick(
+    const [k, d, whys] = pick(
       EVENT_RULES.safeCost.map(
-        ({ k, min, max, why }) => [k, -(min === max ? min : ri(min, max)), why] as const,
+        ({ k, min, max, why, alt }) =>
+          [k, -(min === max ? min : ri(min, max)), [why, ...alt]] as const,
       ),
     );
     addStat(s, k, d);
-    twist = L.twistSafe({ why });
+    twist = L.twistSafe({ why: whys[hashStr(`${s.name}:${evId}:${turnNo(s)}`) % whys.length]! });
   } else if (ok && !safe && chance(EVENT_RULES.twist * EVENT_RULES.twistGain)) {
     const k = pick(ATTR_KEYS.filter((x) => wOf(s)[x] > 0.09));
     const d = ri(1, 2);

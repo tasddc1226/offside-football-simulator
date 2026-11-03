@@ -151,6 +151,7 @@ const ITEM_LABEL: Record<string, string> = {
 export function productLabel(productId: string) {
   const tail = productId.split('.').at(-1) ?? productId;
   if (tail === 'remove_ads') return '광고 제거';
+  if (tail === 'season_pass') return '시즌 패스';
   if (tail === 'club_monthly') return '클럽 멤버십';
   const m = /^([a-z]+)_(\d+)$/.exec(tail);
   return m && ITEM_LABEL[m[1]!] ? `${ITEM_LABEL[m[1]!]} ×${m[2]}` : tail;

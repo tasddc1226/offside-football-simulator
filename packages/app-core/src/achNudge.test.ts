@@ -124,6 +124,7 @@ describe('achieveView', () => {
 describe('touchesAchievements', () => {
   it('업적이 바뀔 수 있는 쓰기만', () => {
     expect(touchesAchievements('/v1/owner-team')).toBe(true);
+    expect(touchesAchievements('/v1/cards/abc/enhance')).toBe(true);
     expect(touchesAchievements('/v1/owner-team/matches')).toBe(true);
     expect(touchesAchievements('/v1/teams/abc/like')).toBe(true);
     expect(touchesAchievements('/v1/profile/nickname')).toBe(true);

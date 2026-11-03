@@ -178,6 +178,8 @@
         // T-11-589 웹 결제(엑솔라). 스위치와 프로젝트 id는 미리 두고, 실제로는 secret XSOLLA_API_KEY · XSOLLA_WEBHOOK_SECRET이
         // 들어가야 열린다(webPayEnabled). 처음에는 WEB_PAY_TESTERS를 먼저 넣어 운영자만 연다(docs/operations/web-pay.md).
         "WEB_PAY_ENABLED": "1",
+        // Xsolla 100장 상품 등록 · 가격 확인 후 이 배포부터 판매한다.
+        "WEB_PAY_BOOST_100_ENABLED": "1",
         "XSOLLA_PROJECT_ID": "318798",
         "ALLOWED_ORIGINS": "https://offside-lab.com,https://offside-web.tasddc1569.workers.dev",
         "WEB_APP_URL": "https://offside-web.tasddc1569.workers.dev",

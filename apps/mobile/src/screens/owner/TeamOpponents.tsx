@@ -1,7 +1,8 @@
 // 상대 고르기(웹 team/Team.svelte 의 view === 'opponents') — 내 팀 OVR과 비슷한 다른 구단주의 팀에 도전한다.
 // 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다. T-11-510 시즌 2(ladder)는 서버가 고른 상대 한 팀과
-// '다른 상대 찾기'(경기마다 3번)를 보여 준다.
+// '다른 상대 찾기'(경기마다 3번)를 보여 준다. T-11-603 그 화면은 queue로 받는다(매칭 찾기를 눌러 큐를 거쳐 상대를 받는다).
 import { FONT } from '@offside/app-core/design-tokens';
+import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TitleBadge } from '../../components/TitleBadge';
@@ -29,8 +30,8 @@ export function TeamOpponents({
   saving = false,
   canSave = true,
   ladder = false,
-  repicksLeft = 0,
-  repick,
+  queue,
+  info,
 }: {
   rating: number;
   matchesLeft: number;
@@ -47,9 +48,9 @@ export function TeamOpponents({
   saving?: boolean;
   canSave?: boolean;
   ladder?: boolean;
-  /** 이번 경기에서 남은 '다른 상대 찾기' 횟수. */
-  repicksLeft?: number;
-  repick?: (() => void) | undefined;
+  /** T-11-603 경기할 수 있을 때의 랭크 매칭 큐, 경기할 수 없을 때 이유 아래 보여 줄 내 팀 정보. */
+  queue?: ReactNode;
+  info?: ReactNode;
 }) {
   const c = useColors();
   return (
@@ -59,11 +60,9 @@ export function TeamOpponents({
         <Txt v="h1" accessibilityRole="header">
           {ladder ? L.matchTitle : L.oppTitle}
         </Txt>
-        {hint ? null : (
+        {hint || ladder ? null : (
           <Txt tone="muted" v="sm">
-            {ladder
-              ? L.matchNear({ rp: rating, left: matchesLeft, per: perDay })
-              : L.oppNear({ rating, left: matchesLeft, per: perDay })}
+            {L.oppNear({ rating, left: matchesLeft, per: perDay })}
           </Txt>
         )}
         <Txt tone="muted" v="xs">
@@ -71,9 +70,9 @@ export function TeamOpponents({
             ? L.matchRule({ n: RANK_MATCH_REPICKS })
             : L.oppRuleApp({ days: TEAM_REPEAT_WINDOW_DAYS })}
         </Txt>
-        {!hint && opponents.length ? (
+        {!hint && !ladder && opponents.length ? (
           <Txt tone="muted" v="xs" testID="opponent-gap-note">
-            {ladder ? L.matchGapNote : L.oppGapNote}
+            {L.oppGapNote}
           </Txt>
         ) : null}
       </View>
@@ -97,13 +96,16 @@ export function TeamOpponents({
               {L.toLineup}
             </Btn>
           ) : null}
+          {info}
         </>
+      ) : queue ? (
+        queue
       ) : (
         <LoadState status={status} failText={L.oppLoadFail} retry={reload}>
           {opponents.length ? (
             opponents.map((o) => {
               const gap = ratingGap(rating, o.rating);
-              const label = ladder ? L.oppRp : L.oppRating;
+              const label = L.oppRating;
               return (
                 <View
                   key={o.teamId}
@@ -164,15 +166,11 @@ export function TeamOpponents({
                     kind="primary"
                     sm
                     testID="team-challenge"
-                    accessibilityLabel={
-                      ladder
-                        ? L.matchStartAria({ name: o.name })
-                        : L.challengeAria({ name: o.name })
-                    }
+                    accessibilityLabel={L.challengeAria({ name: o.name })}
                     disabled={playing || matchesLeft === 0}
                     onPress={() => challenge(o)}
                   >
-                    {ladder ? L.matchStart : L.challenge}
+                    {L.challenge}
                   </Btn>
                 </View>
               );
@@ -180,21 +178,9 @@ export function TeamOpponents({
           ) : (
             <Txt tone="muted">{L.noOpponents}</Txt>
           )}
-          {ladder ? (
-            <Btn
-              sm
-              style={{ alignSelf: 'flex-start' }}
-              onPress={repick ?? reload}
-              disabled={playing || repicksLeft <= 0}
-              testID="team-repick"
-            >
-              {L.matchRepick({ left: repicksLeft, max: RANK_MATCH_REPICKS })}
-            </Btn>
-          ) : (
-            <Btn sm style={{ alignSelf: 'flex-start' }} onPress={reload} disabled={playing}>
-              {L.moreOpponents}
-            </Btn>
-          )}
+          <Btn sm style={{ alignSelf: 'flex-start' }} onPress={reload} disabled={playing}>
+            {L.moreOpponents}
+          </Btn>
         </LoadState>
       )}
     </Card>

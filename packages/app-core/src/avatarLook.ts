@@ -20,6 +20,7 @@ import type { GameState, LookItem, LookState } from '@offside/game/types';
 import { appFormatText as W } from './i18n/ko/appFormat';
 import { avatarLookText as L } from './i18n/ko/avatarLook';
 import { avatarRecordText as R } from './i18n/ko/avatarRecord';
+import { styleLabels } from './createLook';
 
 export interface LookOption {
   value: number;
@@ -55,23 +56,7 @@ export const lookItemName = (item: LookItem): string =>
     kneePads: L.itemKneePads,
   })[item];
 
-const STYLE_LABEL = () => [
-  L.styleShort,
-  L.styleFringe,
-  L.styleLong,
-  L.styleMohawk,
-  L.styleSlick,
-  L.styleBuzz,
-  L.styleAfro,
-  L.styleBun,
-  L.styleSpiky,
-  L.styleBald,
-  L.styleShaved,
-  L.styleDread,
-  L.styleFauxhawk,
-  L.stylePonytail,
-  L.styleMullet,
-];
+const STYLE_LABEL = styleLabels;
 const BEARD_LABEL = () => [L.none, L.beardStubble, L.beardFull];
 const EXPR_LABEL = () => [L.exprBase, L.exprHappy, L.exprWink];
 

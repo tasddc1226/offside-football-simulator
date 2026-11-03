@@ -54,10 +54,10 @@ const ko = {
   titleForm: '고교 3학년, 나는 어떤 선수인가',
   titleCandidates: '스카우트 리포트를 비교해 보세요',
   previewLabel: '내 선수 미리보기',
-  noName: '이름 없음',
+  noName: '이름 미정',
   focusTag: (p: { list: string }) => `주력 ${p.list}`,
   ovrStart: '시작',
-  ovrEst: '예상',
+  ovrEst: '예상 OVR',
   /** 주발 저장값(오른발·왼발·양발)을 화면 문구로. */
   foot: (p: { v: string }) => p.v,
   // 입력 칸
@@ -77,7 +77,8 @@ const ko = {
     `BMI ${p.bmi}${p.note ? ` · ${p.note}` : ' · 포지션 평균 체격'}. 시작 OVR은 같고, 세부 능력치 분포만 조금 달라져요.`,
   position: '포지션',
   detailPosition: '세부 포지션',
-  detailNote: '세부 포지션은 은퇴까지 바뀌지 않아요. 능력치 성장·골과 도움 비중이 달라져요.',
+  detailNote:
+    '세부 포지션은 은퇴까지 바뀌지 않아요. 같은 계열 포지션끼리는 성장과 골 · 도움 비중이 같아요.',
   footLabel: '주발',
   focusTitle: (p: { n: number }) => `주력 능력치 · ${p.n}개 선택`,
   focusUp: (p: { d: number; pct: number }) => `시작 +${p.d} · 성장 +${p.pct}%`,
@@ -85,7 +86,8 @@ const ko = {
   focusDown: (p: { d: number; pct: number }) => `시작 ${p.d} · 성장 -${p.pct}%`,
   focusNone: (p: { pct: number }) => `시작 변화 없음 · 성장 -${p.pct}%`,
   trait: '성장 특성',
-  potentialNote: '잠재력 평가는 은퇴할 때 공개돼요.',
+  potentialNote:
+    '실제 잠재력은 은퇴할 때 공개돼요. 후보를 고를 때는 초기 등급 범위만 미리 볼 수 있어요.',
   // 하단 버튼
   cancel: '취소',
   checkBody: '키·몸무게를 확인해 주세요',
@@ -97,7 +99,7 @@ const ko = {
   // 후보 카드
   potentialRange: (p: { min: string; max: string }) =>
     `초기 잠재력 ${p.min === p.max ? p.min : `${p.min}–${p.max}`}등급`,
-  potentialLocked: '잠재력 등급 범위 미확인',
+  potentialLocked: '잠재력 비공개',
   potentialAd: '광고 보고 후보 3명 잠재력 보기',
   potentialFree: '후보 3명 잠재력 보기',
   /** T-11-221 후보 화면 반폭 톤 버튼 글자(전체 문구는 potentialAd · potentialFree). */
@@ -108,13 +110,24 @@ const ko = {
   potentialHelp:
     '초기 잠재력 등급 범위예요. 훈련과 강화로 달라질 수 있어요. 잠재력은 모든 유저에게 같은 확률로 정해지고, S 등급은 아주 드물어요.',
   potentialWeb: '앱에서 보상형 광고를 보면 후보 3명의 초기 잠재력 등급 범위를 볼 수 있어요.',
+  potentialLogin:
+    '세 후보는 능력치 총합이 같고 분포가 달라요. 초기 잠재력 등급 범위는 구단 자금이나 앱 광고로 볼 수 있어요.',
+  potentialLoginGo: '로그인',
+  potentialClubShort: (p: { price: string; balance: string }) =>
+    `후보 잠재력을 보려면 구단 자금 ${p.price}이 필요해요. 지금은 ${p.balance} 있어요.`,
+  potentialClubCapped:
+    '오늘은 구단 자금으로 후보 잠재력을 더 볼 수 없어요. 내일 다시 볼 수 있어요.',
   potentialSaveFailed: '공개 결과를 저장하지 못했어요. 저장 공간을 확인해 주세요.',
-  candIntro: '세 후보는 능력치 총합이 같고 분포와 잠재력이 달라요. 카드를 눌러 비교해 보세요.',
+  candIntro:
+    '세 후보는 능력치 총합이 같고 분포가 달라요. 이 포지션의 주요 능력치가 높을수록 OVR도 높아요.',
   // T-11-437 웹 비로그인 후보 단계 · 도구 접기
   loginTools:
     '로그인하면 리롤권 · 프리미엄 스카우트권으로 후보를 다시 뽑고, 구단 자금으로 잠재력을 볼 수 있어요.',
   loginToolsGo: '로그인하러 가기',
   moreTools: '상점 · 능력치 안내 더 보기',
+  toolsPicked: '고른 후보',
+  toolsChange: '다른 후보 찾기',
+  toolsPotential: '후보 잠재력 확인',
   openAll: '모두 열기',
   candNo: (p: { n: number }) => `후보 ${p.n}`,
   picked: '✓ 선택',
@@ -129,7 +142,7 @@ const ko = {
     `킵한 후보가 있어요. ${p.pos} · 주력 ${p.focus}로 뽑으면 나와요. 다른 후보를 킵하면 이 후보는 사라져요.`,
   keptRestore: '킵한 후보 조건으로 맞추기',
   scoutMemo: (p: { k: string }) => `스카우트 메모: 숨은 무기는 ${p.k}`,
-  tapToOpen: '탭해서 열기',
+  tapToOpen: '열고 고르기',
   candOpenA11y: (p: { n: number; ovr: number; line: string }) =>
     `후보 ${p.n}, OVR ${p.ovr}, ${p.line}`,
   candClosedA11y: (p: { n: number; k: string }) =>
@@ -152,7 +165,7 @@ const ko = {
   scannedAfter: '명',
   scanCand: '후보',
   scanDone: '후보 3명 선정 완료!',
-  scanSkip: '탭하면 건너뛰기',
+  scanSkip: '누르면 건너뛰기',
   // 국적 고르기
   nationSearchPlaceholder: '나라 이름이나 초성(ㅂㄹㅈ)',
   nationListLabel: '국적',
@@ -166,6 +179,61 @@ const ko = {
   groupHits: (p: { n: number }) => `검색 결과 ${p.n}`,
   // 입력 칸 접근성
   invalidHint: '입력값을 확인해 주세요',
+  // T-11-545 외형 고르기
+  lookTitle: '외형',
+  lookAuto: '기본',
+  lookAutoAria: (p: { item: string }) => `${p.item} 기본`,
+  lookNote:
+    '고르지 않은 항목은 선수마다 정해지는 기본 모습이에요. 고른 항목은 커리어 중 꾸미기에서 무료로 다시 바꿀 수 있어요.',
+  lookPreview: '외형 미리보기',
+  // T-11-605 단계별 선수 만들기
+  blurbCF: '등지고 버티며 공격의 중심을 잡아요',
+  blurbSS: '최전방 뒤를 파고드는 두 번째 공격수',
+  blurbLW: '왼쪽에서 안으로 파고드는 윙어',
+  blurbRW: '오른쪽 측면을 돌파하는 윙어',
+  blurbLM: '왼쪽 측면에서 공수를 오가요',
+  blurbRM: '오른쪽 측면에서 공수를 오가요',
+  blurbLB: '왼쪽을 막고 오버래핑해요',
+  blurbRB: '오른쪽을 막고 오버래핑해요',
+  blurbLWB: '더 높은 곳에서 왼쪽을 오르내려요',
+  blurbRWB: '더 높은 곳에서 오른쪽을 오르내려요',
+  blurbSW: '수비 뒤를 쓸어 담아요',
+  navPos: '포지션',
+  navFocus: '주력',
+  navTrait: '특성',
+  navInfo: '정보',
+  navCand: '후보',
+  stepNav: '선수 만들기 단계',
+  titlePos: '어떤 자리에서 뛸까요',
+  titleFocus: '무엇을 무기로 키울까요',
+  titleTrait: '어떻게 성장할까요',
+  titleInfo: '어떤 선수로 불릴까요',
+  titleExtra: '더 꾸미기',
+  next: '다음 →',
+  prev: '← 이전',
+  quickCandidates: '기본값으로 후보 보기 →',
+  quickNote: '남은 항목은 기본값으로 시작해도 돼요.',
+  moreCustomize: '체격 · 주발 · 외형 더 꾸미기',
+  extraNote: '바꾸지 않아도 돼요. 기본값으로 바로 시작할 수 있어요.',
+  focusMeaning: '시작은 처음 능력치 변화, 성장은 같은 훈련에서 오르는 속도예요.',
+  ovrWhy:
+    '예상 OVR은 포지션마다 중요하게 보는 능력치로 계산해요. 그래서 포지션이나 주력을 바꾸면 달라져요.',
+  tendencyLine: (p: { goal: string; assist: string }) =>
+    `골 비중 ${p.goal} · 도움 비중 ${p.assist}`,
+  levelHigh: '높음',
+  levelMid: '보통',
+  levelLow: '낮음',
+  tendencyGk: '골과 도움 기록은 거의 없어요.',
+  randomNameShort: '랜덤',
+  nameHint: '비워 두면 랜덤 이름으로 시작해요.',
+  numberHint: '번호를 비워 두면 랜덤으로 정해요.',
+  numberErr: '등번호는 1~99로 적어 주세요.',
+  checkNumber: '등번호를 확인해 주세요',
+  candNote:
+    '밑줄은 이 포지션의 OVR 주요 능력치예요. 능력치는 기본 분포라 킥오프 때 조금 달라질 수 있어요.',
+  candEdge: (p: { k: string }) => `세 후보 중 ${p.k}${iGa(p.k)} 가장 높아요`,
+  candEdgeEven: '다른 후보보다 크게 앞서는 능력치는 없어요',
+  sameCandidates: '포지션과 주력이 같으면 후보도 같아요. 둘 중 하나를 바꾸면 새 후보가 나와요.',
 };
 
 export type CreateMsgs = typeof ko;

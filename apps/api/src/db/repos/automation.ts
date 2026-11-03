@@ -25,6 +25,7 @@ const WEIGHT: Record<AutomationReason, number> = {
   serial: 2,
   nonstop: 2,
   aiName: 1,
+  sameSpot: 2,
 };
 const HIGH = 4;
 const MEDIUM = 2;
@@ -34,6 +35,9 @@ const BREAK_MS = 10 * 60_000;
 const MIN_GAPS = 8;
 /** 한 번에 읽는 시즌 수 상한(24시간 ≈ 5만 행). */
 const MAX_ROWS = 60_000;
+/** 같은 좌표 터치를 따질 최소 터치 수와 비율. 사람 손가락은 같은 버튼도 매번 조금씩 다른 점을 누른다. */
+const SAME_SPOT_MIN_TOUCHES = 60;
+const SAME_SPOT_RATIO = 0.5;
 
 const AI_NAME =
   /gemini|제미나이|재미나이|claude|클로드|gpt|지피티|codex|코덱스|deepseek|딥시크|grok|그록|copilot|코파일럿|llama|agent|에이전트|\bbot\b|봇$/i;
@@ -84,9 +88,15 @@ function signalReasons(measured: Signals[]): Set<AutomationReason> {
   const moves = sum('moves');
   const synthetic = sum('synthetic');
   if (synthetic >= 5 && synthetic > clicks) reasons.add('synthetic');
-  if (measured.filter((s) => s.clicks + s.keys + s.touches === 0).length >= 2)
+  // 앱은 모달 안 터치 · 화면 읽기 프로그램 입력을 세지 못해 입력 0이 사람일 수 있다(T-11-590).
+  if (measured.filter((s) => !s.app && s.clicks + s.keys + s.touches === 0).length >= 2)
     reasons.add('noInput');
   if (touches === 0 && clicks >= 20 && moves < clicks * 2) reasons.add('noMoves');
+  const app = measured.filter((s) => s.app);
+  const appTouches = app.reduce((s, x) => s + x.touches, 0);
+  const same = app.reduce((s, x) => s + (x.same ?? 0), 0);
+  if (appTouches >= SAME_SPOT_MIN_TOUCHES && same >= appTouches * SAME_SPOT_RATIO)
+    reasons.add('sameSpot');
   return reasons;
 }
 

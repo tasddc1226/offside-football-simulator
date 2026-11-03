@@ -17,6 +17,7 @@ import { pick, ri } from '@offside/game/rng';
 import { loadKey } from '@offside/game/storage';
 import { SURNAMES, GIVEN, defaultFocus } from '@offside/game/data';
 import type { GameState, HofEntry, LegendSource } from '@offside/game/types';
+import type { CreateLook } from '@offside/game/look';
 import type { Candidate } from '@offside/game/candidates';
 import type { PhaseReport } from './sheets.js';
 
@@ -41,6 +42,8 @@ export type HofView = {
   teamSort?: TeamRankSort;
   /** T-11-150 team 팀의 구단주 프로필을 연다(팀 프로필 대신). */
   owner?: boolean;
+  /** 팀 프로필을 열면 선발 그라운드까지 내려서 보여 준다(라운지 팀 공유). 한 번 쓰면 지운다. */
+  squad?: boolean;
 };
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({
@@ -92,6 +95,9 @@ export type Screen =
   | 'shared';
 export type Tab = 'season' | 'player' | 'career' | 'trophy';
 
+/** T-11-605 선수 만들기의 입력 단계(create-steps.ts). extra는 정보 단계에서 들어가는 선택 단계다. */
+export type CreateStep = 'pos' | 'focus' | 'trait' | 'info' | 'extra';
+
 export interface DraftCharacter {
   name: string;
   number: number;
@@ -107,7 +113,17 @@ export interface DraftCharacter {
   /** T-10-096 키(cm)·몸무게(kg). null이면 포지션 기본 체격을 따른다(포지션을 바꾸면 같이 바뀐다). */
   height: number | null;
   weight: number | null;
+  /** T-11-545 만들기에서 무료로 고른 외형(피부 · 머리색 · 머리 모양). 비어 있으면 기본 모습. */
+  look: CreateLook;
+  /**
+   * T-11-545 만들 커리어의 ID. 만들기 화면이 기본 얼굴을 미리 그리려고 먼저 정하고(draftCid), 커리어를 시작하면 비운다
+   * (다음 선수는 새 ID). 저장하지 않는다.
+   */
+  cid?: string | undefined;
 }
+
+/** T-11-545 만들 커리어의 ID(없으면 지금 만든다). 미리보기 얼굴과 시작한 선수의 얼굴이 같다. */
+export const draftCid = (c: Pick<DraftCharacter, 'cid'>): string => (c.cid ??= crypto.randomUUID());
 
 /** 새 커리어에 넣을 체격 — 입력하지 않은 칸은 포지션 기본값. */
 export const draftBody = (c: Pick<DraftCharacter, 'pos' | 'height' | 'weight'>): Body => ({
@@ -160,6 +176,12 @@ export function savedDraftIdentity(): DraftIdentity | null {
 /** 선수 만들기의 처음 이름·등번호 — 저장된 값이 있으면 그 값, 없으면 무작위(이름 → 등번호 순으로 뽑는다). */
 export const draftIdentity = (): DraftIdentity =>
   savedDraftIdentity() ?? { name: randomName(), number: randomNumber() };
+
+/** T-11-605 비워 둔 이름 · 등번호를 후보를 보기 전에 채운다. 시작할 때 몰래 정하지 않고, 후보 화면에서 정해진 값을 보여 준다. */
+export function fillDraftIdentity(C: Pick<DraftCharacter, 'name' | 'number'>): void {
+  if (!C.name.trim()) C.name = randomName();
+  if (!C.number) C.number = randomNumber();
+}
 
 /** T-10-005 은퇴 선수 상세 화면에 띄울 대상. 내 선수(로컬 ft_hof)면 `own`이 있고 이름 공개를 바꿀 수 있다. */
 export interface LegendView {
@@ -224,6 +246,7 @@ export interface AppState {
   lastRetired: HofEntry | null;
   legend: LegendView | null;
   C: DraftCharacter;
+  createStep: CreateStep;
   /** T-10-002. 선수 생성 후보 카드 3장(같은 능력치 총합, 다른 분포) — 생성 화면을 벗어나면 null. */
   candidates: Candidate[] | null;
   candidatesOpen: boolean[];
@@ -254,6 +277,8 @@ export interface AppState {
   /** Local navigation state for the unified archive (not a career save). */
   honorsView: 'records' | 'titles';
   honorsSeason: number | null;
+  /** T-11-618 남의 명예관을 볼 때 그 구단주의 팀 id. null이면 내 명예관. */
+  honorsVisit: string | null;
   /** T-11-142 받은 친구 신청 수 — 하단 '구단주'·내 팀 '경기' 탭·'친구' 버튼의 점(friendPending). */
   friendReq: number;
 }
@@ -279,7 +304,9 @@ export const initialAppState = (): AppState => ({
     nation: deviceNation(),
     height: null,
     weight: null,
+    look: {},
   },
+  createStep: 'pos',
   candidates: null,
   candidatesOpen: [],
   candidatePick: null,
@@ -299,5 +326,6 @@ export const initialAppState = (): AppState => ({
   recapNew: false,
   honorsView: 'records',
   honorsSeason: null,
+  honorsVisit: null,
   friendReq: 0,
 });

@@ -13,8 +13,14 @@ export function go(screen: Screen) {
     appState.honorsView = 'records';
   }
   pending = null;
+  appState.honorsVisit = null;
   appState.screen = screen;
   window.scrollTo(0, 0);
+}
+/** T-11-618 남의 명예관(읽기 전용). teamId는 그 구단주의 팀. */
+export function openOwnerHallVisit(teamId: string) {
+  go('honors');
+  appState.honorsVisit = teamId;
 }
 
 // 다른 화면에서 들어올 때 한 칸을 펼쳐 둔다(한 번만 읽힌다). T-11-141 설정 '확률과 공정성' → 확률 도감의 그 칸,
@@ -33,6 +39,17 @@ export const goMarketRelease = () => goFocus('market', 'marketRelease');
 export const goTypeDex = () => goFocus('dex', 'types');
 // T-11-437 게임 화면 저장 위치 안내 → 설정의 백업 코드 카드로.
 export const goBackup = () => goFocus('settings', 'backup');
+// 라운지 공유 카드 → 그 선수의 구매창.
+let pendingListing: string | null = null;
+export function goMarketListing(id: string) {
+  go('market');
+  pendingListing = id;
+}
+export function takeMarketListing(): string | null {
+  const id = pendingListing;
+  pendingListing = null;
+  return id;
+}
 export function takeFocus(focus: Focus): boolean {
   const hit = pending === focus;
   if (hit) pending = null;

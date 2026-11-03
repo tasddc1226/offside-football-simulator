@@ -28,10 +28,14 @@
   /** 모든 계열이 비어 있는 날 = 수집 안 된 날(0과 구별해 점선으로 그린다). */
   const missing = $derived(days.map((_, i) => series.every((s) => s.values[i] === null)));
   const totals = $derived(days.map((_, i) => series.reduce((s, x) => s + (x.values[i] ?? 0), 0)));
-  const max = $derived(niceMax(Math.max(0, ...totals)));
+  const positiveTotals = $derived(days.map((_, i) => series.reduce((n, s) => n + Math.max(0, s.values[i] ?? 0), 0)));
+  const negativeTotals = $derived(days.map((_, i) => series.reduce((n, s) => n + Math.min(0, s.values[i] ?? 0), 0)));
+  const max = $derived(niceMax(Math.max(0, ...positiveTotals)));
+  const low = $derived(Math.min(0, ...negativeTotals));
+  const min = $derived(low < 0 ? -niceMax(-low) : 0);
   const bw = $derived((W - PAD.l - PAD.r) / Math.max(1, days.length));
   const barW = $derived(Math.max(2, Math.min(28, bw - 3)));
-  const y = (v: number) => PAD.t + (H - PAD.t - PAD.b) * (1 - v / (max || 1));
+  const y = (v: number) => PAD.t + (H - PAD.t - PAD.b) * (1 - (v - min) / (max - min || 1));
   const x = (i: number) => PAD.l + bw * i + (bw - barW) / 2;
 
   function niceMax(v: number) {
@@ -43,8 +47,8 @@
   /** 위쪽만 둥근 막대 조각(맨 위 조각만). */
   function seg(i: number, lo: number, hi: number, top: boolean) {
     const x0 = x(i);
-    const y0 = y(hi);
-    const y1 = y(lo) - (lo > 0 ? GAP : 0);
+    const y0 = Math.min(y(hi), y(lo));
+    const y1 = Math.max(y(hi), y(lo)) - (lo > 0 ? GAP : 0);
     const h = Math.max(0, y1 - y0);
     if (h <= 0) return '';
     const r = top ? Math.min(4, barW / 2, h) : 0;
@@ -52,11 +56,13 @@
   }
   const stacks = $derived(
     days.map((_, i) => {
-      let acc = 0;
+      let positive = 0;
+      let negative = 0;
       const parts = series.map((s, k) => {
         const v = s.values[i] ?? 0;
-        const p = { k, lo: acc, hi: acc + v };
-        acc += v;
+        const lo = v < 0 ? negative : positive;
+        const p = { k, lo, hi: lo + v };
+        if (v < 0) negative += v; else positive += v;
         return p;
       });
       const topK = parts.findLast((p) => p.hi > p.lo)?.k;
@@ -84,8 +90,8 @@
     <div class="plot" bind:clientWidth={width}>
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={title}>
         {#each [0, 0.5, 1] as f (f)}
-          <line class="grid" x1={PAD.l} x2={W - PAD.r} y1={y(max * f)} y2={y(max * f)} />
-          <text class="tick" x={PAD.l - 6} y={y(max * f) + 4} text-anchor="end">{fmt(max * f, unit)}</text>
+          <line class="grid" x1={PAD.l} x2={W - PAD.r} y1={y(min + (max - min) * f)} y2={y(min + (max - min) * f)} />
+          <text class="tick" x={PAD.l - 6} y={y(min + (max - min) * f) + 4} text-anchor="end">{fmt(min + (max - min) * f, unit)}</text>
         {/each}
         {#each stacks as parts, i (days[i])}
           {#each parts as p (p.k)}

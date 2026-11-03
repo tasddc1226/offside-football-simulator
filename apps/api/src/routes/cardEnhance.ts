@@ -8,11 +8,13 @@ import {
 import {
   ENHANCE_MAX,
   enhanceCost,
+  enhanceDownBp,
   enhanceOutcome,
   enhanceRateBp,
-  enhanceTriesLeft,
+  enhanceTierRules,
   type EnhanceCardState,
 } from '@offside/contracts/card-enhance';
+import { pastSalarySum } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import {
@@ -22,12 +24,16 @@ import {
   enhanceSnapshot,
   type EnhanceCardRow,
 } from '../db/repos/cardEnhance.js';
+import { pastSalaryBudgetOf } from '../db/repos/balance.js';
+import { enhanceTitlesAfter } from '../db/repos/ownerTitles.js';
+import { careersByIds, eligibleMap, myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
+import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { getDb, type AppEnv } from '../env.js';
+import { requireOwner } from '../middleware/requireOwner.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { checkCupEnhance } from './cup.js';
-import { requireOwner } from './ownerTeam.js';
 import {
   conflictError,
   fundsShort,
@@ -39,8 +45,8 @@ import {
   readBody,
 } from './shared.js';
 
-// T-11-373 카드 강화(docs/tracking/card-enhance-plan.md). 구단 자금과 시도권(선발 랭크 경기 수)을 쓰고, 판정은 여기서만 한다(crypto
-// 난수). 화면은 강화 창을 열 때 그 카드 상태를 한 번 읽고, 시도마다 본 단계 · 실패 수 · 쓴 시도권 · 비용 · 확률을 보내 어긋나면 409를
+// T-11-373 카드 강화(docs/tracking/card-enhance-plan.md). 구단 자금을 쓰고, 판정은 여기서만 한다(crypto
+// 난수). 화면은 강화 창을 열 때 그 카드 상태를 한 번 읽고, 시도마다 본 단계 · 실패 수 · 비용 · 성공 · 실패 확률을 보내 어긋나면 409를
 // 받는다. 재시도는 같은 Idempotency-Key로 보내면 판정 · 차감과 같은 batch에 남은 기록으로 한 번만 처리한다.
 
 const stale = () => conflictError('강화 상태가 바뀌었어요. 다시 확인해 주세요.', 'ENHANCE_STALE');
@@ -53,8 +59,7 @@ const roll = () => crypto.getRandomValues(new Uint32Array(1))[0]! % 10_000;
 const stateOf = (card: EnhanceCardRow): EnhanceCardState => ({
   level: card.level,
   fails: card.fails,
-  starts: card.starts,
-  used: card.used,
+  tier: card.tier,
 });
 
 function requestKeyOf(c: Context<AppEnv>): string {
@@ -66,6 +71,40 @@ function requestKeyOf(c: Context<AppEnv>): string {
       details: { reason: 'IDEMPOTENCY_KEY_REQUIRED' },
     });
   return key;
+}
+
+/**
+ * 성공하면 이 시즌 선발의 지난 시즌 급여가 예산을 넘는 시도는 막는다. 예산은 선발을 저장할 때만 재므로, 여기서 막지 않으면 넘은 채로
+ * 경기를 뛰게 된다. 선발에 없는 카드와 이번 시즌 카드는 급여가 바뀌지 않아 팀 · 밸런스를 읽지 않는다(시도당 쿼리 최소화).
+ */
+async function checkEnhanceSalary(
+  db: Db,
+  profileId: string,
+  careerId: string,
+  nextLevel: number,
+  now: string,
+) {
+  const season = teamSeasonAt(now);
+  if (season === null) return;
+  const [team] = await myTeamIn(db, profileId, season);
+  if (!team) return;
+  const ids = slotIdsOf(team).filter((x): x is string => !!x);
+  if (!ids.includes(careerId)) return;
+  const eligible = eligibleMap(await careersByIds(db, ids), profileId, season, true);
+  const salary = pastSalarySum(
+    ids.map((id) => {
+      const c = eligible.get(id);
+      return c && id === careerId ? { ...c, enhance: nextLevel } : c;
+    }),
+    season,
+  );
+  if (salary === 0) return;
+  const budget = await pastSalaryBudgetOf(db, season);
+  if (salary > budget)
+    throw conflictError(
+      '강화에 성공하면 선발 급여가 예산을 넘어요. 선발을 바꾼 뒤 다시 시도해 주세요.',
+      'ENHANCE_SALARY',
+    );
 }
 
 export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
@@ -129,24 +168,26 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
     if (card.level >= ENHANCE_MAX) throw conflictError('이미 가장 높은 단계예요.', 'ENHANCE_MAX');
     if (!rules.open) throw conflictError('지금은 카드 강화를 쉬고 있어요.', 'ENHANCE_CLOSED');
     const cost = enhanceCost(card.level, rules)!;
-    const rateBp = enhanceRateBp(card.level, card.fails, rules);
-    // 화면이 본 값(단계 · 실패 수 · 쓴 시도권 · 비용 · 확률)이 지금과 다르면 판정하지 않는다.
+    // 비용은 구간과 상관없고, 확률만 카드 구간(레전드 점수)의 배율을 받는다.
+    const odds = enhanceTierRules(rules, card.tier);
+    const rateBp = enhanceRateBp(card.level, odds);
+    const downBp = enhanceDownBp(card.level, odds);
+    // 화면이 본 값(단계 · 실패 수 · 비용 · 성공 · 실패 확률)이 지금과 다르면 판정하지 않는다.
     if (
       input.level !== card.level ||
       input.fails !== card.fails ||
-      input.used !== card.used ||
       input.cost !== cost ||
-      input.rateBp !== rateBp
+      input.rateBp !== rateBp ||
+      input.downBp !== downBp
     )
       throw stale();
-    if (enhanceTriesLeft(stateOf(card), rules) < 1)
-      throw conflictError('강화 시도권이 없어요. 선발로 경기를 더 뛰면 생겨요.', 'ENHANCE_NO_TRY');
     // 잔액 행이 없거나 모자라면 batch 전에 막는다(batch도 잔액을 다시 본다).
     if (snap.balance < cost) throw fundsShort();
     await checkCupEnhance(db, me.id, careerId, teamSeasonAt(now), now);
+    await checkEnhanceSalary(db, me.id, careerId, card.level + 1, now);
 
     const r = roll();
-    const out = enhanceOutcome(card.level, card.fails, r, rules);
+    const out = enhanceOutcome(card.level, card.fails, r, odds);
     let res: Awaited<ReturnType<typeof attemptEnhance>>;
     try {
       res = await attemptEnhance(db, {
@@ -156,12 +197,11 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
         requestKey,
         from: card.level,
         fails: card.fails,
-        used: card.used,
-        startsPerTry: rules.startsPerTry,
         to: out.to,
         nextFails: out.fails,
         success: out.success,
         rateBp,
+        downBp,
         roll: r,
         cost,
         now,
@@ -191,6 +231,7 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
         NO_STORE,
       );
     }
+    const titles = await enhanceTitlesAfter(db, me.id, now);
     return ok(
       c,
       EnhanceResponseSchema,
@@ -200,7 +241,8 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
         to: out.to,
         cost,
         balance: res.balance,
-        card: { level: out.to, fails: out.fails, starts: card.starts, used: card.used + 1 },
+        card: { level: out.to, fails: out.fails, tier: card.tier },
+        ...(titles.length ? { titles } : {}),
       },
       200,
       NO_STORE,

@@ -4,7 +4,7 @@
   import { PODIUM_FACE_BOTTOM, PODIUM_FACE_TOP, PODIUM_H, PODIUM_TONES, PODIUM_W, podiumPaths } from '@offside/game/podium';
   import { playerName } from '@offside/app-core/format';
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
-  import { openPublicLegend } from './legend.js';
+  import { openPublicLegend } from './openLegend.js';
   import ClubMark from './ClubMark.svelte';
   import Laurel from './Laurel.svelte';
   import { hofText as L } from '@offside/app-core/i18n/ko/hof';

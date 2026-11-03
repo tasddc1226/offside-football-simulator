@@ -6,7 +6,7 @@ import {
 } from '@offside/contracts/chat';
 import type { AdminChatReport, ChatTicketResponse } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { chatReports, ownerTeams } from '../db/schema.js';
+import { cards, careers, chatReports, marketListings, ownerTeams } from '../db/schema.js';
 import worker from '../index.js';
 import { fakeRoom, type FakeSocket } from '../test/chatRoom.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -335,6 +335,92 @@ describe('T-11-015 채팅 /v1/chat', () => {
     const who = await issueGoogleCookie(ctx, { nickname: '바다' });
     await callJson(env, 'PUT', '/v1/profile/avatar', { cookie: who.cookie, body: { image: null } });
     for (const s of spy) expect(s).toHaveBeenCalled();
+  });
+
+  describe('라운지 공유 POST /v1/chat/share', () => {
+    async function addCard(profileId: string, id: string) {
+      const now = new Date().toISOString();
+      await ctx.db.insert(careers).values({
+        id,
+        profileId,
+        pos: 'FW',
+        foot: '오른발',
+        type: 'poacher',
+        trait: 'none',
+        startYear: 2026,
+        status: 'retired',
+        appVersion: 'test',
+        publicName: '하늘선수',
+        createdAt: now,
+        updatedAt: now,
+      });
+      await ctx.db.insert(cards).values({
+        careerId: id,
+        ownerId: profileId,
+        serviceSeason: 0,
+        pos: 'FW',
+        number: 9,
+        peak: 85,
+        legendScore: 300,
+        retireValue: 0,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+    const share = (cookie: string, body: object, room = '') =>
+      call('POST', `/v1/chat/share${room}`, { cookie, body });
+
+    it('내 선수 카드만 올리고, 내용은 서버가 만들어 방 언어로 적는다', async () => {
+      const me = await issueGoogleCookie(ctx, { nickname: '도하람' });
+      const other = await issueGoogleCookie(ctx, { nickname: '누리' });
+      await addCard(me.profileId, 'car_mine');
+      await addCard(other.profileId, 'car_other');
+      const reader = await chat.join();
+      expect((await share(me.cookie, { kind: 'player', careerId: 'car_other' })).status).toBe(404);
+      const res = await share(me.cookie, { kind: 'player', careerId: 'car_mine' });
+      expect(res.status).toBe(201);
+      const { m } = reader.sent.at(-1) as Extract<ChatServerEvent, { t: 'msg' }>;
+      expect(m.body).toBe('하늘선수 선수를 공유했어요. OVR 85');
+      expect(m.share).toMatchObject({ kind: 'player', name: '하늘선수', player: { peak: 85 } });
+      expect((await share(me.cookie, { kind: 'player', careerId: 'car_mine' })).status).toBe(429);
+    });
+
+    it('이적시장에 내놓은 선수면 등록과 가격을 함께 싣는다', async () => {
+      const me = await issueGoogleCookie(ctx, { nickname: '도하람' });
+      await addCard(me.profileId, 'car_listed');
+      const now = new Date().toISOString();
+      await ctx.db.insert(marketListings).values({
+        id: 'lst_00000000-0000-4000-8000-000000000001',
+        careerId: 'car_listed',
+        sellerId: me.profileId,
+        season: 0,
+        price: 1_200_000,
+        status: 'open',
+        createdAt: now,
+      });
+      const reader = await chat.join();
+      expect((await share(me.cookie, { kind: 'player', careerId: 'car_listed' })).status).toBe(201);
+      const { m } = reader.sent.at(-1) as Extract<ChatServerEvent, { t: 'msg' }>;
+      expect(m.body).toBe('하늘선수 선수가 이적시장에 나왔어요. OVR 85');
+      expect(m.share).toMatchObject({
+        listing: { id: 'lst_00000000-0000-4000-8000-000000000001', price: 1_200_000 },
+      });
+    });
+
+    it('클라이언트가 보낸 내용은 받지 않고, 팀이 없으면 404', async () => {
+      const me = await issueGoogleCookie(ctx, { nickname: '도하람' });
+      expect((await share(me.cookie, { kind: 'team', name: '가짜' })).status).toBe(400);
+      expect((await share(me.cookie, { kind: 'team' })).status).toBe(404);
+    });
+
+    it('입장권과 같은 쓰기 조건을 본다', async () => {
+      const noNick = await issueGoogleCookie(ctx, {});
+      const res = await share(noNick.cookie, { kind: 'team' });
+      expect(res.status).toBe(403);
+      expect(await res.json()).toMatchObject({ error: { details: { reason: 'nickname' } } });
+      const anon = await issueCookie(ctx);
+      expect((await share(anon.cookie, { kind: 'team' })).status).toBe(403);
+    });
   });
 
   it('소켓 업그레이드는 앱 미들웨어를 거치지 않고 채팅방으로 넘긴다', async () => {

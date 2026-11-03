@@ -24,6 +24,17 @@ describe('fakeScore', () => {
     }
   });
 
+  it('골과 도움을 서로 다른 팀 득점으로 반영한다', () => {
+    setActiveRng(createRng(7));
+    for (let i = 0; i < 100; i++)
+      for (const res of ['W', 'D', 'L'] as const) {
+        const m = { ...game(res, false, 90, i % 4), a: 1 + (i % 3) };
+        const [gf, ga] = fakeScore(m, true).split('-').map(Number);
+        expect(gf!).toBeGreaterThanOrEqual(m.g! + m.a);
+        expect(Math.sign(gf! - ga!)).toBe(res === 'W' ? 1 : res === 'L' ? -1 : 0);
+      }
+  });
+
   it('승패는 그대로다', () => {
     setActiveRng(createRng(11));
     for (let i = 0; i < 300; i++) {

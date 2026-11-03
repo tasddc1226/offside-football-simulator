@@ -4,6 +4,7 @@ import { ns } from '../core';
 import { waGwa, withRo } from '../../format';
 
 const ko = {
+  eventLater: '잠시 닫기',
   // 대표팀 경기 줄
   natDetail: (p: { mins: number; g: number; a: number; rating: number | string | null }) =>
     `${p.mins}분${p.g ? ` ${p.g}골` : ''}${p.a ? ` ${p.a}도움` : ''} · 평점 ${p.rating}`,

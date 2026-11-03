@@ -1,0 +1,173 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`report conversion parity (R6) > FW advance keeps state/RNG/report and save/analytics order, including duplicate input guard 1`] = `
+{
+  "calls": [
+    "complete",
+    "save",
+    "play",
+    "steps",
+    "scroll",
+  ],
+  "report": {
+    "back": false,
+    "block": null,
+    "chips": [
+      {
+        "d": 10,
+        "label": "컨디션",
+      },
+      {
+        "d": 4,
+        "label": "사기",
+      },
+    ],
+    "comps": [],
+    "eyebrow": "2026 · 프리시즌 완료",
+    "games": [],
+    "key": 1793491200000,
+    "nat": [],
+    "ph": 0,
+    "rank": {
+      "after": null,
+      "before": null,
+    },
+    "role": "주전",
+    "title": "시즌 준비를 마쳤어요",
+    "titles": [],
+    "year": 2026,
+  },
+  "rng": {
+    "seed": 2264001599,
+  },
+  "stateHash": "9998bc065befc8ae5c94408271eb72247655d039d30d20efcb8c7723a1d8adf3",
+}
+`;
+
+exports[`report conversion parity (R6) > GK advance keeps state/RNG/report and save/analytics order, including duplicate input guard 1`] = `
+{
+  "calls": [
+    "complete",
+    "save",
+    "play",
+    "steps",
+    "scroll",
+  ],
+  "report": {
+    "back": true,
+    "block": null,
+    "chips": [
+      {
+        "d": 10,
+        "label": "컨디션",
+      },
+      {
+        "d": 4,
+        "label": "사기",
+      },
+    ],
+    "comps": [],
+    "eyebrow": "2026 · 프리시즌 완료",
+    "games": [],
+    "key": 1793491200000,
+    "nat": [],
+    "ph": 0,
+    "rank": {
+      "after": null,
+      "before": null,
+    },
+    "role": "주전",
+    "title": "시즌 준비를 마쳤어요",
+    "titles": [],
+    "year": 2026,
+  },
+  "rng": {
+    "seed": 2264001599,
+  },
+  "stateHash": "7d64d06e5362413d44edb4728d9b7101c60734e33babe5db7e2a11f4e65660db",
+}
+`;
+
+exports[`report conversion parity (R6) > cup legs, league numbering, opponents, bench and final preserve copy without consuming RNG or mutating inputs 1`] = `
+[
+  {
+    "detail": "90분 2골 1도움",
+    "hl": true,
+    "line": "리그 페이즈 1경기 · 승",
+  },
+  {
+    "detail": "벤치",
+    "hl": false,
+    "line": "리그 페이즈 2경기 · 무",
+  },
+  {
+    "detail": "90분",
+    "hl": true,
+    "line": "준결승 2차전 · vs missing-club · 통과",
+  },
+  {
+    "detail": "10분",
+    "hl": false,
+    "line": "결승 · 준우승",
+  },
+]
+`;
+
+exports[`report conversion parity (R6) > national absence, bench, participation and old saved tournament without matches > old save 1`] = `
+{
+  "lines": [],
+  "name": "월드 챔피언십",
+  "note": "",
+  "stage": "우승",
+}
+`;
+
+exports[`report conversion parity (R6) > national absence, bench, participation and old saved tournament without matches 1`] = `
+{
+  "absent": {
+    "lines": [],
+    "name": "월드 챔피언십",
+    "note": "명단 외 · 메달 없음",
+    "stage": "우승",
+  },
+  "explicitReason": {
+    "lines": [],
+    "name": "월드 챔피언십",
+    "note": "fixture reason · 메달 없음",
+    "stage": "우승",
+  },
+  "inSquad": {
+    "lines": [
+      "결승 · 대한민국 1-0 일본 · 1골 평점 8",
+    ],
+    "name": "월드 챔피언십",
+    "note": "",
+    "stage": "우승",
+  },
+  "nat": [
+    {
+      "called": false,
+      "comp": "",
+      "games": [],
+      "name": "대표팀",
+    },
+    {
+      "called": true,
+      "comp": "월드 챔피언십",
+      "games": [
+        {
+          "detail": "90분 1골 · 평점 8",
+          "hl": true,
+          "line": "대한민국 1-0 일본",
+        },
+        {
+          "detail": "벤치",
+          "hl": true,
+          "line": "대한민국 1-0 일본",
+        },
+      ],
+      "name": "대표팀",
+    },
+  ],
+}
+`;

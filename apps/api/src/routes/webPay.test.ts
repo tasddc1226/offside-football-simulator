@@ -93,6 +93,82 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
   const items = async (cookie: string) =>
     ItemsRes.parse(await (await call('GET', '/v1/items', { cookie })).json()).data;
 
+  it('T-11-620 스카우트권 50장 묶음을 팔고 결제마다 50장을 한 번만 주고 남은 장수만 회수한다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const productId = 'com.offsidelab.app.scout_50';
+    const calls = stubXsolla();
+    expect(
+      ConfigRes.parse(await (await call('GET', '/v1/web-pay/config', { cookie: me.cookie })).json())
+        .data.products,
+    ).toContainEqual({ productId, item: 'scout', qty: 50, amount: 39500 });
+    await order(me.cookie, productId);
+    expect(JSON.parse(String(calls[0]?.init?.body)).purchase.items[0].sku).toBe(productId);
+    const event = paid(1050, me.profileId, {
+      items: [{ sku: productId, type: 'virtual_good', quantity: 1, amount: '39500' }],
+    });
+    expect((await hook(ctx, event)).status).toBe(204);
+    expect((await hook(ctx, event)).status).toBe(204);
+    expect((await items(me.cookie)).scout).toBe(50);
+    await ctx.env.DB.prepare("UPDATE owner_items SET qty = 20 WHERE item = 'scout'").run();
+    const refund = { ...event, notification_type: 'order_canceled' };
+    expect((await hook(ctx, refund)).status).toBe(204);
+    expect((await items(me.cookie)).scout).toBe(0);
+    expect(await ctx.db.select().from(iapPurchases)).toMatchObject([
+      { productId, item: 'scout', qty: 50, revokedQty: 20 },
+    ]);
+  });
+
+  it('opens the 100-ticket pack only after catalog readiness and grants it once', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const productId = 'com.offsidelab.app.boost_100';
+    const calls = stubXsolla();
+    const config = async () =>
+      ConfigRes.parse(await (await call('GET', '/v1/web-pay/config', { cookie: me.cookie })).json())
+        .data;
+    expect((await config()).products?.some((p) => p.productId === productId)).toBe(false);
+    expect(
+      (
+        await call('POST', '/v1/web-pay/orders', {
+          cookie: me.cookie,
+          body: { productId },
+        })
+      ).status,
+    ).toBe(503);
+    expect(calls).toHaveLength(0);
+    ctx.env.WEB_PAY_BOOST_100_ENABLED = '1';
+    expect((await config()).products).toContainEqual({
+      productId,
+      item: 'boost',
+      qty: 100,
+      amount: 19800,
+    });
+    await order(me.cookie, productId);
+    expect(JSON.parse(String(calls[0]?.init?.body)).purchase.items[0].sku).toBe(productId);
+    const event = paid(1001, me.profileId, {
+      items: [{ sku: productId, type: 'virtual_good', quantity: 1, amount: '19800' }],
+    });
+    // Turning sales off must not strand a payment already in progress.
+    delete ctx.env.WEB_PAY_BOOST_100_ENABLED;
+    expect((await hook(ctx, event)).status).toBe(204);
+    expect((await hook(ctx, event)).status).toBe(204);
+    expect((await items(me.cookie)).boost).toBe(100);
+    expect(await ctx.db.select().from(iapPurchases)).toMatchObject([
+      { productId, item: 'boost', qty: 100 },
+    ]);
+    await call('POST', '/v1/items/boost/use', {
+      cookie: me.cookie,
+      headers: { 'Idempotency-Key': crypto.randomUUID() },
+    });
+    expect((await items(me.cookie)).boost).toBe(99);
+    const refund = { ...event, notification_type: 'order_canceled' };
+    expect((await hook(ctx, refund)).status).toBe(204);
+    expect((await hook(ctx, refund)).status).toBe(204);
+    expect((await items(me.cookie)).boost).toBe(0);
+    expect(await ctx.db.select().from(iapPurchases)).toMatchObject([
+      { productId, qty: 100, revokedQty: 99 },
+    ]);
+  });
+
   it('스위치 · 키 · 테스터 목록이 맞아야 결제를 연다(로그인 구단주만)', async () => {
     const anon = await issueCookie(ctx);
     expect((await call('GET', '/v1/web-pay/config', { cookie: anon.cookie })).status).toBe(403);

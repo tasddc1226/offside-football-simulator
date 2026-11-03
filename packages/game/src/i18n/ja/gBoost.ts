@@ -12,4 +12,7 @@ export const gBoost: Translation<GBoostMsgs> = {
   failTicket: 'ポテンシャル強化に失敗（強化券）。次回の成功率が上がります。',
   successSure: (p) =>
     `確定強化でポテンシャルが上がりました。${p.lv}段階になりました（クラブ資金）。`,
+  great: (p) => `ポテンシャル強化が大成功。一気に2段階上がって${p.lv}段階になりました。`,
+  greatCost: (p) =>
+    `ポテンシャル強化が大成功。一気に2段階上がって${p.lv}段階になりました（${p.cost}）。`,
 };

@@ -357,6 +357,13 @@ export class AgentLedger extends DurableObject<Env> {
   async setSocialToken(kind: SocialKind, v: SocialToken): Promise<void> {
     await this.ctx.storage.put(`${kind}:token`, v);
   }
+  /** T-11-616 새 이름 점검: 어디까지 점검했는지(운영 API가 준 ISO 시각). 없으면 처음이다(API가 최근 24시간을 준다). */
+  async namesCursor(): Promise<string | undefined> {
+    return this.ctx.storage.get<string>('names:cursor');
+  }
+  async setNamesCursor(at: string): Promise<void> {
+    await this.ctx.storage.put('names:cursor', at);
+  }
   async warnOnce(role: Role, day = kstDay()): Promise<boolean> {
     const d = await this.day(role, day);
     if (d.warned) return false;

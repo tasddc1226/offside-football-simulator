@@ -24,7 +24,17 @@ import {
   runInfraHealth,
 } from './infraHealth.js';
 import { DAILY_META_KEY } from './daily.js';
+import { readWorkflowHealth } from './workflowHealth.js';
+import { putVerifiedRecovery } from '../test/backupRecovery.js';
+import { RECOVERY_MARKER_KEY } from './backupRecovery.js';
 import { DAY_MS } from '../time.js';
+
+vi.mock('./workflowHealth.js', () => ({
+  readWorkflowHealth: vi.fn(async (at: number) => ({
+    observation: { at, completedAt: at, conclusion: 'success' },
+    issues: [],
+  })),
+}));
 
 const NOW = Date.parse('2026-10-08T01:00:00Z');
 const OLD = new Date(NOW - 8 * DAY_MS).toISOString();
@@ -54,6 +64,7 @@ beforeAll(async () => {
 });
 afterAll(() => ctx.dispose());
 beforeEach(async () => {
+  await ctx.env.BACKUP!.delete(RECOVERY_MARKER_KEY);
   await run('DELETE FROM career_seasons');
   await run('DELETE FROM app_meta WHERE key = ?1', INFRA_HEALTH_META_KEY);
   await run("UPDATE careers SET status='active',legend_score=NULL,retired_at=NULL WHERE id='own'");
@@ -68,6 +79,7 @@ async function completedBackup(key: string, finishedAt: number) {
     JSON.stringify({ key, chunks: 1, finishedAt, day: key.slice(-11, -1) }),
   );
   await ctx.env.BACKUP!.put(chunkKey(key, 1), 'completed test backup');
+  await putVerifiedRecovery(ctx.env.BACKUP!, finishedAt);
 }
 const season = (year: number, events: string, at = OLD) =>
   run(
@@ -423,6 +435,27 @@ describe('capacity safeguards', () => {
     ).rejects.toThrow('part failed');
     expect(abort).toHaveBeenCalledOnce();
   }, 10_000);
+
+  it('persists independent workflow failures into hourly operational issues', async () => {
+    vi.mocked(readWorkflowHealth).mockResolvedValueOnce({
+      observation: { at: null, completedAt: null, conclusion: null },
+      issues: ['resource-workflow-observation-unavailable'],
+    });
+    const health = await runInfraHealth(env(), NOW);
+    expect(health!.issues).toContain('resource-workflow-observation-unavailable');
+    const row = await ctx.env.DB.prepare('SELECT value FROM app_meta WHERE key=?')
+      .bind(INFRA_HEALTH_META_KEY)
+      .first<{ value: string }>();
+    expect(JSON.parse(row!.value).issues).toContain('resource-workflow-observation-unavailable');
+  });
+
+  it('a generated live copy alone never passes recovery assurance', async () => {
+    await completedBackup('d1/production/2026-10-07/', NOW);
+    await ctx.env.BACKUP!.delete(RECOVERY_MARKER_KEY);
+    const report = await runInfraHealth(env(), NOW);
+    expect(report!.backupRecovery?.status).toBe('unverified');
+    expect(report!.issues).toContain('backup-recovery-unverified');
+  });
 
   it('hourly health uses supported D1 metadata and ignores partial-day growth estimates', async () => {
     await run(

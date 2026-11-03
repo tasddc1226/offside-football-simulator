@@ -17,7 +17,6 @@ import {
   PAST_SALARY_BUDGET,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
-  RANK_MATCH_REPICKS,
   TEAM_RATING_START,
   YOUTH_NAME,
   YOUTH_OVR,
@@ -90,7 +89,7 @@ import { accountCache, appState, prefs } from '../../store';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { askPushAfter } from '../../platform/pushAsk';
 import { useColors } from '../../theme/useColors';
-import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
+import { BackBar, Btn, Card, Press, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
 import { SkeletonFrame, useSkeletonBlock } from '../../ui/Skeleton';
 import { useOnPull } from '../../ui/refresh';
@@ -99,11 +98,13 @@ import type { TabIconName } from '../../ui/TabIcon';
 import { Field, SelectField, TextField } from '../settings/parts';
 import { LoginButtons } from './LoginButtons';
 import { TeamAchievements } from './TeamAchievements';
-import { TeamFriends, OppSwitch, useFriends, type OppTab } from './TeamFriends';
+import { TeamFriends, OppSwitch, oppTabMemory, useFriends, type OppTab } from './TeamFriends';
 import { TeamHistory } from './TeamHistory';
 import { TeamStats } from './TeamStats';
 import { TeamLive } from './TeamLive';
 import { TeamOpponents } from './TeamOpponents';
+import { TeamRankInfo } from './TeamRankInfo';
+import { TeamRankQueue } from './TeamRankQueue';
 import { OvrBadge } from './TeamParts';
 import { TeamLineup } from './TeamLineup';
 import { SalaryBar } from './SalaryGuide';
@@ -111,11 +112,12 @@ import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TeamLogoEditor } from './TeamLogoEditor';
 import { TeamShare, type TeamShareData } from './TeamShare';
+import { shareToLounge } from '../../components/loungeShare';
+import { ShareIcon } from '../../components/ShareIcon';
 import { TeamDialog } from '../../components/TeamDialog';
 import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
 import type { PutOwnerTeamBody } from '@offside/contracts';
 import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './teamDraft';
-import { RecordsChips as SortChips } from '../hof/RecordsControls';
 import { TeamResult } from './TeamResult';
 import { TeamDivision } from './TeamDivision';
 import {
@@ -152,6 +154,19 @@ export default function Team() {
   const [team, setTeam] = useState<OwnerTeam | null>(null);
   const [players, setPlayers] = useState<TeamPlayer[]>([]);
   const [matchesLeft, setMatchesLeft] = useState(0);
+  const [matchesNextAt, setMatchesNextAt] = useState<string | null>(null);
+  // 충전 시각이 되면 경기를 다시 열어 준다(서버가 다시 확인한다). 다음 시각은 경기 응답으로 받는다.
+  useEffect(() => {
+    if (matchesLeft > 0 || !matchesNextAt) return;
+    const timer = setTimeout(
+      () => {
+        setMatchesLeft(1);
+        setMatchesNextAt(null);
+      },
+      Date.parse(matchesNextAt) - Date.now(),
+    );
+    return () => clearTimeout(timer);
+  }, [matchesLeft, matchesNextAt]);
   const [perDay, setPerDay] = useState(0);
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   const [season, setSeason] = useState(0);
@@ -202,11 +217,17 @@ export default function Team() {
 
   /** T-11-098 '경기' 탭의 두 칸(랭크 경기 · 친구). 친구 칸은 처음 열 때만 불러온다. */
   const destination = useSnapshot(notificationDestination);
-  const [oppTab, setOppTab] = useState<OppTab>(destination.friends ? 'friends' : 'ranked');
+  const [oppTab, setOppTabState] = useState<OppTab>(
+    destination.friends ? 'friends' : oppTabMemory.tab,
+  );
+  const setOppTab = (t: OppTab) => {
+    oppTabMemory.tab = t;
+    setOppTabState(t);
+  };
   const friends = useFriends();
   useEffect(() => {
     if (status !== 'ready' || needLogin) return;
-    if (destination.friends) {
+    if (destination.friends || destination.invite) {
       setOppTab('friends');
       notificationDestination.friends = false;
       friends.reload();
@@ -215,11 +236,13 @@ export default function Team() {
       notificationDestination.history = false;
       void loadHistory();
     }
-  }, [destination.friends, destination.history, status, needLogin]);
+  }, [destination.friends, destination.invite, destination.history, status, needLogin]);
   const oppLoaded = useRef(false);
   /** T-11-510 시즌 2 자동 매칭에서 이번 경기의 '다른 상대 찾기' 횟수(경기를 치르면 0으로). */
   const [oppPick, setOppPick] = useState(0);
   const oppPickRef = useRef(0);
+  /** T-11-603 큐에서 찾은 상대(경기를 치르거나 상대가 무효가 되면 비운다). 탭을 다녀와도 남는다. */
+  const [rankFound, setRankFound] = useState<TeamOpponent | null>(null);
   const [opponents, setOpponents] = useState<TeamOpponent[]>([]);
   const [oppStatus, setOppStatus] = useState<LoadStatus>('loading');
   const [playing, setPlaying] = useState(false);
@@ -303,7 +326,7 @@ export default function Team() {
   });
   const ovr = teamOvr(ratings);
   // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
-  const synergy = slotsSynergy(positions, slots, byId);
+  const synergy = slotsSynergy(positions, slots, byId, season);
   const syn = synergyFocus(synergy, synFocus);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = draftLines(slotCodes, ratings, synergy, season);
@@ -369,6 +392,7 @@ export default function Team() {
             peak: p.peak,
             number: p.number,
             legendScore: p.legendScore,
+            specials: p.specials,
             careerId: p.careerId,
             look: p.look,
             nation: p.nation,
@@ -377,7 +401,15 @@ export default function Team() {
         : {}),
     };
   });
-  const matchHint = matchHintOf(team, dirty, matchesLeft, season, current, cupSeason);
+  const matchHint = matchHintOf(
+    team,
+    dirty,
+    matchesLeft,
+    season,
+    current,
+    cupSeason,
+    matchesNextAt,
+  );
   const draftValue: PutOwnerTeamBody = { name, manager, logo, formation, slots, layout };
   draftNow.current = draftValue;
   dirtyNow.current = dirty;
@@ -445,6 +477,7 @@ export default function Team() {
     setLastManager(d.lastManager);
     setPlayers(d.players);
     setMatchesLeft(d.matchesLeft);
+    setMatchesNextAt(d.matchesNextAt ?? null);
     setPerDay(d.matchesPerDay);
     setEnhanceOpen(!!d.enhanceOpen);
     setBudget(budgetOf(d));
@@ -592,10 +625,19 @@ export default function Team() {
   }
 
   async function saveAndFind() {
-    if (await save()) await loadOpponents();
+    if ((await save()) && !usesRankLadder(team?.season ?? 0)) await loadOpponents();
   }
 
   // ───────── 경기 ─────────
+  /** 지난 경기 결과를 연다(기록 탭 · T-11-603 랭크 매칭의 최근 전적). */
+  function openHistoryMatch(m: TeamMatch) {
+    setResultOrigin('history');
+    setDivisionShift(null);
+    setResult(m);
+    setLiveMoments(undefined);
+    setLive(false);
+    show('result');
+  }
   async function loadOpponents(silent = false) {
     oppLoaded.current = true;
     if (!silent) setOppStatus('loading');
@@ -615,17 +657,23 @@ export default function Team() {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') setMatchesLeft(0);
       if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT')
         setOpponents((list) => list.filter((x) => x.teamId !== o.teamId));
+      if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT') setRankFound(null);
       // T-11-510 상대 RP가 그새 멀어졌다 — 같은 횟수로 새 상대를 받는다.
-      if (r.error.reason === 'TEAM_OPPONENT_STALE') void loadOpponents();
+      if (r.error.reason === 'TEAM_OPPONENT_STALE') {
+        if (usesRankLadder(team?.season ?? 0)) setRankFound(null);
+        else void loadOpponents();
+      }
       return toast(r.error.message);
     }
     oppPickRef.current = 0;
+    setRankFound(null);
     setOppPick(0);
     setResultOrigin('opponents');
     setResult(r.data.match);
     setLiveMoments(r.data.live);
     setLive(true);
     setMatchesLeft(r.data.matchesLeft);
+    setMatchesNextAt(r.data.matchesNextAt ?? null);
     setDivisionNotice(null);
     applyPlayed(r.data);
     show('result');
@@ -655,6 +703,7 @@ export default function Team() {
     setResult(r.match);
     setLiveMoments(undefined);
     setMatchesLeft(r.matchesLeft);
+    setMatchesNextAt(r.matchesNextAt ?? null);
     applyPlayed(r);
   }
 
@@ -671,7 +720,8 @@ export default function Team() {
   function pickOppTab(t: OppTab) {
     setOppTab(t);
     if (t === 'friends') friends.ensure();
-    else if (!oppLoaded.current && !matchHint) void loadOpponents();
+    else if (!oppLoaded.current && !matchHint && !usesRankLadder(team?.season ?? 0))
+      void loadOpponents();
   }
 
   // ───────── 시즌 업적 ─────────
@@ -724,7 +774,8 @@ export default function Team() {
     opponents: () =>
       destination.friends || oppTab === 'friends'
         ? friends.ensure()
-        : matchHint
+        : // T-11-603 시즌 2는 매칭 찾기를 누를 때 상대를 받는다.
+          matchHint || usesRankLadder(team?.season ?? 0)
           ? undefined
           : loadOpponents(),
     achievements: () => loadAchievements(),
@@ -977,87 +1028,102 @@ export default function Team() {
             ) : null}
             <Card gap={8}>
               <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
+                style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}
               >
-                <Txt v="h2">{L.groundTitle}</Txt>
-                <Txt v="sm" tone="muted">
-                  {L.startersYouthApp({ n: filled, y: LINEUP_SIZE - filled })}
-                </Txt>
-              </View>
-              {editable ? (
-                <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-                  <Btn sm onPress={() => setPresetsOpen(true)} testID="team-presets">
-                    {L.tpButton}
-                  </Btn>
+                <View style={{ flexGrow: 1, flexShrink: 1, minWidth: 0 }}>
+                  <Txt v="h2">{L.groundTitle}</Txt>
+                  <Txt v="xs" tone="muted">
+                    {L.startersYouthApp({ n: filled, y: LINEUP_SIZE - filled })}
+                  </Txt>
                 </View>
-              ) : null}
-              {editable ? (
-                <SortChips
-                  label={L.formationLabelApp}
-                  value={layout ? (matchShape(layout) ?? '') : formation}
-                  // T-11-216 시즌 1 배치 프리셋(세부 포지션 자리). 프리시즌 팀은 옛 세 가지만.
-                  items={[...FORMATION_IDS, ...(season > 0 ? SHAPE_IDS : [])].map((key) => ({
-                    key,
-                    label: key,
-                  }))}
-                  onPick={(key) => {
-                    const id = SHAPE_IDS.find((s) => s === key);
-                    setFormation(id ? shapeBase(id) : (key as FormationId));
-                    setLayout(id ? shapeLayout(id) : null);
-                  }}
-                  testIDPrefix="formation"
-                />
-              ) : null}
-              <TeamLines lines={lines} coach={coachBonus} />
-              <TeamSynergy
-                synergy={synergy}
-                season={season}
-                focus={synFocus}
-                setFocus={setSynFocus}
-              />
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {editable ? (
-                  <Btn
-                    sm
-                    testID="team-auto"
-                    disabled={!players.length}
-                    style={{ flex: 1 }}
-                    onPress={() => setSlots(autoFillSlots(slotCodes, players, season, budget))}
-                  >
-                    {L.autoPlace}
-                  </Btn>
-                ) : null}
-                <Btn
-                  sm
-                  testID="team-share"
-                  style={{ flex: 1 }}
-                  onPress={() =>
-                    setShare({
-                      name: name || team?.name || L.shareDefaultNameApp,
-                      manager,
-                      logo,
-                      formation,
-                      layout: positions,
-                      cells,
-                      ovr,
-                      lines,
-                      draft: dirty,
-                      season: seasonName,
-                    })
-                  }
+                <View
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' }}
                 >
-                  {L.shareImageApp}
-                </Btn>
+                  {editable ? (
+                    <Btn
+                      sm
+                      testID="team-auto"
+                      disabled={!players.length}
+                      onPress={() => setSlots(autoFillSlots(slotCodes, players, season, budget))}
+                    >
+                      {L.autoPlace}
+                    </Btn>
+                  ) : null}
+                  {editable ? (
+                    <Btn sm onPress={() => setPresetsOpen(true)} testID="team-presets">
+                      {L.tpButton}
+                    </Btn>
+                  ) : null}
+                  <Press
+                    testID="team-share"
+                    accessibilityRole="button"
+                    accessibilityLabel={L.shareImageApp}
+                    onPress={() =>
+                      setShare({
+                        name: name || team?.name || L.shareDefaultNameApp,
+                        manager,
+                        logo,
+                        formation,
+                        layout: positions,
+                        cells,
+                        ovr,
+                        lines,
+                        draft: dirty,
+                        season: seasonName,
+                        lounge: !!team && !dirty,
+                      })
+                    }
+                    style={{
+                      width: 36,
+                      height: 36,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: RADIUS.sm,
+                      backgroundColor: c.surface2,
+                    }}
+                  >
+                    <ShareIcon color={c.ink} />
+                  </Press>
+                </View>
               </View>
               {salary ? <SalaryBar salary={salary} /> : null}
               {editable ? (
-                <Txt v="xs" tone="muted">
-                  {L.dragHintApp}
-                </Txt>
+                <View
+                  style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
+                  accessibilityLabel={L.formationLabelApp}
+                >
+                  {/* T-11-216 시즌 1 배치 프리셋(세부 포지션 자리). 프리시즌 팀은 옛 세 가지만. */}
+                  {[...FORMATION_IDS, ...(season > 0 ? SHAPE_IDS : [])].map((key) => {
+                    const on = (layout ? (matchShape(layout) ?? '') : formation) === key;
+                    return (
+                      <Press
+                        key={key}
+                        testID={`formation-${key}`}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: on }}
+                        onPress={() => {
+                          const id = SHAPE_IDS.find((s) => s === key);
+                          setFormation(id ? shapeBase(id) : (key as FormationId));
+                          setLayout(id ? shapeLayout(id) : null);
+                        }}
+                        style={{
+                          flexBasis: season > 0 ? '18%' : '30%',
+                          flexGrow: 1,
+                          minHeight: 36,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: RADIUS.sm,
+                          borderWidth: on ? 2 : 1,
+                          borderColor: on ? c.accent : c.line,
+                        }}
+                      >
+                        <Txt num bold={on} style={{ fontSize: 12 }}>
+                          {key}
+                        </Txt>
+                      </Press>
+                    );
+                  })}
+                </View>
               ) : null}
               {editable && retireSyncing ? (
                 <View style={{ gap: 6 }}>
@@ -1137,6 +1203,25 @@ export default function Team() {
               </Card>
             ) : null}
             <TeamLineup
+              onShare={
+                team ? (careerId) => void shareToLounge({ kind: 'player', careerId }) : undefined
+              }
+              belowPitch={
+                <>
+                  {editable ? (
+                    <Txt v="xs" tone="muted">
+                      {L.dragHintApp}
+                    </Txt>
+                  ) : null}
+                  <TeamLines lines={lines} coach={coachBonus} />
+                  <TeamSynergy
+                    synergy={synergy}
+                    season={season}
+                    focus={synFocus}
+                    setFocus={setSynFocus}
+                  />
+                </>
+              }
               formation={formation}
               layout={positions}
               slots={slots}
@@ -1199,12 +1284,36 @@ export default function Team() {
             reload={() => void loadOpponents()}
             challenge={(o) => void challenge(o)}
             ladder={usesRankLadder(team?.season ?? 0)}
-            repicksLeft={RANK_MATCH_REPICKS - oppPick}
-            repick={() => {
-              oppPickRef.current += 1;
-              setOppPick(oppPickRef.current);
-              void loadOpponents();
-            }}
+            queue={
+              team && usesRankLadder(team.season) ? (
+                <TeamRankQueue
+                  team={team}
+                  logo={logo}
+                  matchesLeft={matchesLeft}
+                  perDay={perDay}
+                  playing={playing}
+                  found={rankFound}
+                  setFound={setRankFound}
+                  pick={oppPick}
+                  addPick={() => {
+                    oppPickRef.current += 1;
+                    setOppPick(oppPickRef.current);
+                  }}
+                  challenge={(o) => void challenge(o)}
+                  openMatch={openHistoryMatch}
+                />
+              ) : undefined
+            }
+            info={
+              team && usesRankLadder(team.season) ? (
+                <TeamRankInfo
+                  team={team}
+                  matchesLeft={matchesLeft}
+                  perDay={perDay}
+                  open={openHistoryMatch}
+                />
+              ) : undefined
+            }
             hint={matchHint}
             toTeam={editable ? () => switchView('team') : undefined}
             saveAndFind={
@@ -1265,14 +1374,7 @@ export default function Team() {
         history={history}
         status={histStatus}
         reload={() => void loadHistory()}
-        open={(m) => {
-          setResultOrigin('history');
-          setDivisionShift(null);
-          setResult(m);
-          setLiveMoments(undefined);
-          setLive(false);
-          show('result');
-        }}
+        open={openHistoryMatch}
         record={team?.record ?? null}
         seasonName={seasonName}
         more={!!histNext}

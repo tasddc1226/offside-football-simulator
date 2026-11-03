@@ -1,9 +1,24 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { titlesOf, PERMANENT_TITLES, TITLE_GRADES } from '@offside/contracts/owner-title';
+import {
+  honorTitleIdsOf,
+  isOwnerTitle,
+  titlesOf,
+  PERMANENT_TITLES,
+  TITLE_GRADES,
+} from '@offside/contracts/owner-title';
 import { setLocale } from './i18n/core.js';
 import { en } from './i18n/en/index.js';
 import { ja } from './i18n/ja/index.js';
-import { titleLabel, titleCondition, titleRelated, titleGradeLabel } from './ownerTitle.js';
+import {
+  titleLabel,
+  titleCondition,
+  titleRelated,
+  titleGradeLabel,
+  titleIconPath,
+  titleCategoryLabel,
+  titleKindLabel,
+} from './ownerTitle.js';
+import { titleGroups } from './ownerTitleCollection.js';
 
 describe('대표 칭호 (T-11-150)', () => {
   afterEach(() => setLocale('ko'));
@@ -56,13 +71,55 @@ it('permanent labels and criteria are translated and unknown titles stay hidden'
     setLocale(locale);
     for (const t of PERMANENT_TITLES) {
       expect(titleLabel(t.id)).toBeTruthy();
-      if (t.id !== 'owner-pioneer') expect(titleCondition(t.id)).toContain(String(t.target));
+      if (t.id !== 'owner-pioneer' && t.metric !== 'division')
+        // enhanceSpent의 목표는 억 단위 값이라 문구에는 1조로 적는다.
+        if (t.metric !== 'enhanceSpent') expect(titleCondition(t.id)).toContain(String(t.target));
       expect(titleRelated(t.id)).toBeTruthy();
+      expect(titleIconPath(t.id)).toBeTruthy();
+      expect(titleCategoryLabel(t.category)).toBeTruthy();
     }
     for (const grade of TITLE_GRADES) expect(titleGradeLabel(grade)).toBeTruthy();
+    expect(titleCategoryLabel('trophy')).toBeTruthy();
     expect(titleCondition('owner-developer')).toContain('10');
     expect(titleCondition('owner-star-maker')).toContain('90');
   }
   expect(titleLabel('owner-unknown')).toBeNull();
   setLocale('ko');
+});
+
+describe('T-11-619 기록 배지 대표 칭호', () => {
+  it('순위 배지 · 최초 기록은 이름과 그림이 있고, 그 밖의 배지 id는 칭호가 아니다', () => {
+    expect(titleLabel('honor-1-achievements-100')).toBe('시즌 1 업적 TOP 100');
+    expect(titleLabel('honor-2-team-1')).toBe('시즌 2 팀 레이팅 1위');
+    expect(titleLabel('honor-1-hof-10')).toBe('시즌 1 명예의 전당 TOP 10');
+    expect(titleLabel('honor-1-first')).toBe('시즌 1 서버 최초 기록');
+    expect(titleIconPath('honor-1-first')).toBeTruthy();
+    expect(titleKindLabel('honor-1-first')).toBe('기록 배지');
+    expect(titleCategoryLabel('honor')).toBe('기록 배지');
+    for (const id of ['honor-1-pioneer', 'honor-1-division-3', 'honor-1-team', 'honor-x-first']) {
+      expect(titleLabel(id)).toBeNull();
+      expect(isOwnerTitle(id)).toBe(false);
+    }
+  });
+
+  it('달 수 있는 배지만 고르고 최근 시즌 · 높은 순위 먼저 놓는다', () => {
+    const h = (season: number, kind: string, band: number | null) => ({ season, kind, band });
+    expect(
+      honorTitleIdsOf([
+        h(1, 'achievements', 100),
+        h(1, 'team', 10),
+        h(1, 'first', null),
+        h(2, 'hof', 100),
+        h(1, 'pioneer', null),
+        h(1, 'wall-of-honor', null),
+        h(1, 'retired-number', null),
+        h(2, 'division', null),
+      ]),
+    ).toEqual(['honor-2-hof-100', 'honor-1-team-10', 'honor-1-achievements-100', 'honor-1-first']);
+  });
+
+  it('명예관 목록에서 트로피 뒤 기록 배지 묶음으로 나온다', () => {
+    const { earned } = titleGroups({ titles: ['cup-1-sf', 'honor-1-first'], permanent: [] });
+    expect(earned.map((g) => g.key)).toEqual(['trophy', 'honor']);
+  });
 });

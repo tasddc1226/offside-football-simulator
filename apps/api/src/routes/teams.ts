@@ -313,7 +313,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           // T-11-165 선발에 실제로 든 선수만(숨김·지난 주인 카드는 eligible에서 이미 빠졌다).
           players: rows.filter((r) => eligible.has(r.id)).map((r) => teamPlayerCard(r)),
           // T-11-290 선발 시너지 — 내 팀 화면과 같은 표를 남의 팀 프로필에도(경기 계산과 같은 입력).
-          synergy: lineupSynergy(lineup),
+          synergy: lineupSynergy(lineup, t.season),
           coach,
           createdAt: t.createdAt,
         },

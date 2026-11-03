@@ -1,9 +1,16 @@
 // 선수 생성(웹 Create.svelte): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
 // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { careerGuideText as CG } from '@offside/app-core/i18n/ko/careerGuide';
-import { useEffect, useState, useRef, type ReactNode } from 'react';
-import { Alert, Animated, Easing, ScrollView, TextInput, View } from 'react-native';
+import { useCallback, useEffect, useState, useRef, type ReactNode } from 'react';
+import {
+  Alert,
+  Animated,
+  Easing,
+  type LayoutChangeEvent,
+  ScrollView,
+  TextInput,
+  View,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import {
@@ -39,6 +46,7 @@ import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
 import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
+import { scoutWhatText } from '@offside/app-core/scoutOdds';
 import {
   REROLL_MILEAGE,
   rerollMileageLeft,
@@ -62,6 +70,16 @@ import { fundsText } from '@offside/app-core/funds';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { useClubReward } from '../../platform/clubShop';
 import { watchDetailOpening } from '@offside/app-core/season-opening';
+import {
+  CREATE_PROGRESS,
+  candidateEdge,
+  createProgressAt,
+  detailBlurb,
+  nextCreateStep,
+  positionTendency,
+  prevCreateStep,
+  type CreateStep,
+} from '@offside/app-core/create-steps';
 import { detailOpenNow, draftBody, draftDpos, randomName } from '@offside/app-core/state';
 import {
   revealCandidatePotential,
@@ -82,7 +100,7 @@ import { goHome, goRerollShop } from '../../game/nav';
 import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, num, rem } from '../../theme/type';
-import { useColors } from '../../theme/useColors';
+import { useColors, useIsDark } from '../../theme/useColors';
 import {
   ActionBar,
   Btn,
@@ -92,7 +110,6 @@ import {
   Pill,
   Press,
   Row,
-  Topbar,
   Txt,
   useShadow,
 } from '../../ui';
@@ -101,6 +118,7 @@ import { noteScrollY, revealFocusedInput } from '../../ui/scroll';
 import { useFormKeyboardScroll } from '../../ui/useFormKeyboardScroll';
 import { MiniRadar } from './MiniRadar';
 import { NationPicker } from './NationPicker';
+import { CreateLook } from './CreateLook';
 import { ScoutScan } from './ScoutScan';
 import { PositionGuide } from '../game/PositionGuide';
 import { ItemsHint } from '../../components/ItemsHint';
@@ -109,6 +127,9 @@ import { tn } from '@offside/game/i18n/names';
 
 // T-11-244 천장 카운트가 없는 구단주(아직 스카우트권을 쓴 적 없음).
 const NO_PITY: ScoutPity = { used: 0, streak: 0, elites: 0 };
+// 비활성 버튼이 다음 할 일을 문장으로 알려 줄 때는 흐리지 않고 옅은 면에 진한 글자로 둔다.
+const hintBtn = (blocked: boolean) =>
+  blocked ? ({ kind: 'default', style: { opacity: 1 } } as const) : ({ kind: 'primary' } as const);
 
 const posKeys = Object.keys(POS) as Pos[];
 const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에는 L.foot으로)
@@ -129,7 +150,10 @@ function toggleFocus(k: AttrKey) {
   const cur = appState.C.focus;
   appState.C.focus = cur.includes(k) ? cur.filter((f) => f !== k) : [...cur, k].slice(-FOCUS_PICK);
 }
+// T-11-605 후보에서 입력으로 돌아온 사람에게 같은 후보가 나오는 이유를 알린다.
+let returned = false;
 function backToForm() {
+  returned = true;
   appState.candidates = null;
 }
 function openAll() {
@@ -146,6 +170,78 @@ function confirmPick() {
     appState.candidatePick == null ? null : appState.candidates?.[appState.candidatePick];
   if (!cand) return;
   startCareer(appState.C.name, appState.C.number, { ...cand.attrs }, { ...cand.potential });
+}
+
+/** 카드가 열리고 접힐 때 바깥 높이를 이어, 아래 내용이 한 번에 밀리지 않게 한다. 동작 줄이기면 바로 맞춘다. */
+function SmoothHeight({ children }: { children: ReactNode }) {
+  const [height] = useState(() => new Animated.Value(0));
+  const [measured, setMeasured] = useState(false);
+  const last = useRef(0);
+  const onLayout = (e: LayoutChangeEvent) => {
+    const h = e.nativeEvent.layout.height;
+    if (h === last.current) return;
+    const first = last.current === 0;
+    last.current = h;
+    if (first || !prefs.motionOK) {
+      height.setValue(h);
+      setMeasured(true);
+      return;
+    }
+    Animated.timing(height, {
+      toValue: h,
+      duration: 360,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  };
+  return (
+    <Animated.View style={measured ? { height } : null}>
+      <View onLayout={onLayout}>{children}</View>
+    </Animated.View>
+  );
+}
+
+/** 카드 아래 도구 한 묶음. */
+function ToolGroup({
+  title,
+  first,
+  testID,
+  action,
+  children,
+}: {
+  title: string;
+  first: boolean;
+  testID: string;
+  /** 제목 줄 오른쪽에 두는 버튼. */
+  action?: ReactNode;
+  children?: ReactNode;
+}) {
+  const { line } = useColors();
+  return (
+    <View
+      testID={testID}
+      style={[
+        { gap: 6 },
+        first ? null : { paddingTop: 12, borderTopWidth: 1, borderTopColor: line },
+      ]}
+    >
+      <View
+        style={{
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 6,
+        }}
+      >
+        <Txt bold v="sm" tone="muted" accessibilityRole="header">
+          {title}
+        </Txt>
+        {action}
+      </View>
+      {children}
+    </View>
+  );
 }
 
 /** 카드가 세로축으로 뒤집히며 열린다. 동작 줄이기면 바로 표시. */
@@ -456,6 +552,10 @@ export default function Create() {
     }
   }
   const c = useColors();
+  // 금색은 후보의 강점 · 공개 연출에만 쓴다. 다크 모드 초록은 배경에 묻혀 선택지(Opt)와 같은 금색을 쓴다.
+  const dark = useIsDark();
+  const progressColor = dark ? c.ink : c.pitch;
+  const selColor = dark ? c.accent : c.pitch;
   const keyboardScroll = useFormKeyboardScroll();
   const insets = useSafeAreaInsets();
   const shadow = useShadow();
@@ -486,6 +586,34 @@ export default function Create() {
   const ovrFocus = ovrFocusView(C.pos, C.focus, dpos);
 
   const step: 'form' | 'candidates' = s.candidates ? 'candidates' : 'form';
+  // T-11-605 입력을 포지션 → 주력 → 특성 → 정보(선택: 더 꾸미기)로 나눠 한 화면에 한 가지만 고른다.
+  const formStep = s.createStep;
+  const progress = createProgressAt(formStep, !!s.candidates);
+  const progressAt = CREATE_PROGRESS.indexOf(progress);
+  const title = s.candidates
+    ? L.titleCandidates
+    : {
+        pos: L.titlePos,
+        focus: L.titleFocus,
+        trait: L.titleTrait,
+        info: L.titleInfo,
+        extra: L.titleExtra,
+      }[formStep];
+  const lastForm = formStep === 'info' || formStep === 'extra';
+  const scrollView = useRef<ScrollView | null>(null);
+  const setKeyboardScroll = keyboardScroll.ref;
+  const setScroll = useCallback(
+    (v: ScrollView | null) => {
+      scrollView.current = v;
+      setKeyboardScroll(v);
+    },
+    [setKeyboardScroll],
+  );
+  const goStep = (next: CreateStep) => {
+    if (appState.candidates) backToForm();
+    appState.createStep = next;
+    scrollView.current?.scrollTo({ y: 0, animated: false });
+  };
   const kept = step === 'form' ? keptDraft() : null;
   const labels = attrLabels(C.pos);
   const picked =
@@ -499,6 +627,12 @@ export default function Create() {
   const foreign = !isKorean(C);
   const body = draftBody(C);
   const bodyErr = bodyError(body);
+  /** 후보를 볼 수 없는 이유. 없으면 null. */
+  const blocker = bodyErr ? L.checkBody : focusLeft > 0 ? L.focusMore({ n: focusLeft }) : null;
+  // 카드 아래 도구 묶음: 쓸 수 있는 도구가 있는 묶음만 보인다.
+  const hasPicked = s.candidatePick != null && !!s.candidates?.[s.candidatePick];
+  const hasChangeTools = scouts > 0 || rerolls > 0 || !!owner || (!!offer && adLeft > 0);
+  const hasPotentialTools = s.candidatePotentialOpen || !!offer || !!club.offer;
   const note = bodyNote(C.pos, body);
   const def = BODY_DEFAULT[C.pos];
 
@@ -522,7 +656,7 @@ export default function Create() {
   const ovrGuideBody = (showTitle: boolean) => (
     <View
       testID="ovr-guide"
-      style={{ borderLeftWidth: 3, borderLeftColor: c.accent, paddingLeft: 12, gap: 4 }}
+      style={{ borderLeftWidth: 3, borderLeftColor: progressColor, paddingLeft: 12, gap: 4 }}
     >
       {showTitle ? (
         <Txt v="sm" bold>
@@ -541,14 +675,13 @@ export default function Create() {
       </Txt>
     </View>
   );
-  const ovrGuide = ovrGuideBody(true);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bg }}>
       {/* 라이브 카드가 위에 붙어 다니려면 스크롤 밖 위쪽 안전 영역을 따로 비운다 */}
       <View style={{ height: insets.top, backgroundColor: c.bg }} />
       <ScrollView
-        ref={keyboardScroll.ref}
+        ref={setScroll}
         onLayout={keyboardScroll.onLayout}
         onContentSizeChange={revealFocusedInput}
         onScroll={(e) => noteScrollY(e.nativeEvent.contentOffset.y)}
@@ -557,60 +690,92 @@ export default function Create() {
         keyboardDismissMode="on-drag"
         // iOS는 스크롤 여백만 키보드에 맞춘다. 하단 버튼 줄은 화면 끝에 고정한다.
         automaticallyAdjustKeyboardInsets
-        stickyHeaderIndices={step === 'form' ? [2] : undefined}
         contentContainerStyle={{
           paddingHorizontal: 16,
           paddingBottom: 24 + keyboardScroll.bottomInset,
-          gap: 14,
+          paddingTop: 8,
+          gap: 10,
         }}
       >
-        <Topbar />
-
-        <View style={{ marginBottom: -8 }}>
-          <Txt v="eyebrow">Player Creation · {step === 'form' ? 1 : 2}/2</Txt>
-          <Txt v="h1" accessibilityRole="header">
-            {step === 'form' ? L.titleForm : L.titleCandidates}
+        <View style={{ gap: 4 }}>
+          <Txt
+            v="h1"
+            accessibilityRole="header"
+            style={{ fontSize: rem(FONT.title2), lineHeight: rem(FONT.title2) * 1.25 }}
+          >
+            {title}
           </Txt>
+          <View
+            accessibilityRole="tablist"
+            accessibilityLabel={L.stepNav}
+            style={{ flexDirection: 'row', gap: 4 }}
+          >
+            {CREATE_PROGRESS.map((p, i) => {
+              const on = progress === p;
+              const name = {
+                pos: L.navPos,
+                focus: L.navFocus,
+                trait: L.navTrait,
+                info: L.navInfo,
+                candidates: L.navCand,
+              }[p];
+              return (
+                <Press
+                  key={p}
+                  testID={`step-${p}`}
+                  disabled={p === 'candidates'}
+                  accessibilityState={{ selected: on }}
+                  onPress={() => p !== 'candidates' && goStep(p)}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    minHeight: 36,
+                    justifyContent: 'flex-end',
+                    gap: 4,
+                  }}
+                >
+                  <View
+                    style={{
+                      height: 4,
+                      borderRadius: 2,
+                      backgroundColor: i <= progressAt ? progressColor : c.line,
+                    }}
+                  />
+                  <Txt
+                    numberOfLines={1}
+                    tone={on ? undefined : 'muted'}
+                    style={{ fontSize: rem(FONT.caption2), fontWeight: '600' }}
+                  >
+                    {name}
+                  </Txt>
+                </Press>
+              );
+            })}
+          </View>
         </View>
 
-        {/* 라이브 카드 — 1단계에서는 스크롤해도 위에 붙어 있다 */}
-        <View style={{ paddingTop: 8 }}>
+        {step === 'form' ? (
           <View
             testID="live-card"
             accessibilityLabel={L.previewLabel}
-            style={[
-              {
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 14,
-                backgroundColor: c.pitch,
-                borderRadius: RADIUS.lg,
-                paddingVertical: 14,
-                paddingHorizontal: 16,
-                shadowColor: '#000',
-                shadowOpacity: 0.35,
-                shadowRadius: 12,
-                shadowOffset: { width: 0, height: 8 },
-                elevation: 4,
-              },
-            ]}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 10,
+              backgroundColor: c.pitch,
+              borderRadius: RADIUS.lg,
+              paddingVertical: 8,
+              paddingHorizontal: 12,
+            }}
           >
-            <View style={{ alignItems: 'center', minWidth: 48 }}>
-              <Txt
-                num
-                style={{
-                  fontSize: rem(2.5),
-                  lineHeight: rem(2.5),
-                  color: onPitch,
-                  includeFontPadding: false,
-                }}
-              >
+            <View style={{ alignItems: 'center', minWidth: 44 }}>
+              <Txt num style={{ fontSize: rem(FONT.title1), color: onPitch }}>
                 {C.number || '–'}
               </Txt>
               <Txt
                 style={{
                   fontFamily: DISPLAY[700],
-                  fontSize: rem(FONT.label),
+                  fontSize: rem(FONT.caption),
                   letterSpacing: rem(0.8125) * 0.12,
                   color: c.pitchAccent,
                 }}
@@ -618,280 +783,389 @@ export default function Create() {
                 {dpos ?? C.pos}
               </Txt>
             </View>
-            <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-              <Txt
-                bold
-                numberOfLines={1}
-                style={{
-                  fontSize: rem(FONT.title2),
-                  lineHeight: rem(FONT.title2) * 1.2,
-                  color: onPitch,
-                }}
-              >
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Txt bold numberOfLines={1} style={{ fontSize: rem(FONT.body), color: onPitch }}>
                 {C.name.trim() || L.noName}
               </Txt>
               <Txt
-                style={{
-                  fontSize: rem(FONT.label),
-                  lineHeight: rem(FONT.label) * 1.5,
-                  color: alpha(onPitch, 0.75),
-                }}
+                numberOfLines={1}
+                style={{ fontSize: rem(FONT.caption), color: alpha(onPitch, 0.75) }}
               >
-                <Txt accessibilityElementsHidden style={{ fontSize: rem(FONT.label) }}>
+                <Txt accessibilityElementsHidden style={{ fontSize: rem(FONT.caption) }}>
                   {flagOf(nation.code)}
                 </Txt>{' '}
-                {tn(nation.ko)} · {posLabel({ pos: C.pos, dpos })} · {L.foot({ v: C.foot })}
-                {bodyErr ? '' : ` · ${body.h}cm ${body.w}kg`}
+                {tn(nation.ko)} ·{' '}
+                {formStep === 'info' || formStep === 'extra'
+                  ? `${L.foot({ v: C.foot })}${bodyErr ? '' : ` · ${body.h}cm ${body.w}kg`}`
+                  : posLabel({ pos: C.pos, dpos })}
               </Txt>
-              <Row gap={4} style={{ marginTop: 4 }}>
-                {trait ? <LiveTag>{`${trait.icon} ${trait.name}`}</LiveTag> : null}
-                {C.focus.length ? (
-                  <LiveTag>{L.focusTag({ list: C.focus.map((k) => labels[k]).join('·') })}</LiveTag>
-                ) : null}
-              </Row>
+              <Txt
+                numberOfLines={1}
+                style={{ fontSize: rem(FONT.caption), color: alpha(onPitch, 0.75) }}
+              >
+                {trait ? `${trait.icon} ${trait.name}` : ''}
+                {C.focus.length
+                  ? ` · ${L.focusTag({ list: C.focus.map((k) => labels[k]).join('·') })}`
+                  : ''}
+              </Txt>
             </View>
-            <View style={{ alignItems: 'center', gap: 2 }}>
-              <MiniRadar pos={C.pos} attrs={cardAttrs} size={72} onPitch />
+            <MiniRadar pos={C.pos} attrs={cardAttrs} size={44} onPitch />
+            <View style={{ alignItems: 'center' }}>
               <Txt style={{ fontSize: rem(FONT.caption2), color: alpha(onPitch, 0.85) }}>
-                {picked ? L.ovrStart : L.ovrEst} OVR{' '}
-                <Txt num style={{ fontSize: rem(FONT.title3), color: c.pitchAccent }}>
-                  {startOvr(C.pos, cardAttrs)}
-                </Txt>
+                {L.ovrEst}
+              </Txt>
+              <Txt num style={{ fontSize: rem(FONT.title3), color: c.pitchAccent }}>
+                <CountUp value={startOvr(C.pos, cardAttrs)} fromValue ms={280} />
               </Txt>
             </View>
           </View>
-        </View>
+        ) : null}
+
+        {step === 'form' && returned ? (
+          <Txt v="sm" tone="muted" testID="same-candidates">
+            {L.sameCandidates}
+          </Txt>
+        ) : null}
 
         {step === 'form' ? (
-          <Card gap={18}>
-            <View style={{ flexDirection: 'row', gap: 10 }}>
-              <View style={{ flex: 1 }}>
-                <Field label={L.name}>
-                  <View>
-                    <TextInput
-                      testID="f-name"
-                      accessibilityLabel={L.name}
-                      maxLength={12}
-                      autoCorrect={false}
-                      autoCapitalize="none"
-                      spellCheck={false}
-                      returnKeyType="done"
-                      value={C.name}
-                      onChangeText={(t) => (appState.C.name = t)}
-                      onFocus={revealFocusedInput}
-                      style={[input, { paddingRight: 48 }]}
-                    />
-                    <Press
-                      testID="random-name"
-                      accessibilityLabel={L.randomName}
-                      onPress={() => (appState.C.name = randomName())}
-                      style={{
-                        position: 'absolute',
-                        right: 4,
-                        top: 0,
-                        bottom: 0,
-                        width: 44,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Txt style={{ fontSize: rem(FONT.title2) }}>🎲</Txt>
-                    </Press>
+          <>
+            <Card gap={10} style={{ padding: 12 }}>
+              {formStep === 'pos' ? (
+                <>
+                  <CoachTarget id="pos">
+                    <Field label={L.position}>
+                      <View style={{ flexDirection: 'row', gap: 6 }}>
+                        {posKeys.map((k) => (
+                          <View key={k} testID={`pos-${k}`} style={{ flex: 1, minWidth: 0 }}>
+                            <Opt
+                              selected={C.pos === k}
+                              onPress={() => setPos(k, detailOpen)}
+                              style={{ alignItems: 'center', paddingHorizontal: 4 }}
+                            >
+                              <Txt
+                                bold
+                                numberOfLines={1}
+                                adjustsFontSizeToFit
+                                minimumFontScale={0.7}
+                                style={{ textAlign: 'center' }}
+                              >
+                                {POS[k].label}
+                              </Txt>
+                            </Opt>
+                          </View>
+                        ))}
+                      </View>
+                    </Field>
+                  </CoachTarget>
+                  {detailOpen && DETAILS_OF[C.pos].length > 1 ? (
+                    <Field label={L.detailPosition}>
+                      <Seg>
+                        {DETAILS_OF[C.pos].map((d) => (
+                          <SegCell key={d} cols={3} testID={`dpos-${d}`}>
+                            <Opt
+                              selected={C.dpos === d}
+                              onPress={() => pickDetail(d)}
+                              style={{ flex: 1, alignItems: 'center', paddingHorizontal: 4 }}
+                            >
+                              <Txt
+                                bold
+                                style={{
+                                  textAlign: 'center',
+                                  fontSize: rem(FONT.label),
+                                  lineHeight: rem(FONT.label) * 1.2,
+                                }}
+                              >
+                                {DPOS[d].label}
+                              </Txt>
+                            </Opt>
+                          </SegCell>
+                        ))}
+                      </Seg>
+                    </Field>
+                  ) : null}
+                  <View
+                    testID="dpos-panel"
+                    accessibilityLiveRegion="polite"
+                    style={{
+                      borderLeftWidth: 3,
+                      borderLeftColor: progressColor,
+                      paddingLeft: 10,
+                      gap: 2,
+                    }}
+                  >
+                    <Txt bold v="sm">
+                      {dpos ? detailBlurb(dpos) : POS[C.pos].blurb}
+                    </Txt>
+                    {positionTendency(C.pos, dpos) ? (
+                      <Txt v="sm">{positionTendency(C.pos, dpos)}</Txt>
+                    ) : null}
+                    {detailOpen && DETAILS_OF[C.pos].length > 1 ? (
+                      <Txt v="sm" tone="muted">
+                        {L.detailNote}
+                      </Txt>
+                    ) : null}
                   </View>
-                </Field>
-              </View>
-              <View style={{ width: 84 }}>
-                <Field label={L.number}>
-                  <TextInput
-                    testID="f-num"
-                    accessibilityLabel={L.number}
-                    keyboardType="number-pad"
-                    returnKeyType="done"
-                    maxLength={2}
-                    placeholder="1–99"
-                    placeholderTextColor={c.muted}
-                    value={C.number ? String(C.number) : ''}
-                    onChangeText={(t) => (appState.C.number = +t.replace(/\D/g, '') || 0)}
-                    onFocus={revealFocusedInput}
-                    style={input}
+                  {kept ? (
+                    <View testID="kept-elsewhere" style={{ gap: 8 }}>
+                      <Txt v="sm">
+                        {L.keptElsewhere({
+                          pos: posLabel(kept),
+                          focus: kept.focus.map((k) => labels[k]).join('·'),
+                        })}
+                      </Txt>
+                      <Btn
+                        testID="restore-kept"
+                        onPress={() => restoreKeptDraft()}
+                        style={{ alignSelf: 'flex-start' }}
+                      >
+                        {L.keptRestore}
+                      </Btn>
+                    </View>
+                  ) : null}
+                </>
+              ) : formStep === 'focus' ? (
+                <>
+                  <CoachTarget id="focus">
+                    <Field label={L.focusTitle({ n: FOCUS_PICK })}>
+                      <Seg>
+                        {ATTR_KEYS.map((k) => {
+                          const d = preview[k] ?? 0;
+                          const on = C.focus.includes(k);
+                          return (
+                            <SegCell key={k} cols={2} testID={`focus-${k}`}>
+                              <Opt selected={on} onPress={() => toggleFocus(k)} style={{ flex: 1 }}>
+                                <Txt
+                                  bold
+                                  style={
+                                    ovrFocus.keys.includes(k)
+                                      ? { textDecorationLine: 'underline' }
+                                      : undefined
+                                  }
+                                >
+                                  {labels[k]}
+                                </Txt>
+                                <Txt
+                                  style={[
+                                    small,
+                                    { color: d > 0 ? c.good : d < 0 ? c.bad : c.muted },
+                                    d > 0 && { fontWeight: '600' },
+                                  ]}
+                                >
+                                  {focusNote(on, d)}
+                                </Txt>
+                              </Opt>
+                            </SegCell>
+                          );
+                        })}
+                      </Seg>
+                      <Txt v="sm" tone="muted">
+                        {L.focusMeaning}
+                      </Txt>
+                    </Field>
+                  </CoachTarget>
+                  <DisclosureRow
+                    border={false}
+                    open={guideOpen}
+                    onToggle={() => setGuideOpen(!guideOpen)}
+                    label={`${ovrFocus.title}: ${ovrFocus.groups}`}
+                    testID="ovr-guide-toggle"
                   />
-                </Field>
-              </View>
-            </View>
-
-            <Field label={L.nation}>
-              <NationPicker
-                testID="f-nation"
-                value={C.nation}
-                onChange={(code) => (appState.C.nation = code)}
-              />
-              <Txt v="sm" tone="muted" testID="nation-note">
-                {`${
-                  foreign
-                    ? L.nationForeign({ nation: tn(nation.ko), cup: tn(CONFEDS[nation.conf].cup) })
-                    : L.nationHome
-                } ${L.nationSame}`}
-              </Txt>
-            </Field>
-
-            <Field label={L.body}>
-              <Row gap={8} wrap={false}>
-                <BodyInput
-                  testID="f-height"
-                  label={L.height}
-                  unit="cm"
-                  value={C.height}
-                  fallback={def.h}
-                  invalid={!!bodyErr}
-                  onChange={(v) => (appState.C.height = v)}
-                />
-                <BodyInput
-                  testID="f-weight"
-                  label={L.weight}
-                  unit="kg"
-                  value={C.weight}
-                  fallback={def.w}
-                  invalid={!!bodyErr}
-                  onChange={(v) => (appState.C.weight = v)}
-                />
-              </Row>
-              <Txt
-                v="sm"
-                tone={bodyErr ? 'bad' : 'muted'}
-                bold={!!bodyErr}
-                testID="body-note"
-                accessibilityLiveRegion="polite"
-              >
-                {bodyErr ? bodyErr : L.bodyNote({ bmi: bmiOf(body).toFixed(1), note })}
-              </Txt>
-            </Field>
-
-            <CoachTarget id="pos">
-              <Field label={L.position}>
-                <Seg>
-                  {posKeys.map((k) => (
-                    <SegCell key={k} cols={2} testID={`pos-${k}`}>
-                      <PosOpt
-                        code={k}
-                        title={POS[k].label}
-                        blurb={POS[k].blurb}
-                        selected={C.pos === k}
-                        onPress={() => setPos(k, detailOpen)}
-                      />
-                    </SegCell>
-                  ))}
-                </Seg>
-              </Field>
-            </CoachTarget>
-
-            {detailOpen && DETAILS_OF[C.pos].length > 1 ? (
-              <Field label={L.detailPosition}>
-                <Seg>
-                  {DETAILS_OF[C.pos].map((d) => (
-                    <SegCell key={d} cols={2} testID={`dpos-${d}`}>
-                      <PosOpt
-                        code={d}
-                        title={DPOS[d].label}
-                        blurb={DPOS[d].blurb}
-                        selected={C.dpos === d}
-                        onPress={() => pickDetail(d)}
-                      />
-                    </SegCell>
-                  ))}
-                </Seg>
-                <Txt v="sm" tone="muted">
-                  {L.detailNote}
-                </Txt>
-              </Field>
-            ) : null}
-
-            {ovrGuide}
-            {/* T-11-234 유형별 주력 능력치를 생성 중에도 본다(시즌 탭과 같은 안내). */}
-            <PositionGuide pos={C.pos} />
-            <Field label={L.footLabel}>
-              <Seg>
-                {feet.map((f) => (
-                  <SegCell key={f} cols={3} testID={`foot-${f}`}>
-                    <Opt
-                      selected={C.foot === f}
-                      onPress={() => (appState.C.foot = f)}
-                      style={{ flex: 1 }}
-                    >
-                      <Txt bold>{L.foot({ v: f })}</Txt>
-                    </Opt>
-                  </SegCell>
-                ))}
-              </Seg>
-            </Field>
-
-            <CoachTarget id="focus">
-              <Field label={L.focusTitle({ n: FOCUS_PICK })}>
-                <Seg>
-                  {ATTR_KEYS.map((k) => {
-                    const d = preview[k] ?? 0;
-                    const on = C.focus.includes(k);
-                    return (
-                      <SegCell key={k} cols={2} testID={`focus-${k}`}>
-                        <Opt selected={on} onPress={() => toggleFocus(k)} style={{ flex: 1 }}>
-                          <Txt bold>{labels[k]}</Txt>
-                          <Txt
-                            style={[
-                              small,
-                              { color: d > 0 ? c.good : d < 0 ? c.bad : c.muted },
-                              d > 0 && { fontWeight: '600' },
-                            ]}
+                  {guideOpen ? (
+                    <View style={{ gap: 6 }}>
+                      <Txt v="sm" tone="muted">
+                        {L.ovrWhy}
+                      </Txt>
+                      {ovrGuideBody(false)}
+                      {/* T-11-234 유형별 주력 능력치를 생성 중에도 본다(시즌 탭과 같은 안내). */}
+                      <PositionGuide pos={C.pos} />
+                    </View>
+                  ) : null}
+                </>
+              ) : formStep === 'trait' ? (
+                <>
+                  <Field label={L.trait}>
+                    <View style={{ gap: 8 }}>
+                      {TRAITS.map((t) => (
+                        <View key={t.id} testID={`trait-${t.id}`}>
+                          <Opt
+                            selected={C.trait === t.id}
+                            onPress={() => (appState.C.trait = t.id)}
                           >
-                            {focusNote(on, d)}
-                          </Txt>
-                        </Opt>
-                      </SegCell>
-                    );
-                  })}
-                </Seg>
-              </Field>
-            </CoachTarget>
-
-            <Field label={L.trait}>
-              <Seg>
-                {TRAITS.map((t) => (
-                  <SegCell key={t.id} cols={2} testID={`trait-${t.id}`}>
-                    <Opt
-                      selected={C.trait === t.id}
-                      onPress={() => (appState.C.trait = t.id)}
-                      style={{ flex: 1 }}
+                            <Txt bold>
+                              {t.icon} {t.name}
+                            </Txt>
+                            <Txt tone="muted" style={small}>
+                              {t.desc}
+                            </Txt>
+                          </Opt>
+                        </View>
+                      ))}
+                    </View>
+                  </Field>
+                  <Txt v="sm" tone="muted">
+                    {L.potentialNote}
+                  </Txt>
+                </>
+              ) : formStep === 'info' ? (
+                <>
+                  <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Field label={L.name}>
+                        <View>
+                          <TextInput
+                            testID="f-name"
+                            accessibilityLabel={L.name}
+                            maxLength={12}
+                            autoCorrect={false}
+                            autoCapitalize="none"
+                            spellCheck={false}
+                            returnKeyType="done"
+                            value={C.name}
+                            onChangeText={(t) => (appState.C.name = t)}
+                            onFocus={revealFocusedInput}
+                            style={[input, { paddingRight: 74 }]}
+                          />
+                          <Press
+                            testID="random-name"
+                            accessibilityLabel={L.randomName}
+                            onPress={() => (appState.C.name = randomName())}
+                            style={{
+                              position: 'absolute',
+                              right: 4,
+                              top: 0,
+                              bottom: 0,
+                              minWidth: 44,
+                              flexDirection: 'row',
+                              gap: 2,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <Txt style={{ fontSize: rem(FONT.caption) }}>🎲</Txt>
+                            <Txt bold style={{ fontSize: rem(FONT.caption) }}>
+                              {L.randomNameShort}
+                            </Txt>
+                          </Press>
+                        </View>
+                      </Field>
+                    </View>
+                    <View style={{ width: 84 }}>
+                      <Field label={L.number}>
+                        <TextInput
+                          testID="f-num"
+                          accessibilityLabel={L.number}
+                          keyboardType="number-pad"
+                          returnKeyType="done"
+                          maxLength={2}
+                          placeholder="1–99"
+                          placeholderTextColor={c.muted}
+                          value={C.number ? String(C.number) : ''}
+                          onChangeText={(t) => (appState.C.number = +t.replace(/\D/g, '') || 0)}
+                          onFocus={revealFocusedInput}
+                          style={input}
+                        />
+                      </Field>
+                    </View>
+                  </View>
+                  <Txt v="sm" tone="muted" testID="number-note">
+                    {!C.number ? L.numberHint : L.nameHint}
+                  </Txt>
+                  <Field label={L.nation}>
+                    <NationPicker
+                      testID="f-nation"
+                      value={C.nation}
+                      onChange={(code) => (appState.C.nation = code)}
+                    />
+                    <Txt v="sm" tone="muted" testID="nation-note">
+                      {`${
+                        foreign
+                          ? L.nationForeign({
+                              nation: tn(nation.ko),
+                              cup: tn(CONFEDS[nation.conf].cup),
+                            })
+                          : L.nationHome
+                      } ${L.nationSame}`}
+                    </Txt>
+                  </Field>
+                  <Btn testID="step-extra" onPress={() => goStep('extra')}>
+                    {`${L.moreCustomize} →`}
+                  </Btn>
+                </>
+              ) : (
+                <>
+                  <Txt v="sm" tone="muted">
+                    {L.extraNote}
+                  </Txt>
+                  <Field label={L.body}>
+                    <Row gap={8} wrap={false}>
+                      <BodyInput
+                        testID="f-height"
+                        label={L.height}
+                        unit="cm"
+                        value={C.height}
+                        fallback={def.h}
+                        invalid={!!bodyErr}
+                        onChange={(v) => (appState.C.height = v)}
+                      />
+                      <BodyInput
+                        testID="f-weight"
+                        label={L.weight}
+                        unit="kg"
+                        value={C.weight}
+                        fallback={def.w}
+                        invalid={!!bodyErr}
+                        onChange={(v) => (appState.C.weight = v)}
+                      />
+                    </Row>
+                    <Txt
+                      v="sm"
+                      tone={bodyErr ? 'bad' : 'muted'}
+                      bold={!!bodyErr}
+                      testID="body-note"
+                      accessibilityLiveRegion="polite"
                     >
-                      <Txt bold accessibilityHint={t.desc}>
-                        {t.icon} {t.name}
-                      </Txt>
-                      <Txt tone="muted" style={small}>
-                        {t.short}
-                      </Txt>
-                    </Opt>
-                  </SegCell>
-                ))}
-              </Seg>
-            </Field>
-            <Txt v="sm" tone="muted">
-              {L.potentialNote}
-            </Txt>
-            {kept ? (
-              <View testID="kept-elsewhere" style={{ gap: 8 }}>
-                <Txt v="sm">
-                  {L.keptElsewhere({
-                    pos: posLabel(kept),
-                    focus: kept.focus.map((k) => labels[k]).join('·'),
-                  })}
+                      {bodyErr ? bodyErr : L.bodyNote({ bmi: bmiOf(body).toFixed(1), note })}
+                    </Txt>
+                  </Field>
+                  <Field label={L.footLabel}>
+                    <Seg>
+                      {feet.map((f) => (
+                        <SegCell key={f} cols={3} testID={`foot-${f}`}>
+                          <Opt
+                            selected={C.foot === f}
+                            onPress={() => (appState.C.foot = f)}
+                            style={{ flex: 1 }}
+                          >
+                            <Txt bold>{L.foot({ v: f })}</Txt>
+                          </Opt>
+                        </SegCell>
+                      ))}
+                    </Seg>
+                  </Field>
+                  <CreateLook />
+                </>
+              )}
+            </Card>
+            {/* 주력을 덜 고르면 아래 버튼이 같은 안내를 하므로 빠른 링크를 두지 않는다. */}
+            {!lastForm && !(formStep === 'focus' && !bodyErr && focusLeft > 0) ? (
+              <View style={{ alignItems: 'center' }}>
+                <CoachTarget id="candidates" enabled={!blocker}>
+                  <Btn
+                    sm
+                    kind="ghost"
+                    testID="next-candidates"
+                    disabled={!!blocker}
+                    onPress={() => setScouting(true)}
+                  >
+                    {blocker ?? L.quickCandidates}
+                  </Btn>
+                </CoachTarget>
+                <Txt v="sm" tone="muted">
+                  {L.quickNote}
                 </Txt>
-                <Btn
-                  testID="restore-kept"
-                  onPress={() => restoreKeptDraft()}
-                  style={{ alignSelf: 'flex-start' }}
-                >
-                  {L.keptRestore}
-                </Btn>
               </View>
             ) : null}
-          </Card>
+          </>
         ) : s.candidates ? (
           <>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
@@ -906,7 +1180,7 @@ export default function Create() {
             </View>
             {/* T-11-437 카드의 OVR이 확정값처럼 보이지 않게 소개 바로 아래에 둔다(웹과 같은 자리). */}
             <Txt v="sm" tone="muted" testID="candidate-stats-note">
-              {CG.candidateNote}
+              {L.candNote}
             </Txt>
             <CoachTarget id="cands" style={{ gap: 10 }}>
               {s.candidates.map((cand, i) => {
@@ -919,374 +1193,417 @@ export default function Create() {
                 const glow = tier !== 'normal' && (landed || (running && tier === 'jackpot'));
                 if (isOpen)
                   return (
-                    <FlipIn key={`open-${i}`} delay={running ? f.back : 0}>
+                    <SmoothHeight key={`card-${i}`}>
+                      <FlipIn delay={running ? f.back : 0}>
+                        <Press
+                          scale={0.985}
+                          accessibilityLabel={`${landed && tier !== 'normal' ? `${tier === 'jackpot' ? RV.jackpot : RV.good}! ` : ''}${L.candOpenA11y(
+                            {
+                              n: i + 1,
+                              ovr: startOvr(C.pos, cand.attrs),
+                              line: scoutLine(C.pos, cand.attrs),
+                            },
+                          )}`}
+                          testID={`cand-${i}`}
+                          {...(landed ? { accessibilityLiveRegion: 'polite' as const } : {})}
+                          accessibilityState={{ selected: isPicked }}
+                          onPress={() => pickCard(i)}
+                          style={[
+                            {
+                              gap: 4,
+                              borderRadius: RADIUS.lg,
+                              backgroundColor: c.surface,
+                              borderColor: glow ? c.accent : isPicked ? selColor : c.line,
+                              // 고른 카드는 안쪽으로 한 겹 더 두른다(웹 inset 1.5px)
+                              borderWidth: isPicked ? 3 : 1.5,
+                              paddingVertical: isPicked ? 8.5 : 10,
+                              paddingHorizontal: isPicked ? 12.5 : 14,
+                            },
+                            shadow,
+                          ]}
+                        >
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Txt
+                              style={{
+                                fontFamily: DISPLAY[700],
+                                fontSize: rem(FONT.title3),
+                                letterSpacing: rem(1.125) * 0.02,
+                              }}
+                            >
+                              {L.candNo({ n: i + 1 })}
+                            </Txt>
+                            <Txt
+                              tone="muted"
+                              style={{
+                                marginLeft: 'auto',
+                                fontSize: rem(FONT.caption),
+                                lineHeight: rem(FONT.title1),
+                              }}
+                            >
+                              OVR{' '}
+                              <Txt num style={{ fontSize: rem(FONT.title2) }}>
+                                {running && f.hint > 0 ? (
+                                  <CountUp
+                                    value={startOvr(C.pos, cand.attrs)}
+                                    ms={f.back + f.hint}
+                                  />
+                                ) : (
+                                  startOvr(C.pos, cand.attrs)
+                                )}
+                              </Txt>
+                            </Txt>
+                            {cand.pity ? (
+                              <Pill tone="good">
+                                {cand.pity === 'elite' ? SL.pillElite : SL.pillSure}
+                              </Pill>
+                            ) : cand.guaranteed ? (
+                              <Pill>{SL.sure}</Pill>
+                            ) : null}
+                            {cand.kept ? <Pill>{L.kept}</Pill> : null}
+                            {isPicked ? <Pill tone="good">{L.picked}</Pill> : null}
+                          </View>
+                          {!isPicked && !s.candidatePotentialOpen && !cand.kept?.revealed ? null : (
+                            <Txt
+                              v="sm"
+                              tone={
+                                s.candidatePotentialOpen || cand.kept?.revealed ? 'accent' : 'muted'
+                              }
+                              testID={`candidate-potential-${i}`}
+                            >
+                              {s.candidatePotentialOpen || cand.kept?.revealed ? (
+                                potFresh && !cand.kept?.revealed ? (
+                                  <RevealGrade
+                                    grade={`${candidatePotentialGrades(cand.potential).min}~${candidatePotentialGrades(cand.potential).max}`}
+                                    text={L.potentialRange(
+                                      candidatePotentialGrades(cand.potential),
+                                    )}
+                                    tier={gradeTier(candidatePotentialGrades(cand.potential).max)}
+                                  />
+                                ) : (
+                                  L.potentialRange(candidatePotentialGrades(cand.potential))
+                                )
+                              ) : (
+                                L.potentialLocked
+                              )}
+                            </Txt>
+                          )}
+                          <Txt
+                            tone="accent"
+                            style={{ fontSize: rem(FONT.body2), fontWeight: '600' }}
+                          >{`“${scoutLine(C.pos, cand.attrs)}”`}</Txt>
+                          {isPicked ? (
+                            <Txt v="sm" tone="muted" testID={`candidate-edge-${i}`}>
+                              {candidateEdge(C.pos, s.candidates!, i)}
+                            </Txt>
+                          ) : null}
+                          {isPicked ? (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                              <MiniRadar pos={C.pos} attrs={cand.attrs} size={72} />
+                              <View style={{ flex: 1, gap: 1, minWidth: 0 }}>
+                                {ATTR_KEYS.map((k) => {
+                                  const v = Math.round(cand.attrs[k]);
+                                  const hi = cand.hintKeys.includes(k);
+                                  return (
+                                    <View
+                                      key={k}
+                                      style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+                                    >
+                                      <Txt
+                                        numberOfLines={1}
+                                        style={{
+                                          width: 56,
+                                          fontSize: rem(FONT.caption),
+                                          color: hi ? c.ink : c.muted,
+                                          ...(hi ? { fontWeight: '600' as const } : {}),
+                                          ...(ovrFocus.keys.includes(k)
+                                            ? { textDecorationLine: 'underline' as const }
+                                            : {}),
+                                        }}
+                                      >
+                                        {labels[k]}
+                                      </Txt>
+                                      <View
+                                        style={{
+                                          flex: 1,
+                                          height: 6,
+                                          borderRadius: 3,
+                                          backgroundColor: c.surface2,
+                                          overflow: 'hidden',
+                                        }}
+                                      >
+                                        <View
+                                          style={{
+                                            width: `${v}%`,
+                                            height: '100%',
+                                            borderRadius: 3,
+                                            backgroundColor: hi
+                                              ? c.accent
+                                              : mixHex(c.pitch, c.muted, 0.55),
+                                          }}
+                                        />
+                                      </View>
+                                      <Txt
+                                        style={[
+                                          num(700),
+                                          {
+                                            width: 26,
+                                            textAlign: 'right',
+                                            fontSize: rem(FONT.body1),
+                                            color: c.ink,
+                                          },
+                                        ]}
+                                      >
+                                        {v}
+                                      </Txt>
+                                    </View>
+                                  );
+                                })}
+                              </View>
+                            </View>
+                          ) : null}
+                        </Press>
+                      </FlipIn>
+                    </SmoothHeight>
+                  );
+                return (
+                  <SmoothHeight key={`card-${i}`}>
+                    <FlyIn index={i}>
                       <Press
                         scale={0.985}
-                        accessibilityLabel={`${landed && tier !== 'normal' ? `${tier === 'jackpot' ? RV.jackpot : RV.good}! ` : ''}${L.candOpenA11y(
-                          {
-                            n: i + 1,
-                            ovr: startOvr(C.pos, cand.attrs),
-                            line: scoutLine(C.pos, cand.attrs),
-                          },
-                        )}`}
                         testID={`cand-${i}`}
-                        {...(landed ? { accessibilityLiveRegion: 'polite' as const } : {})}
-                        accessibilityState={{ selected: isPicked }}
+                        accessibilityLabel={L.candClosedA11y({
+                          n: i + 1,
+                          k: labels[hiddenStrength(cand.attrs, C.focus)],
+                        })}
                         onPress={() => pickCard(i)}
-                        style={[
-                          {
-                            gap: 8,
-                            borderRadius: RADIUS.lg,
-                            backgroundColor: c.surface,
-                            borderColor: isPicked || glow ? c.accent : c.line,
-                            // 고른 카드는 안쪽으로 한 겹 더 두른다(웹 inset 1.5px)
-                            borderWidth: isPicked ? 3 : 1.5,
-                            padding: isPicked ? 14.5 : 16,
-                          },
-                          shadow,
-                        ]}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 14,
+                          borderWidth: 1.5,
+                          borderColor: c.line,
+                          borderRadius: RADIUS.lg,
+                          backgroundColor: c.pitch,
+                          paddingVertical: 10,
+                          paddingHorizontal: 14,
+                        }}
                       >
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <View
+                          style={{
+                            width: 36,
+                            height: 36,
+                            borderRadius: RADIUS.lg,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            borderWidth: 2,
+                            borderStyle: 'dashed',
+                            borderColor: alpha(onPitch, 0.4),
+                          }}
+                        >
                           <Txt
                             style={{
                               fontFamily: DISPLAY[700],
                               fontSize: rem(FONT.title3),
-                              letterSpacing: rem(1.125) * 0.02,
+                              lineHeight: rem(FONT.title3) * 1.15,
+                              color: onPitch,
                             }}
                           >
+                            ?
+                          </Txt>
+                        </View>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Txt bold style={{ fontSize: rem(FONT.body), color: onPitch }}>
                             {L.candNo({ n: i + 1 })}
                           </Txt>
-                          <Txt
-                            tone="muted"
-                            style={{
-                              marginLeft: 'auto',
-                              fontSize: rem(FONT.caption),
-                              lineHeight: rem(FONT.title1),
-                            }}
-                          >
-                            OVR{' '}
-                            <Txt num style={{ fontSize: rem(FONT.title2) }}>
-                              {running && f.hint > 0 ? (
-                                <CountUp value={startOvr(C.pos, cand.attrs)} ms={f.back + f.hint} />
-                              ) : (
-                                startOvr(C.pos, cand.attrs)
-                              )}
-                            </Txt>
+                          <Txt style={{ fontSize: rem(FONT.caption), color: alpha(onPitch, 0.75) }}>
+                            {L.scoutMemo({ k: labels[hiddenStrength(cand.attrs, C.focus)] })}
                           </Txt>
-                          {cand.pity ? (
-                            <Pill tone="good">
-                              {cand.pity === 'elite' ? SL.pillElite : SL.pillSure}
-                            </Pill>
-                          ) : cand.guaranteed ? (
-                            <Pill>{SL.sure}</Pill>
-                          ) : null}
-                          {cand.kept ? <Pill>{L.kept}</Pill> : null}
-                          {isPicked ? <Pill tone="good">{L.picked}</Pill> : null}
                         </View>
                         <Txt
-                          v="sm"
-                          tone={
-                            s.candidatePotentialOpen || cand.kept?.revealed ? 'accent' : 'muted'
-                          }
-                          testID={`candidate-potential-${i}`}
-                        >
-                          {s.candidatePotentialOpen || cand.kept?.revealed ? (
-                            potFresh && !cand.kept?.revealed ? (
-                              <RevealGrade
-                                grade={`${candidatePotentialGrades(cand.potential).min}~${candidatePotentialGrades(cand.potential).max}`}
-                                text={L.potentialRange(candidatePotentialGrades(cand.potential))}
-                                tier={gradeTier(candidatePotentialGrades(cand.potential).max)}
-                              />
-                            ) : (
-                              L.potentialRange(candidatePotentialGrades(cand.potential))
-                            )
-                          ) : (
-                            L.potentialLocked
-                          )}
-                        </Txt>
-                        <Txt
-                          tone="accent"
-                          style={{ fontSize: rem(FONT.body2), fontWeight: '600' }}
-                        >{`“${scoutLine(C.pos, cand.attrs)}”`}</Txt>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-                          <MiniRadar pos={C.pos} attrs={cand.attrs} size={84} />
-                          <View style={{ flex: 1, gap: 3, minWidth: 0 }}>
-                            {ATTR_KEYS.map((k) => {
-                              const v = Math.round(cand.attrs[k]);
-                              const hi = cand.hintKeys.includes(k);
-                              return (
-                                <View
-                                  key={k}
-                                  style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
-                                >
-                                  <Txt
-                                    numberOfLines={1}
-                                    style={{
-                                      width: 56,
-                                      fontSize: rem(FONT.caption),
-                                      color: hi ? c.ink : c.muted,
-                                      ...(hi ? { fontWeight: '600' as const } : {}),
-                                      ...(ovrFocus.keys.includes(k)
-                                        ? { textDecorationLine: 'underline' as const }
-                                        : {}),
-                                    }}
-                                  >
-                                    {labels[k]}
-                                  </Txt>
-                                  <View
-                                    style={{
-                                      flex: 1,
-                                      height: 6,
-                                      borderRadius: 3,
-                                      backgroundColor: c.surface2,
-                                      overflow: 'hidden',
-                                    }}
-                                  >
-                                    <View
-                                      style={{
-                                        width: `${v}%`,
-                                        height: '100%',
-                                        borderRadius: 3,
-                                        backgroundColor: hi
-                                          ? c.accent
-                                          : mixHex(c.pitch, c.muted, 0.55),
-                                      }}
-                                    />
-                                  </View>
-                                  <Txt
-                                    style={[
-                                      num(700),
-                                      {
-                                        width: 26,
-                                        textAlign: 'right',
-                                        fontSize: rem(FONT.body1),
-                                        color: c.ink,
-                                      },
-                                    ]}
-                                  >
-                                    {v}
-                                  </Txt>
-                                </View>
-                              );
-                            })}
-                          </View>
-                        </View>
-                      </Press>
-                    </FlipIn>
-                  );
-                return (
-                  <FlyIn key={`closed-${i}`} index={i}>
-                    <Press
-                      scale={0.985}
-                      testID={`cand-${i}`}
-                      accessibilityLabel={L.candClosedA11y({
-                        n: i + 1,
-                        k: labels[hiddenStrength(cand.attrs, C.focus)],
-                      })}
-                      onPress={() => pickCard(i)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 14,
-                        borderWidth: 1.5,
-                        borderColor: c.line,
-                        borderRadius: RADIUS.lg,
-                        backgroundColor: c.pitch,
-                        padding: 16,
-                      }}
-                    >
-                      <View
-                        style={{
-                          width: 48,
-                          height: 48,
-                          borderRadius: RADIUS.lg,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderWidth: 2,
-                          borderStyle: 'dashed',
-                          borderColor: alpha(onPitch, 0.4),
-                        }}
-                      >
-                        <Txt
+                          accessibilityElementsHidden
                           style={{
-                            fontFamily: DISPLAY[700],
-                            fontSize: rem(FONT.title1),
-                            lineHeight: rem(FONT.title1) * 1.15,
-                            color: onPitch,
+                            fontSize: rem(FONT.caption2),
+                            fontWeight: '600',
+                            color: alpha(onPitch, 0.7),
                           }}
                         >
-                          ?
+                          {L.tapToOpen}
                         </Txt>
-                      </View>
-                      <View style={{ flex: 1, minWidth: 0 }}>
-                        <Txt bold style={{ fontSize: rem(FONT.body), color: onPitch }}>
-                          {L.candNo({ n: i + 1 })}
-                        </Txt>
-                        <Txt style={{ fontSize: rem(FONT.caption), color: alpha(onPitch, 0.75) }}>
-                          {L.scoutMemo({ k: labels[hiddenStrength(cand.attrs, C.focus)] })}
-                        </Txt>
-                      </View>
-                      <Txt
-                        accessibilityElementsHidden
-                        style={{
-                          fontSize: rem(FONT.caption2),
-                          fontWeight: '600',
-                          color: alpha(onPitch, 0.7),
-                        }}
-                      >
-                        {L.tapToOpen}
-                      </Txt>
-                    </Press>
-                  </FlyIn>
+                      </Press>
+                    </FlyIn>
+                  </SmoothHeight>
                 );
               })}
             </CoachTarget>
-            {s.candidatePick != null && s.candidates[s.candidatePick] ? (
-              <View style={{ gap: 6 }}>
-                <Btn
-                  sm
-                  testID="keep-candidate"
-                  onPress={() =>
-                    keepCandidate(s.candidates![s.candidatePick!]!.kept ? null : s.candidatePick)
-                  }
-                >
-                  {s.candidates[s.candidatePick]!.kept
-                    ? L.unkeepBtn({ n: s.candidatePick + 1 })
-                    : L.keepBtn({ n: s.candidatePick + 1 })}
-                </Btn>
-                <Txt v="sm" tone="muted">
-                  {L.keepHelp}
-                </Txt>
-              </View>
-            ) : null}
-            {scouts > 0 ? (
-              <View style={{ gap: 6 }}>
-                <Btn
-                  block
-                  kind="primary"
-                  testID="candidate-premium-scout"
-                  disabled={rerolling || rewardBusy}
-                  onPress={askScout}
-                >
-                  {rerolling ? SL.busy : SL.btn({ n: scouts })}
-                </Btn>
-                <Txt v="sm" tone="muted">
-                  {SL.what}
-                </Txt>
-                <ScoutPityGauge pity={pity} />
-                <ScoutOdds />
-              </View>
-            ) : owner ? (
-              <View style={{ gap: 6 }}>
-                {pity.used > 0 ? <ScoutPityGauge pity={pity} empty /> : null}
-                <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
-                  {SL.shopGo}
-                </Btn>
-              </View>
-            ) : null}
             {premium ? (
               <Txt v="sm" tone="muted" testID="premium-note">
                 {SL.premiumNote}
               </Txt>
             ) : null}
-            {rerolls > 0 ? (
-              <View style={{ gap: 6 }}>
-                <Btn
-                  block
-                  testID="candidate-reroll"
-                  disabled={rerolling || rewardBusy}
-                  onPress={askReroll}
-                >
-                  {rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}
-                </Btn>
-                <Txt v="sm" tone="muted" testID="reroll-mileage">
-                  {CL.rerollMileage({ n: rerollMileageLeft(mileage), need: REROLL_MILEAGE })}
-                </Txt>
-              </View>
-            ) : owner ? (
-              <View style={{ gap: 6 }} testID="reroll-hint">
-                <Txt v="sm" tone="muted">
-                  {CL.createShopHint}
-                </Txt>
-                <Btn sm kind="ghost" testID="reroll-shop-go" onPress={goRerollShop}>
-                  {CL.createShopGo}
-                </Btn>
-              </View>
+            {/* 카드 아래 도구를 고른 후보 · 다른 후보 찾기 · 잠재력 확인으로 묶는다. */}
+            {hasPicked || hasChangeTools || hasPotentialTools ? (
+              <Card gap={12} testID="cand-tools">
+                {hasPicked ? (
+                  <ToolGroup
+                    first
+                    title={L.toolsPicked}
+                    testID="tools-picked"
+                    action={
+                      <Btn
+                        sm
+                        testID="keep-candidate"
+                        onPress={() =>
+                          keepCandidate(
+                            s.candidates![s.candidatePick!]!.kept ? null : s.candidatePick,
+                          )
+                        }
+                      >
+                        {s.candidates[s.candidatePick!]!.kept
+                          ? L.unkeepBtn({ n: s.candidatePick! + 1 })
+                          : L.keepBtn({ n: s.candidatePick! + 1 })}
+                      </Btn>
+                    }
+                  >
+                    {quiet ? null : (
+                      <Txt v="sm" tone="muted">
+                        {L.keepHelp}
+                      </Txt>
+                    )}
+                  </ToolGroup>
+                ) : null}
+                {hasChangeTools ? (
+                  <ToolGroup first={!hasPicked} title={L.toolsChange} testID="tools-change">
+                    {scouts > 0 ? (
+                      <>
+                        <Btn
+                          block
+                          kind="primary"
+                          testID="candidate-premium-scout"
+                          disabled={rerolling || rewardBusy}
+                          onPress={askScout}
+                        >
+                          {rerolling ? SL.busy : SL.btn({ n: scouts })}
+                        </Btn>
+                        <Txt v="sm" tone="muted">
+                          {scoutWhatText()}
+                        </Txt>
+                        <ScoutPityGauge pity={pity} />
+                        <ScoutOdds />
+                      </>
+                    ) : owner ? (
+                      <>
+                        {pity.used > 0 ? <ScoutPityGauge pity={pity} empty /> : null}
+                        <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
+                          {SL.shopGo}
+                        </Btn>
+                      </>
+                    ) : null}
+                    {rerolls > 0 ? (
+                      <>
+                        <Btn
+                          block
+                          testID="candidate-reroll"
+                          disabled={rerolling || rewardBusy}
+                          onPress={askReroll}
+                        >
+                          {rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}
+                        </Btn>
+                        <Txt v="sm" tone="muted" testID="reroll-mileage">
+                          {CL.rerollMileage({
+                            n: rerollMileageLeft(mileage),
+                            need: REROLL_MILEAGE,
+                          })}
+                        </Txt>
+                      </>
+                    ) : owner ? (
+                      <View style={{ gap: 6 }} testID="reroll-hint">
+                        <Txt v="sm" tone="muted">
+                          {CL.createShopHint}
+                        </Txt>
+                        <Btn sm kind="ghost" testID="reroll-shop-go" onPress={goRerollShop}>
+                          {CL.createShopGo}
+                        </Btn>
+                      </View>
+                    ) : null}
+                    {/* 접근성 이름은 전체 문구. */}
+                    {offer && adLeft > 0 ? (
+                      <Btn
+                        block
+                        kind="tonal"
+                        testID="candidate-ad-reroll"
+                        disabled={rerolling || rewardBusy}
+                        onPress={askAdReroll}
+                        accessibilityLabel={(offer === 'free'
+                          ? adText.adRerollFreeBtn
+                          : adText.adRerollBtn)({
+                          n: adLeft,
+                        })}
+                        badge={
+                          rerolling
+                            ? undefined
+                            : adText.adRerollBadge({ n: adLeft, ad: offer !== 'free' })
+                        }
+                      >
+                        {rerolling ? CL.rerollBusy : adText.adRerollShort}
+                      </Btn>
+                    ) : null}
+                  </ToolGroup>
+                ) : null}
+                {hasPotentialTools ? (
+                  <ToolGroup
+                    first={!hasPicked && !hasChangeTools}
+                    title={L.toolsPotential}
+                    testID="tools-potential"
+                  >
+                    {offer && !s.candidatePotentialOpen ? (
+                      <Btn
+                        block
+                        kind="tonal"
+                        testID="candidate-potential-reward"
+                        disabled={rewardBusy}
+                        onPress={() => void reveal()}
+                        accessibilityLabel={offer === 'free' ? L.potentialFree : L.potentialAd}
+                        badge={rewardBusy || offer === 'free' ? undefined : B.adCost}
+                      >
+                        {rewardBusy ? L.potentialBusy : L.potentialShort}
+                      </Btn>
+                    ) : null}
+                    {s.candidatePotentialOpen ? (
+                      <Txt v="sm" tone="muted">
+                        {premium ? SL.premiumHelp : L.potentialHelp}
+                      </Txt>
+                    ) : (
+                      <>
+                        {club.offer ? (
+                          <Btn
+                            block
+                            testID="candidate-potential-club"
+                            disabled={rewardBusy}
+                            onPress={() => void revealWithClub()}
+                          >
+                            {B.clubCandidates({ price: fundsText(club.offer.price) })}
+                          </Btn>
+                        ) : null}
+                        <Txt v="sm" tone="muted">
+                          {offer === 'free'
+                            ? L.potentialHelp
+                            : club.offer
+                              ? B.clubNote
+                              : L.potentialWatch}
+                        </Txt>
+                      </>
+                    )}
+                  </ToolGroup>
+                ) : null}
+              </Card>
+            ) : null}
+            {rewardMessage ? (
+              <Txt v="sm" tone="muted" accessibilityLiveRegion="polite">
+                {rewardMessage}
+              </Txt>
             ) : null}
             {/* T-11-355 상품 위치 안내(설정과 같은 카드, 기기마다 닫을 때까지). T-11-437 쓸 도구가 없으면 아래 '더 보기'로 접는다. */}
             {quiet ? null : <ItemsHint />}
-            {/* T-11-221 광고 두 개(다시 뽑기 · 잠재력 보기)는 후보 카드 아래 반폭 톤 버튼 한 줄로. 전에는 카드 위에 전폭으로 쌓여
-                첫 화면에 후보가 보이지 않았다. 접근성 이름은 전체 문구. */}
-            {(offer && adLeft > 0) || (offer && !s.candidatePotentialOpen) ? (
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                {offer && adLeft > 0 ? (
-                  <Btn
-                    kind="tonal"
-                    testID="candidate-ad-reroll"
-                    disabled={rerolling || rewardBusy}
-                    onPress={askAdReroll}
-                    accessibilityLabel={(offer === 'free'
-                      ? adText.adRerollFreeBtn
-                      : adText.adRerollBtn)({
-                      n: adLeft,
-                    })}
-                    badge={
-                      rerolling
-                        ? undefined
-                        : adText.adRerollBadge({ n: adLeft, ad: offer !== 'free' })
-                    }
-                    style={{ flex: 1, minWidth: 0, paddingHorizontal: 10 }}
-                  >
-                    {rerolling ? CL.rerollBusy : adText.adRerollShort}
-                  </Btn>
-                ) : null}
-                {offer && !s.candidatePotentialOpen ? (
-                  <Btn
-                    kind="tonal"
-                    testID="candidate-potential-reward"
-                    disabled={rewardBusy}
-                    onPress={() => void reveal()}
-                    accessibilityLabel={offer === 'free' ? L.potentialFree : L.potentialAd}
-                    badge={rewardBusy || offer === 'free' ? undefined : B.adCost}
-                    style={{ flex: 1, minWidth: 0, paddingHorizontal: 10 }}
-                  >
-                    {rewardBusy ? L.potentialBusy : L.potentialShort}
-                  </Btn>
-                ) : null}
-              </View>
-            ) : null}
-            <View style={{ gap: 8 }}>
-              {s.candidatePotentialOpen ? (
-                <Txt v="sm" tone="muted">
-                  {premium ? SL.premiumHelp : L.potentialHelp}
-                </Txt>
-              ) : offer || club.offer ? (
-                <>
-                  {club.offer ? (
-                    <Btn
-                      block
-                      testID="candidate-potential-club"
-                      disabled={rewardBusy}
-                      onPress={() => void revealWithClub()}
-                    >
-                      {B.clubCandidates({ price: fundsText(club.offer.price) })}
-                    </Btn>
-                  ) : null}
-                  <Txt v="sm" tone="muted">
-                    {offer === 'free'
-                      ? L.potentialHelp
-                      : club.offer
-                        ? B.clubNote
-                        : L.potentialWatch}
-                  </Txt>
-                </>
-              ) : null}
-              {rewardMessage ? (
-                <Txt v="sm" tone="muted" accessibilityLiveRegion="polite">
-                  {rewardMessage}
-                </Txt>
-              ) : null}
-            </View>
             {quiet ? (
               // T-11-437 쓸 도구(리롤권 · 스카우트권 · 천장 기록)가 없으면 상점 위치 · 능력치 설명을 한 번에 접어 둔다.
               <Card gap={0} style={{ paddingVertical: 0 }}>
@@ -1299,6 +1616,11 @@ export default function Create() {
                 />
                 {guideOpen ? (
                   <View style={{ paddingBottom: 14, gap: 8 }}>
+                    {s.candidatePick != null ? (
+                      <Txt v="sm" tone="muted">
+                        {L.keepHelp}
+                      </Txt>
+                    ) : null}
                     <ItemsHint />
                     {ovrGuideBody(true)}
                     <Txt v="sm" tone="muted">
@@ -1339,27 +1661,42 @@ export default function Create() {
 
       {step === 'form' ? (
         <ActionBar row>
-          <Btn testID="home" onPress={goHome} style={{ width: '32%' }}>
-            {L.cancel}
-          </Btn>
-          <CoachTarget
-            id="candidates"
-            enabled={!(focusLeft > 0 || !!bodyErr)}
-            style={{ flex: 1, minWidth: 0 }}
-          >
-            <Btn
-              kind="primary"
-              testID="next-candidates"
-              disabled={focusLeft > 0 || !!bodyErr}
-              onPress={() => setScouting(true)}
-            >
-              {bodyErr
-                ? L.checkBody
-                : focusLeft > 0
-                  ? L.focusMore({ n: focusLeft })
-                  : L.seeCandidates}
+          {formStep === 'pos' ? (
+            <Btn testID="home" onPress={goHome} style={{ width: '32%' }}>
+              {L.cancel}
             </Btn>
-          </CoachTarget>
+          ) : (
+            <Btn
+              testID="step-prev"
+              onPress={() => goStep(prevCreateStep(formStep)!)}
+              style={{ width: '32%' }}
+            >
+              {L.prev}
+            </Btn>
+          )}
+          {lastForm ? (
+            <CoachTarget id="candidates" enabled={!blocker} style={{ flex: 1, minWidth: 0 }}>
+              <Btn
+                {...hintBtn(!!blocker)}
+                testID="next-candidates"
+                disabled={!!blocker}
+                onPress={() => setScouting(true)}
+              >
+                {blocker ?? L.seeCandidates}
+              </Btn>
+            </CoachTarget>
+          ) : (
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Btn
+                {...hintBtn(formStep === 'focus' && focusLeft > 0)}
+                testID="step-next"
+                disabled={formStep === 'focus' && focusLeft > 0}
+                onPress={() => goStep(nextCreateStep(formStep)!)}
+              >
+                {formStep === 'focus' && focusLeft > 0 ? L.focusMore({ n: focusLeft }) : L.next}
+              </Btn>
+            </View>
+          )}
         </ActionBar>
       ) : s.candidates ? (
         <ActionBar row>
@@ -1372,7 +1709,7 @@ export default function Create() {
             style={{ flex: 1, minWidth: 0 }}
           >
             <Btn
-              kind="primary"
+              {...hintBtn(s.candidatePick == null)}
               testID="start"
               disabled={s.candidatePick == null || rewardBusy}
               onPress={confirmPick}
@@ -1384,73 +1721,5 @@ export default function Create() {
       ) : null}
       {scouting ? <ScoutScan pos={C.pos} steps={scoutSteps} onDone={scouted} /> : null}
     </View>
-  );
-}
-
-/** 라이브 카드의 작은 태그(웹 .lc-tag). */
-function LiveTag({ children }: { children: string }) {
-  const c = useColors();
-  return (
-    <View
-      style={{
-        borderRadius: RADIUS.pill,
-        borderWidth: 1,
-        borderColor: alpha(c.onPitch, 0.3),
-        paddingVertical: 1,
-        paddingHorizontal: 8,
-      }}
-    >
-      <Txt
-        style={{
-          fontSize: rem(FONT.caption2),
-          lineHeight: rem(FONT.caption2) * 1.5,
-          fontWeight: '600',
-          color: c.onPitch,
-        }}
-      >
-        {children}
-      </Txt>
-    </View>
-  );
-}
-
-/** 포지션 선택 버튼(웹 .pos-opt): 오른쪽 위에 포지션 코드. */
-function PosOpt({
-  code,
-  title,
-  blurb,
-  selected,
-  onPress,
-}: {
-  code: string;
-  title: string;
-  blurb: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  const c = useColors();
-  return (
-    <Opt selected={selected} onPress={onPress} style={{ flex: 1, paddingRight: 44 }}>
-      <Txt
-        num
-        style={{
-          position: 'absolute',
-          right: 10,
-          top: 8,
-          fontSize: rem(FONT.body1),
-          letterSpacing: rem(0.9375) * 0.06,
-          color: selected ? c.accentText : c.muted,
-        }}
-      >
-        {code}
-      </Txt>
-      <Txt bold>{title}</Txt>
-      <Txt
-        tone="muted"
-        style={{ fontSize: rem(FONT.caption), lineHeight: rem(FONT.caption) * 1.35 }}
-      >
-        {blurb}
-      </Txt>
-    </Opt>
   );
 }

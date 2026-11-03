@@ -68,4 +68,12 @@ export const gameBoost: Translation<GameBoostMsgs> = {
   sureButton: (p) => `Guaranteed boost with club funds (${p.price} · 100%)`,
   sureNote:
     'Pay club funds to go up one level with no roll. Each player can get it once, and your regular attempt with player money stays available.',
+  noteGreat: (p) =>
+    `${p.pct}% of successes are great successes that jump two levels at once. There is no great success when going for level +${p.lv}.`,
+  lineReadyGreat: (p) =>
+    `Next level +${p.next} · ${p.chance}% chance (great ${p.great}%) · ${p.cost}`,
+  chanceGreat: (p) => `${p.n}% chance · great ${p.g}%`,
+  historyGreat: (p) => `${p.y} · level +${p.lv} ${p.pct}% · ${p.cost} · great success`,
+  resultGreatTitle: (p) => `Great success · level +${p.lv}`,
+  resultGreat: 'You jumped two levels at once. Your growth ceiling rose twice as much.',
 };

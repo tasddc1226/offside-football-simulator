@@ -2,7 +2,7 @@
   "expo": {
     "name": "OFFSIDE",
     "slug": "offside",
-    "version": "1.1.5",
+    "version": "1.1.7",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "offside",
@@ -26,6 +26,7 @@
         "tinted": "./assets/images/icon-tinted.png"
       },
       "usesAppleSignIn": true,
+      "associatedDomains": ["applinks:offside-lab.com"],
       "infoPlist": {
         "CFBundleName": "OFFSIDE",
         "CFBundleAllowMixedLocalizations": true
@@ -40,7 +41,26 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "offside-lab.com",
+              "pathPrefix": "/invite/"
+            },
+            {
+              "scheme": "https",
+              "host": "offside-lab.com",
+              "pathPrefix": "/career/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "output": "static",
@@ -80,6 +100,7 @@
         }
       ],
       "expo-iap",
+      "./plugins/withMetaAppEvents",
       [
         "react-native-google-mobile-ads",
         {
@@ -102,7 +123,8 @@
     "locales": {
       "ko": "./locales/ko.json",
       "en": "./locales/en.json",
-      "ja": "./locales/ja.json"
+      "ja": "./locales/ja.json",
+      "zh-Hant": "./locales/zh-Hant.json"
     }
   },
   "react-native-google-mobile-ads": {

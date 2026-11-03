@@ -23,7 +23,7 @@ export function TeamSynergy({
 }) {
   const c = useColors();
   const power = synergyPower(synergy);
-  const rows = synergyRows(synergy);
+  const rows = synergyRows(synergy, season);
   const anyOn = rows.some((r) => r.state !== 'off');
   const offCount = rows.filter((r) => r.state === 'off').length;
   const [showOff, setShowOff] = useState(false);

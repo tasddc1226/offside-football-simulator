@@ -12,25 +12,30 @@
   import { chatState } from './chat-state.svelte.js';
   import { goNew, goContinue, go, warmGame } from './nav.js';
   import Topbar from './Topbar.svelte';
-  import InAppBanner from './InAppBanner.svelte';
   import HomeAppStrip from './HomeAppStrip.svelte';
-  import HallOfFame from './HallOfFame.svelte';
-  import HomeNews from './HomeNews.svelte';
   import HomeFirsts from './firsts/HomeFirsts.svelte';
   import HomeLive from './HomeLive.svelte';
+  import HomeNews from './HomeNews.svelte';
   import ClubBadge from './ClubBadge.svelte';
   import HomeTicker from './HomeTicker.svelte';
   import { adoptCareer, keepOnDevice } from './ownerConflict.js';
   import { DC_GALLERY_URL } from '@offside/app-core/links';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
-  import { homeOrder, NO_HOME_TODO, type HomeTodo } from '@offside/app-core/homeOrder';
+  import { homeOrder, NO_HOME_TODO, type HomeBlock, type HomeTodo } from '@offside/app-core/homeOrder';
 
   const firstHome = !homeShown.seen;
   homeShown.seen = true;
   const live = $derived(!!appState.G && !appState.G.retired);
   // T-11-435 받을 선물 · 오늘 출석. 선물 · 출석 블록이 부르는 것과 같은 메모 조회라 새 요청이 없다(불러오기는 첫 화면 번들 밖).
   let todo = $state<HomeTodo>(NO_HOME_TODO);
-  const order = $derived(homeOrder(todo));
+  // 커리어가 없으면 시즌 · 대회 소식보다 서버 현황을 먼저 보여 준다(받을 것 바로 아래).
+  const order = $derived.by((): HomeBlock[] => {
+    const all = homeOrder(todo);
+    if (live) return all;
+    const rest = all.filter((b) => b !== 'live');
+    const up = Number(todo.gift) + Number(todo.attendance);
+    return [...rest.slice(0, up), 'live', ...rest.slice(up)];
+  });
   $effect(() => {
     void import('@offside/app-core/homeTodo').then(({ loadHomeTodo }) => loadHomeTodo()).then((t) => (todo = t));
   });
@@ -39,11 +44,10 @@
 <div class="wrap">
   <Topbar />
   <!-- T-10-115 카톡·인스타 같은 앱 안 브라우저에서만 한 번 보이는 외부 브라우저 안내 -->
-  <InAppBanner />
+  <!-- T-11-604 인앱 브라우저 안내는 인앱에서만 보이므로 첫 화면 청크 밖에서 받는다(PartnerPopup과 같다). -->
+  {#await import('./InAppBanner.svelte') then { default: InAppBanner }}<InAppBanner />{/await}
   <!-- T-11-506 휴대폰 웹에서 맨 위 한 줄 앱 안내(자세한 카드는 아래 타일 밑 AppConversion). 첫 화면에서 바로 정해 화면을 밀지 않는다. -->
   <HomeAppStrip />
-  <!-- T-10-122 이적·서버 최초 기록이 흐르는 전광판 -->
-  <HomeTicker />
   {#if live && appState.G}
     {@const G = appState.G}
     <!-- 진행 중인 커리어가 있으면 첫 카드를 '이번 커리어'로 바꿔 이어하기를 가장 먼저 보여 준다. -->
@@ -95,11 +99,11 @@
       <!-- 시즌 진행 게이지: 유저들이 끝까지 뛴 커리어로 시즌이 차고, 90%면 마감 카운트다운. 첫 화면 번들 밖(지연 청크). -->
       {#await import('./SeasonGauge.svelte') then { default: SeasonGauge }}<SeasonGauge />{/await}
     {:else if block === 'cup'}
-      <!-- T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서(신청은 대회 화면). 트로피 그림까지 끌고 와서 첫 화면 번들 밖 지연 청크로. -->
-      {#await import('./cup/CupBanner.svelte') then { default: CupBanner }}<CupBanner onopen={() => go('cup')} />{/await}
-    {:else if block === 'league'}
-      <!-- T-11-418 오프사이드 리그 소식(신청은 리그 화면). 첫 화면 번들 밖 지연 청크. -->
-      {#await import('./league/LeagueBanner.svelte') then { default: LeagueBanner }}<LeagueBanner onopen={() => go('league')} />{/await}
+      <!-- T-11-145 · T-11-418 컵 · 리그 소식은 한 줄 두 칸으로(하나만 있으면 한 칸). 신청은 각 대회 화면. 첫 화면 번들 밖 지연 청크. -->
+      <div class="home-events">
+        {#await import('./cup/CupBanner.svelte') then { default: CupBanner }}<CupBanner onopen={() => go('cup')} />{/await}
+        {#await import('./league/LeagueBanner.svelte') then { default: LeagueBanner }}<LeagueBanner onopen={() => go('league')} />{/await}
+      </div>
     {:else if block === 'gift'}
       <!-- 홈 선물 칸 · 시즌 업적 보상(T-11-386, 받으면 사라진다. T-11-472 구단주 선물은 없앴다). 첫 화면 번들 밖 지연 청크. -->
       {#await import('./HomeGift.svelte') then { default: HomeGift }}<HomeGift />{/await}
@@ -107,6 +111,8 @@
       <!-- T-11-360 출석 체크 한 줄 입구 + 하루 한 번 뜨는 출석 창(보상은 로그인한 구단주만). 첫 화면 번들 밖 지연 청크. -->
       {#await import('./HomeAttendance.svelte')}<div class="card" style="min-height:52px;box-sizing:border-box" aria-hidden="true"></div>{:then { default: HomeAttendance }}<HomeAttendance auto={firstHome} />{/await}
     {:else if block === 'live'}
+      <!-- T-10-122 이적 · 서버 최초 기록 전광판은 같은 서버 소식인 라이브 현황 바로 위에 둔다. -->
+      <HomeTicker />
       <HomeLive />
     {/if}
   {/each}
@@ -115,27 +121,24 @@
   {#await import('./PartnerPopup.svelte') then { default: PartnerPopup }}<PartnerPopup />{/await}
   <div class="tiles">
     <!-- T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. -->
-    <button class="tile tile-link tile-wide" data-act="home-market" onclick={() => go('market')}>
+    <button class="tile tile-link" data-act="home-market" onclick={() => go('market')}>
       <span class="eyebrow">Transfer market</span><b>{L.marketTitle}</b><span class="muted fs-sm">{L.marketSub}</span>
     </button>
-    <!-- T-11-175 친구 초대 이벤트는 구단주 → 경기 → 친구까지 들어가야 보여서 홈에서 바로 친구 화면(이벤트 카드가 맨 위)으로 간다. 첫 화면 번들 밖 지연 청크. -->
-    {#await import('./HomeInvite.svelte') then { default: HomeInvite }}<HomeInvite />{/await}
     <HomeFirsts />
     <button class="tile tile-link" data-act="dex" onclick={() => go('dex')}>
       <span class="eyebrow">Events</span><b>{L.dexTitle}</b><span class="muted fs-sm">{L.dexSubWeb}</span>
     </button>
-    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. T-11-449 Android 정식 출시로 옆의 테스터 모집을 걷어 한 줄을 다 쓴다. -->
-    <a class="tile tile-link tile-wide" data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
+    <!-- T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. -->
+    <a class="tile tile-link" data-act="dc-gallery" href={DC_GALLERY_URL} target="_blank" rel="noopener noreferrer">
       <span class="eyebrow">Community</span><b>{L.galleryTitle}</b><span class="muted fs-sm">{L.gallerySub}</span>
     </a>
+    <!-- T-11-175 친구 초대 이벤트는 구단주 → 경기 → 친구까지 들어가야 보여서 홈에서 바로 친구 화면(이벤트 카드가 맨 위)으로 간다. 첫 화면 번들 밖 지연 청크. -->
+    {#await import('./HomeInvite.svelte') then { default: HomeInvite }}<HomeInvite />{/await}
   </div>
   <!-- T-11-235 앱 안내 카드는 늦게 뜨는 지연 청크라 타일 위에 끼면 첫 화면이 밀린다(CLS) — 타일 아래에 둔다. -->
   {#await import('./AppConversion.svelte') then { default: AppConversion }}<AppConversion context="home" />{/await}
-  <HallOfFame />
-  <!-- T-11-129 구단 가치 TOP 3. 첫 화면 번들 밖에서 따로 불러온다. -->
-  {#await import('./HomeClubValue.svelte') then { default: HomeClubValue }}<HomeClubValue />{/await}
-  <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
-  <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
+  <!-- 공지 · 릴리즈 노트를 합친 최근 글. 새 소식 확인과 같은 요청을 함께 쓰도록 홈과 같이 그린다. 순위는 하단 기록실에서 본다. -->
+  <HomeNews />
   <!-- 푸터는 홈 맨 아래라 첫 화면 번들 밖 지연 청크로(소식은 앱 시작 때 새 글 점과 같은 요청을 함께 써야 해서 그대로 둔다). -->
   {#await import('./SiteFooter.svelte') then { default: SiteFooter }}<SiteFooter />{/await}
   <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->
@@ -145,3 +148,14 @@
     <span class="visually-hidden" role="status" aria-atomic="true">{chatState.unread ? L.chatStatusUnread({ n: chatState.unread }) : ''}</span>
   </button>
 </div>
+
+<style>
+  .home-events {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+  }
+  .home-events:not(:has(> *)) {
+    display: none;
+  }
+</style>

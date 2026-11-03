@@ -26,6 +26,15 @@ function legacy(edit: (g: Record<string, unknown>) => void = () => {}): GameStat
 }
 
 describe('migrateSave (T-10-046)', () => {
+  it('이전 시즌에 기록 순위를 소급 생성하지 않고 새 순위 시즌은 보존한다', () => {
+    const old = current();
+    delete old.season.scoringVersion;
+    const history = structuredClone(old.career);
+    expect(loadSave(old)!.G.season.scoringVersion).toBeUndefined();
+    expect(old.career).toEqual(history);
+    old.season.scoringVersion = 1;
+    expect(loadSave(JSON.parse(JSON.stringify(old)))!.G.season.scoringVersion).toBe(1);
+  });
   it('꾸미기가 없던 저장과 기록 아이템 도입 전 저장을 외형 선택값 변경 없이 읽는다', () => {
     const old = current();
     delete old.look;

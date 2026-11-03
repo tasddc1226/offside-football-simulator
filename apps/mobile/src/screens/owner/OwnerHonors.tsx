@@ -17,7 +17,12 @@ import Reanimated, {
   type SharedValue,
 } from 'react-native-reanimated';
 import { useSnapshot } from 'valtio';
-import { fetchOwnerArchive, type OwnerArchiveResponse } from '@offside/app-core/api/ownerProfile';
+import {
+  fetchOwnerArchive,
+  fetchOwnerHallByTeam,
+  fetchOwnerProfileByTeam,
+  type OwnerArchiveResponse,
+} from '@offside/app-core/api/ownerProfile';
 import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
 import { honorViews } from '@offside/app-core/seasonRecap';
 import Svg, { Path } from 'react-native-svg';
@@ -26,10 +31,13 @@ import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { Screen, Press, Txt, Btn } from '../../ui';
 import { registerScroll, noteScrollY, noteViewH } from '../../ui/scroll';
 import { appState, prefs } from '../../store';
+import { go, goBack } from '../../game/nav';
+import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 import { useColors } from '../../theme/useColors';
 import { HonorEmblem } from '../../components/HonorEmblem';
 import { CupHonors } from '../../components/CupHonors';
 import { OwnerHall } from './OwnerHall';
+import { OwnerHallVisit } from './OwnerHallVisit';
 import { OwnerArchive } from './OwnerArchive';
 import { LockerArt } from './LockerArt';
 import { Skeleton } from '../../ui/Skeleton';
@@ -45,6 +53,8 @@ const room = {
   line: '#52674e',
 };
 
+type HallData = Pick<OwnerArchiveResponse, 'owner' | 'honors'>;
+
 function Wall({
   index,
   position,
@@ -58,7 +68,7 @@ function Wall({
   position: SharedValue<number>;
   width: number;
   height: number;
-  data: OwnerArchiveResponse | null;
+  data: HallData | null;
   awards: number;
   active: boolean;
 }) {
@@ -133,30 +143,55 @@ function Wall({
 }
 
 export default function OwnerHonors() {
+  // T-11-618 남의 명예관은 그 팀마다 처음부터 다시 그린다.
+  const { honorsVisit } = useSnapshot(appState);
+  return <HonorsRoom key={honorsVisit ?? 'mine'} visitTeam={honorsVisit} />;
+}
+
+// T-11-618 visitTeam이 있으면 그 구단주의 명예관을 읽기 전용으로 — 명패와 트로피장 두 칸만 연다.
+function HonorsRoom({ visitTeam }: { visitTeam: string | null }) {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
+  const firstZone = visitTeam ? 1 : 0;
   const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const [width, setWidth] = useState(Math.min(windowWidth, 680));
   const [zone, setZone] = useState(1);
   const [visited, setVisited] = useState({ records: false, titles: true });
-  const [data, setData] = useState<OwnerArchiveResponse | null>(null);
+  const [data, setData] = useState<HallData | null>(null);
+  const [titles, setTitles] = useState<string[]>([]);
   const [failed, setFailed] = useState(false);
   const alive = useRef(false);
   const position = useSharedValue(1);
   const scrollY = useRef(new Animated.Value(0)).current;
   const names = [L.roomSeasons, L.roomOwner, L.roomTrophies];
-  const notes = [L.roomSeasonsNote, L.roomOwnerNote, L.roomTrophiesNote];
+  const notes = [
+    L.roomSeasonsNote,
+    visitTeam ? L.visitOwnerNote : L.roomOwnerNote,
+    L.roomTrophiesNote,
+  ];
   const wallHeight = Math.max(220, Math.min(windowHeight * 0.37, 370));
   const wallWidth = Math.min(width * 0.82, (wallHeight * 240) / 290);
   const badges = honorViews(data?.honors ?? []);
   const awards = badges.length + (data?.owner.cupHonors.length ?? 0);
   const load = useCallback(async () => {
     setFailed(false);
+    if (visitTeam) {
+      const [p, h] = await Promise.all([
+        fetchOwnerProfileByTeam(visitTeam),
+        fetchOwnerHallByTeam(visitTeam),
+      ]);
+      if (!alive.current) return;
+      if (p.ok && h.ok) {
+        setData({ owner: p.data.owner, honors: h.data.honors });
+        setTitles(h.data.titles);
+      } else setFailed(true);
+      return;
+    }
     const r = await fetchOwnerArchive();
     if (!alive.current) return;
     if (r.ok) setData(r.data);
     else setFailed(true);
-  }, []);
+  }, [visitTeam]);
   useEffect(() => {
     alive.current = true;
     void load();
@@ -166,18 +201,18 @@ export default function OwnerHonors() {
   }, [load]);
   const turn = useCallback(
     (next: number) => {
-      const target = Math.max(0, Math.min(2, next));
+      const target = Math.max(firstZone, Math.min(2, next));
       setZone(target);
       position.value = motionOK
         ? withTiming(target, { duration: 480, easing: Easing.out(Easing.cubic) })
         : target;
       const panel = panels[target]!;
-      if (panel !== 'trophies') {
+      if (panel !== 'trophies' && !visitTeam) {
         setVisited((old) => ({ ...old, [panel]: true }));
         appState.honorsView = panel;
       }
     },
-    [motionOK, position],
+    [firstZone, motionOK, position, visitTeam],
   );
   const gesture = useMemo(
     () =>
@@ -187,7 +222,10 @@ export default function OwnerHonors() {
         .runOnJS(true)
         .onUpdate((e) => {
           if (motionOK)
-            position.value = Math.max(-0.15, Math.min(2.15, zone - e.translationX / width));
+            position.value = Math.max(
+              firstZone - 0.15,
+              Math.min(2.15, zone - e.translationX / width),
+            );
         })
         .onEnd((e) =>
           turn(zone + (Math.abs(e.translationX) > 45 ? (e.translationX < 0 ? 1 : -1) : 0)),
@@ -195,7 +233,7 @@ export default function OwnerHonors() {
         .onFinalize((_e, success) => {
           if (!success) turn(zone);
         }),
-    [motionOK, position, turn, width, zone],
+    [firstZone, motionOK, position, turn, width, zone],
   );
   return (
     <Screen fixed gap={0} style={{ paddingHorizontal: 0, paddingBottom: 0 }}>
@@ -234,13 +272,20 @@ export default function OwnerHonors() {
             ],
           }}
         >
-          <View style={styles.heading}>
-            <Txt v="h1" accessibilityRole="header" style={{ color: room.ink }}>
-              {L.hallTitle}
-            </Txt>
-            <Txt style={{ color: room.muted, fontSize: 12 }}>
-              {data?.owner.team?.name ?? L.roomTitle}
-            </Txt>
+          <View style={[styles.heading, styles.headingRow]}>
+            <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
+              <Txt v="h1" accessibilityRole="header" style={{ color: room.ink }}>
+                {L.hallTitle}
+              </Txt>
+              <Txt style={{ color: room.muted, fontSize: 12 }}>
+                {data?.owner.team?.name ?? L.roomTitle}
+              </Txt>
+            </View>
+            {visitTeam ? (
+              <Btn sm testID="owner-hall-visit-back" onPress={() => goBack(() => go('hof'))}>
+                {shellMoreText.back}
+              </Btn>
+            ) : null}
           </View>
           <GestureDetector gesture={gesture}>
             <View
@@ -279,10 +324,10 @@ export default function OwnerHonors() {
             <Press
               testID="room-prev"
               accessibilityLabel={L.roomPrev}
-              disabled={zone === 0}
-              accessibilityState={{ disabled: zone === 0 }}
+              disabled={zone === firstZone}
+              accessibilityState={{ disabled: zone === firstZone }}
               onPress={() => turn(zone - 1)}
-              style={[styles.arrow, { opacity: zone === 0 ? 0.25 : 1 }]}
+              style={[styles.arrow, { opacity: zone === firstZone ? 0.25 : 1 }]}
             >
               <Txt style={styles.arrowText}>‹</Txt>
             </Press>
@@ -306,30 +351,32 @@ export default function OwnerHonors() {
             </Press>
           </View>
           <View style={styles.dots}>
-            {names.map((name, i) => (
-              <Press
-                key={i}
-                testID={`room-zone-${i}`}
-                accessibilityLabel={name}
-                accessibilityState={{ selected: zone === i }}
-                onPress={() => turn(i)}
-                style={styles.dotTarget}
-              >
-                <View
-                  style={{
-                    width: zone === i ? 20 : 6,
-                    height: 6,
-                    borderRadius: RADIUS.xs,
-                    backgroundColor: zone === i ? room.gold : room.line,
-                  }}
-                />
-              </Press>
-            ))}
+            {names.map((name, i) =>
+              i < firstZone ? null : (
+                <Press
+                  key={i}
+                  testID={`room-zone-${i}`}
+                  accessibilityLabel={name}
+                  accessibilityState={{ selected: zone === i }}
+                  onPress={() => turn(i)}
+                  style={styles.dotTarget}
+                >
+                  <View
+                    style={{
+                      width: zone === i ? 20 : 6,
+                      height: 6,
+                      borderRadius: RADIUS.xs,
+                      backgroundColor: zone === i ? room.gold : room.line,
+                    }}
+                  />
+                </Press>
+              ),
+            )}
           </View>
           {failed ? (
             <View style={{ padding: 16, gap: 8 }}>
               <Txt center style={{ color: room.ink }}>
-                {L.archiveError}
+                {visitTeam ? L.visitLoadFail : L.archiveError}
               </Txt>
               <Btn onPress={() => void load()}>{L.retry}</Btn>
             </View>
@@ -360,7 +407,11 @@ export default function OwnerHonors() {
               <OwnerArchive />
             </View>
           ) : null}
-          {visited.titles ? (
+          {visitTeam ? (
+            zone === 1 && data ? (
+              <OwnerHallVisit title={data.owner.title} titles={titles} />
+            ) : null
+          ) : visited.titles ? (
             <View style={{ display: zone === 1 ? 'flex' : 'none' }}>
               <OwnerHall
                 onpick={(title) =>
@@ -373,12 +424,12 @@ export default function OwnerHonors() {
             <View testID="trophy-gallery" style={{ gap: 16 }}>
               {!data ? (
                 failed ? (
-                  <Txt tone="muted">{L.archiveError}</Txt>
+                  <Txt tone="muted">{visitTeam ? L.visitLoadFail : L.archiveError}</Txt>
                 ) : (
                   <Skeleton rows={4} />
                 )
               ) : !awards ? (
-                <Txt tone="muted">{L.roomEmptyAwards}</Txt>
+                <Txt tone="muted">{visitTeam ? L.visitNoAwards : L.roomEmptyAwards}</Txt>
               ) : (
                 <>
                   {badges.length ? (
@@ -435,6 +486,7 @@ export default function OwnerHonors() {
 
 const styles = StyleSheet.create({
   heading: { paddingHorizontal: 24, paddingTop: 16, paddingBottom: 12, gap: 4 },
+  headingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   ceiling: {
     position: 'absolute',
     top: 0,

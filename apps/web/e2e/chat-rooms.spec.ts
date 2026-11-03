@@ -68,6 +68,7 @@ test('한국어 화면은 한국어 방으로 들어가고, English를 누르면
   await expect(page.locator('[data-chat-msg]')).toHaveText([/한국어 방 메시지/]);
   await expect(page.locator('[data-chat-room="ko"]')).toHaveAttribute('aria-pressed', 'true');
 
+  await page.locator('[data-act="chat-lang"]').click();
   await page.locator('[data-chat-room="en"]').click();
   await expect(page.locator('[data-chat-msg]')).toHaveText([/en room message/]);
   await expect(page.locator('[data-chat-room="en"]')).toHaveAttribute('aria-pressed', 'true');
@@ -76,6 +77,7 @@ test('한국어 화면은 한국어 방으로 들어가고, English를 누르면
   expect(sockets).toEqual(['ko', 'en']);
 
   // 같은 방을 다시 눌러도 다시 붙지 않는다.
+  await page.locator('[data-act="chat-lang"]').click();
   await page.locator('[data-chat-room="en"]').click();
   expect(tickets).toEqual(['ko', 'en']);
 

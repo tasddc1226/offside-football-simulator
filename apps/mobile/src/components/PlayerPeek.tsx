@@ -11,7 +11,16 @@ import { cardBody } from '@offside/app-core/format';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
-import { CARD_BODY_ROW, CARD_HEIGHT, CARD_STYLE_ROW, PlayerCard } from './PlayerCard';
+import { Toast } from '../ui/Toast';
+import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
+import {
+  CARD_BODY_ROW,
+  CARD_HEIGHT,
+  CARD_SPECIAL_ROW,
+  CARD_STYLE_ROW,
+  PlayerCard,
+} from './PlayerCard';
+import { specialRibbon } from '@offside/app-core/cardSpecial';
 
 export type PeekOrigin = { x: number; y: number; w: number; h: number };
 /** 그라운드(measureInWindow 값) 위 자리 카드가 화면에서 놓인 곳 — 자리 카드는 62×88, 가운데가 자리 좌표(TeamPitch). */
@@ -26,7 +35,10 @@ export const pitchPeekOrigin = (
 const CARD_W = 165;
 // PlayerCard 큰 카드 높이(플레이스타일 줄 · 키 몸무게 줄이 있으면 그만큼 더).
 const cardHeight = (p: TeamPlayer) =>
-  CARD_HEIGHT + (typeName(p.pos, p.type) ? CARD_STYLE_ROW : 0) + (cardBody(p) ? CARD_BODY_ROW : 0);
+  CARD_HEIGHT +
+  (typeName(p.pos, p.type) ? CARD_STYLE_ROW : 0) +
+  (cardBody(p) ? CARD_BODY_ROW : 0) +
+  (specialRibbon(p.specials) ? CARD_SPECIAL_ROW : 0);
 
 /** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다(웹 PlayerPeek). */
 export function PlayerPeek({
@@ -36,13 +48,17 @@ export function PlayerPeek({
   slot,
   origin,
   onclose,
+  onshare,
 }: {
   player: TeamPlayer;
   name: string;
   rating: number;
-  slot: DetailPos;
+  /** 그라운드의 자리. 라운지처럼 자리가 없는 곳에서는 안 준다. */
+  slot?: DetailPos;
   origin: PeekOrigin;
   onclose: () => void;
+  /** 내 팀 그라운드에서만 준다. 라운지에 이 선수를 올린다. */
+  onshare?: ((careerId: string) => void) | undefined;
 }) {
   const c = useColors();
   const { motionOK } = useSnapshot(prefs);
@@ -53,7 +69,6 @@ export function PlayerPeek({
   const holder = useRef<View>(null);
   const [box, setBox] = useState<PeekOrigin | null>(null);
   const closing = useRef(false);
-  const fit = Math.round(slotFit(slot, player, rating) * 100);
   // 카드가 그라운드 카드 자리·크기에서 출발한다(FLIP). 가운데를 기준으로 커지므로 가운데끼리 잇는다.
   const from = box
     ? {
@@ -137,6 +152,7 @@ export function PlayerPeek({
                 rating: player.peak,
                 number: player.number,
                 legendScore: player.legendScore,
+                specials: player.specials,
                 attrs: player.attrs,
                 attrsEstimated: player.attrsEstimated,
                 height: player.height,
@@ -152,19 +168,41 @@ export function PlayerPeek({
           </Animated.View>
         </View>
         <Animated.View style={{ alignItems: 'center', gap: 14, opacity: t }}>
-          <View style={{ alignItems: 'center', gap: 2 }}>
-            <Txt v="sm" bold style={{ color: '#fff' }}>
-              {tn(DETAIL_LABEL[slot])}
-            </Txt>
-            <Txt v="xs" style={{ color: '#fff', opacity: 0.9, textAlign: 'center' }}>
-              {L.pitchRatingFull({ peak: player.peak, rating, fit })}
-            </Txt>
+          {slot ? (
+            <View style={{ alignItems: 'center', gap: 2 }}>
+              <Txt v="sm" bold style={{ color: '#fff' }}>
+                {tn(DETAIL_LABEL[slot])}
+              </Txt>
+              <Txt v="xs" style={{ color: '#fff', opacity: 0.9, textAlign: 'center' }}>
+                {L.pitchRatingFull({
+                  peak: player.peak,
+                  rating,
+                  fit: Math.round(slotFit(slot, player, rating) * 100),
+                })}
+              </Txt>
+            </View>
+          ) : null}
+          <View
+            style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}
+          >
+            {onshare ? (
+              <Btn
+                sm
+                kind="primary"
+                testID="player-lounge-share"
+                onPress={() => onshare(player.careerId)}
+              >
+                {LC.sharePlayerAct}
+              </Btn>
+            ) : null}
+            <Btn sm onPress={close}>
+              {L.close}
+            </Btn>
           </View>
-          <Btn sm onPress={close}>
-            {L.close}
-          </Btn>
         </Animated.View>
       </View>
+      {/* 모달은 앱 위 별도 층이라 알림을 이 안에서도 그린다. */}
+      <Toast />
     </Modal>
   );
 }

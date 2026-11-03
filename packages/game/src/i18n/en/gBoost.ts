@@ -12,4 +12,7 @@ export const gBoost: Translation<GBoostMsgs> = {
   failTicket: 'Potential boost failed (boost ticket). Your odds go up next time.',
   successSure: (p) =>
     `Guaranteed boost raised your potential. You are now at level ${p.lv} (club funds).`,
+  great: (p) => `Great success on your potential boost. You jumped two levels to level ${p.lv}.`,
+  greatCost: (p) =>
+    `Great success on your potential boost. You jumped two levels to level ${p.lv} (${p.cost}).`,
 };

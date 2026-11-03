@@ -13,7 +13,6 @@
     TEAM_NAME_MAX,
     TEAM_NAME_MIN,
     PAST_SALARY_BUDGET,
-    RANK_MATCH_REPICKS,
     TEAM_RATING_START,
     YOUTH_NAME,
     YOUTH_OVR,
@@ -94,6 +93,16 @@
   let team = $state<OwnerTeam | null>(null);
   let players = $state<TeamPlayer[]>([]);
   let matchesLeft = $state(0);
+  let matchesNextAt = $state<string | null>(null);
+  // 충전 시각이 되면 경기를 다시 열어 준다(서버가 다시 확인한다). 다음 시각은 경기 응답으로 받는다.
+  $effect(() => {
+    if (matchesLeft > 0 || !matchesNextAt) return;
+    const timer = setTimeout(() => {
+      matchesLeft = 1;
+      matchesNextAt = null;
+    }, Date.parse(matchesNextAt) - Date.now());
+    return () => clearTimeout(timer);
+  });
   let perDay = $state(0);
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   let season = $state(0);
@@ -136,6 +145,8 @@
   let oppStatus = $state<LoadStatus>('loading');
   /** T-11-510 시즌 2 자동 매칭에서 이번 경기의 '다른 상대 찾기' 횟수(경기를 치르면 0으로). */
   let oppPick = $state(0);
+  /** T-11-603 큐에서 찾은 상대(경기를 치르거나 상대가 무효가 되면 비운다). 탭을 다녀와도 남는다. */
+  let rankFound = $state<TeamOpponent | null>(null);
   const ladder = $derived(usesRankLadder(team?.season ?? 0));
   let playing = $state(false);
   let result = $state<TeamMatch | null>(null);
@@ -206,7 +217,7 @@
   );
   const ovr = $derived(teamOvr(ratings));
   // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
-  const synergy = $derived(slotsSynergy(previewLayout, slots, byId));
+  const synergy = $derived(slotsSynergy(previewLayout, slots, byId, season));
   const coachDetail = $derived(team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null);
   // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
   const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
@@ -236,7 +247,7 @@
       return { rating: ratings[i] ?? YOUTH_OVR, name: p ? nameOf(p) : YOUTH_NAME, youth: !p, player: p, salary: p ? salaryIn(p, season) : 0 };
     }),
   );
-  const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current, cupSeason));
+  const matchHint = $derived(matchHintOf(team, dirty, matchesLeft, season, current, cupSeason, matchesNextAt));
 
   const draftValue = () => ({ name, manager, logo, formation, layout, slots });
   function preserveDraft() {
@@ -329,6 +340,7 @@
       return;
     }
     ({ season, current, seasons, lastManager, players, matchesLeft } = r.data);
+    matchesNextAt = r.data.matchesNextAt ?? null;
     cupSeason = r.data.cupSeason ?? null;
     perDay = r.data.matchesPerDay;
     enhanceOpen = !!r.data.enhanceOpen;
@@ -451,7 +463,7 @@
 
   async function saveAndFindOpponents() {
     if (!await save()) return;
-    if (appState.screen === 'team' && view === 'opponents' && !matchHint) await loadOpponents();
+    if (appState.screen === 'team' && view === 'opponents' && !matchHint && !ladder) await loadOpponents();
   }
 
   // ───────── 경기 ─────────
@@ -482,18 +494,25 @@
     playing = false;
     if (!r.ok) {
       if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') matchesLeft = 0;
-      if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT')
+      if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT') {
         opponents = opponents.filter((x) => x.teamId !== o.teamId);
-      // T-11-510 상대 RP가 그새 멀어졌다 — 같은 횟수로 새 상대를 받는다.
-      if (r.error.reason === 'TEAM_OPPONENT_STALE') void loadOpponents();
+        rankFound = null;
+      }
+      // T-11-510 상대 RP가 그새 멀어졌다 — 같은 횟수로 새 상대를 받는다(T-11-603 시즌 2는 큐로 돌아가 다시 찾는다).
+      if (r.error.reason === 'TEAM_OPPONENT_STALE') {
+        if (ladder) rankFound = null;
+        else void loadOpponents();
+      }
       return toast(r.error.message);
     }
     oppPick = 0;
+    rankFound = null;
     result = r.data.match;
     liveMoments = r.data.live;
     resultOrigin = 'opponents';
     live = true;
     matchesLeft = r.data.matchesLeft;
+    matchesNextAt = r.data.matchesNextAt ?? null;
     divisionNotice = null;
     applyPlayed(r.data);
     show('result');
@@ -518,6 +537,7 @@
     result = r.match;
     liveMoments = undefined;
     matchesLeft = r.matchesLeft;
+    matchesNextAt = r.matchesNextAt ?? null;
     applyPlayed(r);
   }
 
@@ -586,6 +606,14 @@
     stats = r.data;
     statsStatus = 'ready';
   }
+  /** 지난 경기 결과를 연다(기록 탭 · T-11-603 랭크 매칭의 최근 전적). */
+  function openHistoryMatch(m: TeamMatch) {
+    result = m;
+    divisionShift = null;
+    resultOrigin = 'history';
+    live = false;
+    switchView('result');
+  }
   function openStats(focus: string | null = null) {
     statsFocus = focus;
     switchView('stats');
@@ -593,7 +621,8 @@
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {
-    opponents: () => (matchHint || friendsUi.mode === 'friends' ? undefined : loadOpponents()),
+    // T-11-603 시즌 2는 매칭 찾기를 누를 때 상대를 받는다.
+    opponents: () => (matchHint || ladder || friendsUi.mode === 'friends' ? undefined : loadOpponents()),
     achievements: () => loadAchievements(),
     history: loadHistory,
     stats: loadStats,
@@ -754,7 +783,7 @@
       <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked && !cupPreset} cupLocked={!!cupBand?.locked} cup={season > 0} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
-        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && !ladder && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}{#if appState.friendReq}<span class="btn-dot" data-friend-dot><span class="sr-only">{S.friendReq({ n: appState.friendReq })}</span></span>{/if}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
@@ -770,9 +799,13 @@
         hint={matchHint}
         onreload={() => void loadOpponents()}
         onchallenge={(o) => void challenge(o)}
-        onmore={ladder ? () => ((oppPick += 1), void loadOpponents()) : () => open('opponents')}
+        onmore={() => open('opponents')}
         {ladder}
-        repicksLeft={RANK_MATCH_REPICKS - oppPick}
+        {team}
+        teamLogo={logo}
+        bind:found={rankFound}
+        bind:pick={oppPick}
+        onopenmatch={openHistoryMatch}
         ontoTeam={editable ? () => switchView('team') : undefined}
         onsave={season === current && dirty && filled > 0 && matchesLeft > 0 ? () => void saveAndFindOpponents() : undefined}
         {saving}
@@ -814,7 +847,7 @@
         more={!!histNext}
         {moreStatus}
         onreload={() => void loadHistory()}
-        onopen={(m) => { result = m; divisionShift = null; resultOrigin = 'history'; live = false; switchView('result'); }}
+        onopen={openHistoryMatch}
         onmore={() => void loadMore()}
         onstats={() => openStats()}
       />

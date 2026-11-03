@@ -25,8 +25,12 @@ export const gStats: Translation<GStatsMsgs> = {
   twistUp: (p) => `Unexpected gain · ${p.label} +${p.d}`,
   costMoraleLabel: 'Morale',
   costMoraleWhy: 'Regret at playing it safe',
+  costMoraleWhy2: '"Too passive" comments on social media',
+  costMoraleWhy3: 'Replaying that moment as you tried to sleep',
   costTrustLabel: 'Manager trust',
   costTrustWhy: "The manager's lukewarm opinion",
+  costTrustWhy2: '"No killer instinct" came up in the coaches’ meeting',
   costFameLabel: 'Fame',
   costFameWhy: 'Seen as "decent, nothing special"',
+  costFameWhy2: 'A week without a single headline',
 };

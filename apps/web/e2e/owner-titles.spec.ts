@@ -79,6 +79,13 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   const hall = page.locator('[data-owner-hall]');
   await expect(hall.locator('[data-permanent-title]')).toHaveCount(PERMANENT_TITLES.length - 1);
   await expect(hall.locator('[data-title-pick="owner-developer"]')).toHaveCount(1);
+  // T-11-556 묶음 · 다음 단계.
+  await expect(
+    hall.locator('[data-title-group="growth"] [data-title-pick="owner-developer"]'),
+  ).toHaveCount(1);
+  await expect(hall.locator('[data-title-pick="owner-developer"] [data-next-tier]')).toContainText(
+    '육성의 명가 10/50',
+  );
   await expect(hall.locator('[data-permanent-title="owner-keeper"]')).toHaveAttribute(
     'data-title-grade',
     'legend',
@@ -140,7 +147,9 @@ test('permanent titles: progress, selection, header update, recovery and memoize
   await expect(hall.locator('.guide-body')).toBeVisible();
 });
 
-test('hall read failure can retry and shows all locked goals for a new owner', async ({ page }) => {
+test('hall read failure can retry and shows the first tier of every locked ladder for a new owner', async ({
+  page,
+}) => {
   await page.addInitScript(() => localStorage.setItem('ft_session', '1'));
   await page.route(`${API}/v1/**`, (route) =>
     route.fulfill(fail(503, 'UNAVAILABLE', 'unavailable')),
@@ -187,7 +196,84 @@ test('hall read failure can retry and shows all locked goals for a new owner', a
   await expect(error).toContainText('명예관을 불러오지 못했어요.');
   await error.getByRole('button', { name: '다시 시도' }).click();
   const hall = page.locator('[data-owner-hall]');
-  await expect(hall.locator('[data-permanent-title]')).toHaveCount(PERMANENT_TITLES.length);
+  // T-11-556 도전 중은 사다리마다 다음 단계 하나(같은 metric은 한 줄).
+  await expect(hall.locator('[data-permanent-title]')).toHaveCount(
+    new Set(PERMANENT_TITLES.map((t) => t.metric)).size,
+  );
+  await expect(hall.locator('[data-permanent-title="owner-academy"]')).toHaveCount(0);
+  await expect(hall.locator('[data-title-group="team"]')).toBeVisible();
   await expect(hall.locator('[data-title-pick]')).toHaveCount(0);
   expect(reads).toBe(2);
+});
+
+test('T-11-619 record badges are grouped in the hall, can be equipped and fit a narrow screen', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.addInitScript(() => localStorage.setItem('ft_session', '1'));
+  let title: string | null = null;
+  await page.route(`${API}/v1/**`, (route) =>
+    route.fulfill(fail(503, 'UNAVAILABLE', 'unavailable')),
+  );
+  await page.route(`${API}/v1/profile`, (route) =>
+    route.fulfill(
+      ok({
+        id: 'test',
+        linked: { google: true },
+        nickname: '구단주',
+        googleEmailMasked: 'a***@example.com',
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    ),
+  );
+  await page.route(`${API}/v1/owner-team`, (route) =>
+    route.fulfill(
+      ok({
+        season: 1,
+        current: 1,
+        seasons: [{ id: 1, name: '시즌 1' }],
+        team: null,
+        players: [],
+        matchesLeft: 10,
+        matchesPerDay: 10,
+        cap: 100,
+        ownerTitle: title,
+      }),
+    ),
+  );
+  await page.route(`${API}/v1/owner/title`, async (route) => {
+    if (route.request().method() === 'PUT') {
+      title = route.request().postDataJSON().title as string;
+      return route.fulfill(ok({ title, pinned: true }));
+    }
+    return route.fulfill(
+      ok({
+        title,
+        pinned: !!title,
+        titles: ['honor-1-achievements-100', 'honor-1-hof-1', 'honor-1-first'],
+        permanent: [],
+        teamId: null,
+      }),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="open-owner-hall"]').click();
+  const hall = page.locator('[data-owner-hall]');
+  const group = hall.locator('[data-title-group="honor"]');
+  await expect(group).toContainText('기록 배지');
+  await expect(group.locator('[data-title-pick]')).toHaveCount(3);
+  await group.locator('[data-title-pick="honor-1-achievements-100"]').click();
+  await expect(group.locator('[data-title-pick="honor-1-achievements-100"]')).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await expect(hall.locator('.oh-title-current')).toContainText('시즌 1 업적 TOP 100');
+  await expect(hall.locator('.oh-title-current')).toContainText('기록 배지');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.locator('.main-nav [data-act="owner"]').click();
+  await expect(
+    page.locator('[aria-label="구단주 요약"] [data-title="honor-1-achievements-100"]'),
+  ).toContainText('시즌 1 업적 TOP 100');
 });

@@ -1,5 +1,6 @@
 import type { LiveEvent, LivePush, LiveRetiredNumber } from '@offside/contracts';
 import type { Context } from 'hono';
+import { chatRooms } from '../chat/socket.js';
 import { liveEventOf } from '../db/repos/live.js';
 import { waitUntil } from '../edgeCache.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -37,4 +38,13 @@ export function publishLive(
 /** T-10-076 방금 확정된 영구결번을 앱을 열어 둔 모든 브라우저에 알린다. */
 export function publishRetiredNumber(c: Context<AppEnv>, item: LiveRetiredNumber): void {
   push(c, async () => ({ type: 'retiredNumber', item }) as const);
+  // 라운지 모든 언어 방의 대화 사이에 배너로 끼운다. 응답을 먼저 보내고 실패는 삼킨다(결번 확정을 막지 않는다).
+  const chat = c.env.CHAT;
+  if (chat)
+    waitUntil(
+      c,
+      (async () => {
+        await Promise.all(chatRooms(chat).map((room) => room.postNotice(item)));
+      })(),
+    );
 }

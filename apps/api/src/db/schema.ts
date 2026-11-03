@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
+import { CARD_SPECIAL_KINDS } from '@offside/contracts/card-special';
 import { CHAT_ROOMS } from '@offside/contracts/chat';
 import {
   check,
@@ -209,9 +210,14 @@ export const profiles = sqliteTable(
     title: text('title'),
     titlePinned: integer('title_pinned').notNull().default(0),
     avatarId: text('avatar_id'),
+    /** T-11-616 닉네임을 정한(바꾼) 시각. 새 이름 점검(apps/agents)이 마지막 점검 뒤에 생긴 닉네임만 읽는 기준이다. 옛 닉네임은 null. */
+    nicknameSetAt: text('nickname_set_at'),
   },
   (table) => [
     index('profiles_created_idx').on(table.createdAt),
+    index('profiles_nickname_set_idx')
+      .on(table.nicknameSetAt)
+      .where(sql`${table.nicknameSetAt} is not null`),
     index('profiles_last_seen_idx').on(table.lastSeenAt),
     uniqueIndex('profiles_google_sub_unique').on(table.googleSub),
     uniqueIndex('profiles_friend_code_unique').on(table.friendCode),
@@ -584,13 +590,9 @@ export const cards = sqliteTable(
     // T-11-548 키운 사람이 계정을 지워 careers 행이 없는 카드의 공개 이름(지금 주인이 이름 변경권으로 붙인다). careers 행이
     // 있으면 그쪽 public_name을 쓰고 이 칸은 비워 둔다.
     publicName: text('public_name'),
-    // T-11-373 카드 강화 단계(0~5)와 그 단계에서 실패한 수(천장). 시도권은 이 카드가 구단주 팀 선발로 뛴 랭크 경기 수로 얻는다 —
-    // enhance_starts는 선발에서 빠질 때 쌓아 둔 경기 수(지금 선발 중인 경기 수는 team_lineup_cards.since로 더한다), enhance_used는
-    // 쓴 시도권 수. 거래 · 시즌이 바뀌어도 카드에 남는다.
+    // T-11-373 카드 강화 단계(0~5)와 그 단계에서 실패한 수(화면이 본 상태 확인용, 천장 없음). 거래 · 시즌이 바뀌어도 카드에 남는다.
     enhance: integer('enhance').notNull().default(0),
     enhanceFails: integer('enhance_fails').notNull().default(0),
-    enhanceStarts: integer('enhance_starts').notNull().default(0),
-    enhanceUsed: integer('enhance_used').notNull().default(0),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
   },
@@ -620,6 +622,7 @@ export const cardEnhanceLog = sqliteTable(
     fails: integer('fails').notNull(),
     success: integer('success', { mode: 'boolean' }).notNull(),
     rateBp: integer('rate_bp').notNull(),
+    downBp: integer('down_bp').notNull(),
     roll: integer('roll').notNull(),
     cost: integer('cost').notNull(),
     createdAt: text('created_at').notNull(),
@@ -903,6 +906,8 @@ export const boardCommentReports = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.commentId, table.profileId] }),
     index('board_comment_reports_profile_idx').on(table.profileId),
+    // T-11-616 신고 알림이 마지막 알림 뒤에 들어온 신고만 읽는다.
+    index('board_comment_reports_created_idx').on(table.createdAt),
   ],
 );
 
@@ -982,6 +987,7 @@ export const teamCommentReports = sqliteTable(
   (table) => [
     primaryKey({ columns: [table.commentId, table.profileId] }),
     index('team_comment_reports_profile_idx').on(table.profileId),
+    index('team_comment_reports_created_idx').on(table.createdAt),
   ],
 );
 
@@ -1209,9 +1215,14 @@ export const ownerTeams = sqliteTable(
     coachId: text('coach_id'),
     createdAt: text('created_at').notNull(),
     updatedAt: text('updated_at').notNull(),
+    /** T-11-616 구단 이름 · 감독 이름이 새로 생기거나 바뀐 시각(새 이름 점검 기준). 옛 팀은 null. */
+    nameChangedAt: text('name_changed_at'),
   },
   (table) => [
     uniqueIndex('owner_teams_profile_season_unique').on(table.profileId, table.season),
+    index('owner_teams_name_changed_idx')
+      .on(table.nameChangedAt)
+      .where(sql`${table.nameChangedAt} is not null`),
     // 상대 목록: 같은 시즌에서 내 팀 OVR 위아래로 가까운 팀을 찾는다.
     index('owner_teams_season_ovr_idx').on(table.season, table.ovr),
     // 라이브 랭킹(팀 랭킹).
@@ -1231,7 +1242,7 @@ export const ownerTeams = sqliteTable(
   ],
 );
 
-/** Reverse lookup for maintaining cached lineup values, plus T-11-373 per-card start counts. */
+/** Reverse lookup for maintaining cached lineup values. */
 export const teamLineupCards = sqliteTable(
   'team_lineup_cards',
   {
@@ -1240,8 +1251,6 @@ export const teamLineupCards = sqliteTable(
       .references(() => ownerTeams.id, { onDelete: 'cascade' }),
     slot: integer('slot').notNull(),
     careerId: text('career_id').notNull(),
-    // T-11-373 이 선발에 들어온 때의 팀 경기 수(wins + draws + losses). 지금 경기 수와의 차이가 이 자리에서 뛴 랭크 경기 수다.
-    since: integer('since').notNull().default(0),
   },
   (table) => [
     primaryKey({ columns: [table.teamId, table.slot] }),
@@ -1991,6 +2000,20 @@ export const ownerTitleProgress = sqliteTable('owner_title_progress', {
   firsts: integer('firsts').notNull(),
   // T-11-374 카드 과제 낸 횟수.
   exchanges: integer('exchanges').notNull().default(0),
+  // T-11-556 최고 능력치 90 이상 공격수 · 그런 선수의 포지션 가짓수 · 은퇴 선수 국적 가짓수 · 마친 컵 · 컵 4강 이상 ·
+  // 은퇴 선수를 남긴 시즌 · 시즌 마감 디비전 휘장의 최고 index.
+  forwards: integer('forwards').notNull().default(0),
+  positions: integer('positions').notNull().default(0),
+  nations: integer('nations').notNull().default(0),
+  cups: integer('cups').notNull().default(0),
+  podiums: integer('podiums').notNull().default(0),
+  seasons: integer('seasons').notNull().default(0),
+  division: integer('division').notNull().default(0),
+  enhanceTries: integer('enhance_tries').notNull().default(0),
+  enhanceKeeps: integer('enhance_keeps').notNull().default(0),
+  enhanceDowns: integer('enhance_downs').notNull().default(0),
+  enhanceNear: integer('enhance_near').notNull().default(0),
+  enhanceSpent: integer('enhance_spent').notNull().default(0),
   updatedAt: text('updated_at').notNull(),
 });
 /** One editable prediction per account and cup match; settlement and grant are atomic. */
@@ -2143,6 +2166,26 @@ export const managerCareers = sqliteTable(
   ],
 );
 
+/**
+ * T-11-372 시즌 특별 카드 표식. 시즌 결산(team/seasonClose.ts specials 단계)이 마감 시각 기준으로 한 번 매긴다 — 카드(career_id)를
+ * 따라가서 팔려도 남고, 기준이 바뀌어도 지난 시즌 표식은 다시 매기지 않는다(rule_version). 능력치는 더하지 않는다.
+ * 카드 응답은 career_id 앞자리(PK)로 붙이고, 결산 화면의 그 시즌 목록은 season 인덱스로 읽는다.
+ */
+export const cardSpecials = sqliteTable(
+  'card_specials',
+  {
+    careerId: text('career_id').notNull(),
+    season: integer('season').notNull(),
+    kind: text('kind', { enum: CARD_SPECIAL_KINDS }).notNull(),
+    rank: integer('rank').notNull(),
+    ruleVersion: integer('rule_version').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.careerId, table.season, table.kind] }),
+    index('card_specials_season_idx').on(table.season, table.kind, table.rank),
+  ],
+);
 /** Optional account acquisition consent. Never exported to advertising SDKs. */
 export const acquisitionConsents = sqliteTable('acquisition_consents', {
   profileId: text('profile_id')

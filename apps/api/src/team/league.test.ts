@@ -7,12 +7,11 @@ import {
   AdminLeagueSchema,
   successEnvelope,
 } from '@offside/contracts';
-import { LEAGUE_ROUNDS, planLeague } from '@offside/contracts/league';
+import { LEAGUE_CYCLE, planLeague } from '@offside/contracts/league';
 import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/service-seasons';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cupKo, cupText } from '../cupText.js';
-import { openLeagueEndsAt } from '../cron/seasonGauge.js';
 import { balanceVersions, cards, careers, leagueEntries, ownerTeams } from '../db/schema.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -22,7 +21,9 @@ import { runLeague } from './league.js';
 // T-11-418b 오프사이드 리그 2차: 배치 · 경기 · 기권 · 알림 · 명단 잠금 · 순위표 API.
 
 const S2 = '2026-10-30T15:00:00.000Z';
-const L = planLeague(2, S2);
+// 시즌 2가 11/19 00:00 KST에 끝나는 일정: 리그는 11/5 ~ 11/18 14라운드(T-11-540 마감 전날까지).
+const S3 = '2026-11-18T15:00:00.000Z';
+const L = planLeague(2, S2, S3);
 const OPEN = '2026-11-01T03:00:00.000Z';
 const at = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOString();
 let seq = 0;
@@ -39,6 +40,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(OPEN));
     await saveSeasonSchedule(ctx.env.DB, closeSeasonSchedule(1, S2, false));
+    await saveSeasonSchedule(ctx.env.DB, closeSeasonSchedule(2, S3, false));
   });
   afterEach(async () => {
     vi.useRealTimers();
@@ -162,7 +164,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     const { n } = (await ctx.env.DB.prepare('SELECT COUNT(*) AS n FROM league_matches').first<{
       n: number;
     }>())!;
-    expect(n).toBe(4 * LEAGUE_ROUNDS + 3 * LEAGUE_ROUNDS);
+    expect(n).toBe(4 * LEAGUE_CYCLE + 3 * LEAGUE_CYCLE);
 
     // 배치 결과 알림(다음 cron).
     expect(await run(at(L.drawAt, 300_000))).toMatchObject({ step: 'notify', n: 17 });
@@ -230,7 +232,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     const table = TableRes.parse(await (await call('GET', '/v1/leagues/2/tables/1/1')).json()).data;
     expect(table.teams).toHaveLength(8);
     expect(table.standings.reduce((a, s) => a + s.p, 0)).toBe(8);
-    expect(table.matches).toHaveLength(4 * LEAGUE_ROUNDS);
+    expect(table.matches).toHaveLength(4 * LEAGUE_CYCLE);
     // T-11-418d 득점 순위: 리그 팀 선수만, 많은 순, 3위까지(같은 골 수 포함 5줄 안). 마지막 라운드 전이라 골 시각은 없다.
     const ids = new Set(table.teams.map((t) => t.teamId));
     const scored = table.matches.reduce((a, m) => a + (m.homeGoals ?? 0) + (m.awayGoals ?? 0), 0);
@@ -274,7 +276,8 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
         ).results.map((r) => [r.item, r.qty]),
       );
     const champ = at1(1, 1).profileId;
-    expect(await items(champ)).toEqual({ reroll: 17, scout: 3, boost: 3 });
+    // T-11-541 시즌 2 새 업적(정점 OVR 90 선수) 단계 보상 강화권 1장이 더해진다.
+    expect(await items(champ)).toEqual({ reroll: 17, scout: 3, boost: 4 });
     expect(await items(at1(2, 1).profileId)).toEqual({ reroll: 9, scout: 1, boost: 1 });
     expect(await items(at1(2, 3).profileId)).toEqual({ reroll: 2 });
     const title = await ctx.env.DB.prepare('SELECT title FROM profiles WHERE id = ?')
@@ -310,7 +313,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     for (const s of final.standings) expect(s.p).toBe(12);
     // T-11-418d 마지막 라운드 경기에만 골 시각이 실리고, 스코어와 쪽별 골 수가 맞는다.
     for (const m of final.matches) {
-      if (m.round !== LEAGUE_ROUNDS || m.forfeit) {
+      if (m.round !== LEAGUE_CYCLE || m.forfeit) {
         expect(m.goals).toBeUndefined();
         continue;
       }
@@ -324,8 +327,31 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
       done_at: string | null;
     }>();
     expect(state?.done_at).not.toBeNull();
-    expect(await openLeagueEndsAt(ctx.env.DB, { id: 2, startsAt: S2 })).toBeNull();
   }, 60_000); // 14라운드를 다 치러 보는 흐름이라 혼자 돌려도 10초 넘게 걸린다(전체 실행 부하에서 20초 기본값을 넘는다).
+
+  it('T-11-540 마감 전 일정은 최대 기간 끝까지 14라운드를 되풀이하고, 마감이 정해지면 그 뒤 라운드를 지운다', async () => {
+    // 시즌 2 마감을 아직 모르는 일정(최대 기간 끝까지).
+    applySeasonSchedule([]);
+    await saveSeasonSchedule(ctx.env.DB, closeSeasonSchedule(1, S2, false));
+    const long = planLeague(2, S2);
+    expect(long.rounds.length).toBeGreaterThan(LEAGUE_CYCLE);
+    for (let i = 0; i < 8; i++) await entrant(8, 80);
+    await run(long.drawAt);
+    const rounds = async () =>
+      (
+        await ctx.env.DB.prepare(
+          'SELECT round, home_team_id AS h, away_team_id AS a FROM league_matches WHERE season = 2 ORDER BY round, slot',
+        ).all<{ round: number; h: string; a: string }>()
+      ).results;
+    const all = await rounds();
+    expect(Math.max(...all.map((m) => m.round))).toBe(long.rounds.length);
+    const pairs = (r: number) => all.filter((m) => m.round === r).map((m) => `${m.h}-${m.a}`);
+    expect(pairs(LEAGUE_CYCLE + 1)).toEqual(pairs(1));
+    // 게이지가 마감을 11/19 00:00 KST로 확정 → 11/18 라운드까지만 남긴다.
+    await saveSeasonSchedule(ctx.env.DB, closeSeasonSchedule(2, S3, false));
+    await drain(at(long.drawAt, 60_000));
+    expect(Math.max(...(await rounds()).map((m) => m.round))).toBe(LEAGUE_CYCLE);
+  }, 60_000);
 
   it('팀이 없어지면 0:3 기권패, 3번 쌓이면 남은 경기는 모두 기권패(forfeited)', async () => {
     const teams = [];
@@ -556,13 +582,6 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
       title: '오프사이드 리그 승격!',
       body: '위 부에 빈자리가 생겨 시즌 3에는 1부에서 뛰어요. 프리미엄 스카우트권 1장을 받았어요.',
     });
-  });
-
-  it('리그가 끝나기 전에는 시즌 마감을 마지막 라운드 뒤로 미룬다', async () => {
-    expect(
-      await openLeagueEndsAt(ctx.env.DB, { id: 1, startsAt: '2026-10-05T15:00:00.000Z' }),
-    ).toBeNull();
-    expect(await openLeagueEndsAt(ctx.env.DB, { id: 2, startsAt: S2 })).toBe(L.rounds.at(-1));
   });
 });
 
