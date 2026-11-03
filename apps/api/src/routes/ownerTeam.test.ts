@@ -51,6 +51,7 @@ import {
   ownerItems,
   ownerTeams,
   cupEntries,
+  teamLiveMatches,
   teamMatches,
 } from '../db/schema.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
@@ -1669,6 +1670,37 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
         await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
       ).data;
       expect(mine.team?.division).toBe(homeRow!.division);
+    });
+
+    it('T-11-626 운영 도구의 랭크 공격 계수를 일반 경기와 장면 경기에 바로 쓴다', async () => {
+      const me = await ownerWithTeam(5, 80, null, 2);
+      const play = async (live: boolean) => {
+        const rival = await ownerWithTeam(5, 75, null, 2);
+        const res = await call('POST', '/v1/owner-team/matches', {
+          cookie: me.cookie,
+          headers: idem(),
+          body: { opponentTeamId: rival.team.id, ...(live ? { live: true } : {}) },
+        });
+        expect(res.status).toBe(201);
+        return PlayRes.parse(await res.json()).data;
+      };
+      const liveXg = async (id: string) => {
+        const [row] = await ctx.db.select().from(teamLiveMatches).where(eq(teamLiveMatches.id, id));
+        return JSON.parse(row!.stateJson).state.report.home.xg as number;
+      };
+      const before = (await play(false)).match.home.xg!;
+      const liveBefore = await liveXg((await play(true)).match.id);
+      const now = new Date().toISOString();
+      await ctx.db.insert(balanceVersions).values({
+        status: 'active',
+        valuesJson: JSON.stringify({ rankAtkK: 0.7 }),
+        createdBy: 'test',
+        createdAt: now,
+        updatedAt: now,
+        activatedAt: now,
+      });
+      expect((await play(false)).match.home.xg).toBeGreaterThan(before);
+      expect(await liveXg((await play(true)).match.id)).toBeGreaterThan(liveBefore);
     });
 
     it('상대는 서버가 한 팀만 골라 주고, 같은 pick이면 같은 상대 · pick은 3까지', async () => {

@@ -564,7 +564,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (input.live) {
       // T-11-387 장면 경기: 일반 골과 장면을 굴려 두고, 마지막 장면을 고르거나 마감할 때 경기를 남긴다.
       const state = startLiveMatch(id, lineups.home, lineups.away, season, {
-        atkK: rankedAtkK(season),
+        atkK: rankedAtkK(season, activeBalance.rankAtkK),
         coaches: lineups.coaches,
       });
       const snap = matchDetailOf(mine, opp.team, lineups, liveResult(state), undefined, {
@@ -610,7 +610,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       );
     }
     const result = simulateMatch(id, lineups.home, lineups.away, season, {
-      atkK: rankedAtkK(season),
+      atkK: rankedAtkK(season, activeBalance.rankAtkK),
       coaches: lineups.coaches,
     });
     const score = matchScore(result.homeGoals, result.awayGoals);
