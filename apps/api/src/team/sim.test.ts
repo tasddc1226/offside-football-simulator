@@ -16,6 +16,7 @@ import {
   lineupSynergy,
   matchOdds,
   oddsOfXg,
+  rankedAtkK,
   SIM,
   simulateMatch,
   type LineupCareer,
@@ -410,5 +411,12 @@ describe('T-11-405 경기 전 예상', () => {
       if (m.homeGoals > m.awayGoals) win++;
     }
     expect(Math.abs(win / n - o.win)).toBeLessThan(0.03);
+  });
+});
+
+describe('T-11-626 랭크 공격 계수', () => {
+  it('시즌 2부터 밸런스 값을 쓰고, 시즌 1은 그대로다', () => {
+    expect(rankedAtkK(2, 0.55)).toBe(0.55);
+    expect(rankedAtkK(1, 0.55)).toBe(SIM.atkK);
   });
 });
