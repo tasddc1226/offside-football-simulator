@@ -109,8 +109,7 @@ const ko = {
   potentialHelp:
     '초기 잠재력 등급 범위예요. 훈련과 강화로 달라질 수 있어요. 잠재력은 모든 유저에게 같은 확률로 정해지고, S 등급은 아주 드물어요.',
   potentialWeb: '앱에서 보상형 광고를 보면 후보 3명의 초기 잠재력 등급 범위를 볼 수 있어요.',
-  potentialLogin:
-    '세 후보는 능력치 총합이 같아요. 잠재력은 구단 자금(로그인)이나 앱 광고로 볼 수 있어요.',
+  potentialLogin: '세 후보는 능력치 총합이 같아요. 잠재력은 구단 자금이나 앱 광고로 볼 수 있어요.',
   potentialLoginGo: '로그인',
   potentialClubShort: (p: { price: string; balance: string }) =>
     `후보 잠재력을 보려면 구단 자금 ${p.price}이 필요해요. 지금은 ${p.balance} 있어요.`,
