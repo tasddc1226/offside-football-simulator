@@ -2,7 +2,7 @@
 import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { lookCode } from './look-code.js';
 import { BAL, leagueOpen } from './balance.js';
-import { ovr, peakProfileOf } from './attributes.js';
+import { notePeakProfile, ovr, peakProfileOf } from './attributes.js';
 import { clamp, ri, pick, rnd, weightedIndex, createRng, getActiveRng } from './rng.js';
 import {
   leagueOf,
@@ -166,8 +166,8 @@ export function endSeason(s: GameState): SeasonEndResult {
   const L = leagueOf(s.leagueId),
     S = s.season,
     o = ovr(s);
-  // T-10-092 최고 OVR을 찍은(같아도) 시즌 말 능력치를 남긴다 — 아래 노쇠 감소 전 값.
-  if (o >= s.peak) s.peakProfile = peakProfileOf(s);
+  // T-10-092 최고 OVR을 찍은 시즌 말 능력치를 남긴다 — 아래 노쇠 감소 전 값.
+  notePeakProfile(s, o);
   if (!S.comps) seasonSetup(s, S);
   S.finalTable ??= leagueTable(s);
   const avg = S.apps ? S.ratingSum / S.apps : 0;

@@ -282,6 +282,16 @@ export function peakProfileOf(s: GameState, shift = 0): PeakProfile {
     ) as PeakProfile['roles'],
   };
 }
+/**
+ * T-11-630 시즌 말에 최고 시점 능력치를 남긴다. 최고 OVR을 넘으면 바꾸고, 같은 OVR을 다시 찍으면 대표 능력치 합이 오를 때만
+ * 바꾼다. 노쇠로 깎인 뒤 이벤트로 같은 OVR에 돌아온 시즌이 전성기 능력치를 덮지 않게 한다.
+ */
+export function notePeakProfile(s: GameState, o: number) {
+  if (o < s.peak) return;
+  const next = peakProfileOf(s);
+  const total = (p: PeakProfile) => ATTR_KEYS.reduce((t, k) => t + p.attrs[k], 0);
+  if (o > s.peak || !s.peakProfile || total(next) > total(s.peakProfile)) s.peakProfile = next;
+}
 export function syncFace(s: GameState) {
   const F = faceOf(s);
   for (const g of ATTR_KEYS) {

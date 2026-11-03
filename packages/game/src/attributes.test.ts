@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newGame } from './engine.js';
-import { ovr, faceOf } from './attributes.js';
+import { ovr, faceOf, notePeakProfile, peakProfileOf } from './attributes.js';
 import { ATTR_KEYS } from './data.js';
 import { createRng, setActiveRng } from './rng.js';
 import type { Pos } from './data.js';
@@ -96,5 +96,53 @@ describe('SUB_KEYS 순서 (T-11-048)', () => {
       'gkp',
       'ref',
     ]);
+  });
+});
+
+describe('최고 시점 능력치 (T-11-630)', () => {
+  const start = () => {
+    setActiveRng(createRng(1630));
+    const g = newGame(
+      { name: '테스트', number: 1, pos: 'MF', foot: '오른발', type: 'maker', trait: 'normal' },
+      1630,
+    );
+    g.peak = 80;
+    g.peakProfile = peakProfileOf(g);
+    return { g, before: g.peakProfile };
+  };
+
+  it('같은 OVR을 다시 찍어도 능력치 합이 그대로거나 낮으면 전성기 값을 지킨다', () => {
+    const { g, before } = start();
+    g.attrs.pac -= 8;
+    g.attrs.sho += 3;
+    notePeakProfile(g, 80);
+    expect(g.peakProfile).toBe(before);
+    g.attrs.pas += 5;
+    notePeakProfile(g, 80);
+    expect(g.peakProfile).toBe(before);
+  });
+
+  it('같은 OVR에서 능력치 합이 오르면 바꾼다', () => {
+    const { g, before } = start();
+    g.attrs.pas += 3;
+    notePeakProfile(g, 80);
+    expect(g.peakProfile).not.toBe(before);
+    expect(g.peakProfile!.attrs.pas).toBe(before.attrs.pas + 3);
+  });
+
+  it('최고 OVR을 넘으면 능력치 합이 낮아도 바꾸고, 못 미치면 두지 않는다', () => {
+    const { g, before } = start();
+    g.attrs.pac -= 8;
+    notePeakProfile(g, 79);
+    expect(g.peakProfile).toBe(before);
+    notePeakProfile(g, 81);
+    expect(g.peakProfile!.attrs.pac).toBe(before.attrs.pac - 8);
+  });
+
+  it('값이 없는 옛 저장본은 같은 OVR에서 새로 남긴다', () => {
+    const { g } = start();
+    delete g.peakProfile;
+    notePeakProfile(g, 80);
+    expect(g.peakProfile).toEqual(peakProfileOf(g));
   });
 });
