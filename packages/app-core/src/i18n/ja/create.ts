@@ -102,7 +102,7 @@ export const create: Translation<CreateMsgs> = {
     '初期ポテンシャルのランク範囲です。トレーニングや強化で変わることがあります。ポテンシャルはすべてのユーザーに同じ確率で決まり、Sランクはとても珍しいです。',
   potentialWeb: 'アプリでリワード広告を見ると、候補3人の初期ポテンシャルのランク範囲を見られます。',
   potentialLogin:
-    '3人は能力値の合計が同じです。ログインするとクラブ資金で、アプリでは広告を見るとポテンシャルを見られます。',
+    '3人は能力値の合計が同じです。ポテンシャルはクラブ資金(ログイン)かアプリ広告で見られます。',
   potentialLoginGo: 'ログイン',
   potentialClubShort: (p: { price: string; balance: string }) =>
     `候補のポテンシャルを見るにはクラブ資金${p.price}が必要です。今は${p.balance}あります。`,

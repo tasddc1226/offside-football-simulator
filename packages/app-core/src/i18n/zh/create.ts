@@ -97,8 +97,7 @@ export const create: Translation<CreateMsgs> = {
   potentialHelp:
     '這是初始潛力的等級範圍，可能因訓練或強化而改變。潛力對所有玩家都以相同機率決定，S 級非常稀有。',
   potentialWeb: '在 App 中觀看獎勵廣告，即可查看 3 名候選的初始潛力等級範圍。',
-  potentialLogin:
-    '3 名候選的能力值總和相同。登入後可用球隊資金查看潛力，在 App 中也可觀看廣告查看。',
+  potentialLogin: '3 名候選的能力值總和相同。潛力可用球隊資金（需登入）或 App 廣告查看。',
   potentialLoginGo: '登入',
   potentialClubShort: (p: { price: string; balance: string }) =>
     `查看候選潛力需要球隊資金 ${p.price}。目前有 ${p.balance}。`,

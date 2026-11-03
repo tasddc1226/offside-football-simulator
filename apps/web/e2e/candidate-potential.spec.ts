@@ -78,7 +78,7 @@ test('로그인하지 않으면 잠재력 로그인 입구가 접히지 않고 �
   await page.goto('/');
   await page.locator('[data-act="new"]').click();
   await page.locator('[data-act="next-candidates"]').click();
-  await expect(page.locator('[data-cand-login]')).toContainText('앱에서는 광고를 보면');
+  await expect(page.locator('[data-cand-login]')).toContainText('앱 광고로');
   await expect(page.locator('[data-cand-app-hint]')).toHaveCount(0);
   await page.locator('[data-act="potential-login-go"]').click();
   await expect(page.getByRole('heading', { level: 1, name: '내 구단' })).toBeVisible();
