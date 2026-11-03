@@ -34,6 +34,7 @@ import {
   FORMATIONS,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
+import * as ids from '../db/ids.js';
 import { resolveBalance } from '@offside/contracts/balance';
 import { divisionRules, nextDivision } from '@offside/contracts/team-division';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -1425,10 +1426,16 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
 
   describe('T-11-387 장면 경기', () => {
     const MomentRes = successEnvelope(TeamMomentResponseSchema);
-    /** 장면이 하나 이상 나오는 경기를 시작한다(장면이 없으면 바로 끝나므로 다른 상대로 다시 건다). */
+    /** 고정 seed에서 장면이 나오는 경기. 실제 경기를 재시도하면 장면 없는 경기의
+     * 기록/레이팅/알림이 fixture에 섞이므로 경기 ID만 고정하고 시뮬레이터는 그대로 쓴다. */
     async function startLive(me: Awaited<ReturnType<typeof ownerWithTeam>>) {
-      for (let i = 0; i < 6; i++) {
-        const rival = await ownerWithTeam(5, 82, '라이벌 에이스');
+      const rival = await ownerWithTeam(5, 82, '라이벌 에이스');
+      const original = ids.newId;
+      const fixedId = 'mat_00000000-0000-4000-8000-000000000001';
+      const idSpy = vi
+        .spyOn(ids, 'newId')
+        .mockImplementation((prefix) => (prefix === 'mat' ? fixedId : original(prefix)));
+      try {
         const res = await call('POST', '/v1/owner-team/matches', {
           cookie: me.cookie,
           headers: idem(),
@@ -1436,9 +1443,12 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
         });
         expect(res.status).toBe(201);
         const data = PlayRes.parse(await res.json()).data;
-        if (data.live?.moments.length) return { rival, data };
+        expect(data.match.id).toBe(fixedId);
+        expect(data.live?.moments.length).toBeGreaterThan(0);
+        return { rival, data };
+      } finally {
+        idSpy.mockRestore();
       }
-      throw new Error('장면이 나오는 경기를 만들지 못했어요');
     }
     const choose = (cookie: string, id: string, index: number, choice: string) =>
       call('POST', `/v1/owner-team/matches/${id}/moments/${index}`, { cookie, body: { choice } });
