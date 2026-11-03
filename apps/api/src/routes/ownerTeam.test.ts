@@ -51,6 +51,7 @@ import {
   ownerItems,
   ownerTeams,
   cupEntries,
+  teamLiveMatches,
   teamMatches,
 } from '../db/schema.js';
 import { rebuildStaleAchievements } from '../team/ownerAchievements.js';
@@ -1671,6 +1672,37 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(mine.team?.division).toBe(homeRow!.division);
     });
 
+    it('T-11-626 운영 도구의 랭크 공격 계수를 일반 경기와 장면 경기에 바로 쓴다', async () => {
+      const me = await ownerWithTeam(5, 80, null, 2);
+      const play = async (live: boolean) => {
+        const rival = await ownerWithTeam(5, 75, null, 2);
+        const res = await call('POST', '/v1/owner-team/matches', {
+          cookie: me.cookie,
+          headers: idem(),
+          body: { opponentTeamId: rival.team.id, ...(live ? { live: true } : {}) },
+        });
+        expect(res.status).toBe(201);
+        return PlayRes.parse(await res.json()).data;
+      };
+      const liveXg = async (id: string) => {
+        const [row] = await ctx.db.select().from(teamLiveMatches).where(eq(teamLiveMatches.id, id));
+        return JSON.parse(row!.stateJson).state.report.home.xg as number;
+      };
+      const before = (await play(false)).match.home.xg!;
+      const liveBefore = await liveXg((await play(true)).match.id);
+      const now = new Date().toISOString();
+      await ctx.db.insert(balanceVersions).values({
+        status: 'active',
+        valuesJson: JSON.stringify({ rankAtkK: 0.7 }),
+        createdBy: 'test',
+        createdAt: now,
+        updatedAt: now,
+        activatedAt: now,
+      });
+      expect((await play(false)).match.home.xg).toBeGreaterThan(before);
+      expect(await liveXg((await play(true)).match.id)).toBeGreaterThan(liveBefore);
+    });
+
     it('상대는 서버가 한 팀만 골라 주고, 같은 pick이면 같은 상대 · pick은 3까지', async () => {
       const me = await ownerWithTeam(3, 80, null, 2);
       const rivals = await Promise.all([1, 2, 3, 4, 5].map(() => ownerWithTeam(3, 80, null, 2)));
@@ -1686,6 +1718,28 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       const picks = await Promise.all(['?pick=1', '?pick=2', '?pick=3', '?pick=9'].map(get));
       for (const p of picks) expect(p).toHaveLength(1);
       expect(picks[3]).toEqual(picks[2]);
+    });
+
+    it('T-11-627 매칭된 상대에 경기 전 예상을 붙이고, 공격 계수 설정을 따른다', async () => {
+      const me = await ownerWithTeam(3, 90, null, 2);
+      await ownerWithTeam(3, 70, null, 2);
+      const odds = async () => {
+        const res = await call('GET', '/v1/owner-team/opponents', { cookie: me.cookie });
+        return OppRes.parse(await res.json()).data.items[0]!.odds!;
+      };
+      const before = await odds();
+      expect(before.win + before.draw + before.loss).toBe(100);
+      expect(before.win).toBeGreaterThan(before.loss);
+      const now = new Date().toISOString();
+      await ctx.db.insert(balanceVersions).values({
+        status: 'active',
+        valuesJson: JSON.stringify({ rankAtkK: 0.9 }),
+        createdBy: 'test',
+        createdAt: now,
+        updatedAt: now,
+        activatedAt: now,
+      });
+      expect(await odds()).not.toEqual(before);
     });
 
     it('고른 상대 RP가 그새 멀어지면 409 TEAM_OPPONENT_STALE', async () => {

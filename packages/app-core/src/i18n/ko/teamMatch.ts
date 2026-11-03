@@ -34,6 +34,14 @@ const ko = {
     `RP와 전력이 비슷한 팀을 골라 드려요. 경기마다 상대를 ${p.n}번까지 다시 찾을 수 있어요.`,
   matchGapNote:
     'RP 아래 숫자는 내 팀과의 차이예요. RP가 높은 팀을 이기면 더 오르고, 져도 덜 깎여요.',
+  oddsTitle: '예상 승 · 무 · 패',
+  oddsWin: '승',
+  oddsDraw: '무',
+  oddsLoss: '패',
+  oddsAria: (p: { win: number; draw: number; loss: number }) =>
+    `예상 승 ${p.win}%, 무 ${p.draw}%, 패 ${p.loss}%`,
+  oddsNote:
+    '지금 두 팀 명단으로 낸 90분 확률이에요. 전력이 앞서도 질 수 있고, 경기 중 선택에 따라 달라져요.',
   oppRp: 'RP',
   matchStart: '경기 시작',
   matchStartAria: (p: { name: string }) => `${p.name}${waGwa(p.name)} 경기 시작`,

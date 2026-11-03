@@ -135,6 +135,22 @@
       {#if stakes.promote}<p class="rq-note up" data-stake-promote>{stakes.promote}</p>{/if}
       {#if stakes.relegate}<p class="rq-note down" data-stake-relegate>{stakes.relegate}</p>{/if}
     </div>
+    {#if found.odds}
+      <div class="rq-stakes" data-rank-odds role="img" aria-label={L.oddsAria(found.odds)}>
+        <small class="muted">{L.oddsTitle}</small>
+        <div class="rq-odds-bar" aria-hidden="true">
+          <i class="w" style="flex:{Math.max(found.odds.win, 1)}"></i>
+          <i style="flex:{Math.max(found.odds.draw, 1)}"></i>
+          <i class="l" style="flex:{Math.max(found.odds.loss, 1)}"></i>
+        </div>
+        <div class="rq-stake-row" aria-hidden="true">
+          <span class="w"><small>{L.oddsWin}</small><b data-odds-win={found.odds.win}>{found.odds.win}%</b></span>
+          <span><small>{L.oddsDraw}</small><b>{found.odds.draw}%</b></span>
+          <span class="l"><small>{L.oddsLoss}</small><b>{found.odds.loss}%</b></span>
+        </div>
+        <small class="muted">{L.oddsNote}</small>
+      </div>
+    {/if}
     <div class="rq-actions">
       <button class="btn btn-primary rq-go" disabled={playing || matchesLeft === 0} onclick={() => onchallenge(found!)} aria-label={L.matchStartAria({ name: found.name })} data-act="team-challenge">{L.matchStart}</button>
       <button class="btn rq-go" onclick={() => void search(true)} disabled={playing || repicksLeft <= 0} aria-label={L.matchRepick({ left: repicksLeft, max: RANK_MATCH_REPICKS })} data-act="team-repick">{L.matchRepickBtn({ left: repicksLeft, max: RANK_MATCH_REPICKS })}</button>
@@ -192,6 +208,10 @@
   .rq-stake-row b {font-variant-numeric: tabular-nums;}
   .rq-stake-row .w b {color: var(--accent-text);}
   .rq-stake-row .l b {color: var(--bad);}
+  .rq-odds-bar {display: flex; gap: 2px; height: 6px; border-radius: 3px; overflow: hidden;}
+  .rq-odds-bar i {background: var(--line);}
+  .rq-odds-bar i.w {background: var(--accent);}
+  .rq-odds-bar i.l {background: var(--bad);}
   .rq-note {margin: 0; font-size: var(--fs-body2); font-weight: 700;}
   .rq-note.up {color: var(--accent-text);}
   .rq-note.down {color: var(--bad);}

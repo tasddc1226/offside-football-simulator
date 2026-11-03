@@ -142,11 +142,11 @@ export const SIM = {
 } as const;
 
 /**
- * T-11-510 시즌 2부터 랭크 경기만 쓰는 공격 계수 — 전력 차이 10이면 건 쪽 승률이 약 66%에서 75%로 오른다. 리그 · 친선은
- * SIM.atkK 그대로고, 컵은 밸런스 설정 cupAtkK(T-11-409)를 쓴다.
+ * T-11-510 시즌 2부터 랭크 경기만 쓰는 공격 계수. T-11-626 값은 밸런스 설정 rankAtkK다. 리그 · 친선은 SIM.atkK 그대로고,
+ * 컵은 밸런스 설정 cupAtkK(T-11-409)를 쓴다.
  */
-export const RANKED_ATK_K = 0.45;
-export const rankedAtkK = (season: number) => (usesRankLadder(season) ? RANKED_ATK_K : SIM.atkK);
+export const rankedAtkK = (season: number, rankAtkK: number) =>
+  usesRankLadder(season) ? rankAtkK : SIM.atkK;
 
 /** 상대 벽: 수비 라인 70% + 골키퍼 30%. */
 export const wallOf = (l: LineStrength) => 0.7 * l.def + 0.3 * l.gk;
@@ -347,6 +347,13 @@ export function matchOdds(
 ) {
   const { homeXg, awayXg } = matchSetup(home, away, season, opts);
   return { ...oddsOfXg(homeXg, awayXg), homeXg, awayXg };
+}
+
+/** 승 · 패 확률을 정수 %로 반올림하고 합이 100이 되게 무승부로 맞춘다. */
+export function oddsPercent(o: { win: number; loss: number }) {
+  const win = Math.round(o.win * 100);
+  const loss = Math.round(o.loss * 100);
+  return { win, draw: Math.max(0, 100 - win - loss), loss };
 }
 
 /** 골 n개의 분 · 득점자 · 도움을 굴려 events에 더한다. */

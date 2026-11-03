@@ -46,6 +46,7 @@ const ko = {
   marketPriceMin: '최저 판매가(기준가 배수)',
   marketPriceMax: '최고 판매가(기준가 배수)',
   cupAtkK: '컵 전력 차이 반영',
+  rankAtkK: '랭크 전력 차이 반영',
   leagueFatigue: '리그 체력',
   leagueHomeAdv: '리그 홈 이점',
   pastSalaryBudget: '지난 시즌 선수 급여 예산',

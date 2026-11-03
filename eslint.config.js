@@ -56,6 +56,26 @@ const noServerImports = {
   },
 };
 
+// T-11-627 앱 런타임(Hermes)에 없어 스토어 앱에서 바로 죽는 표준 API. 10-31 이어하기 크래시(#1024)가 toSorted였고,
+// 타입 검사 · 웹 · 단위 테스트(Node)는 모두 통과해서 앱에서만 터진다. RN 0.86 Hermes 엔진 문자열로 확인했고,
+// toReversed · toSpliced는 지금 엔진엔 있지만 옛 스토어 빌드까지 보장할 수 없어 같이 막는다.
+const HERMES_MESSAGE = '앱 런타임(Hermes)에 없는 API입니다. slice()나 스프레드로 복사한 뒤 쓰세요.';
+const hermesUnsupported = [
+  'error',
+  ...['toSorted', 'toReversed', 'toSpliced'].map((name) => ({
+    selector: `CallExpression[callee.property.name='${name}']`,
+    message: `${name}: ${HERMES_MESSAGE}`,
+  })),
+  {
+    selector: "CallExpression[callee.object.name=/^(Object|Map)$/][callee.property.name='groupBy']",
+    message: `groupBy: ${HERMES_MESSAGE}`,
+  },
+  {
+    selector: "CallExpression[callee.object.name='Array'][callee.property.name='fromAsync']",
+    message: `Array.fromAsync: ${HERMES_MESSAGE}`,
+  },
+];
+
 // 워크스페이스(web/api/contracts) 경계는 표준 no-restricted-imports로 직접 적는다(ADR-013).
 export default [
   ...base,
@@ -117,6 +137,18 @@ export default [
     files: ['apps/admin/src/**/*.ts', 'apps/admin/src/**/*.svelte'],
     plugins: { boundaries: { rules: { 'no-server-imports': noServerImports } } },
     rules: { 'boundaries/no-server-imports': 'error' },
+  },
+  {
+    // 앱 번들에 들어가는 코드. 테스트는 Node에서만 돌므로 뺀다.
+    files: [
+      'apps/mobile/src/**/*.ts',
+      'apps/mobile/src/**/*.tsx',
+      'packages/app-core/src/**/*.ts',
+      'packages/game/src/**/*.ts',
+      'packages/contracts/src/**/*.ts',
+    ],
+    ignores: ['**/*.test.ts', '**/*.test.tsx'],
+    rules: { 'no-restricted-syntax': hermesUnsupported },
   },
   {
     // 공유 계약 패키지는 어느 app에도 의존하지 않는다(의존 방향은 web/api -> contracts만 허용).

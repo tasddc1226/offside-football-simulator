@@ -30,6 +30,13 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   matchRule: (p) => `RPと戦力が近いチームを選びます。1試合ごとに相手を${p.n}回まで探し直せます。`,
   matchGapNote:
     'RPの下の数字はあなたのチームとの差です。RPが高いチームに勝つと多く上がり、負けても減りが少なくなります。',
+  oddsTitle: '予想 勝ち · 引き分け · 負け',
+  oddsWin: '勝ち',
+  oddsDraw: '引き分け',
+  oddsLoss: '負け',
+  oddsAria: (p) => `予想: 勝ち ${p.win}%、引き分け ${p.draw}%、負け ${p.loss}%`,
+  oddsNote:
+    '今の両チームのメンバーで出した90分の確率です。戦力で上回っていても負けることがあり、試合中の選択でも変わります。',
   oppRp: 'RP',
   matchStart: '試合開始',
   matchStartAria: (p) => `${p.name}と試合開始`,

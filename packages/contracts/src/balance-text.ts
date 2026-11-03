@@ -274,6 +274,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '컵 전력 차이 반영',
     desc: '오프사이드 컵 경기에서 공격과 상대 수비벽 10점 차이가 기대 득점에 주는 무게(지수). 0.3이면 2회 컵까지, 0.45면 랭크 경기와 같다. 경기 전 예상에도 같이 쓴다',
   },
+  rankAtkK: {
+    group: 'team',
+    label: '랭크 전력 차이 반영', // i18n-ignore admin-only copy
+    desc: '시즌 2부터 랭크 경기에서 공격과 상대 수비벽 10점 차이가 기대 득점에 주는 무게(지수). 높일수록 강한 팀이 이변 없이 이긴다. 시작하는 경기부터 적용된다', // i18n-ignore admin-only copy
+  },
   rerollPrice: {
     group: 'market',
     label: '리롤권 가격',
