@@ -3,13 +3,23 @@
 // - T-11-600 1.1.6 added @shopify/react-native-skia (native) for the lounge field. 1.1.5 and 1.1.4 builds do not have it,
 //   so the overlay removes the dependency (native fingerprint back to the reviewed build).
 //   T-11-624 removed the lounge field, so no JS imports Skia any more. The package stays for the 1.1.6 fingerprint.
+// - T-11-563 1.1.7 added the Meta app events module (Android native: modules/meta-app-events + plugins/withMetaAppEvents.js).
+//   The JS no-ops without it, so every older lane removes those files (app.json from the source commit drops the plugin).
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** Last main commit that changed app.json while it matched each reviewed store build. */
 export const targets = Object.freeze({
+  '1.1.6': {
+    source: 'a5eb840bfb661aaf54bcf8b45b68108a6415a4e4',
+    runtimes: {
+      ios: 'dfd47f447f667c81816a87122937ef8384f2324e', // 1.1.6 iOS build 20 (T-11-600)
+      android: '788cf73ac02df52f5b15fcdeb398a70e94ff3f3f', // 1.1.6 Android (T-11-600)
+    },
+    skia: true,
+  },
   '1.1.5': {
     source: 'd5ec2d516dfbdb93037b965bab4d9a60ea2cfe3f',
     runtimes: {
@@ -27,8 +37,13 @@ export const targets = Object.freeze({
 });
 export const APP_JSON = 'apps/mobile/app.json';
 export const MOBILE_PACKAGE = 'apps/mobile/package.json';
-/** Native modules the older builds do not contain. */
+/** npm native modules the builds without Skia (1.1.5 and older) do not contain. */
 export const NATIVE_ONLY_IN_NEW = ['@shopify/react-native-skia'];
+/** Local native pieces added in 1.1.7 that every legacy lane removes. */
+export const LOCAL_NATIVE_IN_NEW = [
+  'apps/mobile/modules/meta-app-events',
+  'apps/mobile/plugins/withMetaAppEvents.js',
+];
 
 function target(name) {
   const t = targets[name];
@@ -53,13 +68,19 @@ export function prepare(root, name) {
     }
   }
   const appJson = git('show', `${t.source}:${APP_JSON}`);
-  const pkgPath = resolve(root, MOBILE_PACKAGE);
-  const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-  for (const dep of NATIVE_ONLY_IN_NEW) delete pkg.dependencies?.[dep];
   writeFileSync(resolve(root, APP_JSON), appJson);
-  writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+  for (const path of LOCAL_NATIVE_IN_NEW)
+    rmSync(resolve(root, path), { recursive: true, force: true });
+  const removed = [...LOCAL_NATIVE_IN_NEW];
+  if (!t.skia) {
+    const pkgPath = resolve(root, MOBILE_PACKAGE);
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+    for (const dep of NATIVE_ONLY_IN_NEW) delete pkg.dependencies?.[dep];
+    writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+    removed.push(...NATIVE_ONLY_IN_NEW);
+  }
   console.log(
-    `Prepared ${name} overlay (app.json from ${t.source.slice(0, 7)}, without ${NATIVE_ONLY_IN_NEW})`,
+    `Prepared ${name} overlay (app.json from ${t.source.slice(0, 7)}, without ${removed.join(', ')})`,
   );
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -68,6 +89,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   else if (cmd === 'prepare') prepare(process.cwd(), name);
   else
     throw new Error(
-      'Usage: prepare-ota-legacy.mjs prepare <1.1.5|1.1.4> | check <1.1.5|1.1.4> <platform> <fingerprint>',
+      'Usage: prepare-ota-legacy.mjs prepare <1.1.6|1.1.5|1.1.4> | check <1.1.6|1.1.5|1.1.4> <platform> <fingerprint>',
     );
 }

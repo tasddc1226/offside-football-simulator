@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import {
   APP_JSON,
+  LOCAL_NATIVE_IN_NEW,
   MOBILE_PACKAGE,
   NATIVE_ONLY_IN_NEW,
   assertRuntime,
@@ -45,7 +46,7 @@ test('preparation protects dirty work and existing native test environments', ()
   }
 });
 
-for (const [name, { source }] of Object.entries(targets)) {
+for (const [name, { source, skia }] of Object.entries(targets)) {
   test(`the ${name} overlay restores the reviewed app config and drops the new native modules`, (t) => {
     const repo = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
     // PR 검사는 얕은 체크아웃이라 기준 커밋이 없다. 운영 배포 OTA 잡은 fetch-depth: 0으로 받는다.
@@ -68,10 +69,18 @@ for (const [name, { source }] of Object.entries(targets)) {
       );
       assert.equal(JSON.parse(readFileSync(join(root, APP_JSON), 'utf8')).expo.version, name);
       const after = JSON.parse(readFileSync(join(root, MOBILE_PACKAGE), 'utf8'));
-      for (const dep of NATIVE_ONLY_IN_NEW) assert.equal(after.dependencies[dep], undefined);
-      // 옛 빌드에 없는 모듈만 빼고 나머지 의존성은 그대로다.
-      for (const dep of NATIVE_ONLY_IN_NEW) delete before.dependencies[dep];
-      assert.deepEqual(after, before);
+      // 1.1.7에서 더한 Meta 앱 이벤트 모듈 · 플러그인은 모든 옛 경로가 뺀다.
+      for (const path of LOCAL_NATIVE_IN_NEW)
+        assert.equal(existsSync(join(root, path)), false, path);
+      if (skia) {
+        // 1.1.6 빌드에는 Skia가 있으니 의존성은 그대로 둔다.
+        assert.deepEqual(after, before);
+      } else {
+        for (const dep of NATIVE_ONLY_IN_NEW) assert.equal(after.dependencies[dep], undefined);
+        // 옛 빌드에 없는 모듈만 빼고 나머지 의존성은 그대로다.
+        for (const dep of NATIVE_ONLY_IN_NEW) delete before.dependencies[dep];
+        assert.deepEqual(after, before);
+      }
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -84,7 +93,7 @@ test('the deploy workflow publishes each legacy lane with its own runtime check'
     'utf8',
   );
   const job = workflow.split('  app-update:')[1].split('  release-tag:')[0];
-  assert.match(job, /target: \[current, '1\.1\.5', '1\.1\.4'\]/);
+  assert.match(job, /target: \[current, '1\.1\.6', '1\.1\.5', '1\.1\.4'\]/);
   assert.doesNotMatch(job, /prepare-ota-11[2-4]/);
   assert.match(
     job,
