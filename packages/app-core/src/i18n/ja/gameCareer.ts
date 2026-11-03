@@ -25,9 +25,27 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   rnOutside: '基準は満たしていますが、貢献度が高いクラブが先に審査されます。',
   rnTakenHint: 'このクラブの番号は先に登録されています。他の候補クラブを確認できます。',
   rnRules:
-    '同じサービスシーズンのクラブ別背番号を全ユーザーで共有します。条件を満たす上位2クラブのうち、1クラブで獲得できます。',
+    '審査を受けるには、選手名を公開して30歳以上で引退します。同じサービスシーズンのクラブ別背番号を全ユーザーで共有します。条件を満たす上位2クラブのうち、1クラブで獲得できます。',
   rnNote:
     '貢献度は今のクラブで引退すると仮定した10%刻みの目安です。他のクラブへ移ると下がる場合があります。番号の予約はできません。選手名を公開した状態での引退審査で確定します。',
+  legendTrackTitle: 'カード等級の見通し',
+  legendTrackNow: (p) => `今の記録なら${p.tier}カードです。`,
+  legendTrackScore: (p) => `レジェンドスコア ${p.score}`,
+  legendTrackNext: (p) => `${p.tier}カードまであと${p.remaining}点`,
+  legendTrackTop: '最高の等級です。',
+  legendTrackRules: (p) =>
+    `レジェンドスコア${p.icon}以上ならアイコン、${p.legend}以上ならレジェンドカードです。それ未満は最高OVRで分かれます。エリート${p.elite}、ゴールド${p.gold}、シルバー${p.silver}以上で、それ以外はブロンズです。`,
+  legendTrackNote:
+    'スコアは通算記録・トロフィー・受賞で貯まります。OVRが高くても、スコアが足りなければアイコン・レジェンドカードにはなりません。',
+  legendTierName: (p) =>
+    ({
+      icon: 'アイコン',
+      legend: 'レジェンド',
+      elite: 'エリート',
+      gold: 'ゴールド',
+      silver: 'シルバー',
+      bronze: 'ブロンズ',
+    })[p.tier],
   totalsTitle: '通算記録',
   apps: '試合',
   goals: 'ゴール',

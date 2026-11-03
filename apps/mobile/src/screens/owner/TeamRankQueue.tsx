@@ -362,6 +362,57 @@ export function TeamRankQueue({
             ) : null}
           </View>
         </Animated.View>
+        {found.odds ? (
+          <View
+            accessible
+            accessibilityRole="image"
+            accessibilityLabel={L.oddsAria(found.odds)}
+            testID="rank-odds"
+            style={{
+              alignSelf: 'stretch',
+              gap: 6,
+              padding: 10,
+              borderRadius: 12,
+              backgroundColor: c.surface2,
+            }}
+          >
+            <Txt tone="muted" v="xs">
+              {L.oddsTitle}
+            </Txt>
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 2,
+                height: 6,
+                borderRadius: 3,
+                overflow: 'hidden',
+              }}
+            >
+              <View style={{ flex: Math.max(found.odds.win, 1), backgroundColor: c.accent }} />
+              <View style={{ flex: Math.max(found.odds.draw, 1), backgroundColor: c.line }} />
+              <View style={{ flex: Math.max(found.odds.loss, 1), backgroundColor: c.bad }} />
+            </View>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {[
+                { label: L.oddsWin, value: found.odds.win, tone: 'accent' as const },
+                { label: L.oddsDraw, value: found.odds.draw, tone: undefined },
+                { label: L.oddsLoss, value: found.odds.loss, tone: 'bad' as const },
+              ].map((o) => (
+                <View key={o.label} style={{ flex: 1, minWidth: 0 }}>
+                  <Txt tone="muted" style={{ fontSize: 11, lineHeight: 14 }}>
+                    {o.label}
+                  </Txt>
+                  <Txt bold {...(o.tone ? { tone: o.tone } : {})}>
+                    {`${o.value}%`}
+                  </Txt>
+                </View>
+              ))}
+            </View>
+            <Txt tone="muted" v="xs">
+              {L.oddsNote}
+            </Txt>
+          </View>
+        ) : null}
         <View style={{ flexDirection: 'row', gap: 8, alignSelf: 'stretch' }}>
           <Btn
             kind="primary"

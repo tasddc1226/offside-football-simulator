@@ -9,7 +9,7 @@ import { cupTeamOf } from '../db/repos/ownerTeams.js';
 import { ownerTeams } from '../db/schema.js';
 import type { CupMatchRow } from './cup.js';
 import { lineupsOf, type Lineups } from './match.js';
-import { matchOdds } from './sim.js';
+import { matchOdds, oddsPercent } from './sim.js';
 
 /** 저장 모양: 홈 기준 승(h) · 무(d) · 패(a) 정수 %(합 100)와 기대 득점(xh · xa, 소수 첫째 자리). */
 export type StoredOdds = { h: number; d: number; a: number; xh: number; xa: number };
@@ -26,9 +26,8 @@ export function oddsOfLineups(lineups: Lineups, season: number, atkK: number): S
     coaches: lineups.coaches,
     atkK,
   });
-  const h = Math.round(o.win * 100);
-  const a = Math.round(o.loss * 100);
-  return { h, d: Math.max(0, 100 - h - a), a, xh: round1(o.homeXg), xa: round1(o.awayXg) };
+  const { win: h, draw: d, loss: a } = oddsPercent(o);
+  return { h, d, a, xh: round1(o.homeXg), xa: round1(o.awayXg) };
 }
 
 export function parseOdds(json: string | null | undefined): StoredOdds | null {

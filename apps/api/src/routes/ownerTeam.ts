@@ -86,6 +86,7 @@ import {
   setTeamPresets,
   teamPlayerCard,
   toLineupCareer,
+  type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
 import { membersOf } from '../db/repos/memberships.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
@@ -107,7 +108,15 @@ import { AppError, parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import { refreshAfterChange, refreshOwnerAchievements } from '../team/ownerAchievements.js';
-import { buildLineup, filledCount, lineupOvr, rankedAtkK, simulateMatch } from '../team/sim.js';
+import {
+  buildLineup,
+  filledCount,
+  lineupOvr,
+  matchOdds,
+  oddsPercent,
+  rankedAtkK,
+  simulateMatch,
+} from '../team/sim.js';
 import { lineupsOf, matchDetailOf, matchNotice, matchViews, playedMatch } from '../team/match.js';
 import { teamStatsView } from '../team/stats.js';
 import {
@@ -157,6 +166,22 @@ async function finishOpenLive(db: Db, ids: string[], now: string, lang: Lang) {
     const f = await finalizeLive(db, row, now, lang);
     if (f?.fresh) await refreshBoth(db, f);
   }
+}
+
+/** T-11-627 경기 전 예상(내 팀이 홈). 경기 한 판과 같은 명단 · 공격 계수 · 감독으로 계산한다. */
+async function opponentOdds(db: Db, season: number, mine: OwnerTeamRow, opp: OwnerTeamRow) {
+  const [[active], lineups] = await Promise.all([
+    activeBalanceQuery(db),
+    lineupsOf(db, season, mine, opp),
+  ]);
+  if (filledCount(lineups.home) === 0 || filledCount(lineups.away) === 0) return null;
+  const { rankAtkK } = resolveBalance(active ? balanceVersionOf(active).values : undefined);
+  return oddsPercent(
+    matchOdds(lineups.home, lineups.away, season, {
+      atkK: rankedAtkK(season, rankAtkK),
+      coaches: lineups.coaches,
+    }),
+  );
 }
 
 const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
@@ -464,6 +489,9 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       const j = Math.floor(Math.random() * (i + 1));
       [candidates[i], candidates[j]] = [candidates[j]!, candidates[i]!];
     }
+    // T-11-627 자동 매칭이 고른 한 팀의 경기 전 예상. 매칭 찾기를 눌렀을 때만 오는 요청이라 명단을 이때만 읽는다.
+    const matched = ladder ? candidates[0] : undefined;
+    const odds = matched ? await opponentOdds(db, season, mine, matched) : null;
     const items: TeamOpponent[] = candidates
       .slice(0, OPPONENTS_SHOWN)
       .sort((a, b) => b.rating - a.rating || b.ovr - a.ovr)
@@ -478,6 +506,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         rating: team.rating,
         record: recordOf(team),
         title: team.title,
+        ...(odds ? { odds } : {}),
       }));
     return ok(c, TeamOpponentsResponseSchema, { items }, 200, NO_STORE);
   });

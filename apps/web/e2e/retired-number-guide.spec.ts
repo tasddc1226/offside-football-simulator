@@ -54,6 +54,8 @@ for (const [lang, open, career] of [
     await page.locator('[data-act="continue"]').click();
     await page.getByRole('tab', { name: career, exact: true }).click();
     await expect(page.locator('[data-rn-guide]')).toBeVisible();
+    // T-11-627 카드 등급 전망은 기기 기록으로 그려 서버를 부르지 않는다.
+    await expect(page.locator('[data-legend-track] [role="progressbar"]')).toBeVisible();
     expect(calls).toBe(0);
     await page.getByRole('button', { name: open }).click();
     await expect(page.locator('[data-rn-club]')).toHaveCount(2);

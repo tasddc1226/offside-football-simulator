@@ -349,6 +349,13 @@ export function matchOdds(
   return { ...oddsOfXg(homeXg, awayXg), homeXg, awayXg };
 }
 
+/** 승 · 패 확률을 정수 %로 반올림하고 합이 100이 되게 무승부로 맞춘다. */
+export function oddsPercent(o: { win: number; loss: number }) {
+  const win = Math.round(o.win * 100);
+  const loss = Math.round(o.loss * 100);
+  return { win, draw: Math.max(0, 100 - win - loss), loss };
+}
+
 /** 골 n개의 분 · 득점자 · 도움을 굴려 events에 더한다. */
 export function addGoalEvents(
   events: SimEvent[],

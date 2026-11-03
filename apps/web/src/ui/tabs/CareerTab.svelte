@@ -9,6 +9,8 @@
   import { careerGoals, goalsNote } from '@offside/app-core/career-feedback';
   import { gameCareerText as L } from '@offside/app-core/i18n/ko/gameCareer';
   import { peakValue, seasonValue } from '@offside/contracts/market-value';
+  import { legendScore } from '@offside/game/legend';
+  import { legendTrack } from '@offside/app-core/legendTrack';
 
   // 은퇴 상세(LegendSource)에는 '다음 목표'가 없다 — 진행 중인 커리어(GameState)에서만 계산한다.
   // chart: 몸값 그래프·최고 몸값 줄. 은퇴 크레딧은 자기 '몸값 흐름' 장면이 있어 끈다(T-10-106).
@@ -18,6 +20,8 @@
   const miles = $derived((s.miles || []).slice().reverse());
   const next = $derived('attrs' in s && !s.retired ? careerGoals(s) : []);
   const peakV = $derived(chart ? peakValue(s.career) : null);
+  // T-11-627 진행 중인 커리어에만: 은퇴하기 전에 카드 등급 기준을 보여 준다.
+  const track = $derived('attrs' in s && !s.retired ? legendTrack(legendScore(s), s.peak) : null);
 </script>
 
 <section class="card stack">
@@ -37,6 +41,20 @@
     <p class="muted fs-sm" data-peak-value>{L.peakValue} <b>{fmtValue(peakV.value)}</b> · {seasonLabelOf(peakV.row)} {tn(peakV.row.club)}</p>
   {/if}
 </section>
+{#if track}
+  <section class="card stack" data-legend-track={track.tier}>
+    <div><div class="eyebrow">Card Grade</div><h2>{L.legendTrackTitle}</h2></div>
+    <p class="fs-sm" style="margin:0"><b>{track.now}</b> {track.score}</p>
+    <div class="mile-next">
+      <div class="mile-row">
+        <div class="mile-lbl"><b>{track.next}</b></div>
+        <div class="legend-bar" role="progressbar" aria-label={track.next} aria-valuemin={0} aria-valuemax={100} aria-valuenow={track.pct}><i style="width:{track.pct}%"></i></div>
+      </div>
+    </div>
+    <p class="muted fs-sm" style="margin:0">{track.rules}</p>
+    <p class="muted fs-xs" style="margin:0">{L.legendTrackNote}</p>
+  </section>
+{/if}
 {#if 'attrs' in s && !s.retired}<RetiredNumberGuide {s} />{/if}
 {#if next.length}
   <section class="card stack" data-career-goals>
