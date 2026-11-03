@@ -47,8 +47,16 @@
           "action": "VIEW",
           "autoVerify": true,
           "data": [
-            { "scheme": "https", "host": "offside-lab.com", "pathPrefix": "/invite/" },
-            { "scheme": "https", "host": "offside-lab.com", "pathPrefix": "/career/" }
+            {
+              "scheme": "https",
+              "host": "offside-lab.com",
+              "pathPrefix": "/invite/"
+            },
+            {
+              "scheme": "https",
+              "host": "offside-lab.com",
+              "pathPrefix": "/career/"
+            }
           ],
           "category": ["BROWSABLE", "DEFAULT"]
         }
@@ -115,7 +123,8 @@
     "locales": {
       "ko": "./locales/ko.json",
       "en": "./locales/en.json",
-      "ja": "./locales/ja.json"
+      "ja": "./locales/ja.json",
+      "zh-Hant": "./locales/zh-Hant.json"
     }
   },
   "react-native-google-mobile-ads": {
