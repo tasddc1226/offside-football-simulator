@@ -10,6 +10,8 @@ GitHub 공개 API 조회나 GitHub 장기 토큰을 Worker에 추가하지 않�
 Actions의 일회용 `github.token`은 현재 실행의 저장소, main, schedule, workflow 경로와
 생성 시각을 확인하는 데만 사용한다. 업로드는 기존 Cloudflare 토큰의 해당 버킷
 객체 쓰기 권한이 필요하다. 권한 부족은 게시 단계 실패로 드러나며 정상으로 간주하지 않는다.
+수동 실행은 임시 R2 probe 객체의 쓰기/읽기/삭제를 검사하고 자기 객체만 지운다.
+운영 스냅샷 추출이나 예약 heartbeat 갱신은 수행하지 않는다.
 
 전체 health job 결과를 기록하면 백업 검사가 읽은 이전 job 실패를 다시 기록하는
 순환 경보가 생긴다. 따라서 `steps.resources.outcome`을 기록한다. D1/백업 검사 실패는
