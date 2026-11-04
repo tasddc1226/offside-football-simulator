@@ -19,6 +19,12 @@ const LAST_RANK = RECORD_HOF_TIERS[RECORD_HOF_TIERS.length - 1]!.maxRank;
 const HOF = `c.status = 'retired' AND c.hidden = 0 AND c.service_season = ? AND c.legend_score IS NOT NULL
   AND c.retire_age >= ${HOF_MIN_RETIRE_AGE} AND c.retired_at <= ?`;
 
+/**
+ * T-11-631 그 구단주의 명예의 전당 선수. 인덱스를 고정하지 않으면 플래너가 careers_status_retired_idx로 은퇴 선수 전체(약 18만 행)를
+ * 훑어, 받을 보상이 없는 구단주가 선물 칸을 열 때마다 D1 과부하 503이 났다.
+ */
+export const OWNER_HOF = `FROM careers c INDEXED BY careers_profile_status_season_idx WHERE c.profile_id = ? AND ${HOF}`;
+
 /** 구단주의 시즌 기록. 명예의 전당 선수가 없으면 null. */
 export async function seasonRecordFactsOf(
   db: Db,
@@ -33,13 +39,13 @@ export async function seasonRecordFactsOf(
         `SELECT count(*) AS n, coalesce(sum(c.legend_score >= ${CARD_ICON_SCORE}), 0) AS icons,
                 coalesce(sum(c.legend_score >= ${CARD_LEGEND_SCORE}), 0) AS legends,
                 coalesce(sum(c.ballon > 0), 0) AS ballons
-           FROM careers c WHERE c.profile_id = ? AND ${HOF}`,
+           ${OWNER_HOF}`,
       )
       .bind(profileId, season, cutoff),
     d1
       .prepare(
-        `SELECT c.legend_score AS s, c.retired_at AS r, c.id AS id FROM careers c
-          WHERE c.profile_id = ? AND ${HOF} ORDER BY c.legend_score DESC, c.retired_at, c.id LIMIT 1`,
+        `SELECT c.legend_score AS s, c.retired_at AS r, c.id AS id ${OWNER_HOF}
+          ORDER BY c.legend_score DESC, c.retired_at, c.id LIMIT 1`,
       )
       .bind(profileId, season, cutoff),
   ]);

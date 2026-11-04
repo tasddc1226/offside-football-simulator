@@ -10,6 +10,7 @@ import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/ser
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { careers, ownerAchievements } from '../db/schema.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
+import { OWNER_HOF } from '../team/seasonRecordGift.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
 
@@ -31,6 +32,15 @@ describe('T-11-487 시즌 1 기록 보상(GET /v1/items/gift?v=2 · POST /v1/ite
     forgetSeasonSchedule();
     applySeasonSchedule([]);
     await ctx.dispose();
+  });
+
+  it('T-11-631 구단주 기록은 프로필 인덱스로만 찾는다(은퇴 선수 전체를 훑지 않는다)', async () => {
+    const plan = await ctx.env.DB.prepare(`EXPLAIN QUERY PLAN SELECT count(*) ${OWNER_HOF}`)
+      .bind('prf', 1, S1_END)
+      .all<{ detail: string }>();
+    expect(plan.results.map((r) => r.detail).join('\n')).toContain(
+      'careers_profile_status_season_idx (profile_id=? AND status=? AND service_season=?)',
+    );
   });
 
   const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) =>
