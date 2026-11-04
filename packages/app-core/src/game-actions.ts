@@ -604,7 +604,7 @@ export function createGameActions(host: GameHost) {
           return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
         }),
       },
-      // T-11-118: 25세부터 은퇴할 수 있다. T-11-632 되돌릴 수 없으니 언제나 한 번 더 묻는다.
+      // T-11-118: 25세부터 은퇴할 수 있다. T-11-633 되돌릴 수 없으니 언제나 한 번 더 묻는다.
       G.age >= MIN_RETIRE_AGE ? [{ label: L.retireBtn, fn: () => retireAsk(nextPending) }] : [],
     );
   }

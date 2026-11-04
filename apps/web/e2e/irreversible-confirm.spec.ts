@@ -62,7 +62,7 @@ test('대학 진학은 확인 시트를 거치고, 다시 고르면 저장을 �
   expect(JSON.parse((await saved(page))!).leagueId).toBe('uni');
 });
 
-test('T-11-632 시장이 은퇴를 권해도 은퇴하기는 확인 시트를 거친다', async ({ page }) => {
+test('T-11-633 시장이 은퇴를 권해도 은퇴하기는 확인 시트를 거친다', async ({ page }) => {
   await resumeWithSave(page, {
     age: 34,
     pending: {

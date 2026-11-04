@@ -133,7 +133,7 @@ describe('T-11-431 되돌릴 수 없는 진로 확인', () => {
     expect(v?.kind === 'notice' && v.title).not.toBe(L.pathArmyTitle);
   });
 
-  it('T-11-632 시장에서 은퇴를 권해도 은퇴하기는 확인을 거치고, 물러나면 시장으로 돌아간다', () => {
+  it('T-11-633 시장에서 은퇴를 권해도 은퇴하기는 확인을 거치고, 물러나면 시장으로 돌아간다', () => {
     const h = harness(career(), [STAY], true);
     const press = (label: string) => h.sheet.state.buttons.find((b) => b.label === label)!.fn();
     h.actions.nextPending();
