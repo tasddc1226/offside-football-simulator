@@ -51,4 +51,6 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   tryFail: "Couldn't enhance. Please try again in a moment.",
   sellNote: (p) =>
     `The +${p.lv} enhance value of ${p.value} is added to the price. The maximum price multiplier does not apply to it.`,
+  lossNote: (p) =>
+    `Includes enhanced players: ${p.n}. Their levels are lost, and the funds spent on enhancing aren't returned.`,
 };

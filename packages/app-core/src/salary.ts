@@ -1,16 +1,17 @@
 // T-11-376 급여 안내 시트의 순수 로직(웹 team/SalaryGuide.svelte · 앱 screens/owner/SalaryGuide.tsx 공용).
+import { enhancedPeak } from '@offside/contracts/card-enhance';
 import { PAST_SALARY_TABLE, isWildcardSeason, salaryOf } from '@offside/contracts/owner-team';
 import { salaryText as S } from './i18n/ko/salary.js';
 import { teamCoreText as L } from './i18n/ko/teamCore.js';
 
 /** 이적시장 매물 상세의 급여 줄: 지난 시즌 카드면 그 급여, 이번 시즌 카드면 다음 시즌부터 받을 급여. */
 export const marketSalaryText = (
-  card: { peak: number; season?: number | null | undefined },
+  card: { peak: number; enhance?: number | null | undefined; season?: number | null | undefined },
   current: number | null,
 ) =>
   current !== null && isWildcardSeason(card.season, current)
-    ? L.salaryChip({ n: salaryOf(card.peak) })
-    : L.salaryLater({ n: salaryOf(card.peak) });
+    ? L.salaryChip({ n: salaryOf(enhancedPeak(card)) })
+    : L.salaryLater({ n: salaryOf(enhancedPeak(card)) });
 
 /** 급여표 줄(낮은 구간부터) — '74 이하 1' · '75~79 2' … '96 이상 20'. */
 export function salaryRows(): { band: string; salary: number }[] {

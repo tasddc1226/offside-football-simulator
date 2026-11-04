@@ -66,6 +66,7 @@ import {
   logoOf,
   teamLogosByIds,
   type MatchDetail,
+  type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
 import {
   buyReroll,
@@ -1100,10 +1101,14 @@ export async function checkCupLineup(
  * 참가 중인(탈락 전) 컵의 선발 선수. 대회 시즌의 팀 명단을 본다 — T-11-552 시즌이 넘어간 뒤에도 끝나지 않은 지난 시즌 컵
  * (시즌 1 제3회)의 선발을 지킨다. T-11-570 컵 명단 프리셋이 있으면 그 프리셋 선발이다.
  */
-export async function cupLineupIds(db: Db, profileId: string): Promise<Set<string>> {
+export async function cupLineupIds(
+  db: Db,
+  profileId: string,
+  known?: { season: number; team: OwnerTeamRow | undefined },
+): Promise<Set<string>> {
   const out = new Set<string>();
   for (const { season } of await activeCupSeasonsQuery(db, profileId)) {
-    const [team] = await myTeamIn(db, profileId, season);
+    const [team] = known?.season === season ? [known.team] : await myTeamIn(db, profileId, season);
     for (const id of team ? slotIdsOf(cupTeamOf(team)) : []) if (id) out.add(id);
   }
   return out;
@@ -1138,11 +1143,12 @@ export async function checkCupEnhance(
   careerId: string,
   season: number | null,
   now: string,
+  team: OwnerTeamRow | undefined,
 ) {
-  if ((await cupLineupIds(db, profileId)).has(careerId))
+  const known = season === null ? undefined : { season, team };
+  if ((await cupLineupIds(db, profileId, known)).has(careerId))
     throw conflictError(cupKo('cardEnhance'), 'CUP_CARD_LOCKED');
   if (season === null || !(await leagueLineupLocked(db, profileId, season, now))) return;
-  const [team] = await myTeamIn(db, profileId, season);
   if (team && slotIdsOf(team).includes(careerId))
     throw conflictError(cupKo('leagueEnhance'), 'LEAGUE_LINEUP_LOCKED');
 }

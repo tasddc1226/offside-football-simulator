@@ -14,7 +14,7 @@ import {
   enhanceTierRules,
   type EnhanceCardState,
 } from '@offside/contracts/card-enhance';
-import { pastSalarySum } from '@offside/contracts/owner-team';
+import { pastSalarySum, type FormationId } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import {
@@ -23,10 +23,23 @@ import {
   enhanceRules,
   enhanceSnapshot,
   type EnhanceCardRow,
+  type EnhanceTeamChange,
 } from '../db/repos/cardEnhance.js';
 import { pastSalaryBudgetOf } from '../db/repos/balance.js';
 import { enhanceTitlesAfter } from '../db/repos/ownerTitles.js';
-import { careersByIds, eligibleMap, myTeamIn, slotIdsOf } from '../db/repos/ownerTeams.js';
+import {
+  careersByIds,
+  cupPresetOf,
+  eligibleMap,
+  layoutOf,
+  myTeamIn,
+  presetsOf,
+  slotIdsOf,
+  type OwnerTeamRow,
+} from '../db/repos/ownerTeams.js';
+import { purgeEdge } from '../edgeCache.js';
+import { STALE } from '../edgeKeys.js';
+import { buildLineup, lineupOvr } from '../team/sim.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
 import { AppError, parseWithAppError } from '../errors.js';
@@ -73,30 +86,55 @@ function requestKeyOf(c: Context<AppEnv>): string {
   return key;
 }
 
+/** 이 카드가 든 이번 시즌 편성(팀 선발 · 컵 명단). 어디에도 없으면 null이라 카드 · 밸런스를 읽지 않는다(시도당 쿼리 최소화). */
+async function lineupsWith(db: Db, careerId: string, team: OwnerTeamRow | undefined) {
+  if (!team) return null;
+  const slots = slotIdsOf(team);
+  const cup = cupPresetOf(team);
+  const inTeam = slots.includes(careerId);
+  const inCup = !!cup?.slots.includes(careerId);
+  if (!inTeam && !inCup) return null;
+  const ids = [...slots, ...(cup?.slots ?? [])].filter((x): x is string => !!x);
+  return { team, slots, cup, inTeam, inCup, rows: await careersByIds(db, [...new Set(ids)]) };
+}
+type EnhanceLineups = NonNullable<Awaited<ReturnType<typeof lineupsWith>>>;
+
+/** 이 카드가 level 단계라면 그 시즌 편성에 넣을 수 있는 카드들. */
+const eligibleAt = (
+  l: EnhanceLineups,
+  profileId: string,
+  careerId: string,
+  season: number,
+  level: number,
+) =>
+  eligibleMap(
+    l.rows.map((r) => (r.id === careerId ? { ...r, enhance: level } : r)),
+    profileId,
+    season,
+    true,
+  );
+
 /**
- * 성공하면 이 시즌 선발의 지난 시즌 급여가 예산을 넘는 시도는 막는다. 예산은 선발을 저장할 때만 재므로, 여기서 막지 않으면 넘은 채로
- * 경기를 뛰게 된다. 선발에 없는 카드와 이번 시즌 카드는 급여가 바뀌지 않아 팀 · 밸런스를 읽지 않는다(시도당 쿼리 최소화).
+ * 성공하면 이 카드가 든 편성의 지난 시즌 급여가 예산을 넘는 시도는 막는다. 예산은 편성을 저장할 때만 재므로, 여기서 막지 않으면 넘은 채로
+ * 경기를 뛰게 된다. 팀 선발과 컵 명단을 함께 본다.
  */
 async function checkEnhanceSalary(
   db: Db,
+  l: EnhanceLineups,
   profileId: string,
   careerId: string,
+  season: number,
   nextLevel: number,
-  now: string,
 ) {
-  const season = teamSeasonAt(now);
-  if (season === null) return;
-  const [team] = await myTeamIn(db, profileId, season);
-  if (!team) return;
-  const ids = slotIdsOf(team).filter((x): x is string => !!x);
-  if (!ids.includes(careerId)) return;
-  const eligible = eligibleMap(await careersByIds(db, ids), profileId, season, true);
-  const salary = pastSalarySum(
-    ids.map((id) => {
-      const c = eligible.get(id);
-      return c && id === careerId ? { ...c, enhance: nextLevel } : c;
-    }),
-    season,
+  const eligible = eligibleAt(l, profileId, careerId, season, nextLevel);
+  const salaryOf = (slots: readonly (string | null)[]) =>
+    pastSalarySum(
+      slots.filter((x): x is string => !!x).map((id) => eligible.get(id)),
+      season,
+    );
+  const salary = Math.max(
+    l.inTeam ? salaryOf(l.slots) : 0,
+    l.inCup && l.cup ? salaryOf(l.cup.slots) : 0,
   );
   if (salary === 0) return;
   const budget = await pastSalaryBudgetOf(db, season);
@@ -105,6 +143,38 @@ async function checkEnhanceSalary(
       '강화에 성공하면 선발 급여가 예산을 넘어요. 선발을 바꾼 뒤 다시 시도해 주세요.',
       'ENHANCE_SALARY',
     );
+}
+
+/**
+ * 단계가 바뀐 뒤의 팀 OVR · 컵 명단 OVR. 저장된 값이 곧 랭킹 · 매칭 · 컵 구간의 기준이므로, 강화 batch에서 함께 고친다.
+ * 편성을 저장할 때와 같은 계산이다.
+ */
+function teamOvrAfter(
+  l: EnhanceLineups,
+  profileId: string,
+  careerId: string,
+  season: number,
+  level: number,
+): EnhanceTeamChange {
+  const eligible = eligibleAt(l, profileId, careerId, season, level);
+  const { team, cup } = l;
+  const cupOvr =
+    l.inCup && cup
+      ? lineupOvr(buildLineup(cup.formation, cup.slots, eligible, cup.layout))
+      : team.cupOvr;
+  return {
+    id: team.id,
+    slotsJson: team.slotsJson,
+    presetsJsonBefore: team.presetsJson,
+    ovr: l.inTeam
+      ? lineupOvr(buildLineup(team.formation as FormationId, l.slots, eligible, layoutOf(team)))
+      : team.ovr,
+    cupOvr,
+    presetsJson:
+      l.inCup && cup
+        ? JSON.stringify(presetsOf(team).map((p) => (p.cup ? { ...p, ovr: cupOvr ?? 0 } : p)))
+        : team.presetsJson,
+  };
 }
 
 export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
@@ -183,11 +253,20 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
       throw stale();
     // 잔액 행이 없거나 모자라면 batch 전에 막는다(batch도 잔액을 다시 본다).
     if (snap.balance < cost) throw fundsShort();
-    await checkCupEnhance(db, me.id, careerId, teamSeasonAt(now), now);
-    await checkEnhanceSalary(db, me.id, careerId, card.level + 1, now);
+    // 팀 행은 한 번만 읽어 컵 · 리그 잠금 · 급여 · OVR 계산에 함께 쓴다.
+    const season = teamSeasonAt(now);
+    const [team] = season === null ? [] : await myTeamIn(db, me.id, season);
+    await checkCupEnhance(db, me.id, careerId, season, now, team);
+    const lineups = season === null ? null : await lineupsWith(db, careerId, team);
+    if (lineups && season !== null)
+      await checkEnhanceSalary(db, lineups, me.id, careerId, season, card.level + 1);
 
     const r = roll();
     const out = enhanceOutcome(card.level, card.fails, r, odds);
+    const teamChange =
+      lineups && season !== null && out.to !== card.level
+        ? teamOvrAfter(lineups, me.id, careerId, season, out.to)
+        : undefined;
     let res: Awaited<ReturnType<typeof attemptEnhance>>;
     try {
       res = await attemptEnhance(db, {
@@ -205,6 +284,7 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
         roll: r,
         cost,
         now,
+        ...(teamChange ? { team: teamChange } : {}),
       });
     } catch (e) {
       // 같은 구단주가 동시에 영입 · 구매를 해 잔액이 모자라게 되면 CHECK 위반으로 batch 전체가 되돌아간다.
@@ -231,6 +311,8 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
         NO_STORE,
       );
     }
+    // 팀 OVR이 바뀌었으면 팀 저장과 같은 공개 목록 캐시를 지운다.
+    if (teamChange && season !== null) purgeEdge(c, STALE.teamSaved(season));
     const titles = await enhanceTitlesAfter(db, me.id, now);
     return ok(
       c,

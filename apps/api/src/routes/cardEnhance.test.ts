@@ -24,6 +24,10 @@ import {
   ownerFunds,
   ownerTeams,
 } from '../db/schema.js';
+import { cardTrades } from '../db/repos/market.js';
+import { careersByIds, eligibleMap } from '../db/repos/ownerTeams.js';
+import { buildLineup, lineupOvr } from '../team/sim.js';
+import { marketRatio } from '@offside/contracts/market-value';
 import { createTestD1, syncCards, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 
@@ -511,6 +515,119 @@ describe('카드 강화 (T-11-373)', () => {
     expect(await balanceOf(owner.profileId)).toBe(100_000_000);
     nextRoll(0);
     expect((await enhance(owner.cookie, bench, first)).status).toBe(200);
+  });
+
+  it('단계가 바뀌면 저장된 팀 OVR을 고치고, 유지되거나 선발 밖이면 팀을 건드리지 않는다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const players = await Promise.all(Array.from({ length: 11 }, () => addCard(owner.profileId)));
+    const bench = await addCard(owner.profileId);
+    await fund(owner.profileId, 100_000_000);
+    await activate({ enhanceOpen: 1 });
+    const teamId = await addTeam(owner.profileId, players);
+    const ovrNow = async () =>
+      (await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, teamId)))[0]!.ovr;
+    const expected = async () =>
+      lineupOvr(
+        buildLineup(
+          '4-3-3',
+          players,
+          eligibleMap(await careersByIds(ctx.db, players), owner.profileId, 0, true),
+        ),
+      );
+    // 선발 밖 카드는 팀을 건드리지 않는다.
+    nextRoll(0);
+    expect((await enhance(owner.cookie, bench, first)).status).toBe(200);
+    expect(await ovrNow()).toBe(60);
+    // 유지(실패 수만 는다)도 그대로다.
+    nextRoll(9500);
+    expect((await enhance(owner.cookie, players[0]!, first)).status).toBe(200);
+    expect(await ovrNow()).toBe(60);
+    // 성공하면 저장값이 편성 저장과 같은 계산이 된다.
+    await ctx.db
+      .update(cards)
+      .set({ enhance: 9, enhanceFails: 0 })
+      .where(eq(cards.careerId, players[0]!));
+    await ctx.db
+      .update(cards)
+      .set({ enhance: 9 })
+      .where(inArray(cards.careerId, players.slice(1)));
+    const atNine = { level: 9, fails: 0, cost: ENHANCE_COSTS[9]!, rateBp: 1000, downBp: 2000 };
+    nextRoll(0);
+    expect((await enhance(owner.cookie, players[1]!, atNine)).status).toBe(200);
+    const up = await ovrNow();
+    expect(up).toBe(await expected());
+    expect(up).toBeGreaterThan(60);
+    // 실패로 내려가도 같이 내려간다.
+    nextRoll(1500);
+    expect((await enhance(owner.cookie, players[2]!, atNine)).status).toBe(200);
+    expect((await cardOf(players[2]!)).enhance).toBe(8);
+    expect(await ovrNow()).toBe(await expected());
+  });
+
+  it('컵 명단에만 든 카드도 컵 OVR을 고치고 급여 예산을 본다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const stars = await Promise.all(Array.from({ length: 3 }, () => addCard(owner.profileId)));
+    const starter = await addCard(owner.profileId);
+    const low = await addCard(owner.profileId);
+    const spare = await addCard(owner.profileId);
+    await fund(owner.profileId, 100_000_000);
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1(예산 80), 카드는 시즌 0(지난 시즌)
+    await activate({ enhanceOpen: 1 });
+    await ctx.db.update(cards).set({ peak: 96 }).where(inArray(cards.careerId, stars));
+    await ctx.db.update(cards).set({ peak: 95 }).where(eq(cards.careerId, starter));
+    await ctx.db.update(cards).set({ peak: 80 }).where(eq(cards.careerId, low));
+    const slots = [starter, ...stars, low, spare, ...Array<null>(5).fill(null)];
+    const teamId = await addTeam(owner.profileId, Array<null>(11).fill(null), 1);
+    await ctx.db
+      .update(ownerTeams)
+      .set({
+        cupOvr: 30,
+        presetsJson: JSON.stringify([
+          { name: '컵', formation: '4-3-3', slots, layout: null, cup: true, ovr: 30, filled: 6 },
+        ]),
+      })
+      .where(eq(ownerTeams.id, teamId));
+    // 급여 합이 넘는 시도는 컵 명단에서도 막는다.
+    await ctx.db.update(cards).set({ peak: 81 }).where(eq(cards.careerId, spare));
+    expect(await reason(await enhance(owner.cookie, starter, { ...first, rateBp: 7200 }))).toBe(
+      'ENHANCE_SALARY',
+    );
+    // 예산이 넉넉하면 강화되고, 컵 OVR과 프리셋 OVR이 함께 바뀌고 팀 OVR은 그대로다.
+    await ctx.db
+      .update(cards)
+      .set({ peak: 60 })
+      .where(inArray(cards.careerId, [...stars, starter]));
+    nextRoll(0);
+    expect((await enhance(owner.cookie, spare, first)).status).toBe(200);
+    const [row] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, teamId));
+    expect(row!.ovr).toBe(60);
+    expect(row!.cupOvr).not.toBe(30);
+    expect(JSON.parse(row!.presetsJson!)[0].ovr).toBe(row!.cupOvr);
+  });
+
+  it('등록에 강화 단계를 남기고, 거래 기록 %는 그 단계로 잰다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const id = await addCard(owner.profileId);
+    await ctx.db.update(cards).set({ enhance: 5 }).where(eq(cards.careerId, id));
+    const price = tradeValue(1_000_000, 5);
+    const res = await call('POST', '/v1/market/listings', {
+      cookie: owner.cookie,
+      headers: { 'Idempotency-Key': `enh-list-${++seq}` },
+      body: { careerId: id, price },
+    });
+    expect(res.status).toBe(201);
+    const [listing] = await ctx.db
+      .select()
+      .from(marketListings)
+      .where(eq(marketListings.careerId, id));
+    expect(listing!.enhance).toBe(5);
+    // 판 뒤 새 주인이 더 올려도 그 거래의 %는 그대로다.
+    await ctx.db
+      .update(marketListings)
+      .set({ status: 'sold', closedAt: '2026-09-30T02:00:00.000Z' })
+      .where(eq(marketListings.id, listing!.id));
+    await ctx.db.update(cards).set({ enhance: 9 }).where(eq(cards.careerId, id));
+    expect((await cardTrades(ctx.db, id))[0]!.ratio).toBe(marketRatio(price, price));
   });
 
   it('이적시장에서 산 카드도 새 주인이 강화하고, 단계와 실패 수는 카드를 따라간다', async () => {

@@ -53,15 +53,16 @@ async function googleViaBrowser(ctx: TestD1, token: string, sub: string, verifie
   );
   expect(startRes.status).toBe(200);
   const { url } = ((await startRes.json()) as { data: { url: string } }).data;
-  const ticket = new URL(url).searchParams.get('state')!;
+  const state = new URL(url).searchParams.get('state')!;
   const cb = await createApp().request(
-    `/v1/auth/google/callback?${new URLSearchParams({ code: `fake:${sub}`, state: ticket })}`,
+    `/v1/auth/google/callback?${new URLSearchParams({ code: `fake:${sub}`, state })}`,
     {},
     ctx.env,
   );
   expect(cb.status).toBe(302);
   expect(cb.headers.get('Set-Cookie') ?? '').not.toContain('offside_session=');
-  return { ticket, location: new URL(cb.headers.get('Location')!) };
+  const location = new URL(cb.headers.get('Location')!);
+  return { state, ticket: location.searchParams.get('ticket')!, location };
 }
 
 describe('앱 로그인 (T-11-003)', () => {
@@ -104,8 +105,7 @@ describe('앱 로그인 (T-11-003)', () => {
     const before = await profileOf(ctx, token);
     const { ticket, location } = await googleViaBrowser(ctx, token, 'g-app-1');
     expect(`${location.protocol}//${location.host}`).toBe('offside://auth');
-    expect(location.searchParams.get('google')).toBe('linked');
-    expect(location.searchParams.get('ticket')).toBe(ticket);
+    expect(location.searchParams.get('google')).toBe('ok');
 
     const ex = await appCall(ctx, '/v1/auth/app/exchange', { ticket, verifier: VERIFIER }, token);
     expect(ex.status).toBe(200);
@@ -146,8 +146,7 @@ describe('앱 로그인 (T-11-003)', () => {
     );
 
     const second = await newAppSession(ctx);
-    const { ticket, location } = await googleViaBrowser(ctx, second, 'g-app-2');
-    expect(location.searchParams.get('google')).toBe('switched');
+    const { ticket } = await googleViaBrowser(ctx, second, 'g-app-2');
     const ex = await appCall(ctx, '/v1/auth/app/exchange', { ticket, verifier: VERIFIER }, second);
     const { data } = (await ex.json()) as { data: { token: string; result: string } };
     expect(data.result).toBe('switched');
@@ -175,6 +174,60 @@ describe('앱 로그인 (T-11-003)', () => {
     // 거절 뒤에도 원래 세션은 그대로 교환할 수 있다.
     const ok = await appCall(ctx, '/v1/auth/app/exchange', { ticket, verifier: VERIFIER }, token);
     expect(ok.status).toBe(200);
+  });
+
+  it('구글: 시작할 때 받은 state로는 콜백 뒤에도 교환할 수 없고, 교환 전에는 연결되지 않는다 (T-11-635)', async () => {
+    const token = await newAppSession(ctx);
+    const { state, ticket } = await googleViaBrowser(ctx, token, 'g-app-bind');
+    expect(ticket).not.toBe(state);
+
+    const stolen = await appCall(
+      ctx,
+      '/v1/auth/app/exchange',
+      { ticket: state, verifier: VERIFIER },
+      token,
+    );
+    expect(stolen.status).toBe(400);
+    expect((await profileOf(ctx, token)).linked.google).toBe(false);
+
+    const ex = await appCall(ctx, '/v1/auth/app/exchange', { ticket, verifier: VERIFIER }, token);
+    expect(ex.status).toBe(200);
+  });
+
+  it('구글: 이미 연결된 계정도 state만으로는 가져갈 수 없다 (T-11-635)', async () => {
+    const owner = await newAppSession(ctx);
+    const linked = await googleViaBrowser(ctx, owner, 'g-app-owner');
+    const done = await appCall(
+      ctx,
+      '/v1/auth/app/exchange',
+      { ticket: linked.ticket, verifier: VERIFIER },
+      owner,
+    );
+    expect(done.status).toBe(200);
+
+    const other = await newAppSession(ctx);
+    const { state } = await googleViaBrowser(ctx, other, 'g-app-owner');
+    const stolen = await appCall(
+      ctx,
+      '/v1/auth/app/exchange',
+      { ticket: state, verifier: VERIFIER },
+      other,
+    );
+    expect(stolen.status).toBe(400);
+  });
+
+  it('구글: 콜백을 마친 state로 콜백을 다시 불러도 티켓이 바뀌지 않는다 (T-11-635)', async () => {
+    const token = await newAppSession(ctx);
+    const { state, ticket } = await googleViaBrowser(ctx, token, 'g-app-first');
+    const replay = await createApp().request(
+      `/v1/auth/google/callback?${new URLSearchParams({ code: 'fake:g-app-second', state })}`,
+      {},
+      ctx.env,
+    );
+    expect(replay.status).toBe(302);
+    expect(replay.headers.get('Location') ?? '').not.toContain('offside://');
+    const [row] = await ctx.db.select().from(appAuthTickets).where(eq(appAuthTickets.id, ticket));
+    expect(row?.googleSub).toBe('g-app-first');
   });
 
   it('구글: 콜백 전(브라우저에서 로그인하기 전) 티켓은 교환할 수 없다', async () => {

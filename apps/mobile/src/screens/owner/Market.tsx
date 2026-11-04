@@ -38,6 +38,7 @@ import {
   type OwnerTeamResponse,
   type TeamPlayer,
 } from '@offside/app-core/api/team';
+import { enhanceLossNote } from '@offside/app-core/cardEnhance';
 import { marketSalaryText } from '@offside/app-core/salary';
 import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import {
@@ -2101,6 +2102,9 @@ export default function Market() {
             {L.sheetRelease}
           </Txt>
           <Txt>{releaseConfirmText(pickedPlayers.length, pickedAmount)}</Txt>
+          {enhanceLossNote(pickedPlayers) ? (
+            <Txt v="sm">{enhanceLossNote(pickedPlayers)}</Txt>
+          ) : null}
           {errText}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Btn style={{ flex: 1 }} onPress={closeSheets}>

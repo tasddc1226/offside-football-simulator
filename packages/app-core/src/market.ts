@@ -12,7 +12,7 @@ import type {
 import type { FundsItem } from '@offside/contracts';
 import { ATTR_KEYS, attrLabels, type AttrKey } from '@offside/game/data';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
-import { tradeBand, tradeValue } from '@offside/contracts/card-enhance';
+import { enhancedPeak, tradeBand, tradeValue } from '@offside/contracts/card-enhance';
 import {
   MARKET_TYPES,
   RELEASE_MAX,
@@ -454,7 +454,7 @@ export const needsOwnerLogin = (e: { code: string; reason?: string }) =>
  * 선발에 넣으면 급여 예산을 쓴다.
  */
 export function cardMeta(
-  c: Pick<MarketCard, 'legendScore' | 'transfers' | 'peak' | 'season'>,
+  c: Pick<MarketCard, 'legendScore' | 'transfers' | 'peak' | 'season' | 'enhance'>,
   current: number | null = null,
 ) {
   const meta = L.cardMeta({
@@ -462,7 +462,7 @@ export function cardMeta(
     transfers: c.transfers,
   });
   return current !== null && isWildcardSeason(c.season, current)
-    ? L.pastCardMeta({ season: teamSeasonLabel(c.season), salary: salaryOf(c.peak), meta })
+    ? L.pastCardMeta({ season: teamSeasonLabel(c.season), salary: salaryOf(enhancedPeak(c)), meta })
     : meta;
 }
 

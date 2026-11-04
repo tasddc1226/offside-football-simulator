@@ -51,4 +51,6 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   tryFail: '強化できませんでした。しばらくしてからもう一度お試しください。',
   sellNote: (p) =>
     `+${p.lv}の強化価値${p.value}が販売価格に加わります。最高価格の倍率は強化価値にはかかりません。`,
+  lossNote: (p) =>
+    `強化した選手が${p.n}人含まれています。強化段階はなくなり、強化に使った資金は戻りません。`,
 };

@@ -106,11 +106,17 @@ export const enhanceSellNote = (level: number | null | undefined) =>
   level ? L.sellNote({ lv: level, value: fmtValue(enhanceValue(level)) }) : null;
 
 /**
- * 자리 OVR을 카드에 따로 보일지. 제 자리가 아닐 때만 보인다. 강화 OVR만큼 높은 것은 +N 배지로 알 수 있어 제 자리로 친다.
+ * 자리 OVR을 카드에 따로 보일지. 제 자리가 아닐 때만 보인다. 강화 OVR을 뺀 값으로 재서, 강화 덕에 최고 OVR과 숫자가 같아진 경우도 제 자리가 아니면 보인다.
  * (웹 team/PlayerCard.svelte · 앱 components/PlayerCard.tsx)
  */
 export const showsPosOvr = (peak: number, posOvr: number, level: number | null | undefined) =>
-  posOvr !== peak && posOvr - (level ?? 0) !== peak;
+  posOvr - (level ?? 0) !== peak;
+
+/** 방출 · 카드 과제 확인 문구: 강화한 선수가 있으면 단계와 강화에 쓴 자금이 함께 사라진다고 알린다(없으면 null). */
+export function enhanceLossNote(players: readonly { enhance?: number | null | undefined }[]) {
+  const n = players.filter((p) => p.enhance).length;
+  return n ? L.lossNote({ n }) : null;
+}
 
 /** 서버 거절 이유를 창 문구로(모르는 이유는 서버 문구를 그대로). */
 export function enhanceErrorText(e: { reason?: string | undefined; message?: string }): string {

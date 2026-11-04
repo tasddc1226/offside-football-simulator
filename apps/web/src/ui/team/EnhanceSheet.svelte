@@ -44,7 +44,8 @@
 
   $effect(() => {
     dialog.showModal();
-    void load();
+    // load가 읽는 info를 이 effect의 의존성으로 삼으면 응답마다 다시 불러 요청이 끝없이 이어진다. 창을 열 때 한 번만 부른다.
+    untrack(() => void load());
     return lockScroll();
   });
 

@@ -491,6 +491,7 @@ export function TeamLineup({
                             youth: false,
                           }}
                           code={p.dpos ?? p.pos}
+                          animate={false}
                         />
                       </Press>
                     </DragPlayer>

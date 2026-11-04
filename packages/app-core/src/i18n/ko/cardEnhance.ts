@@ -51,6 +51,8 @@ const ko = {
   tryFail: '강화하지 못했어요. 잠시 후 다시 시도해 주세요.',
   sellNote: (p: { lv: number; value: string }) =>
     `+${p.lv} 강화 가치 ${p.value}${iGa(p.value)} 판매 가격에 더해져요. 최고가 배수는 강화 가치에 붙지 않아요.`,
+  lossNote: (p: { n: number }) =>
+    `강화한 선수 ${p.n}명이 들어 있어요. 강화 단계는 사라지고, 강화에 쓴 자금은 돌려받지 못해요.`,
 };
 
 export type CardEnhanceMsgs = typeof ko;

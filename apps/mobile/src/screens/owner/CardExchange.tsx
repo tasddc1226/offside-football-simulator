@@ -11,6 +11,7 @@ import {
   type OwnerTeamResponse,
   type TeamPlayer,
 } from '@offside/app-core/api/team';
+import { enhanceLossNote } from '@offside/app-core/cardEnhance';
 import { claimExchange, fetchExchangeMe } from '@offside/app-core/api/exchange';
 import type { ExchangeMeResponse } from '@offside/contracts';
 import {
@@ -368,6 +369,7 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
               ))}
             </View>
             <Txt v="sm">{L.confirmGone}</Txt>
+            {enhanceLossNote(chosen) ? <Txt v="sm">{enhanceLossNote(chosen)}</Txt> : null}
             <Txt v="sm" tone="muted">
               {L.confirmFunds({ value: value(chosen) })}
             </Txt>

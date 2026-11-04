@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { PlayerManagement } from '@offside/app-core/playerManagement';
   import { releaseLock, releaseAmount, releaseValue, releaseConfirmText, releaseRowInfo, fundsText } from '@offside/app-core/market';
+  import { enhanceLossNote } from '@offside/app-core/cardEnhance';
   import { localCareerNames } from '@offside/game/hof-store';
   import { playerName } from '@offside/app-core/format';
   import { marketText as M } from '@offside/app-core/i18n/ko/market';
@@ -45,6 +46,7 @@
         <b>{M.dockSum({n:selected.length})} · {fundsText(amount)}</b>
         {#if pm.confirm}
           <p>{releaseConfirmText(selected.length, amount)}</p>
+          {#if enhanceLossNote(selected)}<p class="fs-sm" data-enhance-loss>{enhanceLossNote(selected)}</p>{/if}
           <div class="pm-actions"><button class="btn" disabled={pm.busy} onclick={() => manager.confirm(false)}>{M.close}</button><button class="btn pm-danger" data-act="players-release-confirm" disabled={pm.busy} onclick={() => manager.release()}>{M.releaseBtn({n:selected.length})}</button></div>
         {:else}<p class="muted fs-sm">{M.dockWarn}</p><button class="btn pm-danger" data-act="players-release" disabled={pm.busy} onclick={() => manager.confirm(true)}>{M.releaseBtn({n:selected.length})}</button>{/if}
       </section>

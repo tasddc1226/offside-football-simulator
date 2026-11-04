@@ -5,10 +5,12 @@ import {
   enhanceResultKind,
   enhanceResultText,
   enhanceSellNote,
+  enhanceLossNote,
   showsPosOvr,
   enhanceView,
 } from './cardEnhance.js';
 import { cardEnhanceText as L } from './i18n/ko/cardEnhance.js';
+import { marketSalaryText } from './salary.js';
 
 describe('카드 강화 창 (T-11-373)', () => {
   const open = { ...DEFAULT_ENHANCE_RULES, open: true };
@@ -71,8 +73,21 @@ describe('카드 강화 창 (T-11-373)', () => {
     expect(showsPosOvr(84, 87, 3)).toBe(false);
     expect(showsPosOvr(84, 79, 0)).toBe(true);
     expect(showsPosOvr(84, 82, 3)).toBe(true);
-    // 제 자리가 아니어도 숫자가 같으면 두 번 보이지 않는다.
-    expect(showsPosOvr(84, 84, 3)).toBe(false);
+    // 강화 덕에 최고 OVR과 숫자가 같아져도 제 자리가 아니면 보인다(제 자리면 87이다).
+    expect(showsPosOvr(84, 84, 3)).toBe(true);
     expect(showsPosOvr(84, 87, null)).toBe(true);
+  });
+
+  it('방출 · 과제 확인에는 강화한 선수가 있을 때만 경고한다', () => {
+    expect(enhanceLossNote([{ enhance: 0 }, {}])).toBeNull();
+    expect(enhanceLossNote([{ enhance: 3 }, { enhance: 1 }, {}])).toBe(L.lossNote({ n: 2 }));
+  });
+
+  it('이적시장 급여는 강화 OVR까지 넣어 보인다', () => {
+    const plain = { peak: 85, season: 0 };
+    expect(marketSalaryText({ ...plain, enhance: 10 }, 1)).not.toBe(marketSalaryText(plain, 1));
+    expect(marketSalaryText({ ...plain, enhance: 10 }, 1)).toBe(
+      marketSalaryText({ peak: 95, season: 0 }, 1),
+    );
   });
 });

@@ -85,6 +85,16 @@ export async function enhanceByRequestKey(db: Db, profileId: string, requestKey:
     }>();
 }
 
+/** 강화로 바뀌는 팀 OVR · 컵 명단 OVR. 그 사이 편성을 저장했으면(저장이 OVR을 다시 잰다) 건드리지 않는다. */
+export type EnhanceTeamChange = {
+  id: string;
+  slotsJson: string;
+  presetsJsonBefore: string | null;
+  ovr: number;
+  cupOvr: number | null;
+  presetsJson: string | null;
+};
+
 /**
  * 강화 한 번. 1) 카드가 라우트가 본 단계 · 실패 수 그대로(내 카드 · 감독 아님 · 기준가 있음 · 열린 등록 없음)이고, 같은 멱등 키가 없고, 잔액이 비용 이상일 때만 기록을 넣고 2) 그 행이 있으면 자금을 빼고 3) 카드
  * 단계 · 실패 수를 바꾼다. won = 1이 들어갔는가.
@@ -106,6 +116,7 @@ export async function attemptEnhance(
     roll: number;
     cost: number;
     now: string;
+    team?: EnhanceTeamChange;
   },
 ): Promise<{ won: boolean; balance: number }> {
   const d1 = db.$client;
@@ -149,6 +160,24 @@ export async function attemptEnhance(
           WHERE career_id = ? AND ${won}`,
       )
       .bind(a.to, a.nextFails, a.now, a.careerId, a.id),
+    ...(a.team
+      ? [
+          d1
+            .prepare(
+              `UPDATE owner_teams SET ovr = ?, cup_ovr = ?, presets_json = ?
+                WHERE id = ? AND slots_json = ? AND presets_json IS ? AND ${won}`,
+            )
+            .bind(
+              a.team.ovr,
+              a.team.cupOvr,
+              a.team.presetsJson,
+              a.team.id,
+              a.team.slotsJson,
+              a.team.presetsJsonBefore,
+              a.id,
+            ),
+        ]
+      : []),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(a.profileId),
   ]);
   const row = results.at(-1)!.results[0] as { balance: number } | undefined;

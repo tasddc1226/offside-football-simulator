@@ -19,6 +19,7 @@ CREATE INDEX `card_enhance_log_profile_idx` ON `card_enhance_log` (`profile_id`,
 CREATE INDEX `card_enhance_log_career_idx` ON `card_enhance_log` (`career_id`,`created_at`);--> statement-breakpoint
 ALTER TABLE `cards` ADD `enhance` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `cards` ADD `enhance_fails` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE `market_listings` ADD `enhance` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `owner_title_progress` ADD `enhance_tries` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `owner_title_progress` ADD `enhance_keeps` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `owner_title_progress` ADD `enhance_downs` integer DEFAULT 0 NOT NULL;--> statement-breakpoint

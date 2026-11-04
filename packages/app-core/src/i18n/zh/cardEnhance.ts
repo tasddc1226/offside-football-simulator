@@ -46,4 +46,5 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   retry: '重試',
   tryFail: '無法強化，請稍後再試。',
   sellNote: (p) => `+${p.lv} 的強化價值 ${p.value} 會加到售價。最高售價的倍率不適用於強化價值。`,
+  lossNote: (p) => `包含 ${p.n} 名已強化的球員。強化階段會消失，強化花費的資金也不會退還。`,
 };

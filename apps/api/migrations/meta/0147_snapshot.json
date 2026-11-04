@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "39aef5a8-1da8-443a-be37-00bb787cf226",
+  "id": "09268a6c-c6d0-4b1c-a6ab-49ceb2946ac4",
   "prevId": "fbe2dfd2-f5b7-4996-a468-55b93cbf3fb5",
   "tables": {
     "acquisition_consents": {
@@ -241,6 +241,20 @@
         },
         "profile_id": {
           "name": "profile_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "google_sub": {
+          "name": "google_sub",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "google_email": {
+          "name": "google_email",
           "type": "text",
           "primaryKey": false,
           "notNull": false,
@@ -1342,132 +1356,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "card_enhance_log": {
-      "name": "card_enhance_log",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "profile_id": {
-          "name": "profile_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "career_id": {
-          "name": "career_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "request_key": {
-          "name": "request_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "from_level": {
-          "name": "from_level",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "to_level": {
-          "name": "to_level",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "fails": {
-          "name": "fails",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "success": {
-          "name": "success",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "rate_bp": {
-          "name": "rate_bp",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "down_bp": {
-          "name": "down_bp",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "roll": {
-          "name": "roll",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "cost": {
-          "name": "cost",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "card_enhance_log_request_unique": {
-          "name": "card_enhance_log_request_unique",
-          "columns": [
-            "profile_id",
-            "request_key"
-          ],
-          "isUnique": true
-        },
-        "card_enhance_log_profile_idx": {
-          "name": "card_enhance_log_profile_idx",
-          "columns": [
-            "profile_id",
-            "created_at"
-          ],
-          "isUnique": false
-        },
-        "card_enhance_log_career_idx": {
-          "name": "card_enhance_log_career_idx",
-          "columns": [
-            "career_id",
-            "created_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "card_exchange_claims": {
       "name": "card_exchange_claims",
       "columns": {
@@ -1771,22 +1659,6 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
-        },
-        "enhance": {
-          "name": "enhance",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "enhance_fails": {
-          "name": "enhance_fails",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
         },
         "created_at": {
           "name": "created_at",
@@ -7142,46 +7014,6 @@
         },
         "division": {
           "name": "division",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "enhance_tries": {
-          "name": "enhance_tries",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "enhance_keeps": {
-          "name": "enhance_keeps",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "enhance_downs": {
-          "name": "enhance_downs",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "enhance_near": {
-          "name": "enhance_near",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "enhance_spent": {
-          "name": "enhance_spent",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,

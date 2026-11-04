@@ -101,7 +101,7 @@
   import { marketText as L } from '@offside/app-core/i18n/ko/market';
   import { tradeValue } from '@offside/contracts/card-enhance';
   import { RELEASE_MAX } from '@offside/contracts/market-value';
-  import { enhanceSellNote } from '@offside/app-core/cardEnhance';
+  import { enhanceLossNote, enhanceSellNote } from '@offside/app-core/cardEnhance';
 
   const local = localCareerNames();
   // T-11-442 상점의 '방출하러 가기'로 오면 방출 화면부터 연다.
@@ -690,6 +690,7 @@
   <div class="mk-sheet mk-confirm" role="dialog" aria-modal="true" aria-label={L.sheetRelease}>
     <h2>{L.sheetRelease}</h2>
     <p>{releaseConfirmText(pickedPlayers.length, pickedAmount)}</p>
+    {#if enhanceLossNote(pickedPlayers)}<p class="fs-sm" data-enhance-loss>{enhanceLossNote(pickedPlayers)}</p>{/if}
     {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
     <div class="mk-actions">
       <button class="btn" onclick={closeSheets}>{L.close}</button>
