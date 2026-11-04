@@ -1,5 +1,5 @@
 // T-11-068 앱 광고 칸(웹 ads/AdSlot.svelte). 위치 이름만 받고 노출 규칙은 app-core adPolicy가 정한다. 승인된 위치에 본문과 함께 스크롤되는 칸을 둔다.
-// 맞춤 광고 동의를 받지 않아 비개인화 광고만 요청한다(그래서 iOS 추적 동의 창도 띄우지 않는다). 개발 빌드는 구글 테스트 광고를 쓴다.
+// 맞춤 광고 동의를 받지 않아 비개인화 광고를 요청한다(그래서 iOS 추적 동의 창도 띄우지 않는다. 예외는 T-11-632 Android 시험군). 개발 빌드는 구글 테스트 광고를 쓴다.
 // EEA·영국·스위스는 AdMob 'OFFSIDE 유럽 동의' 메시지(UMP)를 첫 광고 칸에서 한 번 띄우고, 광고 요청은 그 뒤에 한다.
 import { FONT } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
@@ -7,7 +7,7 @@ import { Platform, View } from 'react-native';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { useSnapshot } from 'valtio';
 import { shouldShow, type AdPlace } from '@offside/app-core/adPolicy';
-import { askConsent } from '../platform/adConsent';
+import { adRequestOptions, askConsent } from '../platform/adConsent';
 import { adFree } from '../platform/adFree';
 import { rem } from '../theme/type';
 import { Txt } from '../ui/Txt';
@@ -56,7 +56,7 @@ export function AdSlot({ place }: { place: AdPlace }) {
       unitId={UNIT}
       width={width}
       size={BannerAdSize.ANCHORED_ADAPTIVE_BANNER}
-      requestOptions={{ requestNonPersonalizedAdsOnly: true }}
+      requestOptions={adRequestOptions()}
       onAdFailedToLoad={() => {
         lastShown.set(place, Infinity);
         setPhase('off');
