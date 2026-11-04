@@ -58,13 +58,6 @@ export const chat: Translation<ChatMsgs> = {
   sharePlayerTag: 'Player',
   shareRecord: (p: { w: number; d: number; l: number }) => `${p.w}W ${p.d}D ${p.l}L`,
   shareOpenTeam: 'View team',
-  noticeRetired: (p: { club: string; number: number; name: string }) =>
-    `${p.club} retired No. ${p.number} for ${p.name}.`,
-  noticeRetiredMany: (p: { n: number }) => `${p.n} new retired numbers.`,
-  noticeRetiredTag: 'Retired number',
-  noticeRetiredSub: (p: { club: string; number: number }) => `${p.club} No. ${p.number}`,
-  noticeRetiredManyTitle: (p: { n: number }) => `${p.n} new retired numbers`,
-  noticeRetiredManySub: (p: { name: string; others: number }) => `${p.name} and ${p.others} more`,
   shareListingTag: 'Transfer market',
   shareListingOpen: 'View listing',
   shareListingGone: 'This player was already sold or delisted.',

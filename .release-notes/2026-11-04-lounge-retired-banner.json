@@ -1,0 +1,18 @@
+{
+  "id": "t-11-636-lounge-retired-banner",
+  "title": "라운지 영구결번 배너 제거",
+  "items": ["라운지 대화 사이에 영구결번 배너가 뜨지 않아요."],
+  "en": {
+    "title": "Retired number banners removed from the lounge",
+    "items": ["Retired number banners no longer appear between lounge messages."]
+  },
+  "ja": {
+    "title": "ラウンジの永久欠番バナーを削除",
+    "items": ["ラウンジの会話の間に永久欠番バナーが表示されなくなりました。"]
+  },
+  "zh": {
+    "title": "移除休息室的永久退役號碼橫幅",
+    "items": ["休息室的對話之間不再顯示永久退役號碼橫幅。"]
+  },
+  "availability": "web-app"
+}
