@@ -631,6 +631,8 @@ export const cardEnhanceLog = sqliteTable(
     uniqueIndex('card_enhance_log_request_unique').on(table.profileId, table.requestKey),
     // 자금 내역 · 대조.
     index('card_enhance_log_profile_idx').on(table.profileId, table.createdAt),
+    // 카드 하나의 강화 이력(소유자가 바뀌어도 이어진다).
+    index('card_enhance_log_career_idx').on(table.careerId, table.createdAt),
   ],
 );
 

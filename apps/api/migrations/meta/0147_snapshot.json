@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d1ea0d1c-f573-4a83-89fc-ad71cac81bd2",
+  "id": "39aef5a8-1da8-443a-be37-00bb787cf226",
   "prevId": "fbe2dfd2-f5b7-4996-a468-55b93cbf3fb5",
   "tables": {
     "acquisition_consents": {
@@ -1450,6 +1450,14 @@
           "name": "card_enhance_log_profile_idx",
           "columns": [
             "profile_id",
+            "created_at"
+          ],
+          "isUnique": false
+        },
+        "card_enhance_log_career_idx": {
+          "name": "card_enhance_log_career_idx",
+          "columns": [
+            "career_id",
             "created_at"
           ],
           "isUnique": false
