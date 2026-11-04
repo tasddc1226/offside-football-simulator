@@ -1,10 +1,10 @@
 // T-11-455 은퇴 전면광고(AdMob). 은퇴할 수 있는 나이가 되면 미리 불러 두고, 은퇴 버튼을 누른 순간 준비돼 있을 때만 띄운다.
 // 은퇴 리포트를 읽는 도중에 늦게 뜨지 않게, 준비되지 않았으면 이번 은퇴는 건너뛴다.
-// 광고 제거 구매자 · 동의 실패 · 단위 없음은 부르지 않는다. 비개인화 광고만 요청하고 개발 빌드는 구글 테스트 광고를 쓴다.
+// 광고 제거 구매자 · 동의 실패 · 단위 없음은 부르지 않는다. 기본은 비개인화 광고이고(T-11-632 시험군 제외) 개발 빌드는 구글 테스트 광고를 쓴다.
 import { Platform } from 'react-native';
 import { AdEventType, InterstitialAd, TestIds } from 'react-native-google-mobile-ads';
 import { proxy } from 'valtio';
-import { askConsent } from './adConsent';
+import { adRequestOptions, askConsent } from './adConsent';
 import { adFree, adsOff } from './adFree';
 import { countInterstitial } from './adUsage';
 
@@ -44,7 +44,7 @@ export function prepareRetireAd(now = Date.now()) {
       failedAt = Date.now();
       return;
     }
-    const ad = InterstitialAd.createForAdRequest(UNIT, { requestNonPersonalizedAdsOnly: true });
+    const ad = InterstitialAd.createForAdRequest(UNIT, adRequestOptions());
     const offs = [
       ad.addAdEventListener(AdEventType.LOADED, () => {
         offs.forEach((off) => off());

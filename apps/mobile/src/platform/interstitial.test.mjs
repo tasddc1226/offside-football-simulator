@@ -13,7 +13,10 @@ vi.mock('react-native-google-mobile-ads', () => ({
   TestIds: { INTERSTITIAL: 'test-interstitial' },
   InterstitialAd: { createForAdRequest: f.create },
 }));
-vi.mock('./adConsent', () => ({ askConsent: f.consent }));
+vi.mock('./adConsent', () => ({
+  askConsent: f.consent,
+  adRequestOptions: () => ({ requestNonPersonalizedAdsOnly: true }),
+}));
 vi.mock('./adUsage', () => ({ countInterstitial: f.countInterstitial }));
 vi.mock('./adFree', () => ({
   adFree: {

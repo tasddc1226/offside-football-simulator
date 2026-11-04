@@ -17,7 +17,7 @@ AdMob 직접 연동으로 되돌렸다. 그래서 이번에는 AppLovin을 빼�
     Android pom의 `play-services-ads`)를 다시 보고 고른다.
 - iOS SKAdNetwork ID: `plugins/skadnetwork-ids.json`(Google · Meta · Pangle · Liftoff 152개,
   `https://skadnetwork-ids.applovin.com/v1/skadnetworkids.json?adNetworks=Google,Facebook,ByteDance,Vungle`). 네트워크를 늘리면 다시 받는다.
-- 개인정보: 그대로다. 추적 허용(ATT) 창은 띄우지 않고, 유럽 · 영국 · 스위스는 UMP 동의 창(`platform/adConsent.ts`)을 쓴다.
+- 개인정보: 기본은 비개인화 광고다(T-11-632 Android 시험은 아래 참고). 추적 허용(ATT) 창은 띄우지 않고, 유럽 · 영국 · 스위스는 UMP 동의 창(`platform/adConsent.ts`)을 쓴다.
   UMP는 동의 결과를 AdMob이 고른 광고 파트너에게 넘기므로, AdMob 콘솔 → 개인정보 보호 및 메시지 → 광고 파트너 목록에
   Meta · Pangle · Liftoff가 들어 있는지 확인한다.
 - 네이티브 코드라 OTA로 보낼 수 없다. 1.1.3 이하 앱은 미디에이션 없이 AdMob 광고만 받는다.
@@ -53,3 +53,14 @@ T-11-559에서 1.1.2 · 1.1.3 OTA를 끝내고 스크립트를 지웠다. 최소
 - 운영자 기기(테스트 기기, `adConsent.ts`의 `TEST_DEVICES`)에서 AdMob **광고 검사기**로 각 어댑터가 초기화됐는지,
   미디에이션 그룹의 입찰이 돌아오는지 본다.
 - 출시 뒤 AdMob 보고서 → 미디에이션에서 네트워크별 노출 · eCPM · 채움률을 1~2주 보고 그룹을 조정한다.
+
+## Meta 입찰 시험 (T-11-632)
+
+Meta 입찰 요청이 양쪽 플랫폼 모두 0건이다. Google 문서에 따르면 비개인화 요청에서는 SDK가 모은 신호가 RTB 입찰자에게 가지 않으므로,
+앱의 모든 요청이 비개인화인 것이 원인인지 확인한다(가설, Liftoff는 같은 조건에서 입찰 요청을 받는다).
+
+- 대상: 기기 지역이 한국인 Android 기기의 10%, 동의 메시지 대상이 아닌 경우, 2026-11-14 ~ 11-27 KST(`platform/adPersonalization.ts`).
+  기간이 끝나면 앱을 고치지 않아도 비개인화로 돌아간다.
+- 판단: AdMob 보고서에서 Meta Android 입찰 요청을 시작 뒤 2일 본다. 그대로 0이면 가설을 버리고 Meta 지원에 buyeruid · 허용 목록을 묻는다.
+  늘면 iOS(ATT · ATE 플래그)와 전체 적용을 따로 정한다.
+- 시작 전 확인: 방침 공지, Google Play 데이터 보안의 광고 ID 사용 목적, 기간을 옮기면 방침 9항도 같이 고친다.

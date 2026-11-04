@@ -13,6 +13,8 @@ export default {
       'src/platform/engagement.test.mjs',
       'src/platform/pushAsk.test.mjs',
       'src/platform/chatUnread.test.mjs',
+      'src/platform/adConsent.test.mjs',
+      'src/platform/adPersonalization.test.mjs',
       'src/platform/rewarded.test.mjs',
       'src/platform/interstitial.test.mjs',
       'src/platform/iapItems.test.mjs',
