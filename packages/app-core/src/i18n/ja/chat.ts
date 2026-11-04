@@ -57,13 +57,6 @@ export const chat: Translation<ChatMsgs> = {
   sharePlayerTag: '選手共有',
   shareRecord: (p: { w: number; d: number; l: number }) => `${p.w}勝 ${p.d}分 ${p.l}敗`,
   shareOpenTeam: 'チームを見る',
-  noticeRetired: (p: { club: string; number: number; name: string }) =>
-    `${p.club}の${p.number}番が${p.name}の永久欠番になりました。`,
-  noticeRetiredMany: (p: { n: number }) => `新しい永久欠番が${p.n}件出ました。`,
-  noticeRetiredTag: '永久欠番',
-  noticeRetiredSub: (p: { club: string; number: number }) => `${p.club} ${p.number}番`,
-  noticeRetiredManyTitle: (p: { n: number }) => `新しい永久欠番 ${p.n}件`,
-  noticeRetiredManySub: (p: { name: string; others: number }) => `${p.name}ほか${p.others}件`,
   shareListingTag: '移籍市場',
   shareListingOpen: '購入画面を見る',
   shareListingGone: 'すでに売れたか、取り下げられた選手です。',
