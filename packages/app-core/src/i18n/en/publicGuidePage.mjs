@@ -120,6 +120,14 @@ export default (guideCopy) => {
     ],
     ['Offside League', [guideCopy.league]],
     [
+      'Card enhancement',
+      [
+        'You enhance a player card with club funds in the owner team locker room. Players you raised and retired and players signed from the transfer market can reach +10, and each level adds 1 enhancement OVR. Attempts are available only while the feature is open. Manager cards and cards listed for sale cannot be enhanced, and you cannot attempt an enhancement if success would put your starting lineup over the salary budget.',
+        'An attempt ends in success (+1), no change, or failure (-1). A card never drops below +0, is never destroyed, and there is no pity system. From +0 upward, the success chances are 90%, 75%, 60%, 45%, 30%, 25%, 20%, 15%, 10%, 10% and the failure chances are 0%, 5%, 10%, 15%, 20%, 20%, 20%, 20%, 20%, 20%; the rest is no change.',
+        'Cards with a peak OVR of 90 to 94 have 0.9x the success chance and 95 or higher have 0.8x. The failure chance stays the same, and the difference becomes no change. Legend score does not affect the odds. Attempts cost ₩1 billion, ₩2 billion, ₩4 billion, ₩7 billion, ₩10 billion, ₩15 billion, ₩20 billion, ₩30 billion, ₩50 billion, ₩100 billion, paid with club funds only. Nothing sold for real money changes the odds or grants attempts.',
+      ],
+    ],
+    [
       'Transfer market and club funds',
       [
         `You buy and sell retired player cards in the transfer market on the ${guideCopy.hub} screen. Past-season player cards can be bought and sold too, and starting a past-season player in an owner team uses salary budget. Each card has a base price set from the value of its peak-OVR season, and you can see recent prices for players of the same position and grade in a chart. Market value has a smaller age multiplier from age 30, so a card that reached peak OVR after 30 can have a base price below its top career market value.`,
@@ -348,6 +356,10 @@ export default (guideCopy) => {
     [
       'I have a problem.',
       'Please send your environment and the screen where the problem happened to <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a>.',
+    ],
+    [
+      'Can I lose a card if an enhancement fails?',
+      'No. Cards are never destroyed. A failure drops the card one level (never below +0), and there is no pity system. Odds and costs for each level are in the Card enhancement section of the game guide and on the odds and fairness page.',
     ],
     [
       'What do I do with spare retired player cards?',

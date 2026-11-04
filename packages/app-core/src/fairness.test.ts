@@ -13,7 +13,17 @@ import {
   oddsPct,
   subscribeFairness,
 } from './fairness';
+import { ENHANCE_COSTS, ENHANCE_DOWN_RATES, ENHANCE_RATES } from '@offside/contracts/card-enhance';
 import { balanceKeysText } from './i18n/ko/balanceKeys';
+import { fairnessText } from './i18n/ko/fairness';
+// @ts-expect-error SEO 빌드 전용 평범한 ESM이라 타입 선언이 없다.
+import fairKo from './i18n/ko/publicFairness.mjs';
+// @ts-expect-error SEO 빌드 전용 평범한 ESM이라 타입 선언이 없다.
+import fairEn from './i18n/en/publicFairness.mjs';
+// @ts-expect-error SEO 빌드 전용 평범한 ESM이라 타입 선언이 없다.
+import fairJa from './i18n/ja/publicFairness.mjs';
+// @ts-expect-error SEO 빌드 전용 평범한 ESM이라 타입 선언이 없다.
+import fairZh from './i18n/zh/publicFairness.mjs';
 
 describe('fairness', () => {
   afterEach(() => {
@@ -101,6 +111,38 @@ describe('fairness', () => {
     ]);
     expect(view.boostNote).toContain('확정 강화는 별도');
     expect(view.boostNote).toContain('10%');
+  });
+
+  it('카드 강화 표는 단계별 성공 · 유지 · 실패 · 비용을 담고, 닫혀 있으면 그 사실도 알린다', () => {
+    const view = fairnessView();
+    expect(view.enhance).toHaveLength(10);
+    expect(view.enhance[0]).toEqual(['+0 → +1', '90%', '10%', '0%', '10억']);
+    expect(view.enhance[4]).toEqual(['+4 → +5', '30%', '50%', '20%', '100억']);
+    expect(view.enhance[9]).toEqual(['+9 → +10', '10%', '70%', '20%', '1,000억']);
+    expect(view.enhanceNotes).toContain(fairnessText.enhanceClosed);
+    setLatestBalance({ version: 9, values: { enhanceOpen: 1, enhanceRateScale: 0.5 } });
+    const open = fairnessView();
+    expect(open.enhance[0]?.[1]).toBe('45%');
+    expect(open.enhanceNotes).toEqual([fairnessText.enhanceNote]);
+  });
+
+  it('공개 공정성 페이지의 카드 강화 확률 · 비용은 네 언어 모두 실제 표와 같다', () => {
+    const rates = ENHANCE_RATES.map((r) => `${Math.round(r * 100)}%`);
+    const downs = ENHANCE_DOWN_RATES.map((r) => `${Math.round(r * 100)}%`);
+    for (const page of [fairKo, fairJa, fairZh, fairEn]) {
+      const sep = page === fairEn ? ', ' : ' · ';
+      expect(page.cardEnhance).toContain(rates.join(sep));
+      expect(page.cardEnhance).toContain(downs.join(sep));
+      expect(page.cardEnhance).toContain('0.9');
+      expect(page.cardEnhance).toContain('0.8');
+    }
+    // ENHANCE_COSTS는 만 원 단위다. 영어는 billion, 나머지는 억으로 쓴다.
+    const eok = ENHANCE_COSTS.map((c) => (c / 10_000).toLocaleString('en-US'));
+    expect(fairKo.cardEnhance).toContain(eok.map((c) => `${c}억`).join(' · '));
+    expect(fairJa.cardEnhance).toContain(eok.map((c) => `${c}億`).join(' · '));
+    expect(fairZh.cardEnhance).toContain(eok.map((c) => `${c} 億`).join(' · '));
+    const billion = ENHANCE_COSTS.map((c) => `₩${c / 100_000} billion`);
+    expect(fairEn.cardEnhance).toContain(billion.join(', '));
   });
 
   it('이력은 바로 앞 버전(맨 처음은 기본값)과 달라진 항목만 보여 준다', () => {

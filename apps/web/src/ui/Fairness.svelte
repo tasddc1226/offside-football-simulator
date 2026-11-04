@@ -55,6 +55,28 @@
   </table>
   <p class="muted fs-xs fair-note">{V.boostNote}</p>
 
+  <h3 class="fair-h">{L.enhanceTitle}</h3>
+  <table data-fair-enhance>
+    <thead>
+      <tr>
+        <th>{L.enhanceColLv}</th>
+        <th class="n">{L.enhanceColUp}</th>
+        <th class="n">{L.enhanceColKeep}</th>
+        <th class="n">{L.enhanceColDown}</th>
+        <th class="n">{L.enhanceColCost}</th>
+      </tr>
+    </thead>
+    <tbody>
+      {#each V.enhance as [lv, up, keep, down, cost] (lv)}
+        <tr>
+          <td>{lv}</td><td class="n">{up}</td><td class="n">{keep}</td><td class="n">{down}</td>
+          <td class="n">{cost}</td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+  {#each V.enhanceNotes as note (note)}<p class="muted fs-xs fair-note">{note}</p>{/each}
+
   <h3 class="fair-h">{L.hiddenTitle}</h3>
   {@render terms(V.hidden)}
 
