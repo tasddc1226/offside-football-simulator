@@ -74,8 +74,7 @@ export function enhanceView(
     ratePct: `${rateBp / 100}%`,
     keepPct: `${(10_000 - rateBp - downBp) / 100}%`,
     downPct: `${downBp / 100}%`,
-    tierText:
-      next === null || tier === 'normal' ? null : tier === 'icon' ? L.tierIcon : L.tierLegend,
+    tierText: next === null || tier === 'normal' ? null : tier === 'top' ? L.tierTop : L.tierHigh,
     failText: next === null ? null : downBp > 0 ? L.failNote({ lv: level - 1 }) : L.failSafe,
     cost,
     costText: cost === null ? '-' : fmtValue(cost),

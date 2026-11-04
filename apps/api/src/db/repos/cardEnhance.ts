@@ -37,7 +37,7 @@ export async function enhanceSnapshot(db: Db, profileId: string, careerId: strin
     .prepare(
       `SELECT (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance,
               k.owner_id AS ownerId, k.manager AS manager, k.card_value AS cardValue,
-              k.enhance AS level, k.enhance_fails AS fails, k.legend_score AS legendScore,
+              k.enhance AS level, k.enhance_fails AS fails, k.peak AS peak,
               EXISTS (SELECT 1 FROM market_listings WHERE career_id = ?2 AND status = 'open') AS listed
          FROM (SELECT 1) LEFT JOIN cards k ON k.career_id = ?2`,
     )
@@ -49,7 +49,7 @@ export async function enhanceSnapshot(db: Db, profileId: string, careerId: strin
       cardValue: number | null;
       level: number | null;
       fails: number | null;
-      legendScore: number | null;
+      peak: number | null;
       listed: number;
     }>();
   const card: EnhanceCardRow | null =
@@ -60,7 +60,7 @@ export async function enhanceSnapshot(db: Db, profileId: string, careerId: strin
           cardValue: row.cardValue,
           level: row.level,
           fails: row.fails ?? 0,
-          tier: enhanceTierOf(row.legendScore),
+          tier: enhanceTierOf(row.peak),
           listed: !!row.listed,
         }
       : null;

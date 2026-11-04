@@ -5,8 +5,6 @@
 // - 결과는 셋이다: 성공(+1) · 유지(그대로) · 실패(-1, +0에서는 내려가지 않는다). 천장은 없다(확률은 몇 번을 실패해도 그대로다).
 // 표의 모양은 여기에 고정하고, 운영 도구에서는 열기 · 비용 · 확률 배율(balance-spec enhance*)만 바꾼다.
 
-import { CARD_ICON_SCORE, CARD_LEGEND_SCORE } from './card-tier.js';
-
 /** 가장 높은 단계. */
 export const ENHANCE_MAX = 10;
 
@@ -39,18 +37,23 @@ export const DEFAULT_ENHANCE_RULES: EnhanceRules = {
   rateScale: 1,
 };
 
-/** 레전드 점수로 나뉜 강화 구간(카드 등급의 레전드 · 아이콘과 같은 기준). 은퇴 때 정해져 바뀌지 않는다. */
-export const ENHANCE_TIERS = ['normal', 'legend', 'icon'] as const;
+/**
+ * 최고 OVR로 나뉜 강화 구간. 은퇴 때 정해져 바뀌지 않는다. 레전드 점수로 나누면 일찍 은퇴할수록 강화가 쉬워지고
+ * 오래 뛸수록 손해라서 카드 전력 자체인 최고 OVR을 쓴다(2026-11-04).
+ */
+export const ENHANCE_HIGH_PEAK = 90;
+export const ENHANCE_TOP_PEAK = 95;
+export const ENHANCE_TIERS = ['normal', 'high', 'top'] as const;
 export type EnhanceTier = (typeof ENHANCE_TIERS)[number];
 /** 구간별 성공 확률 배율. 높은 등급일수록 잘 붙지 않아 좋은 카드만 앞서가지 않게 한다. */
 export const ENHANCE_TIER_SCALE: Record<EnhanceTier, number> = {
   normal: 1,
-  legend: 0.9,
-  icon: 0.8,
+  high: 0.9,
+  top: 0.8,
 };
-export const enhanceTierOf = (legendScore: number | null | undefined): EnhanceTier => {
-  const score = legendScore ?? 0;
-  return score >= CARD_ICON_SCORE ? 'icon' : score >= CARD_LEGEND_SCORE ? 'legend' : 'normal';
+export const enhanceTierOf = (peak: number | null | undefined): EnhanceTier => {
+  const ovr = peak ?? 0;
+  return ovr >= ENHANCE_TOP_PEAK ? 'top' : ovr >= ENHANCE_HIGH_PEAK ? 'high' : 'normal';
 };
 /** 그 구간의 판정에 쓰는 수치(운영 배율에 구간 배율을 곱한다). 화면과 서버가 같이 쓴다. */
 export const enhanceTierRules = <R extends { rateScale: number }>(r: R, tier: EnhanceTier): R => ({

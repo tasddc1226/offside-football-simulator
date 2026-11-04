@@ -414,16 +414,18 @@ describe('카드 강화 (T-11-373)', () => {
     }
   });
 
-  it('아이콘 카드는 낮은 확률로 판정하고, 레전드 점수에 맞지 않는 본 값은 받지 않는다', async () => {
+  it('최고 OVR 95+ 카드는 낮은 확률로 판정하고, 레전드 점수와 상관없으며, 맞지 않는 본 값은 받지 않는다', async () => {
     const { owner, id } = await ready();
     await ctx.db.update(cards).set({ legendScore: 1800 }).where(eq(cards.careerId, id));
-    expect((await state(owner.cookie, id)).card.tier).toBe('icon');
+    expect((await state(owner.cookie, id)).card.tier).toBe('normal'); // 레전드 점수는 확률에 영향이 없다.
+    await ctx.db.update(cards).set({ legendScore: 300, peak: 95 }).where(eq(cards.careerId, id));
+    expect((await state(owner.cookie, id)).card.tier).toBe('top');
     expect(await reason(await enhance(owner.cookie, id, first))).toBe('ENHANCE_STALE');
-    nextRoll(7200); // 기본 표면 성공(90%)이지만 아이콘은 72%라 유지다.
+    nextRoll(7200); // 기본 표면 성공(90%)이지만 95+는 72%라 유지다.
     const res = EnhanceRes.parse(
       await (await enhance(owner.cookie, id, { ...first, rateBp: 7200 })).json(),
     ).data;
-    expect(res).toMatchObject({ success: false, to: 0, card: { tier: 'icon' } });
+    expect(res).toMatchObject({ success: false, to: 0, card: { tier: 'top' } });
   });
 
   it('칭호: 목표에 닿은 시도의 응답에 한 번만 실리고, 강화가 닫히면 받지 않은 칭호는 목표로 보이지 않는다', async () => {
@@ -491,7 +493,10 @@ describe('카드 강화 (T-11-373)', () => {
     await ctx.db.update(cards).set({ peak: 95 }).where(eq(cards.careerId, starter));
     await ctx.db.update(cards).set({ peak: 80 }).where(eq(cards.careerId, low));
     await addTeam(owner.profileId, [starter, ...stars, low, ...Array<null>(6).fill(null)], 1);
-    expect(await reason(await enhance(owner.cookie, starter, first))).toBe('ENHANCE_SALARY');
+    // 최고 OVR 95라 성공 확률은 0.8배(72%)다.
+    expect(await reason(await enhance(owner.cookie, starter, { ...first, rateBp: 7200 }))).toBe(
+      'ENHANCE_SALARY',
+    );
     expect(await balanceOf(owner.profileId)).toBe(100_000_000);
     nextRoll(0);
     expect((await enhance(owner.cookie, bench, first)).status).toBe(200);

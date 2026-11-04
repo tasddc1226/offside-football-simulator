@@ -168,7 +168,7 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
     if (card.level >= ENHANCE_MAX) throw conflictError('이미 가장 높은 단계예요.', 'ENHANCE_MAX');
     if (!rules.open) throw conflictError('지금은 카드 강화를 쉬고 있어요.', 'ENHANCE_CLOSED');
     const cost = enhanceCost(card.level, rules)!;
-    // 비용은 구간과 상관없고, 확률만 카드 구간(레전드 점수)의 배율을 받는다.
+    // 비용은 구간과 상관없고, 확률만 카드 구간(최고 OVR)의 배율을 받는다.
     const odds = enhanceTierRules(rules, card.tier);
     const rateBp = enhanceRateBp(card.level, odds);
     const downBp = enhanceDownBp(card.level, odds);

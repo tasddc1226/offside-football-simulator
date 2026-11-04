@@ -40,11 +40,11 @@ describe('카드 강화 창 (T-11-373)', () => {
     });
   });
 
-  it('레전드 · 아이콘 카드는 낮은 확률과 이유를 보여 주고, 본 값도 그 확률이다', () => {
-    const icon = enhanceView({ ...card, tier: 'icon' }, open, 1_000_000);
-    expect(icon).toMatchObject({ ratePct: '72%', keepPct: '28%', tierText: L.tierIcon });
-    expect(icon.body?.rateBp).toBe(7200);
-    expect(enhanceView({ ...card, tier: 'legend' }, open, 1_000_000).ratePct).toBe('81%');
+  it('최고 OVR이 높은 카드는 낮은 확률과 이유를 보여 주고, 본 값도 그 확률이다', () => {
+    const top = enhanceView({ ...card, tier: 'top' }, open, 1_000_000);
+    expect(top).toMatchObject({ ratePct: '72%', keepPct: '28%', tierText: L.tierTop });
+    expect(top.body?.rateBp).toBe(7200);
+    expect(enhanceView({ ...card, tier: 'high' }, open, 1_000_000).ratePct).toBe('81%');
     expect(enhanceView(card, open, 1_000_000).tierText).toBeNull();
   });
 

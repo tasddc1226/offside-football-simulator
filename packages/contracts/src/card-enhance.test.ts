@@ -57,20 +57,20 @@ describe('카드 강화 표 (T-11-373)', () => {
     expect(Math.round(enhanceExpectedCost(10).cost / 10_000)).toBe(60981);
   });
 
-  it('레전드 점수 구간마다 성공 확률이 다르고, 실패 확률은 그대로이며 나머지가 유지다', () => {
-    expect([1099, 1100, 1799, 1800, null].map(enhanceTierOf)).toEqual([
+  it('최고 OVR 구간마다 성공 확률이 다르고, 실패 확률은 그대로이며 나머지가 유지다', () => {
+    expect([89, 90, 94, 95, null].map(enhanceTierOf)).toEqual([
       'normal',
-      'legend',
-      'legend',
-      'icon',
+      'high',
+      'high',
+      'top',
       'normal',
     ]);
-    const legend = enhanceTierRules(r, 'legend');
-    const icon = enhanceTierRules(r, 'icon');
-    expect(enhanceRateBp(0, legend)).toBe(8100);
-    expect(enhanceRateBp(0, icon)).toBe(7200);
-    expect(enhanceRateBp(9, icon)).toBe(800);
-    expect(enhanceDownBp(4, icon)).toBe(2000);
+    const high = enhanceTierRules(r, 'high');
+    const top = enhanceTierRules(r, 'top');
+    expect(enhanceRateBp(0, high)).toBe(8100);
+    expect(enhanceRateBp(0, top)).toBe(7200);
+    expect(enhanceRateBp(9, top)).toBe(800);
+    expect(enhanceDownBp(4, top)).toBe(2000);
     expect(enhanceRateBp(0, enhanceTierRules(r, 'normal'))).toBe(9000);
     // 강화 가치는 구간과 상관없이 기본 표로 잰다.
     expect(enhanceValue(5)).toBe(Math.round(enhanceExpectedCost(5).cost / 2 / 100) * 100);
