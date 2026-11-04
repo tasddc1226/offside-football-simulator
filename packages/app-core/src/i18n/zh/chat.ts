@@ -56,13 +56,6 @@ export const chat: Translation<ChatMsgs> = {
   sharePlayerTag: '球員分享',
   shareRecord: (p: { w: number; d: number; l: number }) => `${p.w}勝 ${p.d}和 ${p.l}負`,
   shareOpenTeam: '查看球隊',
-  noticeRetired: (p: { club: string; number: number; name: string }) =>
-    `${p.club} 的 ${p.number} 號成為 ${p.name} 的永久退役號碼。`,
-  noticeRetiredMany: (p: { n: number }) => `新增 ${p.n} 個永久退役號碼。`,
-  noticeRetiredTag: '永久退役號碼',
-  noticeRetiredSub: (p: { club: string; number: number }) => `${p.club} ${p.number} 號`,
-  noticeRetiredManyTitle: (p: { n: number }) => `新增 ${p.n} 個永久退役號碼`,
-  noticeRetiredManySub: (p: { name: string; others: number }) => `${p.name} 與另外 ${p.others} 個`,
   shareListingTag: '轉會市場',
   shareListingOpen: '查看購買畫面',
   shareListingGone: '這位球員已售出或已下架。',

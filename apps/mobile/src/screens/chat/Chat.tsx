@@ -25,7 +25,6 @@ import {
   CHAT_BODY_MAX,
   CHAT_MUTE_DAYS,
   CHAT_ROOMS,
-  type ChatNotice,
   type ChatRoomKey,
 } from '@offside/contracts/chat';
 import { LOCALE_NAMES } from '@offside/contracts/i18n';
@@ -37,7 +36,6 @@ import {
   CHAT_REJECT_TEXT,
   EMPTY_CHAT,
   chatMutedText,
-  chatTimeline,
   chatTime,
   type ChatMessage,
   type ChatSession,
@@ -45,13 +43,12 @@ import {
 } from '@offside/app-core/api/chat';
 import type { ApiResult } from '@offside/app-core/api/client';
 import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
-import { ChatNoticeBanner } from '../../components/ChatNoticeBanner';
 import { ChatShareCard } from '../../components/ChatShareCard';
 import { NicknameForm } from '../../components/NicknameForm';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
 import { TitleBadge } from '../../components/TitleBadge';
-import { openPublicLegendById, toast } from '../../game/host';
+import { toast } from '../../game/host';
 import { go, goBack, goHome, goMarketListing } from '../../game/nav';
 import { hofStart } from '@offside/app-core/state';
 import { appState } from '../../store';
@@ -210,7 +207,6 @@ export default function Chat() {
   const entering = useRef(true);
   /** 지난번에 그린 메시지 배열 — 줄이 바뀔 때만 따라 내려간다(접속자 수만 바뀌면 그대로). */
   const shown = useRef(EMPTY_CHAT.messages);
-  const shownNotices = useRef(EMPTY_CHAT.notices);
   useEffect(() => {
     // 키보드 애니메이션으로 목록 높이가 줄어든 뒤 최신 메시지를 입력칸 바로 위에 둔다.
     const opened = Keyboard.addListener('keyboardDidShow', () => {
@@ -226,16 +222,11 @@ export default function Chat() {
       (v) => {
         const grew = v.messages !== shown.current;
         shown.current = v.messages;
-        const noticed = v.notices !== shownNotices.current;
-        shownNotices.current = v.notices;
         setView(v);
         // T-11-440 이 화면에서 받은 줄은 읽은 것으로 남겨 홈 채팅 버튼의 안 읽음 수를 비운다.
         if (v.status === 'open') markChatRead(v.messages);
         const fromMe = v.messages.at(-1)?.author === v.me?.author;
-        if (
-          (grew && (entering.current || atBottom.current || fromMe)) ||
-          (noticed && atBottom.current)
-        )
+        if (grew && (entering.current || atBottom.current || fromMe))
           requestAnimationFrame(() => list.current?.scrollToEnd({ animated: false }));
       },
       (code, restore) => {
@@ -343,15 +334,6 @@ export default function Chat() {
   }
   function openTeam(team: string) {
     appState.hof = { ...hofStart(), tab: 'teams', team, owner: false, squad: true };
-    go('hof');
-  }
-  /** 한 건이면 그 선수의 상세 커리어로, 합친 배너면 기록실의 영구결번으로 간다. */
-  function openNotice(notice: ChatNotice) {
-    if (notice.n === 1) {
-      void openPublicLegendById(notice.careerId);
-      return;
-    }
-    appState.hof = { ...hofStart(), tab: 'rn' };
     go('hof');
   }
   async function mute(m: ChatMessage, days: (typeof CHAT_MUTE_DAYS)[number]) {
@@ -574,11 +556,8 @@ export default function Chat() {
               {L.loadingOlder}
             </Txt>
           ) : null}
-          {view.messages.length || view.notices.length ? (
-            chatTimeline(view.messages, view.notices).map((row) => {
-              if ('notice' in row)
-                return <ChatNoticeBanner key={row.id} notice={row.notice} onopen={openNotice} />;
-              const m = row.m;
+          {view.messages.length ? (
+            view.messages.map((m) => {
               return (
                 <View
                   key={m.id}

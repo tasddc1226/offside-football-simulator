@@ -6,14 +6,13 @@
   // 운영자는 메시지를 가리고 작성자를 정지한다. 게임과 무관해 메인 번들과 떼어 처음 열 때 불러온다.
   import { onMount, tick } from 'svelte';
   import { ADMIN_NICKNAME, COMMENT_REPORT_REASONS, type CommentReportReason } from '@offside/contracts/board-limits';
-  import { CHAT_BODY_MAX, CHAT_MUTE_DAYS, type ChatNotice } from '@offside/contracts/chat';
+  import { CHAT_BODY_MAX, CHAT_MUTE_DAYS } from '@offside/contracts/chat';
   import * as api from '@offside/app-core/api/chat';
   import { unblock as unblockApi } from '@offside/app-core/api/boards';
   import type { ChatBlockResponse } from '@offside/contracts';
   import {
     CHAT_REJECT_TEXT,
     EMPTY_CHAT,
-    chatTimeline,
     chatMutedText,
     chatTime,
     type ChatMessage,
@@ -29,8 +28,6 @@
   import OwnerAvatar from './OwnerAvatar.svelte';
   import PopSheet from './PopSheet.svelte';
   import ChatShareCard from './ChatShareCard.svelte';
-  import ChatNoticeBanner from './ChatNoticeBanner.svelte';
-  import { openPublicLegendById } from './openLegend.js';
 
   /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(툴팁)은 지금 기준 지난 시즌으로 보인다. */
   const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
@@ -97,7 +94,7 @@
       (v) => {
         const grew = v.messages !== view.messages;
         const initial = entering && v.status === 'open';
-        const follow = initial || (grew && (nearBottom() || v.messages.at(-1)?.author === v.me?.author)) || (v.notices !== view.notices && nearBottom());
+        const follow = initial || (grew && (nearBottom() || v.messages.at(-1)?.author === v.me?.author));
         if (initial) entering = false;
         // T-11-180 이전 줄이 위에 붙으면 보던 줄이 그 자리에 머물게 늘어난 높이만큼 내린다.
         const prepended = !follow && view.loadingOlder && !v.loadingOlder;
@@ -221,15 +218,6 @@
     openTeam(r.data.teamId, true);
   }
   /** owner면 구단주 프로필, 아니면 팀 프로필(스쿼드)을 연다. 공유 카드는 팀 쪽으로 간다. */
-  /** 한 건이면 그 선수의 상세 커리어로, 합친 배너면 기록실의 영구결번으로 간다. */
-  function openNotice(notice: ChatNotice) {
-    if (notice.n === 1) {
-      void openPublicLegendById(notice.careerId);
-      return;
-    }
-    appState.hof = { ...hofStart(), tab: 'rn' };
-    go('hof');
-  }
   function openTeam(team: string, owner = false) {
     selected = null;
     appState.hof = { ...hofStart(), tab: 'teams', team, owner, squad: !owner };
@@ -301,11 +289,7 @@
     </header>
     <ol class="chat-list" bind:this={list} onscroll={onListScroll} data-chat-list>
       {#if view.loadingOlder}<li class="muted fs-sm chat-older">{L.loadingOlder}</li>{/if}
-      {#each chatTimeline(view.messages, view.notices) as row (row.id)}
-        {#if 'notice' in row}
-          <li class="chat-notice-row"><ChatNoticeBanner notice={row.notice} onopen={openNotice} /></li>
-        {:else}
-        {@const m = row.m}
+      {#each view.messages as m (m.id)}
         <li class="chat-msg" class:mine={mine(m)} data-chat-msg={m.id}>
           <div class="chat-meta">
             {#snippet who()}<OwnerAvatar avatarId={m.avatarId} name={m.nickname} />{#if m.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{m.nickname}</b>{/if}{/snippet}
@@ -345,7 +329,6 @@
             <button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
           {/if}
         </li>
-        {/if}
       {:else}
         {#if view.status === 'open'}<li class="muted fs-sm chat-empty">{L.emptyOpen}</li>{:else}<li class="chat-wait"><Skeleton rows={4} /></li>{/if}
       {/each}
@@ -523,7 +506,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .chat-notice-row {align-self:stretch;margin:4px 0;}
   :global(.chat-msg.chat-flash) {
     border-radius: var(--radius-lg);
     animation: chat-flash 1.2s ease-out;

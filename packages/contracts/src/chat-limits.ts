@@ -3,7 +3,7 @@
  * Durable Object가 같은 값을 쓴다. 방은 언어마다 하나다(T-11-583).
  */
 import type { OwnerTier } from './owner-tier.js';
-import type { DetailPos, PosGroup } from './positions.js';
+import type { DetailPos } from './positions.js';
 import type { FormationId } from './owner-team.js';
 import type { TeamLogo } from './team-logo.js';
 import type { TeamPlayer } from './teams.js';
@@ -74,27 +74,6 @@ export type ChatShare =
       listing?: { id: string; price: number };
     };
 
-/** 이 시간 안에 또 나온 영구결번은 앞 배너에 합쳐 센다(시즌 전환 때 몰린다). */
-export const CHAT_NOTICE_MERGE_MS = 5 * 60_000;
-/**
- * 대화 사이에 끼는 영구결번 배너. 메시지가 아니라 답장 · 신고 · 푸시 · 안 읽은 수와 무관하다. 저장된 이름 그대로 싣고 화면이
- * 언어에 맞게 옮긴다. n이 2 이상이면 합친 배너다.
- */
-export type ChatNotice = {
-  id: string;
-  /** epoch ms. */
-  at: number;
-  kind: 'retiredNumber';
-  n: number;
-  /** 첫 결번의 커리어. 한 건일 때 누르면 이 선수의 상세로 간다. */
-  careerId: string;
-  name: string;
-  pos: PosGroup;
-  club: string;
-  number: number;
-  season: number;
-};
-
 /** 방이 보내는 메시지 한 줄. author는 작성자를 가리키는 불투명한 키다(프로필 id는 내보내지 않는다). */
 export type ChatMessage = {
   id: string;
@@ -129,19 +108,15 @@ export type ChatServerEvent =
       online: number;
       write: boolean;
       more?: boolean;
-      /** 이 메시지들 사이에 끼는 배너. 옛 방엔 없다. */
-      notices?: ChatNotice[];
     }
   | { t: 'msg'; m: ChatMessage }
-  /** 새 배너이거나, 같은 id면 합쳐져 수가 늘어난 배너. */
-  | { t: 'notice'; notice: ChatNotice }
   | { t: 'avatar'; author: string; avatarId: string | null }
   | { t: 'hide'; id: string }
   /** 접속자 수가 바뀌었다(누가 들어오거나 나갔다). */
   | { t: 'online'; n: number }
   | { t: 'err'; code: ChatRejectCode }
   /** T-11-180 'older' 요청의 답(그 소켓에만) — before보다 이전 줄을 오래된 순으로. more가 거짓이면 더 없다. */
-  | { t: 'older'; messages: ChatMessage[]; more: boolean; notices?: ChatNotice[] };
+  | { t: 'older'; messages: ChatMessage[]; more: boolean };
 
 /** 클라이언트 → 서버(핑은 LIVE_PING 문자열 그대로). */
 export type ChatClientEvent =
