@@ -41,5 +41,5 @@ export type AppAuthExchangeBody = z.infer<typeof AppAuthExchangeBodySchema>;
 export type AppleSignInBody = z.infer<typeof AppleSignInBodySchema>;
 export type AppAuthResult = z.infer<typeof AppAuthResultSchema>;
 
-/** 구글 로그인이 끝나면 API가 이 주소로 돌려보낸다(`?google=linked|switched|error&ticket=…&reason=…`). */
+/** 구글 로그인이 끝나면 API가 이 주소로 돌려보낸다(`?google=ok|error&ticket=…&reason=…`). ticket은 콜백이 새로 만든 값이라 state와 다르다. */
 export const APP_AUTH_REDIRECT_URL = 'offside://auth';

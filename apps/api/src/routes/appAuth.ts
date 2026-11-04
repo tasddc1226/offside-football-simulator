@@ -21,7 +21,7 @@ import { createProfile } from '../db/repos/profiles.js';
 import { getDb, type AppEnv, type SessionContext } from '../env.js';
 import { AppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
-import type { SignInOutcome } from '../profile/google-link.js';
+import { resolveGoogleCallback, type SignInOutcome } from '../profile/google-link.js';
 import { resolveAppleSignIn } from '../profile/apple-link.js';
 import { resolveRequestHostPair } from '../production-hosts.js';
 import { GOOGLE_START_RATE_LIMIT_MAX } from './auth.js';
@@ -76,7 +76,7 @@ export function registerAppAuthRoutes(app: Hono<AppEnv>): void {
     return ok(c, AppSessionResponseSchema, { token });
   });
 
-  // 구글 인가 주소를 바로 준다. state가 곧 티켓 id라 콜백은 쿠키 없이 티켓(세션·verifier)을 찾는다.
+  // 구글 인가 주소를 바로 준다. state가 곧 첫 티켓 id라 콜백은 쿠키 없이 티켓(verifier)을 찾는다.
   app.post('/v1/auth/app/google', requireProfile, async (c) => {
     const session = appSession(c);
     const { challenge } = readBody(c, AppGoogleStartBodySchema);
@@ -108,16 +108,22 @@ export function registerAppAuthRoutes(app: Hono<AppEnv>): void {
     const session = appSession(c);
     const body = readBody(c, AppAuthExchangeBodySchema);
     const now = nowIso();
-    // 티켓을 만든 세션만, 그 세션이 가진 verifier로만 바꿀 수 있다 — 스킴 주소를 가로채도 쓸 수 없다.
+    // 티켓을 만든 세션이 콜백에서 새로 받은 id와 자기 verifier를 함께 낼 때만 바꾼다. 어느 하나만 알아서는 쓸 수 없다.
     const ticket = await takeReadyTicket(getDb(c), {
       id: body.ticket,
       sessionId: session.id,
       challenge: await pkceChallenge(body.verifier),
       now,
     });
-    if (!ticket?.profileId) throw loginFailed('ticket');
-    const kind = ticket.profileId === session.profileId ? 'linked' : 'switched';
-    return finishAppLogin(c, session, { kind, profileId: ticket.profileId }, now);
+    if (!ticket?.googleSub) throw loginFailed('ticket');
+    const outcome = await resolveGoogleCallback(getDb(c), {
+      sub: ticket.googleSub,
+      email: ticket.googleEmail,
+      currentProfileId: session.profileId,
+      sessionId: session.id,
+      now,
+    });
+    return finishAppLogin(c, session, outcome, now);
   });
 
   app.post('/v1/auth/apple', requireProfile, async (c) => {

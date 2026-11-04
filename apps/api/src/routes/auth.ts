@@ -10,22 +10,23 @@ import {
   readOauthCookie,
 } from '../auth/oauth-cookie.js';
 import { selectGoogleOidc, verifiedGoogleEmail } from '../auth/google-oidc.js';
+import { randomToken } from '../auth/base64url.js';
 import { clearSessionCookie, rotateSession, sessionCookie } from '../auth/session.js';
 import {
+  completeTicket,
   findPendingTicket,
-  setTicketProfile,
   type AppAuthTicket,
 } from '../db/repos/appAuthTickets.js';
 import { insertAuditLog } from '../db/repos/auditLog.js';
 import { tryAttempt } from '../db/repos/authAttempts.js';
 import { unlinkGoogleAccount } from '../db/repos/profiles.js';
 import { revokeSession } from '../db/repos/sessions.js';
-import { getDb, type AppEnv, type SessionContext } from '../env.js';
+import { getDb, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { resolveSession } from '../middleware/session.js';
-import { resolveGoogleCallback, type SignInOutcome } from '../profile/google-link.js';
+import { resolveGoogleCallback } from '../profile/google-link.js';
 import { resolveRequestHostPair } from '../production-hosts.js';
 
 /** D-21: 시간당 30회. `auth_attempts`의 시간 윈도는 RATE_LIMIT_WINDOW_MS(1시간)를 그대로 쓴다. */
@@ -42,62 +43,50 @@ export function settingsUrl(webOrigin: string, query: Record<string, string>): s
   return url.toString();
 }
 
-/** 구글 인가 코드를 토큰으로 바꾸고 로그인 규칙(연결·전환)을 적용한다. 교환 실패면 null. 웹·앱 콜백이 함께 쓴다. */
-async function googleSignIn(
+/** 구글 인가 코드를 토큰으로 바꿔 계정을 확인한다. 교환 실패면 null. 웹·앱 콜백이 함께 쓴다. */
+async function googleAccount(
   c: Context<AppEnv>,
-  input: {
-    code: string;
-    codeVerifier: string;
-    redirectUri: string;
-    session: Pick<SessionContext, 'id' | 'profileId'>;
-    now: string;
-  },
-): Promise<SignInOutcome | null> {
+  input: { code: string; codeVerifier: string; redirectUri: string },
+): Promise<{ sub: string; email: string | null } | null> {
   const oidc = selectGoogleOidc({ ...c.env, GOOGLE_REDIRECT_URI: input.redirectUri });
   if (oidc === null) return null;
-  let claims: { sub: string; email: string | null; emailVerified: boolean };
   try {
-    claims = await oidc.exchangeCode(input.code, input.codeVerifier);
+    const claims = await oidc.exchangeCode(input.code, input.codeVerifier);
+    return { sub: claims.sub, email: verifiedGoogleEmail(claims) };
   } catch {
     return null;
   }
-  return resolveGoogleCallback(getDb(c), {
-    sub: claims.sub,
-    email: verifiedGoogleEmail(claims),
-    currentProfileId: input.session.profileId,
-    sessionId: input.session.id,
-    now: input.now,
-  });
 }
 
 /**
- * T-11-003 앱 로그인 콜백. 쿠키 대신 state로 찾은 티켓이 세션·verifier를 준다. 세션은 여기서 돌리지 않고(앱이 티켓을
- * 교환할 때 새 토큰을 받는다) 로그인할 프로필을 티켓에 적어 앱 스킴으로 돌려보낸다.
+ * T-11-003 앱 로그인 콜백. 쿠키 대신 state로 찾은 티켓이 verifier를 준다. 이 브라우저가 티켓을 만든 기기인지 알 수 없으므로
+ * 여기서는 구글 계정만 적고 티켓 id를 새 값으로 바꿔 앱 스킴으로 돌려보낸다. 연결 · 전환과 새 토큰은 그 값을 받은 앱이
+ * 교환할 때 처리한다(T-11-635).
  */
 async function appGoogleCallback(
   c: Context<AppEnv>,
-  ticket: AppAuthTicket & { sessionProfileId: string },
+  ticket: AppAuthTicket,
   redirectUri: string,
-  now: string,
 ): Promise<Response> {
   const back = (query: Record<string, string>) =>
     c.redirect(`${APP_AUTH_REDIRECT_URL}?${new URLSearchParams(query).toString()}`, 302);
   if (c.req.query('error') === 'access_denied')
     return back({ google: 'error', reason: 'cancelled' });
   const code = c.req.query('code');
-  const outcome =
+  const account =
     code === undefined
       ? null
-      : await googleSignIn(c, {
-          code,
-          codeVerifier: ticket.codeVerifier,
-          redirectUri,
-          session: { id: ticket.sessionId, profileId: ticket.sessionProfileId },
-          now,
-        });
-  if (!outcome) return back({ google: 'error', reason: 'exchange' });
-  await setTicketProfile(getDb(c), ticket.id, outcome.profileId);
-  return back({ google: outcome.kind, ticket: ticket.id });
+      : await googleAccount(c, { code, codeVerifier: ticket.codeVerifier, redirectUri });
+  if (!account) return back({ google: 'error', reason: 'exchange' });
+  const nextId = randomToken();
+  const done = await completeTicket(getDb(c), {
+    id: ticket.id,
+    nextId,
+    googleSub: account.sub,
+    googleEmail: account.email,
+  });
+  if (!done) return back({ google: 'error', reason: 'exchange' });
+  return back({ google: 'ok', ticket: nextId });
 }
 
 export function registerAuthRoutes(app: Hono<AppEnv>): void {
@@ -166,7 +155,7 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
     // T-11-003 앱 로그인이면 state가 앱 티켓이다.
     const queryState = c.req.query('state');
     const ticket = queryState ? await findPendingTicket(db, queryState, now) : undefined;
-    if (ticket) return appGoogleCallback(c, ticket, hostPair.googleRedirectUri, now);
+    if (ticket) return appGoogleCallback(c, ticket, hostPair.googleRedirectUri);
 
     function redirectToSettings(query: Record<string, string>, rotatedToken?: string): Response {
       c.header('Set-Cookie', clearOauthCookie(local));
@@ -196,14 +185,19 @@ export function registerAuthRoutes(app: Hono<AppEnv>): void {
       return redirectToSettings({ google: 'error', reason: 'exchange' });
     }
 
-    const outcome = await googleSignIn(c, {
+    const account = await googleAccount(c, {
       code,
       codeVerifier: decoded.codeVerifier,
       redirectUri: hostPair.googleRedirectUri,
-      session,
+    });
+    if (!account) return redirectToSettings({ google: 'error', reason: 'exchange' });
+    const outcome = await resolveGoogleCallback(db, {
+      sub: account.sub,
+      email: account.email,
+      currentProfileId: session.profileId,
+      sessionId: session.id,
       now,
     });
-    if (!outcome) return redirectToSettings({ google: 'error', reason: 'exchange' });
     const token = await rotateSession(db, {
       oldSessionId: session.id,
       profileId: outcome.profileId,
