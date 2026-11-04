@@ -50,7 +50,7 @@ const ko = {
   retry: '다시 시도',
   tryFail: '강화하지 못했어요. 잠시 후 다시 시도해 주세요.',
   sellNote: (p: { lv: number; value: string }) =>
-    `+${p.lv} 강화 가치 ${p.value}${iGa(p.value)} 판매 가격 범위에 더해져요.`,
+    `+${p.lv} 강화 가치 ${p.value}${iGa(p.value)} 판매 가격에 더해져요. 최고가 배수는 강화 가치에 붙지 않아요.`,
 };
 
 export type CardEnhanceMsgs = typeof ko;

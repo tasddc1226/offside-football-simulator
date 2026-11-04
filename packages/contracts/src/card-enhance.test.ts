@@ -11,6 +11,7 @@ import {
   enhanceTierOf,
   enhanceTierRules,
   enhanceValue,
+  tradeBand,
 } from './card-enhance.js';
 import { salaryOf, seasonSalaryOf, slotFit, slotRating, type SlotPlayer } from './owner-team.js';
 
@@ -108,5 +109,24 @@ describe('강화 OVR이 자리 실력 · 급여에 더해진다 (T-11-373)', () 
   it('급여는 강화 OVR을 더한 값으로 잰다', () => {
     expect(seasonSalaryOf({ peak: 84, season: 0, enhance: 1 }, 1)).toBe(salaryOf(85));
     expect(seasonSalaryOf({ peak: 84, season: 1, enhance: 5 }, 1)).toBe(0);
+  });
+
+  it('판매가 상한의 배수는 기준가에만 붙고, 하한은 강화 가치까지 본다', () => {
+    const rules = { priceMin: 0.5, priceMax: 3 };
+    // 강화 전에는 예전 범위와 같다.
+    expect(tradeBand(700_000, 0, rules)).toEqual({ min: 350_000, max: 2_100_000 });
+    const v = enhanceValue(6);
+    expect(tradeBand(700_000, 6, rules)).toEqual({
+      min: Math.ceil((700_000 + v) / 2 / 100) * 100,
+      max: 2_100_000 + v,
+    });
+    // 강화 가치는 평균 비용의 절반이라, 상한에서 강화분이 평균 비용을 넘지 않는다.
+    expect(tradeBand(700_000, 10, rules).max - 2_100_000).toBeLessThan(
+      enhanceExpectedCost(10).cost,
+    );
+    // 기준가 그대로(100%)는 어느 단계든 범위 안이다.
+    expect(tradeBand(700_000, 10, { priceMin: 0.5, priceMax: 1 }).max).toBe(
+      700_000 + enhanceValue(10),
+    );
   });
 });

@@ -45,5 +45,5 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   loadFail: '無法載入強化資訊。',
   retry: '重試',
   tryFail: '無法強化，請稍後再試。',
-  sellNote: (p) => `+${p.lv} 的強化價值 ${p.value} 會加到售價範圍。`,
+  sellNote: (p) => `+${p.lv} 的強化價值 ${p.value} 會加到售價。最高售價的倍率不適用於強化價值。`,
 };

@@ -9,7 +9,7 @@ import {
   type EnhanceBody,
 } from '@offside/contracts';
 import { ENHANCE_COSTS } from '@offside/contracts/card-enhance';
-import { tradeValue } from '@offside/contracts/card-enhance';
+import { tradeBand, tradeValue } from '@offside/contracts/card-enhance';
 import { eq, inArray } from 'drizzle-orm';
 import { applySeasonSchedule } from '@offside/contracts/service-seasons';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -534,21 +534,26 @@ describe('카드 강화 (T-11-373)', () => {
     expect(await balanceOf(buyer.profileId)).toBe(100_000_000 - ENHANCE_COSTS[0]);
   });
 
-  it('판매 가격 범위의 기준 가치에 강화 가치가 더해진다', async () => {
+  it('판매 가격 하한은 강화 가치까지 보고, 상한 배수는 기준가에만 붙는다', async () => {
     const owner = await issueGoogleCookie(ctx);
     const id = await addCard(owner.profileId);
     await ctx.db.update(cards).set({ enhance: 5 }).where(eq(cards.careerId, id));
     const me = MeRes.parse(
       await (await call('GET', '/v1/market/me', { cookie: owner.cookie })).json(),
     ).data;
-    const max = Math.floor((tradeValue(1_000_000, 5) * me.rules.priceMax) / 100) * 100;
-    // 기준가만으로는 넘는 값이지만 강화 가치까지 더한 범위 안이다.
-    expect(max).toBeGreaterThan(1_000_000 * me.rules.priceMax);
-    const res = await call('POST', '/v1/market/listings', {
-      cookie: owner.cookie,
-      headers: { 'Idempotency-Key': `enh-list-${++seq}` },
-      body: { careerId: id, price: max },
-    });
-    expect(res.status).toBe(201);
+    const band = tradeBand(1_000_000, 5, me.rules);
+    const list = (price: number) =>
+      call('POST', '/v1/market/listings', {
+        cookie: owner.cookie,
+        headers: { 'Idempotency-Key': `enh-list-${++seq}` },
+        body: { careerId: id, price },
+      });
+    // 기준가만으로는 범위 안이어도 강화 가치를 넣은 하한 아래면 받지 않는다.
+    expect(band.min).toBeGreaterThan(1_000_000 * me.rules.priceMin);
+    expect(await reason(await list(band.min - 100))).toBe('PRICE_OUT_OF_BAND');
+    // 강화 가치에 배수를 곱한 예전 상한은 받지 않는다.
+    expect(await reason(await list(band.max + 100))).toBe('PRICE_OUT_OF_BAND');
+    expect(band.max).toBeLessThan(tradeValue(1_000_000, 5) * me.rules.priceMax);
+    expect((await list(band.max)).status).toBe(201);
   });
 });

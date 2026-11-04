@@ -967,8 +967,10 @@ export default function Market() {
   const [pct, setPct] = useState(100);
   // T-11-373 강화한 카드는 기준가에 강화 가치를 더한 값으로 가격 범위를 잰다(서버와 같은 규칙).
   const sellValue = selling?.cardValue ? tradeValue(selling.cardValue, selling.enhance) : 0;
-  const sellPrice = sellValue && me ? priceAtPct(sellValue, pct, me.rules) : 0;
-  const quote = sellValue && me ? sellQuote(sellValue, sellPrice, me.rules) : null;
+  const sellPrice =
+    sellValue && me ? priceAtPct(selling!.cardValue!, pct, me.rules, selling!.enhance) : 0;
+  const quote =
+    sellValue && me ? sellQuote(selling!.cardValue!, sellPrice, me.rules, selling!.enhance) : null;
   // T-11-442 카드를 고르면 아래 가격 칸이 화면 밖일 수 있어, 다 보이지 않으면 그 칸이 위에 오게 내린다.
   const priceBox = useRef<View>(null);
   const [sellPick, setSellPick] = useState(0);
@@ -1094,7 +1096,7 @@ export default function Market() {
       {error}
     </Txt>
   ) : null;
-  const range = me ? sellSlider(me.rules) : null;
+  const range = me ? sellSlider(me.rules, selling?.cardValue ?? 0, selling?.enhance) : null;
   const sellDiff = sellValue ? priceDiff(sellPrice, sellValue) : null;
   const buyDiff = buying
     ? priceDiff(buying.price, tradeValue(buying.card.cardValue, buying.card.enhance))
@@ -1761,7 +1763,7 @@ export default function Market() {
                           {`${fmtValue(quote.band.min)} (${range!.minPct}%)`}
                         </Txt>
                         <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
-                          {`${fmtValue(quote.band.max)} (${range!.maxPct}%)`}
+                          {`${fmtValue(quote.band.max)} (${range!.maxLabelPct}%)`}
                         </Txt>
                       </View>
                     </View>

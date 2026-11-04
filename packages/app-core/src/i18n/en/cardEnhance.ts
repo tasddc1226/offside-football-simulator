@@ -49,5 +49,6 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   loadFail: "Couldn't load enhance info.",
   retry: 'Try again',
   tryFail: "Couldn't enhance. Please try again in a moment.",
-  sellNote: (p) => `The +${p.lv} enhance value of ${p.value} is added to the price range.`,
+  sellNote: (p) =>
+    `The +${p.lv} enhance value of ${p.value} is added to the price. The maximum price multiplier does not apply to it.`,
 };

@@ -49,5 +49,6 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   loadFail: '強化情報を読み込めませんでした。',
   retry: 'もう一度',
   tryFail: '強化できませんでした。しばらくしてからもう一度お試しください。',
-  sellNote: (p) => `+${p.lv}の強化価値${p.value}が販売価格の範囲に加わります。`,
+  sellNote: (p) =>
+    `+${p.lv}の強化価値${p.value}が販売価格に加わります。最高価格の倍率は強化価値にはかかりません。`,
 };

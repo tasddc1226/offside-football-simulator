@@ -5,6 +5,8 @@
 // - 결과는 셋이다: 성공(+1) · 유지(그대로) · 실패(-1, +0에서는 내려가지 않는다). 천장은 없다(확률은 몇 번을 실패해도 그대로다).
 // 표의 모양은 여기에 고정하고, 운영 도구에서는 열기 · 비용 · 확률 배율(balance-spec enhance*)만 바꾼다.
 
+import { priceBand } from './market-value.js';
+
 /** 가장 높은 단계. */
 export const ENHANCE_MAX = 10;
 
@@ -151,3 +153,17 @@ export function enhanceOutcome(
  */
 export const tradeValue = (cardValue: number, enhance?: number | null) =>
   cardValue + enhanceValue(enhance ?? 0);
+
+/**
+ * T-11-373 강화 단계까지 넣은 판매가 범위(만 원, 100 단위). 하한은 전체 가치에 priceMin을 곱하고, 상한은 기준가에만 priceMax를
+ * 곱한 뒤 강화 가치를 더한다. 강화해서 파는 일이 평균적으로 남지 않게 하고, 카드 한 장으로 옮길 수 있는 자금을 넓히지 않으려는 규칙이다.
+ */
+export function tradeBand(
+  cardValue: number,
+  enhance: number | null | undefined,
+  r: { priceMin: number; priceMax: number },
+) {
+  const band = priceBand(tradeValue(cardValue, enhance), r);
+  const max = Math.floor((cardValue * r.priceMax + enhanceValue(enhance ?? 0)) / 100) * 100;
+  return { min: band.min, max };
+}

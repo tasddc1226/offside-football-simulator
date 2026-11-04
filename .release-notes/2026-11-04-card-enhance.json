@@ -6,6 +6,7 @@
     "결과는 성공 · 유지 · 실패 셋이에요. 실패해도 카드는 사라지지 않고 한 단계만 내려가요(+0에서는 내려가지 않아요).",
     "최고 OVR 90 이상 카드는 성공 확률이 0.9배, 95 이상 카드는 0.8배예요.",
     "강화 OVR은 구단주 팀의 자리 실력 · 팀 OVR · 급여에 더해지고, 선수 커리어 최고 OVR과 기록은 그대로예요.",
+    "강화한 카드를 이적시장에 내놓으면 강화 가치가 판매 가격에 더해져요. 최고가 배수는 강화 가치에 붙지 않아요.",
     "단계별 확률과 비용은 게임 가이드와 '확률과 공정성'에서 볼 수 있어요. 강화 시즌 업적과 칭호 5종도 더했어요."
   ],
   "en": {
@@ -15,6 +16,7 @@
       "There are three results: success, no change and failure. A failure never destroys the card. It only drops one level, and +0 cards do not drop.",
       "Cards with a peak OVR of 90 or higher have 0.9x success odds, and cards with 95 or higher have 0.8x.",
       "Enhancement OVR adds to position skill, team OVR and salary in your owner team. The player's career peak OVR and records stay the same.",
+      "When you list an enhanced card, its enhance value is added to the price. The maximum price multiplier does not apply to it.",
       "Odds and costs for each level are in the game guide and on the odds and fairness page. Enhancement season achievements and 5 titles are also new."
     ]
   },
@@ -25,6 +27,7 @@
       "結果は成功・維持・失敗の3つです。失敗してもカードは消えず、1段階下がるだけです(+0では下がりません)。",
       "最高OVR 90以上のカードは成功確率が0.9倍、95以上のカードは0.8倍です。",
       "強化OVRはオーナーチームのポジション能力・チームOVR・給与に加算され、選手のキャリア最高OVRと記録は変わりません。",
+      "強化したカードを移籍市場に出すと、強化価値が販売価格に加わります。最高価格の倍率は強化価値にはかかりません。",
       "段階別の確率と費用はゲームガイドと「確率と公平性」で確認できます。強化のシーズン実績と称号5種も追加しました。"
     ]
   },
@@ -35,6 +38,7 @@
       "結果分為成功、維持、失敗三種。失敗時卡片不會消失，只會下降一級（+0 不會下降）。",
       "最高 OVR 90 以上的卡片成功機率為 0.9 倍，95 以上為 0.8 倍。",
       "強化 OVR 會計入老闆球隊的位置能力、球隊 OVR 與薪資，球員的生涯最高 OVR 與紀錄不變。",
+      "強化後的卡片上架轉會市場時，強化價值會加到售價。最高售價的倍率不適用於強化價值。",
       "各級機率與費用可在遊戲指南與「機率與公平性」頁面查看。另新增強化賽季成就與 5 種稱號。"
     ]
   },
