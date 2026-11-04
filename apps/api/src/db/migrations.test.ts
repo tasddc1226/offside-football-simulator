@@ -485,7 +485,16 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'last_seen_at',
   ],
   auth_attempts: ['id', 'kind', 'subject', 'window_start', 'count'],
-  app_auth_tickets: ['id', 'session_id', 'challenge', 'code_verifier', 'expires_at', 'profile_id'],
+  app_auth_tickets: [
+    'id',
+    'session_id',
+    'challenge',
+    'code_verifier',
+    'expires_at',
+    'profile_id',
+    'google_sub',
+    'google_email',
+  ],
   audit_log: ['id', 'kind', 'profile_id', 'payload_json', 'created_at'],
   idempotency: [
     'owner_profile_id',

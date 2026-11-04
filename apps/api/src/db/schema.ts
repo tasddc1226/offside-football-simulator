@@ -342,7 +342,8 @@ export const pushDevices = sqliteTable(
 /**
  * T-11-003 앱 구글 로그인 표. 앱은 쿠키가 없어 시스템 브라우저로 구글 로그인을 거친다 — 앱이 PKCE 챌린지를 내면 서버가
  * 이 표(id = 구글 OAuth state)를 앱 세션에 묶어 만들고 구글 인증 주소를 돌려준다. 콜백은 state로 표를 찾아 로그인할
- * 프로필을 적고 offside://auth로 보낸다. 앱이 표 id와 verifier를 내면 표를 지우고 새 앱 세션 토큰을 준다. 10분 뒤 만료.
+ * 구글 계정을 적고 id를 새 값으로 바꿔 offside://auth로 보낸다. 앱이 새 id와 verifier를 내면 표를 지우고 그때 로그인 규칙을
+ * 적용해 새 앱 세션 토큰을 준다(T-11-635). 10분 뒤 만료.
  */
 export const appAuthTickets = sqliteTable(
   'app_auth_tickets',
@@ -356,8 +357,11 @@ export const appAuthTickets = sqliteTable(
     /** 구글 OAuth PKCE verifier(웹은 oauth 쿠키에 둔다). */
     codeVerifier: text('code_verifier').notNull(),
     expiresAt: text('expires_at').notNull(),
-    /** 콜백이 정한 로그인 프로필. NULL이면 아직 콜백 전. 티켓 세션의 프로필과 같으면 연결, 다르면 전환. */
+    /** T-11-635 이전 콜백이 쓰던 열. 이제 쓰지 않는다(배포 중 옛 코드가 읽을 수 있어 바로 지우지 않았다). */
     profileId: text('profile_id'),
+    /** T-11-635 콜백이 확인한 구글 계정. NULL이면 아직 콜백 전. 연결 · 전환은 교환할 때 적용한다. */
+    googleSub: text('google_sub'),
+    googleEmail: text('google_email'),
   },
   (table) => [
     index('app_auth_tickets_expires_at_idx').on(table.expiresAt),

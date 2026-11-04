@@ -20,20 +20,21 @@ export async function createAppAuthTicket(
   });
 }
 
-/** 콜백 전(로그인 프로필이 아직 없는) 만료 전 티켓 + 그 티켓이 묶인 살아 있는 세션의 프로필. 콜백은 쿠키가 없다. */
+/** 콜백 전(구글 계정이 아직 없는) 만료 전 티켓. 묶인 세션이 살아 있을 때만 준다. 콜백은 쿠키가 없다. */
 export async function findPendingTicket(
   db: Db,
   id: string,
   now: string,
-): Promise<(AppAuthTicket & { sessionProfileId: string }) | undefined> {
+): Promise<AppAuthTicket | undefined> {
   const [row] = await db
-    .select({ ticket: appAuthTickets, sessionProfileId: sessions.profileId })
+    .select({ ticket: appAuthTickets })
     .from(appAuthTickets)
     .innerJoin(sessions, eq(sessions.id, appAuthTickets.sessionId))
     .innerJoin(profiles, eq(profiles.id, sessions.profileId))
     .where(
       and(
         eq(appAuthTickets.id, id),
+        isNull(appAuthTickets.googleSub),
         isNull(appAuthTickets.profileId),
         gt(appAuthTickets.expiresAt, now),
         isNull(sessions.revokedAt),
@@ -41,11 +42,23 @@ export async function findPendingTicket(
         isNull(profiles.deletedAt),
       ),
     );
-  return row && { ...row.ticket, sessionProfileId: row.sessionProfileId };
+  return row?.ticket;
 }
 
-export async function setTicketProfile(db: Db, id: string, profileId: string): Promise<void> {
-  await db.update(appAuthTickets).set({ profileId }).where(eq(appAuthTickets.id, id));
+/**
+ * 콜백이 확인한 구글 계정을 적고 티켓 id를 새 값으로 바꾼다. 새 id는 앱 스킴 주소로만 나가므로, 시작할 때 받은 state만
+ * 아는 쪽은 교환할 수 없다. 콜백이 겹치면 하나만 성공한다.
+ */
+export async function completeTicket(
+  db: Db,
+  input: { id: string; nextId: string; googleSub: string; googleEmail: string | null },
+): Promise<boolean> {
+  const rows = await db
+    .update(appAuthTickets)
+    .set({ id: input.nextId, googleSub: input.googleSub, googleEmail: input.googleEmail })
+    .where(and(eq(appAuthTickets.id, input.id), isNull(appAuthTickets.googleSub)))
+    .returning({ id: appAuthTickets.id });
+  return rows.length > 0;
 }
 
 /**
@@ -63,7 +76,7 @@ export async function takeReadyTicket(
         eq(appAuthTickets.id, input.id),
         eq(appAuthTickets.sessionId, input.sessionId),
         eq(appAuthTickets.challenge, input.challenge),
-        isNotNull(appAuthTickets.profileId),
+        isNotNull(appAuthTickets.googleSub),
         gt(appAuthTickets.expiresAt, input.now),
       ),
     )
