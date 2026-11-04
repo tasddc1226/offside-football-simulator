@@ -24,7 +24,10 @@ vi.mock('react-native-google-mobile-ads', () => ({
   },
   AdPools: { create: f.poolCreate },
 }));
-vi.mock('./adConsent', () => ({ askConsent: f.consent }));
+vi.mock('./adConsent', () => ({
+  askConsent: f.consent,
+  adRequestOptions: () => ({ requestNonPersonalizedAdsOnly: true }),
+}));
 vi.mock('./adFree', () => ({
   adFree: {
     get owned() {

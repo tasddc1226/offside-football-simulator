@@ -1,6 +1,6 @@
 // 보상형 광고(AdMob) 공용 재생. 후보 잠재력(T-11-118, 후보 다시 뽑기 T-11-154도 같은 단위)·잠재력 엿보기·강화가 쓴다.
 // T-11-117 두 곳의 실적을 따로 보려고 광고 단위를 나눴다(재생 흐름은 같다).
-// 비개인화 광고만 요청하고, 동의는 배너와 같은 UMP를 쓴다. 개발 빌드는 구글 테스트 광고를 쓴다.
+// 기본은 비개인화 광고이고(T-11-632 시험군 제외), 동의는 배너와 같은 UMP를 쓴다. 개발 빌드는 구글 테스트 광고를 쓴다.
 // T-11-558 버튼이 보이면 SDK 미리 불러오기(Ad Preloading)로 단위마다 1개를 준비해 두고, 누르면 바로 띄운다.
 // 준비된 광고가 없거나 미리 불러오기를 못 쓰면 예전처럼 누른 뒤에 불러온다.
 import { Platform } from 'react-native';
@@ -15,7 +15,7 @@ import {
   type AdPool,
 } from 'react-native-google-mobile-ads';
 import { adText } from '@offside/app-core/i18n/ko/ad';
-import { askConsent } from './adConsent';
+import { adRequestOptions, askConsent } from './adConsent';
 import { adFree, adsOff } from './adFree';
 import { countReward } from './adUsage';
 
@@ -88,7 +88,7 @@ function play(ad: Playable, load?: () => boolean): Promise<WatchResult> {
 }
 
 function watch(unit: string): Promise<WatchResult> {
-  const ad = RewardedAd.createForAdRequest(unit, { requestNonPersonalizedAdsOnly: true });
+  const ad = RewardedAd.createForAdRequest(unit, adRequestOptions());
   const result = play(ad, () => ad.loaded);
   ad.load();
   return result;
@@ -121,7 +121,7 @@ function poolOf(unit: string) {
         ok
           ? AdPools.create(
               AdPoolPresets.fullscreen(AdFormat.REWARDED, unit, {
-                requestOptions: { requestNonPersonalizedAdsOnly: true },
+                requestOptions: adRequestOptions(),
               }),
             )
           : null,
