@@ -604,10 +604,8 @@ export function createGameActions(host: GameHost) {
           return { name: o.name, lg: o.desc ?? '', salary: null, sub: null };
         }),
       },
-      // T-11-118: 25세부터 은퇴할 수 있다. 병역 등으로 시장에서 은퇴를 권하지 않으면 한 번 더 묻는다.
-      G.age >= MIN_RETIRE_AGE
-        ? [{ label: L.retireBtn, fn: () => (m.canRetire ? doRetire() : retireAsk(nextPending)) }]
-        : [],
+      // T-11-118: 25세부터 은퇴할 수 있다. T-11-632 되돌릴 수 없으니 언제나 한 번 더 묻는다.
+      G.age >= MIN_RETIRE_AGE ? [{ label: L.retireBtn, fn: () => retireAsk(nextPending) }] : [],
     );
   }
 
