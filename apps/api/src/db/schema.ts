@@ -2347,12 +2347,19 @@ export const best11Changes = sqliteTable(
  * T-11-468 매일 단계가 지운 버린 커리어(생성 뒤 한 시간 안에 멈추고 일주일 넘게 갱신 없음)의 흔적. 기기에서 다시 이어 하면
  * 다음 시즌 업로드가 커리어를 새로 만드는데, 그때 원래 서비스 시즌을 되살리고 다른 프로필이 같은 id를 가져가지 못하게 한다.
  */
-export const prunedCareers = sqliteTable('pruned_careers', {
-  careerId: text('career_id').primaryKey(),
-  profileId: text('profile_id').notNull(),
-  serviceSeason: integer('service_season'),
-  prunedAt: text('pruned_at').notNull(),
-});
+export const prunedCareers = sqliteTable(
+  'pruned_careers',
+  {
+    careerId: text('career_id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    serviceSeason: integer('service_season'),
+    prunedAt: text('pruned_at').notNull(),
+  },
+  (t) => [
+    // T-11-634 잠재력 조작 판정이 구단주의 최근 삭제 수를 센다.
+    index('pruned_careers_profile_idx').on(t.profileId, t.prunedAt),
+  ],
+);
 
 /**
  * T-11-374 카드 바치기 과제에 낸 기록(한 번에 한 줄). 과제 정의는 코드(contracts card-exchange-rules)에 있고 exchange_id는

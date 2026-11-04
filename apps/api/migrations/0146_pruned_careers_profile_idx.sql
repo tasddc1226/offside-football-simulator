@@ -1,0 +1,1 @@
+CREATE INDEX `pruned_careers_profile_idx` ON `pruned_careers` (`profile_id`,`pruned_at`);
