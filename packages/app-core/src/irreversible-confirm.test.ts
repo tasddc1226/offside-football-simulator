@@ -133,6 +133,25 @@ describe('T-11-431 되돌릴 수 없는 진로 확인', () => {
     expect(v?.kind === 'notice' && v.title).not.toBe(L.pathArmyTitle);
   });
 
+  it('T-11-633 시장에서 은퇴를 권해도 은퇴하기는 확인을 거치고, 물러나면 시장으로 돌아간다', () => {
+    const h = harness(career(), [STAY], true);
+    const press = (label: string) => h.sheet.state.buttons.find((b) => b.label === label)!.fn();
+    h.actions.nextPending();
+    const before = JSON.stringify(h.s);
+    press(L.retireBtn);
+    const v = h.sheet.state.view;
+    expect(v?.kind === 'notice' && v.title).toBe(L.retireTitle);
+    expect(JSON.stringify(h.s)).toBe(before);
+    expect(h.host.uploadRetirement).not.toHaveBeenCalled();
+    press(L.retireStay);
+    expect(h.sheet.state.view?.kind).toBe('market');
+    expect(JSON.stringify(h.s)).toBe(before);
+    press(L.retireBtn);
+    press(L.retireYes);
+    expect(h.s.retired).toBe(true);
+    expect(h.host.uploadRetirement).toHaveBeenCalledTimes(1);
+  });
+
   it('확인 버튼을 두 번 눌러도 한 번만 확정한다', () => {
     const h = harness(career(), [STAY, army]);
     h.actions.pickOption(1);

@@ -61,3 +61,23 @@ test('대학 진학은 확인 시트를 거치고, 다시 고르면 저장을 �
   await expect(sheet).toBeHidden();
   expect(JSON.parse((await saved(page))!).leagueId).toBe('uni');
 });
+
+test('T-11-633 시장이 은퇴를 권해도 은퇴하기는 확인 시트를 거친다', async ({ page }) => {
+  await resumeWithSave(page, {
+    age: 34,
+    pending: {
+      type: 'market',
+      res: null,
+      m: { options: [{ kind: 'stay', name: '잔류', desc: '' }], note: '', canRetire: true },
+    },
+  });
+  const sheet = page.locator('#sheet');
+  await sheet.getByRole('button', { name: '은퇴하기' }).click();
+  await expect(sheet).toContainText('정말 은퇴하시겠어요?');
+  await sheet.getByRole('button', { name: '조금 더 뛴다' }).click();
+  await expect(sheet.getByRole('button', { name: '은퇴하기' })).toBeVisible();
+  await expect(page.locator('[data-credit="player"]')).toBeHidden();
+  await sheet.getByRole('button', { name: '은퇴하기' }).click();
+  await sheet.getByRole('button', { name: '은퇴한다' }).click();
+  await expect(page.locator('[data-credit="player"]')).toBeVisible();
+});
