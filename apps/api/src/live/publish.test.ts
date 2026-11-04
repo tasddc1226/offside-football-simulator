@@ -1,5 +1,4 @@
 import type { LiveRetiredNumber } from '@offside/contracts';
-import { CHAT_ROOMS } from '@offside/contracts/chat';
 import type { Context } from 'hono';
 import { describe, expect, it, vi } from 'vitest';
 import type { AppEnv } from '../env.js';
@@ -27,28 +26,16 @@ const context = (env: Record<string, unknown>) => {
 };
 
 describe('publishRetiredNumber', () => {
-  it('라운지 모든 언어 방에 배너를 끼운다', async () => {
-    const postNotice = vi.fn();
-    const get = vi.fn(() => ({ postNotice }));
-    const { c, pending } = context({ CHAT: { idFromName: (name: string) => name, get } });
+  it('홈 라이브 허브로만 알리고 라운지 방은 건드리지 않는다', async () => {
+    const publish = vi.fn();
+    const chatGet = vi.fn();
+    const { c, pending } = context({
+      LIVE: { idFromName: (name: string) => name, get: () => ({ publish }) },
+      CHAT: { idFromName: (name: string) => name, get: chatGet },
+    });
     publishRetiredNumber(c, ITEM);
     await Promise.all(pending);
-    expect(get).toHaveBeenCalledTimes(CHAT_ROOMS.length);
-    expect(postNotice).toHaveBeenCalledTimes(CHAT_ROOMS.length);
-    expect(postNotice).toHaveBeenCalledWith(ITEM);
-  });
-
-  it('방이 실패해도 던지지 않고, 라운지가 없으면 건너뛴다', async () => {
-    const broken = context({
-      CHAT: {
-        idFromName: (name: string) => name,
-        get: () => ({ postNotice: () => Promise.reject(new Error('down')) }),
-      },
-    });
-    publishRetiredNumber(broken.c, ITEM);
-    await expect(Promise.all(broken.pending)).resolves.toBeDefined();
-    const none = context({});
-    publishRetiredNumber(none.c, ITEM);
-    expect(none.pending).toEqual([]);
+    expect(publish).toHaveBeenCalledWith(JSON.stringify({ type: 'retiredNumber', item: ITEM }));
+    expect(chatGet).not.toHaveBeenCalled();
   });
 });

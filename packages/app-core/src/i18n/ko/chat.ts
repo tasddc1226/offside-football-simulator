@@ -56,13 +56,6 @@ const ko = {
   sharePlayerTag: '선수 공유',
   shareRecord: (p: { w: number; d: number; l: number }) => `${p.w}승 ${p.d}무 ${p.l}패`,
   shareOpenTeam: '팀 보기',
-  noticeRetired: (p: { club: string; number: number; name: string }) =>
-    `${p.club} ${p.number}번이 ${p.name} 선수의 영구결번이 됐어요.`,
-  noticeRetiredMany: (p: { n: number }) => `새 영구결번이 ${p.n}건 나왔어요.`,
-  noticeRetiredTag: '영구결번',
-  noticeRetiredSub: (p: { club: string; number: number }) => `${p.club} ${p.number}번`,
-  noticeRetiredManyTitle: (p: { n: number }) => `새 영구결번 ${p.n}건`,
-  noticeRetiredManySub: (p: { name: string; others: number }) => `${p.name} 선수 외 ${p.others}건`,
   shareListingTag: '이적시장',
   shareListingOpen: '구매창 보기',
   shareListingGone: '이미 팔렸거나 내린 선수예요.',

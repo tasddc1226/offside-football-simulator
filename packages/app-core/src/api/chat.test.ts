@@ -4,7 +4,6 @@ import { setLocale } from '@offside/contracts/i18n';
 import { setStorage } from '@offside/game/storage';
 import {
   applyChat,
-  chatTimeline,
   chatSocketUrl,
   currentChatRoom,
   EMPTY_CHAT,
@@ -228,39 +227,5 @@ describe('T-11-015 openChat', () => {
     expect(sockets[1]!.closed).toBe(true);
     await vi.advanceTimersByTimeAsync(120_000);
     expect(sockets).toHaveLength(2);
-  });
-});
-
-describe('영구결번 배너', () => {
-  const notice = (id: string, at: number, n = 1) =>
-    ({
-      id,
-      at,
-      kind: 'retiredNumber',
-      careerId: 'car',
-      n,
-      name: '',
-      pos: 'FW',
-      club: '',
-      number: 9,
-      season: 2,
-    }) as const;
-  const msg = (id: string, at: number) =>
-    ({ id, at, author: 'a', nickname: 'n', body: 'b', admin: false }) satisfies ChatMessage;
-
-  it('메시지 사이에 시간순으로 끼우고, 같은 시각이면 메시지가 먼저다', () => {
-    const rows = chatTimeline(
-      [msg('m1', 10), msg('m2', 20)],
-      [notice('a', 5), notice('b', 20), notice('c', 30)],
-    );
-    expect(rows.map((r) => r.id)).toEqual(['a', 'm1', 'm2', 'b', 'c']);
-  });
-
-  it('새 배너는 메시지를 건드리지 않고, 같은 id면 수를 바꾼다', () => {
-    const skip = () => false;
-    const one = applyChat(EMPTY_CHAT, { t: 'notice', notice: notice('a', 5) }, skip);
-    expect(one.messages).toBe(EMPTY_CHAT.messages);
-    const two = applyChat(one, { t: 'notice', notice: notice('a', 5, 3) }, skip);
-    expect(two.notices.map((n) => n.n)).toEqual([3]);
   });
 });

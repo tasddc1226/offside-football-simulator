@@ -3,19 +3,16 @@ import type { OwnerTier } from '@offside/contracts/owner-tier';
 import {
   CHAT_HISTORY,
   CHAT_KEEP_MS,
-  CHAT_NOTICE_MERGE_MS,
   CHAT_REPLY_SNIPPET,
   CHAT_SHARE_GAP_MS,
   CHAT_TICKET_MS,
   type ChatMessage,
-  type ChatNotice,
   type ChatRejectCode,
   type ChatReply,
   type ChatServerEvent,
   type ChatShare,
 } from '@offside/contracts/chat';
 import { LIVE_PING, LIVE_PONG } from '@offside/contracts/polling';
-import type { LiveRetiredNumber } from '@offside/contracts';
 import type { Bindings } from '../env.js';
 import { MAX_SOCKETS } from '../live/hub.js';
 import { checkSend } from './rules.js';
@@ -139,11 +136,8 @@ export class ChatRoom extends DurableObject<Bindings> {
     this.sql.exec(
       `CREATE TABLE IF NOT EXISTS tickets (id TEXT PRIMARY KEY, expires INTEGER NOT NULL, writer TEXT NOT NULL)`,
     );
-    // 대화 사이에 끼는 영구결번 배너(ChatNotice JSON).
-    this.sql.exec(
-      `CREATE TABLE IF NOT EXISTS notices (id TEXT PRIMARY KEY, at INTEGER NOT NULL, notice TEXT NOT NULL)`,
-    );
-    this.sql.exec('CREATE INDEX IF NOT EXISTS notices_at ON notices (at)');
+    // T-11-636 라운지 영구결번 배너를 없애며 저장해 둔 배너도 지운다.
+    this.sql.exec('DROP TABLE IF EXISTS notices');
   }
 
   /** 입장권을 만든다. 한 번 쓰면 사라지고, CHAT_TICKET_MS 안에 써야 한다. */
@@ -253,40 +247,6 @@ export class ChatRoom extends DurableObject<Bindings> {
         )
       : null;
     this.post(att.w, check.body, now, reply);
-  }
-
-  /** 영구결번 배너를 끼운다. 바로 앞 배너가 CHAT_NOTICE_MERGE_MS 안이면 거기에 합쳐 센다. */
-  postNotice(item: LiveRetiredNumber): void {
-    const now = Date.now();
-    const [last] = this.sql
-      .exec<Row>(
-        'SELECT notice FROM notices WHERE at > ? ORDER BY at DESC LIMIT 1',
-        now - CHAT_NOTICE_MERGE_MS,
-      )
-      .toArray();
-    const prev = last ? (JSON.parse(String(last.notice)) as ChatNotice) : null;
-    const notice: ChatNotice = prev
-      ? { ...prev, n: prev.n + 1 }
-      : {
-          id: crypto.randomUUID(),
-          at: now,
-          kind: 'retiredNumber',
-          n: 1,
-          careerId: item.careerId,
-          name: item.name,
-          pos: item.pos,
-          club: item.club,
-          number: item.number,
-          season: item.season,
-        };
-    this.sql.exec(
-      'INSERT INTO notices (id, at, notice) VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET notice = excluded.notice',
-      notice.id,
-      notice.at,
-      JSON.stringify(notice),
-    );
-    this.sql.exec('DELETE FROM notices WHERE at < ?', now - CHAT_KEEP_MS);
-    this.broadcast({ t: 'notice', notice });
   }
 
   /** 라운지에 팀 · 선수를 올린다(API가 내용을 만들어 부른다). 올렸으면 메시지 id, 너무 잦으면 null. */
@@ -488,22 +448,9 @@ export class ChatRoom extends DurableObject<Bindings> {
    * 가려지지 않은 줄 CHAT_HISTORY개(오래된 순)와 그 이전 줄이 더 있는지. before(메시지 id)가 있으면 그 줄보다 이전
    * 줄(T-11-180 위로 올리기, 같은 시각이면 먼저 들어온 줄)이고, before가 지워졌으면 빈 페이지다.
    */
-  /** 메시지 한 페이지가 차지하는 시간 안의 배너. 더 이전 줄이 없으면 아래 끝이 없다. */
-  private noticesBetween(from: number, to: number): ChatNotice[] {
-    return this.sql
-      .exec<Row>(
-        'SELECT notice FROM notices WHERE at >= ? AND at < ? ORDER BY at LIMIT 100',
-        from,
-        to,
-      )
-      .toArray()
-      .map((r) => JSON.parse(String(r.notice)) as ChatNotice);
-  }
-
   private page(before?: string): {
     messages: ChatMessage[];
     more: boolean;
-    notices?: ChatNotice[];
   } {
     const rows = this.sql
       .exec<Row>(
@@ -519,14 +466,7 @@ export class ChatRoom extends DurableObject<Bindings> {
       .slice(0, CHAT_HISTORY)
       .reverse()
       .map((r) => publicOf(toMessage(r)));
-    const until = before
-      ? Number(
-          this.sql.exec<Row>('SELECT at FROM messages WHERE id = ?', before).toArray()[0]?.at ?? 0,
-        )
-      : Number.MAX_SAFE_INTEGER;
-    const notices = this.noticesBetween(more ? (messages[0]?.at ?? 0) : 0, until);
-    // 배너가 없으면 응답 모양은 그대로다.
-    return { messages, more, ...(notices.length ? { notices } : {}) };
+    return { messages, more };
   }
 
   private reject(ws: WebSocket, code: ChatRejectCode) {
