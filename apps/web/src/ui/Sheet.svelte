@@ -67,6 +67,12 @@
     return () => clearTimeout(hideTimer);
   });
 
+  // 경기 중계를 넘길 수 있는 동안은 시트 어디를 눌러도 건너뛴다. 장면을 고를 때는 skip이 비어 눌리지 않는다.
+  function tapSkip(e: MouseEvent) {
+    if (view?.kind !== 'block' || !view.skip) return;
+    if (!(e.target as Element).closest('button, a')) view.skip();
+  }
+
   // T-11-479 구간 진행 중계는 배경을 불투명하게 덮는다. 진행 결과(맡김)가 먼저 상태에 들어가 뒤 화면(순위표 · 대회 결과 · 기록)이
   // 결정적 장면을 고르기 전에 결과를 보여 줬다.
   $effect(() => {
@@ -135,6 +141,7 @@
      {#if}로 조건부 마운트되는 .sheet와 별개로 hostRoot 참조를 항상 얻을 수 있게 한다. -->
 <div class="modal-host" bind:this={hostRoot}>
   {#if sheetState.open}
+    <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_noninteractive_element_interactions (키보드는 건너뛰기 버튼을 쓴다) -->
     <div
       class="sheet"
       class:dragging
@@ -146,6 +153,7 @@
       bind:this={sheetEl}
       style={dragY ? `transform:translateY(${dragY}px)` : undefined}
       transition:fly={{ y: 60, duration: dur(SHEET_MS) }}
+      onclick={tapSkip}
       ontouchstart={onTouchStart}
       ontouchend={onTouchEnd}
       ontouchcancel={onTouchEnd}

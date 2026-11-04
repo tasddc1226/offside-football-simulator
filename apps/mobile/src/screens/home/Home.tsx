@@ -1,4 +1,6 @@
 // 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
+import Reanimated from 'react-native-reanimated';
+import { useBarFollow, useBarInset } from '../../ui/navBar';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { Fragment, useCallback, useEffect, useState, type ReactNode } from 'react';
 import { Linking, useWindowDimensions, View } from 'react-native';
@@ -310,60 +312,63 @@ function ChatFab() {
   const c = useColors();
   // T-11-440 안 읽은 채팅 수(웹 .chat-unread와 같다). 앱이 앞에 있을 때 붙는 채팅 소켓이 센다.
   const { n } = useSnapshot(chatUnread);
+  const barInset = useBarInset();
+  const follow = useBarFollow();
   return (
-    <Press
-      testID="chat-fab"
-      accessibilityRole="button"
-      accessibilityLabel={n ? L.chatLabelUnread({ n }) : homeMoreText.chatLabelApp}
-      onPress={() => go('chat')}
-      style={{
-        position: 'absolute',
-        right: 16,
-        bottom: 16,
-        minWidth: 48,
-        minHeight: 48,
-        flexDirection: 'row',
-        gap: 6,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingVertical: 10,
-        paddingHorizontal: 16,
-        borderRadius: RADIUS.pill,
-        backgroundColor: c.accent,
-        shadowColor: '#000',
-        shadowOpacity: 0.35,
-        shadowRadius: 9,
-        shadowOffset: { width: 0, height: 6 },
-        elevation: 6,
-      }}
-    >
-      <Svg width={20} height={20} viewBox="0 0 24 24" accessible={false}>
-        <Path
-          d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z"
-          fill={c.accentInk}
-        />
-      </Svg>
-      {n ? (
-        <View
-          testID="chat-unread"
-          accessible={false}
-          importantForAccessibility="no-hide-descendants"
-          style={{
-            minWidth: 22,
-            height: 22,
-            paddingHorizontal: 5,
-            borderRadius: RADIUS.pill,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: c.ink,
-          }}
-        >
-          <Txt style={[num(700), { color: c.surface, fontSize: rem(FONT.label), lineHeight: 16 }]}>
-            {n > 99 ? '99+' : n}
-          </Txt>
-        </View>
-      ) : null}
-    </Press>
+    <Reanimated.View style={[{ position: 'absolute', right: 16, bottom: barInset + 16 }, follow]}>
+      <Press
+        testID="chat-fab"
+        accessibilityRole="button"
+        accessibilityLabel={n ? L.chatLabelUnread({ n }) : homeMoreText.chatLabelApp}
+        onPress={() => go('chat')}
+        style={{
+          minWidth: 48,
+          minHeight: 48,
+          flexDirection: 'row',
+          gap: 6,
+          alignItems: 'center',
+          justifyContent: 'center',
+          paddingVertical: 10,
+          paddingHorizontal: 16,
+          borderRadius: RADIUS.pill,
+          backgroundColor: c.accent,
+          shadowColor: '#000',
+          shadowOpacity: 0.35,
+          shadowRadius: 9,
+          shadowOffset: { width: 0, height: 6 },
+          elevation: 6,
+        }}
+      >
+        <Svg width={20} height={20} viewBox="0 0 24 24" accessible={false}>
+          <Path
+            d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H10l-4.2 3.6c-.5.4-1.3.1-1.3-.6V16A2.5 2.5 0 0 1 4 13.5z"
+            fill={c.accentInk}
+          />
+        </Svg>
+        {n ? (
+          <View
+            testID="chat-unread"
+            accessible={false}
+            importantForAccessibility="no-hide-descendants"
+            style={{
+              minWidth: 22,
+              height: 22,
+              paddingHorizontal: 5,
+              borderRadius: RADIUS.pill,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: c.ink,
+            }}
+          >
+            <Txt
+              style={[num(700), { color: c.surface, fontSize: rem(FONT.label), lineHeight: 16 }]}
+            >
+              {n > 99 ? '99+' : n}
+            </Txt>
+          </View>
+        ) : null}
+      </Press>
+    </Reanimated.View>
   );
 }
 

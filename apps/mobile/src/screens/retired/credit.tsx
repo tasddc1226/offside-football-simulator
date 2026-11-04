@@ -17,6 +17,7 @@ import { useSnapshot } from 'valtio';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { BarBelow } from '../../ui/Screen';
+import { useBarInset } from '../../ui/navBar';
 import { noteScrollY, registerScroll } from '../../ui/scroll';
 
 type Rect = { x: number; y: number; w: number; h: number };
@@ -155,6 +156,7 @@ export function CreditScreen({
   const c = useColors();
   const insets = useSafeAreaInsets();
   const barBelow = useContext(BarBelow);
+  const barInset = useBarInset();
   const root = useRef<View>(null);
   const [ctl] = useState(() => createCtl(root));
   const [footerH, setFooterH] = useState(0);
@@ -169,7 +171,7 @@ export function CreditScreen({
       <View
         ref={root}
         collapsable={false}
-        style={{ flex: 1, backgroundColor: c.bg }}
+        style={{ flex: 1, backgroundColor: c.bg, marginBottom: barInset }}
         onLayout={() => ctl.check()}
       >
         <ScrollView
