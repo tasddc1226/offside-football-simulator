@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
-import { appMeta, careers, scoutPity } from '../schema.js';
+import { appMeta, careers, prunedCareers, scoutPity } from '../schema.js';
 import { createTestD1, type TestD1 } from '../../test/d1.js';
 import { issueCookie } from '../../test/http.js';
 import {
@@ -86,6 +86,24 @@ describe('잠재력 조작 숨김 (T-11-462)', () => {
     await ctx.db.insert(scoutPity).values({ profileId, used: 12, updatedAt: NOW });
     expect(await hideFarmedPotential(ctx.db, profileId, NOW)).toBe(0);
     expect(await hiddenOf(high[0]!)).toBe(0);
+  });
+
+  it('T-11-634 버린 커리어 정리로 지워진 커리어도 만든 수로 세고, 기간 밖 삭제는 세지 않는다', async () => {
+    await addCareers(20, HIGH);
+    const prune = (n: number, prunedAt: string) =>
+      ctx.db.insert(prunedCareers).values(
+        Array.from({ length: n }, () => ({
+          careerId: crypto.randomUUID(),
+          profileId,
+          serviceSeason: 2,
+          prunedAt,
+        })),
+      );
+    await prune(20, '2026-08-01T00:00:00.000Z');
+    expect(await hideFarmedPotential(ctx.db, profileId, NOW)).toBe(20);
+    await ctx.db.update(careers).set({ hidden: 0 }).where(eq(careers.profileId, profileId));
+    for (let i = 0; i < 16; i++) await prune(20, NOW);
+    expect(await hideFarmedPotential(ctx.db, profileId, NOW)).toBe(0);
   });
 
   it('기간 밖 커리어는 세지 않는다', async () => {
