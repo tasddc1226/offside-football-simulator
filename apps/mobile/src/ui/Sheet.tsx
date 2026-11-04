@@ -27,6 +27,9 @@ export function Sheet() {
     G?.pending as Parameters<typeof canDismissSheet>[1],
   );
   const close = () => dismissible && dismissSheet();
+  // 경기 중계를 넘길 수 있는 동안은 시트 어디를 눌러도 건너뛴다. 장면을 고를 때는 skip이 비어 눌리지 않는다.
+  const skip =
+    s.view?.kind === 'block' && s.view.skip ? () => (v as typeof s.view)?.skip?.() : undefined;
   const handlePan = PanResponder.create({
     onMoveShouldSetPanResponder: (_, g) =>
       dismissible && v?.kind === 'market' && g.dy > 10 && Math.abs(g.dy) > Math.abs(g.dx),
@@ -61,7 +64,10 @@ export function Sheet() {
             backgroundColor: solid ? c.scrimSolid : c.scrim,
           }}
         />
-        <View
+        <Pressable
+          accessible={false}
+          disabled={!skip}
+          onPress={skip}
           accessibilityViewIsModal
           accessibilityLabel={s.view ? sheetLabel(s.view as SheetView) : undefined}
           style={{
@@ -114,7 +120,7 @@ export function Sheet() {
               </Btn>
             ))}
           </ScrollView>
-        </View>
+        </Pressable>
         {/* T-11-473 시트는 다른 창이라 첫 커리어 안내도 시트 안에 따로 둔다. */}
         <Coachmark layer="sheet" />
       </View>
