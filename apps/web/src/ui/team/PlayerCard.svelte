@@ -36,6 +36,7 @@
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
   import { SPECIAL_COLORS, specialRibbon } from '@offside/app-core/cardSpecial';
   import { enhanceFx } from '@offside/app-core/cardEnhanceFx';
+  import { showsPosOvr } from '@offside/app-core/cardEnhance';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 
   let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
@@ -72,8 +73,8 @@
     observer.observe(nameViewport);
     return () => observer.disconnect();
   });
-  // 자리 OVR은 최고 OVR과 다를 때(제 자리가 아닐 때)만 — 같으면 같은 숫자가 두 번 보인다.
-  const deployed = $derived(deploymentRating !== undefined && deploymentRating !== rating);
+  // 자리 OVR은 제 자리가 아닐 때만 — 같으면 같은 숫자가 두 번 보인다. 강화 OVR만큼 높은 것은 +N 배지로 안다.
+  const deployed = $derived(deploymentRating !== undefined && showsPosOvr(rating, deploymentRating, level));
 </script>
 
 {#snippet card()}

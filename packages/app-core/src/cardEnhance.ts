@@ -105,6 +105,13 @@ export const enhanceTitleText = (titles: readonly string[] | undefined) =>
 export const enhanceSellNote = (level: number | null | undefined) =>
   level ? L.sellNote({ lv: level, value: fmtValue(enhanceValue(level)) }) : null;
 
+/**
+ * 자리 OVR을 카드에 따로 보일지. 제 자리가 아닐 때만 보인다. 강화 OVR만큼 높은 것은 +N 배지로 알 수 있어 제 자리로 친다.
+ * (웹 team/PlayerCard.svelte · 앱 components/PlayerCard.tsx)
+ */
+export const showsPosOvr = (peak: number, posOvr: number, level: number | null | undefined) =>
+  posOvr !== peak && posOvr - (level ?? 0) !== peak;
+
 /** 서버 거절 이유를 창 문구로(모르는 이유는 서버 문구를 그대로). */
 export function enhanceErrorText(e: { reason?: string | undefined; message?: string }): string {
   switch (e.reason) {

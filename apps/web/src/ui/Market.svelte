@@ -521,7 +521,7 @@
         {:else}
           <ul class="mk-rows">
             {#each items as l (l.id)}
-              {@const diff = priceDiff(l.price, l.card.cardValue)}
+              {@const diff = priceDiff(l.price, tradeValue(l.card.cardValue, l.card.enhance))}
               <li>
                 <button class="mk-row" data-listing={l.id} onclick={() => ((buying = l), (error = null))}>
                   {@render mini(asPlayer(l.card), marketName(l.card, local))}
@@ -634,7 +634,7 @@
 {#if buying && (me || guest)}
   {@const own = !!me && myListingIds.has(buying.id)}
   {@const block = !me || own ? null : buyBlock(buying.price, me.balance)}
-  {@const diff = priceDiff(buying.price, buying.card.cardValue)}
+  {@const diff = priceDiff(buying.price, tradeValue(buying.card.cardValue, buying.card.enhance))}
   <button class="mk-scrim" aria-label={L.close} onclick={closeSheets}></button>
   <div class="mk-sheet" role="dialog" aria-modal="true" aria-label={L.sheetBuy}>
     <button class="mk-x" aria-label={L.close} data-act="market-sheet-close" onclick={closeSheets}><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
@@ -652,7 +652,7 @@
     <div class="mk-confirm">
       <h2>{own ? L.ownListing : me ? L.buyTitle : L.loginTitle}</h2>
       <dl class="mk-lines">
-        <div><dt>{L.baseLine}</dt><dd>{fmtValue(buying.card.cardValue)}</dd></div>
+        <div><dt>{L.baseLine}</dt><dd>{fmtValue(tradeValue(buying.card.cardValue, buying.card.enhance))}</dd></div>
         <div class="big"><dt>{L.price}</dt><dd>{fmtValue(buying.price)} <small class="mk-{diff.tone}">{diff.text}</small></dd></div>
         {#if me && !own}
           <div class="rule"></div>
@@ -660,6 +660,7 @@
           <div class="strong"><dt>{L.fundsAfter}</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough}</dd></div>
         {/if}
       </dl>
+      {#if enhanceSellNote(buying.card.enhance)}<p class="muted fs-sm" data-buy-enhance>{enhanceSellNote(buying.card.enhance)}</p>{/if}
       <MarketChart card={buying.card} />
       {#if !own}<p class="mk-note" data-market-login={!me ? '' : undefined}>{me ? L.buyNote : L.loginToBuy}</p>{/if}
       {#if block}<p class="mk-err">{block}</p>{/if}

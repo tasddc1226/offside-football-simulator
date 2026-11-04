@@ -35,6 +35,7 @@ import { intlLocale } from '@offside/app-core/i18n/core';
 import { tn } from '@offside/game/i18n/names';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { enhanceFx, type EnhanceFx } from '@offside/app-core/cardEnhanceFx';
+import { showsPosOvr } from '@offside/app-core/cardEnhance';
 import { SPECIAL_COLORS, specialRibbon, type SpecialRibbon } from '@offside/app-core/cardSpecial';
 import type { CardSpecialMark } from '@offside/contracts/card-special';
 
@@ -669,15 +670,15 @@ export function PlayerCard({
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [cardWidth, setCardWidth] = useState(compact ? 62 : 100);
   const shirtWidth = compact ? 25 : Math.min(43, Math.max(24, cardWidth - 56));
-  // 자리 OVR은 최고 OVR과 다를 때(제 자리가 아닐 때)만 — 같으면 같은 숫자가 두 번 보인다(웹 PlayerCard).
-  const deployed = cell.peak !== undefined && cell.peak !== cell.rating;
+  // 자리 OVR은 제 자리가 아닐 때만 — 같으면 같은 숫자가 두 번 보인다. 강화 OVR만큼 높은 것은 +N 배지로 안다(웹 PlayerCard).
+  const level = cell.youth ? 0 : (cell.enhance ?? 0);
+  const deployed = cell.peak !== undefined && showsPosOvr(cell.peak, cell.rating, level);
   // 플레이스타일(웹 PlayerCard .card-type). 자리가 좁은 compact 카드에는 넣지 않는다.
   const style = !compact && cell.pos ? typeName(cell.pos, cell.type) : null;
   const body = compact ? null : cardBody(cell);
   const ribbon = cell.youth ? null : specialRibbon(cell.specials);
   const special = ribbon ? SPECIAL_COLORS[ribbon.kind] : null;
   // T-11-373 강화 단계 효과(등급 색 위에 입힌다).
-  const level = cell.youth ? 0 : (cell.enhance ?? 0);
   const fx = enhanceFx(level);
   const height = compact
     ? mini

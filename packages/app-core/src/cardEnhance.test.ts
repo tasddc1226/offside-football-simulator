@@ -5,6 +5,7 @@ import {
   enhanceResultKind,
   enhanceResultText,
   enhanceSellNote,
+  showsPosOvr,
   enhanceView,
 } from './cardEnhance.js';
 import { cardEnhanceText as L } from './i18n/ko/cardEnhance.js';
@@ -63,5 +64,15 @@ describe('카드 강화 창 (T-11-373)', () => {
     expect(enhanceErrorText({ reason: 'X', message: '서버 문구' })).toBe('서버 문구');
     expect(enhanceSellNote(0)).toBeNull();
     expect(enhanceSellNote(2)).toContain('+2');
+  });
+
+  it('자리 OVR은 제 자리가 아닐 때만 따로 보인다(강화 OVR만큼 높은 것은 제 자리)', () => {
+    expect(showsPosOvr(84, 84, 0)).toBe(false);
+    expect(showsPosOvr(84, 87, 3)).toBe(false);
+    expect(showsPosOvr(84, 79, 0)).toBe(true);
+    expect(showsPosOvr(84, 82, 3)).toBe(true);
+    // 제 자리가 아니어도 숫자가 같으면 두 번 보이지 않는다.
+    expect(showsPosOvr(84, 84, 3)).toBe(false);
+    expect(showsPosOvr(84, 87, null)).toBe(true);
   });
 });

@@ -45,7 +45,7 @@ export const fairness: Translation<FairnessMsgs> = {
   enhanceColCost: '費用',
   enhanceNote:
     '失敗すると1段階下がりますが、カードが消えることはありません。+0では下がらず、天井はありません。最高OVR90〜94のカードは成功確率が0.9倍、95以上は0.8倍で、減った分は維持になります。レジェンドスコアは確率に影響しません。',
-  enhanceClosed: 'カード強化はまだ開放されていません。開放されるとこの表の値が適用されます。',
+  enhanceClosed: 'カード強化は現在お休みしています。再開するとこの表の値が適用されます。',
   hiddenTitle: '隠しているものと理由',
   hiddenPotTerm: '実際のポテンシャル',
   hiddenPot: '引退するときに公開します。スカウト評価は実際の値と少し違うことがあります。',

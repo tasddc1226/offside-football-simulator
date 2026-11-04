@@ -45,7 +45,7 @@ export const fairness: Translation<FairnessMsgs> = {
   enhanceColCost: 'Cost',
   enhanceNote:
     'A failure drops the card one level, but cards are never destroyed. A card never drops below +0, and there is no pity system. Cards with a peak OVR of 90 to 94 have 0.9x the success chance and 95 or higher have 0.8x, and the difference becomes no change. Legend score does not affect the odds.',
-  enhanceClosed: 'Card enhancement is not open yet. These values apply once it opens.',
+  enhanceClosed: 'Card enhancement is paused for now. These values apply when it reopens.',
   hiddenTitle: 'What stays hidden and why',
   hiddenPotTerm: 'Real potential',
   hiddenPot: 'Revealed when you retire. Scouting ratings can differ a little from the real value.',

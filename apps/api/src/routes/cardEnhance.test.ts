@@ -131,7 +131,7 @@ describe('카드 강화 (T-11-373)', () => {
       updatedAt: '2026-09-29T00:00:00.000Z',
       activatedAt: '2026-09-29T00:00:00.000Z',
     });
-  /** 강화를 열고, 카드 하나를 선발에 넣어 10경기를 뛴 구단주. */
+  /** 활성 밸런스 버전을 두고, 카드 하나를 선발에 넣어 10경기를 뛴 구단주. */
   async function ready(balance = 100_000_000) {
     const owner = await issueGoogleCookie(ctx);
     const id = await addCard(owner.profileId);
@@ -148,21 +148,31 @@ describe('카드 강화 (T-11-373)', () => {
     downBp: 0,
   };
 
-  it('강화 창 상태: 기본은 닫혀 있고, 남의 카드는 찾을 수 없다', async () => {
+  it('강화 창 상태: 기본은 열려 있고, 남의 카드는 찾을 수 없다', async () => {
     const owner = await issueGoogleCookie(ctx);
     const other = await issueGoogleCookie(ctx);
     const id = await addCard(owner.profileId);
     await fund(owner.profileId, 1_000_000);
     expect((await call('GET', `/v1/cards/${id}/enhance`)).status).toBe(401);
     expect(await state(owner.cookie, id)).toEqual({
-      rules: { open: false, costScale: 1, rateScale: 1 },
+      rules: { open: true, costScale: 1, rateScale: 1 },
       card: { level: 0, fails: 0, tier: 'normal' },
       balance: 1_000_000,
     });
     const res = await call('GET', `/v1/cards/${id}/enhance`, { cookie: other.cookie });
     expect(res.status).toBe(404);
+    const team = TeamRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: owner.cookie })).json(),
+    ).data;
+    expect(team.enhanceOpen).toBe(true);
+  });
+
+  it('운영 도구에서 닫으면 시도를 거절하고 팀 화면에도 알린다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const id = await addCard(owner.profileId);
+    await fund(owner.profileId, 1_000_000);
+    await activate({ enhanceOpen: 0 });
     expect(await reason(await enhance(owner.cookie, id, first))).toBe('ENHANCE_CLOSED');
-    // 팀 화면도 닫힘을 알린다(버튼을 그리지 않는다).
     const team = TeamRes.parse(
       await (await call('GET', '/v1/owner-team', { cookie: owner.cookie })).json(),
     ).data;
@@ -388,8 +398,9 @@ describe('카드 강화 (T-11-373)', () => {
         const { groups } = await computeOwnerAchievements(ctx.db, me, 2, at);
         return groups.find((g) => g.id === 'enhance')?.items;
       };
+      await activate({ enhanceOpen: 0 });
       expect(await items()).toBeUndefined();
-      await activate({ enhanceOpen: 1 });
+      await ctx.db.update(balanceVersions).set({ valuesJson: JSON.stringify({ enhanceOpen: 1 }) });
       expect((await items())!.every((i) => !i.done)).toBe(true);
       await ctx.db.update(cards).set({ enhance: 3 }).where(eq(cards.careerId, id));
       nextRoll(0);

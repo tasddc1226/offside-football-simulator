@@ -1096,7 +1096,9 @@ export default function Market() {
   ) : null;
   const range = me ? sellSlider(me.rules) : null;
   const sellDiff = sellValue ? priceDiff(sellPrice, sellValue) : null;
-  const buyDiff = buying ? priceDiff(buying.price, buying.card.cardValue) : null;
+  const buyDiff = buying
+    ? priceDiff(buying.price, tradeValue(buying.card.cardValue, buying.card.enhance))
+    : null;
   const ownBuying = !!buying && !!me && myListingIds.has(buying.id);
   const buyBlocked = buying && me && !ownBuying ? buyBlock(buying.price, me.balance) : null;
   const box = {
@@ -1487,7 +1489,10 @@ export default function Market() {
                   <>
                     {items.length ? (
                       items.map((l) => {
-                        const diff = priceDiff(l.price, l.card.cardValue);
+                        const diff = priceDiff(
+                          l.price,
+                          tradeValue(l.card.cardValue, l.card.enhance),
+                        );
                         return (
                           <Press
                             key={l.id}
@@ -1997,7 +2002,10 @@ export default function Market() {
                 {ownBuying ? L.ownListing : me ? L.buyTitle : L.loginTitle}
               </Txt>
               <View style={{ gap: 8 }}>
-                <Line label={L.baseLine} value={fmtValue(buying.card.cardValue)} />
+                <Line
+                  label={L.baseLine}
+                  value={fmtValue(tradeValue(buying.card.cardValue, buying.card.enhance))}
+                />
                 <Line
                   big
                   label={L.price}
@@ -2030,6 +2038,14 @@ export default function Market() {
                   </>
                 ) : null}
               </View>
+              {buying.card.enhance ? (
+                <Txt tone="muted" style={small}>
+                  {CE.sellNote({
+                    lv: buying.card.enhance,
+                    value: fmtValue(enhanceValue(buying.card.enhance)),
+                  })}
+                </Txt>
+              ) : null}
               <MarketChart card={buying.card} />
               {!me ? (
                 <View testID="market-login" style={{ gap: 10 }}>

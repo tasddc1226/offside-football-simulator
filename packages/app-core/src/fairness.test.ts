@@ -119,11 +119,11 @@ describe('fairness', () => {
     expect(view.enhance[0]).toEqual(['+0 → +1', '90%', '10%', '0%', '10억']);
     expect(view.enhance[4]).toEqual(['+4 → +5', '30%', '50%', '20%', '100억']);
     expect(view.enhance[9]).toEqual(['+9 → +10', '10%', '70%', '20%', '1,000억']);
-    expect(view.enhanceNotes).toContain(fairnessText.enhanceClosed);
-    setLatestBalance({ version: 9, values: { enhanceOpen: 1, enhanceRateScale: 0.5 } });
-    const open = fairnessView();
-    expect(open.enhance[0]?.[1]).toBe('45%');
-    expect(open.enhanceNotes).toEqual([fairnessText.enhanceNote]);
+    expect(view.enhanceNotes).toEqual([fairnessText.enhanceNote]);
+    setLatestBalance({ version: 9, values: { enhanceOpen: 0, enhanceRateScale: 0.5 } });
+    const closed = fairnessView();
+    expect(closed.enhance[0]?.[1]).toBe('45%');
+    expect(closed.enhanceNotes).toContain(fairnessText.enhanceClosed);
   });
 
   it('공개 공정성 페이지의 카드 강화 확률 · 비용은 네 언어 모두 실제 표와 같다', () => {
