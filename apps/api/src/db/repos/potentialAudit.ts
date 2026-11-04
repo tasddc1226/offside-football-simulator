@@ -1,6 +1,6 @@
 import { and, eq, gte, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
-import { careers, rerollMileage, scoutPity } from '../schema.js';
+import { careers, prunedCareers, rerollMileage, scoutPity } from '../schema.js';
 import { hideCareerStatements } from './firsts.js';
 import { runBatch } from './batch.js';
 
@@ -11,6 +11,8 @@ import { runBatch } from './batch.js';
 // 운영 실측(2026-09-22~10-22, 높은 잠재력 5명 이상 구단주 전원): 정상은 이 기준 아래였고, 조작 계정 2개만 넘었다.
 // T-11-613 2026-11 커리어를 많이 만드는 앱 구단주가 허용치를 0.4명 넘어 은퇴 선수가 말없이 사라졌다. 조금 넘으면 숨기지 않고 운영자
 // 검토로 넘기고, 크게 넘을 때만 숨긴다. 실측(11-02 기준 30일): 조작 계정은 허용치의 1.26~16배, 그 구단주는 1.003배, 나머지는 1배 아래.
+// T-11-634 버린 커리어 정리(pruned_careers)가 지운 커리어도 만든 수로 센다. 안 세면 커리어를 많이 만들고 금방 그만두는 구단주의 허용치가 정리할수록 줄어,
+// 높은 잠재력을 그대로 키운 은퇴 선수까지 오탐으로 숨긴다. 지운 커리어의 잠재력은 남지 않아 높은 잠재력 수에는 더하지 못한다.
 
 export const POTENTIAL_AUDIT = {
   /** 이 이상 스카우트 평가를 '높은 잠재력'으로 센다. */
@@ -39,9 +41,9 @@ export function potentialVerdict(o: PotentialCounts): 'ok' | 'review' | 'hide' {
   return o.high > allowed ? 'review' : 'ok';
 }
 
-/** 구단주의 최근 커리어 수 · 높은 잠재력 수와 쓴 스카우트권 · 리롤권(프로필 인덱스 한 번 + 기본 키 두 줄). */
+/** 구단주의 최근 커리어 수(지워진 것 포함) · 높은 잠재력 수와 쓴 스카우트권 · 리롤권(프로필 인덱스 두 번 + 기본 키 두 줄). */
 async function profileCounts(db: Db, profileId: string, now: string) {
-  const [[c], [s], [r]] = await db.batch([
+  const [[c], [p], [s], [r]] = await db.batch([
     db
       .select({
         careers: sql<number>`count(*)`,
@@ -55,6 +57,10 @@ async function profileCounts(db: Db, profileId: string, now: string) {
           isNotNull(careers.pot),
         ),
       ),
+    db
+      .select({ n: sql<number>`count(*)` })
+      .from(prunedCareers)
+      .where(and(eq(prunedCareers.profileId, profileId), gte(prunedCareers.prunedAt, since(now)))),
     db.select({ used: scoutPity.used }).from(scoutPity).where(eq(scoutPity.profileId, profileId)),
     db
       .select({ used: rerollMileage.used })
@@ -62,7 +68,7 @@ async function profileCounts(db: Db, profileId: string, now: string) {
       .where(eq(rerollMileage.profileId, profileId)),
   ]);
   return {
-    careers: Number(c?.careers ?? 0),
+    careers: Number(c?.careers ?? 0) + Number(p?.n ?? 0),
     high: Number(c?.high ?? 0),
     scouts: s?.used ?? 0,
     rerolls: r?.used ?? 0,
