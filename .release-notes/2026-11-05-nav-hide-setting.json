@@ -1,0 +1,18 @@
+{
+  "id": "t-11-638-nav-hide-setting",
+  "title": "하단 메뉴 자동 숨김 설정",
+  "items": ["설정에서 스크롤할 때 하단 메뉴를 숨길지 켜고 끌 수 있어요."],
+  "en": {
+    "title": "Auto-hide bottom menu setting",
+    "items": ["You can now turn off hiding the bottom menu on scroll in Settings."]
+  },
+  "ja": {
+    "title": "下部メニューの自動非表示設定",
+    "items": ["スクロール時に下部メニューを隠すかどうかを設定で切り替えられます。"]
+  },
+  "zh": {
+    "title": "下方選單自動隱藏設定",
+    "items": ["可以在設定中切換捲動時是否隱藏下方選單。"]
+  },
+  "availability": "app"
+}

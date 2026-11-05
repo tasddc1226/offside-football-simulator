@@ -12,6 +12,8 @@ export const settings: Translation<SettingsMsgs> = {
   darkTitle: '深色模式',
   darkBodyWeb: '切換為深色畫面，並儲存在這台裝置上。',
   darkBodyApp: '以深色畫面顯示，並儲存在這台裝置上。',
+  barAutoHideTitleApp: '自動隱藏下方選單',
+  barAutoHideBodyApp: '向下捲動時隱藏下方選單，向上捲動時再次出現，並儲存在這台裝置上。',
   hapticsTitleApp: '震動',
   hapticsBodyApp: '在選擇與結果揭曉時短暫震動，並儲存在這台裝置上。',
   langTitle: '語言',
