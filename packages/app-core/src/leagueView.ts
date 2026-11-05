@@ -13,6 +13,22 @@ import { leagueText as L } from './i18n/ko/league';
 
 type Phase = LeagueResponse['phase'];
 
+/** T-11-640 순위표에서 팀 프로필로 나갈 때의 리그 · 라운드. 뒤로 돌아온 한 번만 읽는다(세이브에 넣지 않는다). */
+export interface LeagueReturn {
+  season: number;
+  pick: { tier: number; league: number };
+  round: number;
+}
+let leagueReturn: LeagueReturn | null = null;
+export function rememberLeagueReturn(view: LeagueReturn) {
+  leagueReturn = view;
+}
+export function takeLeagueReturn(): LeagueReturn | null {
+  const view = leagueReturn;
+  leagueReturn = null;
+  return view;
+}
+
 const kst = (iso: string) => {
   const d = new Date(Date.parse(iso) + KST_MS);
   const hh = String(d.getUTCHours()).padStart(2, '0');
@@ -230,6 +246,10 @@ export const leagueChoices = (data: Pick<LeagueResponse, 'tiers'>): LeaguePick[]
   (data.tiers ?? []).flatMap((t) =>
     Array.from({ length: t.leagues }, (_, i) => ({ tier: t.tier, league: i + 1 })),
   );
+
+/** T-11-640 부를 고르면 그 부의 내 리그, 없으면 1리그를 연다. */
+export const leagueTierPick = (tier: number, mine: LeaguePick | null): LeaguePick =>
+  mine?.tier === tier ? mine : { tier, league: 1 };
 
 /** 처음 보여 줄 리그: 내 리그, 없으면 1부 1리그. 배치 전이면 null. */
 export function leagueDefaultPick(

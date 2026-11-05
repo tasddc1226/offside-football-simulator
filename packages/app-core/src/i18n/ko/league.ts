@@ -81,6 +81,8 @@ const ko = {
   runningRounds: (p: { n: number; total: number }) =>
     `${p.total}라운드 중 ${p.n}라운드를 치렀어요.`,
   leagueName: (p: { tier: number; league: number }) => `${p.tier}부 ${p.league}리그`,
+  tierName: (p: { tier: number }) => `${p.tier}부`,
+  goMyLeague: '내 리그로',
   placedLine: (p: { tier: number; league: number; rank: number }) =>
     `${p.tier}부 ${p.league}리그 · 지금 ${p.rank}위`,
   droppedLine: '이번 시즌 리그에 들어가지 못했어요. 다음 시즌에 다시 신청할 수 있어요.',
@@ -116,6 +118,10 @@ const ko = {
   forfeitsTag: (p: { n: number; limit: number }) => `기권 ${p.n}/${p.limit}`,
   roundsTitle: '라운드',
   roundName: (p: { n: number }) => `${p.n}라운드`,
+  roundPrev: '이전 라운드',
+  roundNext: '다음 라운드',
+  roundAll: '라운드 고르기',
+  goThisRound: '이번 라운드로',
   restTeam: (p: { team: string }) => `쉬는 팀 · ${p.team}`,
   forfeitScore: '기권',
   tableFail: '순위표를 불러오지 못했어요.',

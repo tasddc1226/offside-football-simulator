@@ -1,0 +1,38 @@
+{
+  "id": "t-11-640-league-screen",
+  "title": "리그 화면 개선",
+  "items": [
+    "순위표에서 팀을 누르면 그 팀 프로필과 스쿼드를 볼 수 있어요.",
+    "부와 리그 번호를 눌러 리그를 고르고, 화살표나 번호로 라운드를 옮겨요.",
+    "폰에서도 옆으로 밀지 않고 승점까지 바로 보여요.",
+    "앱의 리그 화면에서도 Apple로 로그인할 수 있어요."
+  ],
+  "en": {
+    "title": "League screen improvements",
+    "items": [
+      "Tap a team in the table to see its profile and squad.",
+      "Pick a league by tier and number, and move between rounds with arrows or round numbers.",
+      "Points now fit on phone screens without side scrolling.",
+      "You can now sign in with Apple on the league screen in the app."
+    ]
+  },
+  "ja": {
+    "title": "リーグ画面の改善",
+    "items": [
+      "順位表のチームをタップすると、プロフィールとスカッドを見られます。",
+      "部とリーグ番号でリーグを選び、矢印や番号で節を移動できます。",
+      "スマホでも横にスクロールせず勝点まで見られます。",
+      "アプリのリーグ画面でもAppleでログインできます。"
+    ]
+  },
+  "zh": {
+    "title": "聯賽畫面改善",
+    "items": [
+      "點選積分榜上的球隊，就能查看球隊資料與陣容。",
+      "依級別與編號選擇聯賽，並用箭頭或數字切換輪次。",
+      "手機上不必橫向滑動，也能直接看到積分。",
+      "在 App 的聯賽畫面也能使用 Apple 登入。"
+    ]
+  },
+  "availability": "web-app"
+}

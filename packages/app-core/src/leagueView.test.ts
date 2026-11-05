@@ -4,6 +4,7 @@ import type { LeagueMeResponse, LeagueResponse } from './api/league.js';
 import type { LeagueMatch, LeagueStanding, LeagueTableResponse } from './api/league.js';
 import {
   leagueChoices,
+  leagueTierPick,
   leagueClinches,
   leagueFinalReady,
   leagueLive,
@@ -36,6 +37,15 @@ import {
 const plan = planLeague(2, '2026-10-30T15:00:00.000Z', '2026-12-04T15:00:00.000Z');
 const league = { ...plan, rounds: [...plan.rounds] };
 const data = (phase: LeagueResponse['phase']): LeagueResponse => ({ league, phase, entries: 12 });
+
+describe('leagueTierPick', () => {
+  it('그 부에 내 리그가 있으면 내 리그, 아니면 1리그를 연다', () => {
+    const mine = { tier: 5, league: 12 };
+    expect(leagueTierPick(5, mine)).toEqual(mine);
+    expect(leagueTierPick(3, mine)).toEqual({ tier: 3, league: 1 });
+    expect(leagueTierPick(2, null)).toEqual({ tier: 2, league: 1 });
+  });
+});
 
 describe('leagueView (T-11-418)', () => {
   it('일정은 한국 시간으로 신청 · 배치 · 라운드를 보인다', () => {

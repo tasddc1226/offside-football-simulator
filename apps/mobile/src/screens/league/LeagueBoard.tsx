@@ -2,7 +2,7 @@
 // 강등권 · 기권 수), 라운드별 경기, 경기 상세(처음 열면 문자중계부터). 리그는 홈 경기라 중계에 홈 · 원정을 그대로 둔다.
 // T-11-418d 확정 배지 · 리그 기록 · 마지막 라운드 동시 중계(웹 LeagueFinalLive.svelte).
 import { useEffect, useRef, useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { RADIUS } from '@offside/app-core/design-tokens';
 import {
   fetchLeagueMatch,
@@ -24,6 +24,7 @@ import {
   leagueLastRound,
   leagueLive,
   leagueLegend,
+  leagueTierPick,
   leagueMatchMid,
   leagueRoundAt,
   leagueZoneLabel,
@@ -42,84 +43,146 @@ import { useColors } from '../../theme/useColors';
 import { Btn, Card, Pill, Press, Skeleton, Txt, scrollTo } from '../../ui';
 import { TeamLive } from '../owner/TeamLive';
 
-/** 가로로 넘기는 고르기 칩(리그 · 라운드). */
-function Chips<T>({
-  items,
+/** T-11-640 부 · 리그 · 라운드 고르기 버튼 하나. */
+function PickBtn({
   on,
+  dot,
   label,
-  keyOf,
-  pick,
+  accessibilityLabel,
+  onPress,
   testID,
+  fill,
+  strong,
 }: {
-  items: readonly T[];
-  on: (x: T) => boolean;
-  label: (x: T) => string;
-  keyOf: (x: T) => string;
-  pick: (x: T) => void;
+  on: boolean;
+  dot?: boolean;
+  label: string;
+  accessibilityLabel?: string;
+  onPress: () => void;
   testID: string;
+  /** 줄을 나눠 채운다(부). 없으면 번호 칸 크기. */
+  fill?: boolean;
+  strong?: boolean;
 }) {
   const c = useColors();
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityRole="tablist">
-      <View style={{ flexDirection: 'row', gap: 6 }}>
-        {items.map((x) => {
-          const sel = on(x);
-          return (
-            <Press
-              key={keyOf(x)}
-              testID={`${testID}-${keyOf(x)}`}
-              accessibilityRole="tab"
-              accessibilityState={{ selected: sel }}
-              onPress={() => pick(x)}
-              style={{
-                minHeight: 44,
-                justifyContent: 'center',
-                paddingHorizontal: 12,
-                borderRadius: RADIUS.pill,
-                borderWidth: sel ? 2 : 1,
-                borderColor: sel ? c.accent : c.line,
-                backgroundColor: c.surface,
-              }}
-            >
-              <Txt v="sm" bold={sel}>
-                {label(x)}
-              </Txt>
-            </Press>
-          );
-        })}
-      </View>
-    </ScrollView>
+    <Press
+      testID={testID}
+      accessibilityLabel={accessibilityLabel ?? label}
+      accessibilityState={{ selected: on }}
+      onPress={onPress}
+      style={{
+        ...(fill ? { flex: 1 } : { width: 46 }),
+        minHeight: 44,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderRadius: RADIUS.sm,
+        borderWidth: on ? 2 : 1,
+        borderColor: on ? c.accent : c.line,
+        backgroundColor: c.surface,
+      }}
+    >
+      <Txt v="sm" bold={on || strong} tone={strong ? 'accent' : 'ink'} num>
+        {label}
+      </Txt>
+      {dot ? (
+        <View
+          style={{
+            position: 'absolute',
+            top: 5,
+            right: 5,
+            width: 6,
+            height: 6,
+            borderRadius: 3,
+            backgroundColor: c.accent,
+          }}
+        />
+      ) : null}
+    </Press>
   );
 }
 
+/** 카드 머리의 글자 버튼('내 리그로' · '이번 라운드로'). */
+function HeadLink({
+  label,
+  onPress,
+  testID,
+}: {
+  label: string;
+  onPress: () => void;
+  testID: string;
+}) {
+  return (
+    <Press
+      testID={testID}
+      onPress={onPress}
+      hitSlop={8}
+      style={{ minHeight: 28, justifyContent: 'center' }}
+    >
+      <Txt v="sm" bold tone="accent">
+        {label}
+      </Txt>
+    </Press>
+  );
+}
+
+/** T-11-640 리그 고르기: 부를 먼저 고르고, 리그가 여럿이면 번호를 고른다(웹 LeaguePicker.svelte와 같은 구성). */
 export function LeaguePicker({
-  choices,
+  tiers,
   pick,
   mine,
   onpick,
 }: {
-  choices: readonly LeaguePick[];
+  tiers: readonly { tier: number; leagues: number }[];
   pick: LeaguePick;
   mine: LeaguePick | null;
   onpick: (p: LeaguePick) => void;
 }) {
-  if (choices.length < 2) return null;
-  const same = (a: LeaguePick | null, b: LeaguePick) =>
-    !!a && a.tier === b.tier && a.league === b.league;
+  if (tiers.reduce((n, t) => n + t.leagues, 0) < 2) return null;
+  const leagues = tiers.find((t) => t.tier === pick.tier)?.leagues ?? 1;
+  const isMine = !!mine && mine.tier === pick.tier && mine.league === pick.league;
   return (
-    <View style={{ gap: 6 }} accessibilityLabel={L.pickLeague}>
-      <Txt v="sm" tone="muted">
-        {L.pickLeague}
-      </Txt>
-      <Chips
-        items={choices}
-        on={(x) => same(pick, x)}
-        label={(x) => `${L.leagueName(x)}${same(mine, x) ? ` · ${L.myLeague}` : ''}`}
-        keyOf={(x) => `${x.tier}-${x.league}`}
-        pick={onpick}
-        testID="league-pick"
-      />
-    </View>
+    <Card gap={10} testID="league-picker">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 28 }}>
+        <Txt bold style={{ flex: 1 }} testID={`league-picked-${pick.tier}-${pick.league}`}>
+          {`${L.leagueName(pick)}${isMine ? ` · ${L.myLeague}` : ''}`}
+        </Txt>
+        {mine && !isMine ? (
+          <HeadLink label={L.goMyLeague} onPress={() => onpick(mine)} testID="league-pick-mine" />
+        ) : null}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        {tiers.map((t) => (
+          <PickBtn
+            key={t.tier}
+            fill
+            on={t.tier === pick.tier}
+            dot={mine?.tier === t.tier}
+            label={L.tierName({ tier: t.tier })}
+            onPress={() => onpick(leagueTierPick(t.tier, mine))}
+            testID={`league-tier-${t.tier}`}
+          />
+        ))}
+      </View>
+      {leagues > 1 ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {Array.from({ length: leagues }, (_, i) => i + 1).map((no) => {
+            const own = mine?.tier === pick.tier && mine.league === no;
+            return (
+              <PickBtn
+                key={no}
+                on={no === pick.league}
+                dot={own}
+                label={String(no)}
+                accessibilityLabel={`${L.leagueName({ tier: pick.tier, league: no })}${own ? ` · ${L.myLeague}` : ''}`}
+                onPress={() => onpick({ tier: pick.tier, league: no })}
+                testID={`league-no-${no}`}
+              />
+            );
+          })}
+        </View>
+      ) : null}
+    </Card>
   );
 }
 
@@ -127,10 +190,12 @@ function Standings({
   table,
   bottomTier,
   mineId,
+  onteam,
 }: {
   table: LeagueTableResponse;
   bottomTier: number;
   mineId: string | null;
+  onteam: (teamId: string) => void;
 }) {
   const c = useColors();
   const num = (w: number) => ({ width: w, textAlign: 'right' as const });
@@ -147,101 +212,104 @@ function Standings({
       <Txt v="h3" bold accessibilityRole="header">
         {L.standingsTitle}
       </Txt>
-      <ScrollView horizontal showsHorizontalScrollIndicator accessibilityLabel={L.standingsTitle}>
-        <View style={{ gap: 2, width: 420 }}>
-          <View
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 }}
-          >
-            <View style={{ width: 18 }} />
-            <Txt v="xs" tone="muted" style={{ flex: 1 }}>
-              {C.thTeam}
+      <View style={{ gap: 2 }} accessibilityLabel={L.standingsTitle}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 6 }}>
+          <View style={{ width: 18 }} />
+          <Txt v="xs" tone="muted" style={{ flex: 1 }}>
+            {C.thTeam}
+          </Txt>
+          {head(C.thP, 22)}
+          {head(C.thW, 18)}
+          {head(C.thD, 18)}
+          {head(C.thL, 18)}
+          {head(C.thGd, 30)}
+          {head(C.thPts, 26)}
+        </View>
+        {rows.map((s) => {
+          const team = table.teams.find((t) => t.teamId === s.teamId);
+          const mine = s.teamId === mineId;
+          const zone = leagueZone(s.rank, rows.length, table.tier, bottomTier);
+          const zoneLabel = mine ? leagueZoneLabel(zone, clinches.has(s.teamId)) : null;
+          const cell = (value: string | number, w: number, bold = false) => (
+            <Txt v="sm" bold={bold || mine} num style={num(w)}>
+              {String(value)}
             </Txt>
-            {head(C.thP, 30)}
-            {head(C.thW, 22)}
-            {head(C.thD, 22)}
-            {head(C.thL, 22)}
-            {head(C.thGd, 34)}
-            {head(C.thPts, 34)}
-          </View>
-          {rows.map((s) => {
-            const team = table.teams.find((t) => t.teamId === s.teamId);
-            const mine = s.teamId === mineId;
-            const zone = leagueZone(s.rank, rows.length, table.tier, bottomTier);
-            const zoneLabel = mine ? leagueZoneLabel(zone, clinches.has(s.teamId)) : null;
-            const cell = (value: string | number, w: number, bold = false) => (
-              <Txt v="sm" bold={bold || mine} num style={num(w)}>
-                {String(value)}
-              </Txt>
-            );
-            const gd = s.gf - s.ga;
-            return (
-              <View
-                key={s.teamId}
-                testID={`league-rank-${s.rank}${zone ? `-${zone}` : ''}`}
+          );
+          const gd = s.gf - s.ga;
+          return (
+            <View
+              key={s.teamId}
+              testID={`league-rank-${s.rank}${zone ? `-${zone}` : ''}`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+                minHeight: 44,
+                paddingVertical: 6,
+                paddingHorizontal: 6,
+                borderRadius: RADIUS.sm,
+                backgroundColor:
+                  zone === 'up'
+                    ? alpha(c.good, 0.14)
+                    : zone === 'down'
+                      ? alpha(c.warn, 0.12)
+                      : 'transparent',
+              }}
+            >
+              <Press
+                disabled={!team}
+                scale={0.985}
+                onPress={() => onteam(s.teamId)}
+                testID={`league-team-open-${s.rank}`}
+                accessibilityRole="button"
+                accessibilityLabel={team ? C.teamProfileOpen({ team: team.name }) : undefined}
                 style={{
+                  flex: 1,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  gap: 4,
+                  gap: 6,
+                  minWidth: 0,
                   minHeight: 44,
-                  paddingVertical: 6,
-                  paddingHorizontal: 6,
-                  borderRadius: RADIUS.sm,
-                  backgroundColor:
-                    zone === 'up'
-                      ? alpha(c.good, 0.14)
-                      : zone === 'down'
-                        ? alpha(c.warn, 0.12)
-                        : 'transparent',
                 }}
               >
-                <Txt v="sm" bold style={{ width: 18 }}>
+                <Txt v="sm" bold style={{ width: 16 }}>
                   {String(s.rank)}
                 </Txt>
-                <View
-                  style={{
-                    flex: 1,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 6,
-                    minWidth: 0,
-                  }}
-                >
-                  <TeamLogo logo={team?.logo} name={team?.name ?? C.tbd} size={24} decorative />
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 6,
-                        flexWrap: 'wrap',
-                      }}
-                    >
-                      <Txt v="sm" bold={mine} tone={mine ? 'accent' : 'ink'}>
-                        {team?.name ?? C.tbd}
-                      </Txt>
-                      <ClinchPill clinch={clinches.get(s.teamId)} />
-                      {zoneLabel ? (
-                        <View testID="league-my-zone">
-                          <Pill tone={zone === 'up' ? 'good' : 'warn'}>{zoneLabel}</Pill>
-                        </View>
-                      ) : null}
-                    </View>
-                    <Txt v="xs" tone="muted">
-                      {`${C.teamOwnerLabel} ${team?.owner ?? C.tbd}${s.forfeits || mine ? ` · ${leagueForfeitsTag(s.forfeits)}` : ''}`}
+                <TeamLogo logo={team?.logo} name={team?.name ?? C.tbd} size={24} decorative />
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 6,
+                      flexWrap: 'wrap',
+                    }}
+                  >
+                    <Txt v="sm" bold={mine} tone={mine ? 'accent' : 'ink'}>
+                      {team?.name ?? C.tbd}
                     </Txt>
+                    <ClinchPill clinch={clinches.get(s.teamId)} />
+                    {zoneLabel ? (
+                      <View testID="league-my-zone">
+                        <Pill tone={zone === 'up' ? 'good' : 'warn'}>{zoneLabel}</Pill>
+                      </View>
+                    ) : null}
                   </View>
+                  <Txt v="xs" tone="muted">
+                    {`${C.teamOwnerLabel} ${team?.owner ?? C.tbd}${s.forfeits || mine ? ` · ${leagueForfeitsTag(s.forfeits)}` : ''}`}
+                  </Txt>
                 </View>
-                {cell(s.p, 30)}
-                {cell(s.w, 22)}
-                {cell(s.d, 22)}
-                {cell(s.l, 22)}
-                {cell(gd > 0 ? `+${gd}` : gd, 34)}
-                {cell(s.pts, 34, true)}
-              </View>
-            );
-          })}
-        </View>
-      </ScrollView>
+              </Press>
+              {cell(s.p, 22)}
+              {cell(s.w, 18)}
+              {cell(s.d, 18)}
+              {cell(s.l, 18)}
+              {cell(gd > 0 ? `+${gd}` : gd, 30)}
+              {cell(s.pts, 26, true)}
+            </View>
+          );
+        })}
+      </View>
       <Txt v="xs" tone="muted">
         {[legend.up ? L.zoneUp : null, legend.down ? L.zoneDown : null, legend.move]
           .filter(Boolean)
@@ -484,6 +552,7 @@ function FinalLive({
 function Rounds({
   table,
   round,
+  thisRound,
   setRound,
   mineId,
   onopen,
@@ -491,6 +560,8 @@ function Rounds({
 }: {
   table: LeagueTableResponse;
   round: number;
+  /** 다음에 치를 라운드. '이번 라운드로'가 여기로 돌아온다. */
+  thisRound: number;
   setRound: (n: number) => void;
   mineId: string | null;
   onopen: (m: LeagueMatch) => void;
@@ -500,23 +571,89 @@ function Rounds({
   const day = leagueRound(table, round);
   const roundAt = leagueRoundAt(day.matches);
   const name = (id: string) => table.teams.find((t) => t.teamId === id)?.name ?? C.tbd;
+  const last = leagueLastRound(table);
+  const [all, setAll] = useState(false);
+  const pickRound = (n: number) => {
+    setRound(n);
+    setAll(false);
+  };
+  const arrow = (text: string, label: string, to: number, off: boolean, testID: string) => (
+    <Press
+      testID={testID}
+      accessibilityLabel={label}
+      disabled={off}
+      onPress={() => pickRound(to)}
+      style={{
+        width: 44,
+        minHeight: 52,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: c.line,
+        borderRadius: RADIUS.sm,
+        opacity: off ? 0.35 : 1,
+      }}
+    >
+      <Txt bold>{text}</Txt>
+    </Press>
+  );
   return (
     <Card gap={8} testID="league-rounds">
-      <Txt v="h3" bold accessibilityRole="header">
-        {L.roundsTitle}
-      </Txt>
-      <Chips
-        items={Array.from({ length: leagueLastRound(table) }, (_, i) => i + 1)}
-        on={(n) => n === round}
-        label={(n) => L.roundName({ n })}
-        keyOf={String}
-        pick={setRound}
-        testID="league-round"
-      />
-      {roundAt ? (
-        <Txt v="xs" tone="muted" testID="league-round-at">
-          {roundAt}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 28 }}>
+        <Txt v="h3" bold accessibilityRole="header" style={{ flex: 1 }}>
+          {L.roundsTitle}
         </Txt>
+        {round !== thisRound ? (
+          <HeadLink
+            label={L.goThisRound}
+            onPress={() => pickRound(thisRound)}
+            testID="league-round-now"
+          />
+        ) : null}
+      </View>
+      <View style={{ flexDirection: 'row', gap: 6 }}>
+        {arrow('‹', L.roundPrev, round - 1, round <= 1, 'league-round-prev')}
+        <Press
+          testID="league-round-all"
+          accessibilityLabel={`${L.roundAll} · ${L.roundName({ n: round })}`}
+          accessibilityState={{ expanded: all }}
+          onPress={() => setAll((v) => !v)}
+          style={{
+            flex: 1,
+            minHeight: 52,
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 2,
+            borderWidth: 1,
+            borderColor: c.line,
+            borderRadius: RADIUS.sm,
+          }}
+        >
+          <Txt v="sm" bold testID={`league-round-${round}`}>
+            {`${L.roundName({ n: round })} ${all ? '▴' : '▾'}`}
+          </Txt>
+          {roundAt ? (
+            <Txt v="xs" tone="muted" testID="league-round-at">
+              {roundAt}
+            </Txt>
+          ) : null}
+        </Press>
+        {arrow('›', L.roundNext, round + 1, round >= last, 'league-round-next')}
+      </View>
+      {all ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+          {Array.from({ length: last }, (_, i) => i + 1).map((n) => (
+            <PickBtn
+              key={n}
+              on={n === round}
+              strong={n === thisRound}
+              label={String(n)}
+              accessibilityLabel={L.roundName({ n })}
+              onPress={() => pickRound(n)}
+              testID={`league-round-no-${n}`}
+            />
+          ))}
+        </View>
       ) : null}
       {day.matches.map((m) => {
         const mine = m.homeTeamId === mineId || m.awayTeamId === mineId;
@@ -594,16 +731,20 @@ export function LeagueBoard({
   bottomTier,
   mineId,
   round,
+  thisRound,
   setRound,
   onopen,
+  onteam,
 }: {
   season: number;
   pick: LeaguePick;
   bottomTier: number;
   mineId: string | null;
   round: number;
+  thisRound: number;
   setRound: (n: number) => void;
   onopen: (m: LeagueMatch, table: LeagueTableResponse) => void;
+  onteam: (teamId: string) => void;
 }) {
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [table, setTable] = useState<LeagueTableResponse | null>(null);
@@ -643,10 +784,11 @@ export function LeagueBoard({
     );
   return (
     <>
-      <Standings table={table} bottomTier={bottomTier} mineId={mineId} />
+      <Standings table={table} bottomTier={bottomTier} mineId={mineId} onteam={onteam} />
       <Rounds
         table={table}
         round={round}
+        thisRound={thisRound}
         setRound={setRound}
         mineId={mineId}
         onopen={(m) => onopen(m, table)}

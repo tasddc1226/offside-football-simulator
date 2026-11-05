@@ -6,8 +6,11 @@
   import { isMember } from '@offside/app-core/account';
   import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
   import { leagueText as L } from '@offside/app-core/i18n/ko/league';
-  import { leagueCancelled, leagueChoices, leagueDefaultPick, leagueDefaultRound, leagueEnterAsk, leagueEntryCard, leagueEntryRules, leagueFinalView, leagueLastFinalView, leagueLine, leagueOutcomeTone, leaguePhaseActive, leaguePhaseLabel, leaguePlacementLine, leaguePresign, leagueReadiness, leagueRules, leagueSchedule, leagueTeamAction, leagueWhen, type LeagueAccount, type LeaguePick } from '@offside/app-core/leagueView';
+  import { leagueCancelled, leagueChoices, leagueDefaultPick,
+    rememberLeagueReturn,
+    takeLeagueReturn, leagueDefaultRound, leagueEnterAsk, leagueEntryCard, leagueEntryRules, leagueFinalView, leagueLastFinalView, leagueLine, leagueOutcomeTone, leaguePhaseActive, leaguePhaseLabel, leaguePlacementLine, leaguePresign, leagueReadiness, leagueRules, leagueSchedule, leagueTeamAction, leagueWhen, type LeagueAccount, type LeaguePick } from '@offside/app-core/leagueView';
   import type { LeagueMatch, LeagueTableResponse } from '@offside/app-core/api/league';
+  import LeaguePicker from './league/LeaguePicker.svelte';
   import LeagueBoard from './league/LeagueBoard.svelte';
   import LeagueMatchDetail from './league/LeagueMatchDetail.svelte';
   import PopSheet from './PopSheet.svelte';
@@ -19,7 +22,7 @@
   import { accountCache, refreshAccount } from './account-state.svelte.js';
   import { toast } from './helpers.js';
   import { go } from './nav.js';
-  import { appState } from './state.svelte.js';
+  import { appState, hofStart } from './state.svelte.js';
 
   let status = $state<LoadStatus>('loading');
   let data = $state<LeagueResponse | null>(null);
@@ -33,6 +36,8 @@
   let picked = $state(false);
   let round = $state(1);
   let detail = $state<{ m: LeagueMatch; table: LeagueTableResponse } | null>(null);
+  // T-11-640 팀 프로필에서 돌아오면 보던 리그 · 라운드를 그대로 연다.
+  const back = takeLeagueReturn();
 
   const linked = $derived.by(() => {
     const acct = accountCache.value;
@@ -71,19 +76,29 @@
 
   $effect(() => {
     if (picked || !data?.tiers) return;
-    pick = leagueDefaultPick(data, me);
-    round = leagueDefaultRound(data);
+    const kept = back?.season === data.league.season ? back : null;
+    pick = kept?.pick ?? leagueDefaultPick(data, me);
+    round = kept?.round ?? leagueDefaultRound(data);
+    if (kept) picked = true;
   });
   const choices = $derived(data ? leagueChoices(data) : []);
   const placement = $derived(leaguePlacementLine(me, data ? leagueCancelled(data) : false));
   const final = $derived(data ? leagueFinalView(me, data.league.season) : null);
   const mineId = $derived(me?.placement?.teamId ?? null);
-  const mineKey = $derived(me?.placement?.tier ? `${me.placement.tier}-${me.placement.league}` : null);
+  const mine = $derived.by<LeaguePick | null>(() => {
+    const p = me?.placement;
+    return p?.tier && p.league ? { tier: p.tier, league: p.league } : null;
+  });
   const pickKey = $derived(pick ? `${pick.tier}-${pick.league}` : '');
-  function choose(key: string) {
-    const [tier, league] = key.split('-').map(Number);
+  function choose(next: LeaguePick) {
     picked = true;
-    pick = { tier: tier!, league: league! };
+    pick = { ...next };
+  }
+  function openProfile(teamId: string) {
+    if (!data || !pick) return;
+    rememberLeagueReturn({ season: data.league.season, pick: { ...pick }, round });
+    appState.hof = { ...hofStart(), tab: 'teams', team: teamId, season: data.league.season };
+    go('hof');
   }
   function openMatch(m: LeagueMatch, table: LeagueTableResponse) {
     detail = { m, table };
@@ -198,19 +213,9 @@
       </section>
 
       {#if pick && data.tiers}
-        {#if choices.length > 1}
-          <label class="league-pick">
-            <span class="muted fs-sm">{L.pickLeague}</span>
-            <select value={pickKey} onchange={(e) => choose(e.currentTarget.value)} data-league-pick>
-              {#each choices as c (`${c.tier}-${c.league}`)}
-                {@const key = `${c.tier}-${c.league}`}
-                <option value={key}>{L.leagueName(c)}{key === mineKey ? ` · ${L.myLeague}` : ''}</option>
-              {/each}
-            </select>
-          </label>
-        {/if}
+        {#if choices.length > 1}<LeaguePicker tiers={data.tiers} {pick} {mine} onpick={choose} />{/if}
         {#key pickKey}
-          <LeagueBoard season={data.league.season} tier={pick.tier} league={pick.league} bottomTier={data.tiers.at(-1)?.tier ?? 1} {mineId} bind:round onopen={openMatch} />
+          <LeagueBoard season={data.league.season} tier={pick.tier} league={pick.league} bottomTier={data.tiers.at(-1)?.tier ?? 1} {mineId} bind:round thisRound={leagueDefaultRound(data)} onopen={openMatch} onteam={openProfile} />
         {/key}
       {/if}
 
@@ -264,15 +269,6 @@
   .league-sec h2,
   .league-sec p {
     margin: 0;
-  }
-  .league-pick {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-  }
-  .league-pick select {
-    min-height: 44px;
   }
   .league-warn {
     color: var(--warn);

@@ -24,14 +24,17 @@
   import TeamLogo from '../team/TeamLogo.svelte';
   import LeagueFinalLive from './LeagueFinalLive.svelte';
 
-  let { season, tier, league, bottomTier, mineId, round = $bindable(), onopen }: {
+  let { season, tier, league, bottomTier, mineId, round = $bindable(), thisRound, onopen, onteam }: {
     season: number;
     tier: number;
     league: number;
     bottomTier: number;
     mineId: string | null;
     round: number;
+    /** 다음에 치를 라운드. '이번 라운드로'가 여기로 돌아온다. */
+    thisRound: number;
     onopen: (m: LeagueMatch, table: LeagueTableResponse) => void;
+    onteam: (teamId: string) => void;
   } = $props();
 
   let status = $state<LoadStatus>('loading');
@@ -65,6 +68,11 @@
   const finalReady = $derived(!!table && leagueFinalReady(table));
   const lastRound = $derived(table ? leagueLastRound(table) : 0);
   let live = $state(false);
+  let allRounds = $state(false);
+  function pickRound(n: number) {
+    round = n;
+    allRounds = false;
+  }
 </script>
 
 <LoadState {status} failText={L.tableFail} retry={load} rows={8}>
@@ -84,11 +92,11 @@
               {@const zoneLabel = s.teamId === mineId ? leagueZoneLabel(zone, !!cl) : null}
               <tr class:up={zone === 'up'} class:down={zone === 'down'} class:mine={s.teamId === mineId} data-league-rank={s.rank}>
                 <td class="t">
-                  <div class="lg-who">
+                  <button class="lg-who" type="button" data-act="league-team-open" disabled={!t} onclick={() => onteam(s.teamId)} aria-label={t ? C.teamProfileOpen({ team: t.name }) : undefined}>
                     <span class="rk">{s.rank}</span>
                     <TeamLogo logo={t?.logo} name={t?.name ?? C.tbd} size={24} decorative />
                     <span class="lg-nm"><b>{t?.name ?? C.tbd}{#if cl}<span class="pill lg-clinch {CLINCH[cl].cls}" data-league-clinch={cl}>{CLINCH[cl].text}</span>{/if}{#if zoneLabel}<span class="pill lg-clinch" class:good={zone === 'up'} class:warn={zone === 'down'} data-league-my-zone={zone}>{zoneLabel}</span>{/if}</b><small class="muted">{C.teamOwnerLabel} {t?.owner ?? C.tbd}{#if s.forfeits || s.teamId === mineId}&nbsp;· <span data-league-forfeits={s.teamId === mineId ? 'mine' : undefined}>{leagueForfeitsTag(s.forfeits)}</span>{/if}</small></span>
-                  </div>
+                  </button>
                 </td>
                 <td>{s.p}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td><td>{gd(s.gf, s.ga)}</td><td><b>{s.pts}</b></td>
               </tr>
@@ -107,14 +115,23 @@
     <section class="card lg-sec" data-league-rounds>
       <div class="lg-head">
         <h2>{L.roundsTitle}</h2>
-        <label class="lg-pick">
-          <span class="sr-only">{L.roundsTitle}</span>
-          <select bind:value={round} data-league-round>
-            {#each Array.from({ length: lastRound }, (_, i) => i + 1) as n (n)}<option value={n}>{L.roundName({ n })}</option>{/each}
-          </select>
-        </label>
+        {#if round !== thisRound}<button class="lg-link" type="button" data-act="league-round-now" onclick={() => pickRound(thisRound)}>{L.goThisRound}</button>{/if}
       </div>
-      {#if roundAt}<p class="muted fs-sm lg-at" data-league-round-at>{roundAt}</p>{/if}
+      <div class="lg-step">
+        <button class="lg-arrow" type="button" data-act="league-round-prev" aria-label={L.roundPrev} disabled={round <= 1} onclick={() => pickRound(round - 1)}>‹</button>
+        <button class="lg-now" type="button" data-act="league-round-all" data-league-round={round} aria-expanded={allRounds} aria-label={`${L.roundAll} · ${L.roundName({ n: round })}`} onclick={() => (allRounds = !allRounds)}>
+          <b>{L.roundName({ n: round })} <span aria-hidden="true">{allRounds ? '▴' : '▾'}</span></b>
+          {#if roundAt}<small class="muted" data-league-round-at>{roundAt}</small>{/if}
+        </button>
+        <button class="lg-arrow" type="button" data-act="league-round-next" aria-label={L.roundNext} disabled={round >= lastRound} onclick={() => pickRound(round + 1)}>›</button>
+      </div>
+      {#if allRounds}
+        <div class="lg-grid" data-league-round-grid>
+          {#each Array.from({ length: lastRound }, (_, i) => i + 1) as n (n)}
+            <button class="lg-no" class:on={n === round} class:now={n === thisRound} type="button" aria-pressed={n === round} aria-label={L.roundName({ n })} data-league-round-no={n} onclick={() => pickRound(n)}>{n}</button>
+          {/each}
+        </div>
+      {/if}
       {#if day}
         <ul class="lg-matches">
           {#each day.matches as m (m.id)}
@@ -164,22 +181,33 @@
   .lg-sec { display: flex; flex-direction: column; gap: 10px; }
   .lg-sec h2 { margin: 0; }
   .lg-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .lg-pick select { min-height: 44px; }
+  .lg-link { min-height: 44px; margin: -8px 0; padding: 0 2px; border: 0; background: transparent; color: var(--accent-text); font: inherit; font-size: var(--fs-body2); font-weight: 600; cursor: pointer; }
+  .lg-step { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 6px; }
+  .lg-arrow, .lg-now, .lg-no { border: 1px solid var(--line); border-radius: var(--radius-sm, 8px); background: var(--surface); color: inherit; font: inherit; cursor: pointer; }
+  .lg-arrow { min-height: 52px; font-size: 22px; line-height: 1; }
+  .lg-arrow:disabled { opacity: 0.35; cursor: default; }
+  .lg-now { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; padding: 4px; }
+  .lg-now small { font-size: var(--fs-caption); }
+  .lg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }
+  .lg-no { min-height: 44px; font-size: var(--fs-body2); font-variant-numeric: tabular-nums; }
+  .lg-no.now { font-weight: 700; color: var(--accent-text); }
+  .lg-no.on { border: 2px solid var(--accent); font-weight: 700; }
   .lg-scroll { overflow-x: auto; }
-  .lg-table { width: 100%; min-width: 400px; border-collapse: collapse; font-size: var(--fs-label); font-variant-numeric: tabular-nums; }
-  .lg-table th, .lg-table td { padding: 8px 4px; text-align: center; white-space: nowrap; }
+  .lg-table { width: 100%; border-collapse: collapse; font-size: var(--fs-label); font-variant-numeric: tabular-nums; }
+  .lg-table th, .lg-table td { padding: 8px 2px; text-align: center; white-space: nowrap; }
   .lg-table th { font-weight: 600; color: var(--muted); font-size: var(--fs-caption); }
-  .lg-table .t { min-width: 170px; width: 100%; text-align: left; white-space: normal; }
+  .lg-table .t { width: 100%; text-align: left; white-space: normal; }
   .lg-table tbody tr { border-top: 1px solid var(--line); }
   .lg-table tr.up { background: color-mix(in srgb, var(--good) 12%, transparent); box-shadow: inset 3px 0 0 var(--good); }
   .lg-table tr.down { background: color-mix(in srgb, var(--warn) 10%, transparent); box-shadow: inset 3px 0 0 var(--warn); }
   .lg-table tr.mine b { color: var(--accent-text); }
-  .lg-who { display: flex; align-items: center; gap: 6px; min-height: 44px; }
+  .lg-who { display: flex; align-items: center; gap: 6px; width: 100%; min-height: 44px; padding: 0; border: 0; border-radius: var(--radius-xs); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+  .lg-who:disabled { cursor: default; }
+  .lg-who:not(:disabled):hover b { text-decoration: underline; }
   .lg-who .rk { flex: none; width: 1.4em; color: var(--muted); }
   .lg-nm { display: flex; flex-direction: column; gap: 3px; min-width: 0; overflow-wrap: anywhere; }
   .lg-nm small { font-size: 11px; font-weight: 400; }
   .lg-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 0; }
-  .lg-at { margin: 0; }
   .lg-key { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
   .lg-key.up { background: var(--good); }
   .lg-key.down { background: var(--warn); }
