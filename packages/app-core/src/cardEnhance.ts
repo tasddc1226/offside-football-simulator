@@ -85,6 +85,9 @@ export function enhanceView(
   };
 }
 
+/** 강화 게이지가 차는 시간. 응답이 먼저 와도 이만큼은 채운 뒤 결과를 보여 준다(동작 줄이기면 건너뛴다). */
+export const ENHANCE_CHARGE_MS = 650;
+
 /** 시도 결과 한 줄. */
 export const enhanceResultText = (r: { success: boolean; from: number; to: number }) =>
   r.success

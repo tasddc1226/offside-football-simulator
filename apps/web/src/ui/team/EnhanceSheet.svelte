@@ -4,9 +4,10 @@
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { holdAchCheck } from '@offside/app-core/achDirty';
   import { enhanceCard, fetchEnhanceState, type EnhanceResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
-  import { enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView } from '@offside/app-core/cardEnhance';
+  import { ENHANCE_CHARGE_MS, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView } from '@offside/app-core/cardEnhance';
   import { fundsText } from '@offside/app-core/funds';
   import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
+  import { buzz, dur } from '../motion.js';
   import { lockScroll } from '../scrollLock.js';
   import Skeleton from '../Skeleton.svelte';
   import { untrack } from 'svelte';
@@ -31,6 +32,11 @@
   let result = $state<EnhanceResponse | null>(null);
   let error = $state<string | null>(null);
   let requestKey = crypto.randomUUID();
+
+  const animate = dur(1) > 0;
+  // 결과 연출. 다음 시도를 누르면 result가 비워져 같은 결과가 이어져도 다시 움직인다.
+  const fx = $derived(result && animate ? enhanceResultKind(result) : null);
+  const SPARKS = [0, 45, 90, 135, 180, 225, 270, 315];
 
   const view = $derived(info ? enhanceView(info.card, info.rules, info.balance, listed) : null);
 
@@ -57,9 +63,10 @@
     busy = true;
     error = null;
     result = null;
+    const started = Date.now();
     const r = await enhanceCard(careerId, view.body, requestKey);
-    busy = false;
     if (!r.ok) {
+      busy = false;
       error = enhanceErrorText(r.error);
       // 응답을 받지 못했으면 같은 키로 다시 보낸다(서버가 이미 판정했으면 그 결과가 온다). 거절이면 새 키로.
       if (!enhanceKeepKey(r.error)) requestKey = crypto.randomUUID();
@@ -68,6 +75,11 @@
       return;
     }
     requestKey = crypto.randomUUID();
+    // 게이지가 다 찬 뒤 결과를 연다. 판정은 이미 끝났고 연출만 기다린다.
+    const wait = dur(ENHANCE_CHARGE_MS) - (Date.now() - started);
+    if (wait > 0) await new Promise((done) => setTimeout(done, wait));
+    busy = false;
+    if (enhanceResultKind(r.data) !== 'keep') buzz();
     if (info) info = { ...info, balance: r.data.balance, card: r.data.card };
     result = r.data;
     onresult(careerId, r.data);
@@ -76,7 +88,16 @@
 
 <dialog bind:this={dialog} aria-labelledby="enhance-title" onclose={onclose} data-enhance-sheet>
   <header><h2 id="enhance-title">{L.title}</h2><button class="close" aria-label={L.close} onclick={() => dialog.close()}>×</button></header>
-  <p class="who"><strong>{name}</strong><span class="lv" data-enhance-level>+{info?.card.level ?? player.enhance ?? 0}</span></p>
+  <div class="stage" class:charging={busy && animate} data-fx={fx} data-enhance-stage>
+    {#if fx}<span class="flash" aria-hidden="true"></span>{/if}
+    {#if fx === 'success'}
+      <span class="burst" aria-hidden="true"><span class="ring"></span>{#each SPARKS as a (a)}<i style:--a="{a}deg"></i>{/each}</span>
+    {/if}
+    <strong class="who">{name}</strong>
+    <span class="lv" data-enhance-level>+{info?.card.level ?? player.enhance ?? 0}</span>
+    <span class="gauge" aria-hidden="true">{#if busy && animate}<i style:animation-duration="{ENHANCE_CHARGE_MS}ms"></i>{/if}</span>
+    <p class="result" class:good={result?.success} class:bad={result && enhanceResultKind(result) === 'down'} role="status" data-enhance-result={result ? enhanceResultKind(result) : undefined}>{result ? enhanceResultText(result) : ''}</p>
+  </div>
   {#if status === 'loading'}
     <Skeleton height={180} />
   {:else if status === 'error' || !view || !info}
@@ -94,9 +115,6 @@
     {#if view.ovrText}<p class="ovr" data-enhance-ovr>{view.ovrText}</p>{/if}
     {#if view.tierText}<p class="muted fs-sm" data-enhance-tier>{view.tierText}</p>{/if}
     {#if view.failText}<p class="muted fs-sm" data-enhance-fail-note>{view.failText}</p>{/if}
-    {#if result}
-      <p class="result" class:good={result.success} class:bad={enhanceResultKind(result) === 'down'} role="status" data-enhance-result={enhanceResultKind(result)}>{enhanceResultText(result)}</p>
-    {/if}
     {#if result && enhanceTitleText(result.titles)}<p class="result good" role="status" data-enhance-title>{enhanceTitleText(result.titles)}</p>{/if}
     {#if error}<p class="note" role="alert" data-enhance-error>{error}</p>{/if}
     {#if view.block}<p class="note" data-enhance-block>{view.block}</p>{/if}
@@ -114,16 +132,39 @@
   header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   h2{font-size:18px;margin:0;}
   .close{flex:none;width:44px;height:44px;border:0;background:transparent;color:inherit;font-size:28px;cursor:pointer;}
-  .who{display:flex;align-items:baseline;gap:8px;margin:4px 0 12px;overflow-wrap:anywhere;}
-  .lv{font-family:var(--display);font-weight:700;font-size:1.4rem;color:var(--accent-text);}
+  .stage{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:4px;margin:4px 0 12px;padding:12px;border-radius:12px;background:var(--surface-2);text-align:center;}
+  .who{overflow-wrap:anywhere;}
+  .lv{font-family:var(--display);font-weight:700;font-size:2.4rem;line-height:1.1;color:var(--accent-text);font-variant-numeric:tabular-nums;}
+  .gauge{width:70%;height:4px;border-radius:2px;background:var(--line);overflow:hidden;}
+  .gauge i{display:block;height:100%;background:var(--accent);transform-origin:left;animation:enh-charge ease-out forwards;}
+  .charging .lv{animation:enh-swell 650ms ease-out forwards;}
+  .stage[data-fx='success'] .lv{animation:enh-pop 460ms cubic-bezier(.3,1.7,.5,1);}
+  .stage[data-fx='down'] .lv{color:var(--bad);}
+  .stage[data-fx='down']{animation:enh-shake 360ms linear;}
+  .stage[data-fx='keep']{animation:enh-nudge 240ms linear;}
+  .flash{position:absolute;inset:0;pointer-events:none;background:var(--line);opacity:0;animation:enh-flash 520ms ease-out;}
+  .stage[data-fx='success'] .flash{background:var(--accent);}
+  .stage[data-fx='down'] .flash{background:var(--bad);}
+  .burst{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;}
+  .burst>*{grid-area:1/1;}
+  .ring{width:60px;height:60px;border:3px solid var(--accent);border-radius:50%;opacity:0;animation:enh-ring 620ms ease-out;}
+  .burst i{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:0;animation:enh-spark 620ms ease-out;}
+  @keyframes enh-charge{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+  @keyframes enh-swell{to{transform:scale(1.12);}}
+  @keyframes enh-pop{from{transform:scale(.4);}to{transform:scale(1);}}
+  @keyframes enh-shake{0%,100%{transform:none;}20%{transform:translateX(-8px);}45%{transform:translateX(6px);}70%{transform:translateX(-3px);}}
+  @keyframes enh-nudge{0%,100%{transform:none;}35%{transform:translateX(-3px);}70%{transform:translateX(3px);}}
+  @keyframes enh-flash{from{opacity:.4;}to{opacity:0;}}
+  @keyframes enh-ring{from{opacity:.9;transform:scale(.5);}to{opacity:0;transform:scale(2.6);}}
+  @keyframes enh-spark{from{opacity:1;transform:rotate(var(--a)) translateY(-22px);}to{opacity:0;transform:rotate(var(--a)) translateY(-78px);}}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px;}
   .grid div{border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
   .grid dt{font-size:.72rem;color:var(--muted);}
   .grid dd{margin:2px 0 0;font-weight:700;font-variant-numeric:tabular-nums;}
   .ovr{margin:0 0 6px;font-weight:600;}
   .note{padding:10px 12px;border-radius:10px;background:var(--surface-2);font-size:13px;line-height:1.6;}
-  .result{margin:10px 0;font-weight:600;}
+  .result{margin:6px 0 0;min-height:1.5em;line-height:1.5;font-weight:600;}
   .result.good{color:var(--good);}
-  .result.bad{color:var(--warn);}
+  .result.bad{color:var(--bad);}
   .foot{margin-top:10px;line-height:1.6;}
 </style>

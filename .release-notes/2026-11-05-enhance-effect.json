@@ -1,0 +1,20 @@
+{
+  "id": "t-11-639-enhance-effect",
+  "title": "카드 강화 연출 추가",
+  "items": [
+    "강화하기를 누르면 게이지가 차오르고, 성공 · 유지 · 하락에 따라 화면 연출과 진동이 달라져요. 확률과 비용은 그대로예요."
+  ],
+  "en": {
+    "title": "Card enhancement effects",
+    "items": [
+      "Tapping Enhance now fills a gauge, and success, no change and level drop each get their own effect and vibration. Rates and costs stay the same."
+    ]
+  },
+  "ja": {
+    "title": "カード強化の演出を追加",
+    "items": [
+      "強化するを押すとゲージがたまり、成功・維持・ダウンごとに画面の演出と振動が変わります。確率と費用は変わりません。"
+    ]
+  },
+  "availability": "web-app"
+}
