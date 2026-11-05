@@ -112,7 +112,7 @@
   /* 시너지 — 효과가 들어가는 선수는 늘 카드 아래 점으로, 칩으로 고른 시너지의 선수만 테두리로 더 강조한다. */
   .syn-pip {display:block;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--pitch),transparent 20%),0 0 8px var(--accent);}
   .tm-slot > .syn-pip {position:absolute;left:50%;bottom:-6px;transform:translateX(-50%);pointer-events:none;}
-  .tm-slot > .salary-pip {position:absolute;left:-4px;bottom:8px;z-index:2;padding:1px 4px;border-radius:var(--radius-pill);background:#000c;color:#ffd76a;font:700 8px/1.3 system-ui,sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 0 0 1px #ffd76a66 inset;}
+  .tm-slot > .salary-pip {position:absolute;left:-4px;top:-8px;z-index:2;padding:1px 4px;border-radius:var(--radius-pill);background:#000c;color:#ffd76a;font:700 8px/1.3 system-ui,sans-serif;white-space:nowrap;pointer-events:none;box-shadow:0 0 0 1px #ffd76a66 inset;}
   .syn-caption {position:absolute;left:50%;bottom:14px;transform:translateX(-50%);margin:0;display:flex;align-items:center;gap:7px;max-width:calc(100% - 24px);padding:5px 12px;border-radius:var(--radius-pill);background:color-mix(in srgb,#000,transparent 55%);color:var(--on-pitch);font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;pointer-events:none;}
   .syn-caption .syn-pip {flex:none;width:7px;height:7px;box-shadow:0 0 6px var(--accent);}
   .syn-links {position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}

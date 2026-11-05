@@ -213,24 +213,6 @@ export function TeamPitch({
                   <PlayerCard cell={cell} code={pos.slot} compact animate={animate} />
                 </Press>
               </DragPlayer>
-              {salaries[i] ? (
-                <View
-                  pointerEvents="none"
-                  testID={`slot-${i}-salary`}
-                  style={{
-                    position: 'absolute',
-                    left: -4,
-                    bottom: 8,
-                    paddingHorizontal: 4,
-                    borderRadius: 999,
-                    backgroundColor: '#000c',
-                  }}
-                >
-                  <Txt style={{ fontSize: 8, lineHeight: 11, fontWeight: '700', color: '#ffd76a' }}>
-                    {TC.salaryChip({ n: salaries[i]! })}
-                  </Txt>
-                </View>
-              ) : null}
               {applied.includes(i) ? (
                 <View
                   pointerEvents="none"
@@ -251,6 +233,31 @@ export function TeamPitch({
             </View>
           );
         })}
+        {/* 급여 칩은 카드 위쪽에 걸쳐 있어 윗줄 카드에 덮이지 않게 모든 카드 위에 따로 그린다. */}
+        {positions.map((pos, i) =>
+          cells[i] && salaries[i] ? (
+            <View
+              key={`salary-${i}`}
+              pointerEvents="none"
+              testID={`slot-${i}-salary`}
+              style={{
+                position: 'absolute',
+                left: `${pos.x}%`,
+                top: `${pos.y}%`,
+                marginLeft: -35,
+                marginTop: -52,
+                zIndex: 4,
+                paddingHorizontal: 4,
+                borderRadius: 999,
+                backgroundColor: '#000c',
+              }}
+            >
+              <Txt style={{ fontSize: 8, lineHeight: 11, fontWeight: '700', color: '#ffd76a' }}>
+                {TC.salaryChip({ n: salaries[i]! })}
+              </Txt>
+            </View>
+          ) : null,
+        )}
       </View>
     </View>
   );

@@ -40,7 +40,6 @@ import {
 } from '@offside/app-core/api/team';
 import { enhanceLossNote } from '@offside/app-core/cardEnhance';
 import { marketSalaryText } from '@offside/app-core/salary';
-import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import {
   MARKET_POS_FILTERS,
   marketDetailFilters,
@@ -331,12 +330,15 @@ function PctSlider({
   max,
   step,
   value,
+  valueText,
   onChange,
 }: {
   min: number;
   max: number;
   step: number;
   value: number;
+  /** 화면의 판매가 — 상한에 걸리면 슬라이더 % 와 실제 값이 다르다. */
+  valueText: string;
   onChange: (v: number) => void;
 }) {
   const c = useColors();
@@ -366,7 +368,7 @@ function PctSlider({
       accessible
       accessibilityRole="adjustable"
       accessibilityLabel={L.sliderLabelApp}
-      accessibilityValue={{ min, max, now: value, text: `${value}%` }}
+      accessibilityValue={{ min, max, now: value, text: valueText }}
       onAccessibilityAction={(e) =>
         onChange(
           Math.min(
@@ -1757,6 +1759,7 @@ export default function Market() {
                         max={range!.maxPct}
                         step={range!.step}
                         value={pct}
+                        valueText={fmtValue(sellPrice)}
                         onChange={setPct}
                       />
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -1959,6 +1962,7 @@ export default function Market() {
                     weight: buying.card.weight,
                     foot: buying.card.foot,
                     cardValue: buying.card.cardValue,
+                    enhance: buying.card.enhance,
                     pos: buying.card.pos,
                     type: buying.card.type ?? null,
                     youth: false,
@@ -1990,7 +1994,7 @@ export default function Market() {
                 testID="market-salary"
                 style={{ fontSize: rem(0.75), fontWeight: '600', color: c.onPitch, opacity: 0.85 }}
               >
-                {`${TC.salaryLabel} · ${marketSalaryText(buying.card, season)}`}
+                {marketSalaryText(buying.card, season)}
               </Txt>
             </View>
             <View
@@ -2006,7 +2010,7 @@ export default function Market() {
               </Txt>
               <View style={{ gap: 8 }}>
                 <Line
-                  label={L.baseLine}
+                  label={buying.card.enhance ? L.baseLineEnhanced : L.baseLine}
                   value={fmtValue(tradeValue(buying.card.cardValue, buying.card.enhance))}
                 />
                 <Line

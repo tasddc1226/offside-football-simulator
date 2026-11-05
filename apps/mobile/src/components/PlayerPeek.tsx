@@ -9,7 +9,6 @@ import { tn } from '@offside/game/i18n/names';
 import { typeName } from '@offside/game/data';
 import { cardBody } from '@offside/app-core/format';
 import { prefs } from '../store';
-import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
 import { Toast } from '../ui/Toast';
 import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
@@ -60,7 +59,6 @@ export function PlayerPeek({
   /** 내 팀 그라운드에서만 준다. 라운지에 이 선수를 올린다. */
   onshare?: ((careerId: string) => void) | undefined;
 }) {
-  const c = useColors();
   const { motionOK } = useSnapshot(prefs);
   const { width, height } = useWindowDimensions();
   const CARD_H = cardHeight(player);
@@ -91,7 +89,8 @@ export function PlayerPeek({
   return (
     <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={close}>
       <Animated.View
-        style={{ position: 'absolute', inset: 0, backgroundColor: c.scrim, opacity: t }}
+        // 카드 아래 설명 줄 뒤로 화면 글자가 비치지 않게 일반 시트보다 어둡게 깐다.
+        style={{ position: 'absolute', inset: 0, backgroundColor: '#000000c4', opacity: t }}
       >
         <Pressable
           testID="peek-backdrop"
@@ -159,6 +158,8 @@ export function PlayerPeek({
                 weight: player.weight,
                 foot: player.foot,
                 cardValue: player.cardValue,
+                enhance: player.enhance,
+                locked: player.locked,
                 pos: player.pos,
                 type: player.type,
                 youth: false,

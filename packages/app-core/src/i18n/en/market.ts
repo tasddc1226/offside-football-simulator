@@ -52,6 +52,7 @@ export const market: Translation<MarketMsgs> = {
   loginTitle: 'Sign in to sign players',
   loginToBuy: 'Sign in to become a club owner and sign this player.',
   baseLine: 'Base value (value in their peak OVR season)',
+  baseLineEnhanced: 'Base value + enhancement value',
   price: 'Price',
   fundsNow: 'Current club funds',
   fundsAfter: 'Funds left after signing',

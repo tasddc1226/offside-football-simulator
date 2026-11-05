@@ -88,7 +88,6 @@
   import Topbar from './Topbar.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
   import { marketSalaryText } from '@offside/app-core/salary';
-  import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import MarketChart from './MarketChart.svelte';
   import MarketFind from './MarketFind.svelte';
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
@@ -582,7 +581,7 @@
             </div>
             <label class="mk-slider">
               <span class="mk-slider-top"><span>{L.price}</span><b>{fmtValue(sellPrice)} <small class="mk-{diff.tone}">{diff.text}</small></b></span>
-              <input type="range" min={range.minPct} max={range.maxPct} step={range.step} bind:value={pct} aria-label={L.sliderLabelWeb} data-sell-pct />
+              <input type="range" min={range.minPct} max={range.maxPct} step={range.step} bind:value={pct} aria-label={L.sliderLabelWeb} aria-valuetext={fmtValue(sellPrice)} data-sell-pct />
               <span class="mk-slider-ends"><span>{fmtValue(quote.band.min)} ({range.minPct}%)</span><span>{fmtValue(quote.band.max)} ({range.maxLabelPct}%)</span></span>
             </label>
             <dl class="mk-lines">
@@ -647,12 +646,12 @@
         <div><dt>{L.detailTransfers}</dt><dd>{L.transferTimes({ n: buying.card.transfers })}</dd></div>
         <div><dt>{L.position}</dt><dd>{tn(POS_LABEL[buying.card.pos])}</dd></div>
       </dl>
-      <p class="mk-salary" data-market-salary>{TC.salaryLabel} · {marketSalaryText(buying.card, season)}</p>
+      <p class="mk-salary" data-market-salary>{marketSalaryText(buying.card, season)}</p>
     </div>
     <div class="mk-confirm">
       <h2>{own ? L.ownListing : me ? L.buyTitle : L.loginTitle}</h2>
       <dl class="mk-lines">
-        <div><dt>{L.baseLine}</dt><dd>{fmtValue(tradeValue(buying.card.cardValue, buying.card.enhance))}</dd></div>
+        <div><dt>{buying.card.enhance ? L.baseLineEnhanced : L.baseLine}</dt><dd>{fmtValue(tradeValue(buying.card.cardValue, buying.card.enhance))}</dd></div>
         <div class="big"><dt>{L.price}</dt><dd>{fmtValue(buying.price)} <small class="mk-{diff.tone}">{diff.text}</small></dd></div>
         {#if me && !own}
           <div class="rule"></div>

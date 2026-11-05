@@ -198,8 +198,8 @@
     .card-fx i {animation:none;opacity:.9;}
     }
   /* 자물쇠 아래 오른쪽 단계 배지. */
-  .card-enhance {position:absolute;top:56px;right:9px;z-index:2;padding:2px 6px 1px;border-radius:999px;background:var(--fx-line);font:800 11px/1.2 var(--display);box-shadow:0 0 0 1px #ffffff88 inset,0 1px 3px #0006;}
-  .compact .card-enhance {top:50px;right:4px;padding:1px 4px 0;font-size:8px;}
+  .card-enhance {position:absolute;top:44px;left:44px;z-index:2;padding:2px 6px 1px;border-radius:999px;background:var(--fx-line);font:800 11px/1.2 var(--display);box-shadow:0 0 0 1px #ffffff88 inset,0 1px 3px #0006;}
+  .compact .card-enhance {top:50px;left:auto;right:4px;padding:1px 4px 0;font-size:8px;}
   .card-season {position:absolute;top:9px;left:50%;transform:translateX(-50%);z-index:1;padding:2px 5px 1px;border-radius:3px;background:var(--season-bg);color:#fff;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.06em;box-shadow:0 0 0 1px #ffffff55 inset;}
   .compact .card-season {top:4px;padding:1px 3px 0;font-size:7px;}
   /* T-11-372 시즌 특별 카드: 테두리를 표식 색으로 바꾸고 빛을 두르며, 아래쪽에 띠를 단다. */

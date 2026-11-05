@@ -434,15 +434,12 @@ function EnhanceFxPulse({
   );
 }
 
-/** T-11-373 카드 강화 배지(웹 PlayerCard .card-enhance). */
-function EnhanceBadge({ level, compact, fx }: { level: number; compact: boolean; fx: EnhanceFx }) {
+/** T-11-373 강화 단계 알약. */
+function EnhancePill({ level, compact, fx }: { level: number; compact: boolean; fx: EnhanceFx }) {
   return (
     <View
       testID="card-enhance"
       style={{
-        position: 'absolute',
-        top: compact ? 50 : 56,
-        right: compact ? 4 : 9,
         paddingHorizontal: compact ? 4 : 6,
         paddingVertical: 1,
         borderRadius: 999,
@@ -466,17 +463,45 @@ function EnhanceBadge({ level, compact, fx }: { level: number; compact: boolean;
   );
 }
 
+/**
+ * T-11-373 카드 강화 배지 자리(웹 PlayerCard .card-enhance). 얼굴 · 등번호 · 이름을 가리지 않는 빈자리에 둔다. 큰 카드는 OVR 줄과
+ * 초상화 사이, 그라운드 카드는 이름 아래, 이름이 없는 목록 카드는 오른쪽 아래. 자리 OVR이 있는 그라운드 카드는 그 값 옆에 붙인다.
+ */
+function EnhanceBadge({
+  level,
+  compact,
+  mini,
+  fx,
+}: {
+  level: number;
+  compact: boolean;
+  mini: boolean;
+  fx: EnhanceFx;
+}) {
+  const place = !compact
+    ? { top: 44, left: 44 }
+    : mini
+      ? { top: 50, right: 4 }
+      : { top: 64, left: 0, right: 0, alignItems: 'center' as const };
+  return (
+    <View pointerEvents="none" style={{ position: 'absolute', ...place }}>
+      <EnhancePill level={level} compact={compact} fx={fx} />
+    </View>
+  );
+}
+
 /** T-11-188 잠긴 선수 자물쇠(웹 PlayerCard .card-lock). */
 function LockBadge({ compact }: { compact: boolean }) {
-  const size = compact ? 16 : 22;
+  const size = compact ? 14 : 22;
   return (
     <View
       accessibilityRole="image"
       accessibilityLabel={L.lockedAria}
       style={{
         position: 'absolute',
-        top: compact ? 32 : 30,
-        right: compact ? 5 : 11,
+        // 작은 카드는 등번호를 가리지 않게 국기 위 모서리에 둔다.
+        top: compact ? -3 : 30,
+        right: compact ? 1 : 11,
         width: size,
         height: size,
         borderRadius: size / 2,
@@ -487,7 +512,7 @@ function LockBadge({ compact }: { compact: boolean }) {
         justifyContent: 'center',
       }}
     >
-      <Svg width={compact ? 10 : 13} height={compact ? 10 : 13} viewBox="0 0 16 16">
+      <Svg width={compact ? 9 : 13} height={compact ? 9 : 13} viewBox="0 0 16 16">
         <Rect x="3" y="7" width="10" height="7" rx="1.5" fill="#fff" />
         <Path
           d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"
@@ -911,7 +936,9 @@ export function PlayerCard({
         <SeasonBadge season={cell.season} compact={compact} />
       ) : null}
       {cell.locked && !cell.youth ? <LockBadge compact={compact} /> : null}
-      {fx ? <EnhanceBadge level={level} compact={compact} fx={fx} /> : null}
+      {fx && !(compact && !mini && deployed) ? (
+        <EnhanceBadge level={level} compact={compact} mini={mini} fx={fx} />
+      ) : null}
       {mini ? null : (
         <View
           style={{
@@ -962,18 +989,21 @@ export function PlayerCard({
           >
             {L.posOvrLabel}
           </Text>
-          <Text
-            maxFontSizeMultiplier={1.1}
-            style={{
-              color: tone.ink,
-              fontFamily: DISPLAY[700],
-              fontSize: compact ? 12 : 14,
-              lineHeight: compact ? 12 : 17,
-              includeFontPadding: false,
-            }}
-          >
-            {cell.rating}
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+            <Text
+              maxFontSizeMultiplier={1.1}
+              style={{
+                color: tone.ink,
+                fontFamily: DISPLAY[700],
+                fontSize: compact ? 12 : 14,
+                lineHeight: compact ? 12 : 17,
+                includeFontPadding: false,
+              }}
+            >
+              {cell.rating}
+            </Text>
+            {fx && compact && !mini ? <EnhancePill level={level} compact fx={fx} /> : null}
+          </View>
         </View>
       ) : null}
       {!compact ? <CardAttributes cell={cell} color={tone.ink} /> : null}

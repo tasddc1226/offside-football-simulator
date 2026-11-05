@@ -86,7 +86,6 @@ const ko = {
   salaryOpen: '급여 안내 보기',
   salaryOverSave: (p: { n: number; max: number }) =>
     `지난 시즌 선수 급여가 예산을 넘어 저장할 수 없어요(${p.n}/${p.max}). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.`,
-  salaryLabel: '급여',
   salaryLater: (p: { n: number }) => `이번 시즌은 없음 · 다음 시즌부터 ${p.n}`,
 };
 

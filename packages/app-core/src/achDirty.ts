@@ -25,10 +25,31 @@ export function clearAchDirty(): void {
   void saveKey(DIRTY_KEY, false);
 }
 
-/** 업적을 확인해도 되는 화면(홈·기록실·구단주·내 팀, 경기 결과를 보는 중이 아닐 때). 시트가 떠 있으면 닫힌 뒤로 미룬다. */
+let holds = 0;
+/** 강화 창처럼 그 안에서 쓰기가 이어지는 창이 떠 있는 동안인지. */
+export const achHeld = (): boolean => holds > 0;
+/**
+ * 창이 열린 동안 업적 확인을 미룬다. 앱은 모달 위에 시트 모달을 또 열면 iOS에서 화면이 멈추고, 강화처럼 연달아 쓰는 창은
+ * 시도마다 업적을 다시 받게 된다. 돌려준 함수로 풀면 미룬 확인을 한 번 한다.
+ */
+export function holdAchCheck(): () => void {
+  holds++;
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    holds--;
+    if (holds === 0) for (const fn of listeners) fn();
+  };
+}
+
+/** 업적을 확인해도 되는 화면(홈·기록실·구단주·내 팀, 경기 결과를 보는 중이 아닐 때). 시트나 보류 중인 창이 떠 있으면 닫힌 뒤로 미룬다. */
 const ACH_SCREENS = new Set(['home', 'hof', 'owner', 'team']);
 export const achCheckable = (screen: string, teamView: string, sheetOpen: boolean): boolean =>
-  !sheetOpen && ACH_SCREENS.has(screen) && !(screen === 'team' && teamView === 'result');
+  !sheetOpen &&
+  !achHeld() &&
+  ACH_SCREENS.has(screen) &&
+  !(screen === 'team' && teamView === 'result');
 
 /** 업적이 바뀔 수 있는 API 쓰기 경로(api/client가 성공한 쓰기마다 묻는다). 은퇴는 업로드 큐가 따로 표시한다. */
 export const touchesAchievements = (path: string): boolean =>

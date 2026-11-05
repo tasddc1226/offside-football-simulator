@@ -82,6 +82,5 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   salaryOpen: '年俸のご案内を見る',
   salaryOverSave: (p) =>
     `過去シーズン選手の年俸が予算を超えているため保存できません（${p.n}/${p.max}）。年俸の低い選手か今シーズンの選手に替えてください。`,
-  salaryLabel: '年俸',
   salaryLater: (p) => `今シーズンはなし・来シーズンから${p.n}`,
 };

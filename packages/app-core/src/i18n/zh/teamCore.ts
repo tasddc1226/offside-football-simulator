@@ -79,6 +79,5 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   salaryOpen: '查看薪資說明',
   salaryOverSave: (p) =>
     `過去賽季球員薪資超出預算，無法儲存（${p.n}/${p.max}）。請換成薪資較低的球員或本賽季的球員。`,
-  salaryLabel: '薪資',
   salaryLater: (p) => `本賽季無 · 下賽季起 ${p.n}`,
 };

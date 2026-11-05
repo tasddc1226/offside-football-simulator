@@ -397,6 +397,8 @@ export default function Team() {
             look: p.look,
             nation: p.nation,
             season: p.season,
+            enhance: p.enhance,
+            locked: p.locked,
           }
         : {}),
     };

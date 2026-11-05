@@ -2,6 +2,7 @@
   // T-11-373 카드 강화 창(앱 screens/owner/EnhanceSheet.tsx). 열 때 그 카드 상태를 한 번 받고, 시도는 서버가 판정한다. 응답을 받지
   // 못한 시도는 같은 멱등 키로 다시 보내 두 번 판정되지 않는다. 결과는 열린 카드(careerId)에만 돌려준다.
   import type { TeamPlayer } from '@offside/app-core/api/team';
+  import { holdAchCheck } from '@offside/app-core/achDirty';
   import { enhanceCard, fetchEnhanceState, type EnhanceResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
   import { enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView } from '@offside/app-core/cardEnhance';
   import { fundsText } from '@offside/app-core/funds';
@@ -19,6 +20,8 @@
   } = $props();
 
   // 열 때의 카드로 고정한다(창이 열린 동안 부모가 다른 카드를 골라도 이 창은 이 카드만 다룬다).
+  // 창이 열린 동안 시도마다 업적을 받지 않고, 닫을 때 한 번 확인한다.
+  $effect(() => holdAchCheck());
   const careerId = untrack(() => player.careerId);
   const listed = untrack(() => !!player.listing);
   let dialog: HTMLDialogElement;
