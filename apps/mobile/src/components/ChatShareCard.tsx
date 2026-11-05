@@ -172,6 +172,7 @@ function PlayerShareCard({
               number: player.number,
               legendScore: player.legendScore,
               specials: player.specials,
+              enhance: player.enhance,
               pos: player.pos,
               youth: false,
             }}

@@ -215,6 +215,15 @@ export function drawTeamShareCard(
       'center',
       DISPLAY,
     );
+    // 강화 단계는 팀 그라운드 카드처럼 오른쪽 위에 +N으로 붙인다.
+    const enhance = cell.player?.enhance ?? 0;
+    if (enhance > 0) {
+      ctx.fillStyle = '#101e17';
+      ctx.beginPath();
+      ctx.roundRect(98, 12, 40, 28, 8);
+      ctx.fill();
+      text(`+${enhance}`, 118, 34, 24, '#f0b437', 'center', DISPLAY);
+    }
     const name = nameLines(ctx, cell.name, 126);
     const lineHeight = name.size + 2;
     const top = 122 - ((name.lines.length - 1) * lineHeight) / 2;

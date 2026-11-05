@@ -116,6 +116,7 @@ export default function Best11() {
             peak: card.peak,
             number: card.number,
             legendScore: card.legendScore,
+            enhance: card.enhance,
             attrs: card.attrs,
             attrsEstimated: card.attrsEstimated,
             height: card.height,
