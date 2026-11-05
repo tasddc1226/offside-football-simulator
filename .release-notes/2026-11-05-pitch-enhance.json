@@ -1,0 +1,18 @@
+{
+  "id": "t-11-642-pitch-enhance",
+  "title": "그라운드에서 바로 강화",
+  "items": ["내 구단 그라운드에서 선수를 누르면 강화하기 버튼이 보여요."],
+  "en": {
+    "title": "Enhance from the pitch",
+    "items": ["Tap a player on your club's pitch to see the Enhance button."]
+  },
+  "ja": {
+    "title": "ピッチからすぐ強化",
+    "items": ["自分のクラブのピッチで選手をタップすると、強化ボタンが表示されます。"]
+  },
+  "zh": {
+    "title": "從球場直接強化",
+    "items": ["在自己球會的球場點選球員，就會看到強化按鈕。"]
+  },
+  "availability": "web-app"
+}

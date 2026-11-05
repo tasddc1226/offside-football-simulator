@@ -11,7 +11,7 @@
   type Cell = { rating: number; name: string; youth: boolean; nation?: string | null | undefined; season?: number | undefined; player?: TeamPlayer | undefined;
     /** T-11-376 지난 시즌 선수 급여(0이면 칩 없음 — 이번 시즌 선수 · 유스). */
     salary?: number | undefined };
-  let { formation, cells, layout, selected = null, dragging = null, links = [], focus = null, applied = [], caption = null, element = $bindable(), onpick, onstart, onkey, onplace, onshare }:
+  let { formation, cells, layout, selected = null, dragging = null, links = [], focus = null, applied = [], caption = null, element = $bindable(), onpick, onstart, onkey, onplace, onshare, onenhance }:
     { formation: FormationId; cells: readonly Cell[]; layout?: TeamLayout | null | undefined; selected?: number | null; dragging?: number | null;
       /** T-11-105 시너지 듀오 — 첫 선수에서 나머지로 잇는다. on이면 굵게. */
       links?: readonly { members: readonly number[]; on: boolean }[]; focus?: readonly number[] | null;
@@ -21,7 +21,7 @@
       /** 편성 중 자리 누름. true면 배치·교체로 끝난 누름이라 카드 팝업을 열지 않는다. */
       onpick?: ((i: number) => boolean | void) | undefined; onstart?: ((e: PointerEvent, i: number) => void) | undefined;
       onkey?: ((e: KeyboardEvent, i: number) => void) | undefined; onplace?: ((e: MouseEvent) => void) | undefined;
-      onshare?: ((careerId: string) => void) | undefined } = $props();
+      onshare?: ((careerId: string) => void) | undefined; onenhance?: ((player: TeamPlayer) => void) | undefined } = $props();
   const positions = $derived(layout ?? presetLayout(formation));
   const filled = $derived(cells.filter((c) => !c.youth).length);
   // 카드 팝업 — 누른 자리와 그 버튼(팝업이 커져 나오고 닫히면 돌아갈 곳).
@@ -86,7 +86,7 @@
   {#if peek && peekCell?.player}
     {@const slot = positions[peek.i]!.slot}
     <PlayerPeek player={peekCell.player} name={peekCell.name} rating={peekCell.rating} {slot} nation={peekCell.nation} season={peekCell.season}
-      fit={Math.round(slotFit(slot, peekCell.player, peekCell.rating) * 100)} origin={peek.el} {onshare} onclose={() => (peek = null)} />
+      fit={Math.round(slotFit(slot, peekCell.player, peekCell.rating) * 100)} origin={peek.el} {onshare} {onenhance} onclose={() => (peek = null)} />
   {/if}
   {#if caption}<p class="syn-caption" class:focused={!!focus} data-synergy-caption aria-live="polite"><span class="syn-pip" aria-hidden="true"></span>{caption}</p>{/if}
 </section>

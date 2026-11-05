@@ -8,15 +8,18 @@
   import { dur } from '../motion.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
+  import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
 
   /** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다. */
-  let { player, name, rating, slot, nation, season, fit, origin, onclose, onshare }:
+  let { player, name, rating, slot, nation, season, fit, origin, onclose, onshare, onenhance }:
     { player: TeamPlayer; name: string; rating: number;
       /** 그라운드의 자리와 적합도. 라운지처럼 자리가 없는 곳에서는 안 준다. */
       slot?: DetailPos | undefined; fit?: number | undefined;
       nation?: string | null | undefined; season?: number | undefined; origin: HTMLElement; onclose: () => void;
       /** 내 팀 그라운드에서만 준다. 라운지에 이 선수를 올린다. */
-      onshare?: ((careerId: string) => void) | undefined } = $props();
+      onshare?: ((careerId: string) => void) | undefined;
+      /** 내 팀 그라운드에서 강화할 수 있을 때만 준다. 팝업을 닫은 뒤 강화 창을 연다. */
+      onenhance?: ((player: TeamPlayer) => void) | undefined } = $props();
   let card = $state<HTMLElement>();
   let closeButton = $state<HTMLButtonElement>();
   let closing = false;
@@ -57,6 +60,15 @@
     origin.focus({ preventScroll: true });
     onclose();
   }
+
+  async function enhance() {
+    if (closing) return;
+    // 닫히면 컴포넌트가 사라져 prop을 읽을 수 없으니 먼저 잡아 둔다.
+    const open = onenhance;
+    const target = player;
+    await close();
+    open?.(target);
+  }
 </script>
 
 <svelte:window onkeydown={(e) => { if (e.key === 'Escape') { e.stopPropagation(); void close(); } }} />
@@ -70,6 +82,7 @@
     </div>
     {#if slot != null && fit != null}<p class="peek-slot"><b>{tn(DETAIL_LABEL[slot])}</b>{L.pitchRatingFull({ peak: player.peak, rating, fit })}</p>{/if}
     <div class="peek-actions">
+      {#if onenhance && player.cardValue != null}<button class="peek-close peek-share" data-act="player-enhance" onclick={enhance}>{CE.go}</button>{/if}
       {#if onshare}<button class="peek-close peek-share" data-act="player-lounge-share" onclick={() => onshare(player.careerId)}>{LC.sharePlayerAct}</button>{/if}
       <button class="peek-close" bind:this={closeButton} onclick={close}>{L.close}</button>
     </div>

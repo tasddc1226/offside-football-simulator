@@ -100,3 +100,15 @@ test('강화 창은 열 때 상태를 한 번만 읽고, 시도 뒤에도 다시
   expect(hits.attempt).toBe(1);
   expect(hits.state).toBe(1);
 });
+
+test('그라운드 선수를 눌러 강화 창을 연다', async ({ page }) => {
+  await stub(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-act="team-auto"]').click();
+  await page.locator('[data-pitch-frame] [data-slot]', { hasText: '강화 선수' }).first().click();
+  await page.locator('[data-player-peek] [data-act="player-enhance"]').click();
+  await expect(page.locator('[data-player-peek]')).toHaveCount(0);
+  await expect(page.locator('[data-enhance-sheet] [data-act="enhance-go"]')).toBeEnabled();
+});
