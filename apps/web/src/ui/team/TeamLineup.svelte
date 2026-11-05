@@ -190,7 +190,7 @@
       {#each FORMATION_IDS as f (f)}<button class="hof-sort" aria-pressed={!layout && formation === f} data-formation={f} disabled={!editable} onclick={() => preset(f)}>{f}</button>{/each}
       {#if season > 0}{#each SHAPE_IDS as id (id)}<button class="hof-sort" aria-pressed={shapeOn === id} data-formation={id} disabled={!editable} onclick={() => shape(id)}>{id}</button>{/each}{/if}
     </div>
-    <TeamPitch onshare={team ? (careerId) => void shareToLounge({ kind: 'player', careerId }) : undefined} {formation} {cells} layout={positions} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} applied={syn.applied} caption={synergyApplies(season) ? syn.caption : null} bind:element={pitch}
+    <TeamPitch onshare={team ? (careerId) => void shareToLounge({ kind: 'player', careerId }) : undefined} {onenhance} {formation} {cells} layout={positions} selected={selectedSlot} dragging={drag?.moving ? drag.from : null} links={syn.links} focus={syn.members} applied={syn.applied} caption={synergyApplies(season) ? syn.caption : null} bind:element={pitch}
       onpick={editable ? pickSlot : undefined} onstart={editable ? (e, i) => start(e, slots[i] ?? null, i) : undefined} onkey={editable ? keyMove : undefined} onplace={editable ? place : undefined} />
     {#if editable}
       <div class="placement-bar" aria-live="polite">
