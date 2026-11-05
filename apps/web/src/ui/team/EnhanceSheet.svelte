@@ -10,6 +10,7 @@
   import { buzz, dur } from '../motion.js';
   import { lockScroll } from '../scrollLock.js';
   import Skeleton from '../Skeleton.svelte';
+  import EnhanceFx from './EnhanceFx.svelte';
   import { untrack } from 'svelte';
 
   let { player, name, onclose, onresult }: {
@@ -36,7 +37,6 @@
   const animate = dur(1) > 0;
   // 결과 연출. 다음 시도를 누르면 result가 비워져 같은 결과가 이어져도 다시 움직인다.
   const fx = $derived(result && animate ? enhanceResultKind(result) : null);
-  const SPARKS = [0, 45, 90, 135, 180, 225, 270, 315];
 
   const view = $derived(info ? enhanceView(info.card, info.rules, info.balance, listed) : null);
 
@@ -87,12 +87,9 @@
 </script>
 
 <dialog bind:this={dialog} aria-labelledby="enhance-title" onclose={onclose} data-enhance-sheet>
+  <div class="body" data-shake={fx}>
   <header><h2 id="enhance-title">{L.title}</h2><button class="close" aria-label={L.close} onclick={() => dialog.close()}>×</button></header>
   <div class="stage" class:charging={busy && animate} data-fx={fx} data-enhance-stage>
-    {#if fx}<span class="flash" aria-hidden="true"></span>{/if}
-    {#if fx === 'success'}
-      <span class="burst" aria-hidden="true"><span class="ring"></span>{#each SPARKS as a (a)}<i style:--a="{a}deg"></i>{/each}</span>
-    {/if}
     <strong class="who">{name}</strong>
     <span class="lv" data-enhance-level>+{info?.card.level ?? player.enhance ?? 0}</span>
     <span class="gauge" aria-hidden="true">{#if busy && animate}<i style:animation-duration="{ENHANCE_CHARGE_MS}ms"></i>{/if}</span>
@@ -124,6 +121,8 @@
       {L.effectNote}
     </p>
   {/if}
+  </div>
+  {#if animate}<EnhanceFx charging={busy} {result} />{/if}
 </dialog>
 
 <style>
@@ -132,31 +131,24 @@
   header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   h2{font-size:18px;margin:0;}
   .close{flex:none;width:44px;height:44px;border:0;background:transparent;color:inherit;font-size:28px;cursor:pointer;}
-  .stage{position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:4px;margin:4px 0 12px;padding:12px;border-radius:12px;background:var(--surface-2);text-align:center;}
+  .stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:6px;margin:4px 0 12px;padding:14px 12px;border-radius:14px;background:var(--surface-2);text-align:center;transition:box-shadow .3s;}
+  .stage.charging{box-shadow:0 0 0 2px #ffd35c,0 0 28px #ffb80099;}
   .who{overflow-wrap:anywhere;}
-  .lv{font-family:var(--display);font-weight:700;font-size:2.4rem;line-height:1.1;color:var(--accent-text);font-variant-numeric:tabular-nums;}
-  .gauge{width:70%;height:4px;border-radius:2px;background:var(--line);overflow:hidden;}
-  .gauge i{display:block;height:100%;background:var(--accent);transform-origin:left;animation:enh-charge ease-out forwards;}
-  .charging .lv{animation:enh-swell 650ms ease-out forwards;}
-  .stage[data-fx='success'] .lv{animation:enh-pop 460ms cubic-bezier(.3,1.7,.5,1);}
-  .stage[data-fx='down'] .lv{color:var(--bad);}
-  .stage[data-fx='down']{animation:enh-shake 360ms linear;}
-  .stage[data-fx='keep']{animation:enh-nudge 240ms linear;}
-  .flash{position:absolute;inset:0;pointer-events:none;background:var(--line);opacity:0;animation:enh-flash 520ms ease-out;}
-  .stage[data-fx='success'] .flash{background:var(--accent);}
-  .stage[data-fx='down'] .flash{background:var(--bad);}
-  .burst{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none;}
-  .burst>*{grid-area:1/1;}
-  .ring{width:60px;height:60px;border:3px solid var(--accent);border-radius:50%;opacity:0;animation:enh-ring 620ms ease-out;}
-  .burst i{width:6px;height:6px;border-radius:50%;background:var(--accent);opacity:0;animation:enh-spark 620ms ease-out;}
+  .lv{font-family:var(--display);font-weight:700;font-size:2.8rem;line-height:1.1;color:var(--accent-text);font-variant-numeric:tabular-nums;}
+  .gauge{width:82%;height:10px;border-radius:5px;background:var(--line);overflow:hidden;}
+  .gauge i{display:block;height:100%;background:linear-gradient(90deg,#ff8a00,#ffd35c,#fff);box-shadow:0 0 12px #ffd35c;transform-origin:left;animation:enh-charge cubic-bezier(.4,0,.8,.6) forwards;}
+  .charging .lv{animation:enh-tremble 900ms linear forwards;}
+  .stage[data-fx='success'] .lv{color:#d99a12;animation:enh-pop 420ms cubic-bezier(.3,1.9,.5,1);}
+  .stage[data-fx='down'] .lv{color:var(--bad);animation:enh-pop 300ms ease-out;}
+  .body[data-shake='down']{animation:enh-shake 520ms linear;}
+  .body[data-shake='keep']{animation:enh-nudge 260ms linear;}
+  .body[data-shake='success']{animation:enh-kick 300ms ease-out;}
   @keyframes enh-charge{from{transform:scaleX(0);}to{transform:scaleX(1);}}
-  @keyframes enh-swell{to{transform:scale(1.12);}}
+  @keyframes enh-tremble{0%{transform:none;}20%{transform:translate(1px,-1px) scale(1.03);}40%{transform:translate(-2px,1px) scale(1.07);}60%{transform:translate(3px,-2px) scale(1.12);}80%{transform:translate(-4px,2px) scale(1.18);}100%{transform:translate(4px,-3px) scale(1.25);}}
   @keyframes enh-pop{from{transform:scale(.4);}to{transform:scale(1);}}
-  @keyframes enh-shake{0%,100%{transform:none;}20%{transform:translateX(-8px);}45%{transform:translateX(6px);}70%{transform:translateX(-3px);}}
-  @keyframes enh-nudge{0%,100%{transform:none;}35%{transform:translateX(-3px);}70%{transform:translateX(3px);}}
-  @keyframes enh-flash{from{opacity:.4;}to{opacity:0;}}
-  @keyframes enh-ring{from{opacity:.9;transform:scale(.5);}to{opacity:0;transform:scale(2.6);}}
-  @keyframes enh-spark{from{opacity:1;transform:rotate(var(--a)) translateY(-22px);}to{opacity:0;transform:rotate(var(--a)) translateY(-78px);}}
+  @keyframes enh-shake{0%,100%{transform:none;}12%{transform:translate(-16px,6px) rotate(-1.5deg);}28%{transform:translate(14px,-5px) rotate(1.2deg);}46%{transform:translate(-10px,4px);}64%{transform:translate(7px,-2px);}82%{transform:translate(-3px,1px);}}
+  @keyframes enh-nudge{0%,100%{transform:none;}35%{transform:translateX(-4px);}70%{transform:translateX(4px);}}
+  @keyframes enh-kick{0%{transform:scale(.97);}50%{transform:scale(1.02);}100%{transform:none;}}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 10px;}
   .grid div{border:1px solid var(--line);border-radius:10px;padding:8px 10px;}
   .grid dt{font-size:.72rem;color:var(--muted);}

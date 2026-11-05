@@ -25,12 +25,15 @@ export function TeamDialog({
   close,
   avoidKeyboard = false,
   footer,
+  overlay,
 }: {
   title: string;
   children: ReactNode;
   close: () => void;
   avoidKeyboard?: boolean;
   footer?: ReactNode;
+  /** 창 전체를 덮는 층(연출용). 모달을 겹치지 않으려고 이 모달 안에 그린다. 눌림을 막지 않게 넘겨야 한다. */
+  overlay?: ReactNode;
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -107,6 +110,7 @@ export function TeamDialog({
           ) : null}
         </View>
       </KeyboardAvoidingView>
+      {overlay}
       {/* 모달은 앱 위 별도 층이라 알림을 이 안에서도 그린다. */}
       <Toast />
     </Modal>

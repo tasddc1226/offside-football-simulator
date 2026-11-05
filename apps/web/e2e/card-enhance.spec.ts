@@ -93,6 +93,8 @@ test('강화 창은 열 때 상태를 한 번만 읽고, 시도 뒤에도 다시
   await expect(sheet.locator('[data-enhance-level]')).toHaveText('+1');
   await expect(sheet.locator('[data-enhance-stage]')).toHaveAttribute('data-fx', 'success');
   await expect(sheet.locator('[data-enhance-stage] .gauge i')).toHaveCount(0);
+  // 전체 화면 연출은 눌림을 막지 않는다.
+  await expect(page.locator('[data-enhance-burst="success"]')).toHaveCSS('pointer-events', 'none');
   await expect(sheet.locator('[data-enhance-result]')).toBeVisible();
   await page.waitForTimeout(300);
   expect(hits.attempt).toBe(1);

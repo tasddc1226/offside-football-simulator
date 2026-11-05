@@ -35,6 +35,9 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   go: '強化する',
   going: '強化中…',
   close: '閉じる',
+  fxSuccess: '強化成功!',
+  fxKeep: '維持',
+  fxDown: 'ダウン',
   success: (p) => `+${p.lv}への強化に成功しました。`,
   failKeep: (p: { lv: number }) => `強化されませんでした。+${p.lv}のままです。`,
   failDown: (p: { from: number; to: number }) =>

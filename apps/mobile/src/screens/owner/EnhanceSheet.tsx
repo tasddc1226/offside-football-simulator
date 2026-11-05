@@ -20,6 +20,7 @@ import {
 } from '@offside/app-core/cardEnhance';
 import { fundsText } from '@offside/app-core/funds';
 import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
+import { EnhanceFx } from '../../components/EnhanceFx';
 import { EnhanceStage } from '../../components/EnhanceStage';
 import { TeamDialog } from '../../components/TeamDialog';
 import { prefs } from '../../store';
@@ -118,7 +119,11 @@ export function EnhanceSheet({
   );
 
   return (
-    <TeamDialog title={L.title} close={close}>
+    <TeamDialog
+      title={L.title}
+      close={close}
+      overlay={<EnhanceFx charging={busy} result={result} />}
+    >
       <EnhanceStage
         name={name}
         level={info?.card.level ?? player.enhance ?? 0}
