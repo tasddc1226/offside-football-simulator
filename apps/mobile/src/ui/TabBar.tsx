@@ -5,6 +5,7 @@
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Animated, Easing, View } from 'react-native';
+import Reanimated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { NAV_INTRO_MS, takeNavIntro, type SubNav } from '@offside/app-core/navIntro';
@@ -13,6 +14,7 @@ import { prefs, sheetState } from '../store';
 import { alpha } from '../theme/colors';
 import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
+import { barHeightUI, barHidden, noteBarH, watchBarLocks } from './navBar';
 import { Press } from './Press';
 import { TabIcon, type TabIconName } from './TabIcon';
 import { Txt } from './Txt';
@@ -166,108 +168,119 @@ export function TabBar({ items, label, sub }: { items: TabItem[]; label: string;
   const c = useColors();
   const insets = useSafeAreaInsets();
   const [ping, setPing] = useState(false);
+  useEffect(watchBarLocks, []);
+  const slide = useAnimatedStyle(() => ({
+    transform: [{ translateY: barHidden.value * barHeightUI.value }],
+  }));
   return (
-    <View
-      accessibilityRole="tablist"
-      accessibilityLabel={label}
-      style={{
-        flexDirection: 'row',
-        backgroundColor: c.surface,
-        borderTopWidth: sub ? 2 : 1,
-        borderTopColor: sub ? c.accent : c.line,
-        paddingTop: 6,
-        paddingHorizontal: 4,
-        paddingBottom: 6 + insets.bottom,
-        shadowColor: '#14201a',
-        shadowOpacity: 0.12,
-        shadowRadius: 10,
-        shadowOffset: { width: 0, height: -4 },
-        elevation: 8,
-      }}
+    <Reanimated.View
+      onLayout={(e) => noteBarH(e.nativeEvent.layout.height)}
+      style={[{ position: 'absolute', left: 0, right: 0, bottom: 0 }, slide]}
     >
-      {sub ? <NavIntro kind={sub} onShow={setPing} /> : null}
-      {items.map((t, i) => {
-        const color = t.active ? c.tabOn : c.muted;
-        const icon = <TabIcon name={t.key} color={color} />;
-        return (
-          <Enter
-            key={t.key}
-            kind="translateY"
-            from={14}
-            ms={320}
-            delay={i * 40}
-            style={{ flex: 1 }}
-          >
-            <Press
-              accessibilityRole="tab"
-              accessibilityState={{ selected: t.active }}
-              accessibilityLabel={
-                t.hint
-                  ? `${t.label}, ${t.hint}`
-                  : t.dot
-                    ? `${t.label}, ${t.dotLabel ?? L.achNew({ n: t.dot })}`
-                    : undefined
-              }
-              onPress={t.onPress}
-              testID={t.testID ?? `tab-${t.key}`}
-              style={(pressed) => ({
-                flex: 1,
-                minHeight: 44,
-                borderRadius: RADIUS.sm,
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 3,
-                paddingVertical: 6,
-                backgroundColor: pressed
-                  ? 'rgba(128,128,128,0.12)'
-                  : t.hint
-                    ? alpha(c.accent, 0.15)
-                    : 'transparent',
-                borderWidth: t.hint ? 2 : 0,
-                borderColor: c.accent,
-              })}
+      <View
+        accessibilityRole="tablist"
+        accessibilityLabel={label}
+        style={{
+          flexDirection: 'row',
+          backgroundColor: c.surface,
+          borderTopWidth: sub ? 2 : 1,
+          borderTopColor: sub ? c.accent : c.line,
+          paddingTop: 6,
+          paddingHorizontal: 4,
+          paddingBottom: 6 + insets.bottom,
+          shadowColor: '#14201a',
+          shadowOpacity: 0.12,
+          shadowRadius: 10,
+          shadowOffset: { width: 0, height: -4 },
+          elevation: 8,
+        }}
+      >
+        {sub ? <NavIntro kind={sub} onShow={setPing} /> : null}
+        {items.map((t, i) => {
+          const color = t.active ? c.tabOn : c.muted;
+          const icon = <TabIcon name={t.key} color={color} />;
+          return (
+            <Enter
+              key={t.key}
+              kind="translateY"
+              from={14}
+              ms={320}
+              delay={i * 40}
+              style={{ flex: 1 }}
             >
-              <View
-                style={t.active ? { transform: [{ translateY: -1 }, { scale: 1.06 }] } : undefined}
+              <Press
+                accessibilityRole="tab"
+                accessibilityState={{ selected: t.active }}
+                accessibilityLabel={
+                  t.hint
+                    ? `${t.label}, ${t.hint}`
+                    : t.dot
+                      ? `${t.label}, ${t.dotLabel ?? L.achNew({ n: t.dot })}`
+                      : undefined
+                }
+                onPress={t.onPress}
+                testID={t.testID ?? `tab-${t.key}`}
+                style={(pressed) => ({
+                  flex: 1,
+                  minHeight: 44,
+                  borderRadius: RADIUS.sm,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 3,
+                  paddingVertical: 6,
+                  backgroundColor: pressed
+                    ? 'rgba(128,128,128,0.12)'
+                    : t.hint
+                      ? alpha(c.accent, 0.15)
+                      : 'transparent',
+                  borderWidth: t.hint ? 2 : 0,
+                  borderColor: c.accent,
+                })}
               >
-                <IconChip ping={!!sub && i === 2 && ping} on={t.active}>
-                  {icon}
-                </IconChip>
-                {t.dot ? (
-                  <View
-                    testID={`${t.testID ?? `tab-${t.key}`}-dot`}
-                    style={{
-                      position: 'absolute',
-                      top: -4,
-                      right: -8,
-                      width: 12,
-                      height: 12,
-                      borderRadius: RADIUS.xs,
-                      backgroundColor: c.bad,
-                      borderWidth: 2,
-                      borderColor: c.surface,
-                    }}
-                  />
-                ) : null}
-              </View>
-              {/* T-11-038 아주 큰 글씨 설정에서 탭 이름이 옆 칸까지 번져 겹쳤다 — 한 줄, 확대는 1.3배까지. */}
-              <Txt
-                numberOfLines={1}
-                maxFontSizeMultiplier={1.3}
-                adjustsFontSizeToFit
-                style={{
-                  fontSize: rem(FONT.caption2),
-                  lineHeight: rem(FONT.caption2) * 1.3,
-                  fontWeight: '600',
-                  color,
-                }}
-              >
-                {t.label}
-              </Txt>
-            </Press>
-          </Enter>
-        );
-      })}
-    </View>
+                <View
+                  style={
+                    t.active ? { transform: [{ translateY: -1 }, { scale: 1.06 }] } : undefined
+                  }
+                >
+                  <IconChip ping={!!sub && i === 2 && ping} on={t.active}>
+                    {icon}
+                  </IconChip>
+                  {t.dot ? (
+                    <View
+                      testID={`${t.testID ?? `tab-${t.key}`}-dot`}
+                      style={{
+                        position: 'absolute',
+                        top: -4,
+                        right: -8,
+                        width: 12,
+                        height: 12,
+                        borderRadius: RADIUS.xs,
+                        backgroundColor: c.bad,
+                        borderWidth: 2,
+                        borderColor: c.surface,
+                      }}
+                    />
+                  ) : null}
+                </View>
+                {/* T-11-038 아주 큰 글씨 설정에서 탭 이름이 옆 칸까지 번져 겹쳤다 — 한 줄, 확대는 1.3배까지. */}
+                <Txt
+                  numberOfLines={1}
+                  maxFontSizeMultiplier={1.3}
+                  adjustsFontSizeToFit
+                  style={{
+                    fontSize: rem(FONT.caption2),
+                    lineHeight: rem(FONT.caption2) * 1.3,
+                    fontWeight: '600',
+                    color,
+                  }}
+                >
+                  {t.label}
+                </Txt>
+              </Press>
+            </Enter>
+          );
+        })}
+      </View>
+    </Reanimated.View>
   );
 }

@@ -12,6 +12,9 @@ export const settings: Translation<SettingsMsgs> = {
   darkTitle: 'Dark mode',
   darkBodyWeb: 'Switch to a dark screen. Saved on this device.',
   darkBodyApp: 'Use a dark screen. Saved on this device.',
+  barAutoHideTitleApp: 'Auto-hide bottom menu',
+  barAutoHideBodyApp:
+    'The bottom menu hides when you scroll down and comes back when you scroll up. Saved on this device.',
   hapticsTitleApp: 'Vibration',
   hapticsBodyApp: 'Short vibrations on choices and results. Saved on this device.',
   langTitle: 'Language',

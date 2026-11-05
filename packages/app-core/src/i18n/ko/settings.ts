@@ -12,6 +12,9 @@ const ko = {
   darkTitle: '다크 모드',
   darkBodyWeb: '어두운 화면으로 바꿔요. 이 기기에 저장돼요.',
   darkBodyApp: '어두운 화면으로 봐요. 이 기기에 저장돼요.',
+  barAutoHideTitleApp: '하단 메뉴 자동 숨김',
+  barAutoHideBodyApp:
+    '아래로 스크롤하면 하단 메뉴가 숨고, 위로 올리면 다시 나타나요. 이 기기에 저장돼요.',
   hapticsTitleApp: '진동',
   hapticsBodyApp: '선택·결과 순간에 짧게 진동해요. 이 기기에 저장돼요.',
   langTitle: '언어',

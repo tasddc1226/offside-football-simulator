@@ -1,0 +1,30 @@
+{
+  "id": "t-11-637-nav-hide-tap-skip",
+  "title": "하단 메뉴 숨김과 쉬운 중계 건너뛰기",
+  "items": [
+    "앱에서 아래로 스크롤하면 하단 메뉴가 숨고, 위로 올리면 다시 나타나요.",
+    "경기 중계 창은 아무 데나 눌러도 건너뛸 수 있어요."
+  ],
+  "en": {
+    "title": "Auto-hiding menu and easier match skipping",
+    "items": [
+      "In the app, the bottom menu hides when you scroll down and comes back when you scroll up.",
+      "Tap anywhere on the match feed panel to skip it."
+    ]
+  },
+  "ja": {
+    "title": "下部メニューの自動非表示と試合スキップの改善",
+    "items": [
+      "アプリで下にスクロールすると下部メニューが隠れ、上にスクロールすると戻ります。",
+      "試合中継のパネルはどこをタップしてもスキップできます。"
+    ]
+  },
+  "zh": {
+    "title": "下方選單自動隱藏與更方便的比賽略過",
+    "items": [
+      "在 App 中向下捲動時下方選單會隱藏，向上捲動時會再次出現。",
+      "比賽轉播面板點任何地方都可以略過。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -7,6 +7,7 @@ export default {
     globals: true,
     include: [
       'src/ui/scroll.test.mjs',
+      'src/ui/barScroll.test.mjs',
       'src/platform/push.test.mjs',
       'src/platform/pushTracking.test.mjs',
       'src/platform/pushPreferences.test.mjs',

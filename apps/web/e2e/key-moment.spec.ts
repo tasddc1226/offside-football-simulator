@@ -25,8 +25,8 @@ test('리그 구간 중계가 결정적 장면에서 멈추고, 고른 결과가
 
   await page.locator('[data-act="advance"]').click(); // 전반기
   const card = sheet.locator('[data-key-moment="league"]');
-  // 건너뛰기도 장면에서는 멈춘다.
-  await page.locator('#an-skip').click();
+  // 시트 아무 데나 눌러 건너뛰어도 장면에서는 멈춘다.
+  await sheet.locator('.tally').click();
   await expect(card).toBeVisible({ timeout: 10_000 });
   await expect(page.locator('#an-skip')).toHaveCount(0);
   await expect(card).toContainText(/결정적 찬스|실점 위기/);
