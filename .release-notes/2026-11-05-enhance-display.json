@@ -1,0 +1,30 @@
+{
+  "id": "t-11-641-enhance-display",
+  "title": "더 많은 카드에 강화 표시",
+  "items": [
+    "앱의 다른 구단 그라운드, BEST 11, 라운지 공유 선수 카드에도 강화 단계가 보여요.",
+    "웹에서 만든 팀 공유 이미지에도 강화 단계가 보여요."
+  ],
+  "en": {
+    "title": "Enhancement shown on more cards",
+    "items": [
+      "In the app, enhancement levels now appear on other clubs' pitches, the BEST 11, and player cards shared in the lounge.",
+      "Team share images made on the web now show enhancement levels too."
+    ]
+  },
+  "ja": {
+    "title": "より多くのカードに強化を表示",
+    "items": [
+      "アプリの他クラブのピッチ、BEST 11、ラウンジで共有した選手カードにも強化段階が表示されます。",
+      "Webで作ったチーム共有画像にも強化段階が表示されます。"
+    ]
+  },
+  "zh": {
+    "title": "更多卡片顯示強化",
+    "items": [
+      "App 中其他球會的球場、BEST 11 與大廳分享的球員卡現在也會顯示強化等級。",
+      "網頁製作的球隊分享圖片現在也會顯示強化等級。"
+    ]
+  },
+  "availability": "web-app"
+}
