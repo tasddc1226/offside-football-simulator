@@ -145,6 +145,7 @@ export default function TeamProfile({ id }: { id: string }) {
               number: p.number,
               legendScore: p.legendScore,
               specials: p.specials,
+              enhance: p.enhance,
               attrs: p.attrs,
               attrsEstimated: p.attrsEstimated,
               height: p.height,

@@ -10,6 +10,7 @@ import {
   type EnhanceStateResponse,
 } from '@offside/app-core/api/cardEnhance';
 import {
+  ENHANCE_CHARGE_MS,
   enhanceErrorText,
   enhanceKeepKey,
   enhanceResultKind,
@@ -19,7 +20,10 @@ import {
 } from '@offside/app-core/cardEnhance';
 import { fundsText } from '@offside/app-core/funds';
 import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
+import { EnhanceFx } from '../../components/EnhanceFx';
+import { EnhanceStage } from '../../components/EnhanceStage';
 import { TeamDialog } from '../../components/TeamDialog';
+import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { Btn, Skeleton, Txt } from '../../ui';
 
@@ -71,6 +75,7 @@ export function EnhanceSheet({
     setBusy(true);
     setError(null);
     setResult(null);
+    const started = Date.now();
     const r = await enhanceCard(careerId, view.body, requestKey.current);
     if (!r.ok) {
       // 응답을 받지 못했으면 같은 키로 다시 보낸다(서버가 이미 판정했으면 그 결과가 온다). 거절이면 새 키로.
@@ -82,6 +87,9 @@ export function EnhanceSheet({
       return;
     }
     requestKey.current = crypto.randomUUID();
+    // 게이지가 다 찬 뒤 결과를 연다. 판정은 이미 끝났고 연출만 기다린다.
+    const wait = prefs.motionOK ? ENHANCE_CHARGE_MS - (Date.now() - started) : 0;
+    if (wait > 0) await new Promise((done) => setTimeout(done, wait));
     // 창을 닫은 뒤에 온 결과도 그 카드에는 반영한다.
     onResult(careerId, r.data);
     if (!alive.current) return;
@@ -111,15 +119,18 @@ export function EnhanceSheet({
   );
 
   return (
-    <TeamDialog title={L.title} close={close}>
-      <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8 }}>
-        <Txt bold style={{ flexShrink: 1 }}>
-          {name}
-        </Txt>
-        <Txt bold style={{ color: c.accentText, fontSize: 20 }} testID="enhance-level">
-          {`+${info?.card.level ?? player.enhance ?? 0}`}
-        </Txt>
-      </View>
+    <TeamDialog
+      title={L.title}
+      close={close}
+      overlay={<EnhanceFx charging={busy} result={result} />}
+    >
+      <EnhanceStage
+        name={name}
+        level={info?.card.level ?? player.enhance ?? 0}
+        charging={busy}
+        kind={result ? enhanceResultKind(result) : null}
+        text={result ? enhanceResultText(result) : ''}
+      />
       {status === 'loading' ? (
         <Skeleton height={180} />
       ) : status === 'error' || !view || !info ? (
@@ -156,15 +167,6 @@ export function EnhanceSheet({
           {view.failText ? (
             <Txt v="sm" tone="muted">
               {view.failText}
-            </Txt>
-          ) : null}
-          {result ? (
-            <Txt
-              bold
-              tone={result.success ? 'good' : enhanceResultKind(result) === 'down' ? 'warn' : 'ink'}
-              testID={`enhance-result-${enhanceResultKind(result)}`}
-            >
-              {enhanceResultText(result)}
             </Txt>
           ) : null}
           {result && enhanceTitleText(result.titles) ? (

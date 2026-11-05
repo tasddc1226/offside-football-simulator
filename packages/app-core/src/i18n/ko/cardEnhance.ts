@@ -36,6 +36,9 @@ const ko = {
   go: '강화하기',
   going: '강화하는 중…',
   close: '닫기',
+  fxSuccess: '강화 성공!',
+  fxKeep: '유지',
+  fxDown: '하락',
   success: (p: { lv: number }) => `+${p.lv} 강화에 성공했어요.`,
   failKeep: (p: { lv: number }) => `강화되지 않았어요. +${p.lv} 그대로예요.`,
   failDown: (p: { from: number; to: number }) =>
