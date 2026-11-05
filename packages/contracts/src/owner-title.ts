@@ -108,7 +108,14 @@ export const CAREER_FEATS = { goals: 500, caps: 150, assists: 300, peak: 90 } as
 export const TITLE_GRADES = ['entry', 'skilled', 'honor', 'legend'] as const;
 export type TitleGrade = (typeof TITLE_GRADES)[number];
 /** T-11-556 명예관 묶음(화면 순서). 트로피 칭호(컵 · 리그)는 묶음 밖에서 따로 그린다. */
-export const TITLE_CATEGORIES = ['growth', 'position', 'record', 'legacy', 'team'] as const;
+export const TITLE_CATEGORIES = [
+  'growth',
+  'position',
+  'record',
+  'legacy',
+  'team',
+  'enhance',
+] as const;
 export type TitleCategory = (typeof TITLE_CATEGORIES)[number];
 /** T-11-556 구단주 팀 디비전 칭호의 기준(team-division TEAM_DIVISION_KEYS index — elite2 · master). */
 export const TITLE_DIVISION = { elite: 5, master: 7 } as const;
@@ -423,12 +430,58 @@ export const PERMANENT_TITLES = def([
     category: 'team',
     related: 'division',
   },
+  // T-11-373 카드 강화 — 시도 기록(card_enhance_log)으로 센다. enhanceSpent는 억 단위.
+  {
+    id: 'owner-enh-tries',
+    metric: 'enhanceTries',
+    target: 100,
+    symbol: 'star',
+    grade: 'entry',
+    category: 'enhance',
+    related: 'enhance',
+  },
+  {
+    id: 'owner-enh-keeps',
+    metric: 'enhanceKeeps',
+    target: 50,
+    symbol: 'star',
+    grade: 'skilled',
+    category: 'enhance',
+    related: 'enhance',
+  },
+  {
+    id: 'owner-enh-downs',
+    metric: 'enhanceDowns',
+    target: 20,
+    symbol: 'chevron',
+    grade: 'skilled',
+    category: 'enhance',
+    related: 'enhance',
+  },
+  {
+    id: 'owner-enh-near',
+    metric: 'enhanceNear',
+    target: 1,
+    symbol: 'flag',
+    grade: 'honor',
+    category: 'enhance',
+    related: 'enhance',
+  },
+  {
+    id: 'owner-enh-spent',
+    metric: 'enhanceSpent',
+    target: 10_000,
+    symbol: 'star',
+    grade: 'legend',
+    category: 'enhance',
+    related: 'enhance',
+  },
 ]);
 export type PermanentTitle = (typeof PERMANENT_TITLES)[number];
 export type PermanentTitleId = PermanentTitle['id'];
 export type TitleMetric = PermanentTitle['metric'];
-/** T-11-556 4: 단계 · 새 칭호. 명예관을 열면 이전 버전 진행도를 한 번 다시 센다(받은 칭호는 그대로). */
-export const TITLE_CRITERIA_VERSION = 4;
+/** T-11-373 5: 카드 강화 칭호. T-11-556 4: 단계 · 새 칭호. 명예관을 열면 이전 버전 진행도를 한 번 다시 센다(받은 칭호는 그대로). */
+export const TITLE_CRITERIA_VERSION = 5;
 export const permanentTitleOf = (id: string | null | undefined) =>
   PERMANENT_TITLES.find((t) => t.id === id);
 export const isOwnerTitle = (id: string): boolean =>

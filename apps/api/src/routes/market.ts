@@ -22,7 +22,8 @@ import {
   ReleaseCardsBodySchema,
   ReleaseCardsResponseSchema,
 } from '@offside/contracts';
-import { marketFee, marketRatio, ovrBand, priceBand } from '@offside/contracts/market-value';
+import { marketFee, marketRatio, ovrBand } from '@offside/contracts/market-value';
+import { tradeBand, tradeValue } from '@offside/contracts/card-enhance';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import { newId } from '../db/ids.js';
@@ -280,7 +281,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     // T-11-474 지금 시즌 선발은 팀에서 뺀 뒤에 내놓는다(팔기 탭에도 보이지 않는다). T-11-604 컵 명단 프리셋도 같다.
     if (team && lockedIdsOf(team).has(input.careerId)) throw inLineup();
     await checkCupListing(db, me.id, input.careerId);
-    const band = priceBand(card.cardValue, rules);
+    const band = tradeBand(card.cardValue, card.enhance, rules);
     if (input.price < band.min || input.price > band.max)
       throw conflictError('판매가가 정해진 범위를 벗어났어요.', 'PRICE_OUT_OF_BAND');
     const id = newId('lst');
@@ -290,6 +291,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
         careerId: input.careerId,
         sellerId: me.id,
         price: input.price,
+        enhance: card.enhance,
         now,
       }))
     )
@@ -340,7 +342,8 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
           posGroup: card.pos,
           band: ovrBand(card.peak),
           day: kstDay(now),
-          ratio: marketRatio(input.price, card.cardValue),
+          // T-11-373 강화 웃돈을 뺀 시세(기준가 + 강화 가치로 나눈다).
+          ratio: marketRatio(input.price, tradeValue(card.cardValue, card.enhance)),
         },
       });
     } catch (e) {

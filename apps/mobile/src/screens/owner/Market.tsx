@@ -11,6 +11,9 @@ import { ShareIcon } from '../../components/ShareIcon';
 import { Toast } from '../../ui/Toast';
 import { useSnapshot } from 'valtio';
 import type { CareerPos } from '@offside/contracts';
+import { tradeValue } from '@offside/contracts/card-enhance';
+import { enhanceValue } from '@offside/contracts/card-enhance';
+import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
 import { detailPosOf, type DetailPos } from '@offside/contracts/positions';
 import {
   buyListing,
@@ -35,8 +38,8 @@ import {
   type OwnerTeamResponse,
   type TeamPlayer,
 } from '@offside/app-core/api/team';
+import { enhanceLossNote } from '@offside/app-core/cardEnhance';
 import { marketSalaryText } from '@offside/app-core/salary';
-import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import {
   MARKET_POS_FILTERS,
   marketDetailFilters,
@@ -135,6 +138,7 @@ function MiniCard({
     dpos: DetailPos | null;
     attrs: TeamPlayer['attrs'];
     locked?: boolean | undefined;
+    enhance?: number | undefined;
   };
   name: string;
   dim?: boolean;
@@ -162,6 +166,7 @@ function MiniCard({
           attrs: card.attrs,
           pos: card.pos,
           locked: card.locked,
+          enhance: card.enhance,
           youth: false,
         }}
       />
@@ -325,12 +330,15 @@ function PctSlider({
   max,
   step,
   value,
+  valueText,
   onChange,
 }: {
   min: number;
   max: number;
   step: number;
   value: number;
+  /** 화면의 판매가 — 상한에 걸리면 슬라이더 % 와 실제 값이 다르다. */
+  valueText: string;
   onChange: (v: number) => void;
 }) {
   const c = useColors();
@@ -360,7 +368,7 @@ function PctSlider({
       accessible
       accessibilityRole="adjustable"
       accessibilityLabel={L.sliderLabelApp}
-      accessibilityValue={{ min, max, now: value, text: `${value}%` }}
+      accessibilityValue={{ min, max, now: value, text: valueText }}
       onAccessibilityAction={(e) =>
         onChange(
           Math.min(
@@ -960,8 +968,12 @@ export default function Market() {
   // 팔기 — 고른 선수와 판매가(기준가의 %).
   const [selling, setSelling] = useState<TeamPlayer | null>(null);
   const [pct, setPct] = useState(100);
-  const sellPrice = selling?.cardValue && me ? priceAtPct(selling.cardValue, pct, me.rules) : 0;
-  const quote = selling?.cardValue && me ? sellQuote(selling.cardValue, sellPrice, me.rules) : null;
+  // T-11-373 강화한 카드는 기준가에 강화 가치를 더한 값으로 가격 범위를 잰다(서버와 같은 규칙).
+  const sellValue = selling?.cardValue ? tradeValue(selling.cardValue, selling.enhance) : 0;
+  const sellPrice =
+    sellValue && me ? priceAtPct(selling!.cardValue!, pct, me.rules, selling!.enhance) : 0;
+  const quote =
+    sellValue && me ? sellQuote(selling!.cardValue!, sellPrice, me.rules, selling!.enhance) : null;
   // T-11-442 카드를 고르면 아래 가격 칸이 화면 밖일 수 있어, 다 보이지 않으면 그 칸이 위에 오게 내린다.
   const priceBox = useRef<View>(null);
   const [sellPick, setSellPick] = useState(0);
@@ -1087,9 +1099,11 @@ export default function Market() {
       {error}
     </Txt>
   ) : null;
-  const range = me ? sellSlider(me.rules) : null;
-  const sellDiff = selling?.cardValue ? priceDiff(sellPrice, selling.cardValue) : null;
-  const buyDiff = buying ? priceDiff(buying.price, buying.card.cardValue) : null;
+  const range = me ? sellSlider(me.rules, selling?.cardValue ?? 0, selling?.enhance) : null;
+  const sellDiff = sellValue ? priceDiff(sellPrice, sellValue) : null;
+  const buyDiff = buying
+    ? priceDiff(buying.price, tradeValue(buying.card.cardValue, buying.card.enhance))
+    : null;
   const ownBuying = !!buying && !!me && myListingIds.has(buying.id);
   const buyBlocked = buying && me && !ownBuying ? buyBlock(buying.price, me.balance) : null;
   const box = {
@@ -1480,7 +1494,10 @@ export default function Market() {
                   <>
                     {items.length ? (
                       items.map((l) => {
-                        const diff = priceDiff(l.price, l.card.cardValue);
+                        const diff = priceDiff(
+                          l.price,
+                          tradeValue(l.card.cardValue, l.card.enhance),
+                        );
                         return (
                           <Press
                             key={l.id}
@@ -1680,12 +1697,7 @@ export default function Market() {
                     <View style={{ flexDirection: 'row', gap: 8 }}>
                       {(
                         [
-                          [
-                            L.presetBase,
-                            fmtValue(selling.cardValue!),
-                            pct === 100,
-                            () => setPct(100),
-                          ],
+                          [L.presetBase, fmtValue(sellValue), pct === 100, () => setPct(100)],
                           [
                             L.presetCustom,
                             pct === 100 ? L.presetSlider : fmtValue(sellPrice),
@@ -1747,6 +1759,7 @@ export default function Market() {
                         max={range!.maxPct}
                         step={range!.step}
                         value={pct}
+                        valueText={fmtValue(sellPrice)}
                         onChange={setPct}
                       />
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -1754,7 +1767,7 @@ export default function Market() {
                           {`${fmtValue(quote.band.min)} (${range!.minPct}%)`}
                         </Txt>
                         <Txt tone="muted" style={{ fontSize: rem(FONT.caption2) }}>
-                          {`${fmtValue(quote.band.max)} (${range!.maxPct}%)`}
+                          {`${fmtValue(quote.band.max)} (${range!.maxLabelPct}%)`}
                         </Txt>
                       </View>
                     </View>
@@ -1770,6 +1783,14 @@ export default function Market() {
                     <Txt tone="muted" style={small}>
                       {L.sellHelp}
                     </Txt>
+                    {selling.enhance ? (
+                      <Txt tone="muted" style={small}>
+                        {CE.sellNote({
+                          lv: selling.enhance,
+                          value: fmtValue(enhanceValue(selling.enhance)),
+                        })}
+                      </Txt>
+                    ) : null}
                     {errText}
                     <Btn
                       block
@@ -1941,6 +1962,7 @@ export default function Market() {
                     weight: buying.card.weight,
                     foot: buying.card.foot,
                     cardValue: buying.card.cardValue,
+                    enhance: buying.card.enhance,
                     pos: buying.card.pos,
                     type: buying.card.type ?? null,
                     youth: false,
@@ -1972,7 +1994,7 @@ export default function Market() {
                 testID="market-salary"
                 style={{ fontSize: rem(0.75), fontWeight: '600', color: c.onPitch, opacity: 0.85 }}
               >
-                {`${TC.salaryLabel} · ${marketSalaryText(buying.card, season)}`}
+                {marketSalaryText(buying.card, season)}
               </Txt>
             </View>
             <View
@@ -1987,7 +2009,10 @@ export default function Market() {
                 {ownBuying ? L.ownListing : me ? L.buyTitle : L.loginTitle}
               </Txt>
               <View style={{ gap: 8 }}>
-                <Line label={L.baseLine} value={fmtValue(buying.card.cardValue)} />
+                <Line
+                  label={buying.card.enhance ? L.baseLineEnhanced : L.baseLine}
+                  value={fmtValue(tradeValue(buying.card.cardValue, buying.card.enhance))}
+                />
                 <Line
                   big
                   label={L.price}
@@ -2020,6 +2045,14 @@ export default function Market() {
                   </>
                 ) : null}
               </View>
+              {buying.card.enhance ? (
+                <Txt tone="muted" style={small}>
+                  {CE.sellNote({
+                    lv: buying.card.enhance,
+                    value: fmtValue(enhanceValue(buying.card.enhance)),
+                  })}
+                </Txt>
+              ) : null}
               <MarketChart card={buying.card} />
               {!me ? (
                 <View testID="market-login" style={{ gap: 10 }}>
@@ -2073,6 +2106,9 @@ export default function Market() {
             {L.sheetRelease}
           </Txt>
           <Txt>{releaseConfirmText(pickedPlayers.length, pickedAmount)}</Txt>
+          {enhanceLossNote(pickedPlayers) ? (
+            <Txt v="sm">{enhanceLossNote(pickedPlayers)}</Txt>
+          ) : null}
           {errText}
           <View style={{ flexDirection: 'row', gap: 8 }}>
             <Btn style={{ flex: 1 }} onPress={closeSheets}>

@@ -187,6 +187,24 @@ function FairnessBody() {
       ))}
       <Note>{V.boostNote}</Note>
 
+      <H3>{L.enhanceTitle}</H3>
+      <Cells
+        head
+        cells={[
+          L.enhanceColLv,
+          L.enhanceColUp,
+          L.enhanceColKeep,
+          L.enhanceColDown,
+          L.enhanceColCost,
+        ]}
+      />
+      {V.enhance.map((row) => (
+        <Cells key={row[0]} cells={row} />
+      ))}
+      {V.enhanceNotes.map((note) => (
+        <Note key={note}>{note}</Note>
+      ))}
+
       <H3>{L.hiddenTitle}</H3>
       <Terms list={V.hidden} />
 

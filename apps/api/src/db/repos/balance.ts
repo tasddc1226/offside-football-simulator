@@ -46,6 +46,10 @@ export const pastSalaryBudgetFrom = (row: Row | undefined, teamSeason: number) =
   const b = resolveBalance(row && toVersion(row).values);
   return seasonSalaryBudget(b.pastSalaryBudget, b.pastSalaryBudgetStep, teamSeason);
 };
+/** T-11-373 카드 강화를 여는가(밸런스 enhanceOpen). */
+export const enhanceOpenFrom = (row: Row | undefined) =>
+  resolveBalance(row && toVersion(row).values).enhanceOpen >= 1;
+
 /** 랭크 경기 충전 간격(분, 0이면 끔). */
 export const matchRechargeFrom = (row: Row | undefined) =>
   resolveBalance(row && toVersion(row).values).teamMatchRechargeMin;

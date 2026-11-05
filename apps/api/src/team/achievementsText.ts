@@ -36,6 +36,7 @@ const GROUP: Record<string, { stage: string; title: string }> = {
   season: { stage: 'Season', title: 'One great season' },
   career: { stage: 'Career', title: 'Shape of a career' },
   match: { stage: 'MATCH', title: 'Match moments' },
+  enhance: { stage: 'ENHANCE', title: 'Card enhancement' },
 };
 
 const LABEL: Record<string, string> = {
@@ -127,6 +128,10 @@ const LABEL: Record<string, string> = {
   // 감독
   'mgr-first': 'Finish a manager career',
   'mgr-count': 'Managers raised',
+  'enh-first': 'First successful card enhancement',
+  'enh-best': 'Highest enhancement this season',
+  'enh-success': 'Successful card enhancements',
+  'enh-down': 'Levels lost to failed enhancements',
   'mgr-title': 'League-winning manager',
   'mgr-promote': 'Manager who won promotion',
   'mgr-mastery': 'Manager with S formation mastery',
@@ -177,6 +182,9 @@ const UNIT: Record<string, string> = {
   'owner-match-days': ' days',
   'owner-likes': ' likes',
   'mgr-count': ' managers',
+  'enh-best': ' level',
+  'enh-success': ' successes',
+  'enh-down': ' times',
   'c-peak': '',
   'c-ballon-players': ' players',
   'c-legends': ' players',

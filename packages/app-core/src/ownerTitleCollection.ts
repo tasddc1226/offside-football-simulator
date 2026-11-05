@@ -4,6 +4,7 @@ import {
   type TitleCategory,
 } from '@offside/contracts/owner-title';
 import type { OwnerTitlesResponse } from './api/ownerProfile.js';
+import { fmtValue } from './format.js';
 import { ownerProfileText as L } from './i18n/ko/ownerProfile.js';
 import { parseHonorTitle, parseTitle, permanentTitleOf, titleLabel } from './ownerTitle.js';
 import { divisionName } from './teamDivision.js';
@@ -55,6 +56,9 @@ export function titleGroups(hall: Pick<OwnerTitlesResponse, 'titles' | 'permanen
 
 /** '4/10', or division names for the division ladder ('프로 II / 엘리트 II'). */
 export function titleProgressText(t: Pick<Permanent, 'id' | 'value' | 'target'>): string {
+  // T-11-373 강화에 쓴 자금은 억 단위로 세어 돈으로 보여 준다.
+  if (permanentTitleOf(t.id)?.metric === 'enhanceSpent')
+    return `${fmtValue(t.value * 10_000)} / ${fmtValue(t.target * 10_000)}`;
   if (permanentTitleOf(t.id)?.metric !== 'division') return L.progress(t);
   return `${t.value ? divisionName(t.value) : L.divisionNone} / ${divisionName(t.target)}`;
 }

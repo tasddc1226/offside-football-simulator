@@ -63,6 +63,8 @@ export function TeamRankSquad({ opponentId, myId }: { opponentId: string; myId: 
               foot: p.foot,
               pos: p.pos,
               type: p.type,
+              enhance: p.enhance,
+              locked: p.locked,
             }
           : {}),
       };

@@ -137,6 +137,9 @@
   /** T-11-217 팀 프리셋(서버에 있는 목록)과 시트. */
   let presets = $state<TeamPreset[]>([]);
   let presetsOpen = $state(false);
+  // T-11-373 카드 강화 창(지연 청크). 강화가 열린 동안만 버튼을 보인다.
+  let enhancing = $state<TeamPlayer | null>(null);
+  let enhanceOpen = $state(false);
 
   let opponents = $state<TeamOpponent[]>([]);
   let oppStatus = $state<LoadStatus>('loading');
@@ -340,6 +343,7 @@
     matchesNextAt = r.data.matchesNextAt ?? null;
     cupSeason = r.data.cupSeason ?? null;
     perDay = r.data.matchesPerDay;
+    enhanceOpen = !!r.data.enhanceOpen;
     budget = budgetOf(r.data);
     fatigue = r.data.fatigue ?? null;
     needLogin = false;
@@ -747,6 +751,7 @@
         onauto={autoFill}
         onsave={save}
         onlock={toggleLock}
+        onenhance={editable && enhanceOpen ? (p) => (enhancing = p) : undefined}
         onpresets={() => (presetsOpen = true)}
         bind:focusSlot
       />
@@ -769,6 +774,11 @@
             </details>
           {/if}
         </section>
+      {/if}
+      {#if enhancing}
+        {#await import('./EnhanceSheet.svelte') then { default: EnhanceSheet }}
+          <EnhanceSheet player={enhancing} name={nameOf(enhancing)} onclose={() => (enhancing = null)} onresult={(id, r) => (players = players.map((x) => (x.careerId === id ? { ...x, enhance: r.card.level || undefined } : x)))} />
+        {/await}
       {/if}
       <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked && !cupPreset} cupLocked={!!cupBand?.locked} cup={season > 0} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}

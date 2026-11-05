@@ -19,6 +19,7 @@ export const GROUP_ZH: Record<string, { stage: string; title: string }> = {
   season: { stage: '賽季', title: '單季偉業' },
   career: { stage: '生涯', title: '生涯樣貌' },
   match: { stage: 'MATCH', title: '比賽名場面' },
+  enhance: { stage: 'ENHANCE', title: '卡片強化' },
 };
 
 export const LABEL_ZH: Record<string, string> = {
@@ -108,6 +109,10 @@ export const LABEL_ZH: Record<string, string> = {
   'owner-likes': '為其他球隊加油（讚）',
   'mgr-first': '完成一段總教練生涯',
   'mgr-count': '培養的總教練',
+  'enh-first': '首次卡片強化成功',
+  'enh-best': '本賽季最高強化',
+  'enh-success': '卡片強化成功',
+  'enh-down': '強化失敗下降次數',
   'mgr-title': '聯賽冠軍總教練',
   'mgr-promote': '帶隊升級的總教練',
   'mgr-mastery': '陣型熟練度 S 的總教練',
@@ -158,6 +163,9 @@ export const UNIT_ZH: Record<string, string> = {
   'owner-match-days': '天',
   'owner-likes': '次',
   'mgr-count': '人',
+  'enh-best': '階',
+  'enh-success': '次',
+  'enh-down': '次',
   'c-peak': '',
   'c-ballon-players': '人',
   'c-legends': '人',
@@ -170,6 +178,7 @@ export const UNIT_ZH: Record<string, string> = {
 export const ageLabelZh = (age: string) => `${age} 歲仍是現役`;
 
 export const DESC_ZH: Record<string, string> = {
+  'enh-best': '計算本賽季成功達到的階段。因失敗下降也不會消失。',
   'team-mates':
     '只要生涯中曾有一個賽季在同一家職業俱樂部效力就算達成。高中、大學、服兵役的賽季不列入計算。',
   'team-club': '11 人退役時最後所屬的俱樂部必須相同。',

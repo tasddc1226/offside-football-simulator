@@ -17,6 +17,8 @@ import {
   cardStyle,
   lockToggleable,
   priceAtPct,
+  sellQuote,
+  sellSlider,
   priceDiff,
   releaseLock,
   sellable,
@@ -118,6 +120,18 @@ describe('이적시장 표시 (T-11-080d)', () => {
     expect(priceAtPct(80_000, 125, rules)).toBe(100_000);
     expect(priceAtPct(83_333, 100, rules)).toBe(83_300);
     expect(priceAtPct(80_000, 999, rules)).toBe(240_000);
+  });
+  it('강화한 카드는 상한 배수가 기준가에만 붙어 슬라이더 끝이 상한에 닿는다', () => {
+    const base = sellSlider(rules, 700_000, 0);
+    expect(base.maxPct).toBe(300);
+    expect(base.maxLabelPct).toBe(300);
+    const s = sellSlider(rules, 700_000, 6);
+    const band = sellQuote(700_000, 0, rules, 6).band;
+    expect(s.maxLabelPct).toBeLessThan(300);
+    expect(s.maxPct % s.step).toBe(0);
+    expect(priceAtPct(700_000, s.maxPct, rules, 6)).toBe(band.max);
+    expect(priceAtPct(700_000, 300, rules, 6)).toBe(band.max);
+    expect(sellQuote(700_000, band.max + 100, rules, 6).error).toBeTruthy();
   });
   it('방출은 직접 키운 선수 중 판매 중도 선발도 아닌 선수만', () => {
     const p = { careerId: 'a', raised: true, listing: null } as never;

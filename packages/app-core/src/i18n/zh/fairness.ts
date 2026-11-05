@@ -34,6 +34,15 @@ export const fairness: Translation<FairnessMsgs> = {
   boostLv: (p) => `+${p.lv}階段`,
   boostNote: (p) =>
     `在同一階段每失敗一次，下次挑戰的機率提高${p.pity}。用廣告或俱樂部資金挑戰，機率也相同。`,
+  enhanceTitle: '卡片強化機率',
+  enhanceColLv: '階段',
+  enhanceColUp: '成功',
+  enhanceColKeep: '維持',
+  enhanceColDown: '失敗',
+  enhanceColCost: '費用',
+  enhanceNote:
+    '失敗時下降一階，但卡片不會損毀。+0 時不會下降，也沒有保底。最高 OVR 90~94 的卡片成功機率為 0.9 倍，95 以上為 0.8 倍，減少的部分轉為維持。傳奇分數不影響機率。',
+  enhanceClosed: '卡片強化目前暫停中。重新開放後將套用此表的數值。',
   hiddenTitle: '隱藏的內容與理由',
   hiddenPotTerm: '真實潛力',
   hiddenPot: '退役時公開。球探評價可能與真實數值略有差異。',

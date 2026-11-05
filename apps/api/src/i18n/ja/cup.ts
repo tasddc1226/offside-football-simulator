@@ -77,6 +77,8 @@ export const CUP_JA: Record<CupTextKey, string> = {
   cardLocked: 'オフサイドカップ参加中のスタメン選手は出品できません。',
   cardReleaseLocked: 'オフサイドカップ参加中のスタメン選手は放出できません。',
   cardManager: 'オフサイドカップ参加中のスタメン選手は監督キャリアを始められません。',
+  cardEnhance: 'オフサイドカップ参加中のスタメン選手は強化できません。',
+  leagueEnhance: 'オフサイドリーグの試合1時間前から試合終了まで、スタメン選手を強化できません。',
   droppedTitle: '{cup}へのエントリーが取り消されました',
   droppedBody: '抽選時点でスタメン選手が{n}人未満だったため参加できませんでした。',
   cancelledTitle: '{cup}は開催されません',

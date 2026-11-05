@@ -17,6 +17,7 @@ import { best11 } from './best11';
 import { bizInfo } from './bizInfo';
 import { board } from './board';
 import { boardLabel } from './boardLabel';
+import { cardEnhance } from './cardEnhance';
 import { careerGuide } from './careerGuide';
 import { careerMoment } from './careerMoment';
 import { careerOverview } from './careerOverview';
@@ -141,6 +142,7 @@ export const ja = {
   bizInfo,
   board,
   boardLabel,
+  cardEnhance,
   careerGuide,
   careerMoment,
   careerOverview,

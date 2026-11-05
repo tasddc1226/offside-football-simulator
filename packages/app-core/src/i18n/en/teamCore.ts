@@ -84,6 +84,5 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   salaryOpen: 'Open salary guide',
   salaryOverSave: (p) =>
     `Past-season salaries are over budget (${p.n}/${p.max}), so the team can't be saved. Swap in lower-salary or this-season players.`,
-  salaryLabel: 'Salary',
   salaryLater: (p) => `None this season · ${p.n} from next season`,
 };

@@ -19,6 +19,7 @@ export const GROUP_JA: Record<string, { stage: string; title: string }> = {
   season: { stage: 'シーズン', title: '1シーズンの偉業' },
   career: { stage: 'キャリア', title: 'キャリアのかたち' },
   match: { stage: 'MATCH', title: '試合の名場面' },
+  enhance: { stage: 'ENHANCE', title: 'カード強化' },
 };
 
 export const LABEL_JA: Record<string, string> = {
@@ -108,6 +109,10 @@ export const LABEL_JA: Record<string, string> = {
   'owner-likes': '他チームへの応援（いいね）',
   'mgr-first': '監督キャリアを終える',
   'mgr-count': '育てた監督',
+  'enh-first': 'カード強化の初成功',
+  'enh-best': '今シーズンの最高強化',
+  'enh-success': 'カード強化の成功',
+  'enh-down': '強化失敗で下がった回数',
   'mgr-title': 'リーグ優勝監督',
   'mgr-promote': '昇格を果たした監督',
   'mgr-mastery': 'フォーメーション熟練度Sの監督',
@@ -158,6 +163,9 @@ export const UNIT_JA: Record<string, string> = {
   'owner-match-days': '日',
   'owner-likes': '回',
   'mgr-count': '人',
+  'enh-best': '段階',
+  'enh-success': '回',
+  'enh-down': '回',
   'c-peak': '',
   'c-ballon-players': '人',
   'c-legends': '人',
@@ -170,6 +178,7 @@ export const UNIT_JA: Record<string, string> = {
 export const ageLabelJa = (age: string) => `${age}歳まで現役`;
 
 export const DESC_JA: Record<string, string> = {
+  'enh-best': '今シーズンに成功で到達した段階を数えます。失敗で下がっても消えません。',
   'team-mates':
     'キャリアで1シーズンでも同じプロクラブでプレーしていれば達成です。高校・大学・兵役のシーズンは数えません。',
   'team-club': '引退時に最後に所属したクラブが11人全員同じである必要があります。',

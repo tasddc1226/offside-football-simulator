@@ -12,11 +12,11 @@ import type {
 import type { FundsItem } from '@offside/contracts';
 import { ATTR_KEYS, attrLabels, type AttrKey } from '@offside/game/data';
 import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
+import { enhancedPeak, tradeBand, tradeValue } from '@offside/contracts/card-enhance';
 import {
   MARKET_TYPES,
   RELEASE_MAX,
   marketFee,
-  priceBand,
   releasePayout,
   type MarketType,
 } from '@offside/contracts/market-value';
@@ -204,23 +204,44 @@ export function priceDiff(
     : { text: L.priceDown({ d: -d }), tone: 'down' };
 }
 
-/** 판매가 슬라이더 범위(기준가의 %)와 한 칸, 수수료(%). priceAtPct와 같은 규칙을 쓴다. */
-export const sellSlider = (rules: MarketRules) => ({
-  minPct: Math.round(rules.priceMin * 100),
-  maxPct: Math.round(rules.priceMax * 100),
-  step: 5,
-  feePct: Math.round(rules.feeRate * 100),
-});
+/**
+ * 판매가 슬라이더 범위(기준가 + 강화 가치의 %)와 한 칸, 수수료(%). priceAtPct와 같은 규칙을 쓴다. 강화한 카드는 상한 배수가
+ * 기준가에만 붙어 최고 %가 카드마다 다르다. maxPct는 슬라이더 끝이 상한에 닿도록 한 칸 단위로 올리고, maxLabelPct는 실제 상한의 %다.
+ */
+export function sellSlider(rules: MarketRules, cardValue = 0, enhance?: number | null) {
+  const step = 5;
+  const value = tradeValue(cardValue, enhance);
+  const ratio =
+    value > 0 ? (tradeBand(cardValue, enhance, rules).max * 100) / value : rules.priceMax * 100;
+  return {
+    minPct: Math.round(rules.priceMin * 100),
+    maxPct: Math.min(Math.round(rules.priceMax * 100), Math.ceil(ratio / step - 1e-9) * step),
+    maxLabelPct: Math.round(ratio),
+    step,
+    feePct: Math.round(rules.feeRate * 100),
+  };
+}
 
 /** 판매가 슬라이더(기준가의 %)를 만 원으로. 100 단위로 맞추고 고를 수 있는 범위 안에 둔다. */
-export function priceAtPct(cardValue: number, pct: number, rules: MarketRules): number {
-  const band = priceBand(cardValue, rules);
-  return Math.min(band.max, Math.max(band.min, Math.round((cardValue * pct) / 100 / 100) * 100));
+export function priceAtPct(
+  cardValue: number,
+  pct: number,
+  rules: MarketRules,
+  enhance?: number | null,
+): number {
+  const band = tradeBand(cardValue, enhance, rules);
+  const value = tradeValue(cardValue, enhance);
+  return Math.min(band.max, Math.max(band.min, Math.round((value * pct) / 100 / 100) * 100));
 }
 
 /** 판매 시트 — 고를 수 있는 범위, 수수료, 받을 돈. 가격이 범위를 벗어나면 error. */
-export function sellQuote(cardValue: number, price: number, rules: MarketRules) {
-  const band = priceBand(cardValue, rules);
+export function sellQuote(
+  cardValue: number,
+  price: number,
+  rules: MarketRules,
+  enhance?: number | null,
+) {
+  const band = tradeBand(cardValue, enhance, rules);
   const fee = marketFee(price, rules.feeRate);
   const error =
     !Number.isInteger(price) || price < band.min
@@ -433,7 +454,7 @@ export const needsOwnerLogin = (e: { code: string; reason?: string }) =>
  * 선발에 넣으면 급여 예산을 쓴다.
  */
 export function cardMeta(
-  c: Pick<MarketCard, 'legendScore' | 'transfers' | 'peak' | 'season'>,
+  c: Pick<MarketCard, 'legendScore' | 'transfers' | 'peak' | 'season' | 'enhance'>,
   current: number | null = null,
 ) {
   const meta = L.cardMeta({
@@ -441,7 +462,7 @@ export function cardMeta(
     transfers: c.transfers,
   });
   return current !== null && isWildcardSeason(c.season, current)
-    ? L.pastCardMeta({ season: teamSeasonLabel(c.season), salary: salaryOf(c.peak), meta })
+    ? L.pastCardMeta({ season: teamSeasonLabel(c.season), salary: salaryOf(enhancedPeak(c)), meta })
     : meta;
 }
 

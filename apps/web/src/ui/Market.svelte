@@ -88,7 +88,6 @@
   import Topbar from './Topbar.svelte';
   import PlayerCard from './team/PlayerCard.svelte';
   import { marketSalaryText } from '@offside/app-core/salary';
-  import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import MarketChart from './MarketChart.svelte';
   import MarketFind from './MarketFind.svelte';
   import { CHART_COPY, marketIndex } from '@offside/app-core/marketChart';
@@ -99,7 +98,9 @@
   import { shareToLounge } from './team/loungeShare.js';
   import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
   import { marketText as L } from '@offside/app-core/i18n/ko/market';
+  import { tradeValue } from '@offside/contracts/card-enhance';
   import { RELEASE_MAX } from '@offside/contracts/market-value';
+  import { enhanceLossNote, enhanceSellNote } from '@offside/app-core/cardEnhance';
 
   const local = localCareerNames();
   // T-11-442 상점의 '방출하러 가기'로 오면 방출 화면부터 연다.
@@ -216,8 +217,10 @@
   // 팔기 — 고른 선수와 판매가(기준가의 %).
   let selling = $state<TeamPlayer | null>(null);
   let pct = $state(100);
-  const sellPrice = $derived(selling?.cardValue && me ? priceAtPct(selling.cardValue, pct, me.rules) : 0);
-  const quote = $derived(selling?.cardValue && me ? sellQuote(selling.cardValue, sellPrice, me.rules) : null);
+  // T-11-373 강화한 카드는 기준가에 강화 가치를 더한 값으로 가격 범위를 잰다(서버와 같은 규칙).
+  const sellValue = $derived(selling?.cardValue ? tradeValue(selling.cardValue, selling.enhance) : 0);
+  const sellPrice = $derived(sellValue && me ? priceAtPct(selling!.cardValue!, pct, me.rules, selling!.enhance) : 0);
+  const quote = $derived(sellValue && me ? sellQuote(selling!.cardValue!, sellPrice, me.rules, selling!.enhance) : null);
   // T-11-442 카드를 고르면 아래 가격 칸이 화면 밖일 수 있어 그 칸이 보이게 내린다(이미 보이면 그대로).
   let priceBox = $state<HTMLElement | null>(null);
   function pickSell(p: TeamPlayer) {
@@ -517,7 +520,7 @@
         {:else}
           <ul class="mk-rows">
             {#each items as l (l.id)}
-              {@const diff = priceDiff(l.price, l.card.cardValue)}
+              {@const diff = priceDiff(l.price, tradeValue(l.card.cardValue, l.card.enhance))}
               <li>
                 <button class="mk-row" data-listing={l.id} onclick={() => ((buying = l), (error = null))}>
                   {@render mini(asPlayer(l.card), marketName(l.card, local))}
@@ -568,24 +571,25 @@
           </div>
         {/if}
         {#if selling && quote && me}
-          {@const diff = priceDiff(sellPrice, selling.cardValue!)}
-          {@const range = sellSlider(me.rules)}
+          {@const diff = priceDiff(sellPrice, sellValue)}
+          {@const range = sellSlider(me.rules, selling.cardValue ?? 0, selling.enhance)}
           <div class="mk-price-box" bind:this={priceBox}>
             <h2 class="mk-step">{L.sellStep2({ name: nameOfPlayer(selling), pos: detailPosOf(selling), peak: selling.peak })}</h2>
             <div class="mk-presets">
-              <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>{L.presetBase}</span><b>{fmtValue(selling.cardValue!)}</b></button>
+              <button aria-pressed={pct === 100} onclick={() => (pct = 100)}><span>{L.presetBase}</span><b>{fmtValue(sellValue)}</b></button>
               <button aria-pressed={pct !== 100} onclick={() => (pct = pct === 100 ? 110 : pct)}><span>{L.presetCustom}</span><b>{pct === 100 ? L.presetSlider : fmtValue(sellPrice)}</b></button>
             </div>
             <label class="mk-slider">
               <span class="mk-slider-top"><span>{L.price}</span><b>{fmtValue(sellPrice)} <small class="mk-{diff.tone}">{diff.text}</small></b></span>
-              <input type="range" min={range.minPct} max={range.maxPct} step={range.step} bind:value={pct} aria-label={L.sliderLabelWeb} data-sell-pct />
-              <span class="mk-slider-ends"><span>{fmtValue(quote.band.min)} ({range.minPct}%)</span><span>{fmtValue(quote.band.max)} ({range.maxPct}%)</span></span>
+              <input type="range" min={range.minPct} max={range.maxPct} step={range.step} bind:value={pct} aria-label={L.sliderLabelWeb} aria-valuetext={fmtValue(sellPrice)} data-sell-pct />
+              <span class="mk-slider-ends"><span>{fmtValue(quote.band.min)} ({range.minPct}%)</span><span>{fmtValue(quote.band.max)} ({range.maxLabelPct}%)</span></span>
             </label>
             <dl class="mk-lines">
               <div><dt>{L.fee({ pct: range.feePct })}</dt><dd>−{fmtValue(quote.fee)}</dd></div>
               <div class="strong"><dt>{L.gets}</dt><dd>{fmtValue(quote.gets)}</dd></div>
             </dl>
             <p class="muted fs-sm">{L.sellHelp}</p>
+            {#if enhanceSellNote(selling.enhance)}<p class="muted fs-sm" data-sell-enhance>{enhanceSellNote(selling.enhance)}</p>{/if}
             {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
             <button class="btn btn-primary btn-block" data-act="list" disabled={busy || !!quote.error} onclick={() => run(() => createListing(selling!.careerId, sellPrice), MARKET_TOAST.listed)}>
               {L.listFor({ price: fmtValue(sellPrice) })}
@@ -629,7 +633,7 @@
 {#if buying && (me || guest)}
   {@const own = !!me && myListingIds.has(buying.id)}
   {@const block = !me || own ? null : buyBlock(buying.price, me.balance)}
-  {@const diff = priceDiff(buying.price, buying.card.cardValue)}
+  {@const diff = priceDiff(buying.price, tradeValue(buying.card.cardValue, buying.card.enhance))}
   <button class="mk-scrim" aria-label={L.close} onclick={closeSheets}></button>
   <div class="mk-sheet" role="dialog" aria-modal="true" aria-label={L.sheetBuy}>
     <button class="mk-x" aria-label={L.close} data-act="market-sheet-close" onclick={closeSheets}><svg viewBox="0 0 20 20" width="18" height="18" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
@@ -642,12 +646,12 @@
         <div><dt>{L.detailTransfers}</dt><dd>{L.transferTimes({ n: buying.card.transfers })}</dd></div>
         <div><dt>{L.position}</dt><dd>{tn(POS_LABEL[buying.card.pos])}</dd></div>
       </dl>
-      <p class="mk-salary" data-market-salary>{TC.salaryLabel} · {marketSalaryText(buying.card, season)}</p>
+      <p class="mk-salary" data-market-salary>{marketSalaryText(buying.card, season)}</p>
     </div>
     <div class="mk-confirm">
       <h2>{own ? L.ownListing : me ? L.buyTitle : L.loginTitle}</h2>
       <dl class="mk-lines">
-        <div><dt>{L.baseLine}</dt><dd>{fmtValue(buying.card.cardValue)}</dd></div>
+        <div><dt>{buying.card.enhance ? L.baseLineEnhanced : L.baseLine}</dt><dd>{fmtValue(tradeValue(buying.card.cardValue, buying.card.enhance))}</dd></div>
         <div class="big"><dt>{L.price}</dt><dd>{fmtValue(buying.price)} <small class="mk-{diff.tone}">{diff.text}</small></dd></div>
         {#if me && !own}
           <div class="rule"></div>
@@ -655,6 +659,7 @@
           <div class="strong"><dt>{L.fundsAfter}</dt><dd>{me.balance >= buying.price ? fundsText(me.balance - buying.price) : L.notEnough}</dd></div>
         {/if}
       </dl>
+      {#if enhanceSellNote(buying.card.enhance)}<p class="muted fs-sm" data-buy-enhance>{enhanceSellNote(buying.card.enhance)}</p>{/if}
       <MarketChart card={buying.card} />
       {#if !own}<p class="mk-note" data-market-login={!me ? '' : undefined}>{me ? L.buyNote : L.loginToBuy}</p>{/if}
       {#if block}<p class="mk-err">{block}</p>{/if}
@@ -684,6 +689,7 @@
   <div class="mk-sheet mk-confirm" role="dialog" aria-modal="true" aria-label={L.sheetRelease}>
     <h2>{L.sheetRelease}</h2>
     <p>{releaseConfirmText(pickedPlayers.length, pickedAmount)}</p>
+    {#if enhanceLossNote(pickedPlayers)}<p class="fs-sm" data-enhance-loss>{enhanceLossNote(pickedPlayers)}</p>{/if}
     {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
     <div class="mk-actions">
       <button class="btn" onclick={closeSheets}>{L.close}</button>

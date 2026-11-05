@@ -153,6 +153,18 @@ export type AchievementInput = {
    * 단계 업적마다 다른 단계 점수(GRIND · STEEP)를 쓴다.
    */
   varied?: boolean;
+  /** T-11-373 그 시즌 카드 강화 기록. 강화가 닫혀 있고 기록도 없으면 없음(업적을 보이지 않는다). */
+  enhance?: AchievementEnhance;
+};
+
+/** T-11-373 그 시즌 카드 강화 기록(card_enhance_log). 카드 단계가 내려가도 세어 둔 값은 줄지 않는다. */
+export type AchievementEnhance = {
+  tries: number;
+  successes: number;
+  /** 실패해 한 단계 내려간 수. */
+  downs: number;
+  /** 성공으로 닿은 가장 높은 단계. */
+  best: number;
 };
 
 /** 팀 업적 id → 그 시즌에 닿은 값(한 번 달성은 1, 단계 업적은 최고 값). */
@@ -1205,5 +1217,47 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         : []),
     ]),
   );
+  if (input.enhance) {
+    const e = input.enhance;
+    groups.push(
+      group(
+        'owner',
+        'enhance',
+        achievementGroups.enhance!.stage,
+        achievementGroups.enhance!.title,
+        [
+          once('enh-first', achievementLabels['enh-first']!, e.successes > 0, 20),
+          described(
+            tier(
+              'enh-best',
+              achievementLabels['enh-best']!,
+              achievementUnits['enh-best']!,
+              e.best,
+              [3, 5, 7, 9, 10],
+              STEEP,
+            ),
+          ),
+          tier(
+            'enh-success',
+            achievementLabels['enh-success']!,
+            achievementUnits['enh-success']!,
+            e.successes,
+            [5, 15, 30, 60],
+            GRIND,
+            endless,
+          ),
+          tier(
+            'enh-down',
+            achievementLabels['enh-down']!,
+            achievementUnits['enh-down']!,
+            e.downs,
+            [1, 5, 20],
+            TEAM_V2,
+            endless,
+          ),
+        ],
+      ),
+    );
+  }
   return groups;
 }

@@ -9,6 +9,7 @@ export const fundsHistory: Translation<FundsHistoryMsgs> = {
   spending: '支出',
   released: '釋出',
   bonus: '退役獎勵金',
+  enhance: '卡牌強化',
   sold: '出售',
   fees: (p) => `扣除手續費 ${p.fee}`,
   bought: '買入',

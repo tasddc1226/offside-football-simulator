@@ -1,0 +1,56 @@
+import type { Translation } from '../core';
+import type { CardEnhanceMsgs } from '../ko/cardEnhance';
+
+export const cardEnhance: Translation<CardEnhanceMsgs> = {
+  title: 'Card enhance',
+  open: 'Enhance',
+  openAria: (p) => `Enhance ${p.name}'s card`,
+  now: 'Now',
+  next: 'On success',
+  rate: 'Success rate',
+  keep: 'Stay chance',
+  fail: 'Fail chance',
+  tierHigh: 'Cards with a peak OVR of 90 or higher have 0.9x the success chance.',
+  tierTop: 'Cards with a peak OVR of 95 or higher have 0.8x the success chance.',
+  newTitle: (p: { names: string }) => `New title earned: ${p.names}`,
+  cost: 'Cost',
+  balance: 'Club funds',
+  ovr: (p) => `Enhance OVR +${p.now} → +${p.next}`,
+  effectNote:
+    "Enhance OVR adds to slot ratings, team OVR and wages for your club. The player's career peak OVR and records stay the same.",
+  fxLabel: 'Card effect',
+  fx1: 'Turf',
+  fx2: 'Floodlight',
+  fx3: 'Flare',
+  fx4: 'Offside Line',
+  fx5: 'Full Time',
+  fx6: 'Extra Time',
+  fx7: 'Penalty Shootout',
+  fx8: 'The Final',
+  fx9: 'Champions',
+  fx10: 'Final Whistle',
+  failNote: (p: { lv: number }) =>
+    `A failed attempt drops the card one level (+${p.lv}). If it stays, the level doesn't change.`,
+  failSafe: "A failed attempt won't drop the card at this level.",
+  go: 'Enhance',
+  going: 'Enhancing…',
+  close: 'Close',
+  success: (p) => `Enhanced to +${p.lv}.`,
+  failKeep: (p: { lv: number }) => `No upgrade this time. Still +${p.lv}.`,
+  failDown: (p: { from: number; to: number }) =>
+    `The attempt failed and the card dropped a level (+${p.from} → +${p.to}).`,
+  max: 'This card is at the highest level.',
+  short: 'Not enough club funds.',
+  salary:
+    "Enhancing this player would put your lineup's wages over budget. Change the lineup and try again.",
+  closed: 'Card enhance is closed right now.',
+  listed: "Players on the transfer list can't be enhanced.",
+  stale: 'The enhance status changed. We loaded the latest one.',
+  loadFail: "Couldn't load enhance info.",
+  retry: 'Try again',
+  tryFail: "Couldn't enhance. Please try again in a moment.",
+  sellNote: (p) =>
+    `The +${p.lv} enhance value of ${p.value} is added to the price. The maximum price multiplier does not apply to it.`,
+  lossNote: (p) =>
+    `Includes enhanced players: ${p.n}. Their levels are lost, and the funds spent on enhancing aren't returned.`,
+};

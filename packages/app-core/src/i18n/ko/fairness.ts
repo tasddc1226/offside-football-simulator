@@ -37,6 +37,15 @@ const ko = {
   boostLv: (p: { lv: number }) => `+${p.lv} 단계`,
   boostNote: (p: { pity: string }) =>
     `같은 단계에서 실패할 때마다 다음 시도 확률이 ${p.pity}씩 올라요. 광고나 구단 자금으로 시도해도 확률은 같아요.`,
+  enhanceTitle: '카드 강화 확률',
+  enhanceColLv: '단계',
+  enhanceColUp: '성공',
+  enhanceColKeep: '유지',
+  enhanceColDown: '실패',
+  enhanceColCost: '비용',
+  enhanceNote:
+    '실패하면 한 단계 내려가지만 카드는 파괴되지 않아요. +0에서는 내려가지 않고 천장은 없어요. 최고 OVR 90~94 카드는 성공 확률이 0.9배, 95 이상은 0.8배이고, 줄어든 몫은 유지로 가요. 레전드 점수는 확률에 영향을 주지 않아요.',
+  enhanceClosed: '지금은 카드 강화를 쉬고 있어요. 다시 열리면 지금 표의 값이 적용돼요.',
   hiddenTitle: '숨겨 둔 것과 이유',
   hiddenPotTerm: '실제 잠재력',
   hiddenPot: '은퇴할 때 공개해요. 스카우트 평가는 실제 값과 조금 다를 수 있어요.',

@@ -1,5 +1,5 @@
 import { Toast } from '../ui/Toast';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -11,10 +11,14 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
+import { holdAchCheck } from '@offside/app-core/achDirty';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
+/** 모달이 닫히는 움직임보다 조금 길게 — 닫히는 중에 다음 모달을 열면 iOS가 띄우지 못한다. */
+const DISMISS_MS = 450;
+
 export function TeamDialog({
   title,
   children,
@@ -31,6 +35,11 @@ export function TeamDialog({
   const c = useColors();
   const insets = useSafeAreaInsets();
   const { motionOK } = useSnapshot(prefs);
+  // 이 창 위에 업적 시트 모달이 겹치면 iOS에서 닫은 뒤 터치가 먹지 않는다. 창이 다 닫힌 뒤 확인한다.
+  useEffect(() => {
+    const release = holdAchCheck();
+    return () => void setTimeout(release, DISMISS_MS);
+  }, []);
   return (
     <Modal
       visible

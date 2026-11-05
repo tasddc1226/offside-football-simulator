@@ -9,6 +9,7 @@ import {
   releaseRowInfo,
   fundsText,
 } from '@offside/app-core/market';
+import { enhanceLossNote } from '@offside/app-core/cardEnhance';
 import { localCareerNames } from '@offside/game/hof-store';
 import { playerName } from '@offside/app-core/format';
 import { marketText as M } from '@offside/app-core/i18n/ko/market';
@@ -141,6 +142,7 @@ export function PlayerRelease({ season }: { season: number }) {
               {state.confirm ? (
                 <>
                   <Txt>{releaseConfirmText(selected.length, amount)}</Txt>
+                  {enhanceLossNote(selected) ? <Txt v="sm">{enhanceLossNote(selected)}</Txt> : null}
                   <View style={{ gap: 8 }}>
                     <Btn disabled={state.busy} onPress={() => manager.confirm(false)}>
                       {M.close}

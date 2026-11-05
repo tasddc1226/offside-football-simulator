@@ -151,6 +151,11 @@ describe('Permanent owner titles', () => {
       podiums: 0,
       seasons: 0,
       division: 0,
+      enhanceTries: 0,
+      enhanceKeeps: 0,
+      enhanceDowns: 0,
+      enhanceNear: 0,
+      enhanceSpent: 0,
     });
     expect((await titleMetricsOf(ctx.db, b.profileId)).retired).toBe(0);
     const preview = await refreshOwnerTitles(ctx.db, a.profileId, NOW, true);
@@ -233,7 +238,7 @@ describe('Permanent owner titles', () => {
     const later = '2026-10-11T00:00:00.000Z';
     hall = await permanentTitlesOf(ctx.db, who.profileId, later);
     expect(hall.find((t) => t.id === 'owner-goals')).toMatchObject({ value: 5, earnedAt: later });
-    expect((await ctx.db.select().from(ownerTitleProgress))[0]?.criteriaVersion).toBe(4);
+    expect((await ctx.db.select().from(ownerTitleProgress))[0]?.criteriaVersion).toBe(5);
     // Historic awards remain valid when their earlier criteria were easier.
     await ctx.db
       .update(ownerTitleAwards)
@@ -452,7 +457,7 @@ describe('Permanent owner titles', () => {
     const later = '2026-10-10T01:00:00.000Z';
     let hall = await permanentTitlesOf(ctx.db, who.profileId, later);
     let [progress] = await ctx.db.select().from(ownerTitleProgress);
-    expect(progress).toMatchObject({ criteriaVersion: 4, forwards: 3, updatedAt: later });
+    expect(progress).toMatchObject({ criteriaVersion: 5, forwards: 3, updatedAt: later });
     expect(hall.find((t) => t.id === 'owner-exchange')).toMatchObject({
       earnedAt: NOW,
       value: 10,

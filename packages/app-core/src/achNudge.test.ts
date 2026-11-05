@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ClubAchievementsResponse } from '@offside/contracts';
-import { isAchDirty, markAchDirty, touchesAchievements } from './achDirty.js';
+import {
+  achCheckable,
+  holdAchCheck,
+  isAchDirty,
+  markAchDirty,
+  onAchDirty,
+  touchesAchievements,
+} from './achDirty.js';
 import { absorbAch, achieveView, createAchNudge, type AchSeen } from './achNudge.js';
 import { initialAppState } from './state.js';
 
@@ -124,6 +131,7 @@ describe('achieveView', () => {
 describe('touchesAchievements', () => {
   it('업적이 바뀔 수 있는 쓰기만', () => {
     expect(touchesAchievements('/v1/owner-team')).toBe(true);
+    expect(touchesAchievements('/v1/cards/abc/enhance')).toBe(true);
     expect(touchesAchievements('/v1/owner-team/matches')).toBe(true);
     expect(touchesAchievements('/v1/teams/abc/like')).toBe(true);
     expect(touchesAchievements('/v1/profile/nickname')).toBe(true);
@@ -187,6 +195,71 @@ describe('createAchNudge', () => {
     await b.nudge.check();
     expect(b.fetch).not.toHaveBeenCalled();
     expect(isAchDirty()).toBe(true);
+  });
+
+  it('창이 열린 동안에는 확인을 미루고, 닫으면 한 번 다시 본다', async () => {
+    store.set('ft_ach_seen', JSON.stringify(seen({ a: 10 })));
+    const { shown, fetch, nudge } = setup(resp({ a: 10, b: 10 }));
+    const notified = vi.fn();
+    const off = onAchDirty(notified);
+    const release = holdAchCheck();
+    expect(achCheckable('team', 'lineup', false)).toBe(false);
+    markAchDirty();
+    markAchDirty();
+    notified.mockClear();
+    await nudge.check();
+    expect(fetch).not.toHaveBeenCalled();
+    expect(shown).toHaveLength(0);
+    expect(isAchDirty()).toBe(true);
+
+    release();
+    release();
+    off();
+    expect(notified).toHaveBeenCalledTimes(1);
+    expect(achCheckable('team', 'lineup', false)).toBe(true);
+    await nudge.check();
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(shown).toHaveLength(1);
+    expect(isAchDirty()).toBe(false);
+  });
+
+  it('두 창이 겹치면 마지막 창이 닫힐 때 다시 본다', () => {
+    const notified = vi.fn();
+    const off = onAchDirty(notified);
+    const a = holdAchCheck();
+    const b = holdAchCheck();
+    a();
+    expect(notified).not.toHaveBeenCalled();
+    b();
+    off();
+    expect(notified).toHaveBeenCalledTimes(1);
+  });
+
+  it('업적을 받는 사이 창이 열리면 표시를 남기고 창이 닫힌 뒤 알린다', async () => {
+    store.set('ft_ach_seen', JSON.stringify(seen({ a: 10 })));
+    let answer!: (v: { ok: true; data: ClubAchievementsResponse }) => void;
+    const state = initialAppState();
+    const shown: unknown[] = [];
+    const nudge = createAchNudge({
+      state,
+      fetch: () => new Promise((resolve) => (answer = resolve)),
+      sheetOpen: () => false,
+      showSheet: (v) => void shown.push(v),
+      closeSheet: () => {},
+      openAchievements: () => {},
+    });
+    markAchDirty();
+    const first = nudge.check();
+    const release = holdAchCheck();
+    answer({ ok: true, data: resp({ a: 10, b: 10 }) });
+    await first;
+    expect(shown).toHaveLength(0);
+    expect(isAchDirty()).toBe(true);
+    release();
+    const second = nudge.check();
+    answer({ ok: true, data: resp({ a: 10, b: 10 }) });
+    await second;
+    expect(shown).toHaveLength(1);
   });
 
   it('구단주가 아니면(403) 표시만 지운다', async () => {

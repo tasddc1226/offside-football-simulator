@@ -126,6 +126,11 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'podiums',
     'seasons',
     'division',
+    'enhance_tries',
+    'enhance_keeps',
+    'enhance_downs',
+    'enhance_near',
+    'enhance_spent',
   ],
   cup_entries: [
     'cup_id',
@@ -297,6 +302,25 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'consumed_in',
     // T-11-548 기록이 지워진 카드의 공개 이름.
     'public_name',
+    // T-11-373 카드 강화 단계 · 그 단계 실패 수.
+    'enhance',
+    'enhance_fails',
+  ],
+  // T-11-373 카드 강화 시도 기록(구단 자금 지출 원장 · 멱등 키).
+  card_enhance_log: [
+    'id',
+    'profile_id',
+    'career_id',
+    'request_key',
+    'from_level',
+    'to_level',
+    'fails',
+    'success',
+    'rate_bp',
+    'down_bp',
+    'roll',
+    'cost',
+    'created_at',
   ],
   // T-11-374 카드 과제를 낸 기록(주 · 시즌 횟수 상한).
   card_exchange_claims: [
@@ -385,6 +409,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'buyer_id',
     'season',
     'price',
+    'enhance',
     'fee',
     'status',
     'created_at',

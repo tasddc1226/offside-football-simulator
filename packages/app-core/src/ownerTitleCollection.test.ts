@@ -66,6 +66,7 @@ describe('title collection', () => {
       'record',
       'legacy',
       'team',
+      'enhance',
     ]);
     expect(titleTierText('owner-academy')).toBe('2/3단계');
     expect(titleTierText('owner-keeper')).toBeNull();

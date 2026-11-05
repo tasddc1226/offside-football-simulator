@@ -37,6 +37,15 @@ export const fairness: Translation<FairnessMsgs> = {
   boostLv: (p) => `+${p.lv}段階`,
   boostNote: (p) =>
     `同じ段階で失敗するたびに、次の挑戦の確率が${p.pity}ずつ上がります。広告やクラブ資金で挑戦しても確率は同じです。`,
+  enhanceTitle: 'カード強化の確率',
+  enhanceColLv: '段階',
+  enhanceColUp: '成功',
+  enhanceColKeep: '維持',
+  enhanceColDown: '失敗',
+  enhanceColCost: '費用',
+  enhanceNote:
+    '失敗すると1段階下がりますが、カードが消えることはありません。+0では下がらず、天井はありません。最高OVR90〜94のカードは成功確率が0.9倍、95以上は0.8倍で、減った分は維持になります。レジェンドスコアは確率に影響しません。',
+  enhanceClosed: 'カード強化は現在お休みしています。再開するとこの表の値が適用されます。',
   hiddenTitle: '隠しているものと理由',
   hiddenPotTerm: '実際のポテンシャル',
   hiddenPot: '引退するときに公開します。スカウト評価は実際の値と少し違うことがあります。',

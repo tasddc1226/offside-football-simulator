@@ -4,6 +4,8 @@ export const tenureLabels = {
 } as const;
 
 export const achievementDescs: Record<string, string> = {
+  'enh-best':
+    'Counts the level reached by a success this season. It stays even if a failed attempt drops the card.',
   'team-mates':
     'All 11 played for the same pro club at some point. High school, university and military seasons do not count.',
   'team-club': 'All 11 must have retired at the same club.',

@@ -78,6 +78,9 @@ export const CUP_KO = {
   cardLocked: '오프사이드 컵에 참가 중인 선발 선수는 내놓을 수 없어요.',
   cardReleaseLocked: '오프사이드 컵에 참가 중인 선발 선수는 방출할 수 없어요.',
   cardManager: '오프사이드 컵에 참가 중인 선발 선수는 감독 커리어를 시작할 수 없어요.',
+  cardEnhance: '오프사이드 컵에 참가 중인 선발 선수는 강화할 수 없어요.',
+  leagueEnhance:
+    '오프사이드 리그 경기 1시간 전부터 경기가 끝날 때까지 선발 선수를 강화할 수 없어요.',
   droppedTitle: '{cup} 참가가 취소됐어요',
   droppedBody: '추첨 시각에 선발 선수가 {n}명보다 적어 참가할 수 없었어요.',
   cancelledTitle: '{cup} 개최가 취소됐어요',

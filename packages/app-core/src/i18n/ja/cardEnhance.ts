@@ -1,0 +1,56 @@
+import type { Translation } from '../core';
+import type { CardEnhanceMsgs } from '../ko/cardEnhance';
+
+export const cardEnhance: Translation<CardEnhanceMsgs> = {
+  title: 'カード強化',
+  open: '強化',
+  openAria: (p) => `${p.name}のカードを強化`,
+  now: '現在',
+  next: '成功すると',
+  rate: '成功確率',
+  keep: '維持確率',
+  fail: '失敗確率',
+  tierHigh: '最高OVR90以上のカードは成功確率が0.9倍です。',
+  tierTop: '最高OVR95以上のカードは成功確率が0.8倍です。',
+  newTitle: (p: { names: string }) => `新しい称号を獲得しました：${p.names}`,
+  cost: '費用',
+  balance: 'クラブ資金',
+  ovr: (p) => `強化OVR +${p.now} → +${p.next}`,
+  effectNote:
+    '強化OVRはオーナーチームのポジション実力・チームOVR・給料に加わります。選手キャリアの最高OVRと記録は変わりません。',
+  fxLabel: 'カード効果',
+  fx1: '芝',
+  fx2: '照明塔',
+  fx3: '発煙筒',
+  fx4: 'オフサイドライン',
+  fx5: 'フルタイム',
+  fx6: '延長戦',
+  fx7: 'PK戦',
+  fx8: '決勝戦',
+  fx9: '優勝カップ',
+  fx10: '最後のホイッスル',
+  failNote: (p: { lv: number }) =>
+    `失敗すると1段階下がります（+${p.lv}）。維持なら段階はそのままです。`,
+  failSafe: 'この段階では失敗しても下がりません。',
+  go: '強化する',
+  going: '強化中…',
+  close: '閉じる',
+  success: (p) => `+${p.lv}への強化に成功しました。`,
+  failKeep: (p: { lv: number }) => `強化されませんでした。+${p.lv}のままです。`,
+  failDown: (p: { from: number; to: number }) =>
+    `強化に失敗し、1段階下がりました（+${p.from} → +${p.to}）。`,
+  max: '最高段階です。',
+  short: 'クラブ資金が足りません。',
+  salary:
+    '強化に成功するとスタメンの給与が予算を超えます。スタメンを変更してからもう一度お試しください。',
+  closed: '現在カード強化はお休み中です。',
+  listed: '出品中の選手は強化できません。',
+  stale: '強化の状態が変わりました。最新の状態を読み込みました。',
+  loadFail: '強化情報を読み込めませんでした。',
+  retry: 'もう一度',
+  tryFail: '強化できませんでした。しばらくしてからもう一度お試しください。',
+  sellNote: (p) =>
+    `+${p.lv}の強化価値${p.value}が販売価格に加わります。最高価格の倍率は強化価値にはかかりません。`,
+  lossNote: (p) =>
+    `強化した選手が${p.n}人含まれています。強化段階はなくなり、強化に使った資金は戻りません。`,
+};

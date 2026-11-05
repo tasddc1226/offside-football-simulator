@@ -72,7 +72,8 @@ it('permanent labels and criteria are translated and unknown titles stay hidden'
     for (const t of PERMANENT_TITLES) {
       expect(titleLabel(t.id)).toBeTruthy();
       if (t.id !== 'owner-pioneer' && t.metric !== 'division')
-        expect(titleCondition(t.id)).toContain(String(t.target));
+        // enhanceSpent의 목표는 억 단위 값이라 문구에는 1조로 적는다.
+        if (t.metric !== 'enhanceSpent') expect(titleCondition(t.id)).toContain(String(t.target));
       expect(titleRelated(t.id)).toBeTruthy();
       expect(titleIconPath(t.id)).toBeTruthy();
       expect(titleCategoryLabel(t.category)).toBeTruthy();

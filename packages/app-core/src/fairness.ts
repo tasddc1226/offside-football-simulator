@@ -13,6 +13,12 @@ import {
 } from '@offside/contracts/balance';
 import { latestBalance, subscribeLatestBalance } from '@offside/game/balance';
 import { BOOST, BOOST_PITY_PCT } from '@offside/game/boost';
+import {
+  ENHANCE_MAX,
+  enhanceCost,
+  enhanceDownBp,
+  enhanceRateBp,
+} from '@offside/contracts/card-enhance';
 import { fmtValue } from './format.js';
 import { gradeOf } from '@offside/game/stats';
 import { phi } from '@offside/game/premiumScout';
@@ -51,6 +57,9 @@ export interface FairnessView {
   /** [단계 이름, 첫 시도 확률]. */
   boost: (readonly [string, string])[];
   boostNote: string;
+  /** [단계, 성공, 유지, 실패, 비용]. 최고 OVR 90 미만 카드 기준이다. */
+  enhance: (readonly [string, string, string, string, string])[];
+  enhanceNotes: string[];
   hidden: (readonly [string, string])[];
 }
 
@@ -98,6 +107,19 @@ export function fairnessView(): FairnessView {
       values.boostGreat > 0
         ? `${L.boostNote({ pity: `${BOOST_PITY_PCT}%p` })} ${L.boostSureNote} ${L.boostGreatNote({ pct: values.boostGreat * 100 })}`
         : `${L.boostNote({ pity: `${BOOST_PITY_PCT}%p` })} ${L.boostSureNote}`,
+    enhance: Array.from({ length: ENHANCE_MAX }, (_, level) => {
+      const rules = { rateScale: values.enhanceRateScale, costScale: values.enhanceCostScale };
+      const up = enhanceRateBp(level, rules);
+      const down = enhanceDownBp(level, rules);
+      return [
+        `+${level} → +${level + 1}`,
+        `${up / 100}%`,
+        `${(10000 - up - down) / 100}%`,
+        `${down / 100}%`,
+        fmtValue(enhanceCost(level, rules) ?? 0),
+      ] as const;
+    }),
+    enhanceNotes: values.enhanceOpen ? [L.enhanceNote] : [L.enhanceNote, L.enhanceClosed],
     hidden: [
       [L.hiddenPotTerm, L.hiddenPot],
       [L.hiddenBloomTerm, L.hiddenBloom],

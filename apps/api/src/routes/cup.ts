@@ -66,6 +66,7 @@ import {
   logoOf,
   teamLogosByIds,
   type MatchDetail,
+  type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
 import {
   buyReroll,
@@ -1100,10 +1101,14 @@ export async function checkCupLineup(
  * 참가 중인(탈락 전) 컵의 선발 선수. 대회 시즌의 팀 명단을 본다 — T-11-552 시즌이 넘어간 뒤에도 끝나지 않은 지난 시즌 컵
  * (시즌 1 제3회)의 선발을 지킨다. T-11-570 컵 명단 프리셋이 있으면 그 프리셋 선발이다.
  */
-export async function cupLineupIds(db: Db, profileId: string): Promise<Set<string>> {
+export async function cupLineupIds(
+  db: Db,
+  profileId: string,
+  known?: { season: number; team: OwnerTeamRow | undefined },
+): Promise<Set<string>> {
   const out = new Set<string>();
   for (const { season } of await activeCupSeasonsQuery(db, profileId)) {
-    const [team] = await myTeamIn(db, profileId, season);
+    const [team] = known?.season === season ? [known.team] : await myTeamIn(db, profileId, season);
     for (const id of team ? slotIdsOf(cupTeamOf(team)) : []) if (id) out.add(id);
   }
   return out;
@@ -1126,4 +1131,24 @@ export async function checkCupRelease(db: Db, profileId: string, careerIds: read
   const ids = await cupLineupIds(db, profileId);
   if (careerIds.some((id) => ids.has(id)))
     throw conflictError(cupKo('cardReleaseLocked'), 'CUP_CARD_LOCKED');
+}
+
+/**
+ * T-11-373 카드 강화 검사: 컵 참가 중이면 선발에 든 선수(지난 시즌 컵 · 컵 명단 프리셋 포함)는 대회가 끝날 때까지 강화할 수 없고(추첨
+ * 뒤 OVR 구간 · 배당을 지킨다), 리그 경기 1시간 전부터 끝날 때까지는 그 시즌 팀 선발을 강화할 수 없다.
+ */
+export async function checkCupEnhance(
+  db: Db,
+  profileId: string,
+  careerId: string,
+  season: number | null,
+  now: string,
+  team: OwnerTeamRow | undefined,
+) {
+  const known = season === null ? undefined : { season, team };
+  if ((await cupLineupIds(db, profileId, known)).has(careerId))
+    throw conflictError(cupKo('cardEnhance'), 'CUP_CARD_LOCKED');
+  if (season === null || !(await leagueLineupLocked(db, profileId, season, now))) return;
+  if (team && slotIdsOf(team).includes(careerId))
+    throw conflictError(cupKo('leagueEnhance'), 'LEAGUE_LINEUP_LOCKED');
 }

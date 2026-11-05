@@ -22,6 +22,10 @@ export const achievementLabels: Record<string, string> = {
   // T-11-310 감독 업적(그 시즌에 끝낸 감독 커리어)
   'mgr-first': '감독 커리어 마치기',
   'mgr-count': '키운 감독',
+  'enh-first': '카드 강화 첫 성공',
+  'enh-best': '이번 시즌 가장 높은 강화',
+  'enh-success': '카드 강화 성공',
+  'enh-down': '강화 실패로 내려간 횟수',
   'mgr-title': '리그 우승 감독',
   'mgr-promote': '승격시킨 감독',
   'mgr-mastery': '포메이션 숙련 S 감독',
@@ -57,6 +61,9 @@ export const achievementLabels: Record<string, string> = {
 
 /** T-11-541 단계 업적 단위(업적 id → 단위). */
 export const achievementUnits: Record<string, string> = {
+  'enh-best': '강',
+  'enh-success': '번',
+  'enh-down': '번',
   'c-peak': '',
   'c-ballon-players': '명',
   'c-legends': '명',
@@ -84,10 +91,12 @@ export const achievementGroups: Record<string, { stage: string; title: string }>
   season: { stage: '시즌', title: '한 시즌의 위업' },
   career: { stage: '커리어', title: '커리어의 모양' },
   match: { stage: 'MATCH', title: '경기 장면' },
+  enhance: { stage: 'ENHANCE', title: '카드 강화' },
 };
 
 /** T-11-237 이름만으로 헷갈리는 업적의 판정 기준(업적 id → 한 줄). */
 export const achievementDescs: Record<string, string> = {
+  'enh-best': '이번 시즌 성공으로 닿은 단계를 세요. 실패로 내려가도 지워지지 않아요.',
   'team-mates':
     '커리어 중 한 시즌이라도 같은 프로 구단에서 뛰었으면 돼요. 고교·대학·병역 시즌은 세지 않아요.',
   'team-club': '은퇴할 때 마지막으로 뛴 구단이 11명 모두 같아야 해요.',

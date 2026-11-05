@@ -2,7 +2,12 @@
 // 같은 길로 센다.
 import type { FormationId } from '@offside/contracts/owner-team';
 import { detailPosInSeason } from '@offside/contracts/positions';
-import { retireAtOf, teamSeasonAt, teamSeasonEndsAt } from '@offside/contracts/service-seasons';
+import {
+  retireAtOf,
+  teamSeasonAt,
+  seasonById,
+  teamSeasonEndsAt,
+} from '@offside/contracts/service-seasons';
 import type { Db } from '../db/client.js';
 import {
   ACH_REWARD_FIRST_SEASON,
@@ -37,6 +42,7 @@ import {
 } from '../db/repos/ownerTeams.js';
 import { saveSeasonGift, seasonGiftRowOf } from '../db/repos/iap.js';
 import { getProfile, hasAccount } from '../db/repos/profiles.js';
+import { enhanceActivityIn, enhanceRules } from '../db/repos/cardEnhance.js';
 import { seasonManagersOf } from '../db/repos/managers.js';
 import {
   achRewardSteps,
@@ -58,6 +64,20 @@ function keptOf(json: string | null | undefined): TeamKept {
   } catch {
     return {};
   }
+}
+
+async function enhanceAchInput(
+  db: Db,
+  profileId: string,
+  season: number,
+  open: boolean,
+  asOf?: string,
+) {
+  const from = seasonById(season)?.startsAt;
+  if (season < ACH_VARIETY_FROM_SEASON || !from) return null;
+  const stats = await enhanceActivityIn(db, profileId, from, teamSeasonEndsAt(season), asOf);
+  if (stats.tries > 0) return stats;
+  return open && (await enhanceRules(db)).open ? stats : null;
 }
 
 /**
@@ -136,6 +156,8 @@ export async function computeOwnerAchievements(
       : open
         ? { slots: [], wins: 0, bestStreak: 0, bestMargin: 0, goalsFor: 0, rating: 0, likes: 0 }
         : null;
+  // T-11-373 카드 강화 업적: 다양해진 시즌부터, 강화가 열려 있거나 그 시즌에 시도한 기록이 있을 때만 보인다.
+  const enhance = await enhanceAchInput(db, owner.id, season, open, asOf);
   const groups = clubAchievements({
     careers: careersIn,
     managers,
@@ -153,6 +175,7 @@ export async function computeOwnerAchievements(
     ladder: usesRankLadder(season),
     endless: season >= ACH_ENDLESS_FROM_SEASON,
     varied: season >= ACH_VARIETY_FROM_SEASON,
+    ...(enhance ? { enhance } : {}),
   });
   return { groups, prev, players: careersIn.length };
 }

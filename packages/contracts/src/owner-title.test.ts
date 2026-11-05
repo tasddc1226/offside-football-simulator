@@ -17,7 +17,7 @@ describe('T-11-556 permanent title catalog', () => {
       expect(TITLE_CATEGORIES).toContain(t.category);
       expect(t.target).toBeGreaterThan(0);
     }
-    expect(TITLE_CRITERIA_VERSION).toBe(4);
+    expect(TITLE_CRITERIA_VERSION).toBe(5);
   });
 
   it('ladders share a metric, a category and climb in target and grade', () => {

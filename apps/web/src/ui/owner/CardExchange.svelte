@@ -5,6 +5,7 @@
   // 고르기 화면은 낼 수 있는 선수만 가치 낮은 순으로 보이고 낼 수 없는 선수는 접는다. 낸 뒤에는 목록에 머문다.
   import PopSheet from '../PopSheet.svelte';
   import type { TeamPlayer, OwnerTeamResponse } from '@offside/app-core/api/team';
+  import { enhanceLossNote } from '@offside/app-core/cardEnhance';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { claimExchange, fetchExchangeMe } from '@offside/app-core/api/exchange';
   import type { ExchangeMeResponse } from '@offside/contracts';
@@ -172,6 +173,7 @@
           {#each chosen as p (p.careerId)}<li><b class="xc-num">{p.peak}</b><span>{nameOf(p)}</span><small class="muted">{tn(POS_LABEL[p.pos])}</small></li>{/each}
         </ul>
         <p class="fs-sm">{L.confirmGone}</p>
+        {#if enhanceLossNote(chosen)}<p class="fs-sm" data-enhance-loss>{enhanceLossNote(chosen)}</p>{/if}
         <p class="fs-sm muted">{L.confirmFunds({ value: value(chosen) })}</p>
         <div class="xc-step">
           <b class="xc-num">{doneCount}/{defs.length}</b><span aria-hidden="true">→</span><b class="xc-num xc-gold">{doneCount + 1}/{defs.length}</b>

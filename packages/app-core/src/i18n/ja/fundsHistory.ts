@@ -9,6 +9,7 @@ export const fundsHistory: Translation<FundsHistoryMsgs> = {
   spending: '出ていった資金',
   released: '放出',
   bonus: '引退奨励金',
+  enhance: 'カード強化',
   sold: '売却',
   fees: (p) => `手数料 ${p.fee} 差引`,
   bought: '獲得',

@@ -50,6 +50,7 @@ export const market: Translation<MarketMsgs> = {
   loginTitle: '登入後簽下',
   loginToBuy: '登入後成為球隊老闆，就能簽下這名球員。',
   baseLine: '基準價（最高 OVR 賽季的身價）',
+  baseLineEnhanced: '基準價 + 強化價值',
   price: '售價',
   fundsNow: '目前俱樂部資金',
   fundsAfter: '簽下後剩餘資金',

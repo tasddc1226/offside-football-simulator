@@ -11,7 +11,14 @@ import {
 } from '@offside/contracts/owner-team';
 import type { ClubAchievementNotifications } from '@offside/contracts';
 import { loadKey, saveKey } from '@offside/game/storage';
-import { ACH_SEEN_KEY, OUTBOX_KEY, achUnseenCount, clearAchDirty, isAchDirty } from './achDirty.js';
+import {
+  ACH_SEEN_KEY,
+  OUTBOX_KEY,
+  achUnseenCount,
+  clearAchDirty,
+  isAchDirty,
+  achHeld,
+} from './achDirty.js';
 import type { ApiResult } from './api/client.js';
 import type { SheetButton, SheetView } from './sheets.js';
 import type { AppState } from './state.js';
@@ -187,7 +194,7 @@ export function createAchNudge(host: AchNudgeHost) {
    * 미룬다. 구단주가 아니면(403) 표시만 지운다.
    */
   async function check() {
-    if (busy || !isAchDirty() || host.sheetOpen() || pendingRetirement()) return;
+    if (busy || !isAchDirty() || achHeld() || host.sheetOpen() || pendingRetirement()) return;
     busy = true;
     try {
       const r = await host.fetch();
@@ -195,6 +202,8 @@ export function createAchNudge(host: AchNudgeHost) {
         if (!r.error.retryable) clearAchDirty();
         return;
       }
+      // 받는 사이 창이 열렸으면 표시를 남겨 두고 창이 닫힐 때 다시 본다.
+      if (achHeld()) return;
       clearAchDirty();
       const { seen, nudge } = absorbAch(loadSeen(), r.data);
       saveSeen(seen);

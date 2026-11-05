@@ -47,6 +47,8 @@ export type LineupCareer = {
   mainClub?: string | null;
   /** T-11-114 카드 시즌(0 = 프리시즌). 팀 시즌보다 앞이면 와일드카드. */
   season?: number;
+  /** T-11-373 카드 강화 단계(0 = 강화 전). slotRating이 자리 실력에 강화 OVR을 더한다. */
+  enhance?: number;
 };
 
 /** 경기 기록에 남기는 선수. 공개 이름은 담지 않는다 — 읽을 때 커리어의 지금 공개 이름을 붙인다. */

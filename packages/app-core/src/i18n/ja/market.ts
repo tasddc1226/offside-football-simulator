@@ -50,6 +50,7 @@ export const market: Translation<MarketMsgs> = {
   loginTitle: 'ログインして獲得',
   loginToBuy: 'ログインするとオーナーとしてこの選手を獲得できます。',
   baseLine: '基準価格（最高OVRシーズンの市場価値）',
+  baseLineEnhanced: '基準価格 + 強化価値',
   price: '販売価格',
   fundsNow: '現在のクラブ資金',
   fundsAfter: '獲得後に残る資金',

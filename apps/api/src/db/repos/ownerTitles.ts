@@ -8,16 +8,61 @@ import type { PermanentTitleId, TitleMetric } from '@offside/contracts/owner-tit
 import { and, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { ownerTitleAwards, ownerTitleProgress, profiles, careers } from '../schema.js';
+import { enhanceRules } from './cardEnhance.js';
 import { accountLinkedSql } from './profiles.js';
 
 type Metrics = Record<TitleMetric, number>;
+type EnhanceMetric =
+  'enhanceTries' | 'enhanceKeeps' | 'enhanceDowns' | 'enhanceNear' | 'enhanceSpent';
 
 /** Scalar aggregates use careers.profile_id, never the transferable cards.owner_id.
  * Pin the owner index: the global HOF peak index can otherwise scan every owner's retirees.
  * T-11-556 subqueries read only owner-prefixed indexes (cup_entries_profile_idx, owner_season_records · owner_honors PK).
  * Korean players are stored with a NULL nation, so they count as DEFAULT_NATION. */
 export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics> {
-  const row = await db.get<Metrics>(sql`
+  const [row, enhance] = await Promise.all([
+    careerTitleMetricsOf(db, profileId),
+    enhanceTitleMetricsOf(db, profileId),
+  ]);
+  return { ...row, ...enhance };
+}
+
+/** T-11-373 카드 강화 칭호의 재료(card_enhance_log_profile_idx). 카드를 팔아도 내가 시도한 기록은 그대로 센다. */
+async function enhanceTitleMetricsOf(db: Db, profileId: string) {
+  const row = await db.get<Record<EnhanceMetric, number>>(sql`
+    select count(*) as enhanceTries,
+      coalesce(sum(success = 0 and to_level = from_level), 0) as enhanceKeeps,
+      coalesce(sum(to_level < from_level), 0) as enhanceDowns,
+      coalesce(sum(from_level = 9 and to_level = 8), 0) as enhanceNear,
+      coalesce(sum(cost), 0) / 10000 as enhanceSpent
+    from card_enhance_log where profile_id = ${profileId}`);
+  return row!;
+}
+
+const ENHANCE_TITLES = PERMANENT_TITLES.filter((t) => t.category === 'enhance');
+
+/**
+ * 강화 시도 뒤 새로 닿은 칭호를 준다. 대개는 집계 한 번으로 끝나고, 목표를 넘은 칭호가 있을 때만 받은 기록을 읽는다. 칭호가
+ * 실패해도 시도 결과는 돌려준다 — 하루 한 번 명예관 재집계(TITLE_PROGRESS_TTL_MS)가 놓친 칭호를 준다.
+ */
+export async function enhanceTitlesAfter(db: Db, profileId: string, now: string) {
+  try {
+    const m = await enhanceTitleMetricsOf(db, profileId);
+    const reached = ENHANCE_TITLES.filter((t) => m[t.metric as EnhanceMetric] >= t.target);
+    if (!reached.length) return [];
+    const held = await db
+      .select({ id: ownerTitleAwards.titleId })
+      .from(ownerTitleAwards)
+      .where(eq(ownerTitleAwards.profileId, profileId));
+    if (reached.every((t) => held.some((a) => a.id === t.id))) return [];
+    return await refreshOwnerTitles(db, profileId, now);
+  } catch {
+    return [];
+  }
+}
+
+async function careerTitleMetricsOf(db: Db, profileId: string) {
+  const row = await db.get<Omit<Metrics, EnhanceMetric>>(sql`
     select
       (select count(*) from careers c where c.profile_id = ${profileId}
        and c.status = 'retired' and c.service_season = 0 and c.hidden = 0) as preseason,
@@ -133,11 +178,19 @@ export async function permanentTitlesOf(db: Db, profileId: string, now: string) 
       .from(ownerTitleProgress)
       .where(eq(ownerTitleProgress.profileId, profileId));
   }
-  const held = await db
-    .select()
-    .from(ownerTitleAwards)
-    .where(eq(ownerTitleAwards.profileId, profileId));
-  return PERMANENT_TITLES.map((t) => {
+  const [held, rules] = await Promise.all([
+    db.select().from(ownerTitleAwards).where(eq(ownerTitleAwards.profileId, profileId)),
+    enhanceRules(db),
+  ]);
+  // T-11-373 강화가 닫혀 있으면 아직 받지 않은 강화 칭호는 목표로 보이지 않는다.
+  const shown = PERMANENT_TITLES.filter(
+    (t) =>
+      t.category !== 'enhance' ||
+      rules.open ||
+      (progress?.enhanceTries ?? 0) > 0 ||
+      held.some((a) => a.titleId === t.id),
+  );
+  return shown.map((t) => {
     const award = held.find((a) => a.titleId === t.id);
     return {
       id: t.id,
