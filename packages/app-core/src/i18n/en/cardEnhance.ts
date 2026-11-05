@@ -35,6 +35,9 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   go: 'Enhance',
   going: 'Enhancing…',
   close: 'Close',
+  fxSuccess: 'SUCCESS!',
+  fxKeep: 'NO CHANGE',
+  fxDown: 'LEVEL DOWN',
   success: (p) => `Enhanced to +${p.lv}.`,
   failKeep: (p: { lv: number }) => `No upgrade this time. Still +${p.lv}.`,
   failDown: (p: { from: number; to: number }) =>

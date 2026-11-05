@@ -1,0 +1,26 @@
+{
+  "id": "t-11-639-enhance-effect",
+  "title": "카드 강화 연출 추가",
+  "items": [
+    "강화하기를 누르면 빛이 모였다가 화면 가득 터져요. 성공 · 유지 · 하락마다 연출과 진동이 다르고, +7 이상 성공은 더 크게 터져요. 확률과 비용은 그대로예요."
+  ],
+  "en": {
+    "title": "Card enhancement effects",
+    "items": [
+      "Tapping Enhance now gathers light and bursts across the screen. Success, no change and level drop each have their own effect and vibration, and successes at +7 and above are bigger. Rates and costs stay the same."
+    ]
+  },
+  "ja": {
+    "title": "カード強化の演出を追加",
+    "items": [
+      "強化するを押すと光が集まり、画面いっぱいにはじけます。成功・維持・ダウンごとに演出と振動が変わり、+7以上の成功はさらに派手になります。確率と費用は変わりません。"
+    ]
+  },
+  "zh": {
+    "title": "新增卡片強化演出",
+    "items": [
+      "按下強化後，光芒會先聚集，再在整個畫面爆發。成功、維持、下降各有不同的演出與震動，+7 以上的成功會更華麗。機率與費用不變。"
+    ]
+  },
+  "availability": "web-app"
+}
