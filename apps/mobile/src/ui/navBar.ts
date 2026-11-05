@@ -5,6 +5,7 @@ import { AccessibilityInfo, Keyboard } from 'react-native';
 import { Easing, makeMutable, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { proxy, useSnapshot } from 'valtio';
+import { saveKey } from '@offside/game/storage';
 import { prefs } from '../store';
 import { BAR_SCROLL_START, nextBarScroll } from './barScroll';
 import { coachState } from '../components/Coachmark';
@@ -57,8 +58,20 @@ export function showBar() {
   apply(keyboard);
 }
 
+/** 설정 스위치. 끄면 메뉴를 바로 되돌리고, 켜면 지금 위치부터 방향을 다시 잰다. */
+export function setBarAutoHide(on: boolean) {
+  prefs.barAutoHide = on;
+  saveKey('ft_bar_auto_hide', on);
+  scroll = { ...scroll, travel: 0, hidden: false };
+  apply(keyboard);
+}
+
 export function noteBarScroll(y: number, maxY: number) {
   if (keyboard || reader || coachState.i !== null) return;
+  if (!prefs.barAutoHide) {
+    scroll = { ...BAR_SCROLL_START, last: y };
+    return;
+  }
   const next = nextBarScroll(scroll, y, maxY);
   const changed = next.hidden !== scroll.hidden;
   scroll = next;

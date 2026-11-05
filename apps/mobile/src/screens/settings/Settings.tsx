@@ -31,6 +31,7 @@ import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
 import { openWeb } from '../../platform/openWeb';
 import { appBuildInfo } from '../../platform/updates';
 import { prefs } from '../../store';
+import { setBarAutoHide } from '../../ui/navBar';
 import { useColors, useIsDark } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Card, Press, Screen, Topbar, Txt } from '../../ui';
@@ -154,7 +155,7 @@ export default function Settings() {
   const textSize = useTextSize();
   const consent = useSyncExternalStore(nativeAnalytics.onConsent, nativeAnalytics.getConsent);
   const [namePublic, setNamePublicState] = useState(namePublicEnabled());
-  const { lang, haptics, revealShort } = useSnapshot(prefs);
+  const { lang, haptics, revealShort, barAutoHide } = useSnapshot(prefs);
 
   /** 언어: 이 기기에 저장하고 루트를 다시 그린다(_layout의 key). */
   const setLang = (l: Locale) => {
@@ -252,6 +253,15 @@ export default function Settings() {
             onChange={setTextSize}
             label={L.textSizeTitle}
             testID="text-size"
+          />
+        </SettingsRow>
+        <SettingsRow first={false}>
+          <SettingsLabel title={L.barAutoHideTitleApp} muted={L.barAutoHideBodyApp} />
+          <Switch
+            value={barAutoHide}
+            onChange={setBarAutoHide}
+            label={L.barAutoHideTitleApp}
+            testID="bar-auto-hide"
           />
         </SettingsRow>
         <SettingsRow first={false}>

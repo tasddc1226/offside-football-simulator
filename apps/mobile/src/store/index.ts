@@ -45,11 +45,14 @@ export const prefs = proxy<{
   haptics: boolean;
   /** T-11-371 공개 연출 짧게(설정, 기본 끔). */
   revealShort: boolean;
+  /** T-11-638 스크롤할 때 하단 메뉴 숨기기(설정, 기본 켬). */
+  barAutoHide: boolean;
   lang: Locale;
 }>({
   theme: loadKey<'light' | 'dark'>('ft_theme'),
   motionOK: true,
   haptics: loadKey<boolean>('ft_haptics') !== false,
   revealShort: loadKey<boolean>(REVEAL_SHORT_KEY) === true,
+  barAutoHide: loadKey<boolean>('ft_bar_auto_hide') !== false,
   lang: getLocale(),
 });
