@@ -2,6 +2,9 @@ import { DEFAULT_ENHANCE_RULES } from '@offside/contracts/card-enhance';
 import { describe, expect, it } from 'vitest';
 import {
   enhanceErrorText,
+  enhanceFxBig,
+  enhanceFxMs,
+  enhanceParticles,
   enhanceResultKind,
   enhanceResultText,
   enhanceSellNote,
@@ -89,5 +92,29 @@ describe('카드 강화 창 (T-11-373)', () => {
     expect(marketSalaryText({ ...plain, enhance: 10 }, 1)).toBe(
       marketSalaryText({ peak: 95, season: 0 }, 1),
     );
+  });
+});
+
+describe('T-11-639 강화 연출 값', () => {
+  it('높은 단계 성공만 크게, 길이는 결과마다 다르다', () => {
+    expect(enhanceFxBig({ success: true, to: 7 })).toBe(true);
+    expect(enhanceFxBig({ success: true, to: 6 })).toBe(false);
+    expect(enhanceFxBig({ success: false, to: 8 })).toBe(false);
+    expect(enhanceFxMs({ success: true, from: 7, to: 8 })).toBeGreaterThan(
+      enhanceFxMs({ success: true, from: 1, to: 2 }),
+    );
+    expect(enhanceFxMs({ success: false, from: 2, to: 2 })).toBeLessThan(
+      enhanceFxMs({ success: false, from: 2, to: 1 }),
+    );
+  });
+  it('입자 배치는 범위 안의 고정값이다', () => {
+    const a = enhanceParticles(24);
+    expect(a).toHaveLength(24);
+    expect(a).toEqual(enhanceParticles(24));
+    for (const x of a) {
+      expect(x.dist).toBeGreaterThanOrEqual(0.55);
+      expect(x.dist).toBeLessThanOrEqual(1);
+      expect(x.delay).toBeLessThan(1);
+    }
   });
 });

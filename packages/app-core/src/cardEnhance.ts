@@ -85,6 +85,34 @@ export function enhanceView(
   };
 }
 
+/** 강화 충전 연출 시간. 응답이 먼저 와도 이만큼은 채운 뒤 결과를 보여 준다(동작 줄이기면 건너뛴다). */
+export const ENHANCE_CHARGE_MS = 900;
+
+/** 높은 단계 성공은 연출을 더 크게 한다. */
+export const enhanceFxBig = (r: { success: boolean; to: number }) => r.success && r.to >= 7;
+
+/** 결과 연출 길이(ms). */
+export const enhanceFxMs = (r: { success: boolean; from: number; to: number }) => {
+  if (enhanceFxBig(r)) return 1800;
+  const kind = enhanceResultKind(r);
+  return kind === 'success' ? 1300 : kind === 'down' ? 1100 : 800;
+};
+
+/** 결과 연출 큰 글자. */
+export const enhanceFxLabel = (r: { success: boolean; from: number; to: number }) => {
+  const kind = enhanceResultKind(r);
+  return kind === 'success' ? L.fxSuccess : kind === 'down' ? L.fxDown : L.fxKeep;
+};
+
+/** 연출 입자 배치(웹 · 앱 공통, 고정값이라 게임 난수를 쓰지 않는다). dist는 0.55~1, delay는 0~1 비율. */
+export const enhanceParticles = (n: number) =>
+  Array.from({ length: n }, (_, i) => ({
+    angle: (i * 360) / n + ((i * 47) % 17),
+    dist: 0.55 + ((i * 37) % 46) / 100,
+    size: 4 + ((i * 3) % 7),
+    delay: ((i * 53) % 100) / 100,
+  }));
+
 /** 시도 결과 한 줄. */
 export const enhanceResultText = (r: { success: boolean; from: number; to: number }) =>
   r.success
