@@ -119,7 +119,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   leagueRemindBody:
     '組分け時にシーズン{season}チームのスタメンに選手が{n}人いれば参加できます。今は{filled}人です。',
   leaguePlacedTitle: 'シーズン{season} オフサイドリーグ組分け結果',
-  leaguePlacedBody: '{team}は{tier}部{league}リーグです。第1節は今日{time}に始まります。',
+  leaguePlacedBody: '{team}は{tier}部 {title}です。第1節は今日{time}に始まります。',
   leagueDroppedTitle: 'シーズン{season} オフサイドリーグの参加が取り消されました',
   leagueDroppedBody:
     '組分け時刻にシーズン{season}チームのスタメン選手が{n}人に届きませんでした。次のシーズンにまた申し込めます。',
@@ -133,18 +133,18 @@ export const CUP_JA: Record<CupTextKey, string> = {
   leagueRest: 'お休み',
   leagueRestBody: '今節はお休みでした・現在{rank}位です',
   leagueEndTitle: 'シーズン{season} オフサイドリーグが終わりました',
-  leagueEndBody: '{tier}部{league}リーグ最終{rank}位です。',
-  leagueChampionTitle: 'シーズン{season} オフサイドリーグ{tier}部{league}リーグ優勝！',
+  leagueEndBody: '{tier}部 {title}最終{rank}位です。',
+  leagueChampionTitle: 'シーズン{season} オフサイドリーグ{tier}部 {title}優勝！',
   leagueEndBodyChampion:
     '1部優勝！シーズン{season} リーグ王者の称号と選手候補リロール券{n}枚、プレミアムスカウト券{s}枚、ポテンシャル強化券{b}枚を受け取りました。',
   leagueEndBodyAll:
-    '{tier}部{league}リーグ最終{rank}位です。選手候補リロール券{n}枚、プレミアムスカウト券{s}枚、ポテンシャル強化券{b}枚を受け取りました。次のシーズンに申し込むと{next}部から始まります。',
+    '{tier}部 {title}最終{rank}位です。選手候補リロール券{n}枚、プレミアムスカウト券{s}枚、ポテンシャル強化券{b}枚を受け取りました。次のシーズンに申し込むと{next}部から始まります。',
   leagueEndBodyReroll:
-    '{tier}部{league}リーグ最終{rank}位です。選手候補リロール券{n}枚を受け取りました。次のシーズンに申し込むと{next}部から始まります。',
+    '{tier}部 {title}最終{rank}位です。選手候補リロール券{n}枚を受け取りました。次のシーズンに申し込むと{next}部から始まります。',
   leagueEndBodyNext:
-    '{tier}部{league}リーグ最終{rank}位です。次のシーズンに申し込むと{next}部から始まります。',
+    '{tier}部 {title}最終{rank}位です。次のシーズンに申し込むと{next}部から始まります。',
   leagueEndBodyForfeited:
-    '{tier}部{league}リーグ最終{rank}位です。棄権が重なったため報酬はなく、次のシーズンは一番下の部から始まります。',
+    '{tier}部 {title}最終{rank}位です。棄権が重なったため報酬はなく、次のシーズンは一番下の部から始まります。',
   leagueFillTitle: 'オフサイドリーグ昇格！',
   leagueFillBody:
     '上の部に空きができたので、シーズン{season}は{tier}部でプレーします。プレミアムスカウト券{s}枚を受け取りました。',

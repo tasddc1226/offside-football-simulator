@@ -35,6 +35,7 @@ import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { teamAchText as L } from '@offside/app-core/i18n/ko/teamAch';
 import { ownerProfileText as LO } from '@offside/app-core/i18n/ko/ownerProfile';
 import { CupHonors } from '../../../components/CupHonors';
+import { LeagueHonors } from '../../../components/LeagueHonors';
 import { TeamComments } from './TeamComments';
 import { TitleBadge } from '../../../components/TitleBadge';
 import { toast } from '../../../game/host';
@@ -482,6 +483,7 @@ export default function TeamProfile({ id }: { id: string }) {
               </Txt>
             )}
           </Card>
+          <LeagueHonors honors={team.leagueHonors ?? []} />
           <CupHonors honors={team.cupHonors ?? []} />
           {statsOpen ? (
             <TeamStats

@@ -6,6 +6,7 @@ import { TITLE_NONE, PERMANENT_TITLES } from './owner-title.js';
 import { OwnerHonorSchema, OwnerTierSchema, OwnerTierTagSchema } from './season-recap.js';
 import {
   CupHonorSchema,
+  LeagueHonorSchema,
   OwnerTitleSchema,
   TeamIdSchema,
   TeamLogoSchema,
@@ -50,6 +51,8 @@ export const OwnerProfileSchema = z.strictObject({
     .nullable(),
   /** 컵 성적(최근 대회부터). 트로피 진열장. */
   cupHonors: z.array(CupHonorSchema),
+  /** T-11-640 리그 우승(최근 시즌부터). 배포 전 응답엔 없다. */
+  leagueHonors: z.array(LeagueHonorSchema).optional(),
   /** 시즌별 기록(오래된 시즌부터). */
   seasons: z.array(OwnerSeasonLineSchema),
   stats: z.strictObject({

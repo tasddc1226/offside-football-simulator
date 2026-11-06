@@ -1,4 +1,5 @@
 <script lang="ts">
+  import LeagueHonors from '../league/LeagueHonors.svelte';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
   // T-10-092 팀 프로필(라이브 랭킹에서 연다) — 시즌 순위 · 감독 · 레이팅 · 선발 그라운드 · 줄 힘 · 좋아요/조회수 · 팀 히스토리
@@ -228,6 +229,7 @@
         <p class="empty">{L.profHistoryEmpty}</p>
       {/if}
     </section>
+    <LeagueHonors honors={team.leagueHonors ?? []} />
     {#if team.cupHonors?.length}<CupHonors honors={team.cupHonors} />{/if}
     {#if statsOpen && StatsView}
       <StatsView {stats} status={statsStatus} seasonName={seasonLabel(team.season, team.seasonName)} focus={null} name={statsName} onreload={() => void loadStats()} onback={() => (statsOpen = false)} backText={LM.statsTeamClose} embedded />

@@ -13,6 +13,7 @@ import { tierTitle } from '@offside/app-core/ownerTier';
 import { seasonLabel } from '@offside/app-core/seasonName';
 import { num } from '@offside/app-core/teamText';
 import { CupHonors } from '../../../components/CupHonors';
+import { LeagueHonors } from '../../../components/LeagueHonors';
 import { LoadState, type LoadStatus } from '../../../components/LoadState';
 import { OwnerAvatar } from '../../../components/OwnerAvatar';
 import { TeamLogo } from '../../../components/TeamLogo';
@@ -133,6 +134,7 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
             )}
           </Card>
 
+          <LeagueHonors honors={owner.leagueHonors ?? []} />
           {owner.cupHonors.length ? (
             <CupHonors honors={owner.cupHonors} />
           ) : (

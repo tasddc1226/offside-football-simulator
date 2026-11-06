@@ -1,5 +1,6 @@
 import { teamCoachOf } from '../db/repos/managers.js';
 import { cupHonorsOf } from '../team/cup.js';
+import { leagueHonorsOf } from '../team/league.js';
 import {
   AchRankQuerySchema,
   AchRankResponseSchema,
@@ -266,7 +267,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const ids = slotIdsOf(t);
     const other = session && session.profileId !== t.profileId ? session.profileId : null;
     const { ownerNickname } = found;
-    const [rows, rank, liked, friend, cupHonors, coach] = await Promise.all([
+    const [rows, rank, liked, friend, cupHonors, leagueHonors, coach] = await Promise.all([
       careersByIds(
         db,
         ids.filter((x): x is string => !!x),
@@ -275,6 +276,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
       session ? isTeamLiked(db, t.id, session.profileId) : false,
       other ? friendStateOf(db, other, t.profileId) : null,
       cupHonorsOf(db, t.profileId),
+      leagueHonorsOf(db, t.profileId),
       // T-11-335 감독 칸에 앉힌 감독(카드 id 고유 인덱스 한 줄).
       teamCoachOf(db, t),
     ]);
@@ -308,6 +310,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           views: t.views,
           badges: teamBadges(t, teamSeasonClosed(t.season, now) ? rank : null, seasonName, lang),
           cupHonors,
+          leagueHonors,
           ownerTitle: found.title,
           ownerNickname,
           // T-11-165 선발에 실제로 든 선수만(숨김·지난 주인 카드는 eligible에서 이미 빠졌다).
