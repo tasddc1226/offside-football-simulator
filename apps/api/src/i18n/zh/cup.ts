@@ -111,6 +111,11 @@ export const CUP_ZH: Record<CupTextKey, string> = {
   leagueLocked: 'OFFSIDE 聯賽比賽開始前 1 小時到比賽結束期間，無法更改陣容。',
   leagueRemindTitle: 'OFFSIDE 聯賽明天分級',
   leagueRemindBody: '分級時第 {season} 賽季球隊的先發有 {n} 名球員就能參加。目前有 {filled} 名。',
+  leagueLineupTitle: '聯賽陣容 1 小時後鎖定',
+  leagueLineupBody:
+    '第 {round} 輪比賽 {time} 開踢。{lock} 起到比賽結束前無法更改先發陣容，請現在確認。',
+  leagueLineupShortBody:
+    '第 {round} 輪比賽 {time} 開踢。陣容將在 {lock} 鎖定，目前先發只有 {filled}/11 人，空位會由青訓球員上場。',
   leaguePlacedTitle: '第 {season} 賽季 OFFSIDE 聯賽分級結果',
   leaguePlacedBody: '{team} 分在 {tier} 級 {title}。第 1 輪今天 {time} 開踢。',
   leagueDroppedTitle: '第 {season} 賽季 OFFSIDE 聯賽參賽已取消',
