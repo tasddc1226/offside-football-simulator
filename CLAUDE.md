@@ -26,15 +26,7 @@ pnpm workspaces + Turborepo 모노레포. Node ≥22.13, TypeScript strict. 게�
 ## 자주 쓰는 명령
 
 ```bash
-pnpm dev                  # web(vite) + api(wrangler dev) 동시 실행
-pnpm test                 # 전체 Vitest (turbo)
-pnpm lint                 # ESLint 전체
-pnpm lint:deps            # 패키지 의존 방향 검사 (tooling/scripts/check-deps.mjs)
-pnpm lint:i18n            # 하드코딩 한국어 문구 게이트 (tooling/scripts/check-i18n.mjs, 기준선 래칫)
-pnpm typecheck            # tsc --noEmit 전체
-pnpm build                # 전체 빌드
-pnpm format               # prettier --write (apps·packages·tooling·루트 설정)
-pnpm format:check         # 서식 검사 (CI가 돌린다)
+# 루트 스크립트(lint:deps · lint:i18n · format 등)는 package.json을 본다.
 
 # 단일 패키지 테스트
 pnpm --filter @offside/web test
@@ -165,14 +157,6 @@ pnpm --filter @offside/fulltime-sim analyze
 - 새 게임 기능은 규칙·문구를 `packages/game`·`packages/app-core`에 두고 웹·앱에 함께 낸다.
 - 게임 규칙·수치가 바뀌면 공개 가이드 · FAQ(`packages/app-core/src/i18n/{ko,en,ja,zh}/publicGuidePage.mjs`, 웹 `/guide/`·`/en/guide/` 등 · 앱 설정의 게임 가이드)도 같은 PR에서 네 언어를 함께 고친다(T-11-112, T-11-588).
 - 결제(IAP)·푸시·보상형 광고만 앱 전용이다. 배경과 축소 검토 기준은 [결정 로그](docs/tracking/decision-log.md)(2026-10-04)를 본다.
-
-## 로딩 표시 규칙 (2026-10-18, T-11-389)
-
-- 서버 데이터를 기다리는 자리는 글자("불러오는 중…") 대신 뼈대를 그린다. 웹은 `LoadState`(`rows`로 줄 수)나 `Skeleton.svelte`, 앱은
-  `components/LoadState`나 `ui/Skeleton`(`height`를 주면 카드 한 장, T-11-391). 줄 · 카드가 맞지 않는 화면은 `LoadState`의
-  `skeleton`에 화면 모양 뼈대를 넘긴다(웹 snippet, 앱 `SkeletonFrame` + `useSkeletonBlock`, 예: 팀 그라운드 T-11-392). 뼈대는 0.2초 뒤에 나타나고(메모에서 바로 오는 재방문이 번쩍이지 않게) 움직임 줄이기를 따른다.
-- 기기 안 데이터로 바로 그리는 화면(커리어 진행 · 만들기 · 세이브 · 설정)에는 넣지 않는다.
-- 웹 뼈대는 첫 화면 번들에 실리므로 요소 하나의 CSS 배경으로 그린다(`style.css` `.sk-list` · `.sk-wait`). 화면 모양 뼈대를 새로 만들면 그 화면 청크 안에 둔다.
 
 ## 문서 정본 우선순위
 
