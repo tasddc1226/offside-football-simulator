@@ -70,6 +70,7 @@ import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
 import { legendToast } from './legendToast';
 import { manager } from './manager';
+import { manager3 } from './manager3';
 import { market } from './market';
 import { marketChart } from './marketChart';
 import { marketValueChart } from './marketValueChart';
@@ -196,6 +197,7 @@ export const en = {
   legendStyle,
   legendToast,
   manager,
+  manager3,
   market,
   marketChart,
   marketValueChart,

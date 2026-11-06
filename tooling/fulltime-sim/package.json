@@ -9,7 +9,8 @@
     "check-parity": "tsx check-parity.ts",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "manager-sim": "tsx manager.ts"
+    "manager-sim": "tsx manager.ts",
+    "manager3-sim": "tsx manager3.ts"
   },
   "devDependencies": {
     "tsx": "4.23.13"

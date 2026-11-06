@@ -5,10 +5,13 @@ import {
   FinishManagerBodySchema,
   ManagerCareerIdSchema,
   ManagerCareerResponseSchema,
+  ManagerPreviewResponseSchema,
   ManagersResponseSchema,
   ReleaseManagerResponseSchema,
   StartManagerBodySchema,
 } from '@offside/contracts';
+import { MANAGER_SEASONS_MAX } from '@offside/contracts/manager-rules';
+import { CareerIdParamSchema } from '@offside/contracts';
 import type { FormationId } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
@@ -52,6 +55,7 @@ import { buildLineup, filledCount, lineupOvr } from '../team/sim.js';
 import type { Db } from '../db/client.js';
 
 const managerGone = () => notFoundError('감독 커리어를 찾을 수 없어요.', 'MANAGER_NOT_FOUND');
+const cardGone = () => notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
 
 const managerIdOf = (c: Context<AppEnv>) =>
   parseWithAppError(ManagerCareerIdSchema, c.req.param('managerId'));
@@ -159,12 +163,11 @@ export function registerManagerRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, StartManagerBodySchema);
     const now = nowIso();
     const card = await cardForManager(db, input.careerId);
-    if (!card || card.ownerId !== me.id || card.hidden)
-      throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
+    if (!card || card.ownerId !== me.id || card.hidden) throw cardGone();
     if (card.manager) throw conflictError('이미 감독인 선수예요.', 'CARD_MANAGER');
     await checkCupManager(db, me.id, input.careerId);
     const origin = await managerOriginOf(db, input.careerId);
-    if (!origin) throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
+    if (!origin) throw cardGone();
     let id: string | null;
     try {
       id = await startManagerCareer(db, {
@@ -172,6 +175,7 @@ export function registerManagerRoutes(app: Hono<AppEnv>): void {
         careerId: input.careerId,
         seed: newSeed(),
         origin,
+        engine: input.engine ?? 2,
         now,
       });
     } catch (e) {
@@ -190,6 +194,18 @@ export function registerManagerRoutes(app: Hono<AppEnv>): void {
     }
     const career = await managerCareerOf(db, id, me.id);
     return ok(c, ManagerCareerResponseSchema, { career: career! }, 201, NO_STORE);
+  });
+
+  // T-11-648 후보 이력서: 그 카드로 감독을 시작하면 쓰일 시작값의 재료. 이력서를 열 때만 부른다(목록에는 싣지 않는다).
+  app.get('/v1/managers/preview/:careerId', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
+    const card = await cardForManager(db, careerId);
+    const origin =
+      card && card.ownerId === me.id && !card.hidden ? await managerOriginOf(db, careerId) : null;
+    if (!origin) throw cardGone();
+    return ok(c, ManagerPreviewResponseSchema, { origin }, 200, NO_STORE);
   });
 
   // 진행 중인 감독 커리어 포기: 원래 선수로 돌아온다(선발에는 다시 넣지 않는다).
@@ -238,12 +254,22 @@ export function registerManagerRoutes(app: Hono<AppEnv>): void {
     const input = readBody(c, FinishManagerBodySchema);
     const now = nowIso();
     const season = teamSeasonAt(now) ?? 0;
+    // 감독 커리어 3 결과(10시즌 넘게 · 3 전용 값)는 3으로 시작한 커리어만 받는다.
+    const v3Only = input.result.seasons > MANAGER_SEASONS_MAX || input.result.v3 !== undefined;
     if (
-      !(await finishManagerCareer(db, { id, profileId: me.id, result: input.result, season, now }))
+      !(await finishManagerCareer(db, {
+        id,
+        profileId: me.id,
+        result: input.result,
+        season,
+        now,
+        v3Only,
+      }))
     ) {
       const found = await managerCareerOf(db, id, me.id);
       // 재시도(이미 끝낸 같은 커리어)는 지금 결과를 그대로 돌려준다.
       if (found?.status === 'done') return ok(c, ManagerCareerResponseSchema, { career: found });
+      if (found && v3Only) throw conflictError('engine mismatch', 'MANAGER_ENGINE');
       throw managerGone();
     }
     waitUntil(c, refreshAfterChange(db, me.id, season));
