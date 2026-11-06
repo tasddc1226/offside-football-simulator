@@ -1,0 +1,41 @@
+// 대회·수상 이름 바꾸기 카드(T-11-647) — 웹 CustomNamesSettings.svelte · 앱 screens/settings/CustomNamesSettings.tsx · app-core customNames.ts.
+import { ns } from '../core';
+
+const ko = {
+  title: '대회·수상 이름 바꾸기',
+  intro:
+    '대회·수상·리그 이름을 내 화면에서만 원하는 이름으로 바꿔요. 게임 기록은 그대로고, 공유 이미지와 다른 사람 화면에는 원래 이름이 보여요.',
+  local: '이 기기에만 저장돼요. 다른 기기로 옮길 때는 에디트 파일을 써요.',
+  group: '종류',
+  groupComp: '대회',
+  groupAward: '수상',
+  groupLeague: '리그',
+  search: '이름 찾기',
+  mine: '내 커리어',
+  nameLabel: (p: { name: string }) => `${p.name} 새 이름`,
+  reset: '원래대로',
+  changed: (p: { n: number }) => `바꾼 이름 ${p.n}개`,
+  noMatch: '맞는 이름이 없어요',
+  more: (p: { n: number }) => `${p.n}개 더 보기`,
+  exportFile: '에디트 파일 내보내기',
+  importFile: '에디트 파일 가져오기',
+  resetAll: '전체 초기화',
+  importPlaceholder: '내보낸 에디트 파일 내용을 여기에 붙여넣어요',
+  importPasteLabel: '에디트 파일 붙여넣기',
+  importBtn: '가져오기',
+  pasteClipboard: '클립보드에서 붙여넣기',
+  cancel: '취소',
+  revert: '되돌리기',
+  noSpace: '저장 공간이 부족해 저장하지 못했어요',
+  limit: '이름은 500개까지 바꿀 수 있어요',
+  badFile: '에디트 파일 형식이 올바르지 않아요',
+  imported: (p: { n: number }) => `이름 ${p.n}개를 불러왔어요`,
+  resetAllConfirm: '바꾼 이름을 모두 원래대로 되돌릴까요?',
+  allReset: '모든 이름을 원래대로 되돌렸어요',
+  shareFail: '공유하지 못했어요',
+  clipEmpty: '클립보드가 비어 있어요',
+  clipFail: '클립보드를 읽지 못했어요',
+};
+
+export type CustomNamesMsgs = typeof ko;
+export const customNamesText = ns('customNames', ko);

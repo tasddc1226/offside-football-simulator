@@ -17,6 +17,7 @@ const uploadLegacyRetirement: (typeof import('./uploads.js'))['uploadLegacyRetir
   ...args
 ) => void import('./uploads.js').then((m) => m.uploadLegacyRetirement(...args));
 import { loadClubCustom } from './clubCustom.svelte.js';
+import { loadCustomNames } from './customNames.svelte.js';
 
 /** 아주 오래된 저장 키(sl_save)를 한 번만 ft_save로 옮기고 지운다. 예전엔 부팅마다 ft_save가 비어 있으면
  * sl_save를 읽어서, 새 커리어를 막 시작한 직후(아직 ft_save가 없을 때) 새로고침하면 옛 선수가 되살아났다. */
@@ -35,6 +36,8 @@ let activityReady = false;
 export function loadGame() {
   // T-10-009: 유저 클럽 이름을 먼저 CLUBS에 반영해야 세이브를 읽을 때 '현재 소속 최신 이름' 갱신이 커스텀 이름을 읽는다.
   loadClubCustom();
+  // T-11-647 유저가 바꾼 대회·수상 이름을 첫 화면을 그리기 전에 tn()에 건다.
+  loadCustomNames();
   migrateLegacySave();
   appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });
   // T-11-438 중계 도중 끊긴 구간 리포트가 있으면 시즌 탭 맨 위에 다시 보여 준다.

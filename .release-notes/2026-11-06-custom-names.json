@@ -1,0 +1,30 @@
+{
+  "id": "t-11-647-custom-names",
+  "title": "대회·수상 이름 바꾸기",
+  "items": [
+    "설정 → 대회·수상 이름 바꾸기에서 대회·수상·리그 이름을 내 화면에서만 원하는 이름으로 바꿀 수 있어요. 공유 이미지와 다른 사람 화면에는 원래 이름이 보여요.",
+    "바꾼 이름은 이 기기에만 저장돼요. 에디트 파일로 내보내고 가져와 다른 기기로 옮길 수 있어요."
+  ],
+  "en": {
+    "title": "Rename competitions and awards",
+    "items": [
+      "In Settings → Rename competitions and awards, you can give competitions, awards and leagues your own names on your screen only. Share images and other players still show the original names.",
+      "Your names are saved on this device only. Export and import an edit file to move them to another device."
+    ]
+  },
+  "ja": {
+    "title": "大会・タイトル名の変更",
+    "items": [
+      "設定 → 大会・タイトル名の変更で、大会・タイトル・リーグの名前を自分の画面でだけ好きな名前に変えられます。シェア画像やほかの人の画面には元の名前が表示されます。",
+      "変更した名前はこの端末にだけ保存されます。エディットファイルを書き出して読み込めば、ほかの端末に移せます。"
+    ]
+  },
+  "zh": {
+    "title": "更改賽事・獎項名稱",
+    "items": [
+      "在設定 → 更改賽事・獎項名稱中，可以只在自己的畫面上把賽事、獎項與聯賽改成想要的名稱。分享圖片與其他人的畫面仍顯示原本的名稱。",
+      "更改的名稱只儲存在這台裝置。匯出再匯入編輯檔案，就能移到其他裝置。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -37,6 +37,7 @@ import { rem } from '../../theme/type';
 import { Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { BackupSettings } from './BackupSettings';
 import { ClubCustomSettings } from './ClubCustomSettings';
+import { CustomNamesSettings } from './CustomNamesSettings';
 import { AdFreeSettings } from './AdFreeSettings';
 import { PushSettings } from './PushSettings';
 import { ReviewSettings } from './ReviewSettings';
@@ -337,6 +338,7 @@ export default function Settings() {
       <PushSettings />
       <ReviewSettings />
       <ClubCustomSettings />
+      <CustomNamesSettings />
 
       <Group eyebrow="Help" title={L.help}>
         <LinkList

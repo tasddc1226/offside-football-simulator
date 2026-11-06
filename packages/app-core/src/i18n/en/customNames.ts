@@ -1,0 +1,39 @@
+import type { Translation } from '../core';
+import type { CustomNamesMsgs } from '../ko/customNames';
+import { plural } from './_util';
+
+export const customNames: Translation<CustomNamesMsgs> = {
+  title: 'Rename competitions and awards',
+  intro:
+    'Give competitions, awards and leagues your own names on your screen only. Your records stay the same, and share images and other players still see the original names.',
+  local: 'Saved on this device only. Use an edit file to move them to another device.',
+  group: 'Type',
+  groupComp: 'Competitions',
+  groupAward: 'Awards',
+  groupLeague: 'Leagues',
+  search: 'Find a name',
+  mine: 'My career',
+  nameLabel: (p) => `New name for ${p.name}`,
+  reset: 'Original',
+  changed: (p) => `${plural(p.n, 'name')} changed`,
+  noMatch: 'No matching names',
+  more: (p) => `Show ${p.n} more`,
+  exportFile: 'Export edit file',
+  importFile: 'Import edit file',
+  resetAll: 'Reset all',
+  importPlaceholder: 'Paste the contents of an exported edit file here',
+  importPasteLabel: 'Paste edit file',
+  importBtn: 'Import',
+  pasteClipboard: 'Paste from clipboard',
+  cancel: 'Cancel',
+  revert: 'Reset',
+  noSpace: 'Not enough storage space to save',
+  limit: 'You can rename up to 500 names',
+  badFile: 'This edit file isn’t in the right format',
+  imported: (p) => `Loaded ${plural(p.n, 'name')}`,
+  resetAllConfirm: 'Change every renamed name back to the original?',
+  allReset: 'All names are back to the originals',
+  shareFail: 'Couldn’t share',
+  clipEmpty: 'The clipboard is empty',
+  clipFail: 'Couldn’t read the clipboard',
+};

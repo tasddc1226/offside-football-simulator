@@ -31,6 +31,7 @@
   import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
+  import CustomNamesSettings from './CustomNamesSettings.svelte';
   import BackupSettings from './BackupSettings.svelte';
   import ServerStatus from './ServerStatus.svelte';
   import AppMoveCard from './AppMoveCard.svelte';
@@ -204,6 +205,7 @@
   <!-- T-10-116 진행 중 커리어 백업·불러오기 -->
   <BackupSettings />
   <ClubCustomSettings />
+  <CustomNamesSettings />
   <AnalyticsConsent settings />
 
   <section class="settings-group" aria-labelledby="settings-help">
