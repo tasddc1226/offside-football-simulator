@@ -7,7 +7,8 @@ import { CLUBS, clubRef, sameClub, type Club } from './data.js';
 import { clubsIn, leagueOf } from './player.js';
 import { log } from './stats.js';
 import { gSeasonText as L } from './i18n/ko/gSeason.js';
-import { tn } from './i18n/names.js';
+// 진행 중에 만드는 문장은 세이브에 남으므로 유저가 바꾼 이름 없이 원래 이름으로(T-11-647).
+import { tnBase as tn } from './i18n/names.js';
 import type { GameState } from './types.js';
 
 export interface Promotion {

@@ -2,7 +2,7 @@
 import type { EventText } from '../../events-data';
 import type { GameState } from '../../types';
 import { milAbroad, sangmuChance } from '../../military';
-import { tn } from '../names';
+import { tnBase as tn } from '../names'; // 진행 중 문장은 원래 이름(T-11-647)
 
 // military.ts의 모집 공고 문구를 중국어로 옮긴 것. 입영 연기 기한(만 28세)·낮은 합격률 기준(0.35)은 정의와 같다.
 const MIL_AGE = 28;

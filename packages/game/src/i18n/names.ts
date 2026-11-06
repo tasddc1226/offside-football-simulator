@@ -77,6 +77,10 @@ export function tn(ko: string): string {
   return out;
 }
 
+/** 유저가 바꾼 이름 없이 지금 언어의 원래 이름. 게임 진행 중에 만드는 문장(소식 줄 · 이벤트 · 시즌 결산)은 이걸 쓴다 —
+ * 그 문장은 세이브에 그대로 남으므로, 바꾼 이름이 섞이면 되돌려도 남고 백업으로 다른 기기까지 따라간다. */
+export const tnBase = (ko: string): string => defaultName(ko);
+
 function defaultName(ko: string): string {
   const t = localeData<NameTable>('__names');
   if (!ko) return ko;

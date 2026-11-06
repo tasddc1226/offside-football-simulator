@@ -1,6 +1,6 @@
 import type { Translation } from '@offside/contracts/i18n';
 import type { gBigStageText } from '../ko/gBigStage';
-import { tn } from '../names';
+import { tnBase as tn } from '../names'; // 진행 중 문장은 원래 이름(T-11-647)
 
 // 연맹별 대륙컵 이름(national.ts CONT_CUP와 같은 대회).
 const CONT_CUP: Record<string, string> = {

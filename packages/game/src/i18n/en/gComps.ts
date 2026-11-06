@@ -1,6 +1,6 @@
 import type { Translation } from '@offside/contracts/i18n';
 import type { GCompsMsgs } from '../ko/gComps';
-import { tn } from '../names';
+import { tnBase as tn } from '../names'; // 진행 중 문장은 원래 이름(T-11-647)
 
 const ROUND: Record<string, string> = {
   '32강': 'round of 32',

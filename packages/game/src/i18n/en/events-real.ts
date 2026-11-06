@@ -5,7 +5,7 @@ import { isKorean } from '../../nation';
 import { pick } from '../../rng';
 import { leagueOf } from '../../player';
 import type { GameState } from '../../types';
-import { tn } from '../names';
+import { tnBase as tn } from '../names'; // 진행 중 문장은 원래 이름(T-11-647)
 import { derbyText } from '../../derby';
 
 const byPos =

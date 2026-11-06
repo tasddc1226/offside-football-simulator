@@ -16,7 +16,8 @@ import type { GameState, Season, SeasonComp } from './types.js';
 import type { NatTourResult } from './national.js';
 import { confPoty, federationPoty } from './nation.js';
 import { gCompsText as M } from './i18n/ko/gComps.js';
-import { tn } from './i18n/names.js';
+// 진행 중에 만드는 문장은 세이브에 남으므로 유저가 바꾼 이름 없이 원래 이름으로(T-11-647).
+import { tnBase as tn } from './i18n/names.js';
 import { leagueOpen } from './balance.js';
 import { scoringTable, scoringRank } from './scoring-table.js';
 import type { MomentHooks } from './moments.js';

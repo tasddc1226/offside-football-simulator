@@ -4,7 +4,8 @@ import { clamp, chance, gauss, hashStr } from './rng.js';
 import type { GameState } from './types.js';
 import { leagueOf, clubsIn } from './player.js';
 import { gTurnText as M } from './i18n/ko/gTurn.js';
-import { tn } from './i18n/names.js';
+// 진행 중에 만드는 문장은 세이브에 남으므로 유저가 바꾼 이름 없이 원래 이름으로(T-11-647).
+import { tnBase as tn } from './i18n/names.js';
 
 // ───────── 순위 ─────────
 // 시즌마다 상대 전력 19개(S.rivals)를 뽑지만, 리그의 실제 팀 수는 12~20개다(T-10-009). T-10-024부터
