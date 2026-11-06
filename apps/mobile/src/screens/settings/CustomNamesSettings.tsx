@@ -11,7 +11,11 @@ import {
   CUSTOM_NAMES_LIMIT,
   CUSTOM_NAMES_NO_SPACE,
 } from '@offside/app-core/customNames';
-import { customNameCatalog, type CustomNameGroup } from '@offside/app-core/customNamesCatalog';
+import {
+  customNameCatalog,
+  customNameSectionKey,
+  type CustomNameGroup,
+} from '@offside/app-core/customNamesCatalog';
 import { customNamesText as T } from '@offside/app-core/i18n/ko/customNames';
 import { tn, withDefaultNames } from '@offside/game/i18n/names';
 import {
@@ -24,7 +28,6 @@ import {
 import { appState, customNames as customNamesState } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
-import { alpha } from '../../theme/colors';
 import { Btn, Row, Txt } from '../../ui';
 import { SettingsCard, SettingsLabel, SettingsTrigger, TextField } from './parts';
 
@@ -182,54 +185,50 @@ export function CustomNamesSettings() {
           ) : null}
           {items.length ? (
             <View style={{ gap: 8 }}>
-              {items.slice(0, shown).map((x) => {
+              {items.slice(0, shown).map((x, i) => {
                 const base = original(x.ko);
                 const value = map[x.ko] ?? '';
+                const head = i === 0 || items[i - 1]!.sec !== x.sec;
                 return (
-                  <View
-                    key={x.ko}
-                    testID={`name-${x.ko}`}
-                    style={{
-                      borderWidth: 1,
-                      borderColor: c.line,
-                      borderRadius: RADIUS.md,
-                      padding: 8,
-                      gap: 6,
-                    }}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Txt style={{ flexShrink: 1, fontSize: rem(FONT.body2) }}>{base}</Txt>
-                      {x.mine ? (
-                        <Txt
-                          style={{
-                            paddingHorizontal: 6,
-                            paddingVertical: 1,
-                            borderRadius: RADIUS.sm,
-                            overflow: 'hidden',
-                            backgroundColor: alpha(c.accent, 0.16),
-                            color: c.accent,
-                            fontSize: rem(FONT.caption2),
-                            fontWeight: '700',
-                          }}
-                        >
-                          {T.mine}
-                        </Txt>
-                      ) : null}
-                    </View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                      <CommitInput
-                        value={value}
-                        onCommit={(v) => rename(x.ko, v, changed)}
-                        maxLength={CUSTOM_NAME_MAX}
-                        placeholder={base}
-                        accessibilityLabel={T.nameLabel({ name: base })}
-                        style={{ flex: 1, minWidth: 0 }}
-                      />
-                      {value ? (
-                        <Btn sm testID="name-reset" onPress={() => rename(x.ko, '', changed)}>
-                          {T.reset}
-                        </Btn>
-                      ) : null}
+                  <View key={x.ko} style={{ gap: 8 }}>
+                    {head ? (
+                      <Txt
+                        tone="muted"
+                        v="xs"
+                        testID={`name-sec-${x.sec}`}
+                        style={{ fontWeight: '700', marginTop: i === 0 ? 0 : 6 }}
+                      >
+                        {T[customNameSectionKey(x.sec)]}
+                      </Txt>
+                    ) : null}
+                    <View
+                      testID={`name-${x.ko}`}
+                      style={{
+                        borderWidth: 1,
+                        borderColor: c.line,
+                        borderRadius: RADIUS.md,
+                        padding: 8,
+                        gap: 6,
+                      }}
+                    >
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Txt style={{ flexShrink: 1, fontSize: rem(FONT.body2) }}>{base}</Txt>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        <CommitInput
+                          value={value}
+                          onCommit={(v) => rename(x.ko, v, changed)}
+                          maxLength={CUSTOM_NAME_MAX}
+                          placeholder={base}
+                          accessibilityLabel={T.nameLabel({ name: base })}
+                          style={{ flex: 1, minWidth: 0 }}
+                        />
+                        {value ? (
+                          <Btn sm testID="name-reset" onPress={() => rename(x.ko, '', changed)}>
+                            {T.reset}
+                          </Btn>
+                        ) : null}
+                      </View>
                     </View>
                   </View>
                 );

@@ -40,7 +40,7 @@ export const CUPS: Record<string, string[]> = {
   bra: ['코파 두 브라질'],
   por: ['타사 드 포르투갈', '타사 다 리가'],
 };
-const SUPERCUP: Record<string, string> = {
+export const SUPERCUP: Record<string, string> = {
   pl: 'FA 커뮤니티 실드',
   ll: '수페르코파 데 에스파냐',
   sa: '수페르코파 이탈리아나',
@@ -94,6 +94,29 @@ const YOUNG: Record<string, string> = {
   j1: 'J리그 베스트 영플레이어상',
 };
 const youngOf = (L: { id: string; name: string }) => YOUNG[L.id] ?? `${L.name} 올해의 영플레이어`;
+const assistOf = (L: { name: string }) => `${L.name} 도움왕`; // i18n-ignore 저장값
+const best11Of = (L: { name: string; tier: number }) =>
+  L.tier >= 4 ? `${L.name} 올해의 팀` : `${L.name} 베스트 11`; // i18n-ignore 저장값
+// i18n-ignore 저장값(포지션 상)
+type PosAward = '수비수' | '골키퍼' | '미드필더';
+const posAwardOf = (L: { name: string }, pos: PosAward) => `${L.name} 올해의 ${pos}`; // i18n-ignore 저장값
+
+// ───────── 상 이름 목록 (T-11-647) ─────────
+// 설정 → 대회·수상 이름 바꾸기가 받기 전에도 보여 주는 상 이름. 아래 시상 코드가 주는 문자열과 같아야 한다.
+/** 시상식 상(발롱도르 등) — 시상 코드와 실제 이벤트(푸스카스상)가 주는 이름. */
+// prettier-ignore
+export const GALA_AWARDS = ['발롱도르', '코파 트로피', '야신 트로피', 'FIFA 더 베스트 남자 선수', 'FIFPRO 월드 11', '게르트 뮐러 트로피', '유러피언 골든슈', 'FIFA 푸스카스상'] as const; // i18n-ignore 저장값(상 이름)
+/** 아마추어(고교 · 대학) 리그 상. */
+// i18n-ignore 저장값(상 이름)
+export const AMATEUR_AWARDS = ['득점왕', '도움왕', '대회 MVP', '대회 베스트 11'] as const;
+/** 프로 리그 하나의 개인상(득점상 · 올해의 선수 제외) — 도움왕 · 베스트 11 · 영플레이어 · 포지션 상. */
+export function leagueAwardNames(L: (typeof LEAGUES)[number]): string[] {
+  if (L.amateur) return [];
+  const out = [assistOf(L), best11Of(L), youngOf(L)];
+  if (L.tier >= 5) out.push(posAwardOf(L, '수비수')); // i18n-ignore 저장값
+  out.push(posAwardOf(L, '골키퍼'), posAwardOf(L, '미드필더')); // i18n-ignore 저장값
+  return out;
+}
 const YOUNG_NAMES = new Set(LEAGUES.map(youngOf));
 const wonYoung = (s: GameState) => s.awards.some((a) => YOUNG_NAMES.has(a.t));
 /** ko: 리그 페이즈 없이 전 라운드 녹아웃(전반기 1라운드 · 후반기 16강~결승). */
@@ -583,13 +606,11 @@ export function seasonAwards(
   const first = (key: 'goals' | 'assists', legacy: number) =>
     scoring && mine ? mine[key] > 0 && scoringRank(scoring, mine, key) === 1 : S[key] >= legacy;
   if (first('goals', Math.max(topG, 6))) awards.push(L.amateur ? '득점왕' : TOP_SCORER[L.id]!);
-  if (first('assists', Math.max(topA, 5))) awards.push(L.amateur ? '도움왕' : `${L.name} 도움왕`);
+  if (first('assists', Math.max(topA, 5))) awards.push(L.amateur ? '도움왕' : assistOf(L));
   if (enough && avg >= 7.55 && (rank <= 3 || S.goals >= topG) && chance(0.5))
     awards.push(L.amateur ? '대회 MVP' : POTY[L.id]!);
   if (enough && avg >= (back ? 7.2 : 7.3) && chance(0.75))
-    awards.push(
-      L.amateur ? '대회 베스트 11' : L.tier >= 4 ? `${L.name} 올해의 팀` : `${L.name} 베스트 11`,
-    );
+    awards.push(L.amateur ? '대회 베스트 11' : best11Of(L));
   // 영플레이어는 23세 이하면 어느 프로 시즌에서든 받을 수 있고 커리어에 한 번이다(옛 rookieDone은 첫 프로 시즌만 봤다).
   if (!L.amateur && s.age <= 23 && !wonYoung(s) && S.apps >= m * 0.45 && avg >= 7.25)
     awards.push(youngOf(L));
@@ -634,11 +655,11 @@ export function seasonAwards(
   const shoe = S.goals * (L.tier >= 5 ? 2 : 1.5);
   if (L.tier >= 4 && shoe >= SHOE_BAR + gauss() * 4) awards.push('유러피언 골든슈');
   if (s.pos === 'DF' && L.tier >= 5 && enough && avg >= 7.15 && rank <= 3 && chance(0.45))
-    awards.push(`${L.name} 올해의 수비수`);
+    awards.push(posAwardOf(L, '수비수')); // i18n-ignore 저장값
   // T-11-021 미드필더(세부 포지션 선수)도 골키퍼와 같은 조건으로 포지션 상을 받는다.
   const posAward = s.pos === 'GK' ? '골키퍼' : s.dpos && s.pos === 'MF' ? '미드필더' : null;
   if (posAward && enough && avg >= 7.1 && rank <= 4 && chance(0.45))
-    awards.push(`${L.name} 올해의 ${posAward}`);
+    awards.push(posAwardOf(L, posAward));
   const kfa = s.nat.caps > 0 && (ballonRank <= 30 || (o >= 80 && avg >= 7.2)) && chance(0.5);
   if (kfa) awards.push(federationPoty(s));
   // AFC 올해의 선수는 아시아 리그 소속, 국제선수상은 아시아 밖(유럽 · MLS · 브라질)에서 뛰는 선수 몫이다.

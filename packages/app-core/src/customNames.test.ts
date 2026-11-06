@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { setStorage } from '@offside/game/storage';
+import { setLocale } from '@offside/contracts/i18n';
 import { setCustomNames, tn } from '@offside/game/i18n/names';
+import { en } from '@offside/game/i18n/en/index';
 import type { GameState } from '@offside/game/types';
 import {
   CUSTOM_NAME_MAX,
@@ -101,10 +103,36 @@ describe('대회·수상 이름 바꾸기 (T-11-647)', () => {
     ]);
     expect(c.comp[0]!.mine).toBe(true);
     expect(c.comp.some((x) => x.ko === 'FA컵' && !x.mine)).toBe(true);
-    expect(c.award[0]).toEqual({ ko: 'K리그1 득점왕', mine: true });
-    expect(c.league[0]).toEqual({ ko: 'K리그1', mine: true });
+    expect(c.award[0]).toEqual({ ko: 'K리그1 득점왕', mine: true, sec: 'mine' });
+    expect(c.league[0]).toEqual({ ko: 'K리그1', mine: true, sec: 'mine' });
     // 같은 이름은 한 번.
     expect(c.league.filter((x) => x.ko === 'K리그1')).toHaveLength(1);
     expect(customNameCatalog(null).comp.every((x) => !x.mine)).toBe(true);
+  });
+
+  it('받기 전인 대회·상도 묶음별로 모두 고를 수 있고, 모두 게임에 있는 이름이다', () => {
+    const c = customNameCatalog(null);
+    const has = (g: 'comp' | 'award', ko: string, sec: string) =>
+      expect(c[g].find((x) => x.ko === ko)?.sec, ko).toBe(sec);
+    has('comp', 'FA 커뮤니티 실드', 'super');
+    has('comp', 'FIFA 클럽 월드컵', 'club');
+    has('comp', 'FIFA 월드컵', 'national');
+    has('comp', 'UEFA 유로', 'national');
+    has('award', 'K리그1 도움왕', 'leagueMore');
+    has('award', '프리미어리그 올해의 팀', 'leagueMore');
+    has('award', 'PFA 올해의 영플레이어', 'leagueMore');
+    has('award', '발롱도르', 'gala');
+    has('award', 'AFC 올해의 국제선수', 'confed');
+    has('award', '대한축구협회 올해의 선수', 'confed');
+    has('award', '올림픽 은메달', 'medal');
+    has('award', '대회 MVP', 'amateur');
+    // 영어 대응표에 모두 있다 = 게임이 실제로 쓰는 이름이다(오타면 한글이 남는다).
+    setLocale('en', en);
+    try {
+      const all = [...c.comp, ...c.award, ...c.league].map((x) => x.ko);
+      expect(all.filter((ko) => /[가-힣]/.test(tn(ko)))).toEqual([]);
+    } finally {
+      setLocale('ko');
+    }
   });
 });

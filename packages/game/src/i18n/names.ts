@@ -41,6 +41,7 @@ let custom: Readonly<Record<string, string>> = {};
 /** 긴 키부터 — `AFC 챔피언스리그 엘리트`가 `AFC 챔피언스리그`보다 먼저 맞는다. */
 let customKeys: readonly string[] = [];
 let customOff = 0;
+const YEAR_HEAD = /^\d{4} /;
 
 /** 유저 이름표를 바꾼다(부팅 때 · 설정에서 바꿀 때). 빈 값은 빠진다. */
 export function setCustomNames(map: Readonly<Record<string, string>>): void {
@@ -65,8 +66,10 @@ export function tn(ko: string): string {
   if (customOff || !customKeys.length || !ko) return out;
   const exact = custom[ko];
   if (exact !== undefined) return exact;
+  // 대표팀 대회 기록은 연도가 앞에 붙는다(`2030 FIFA 월드컵 (개최지)`) — 연도 뒤부터 맞춘다.
+  const body = YEAR_HEAD.test(ko) ? ko.slice(5) : ko;
   for (const k of customKeys) {
-    if (!ko.startsWith(k) || ko.charAt(k.length) !== ' ') continue;
+    if (!body.startsWith(k) || (body.length > k.length && body.charAt(k.length) !== ' ')) continue;
     // 원래 이름 안의 그 부분을 유저 이름으로 바꾼다(언어마다 어순이 달라도 원래 번역 안에서 찾는다).
     const part = defaultName(k);
     if (out.includes(part)) return out.replace(part, () => custom[k]!);

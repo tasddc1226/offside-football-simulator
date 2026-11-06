@@ -342,6 +342,22 @@ describe('유저가 바꾼 이름 (T-11-647)', () => {
     expect(tn('코리아컵')).toBe('Offside Cup');
   });
 
+  it('연도가 앞에 붙은 대표팀 대회 기록도 대회 이름 부분만 바꾼다', () => {
+    setCustomNames({ 'FIFA 월드컵': '지구컵', '코파 아메리카': '남미컵', 'UEFA 유로': '유럽컵' });
+    expect(tn('2030 FIFA 월드컵 (스페인·포르투갈·모로코)')).toBe(
+      '2030 지구컵 (스페인·포르투갈·모로코)',
+    );
+    expect(tn('2031 코파 아메리카')).toBe('2031 남미컵');
+    expect(tn('UEFA 유로 2032')).toBe('유럽컵 2032');
+    expect(tn('FIFA 월드컵 우승')).toBe('지구컵 우승');
+    // 연도만 맞고 이름이 다른 기록은 그대로다.
+    expect(tn('2030 아시안게임 (카타르)')).toBe('2030 아시안게임 (카타르)');
+    setLocale('en', en);
+    const base = withDefaultNames(() => tn('2030 FIFA 월드컵 (스페인·포르투갈·모로코)'));
+    const part = withDefaultNames(() => tn('FIFA 월드컵'));
+    expect(tn('2030 FIFA 월드컵 (스페인·포르투갈·모로코)')).toBe(base.replace(part, '지구컵'));
+  });
+
   it('withDefaultNames 안에서는 원래 이름, 빈 값은 원래대로', () => {
     setCustomNames({ 코리아컵: '오프사이드컵', FA컵: '' });
     expect(withDefaultNames(() => tn('코리아컵 우승'))).toBe('코리아컵 우승');

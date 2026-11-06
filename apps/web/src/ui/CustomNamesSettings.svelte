@@ -2,7 +2,7 @@
   // 설정 화면의 "대회·수상 이름 바꾸기" 카드(T-11-647) — 대회·수상·리그 이름을 이 기기에서만 바꾸고, 에디트 파일로 옮긴다.
   // 저장은 app-core/customNames. 이름은 저장된 한국어(tn 키)로 고르고, 칸 옆에는 지금 언어의 원래 이름을 보여 준다.
   import { CUSTOM_NAME_MAX, CUSTOM_NAMES_LIMIT, CUSTOM_NAMES_NO_SPACE } from '@offside/app-core/customNames';
-  import { customNameCatalog, type CustomNameGroup } from '@offside/app-core/customNamesCatalog';
+  import { customNameCatalog, customNameSectionKey, type CustomNameGroup } from '@offside/app-core/customNamesCatalog';
   import { tn, withDefaultNames } from '@offside/game/i18n/names';
   import { customNamesText as T } from '@offside/app-core/i18n/ko/customNames';
   import { customNames, setCustomName, resetCustomNames, exportCustomNames, importCustomNames } from './customNames.svelte.js';
@@ -25,6 +25,7 @@
     if (!q) return list;
     return list.filter((x) => `${x.ko} ${original(x.ko)} ${customNames.map[x.ko] ?? ''}`.toLowerCase().includes(q));
   });
+  const visible = $derived(items.slice(0, shown));
   const changed = $derived(Object.keys(customNames.map).length);
 
   function rename(ko: string, value: string) {
@@ -82,13 +83,13 @@
       {#if changed}<p class="muted fs-xs" style="margin:0" data-names-changed={changed}>{T.changed({ n: changed })}</p>{/if}
       {#if items.length}
         <ul class="name-list">
-          {#each items.slice(0, shown) as x (x.ko)}
+          {#each visible as x, i (x.ko)}
             {@const base = original(x.ko)}
             {@const value = customNames.map[x.ko] ?? ''}
+            {#if i === 0 || visible[i - 1]!.sec !== x.sec}<li class="name-sec" data-name-sec={x.sec}>{T[customNameSectionKey(x.sec)]}</li>{/if}
             <li class="name-row" data-name={x.ko}>
               <div class="name-head">
                 <span class="name-base">{base}</span>
-                {#if x.mine}<span class="name-mine">{T.mine}</span>{/if}
               </div>
               <div class="name-edit">
                 <input
@@ -168,14 +169,15 @@
     min-width: 0;
     overflow-wrap: anywhere;
   }
-  .name-mine {
-    flex: none;
-    padding: 1px 6px;
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--accent) 16%, transparent);
-    color: var(--accent);
+  .name-sec {
+    margin-top: 6px;
+    color: var(--muted);
     font-size: var(--fs-caption2);
     font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .name-sec:first-child {
+    margin-top: 0;
   }
   .name-edit {
     display: flex;
