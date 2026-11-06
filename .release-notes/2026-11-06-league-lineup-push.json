@@ -1,0 +1,26 @@
+{
+  "id": "t-11-644-league-lineup-push",
+  "title": "리그 명단 잠금 알림",
+  "items": [
+    "리그 경기 명단이 잠기기 1시간 전(경기 2시간 전)에 알림이 와요. 선발에 빈 자리가 있으면 몇 명인지도 알려 줘요."
+  ],
+  "en": {
+    "title": "League lineup lock alert",
+    "items": [
+      "You now get a notification 1 hour before your league lineup locks (2 hours before kickoff). If your starting XI has empty spots, it tells you how many players you have."
+    ]
+  },
+  "ja": {
+    "title": "リーグのメンバー固定通知",
+    "items": [
+      "リーグの試合でメンバーが固定される1時間前（試合の2時間前）に通知が届きます。スタメンに空きがあれば人数もお知らせします。"
+    ]
+  },
+  "zh": {
+    "title": "聯賽陣容鎖定通知",
+    "items": [
+      "聯賽比賽陣容鎖定前 1 小時（比賽前 2 小時）會收到通知。先發有空位時也會告知目前人數。"
+    ]
+  },
+  "availability": "web-app"
+}

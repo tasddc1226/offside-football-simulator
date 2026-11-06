@@ -120,6 +120,12 @@ export const CUP_KO = {
   leagueRemindTitle: '오프사이드 리그 배치가 내일이에요',
   leagueRemindBody:
     '배치 때 시즌 {season} 팀 선발에 선수가 {n}명 있어야 참가할 수 있어요. 지금은 {filled}명이에요.',
+  // T-11-644 명단 잠금 1시간 전 안내.
+  leagueLineupTitle: '리그 명단이 1시간 뒤 잠겨요',
+  leagueLineupBody:
+    '{round}라운드 경기가 {time}에 열려요. {lock}부터 경기가 끝날 때까지 선발 명단을 바꿀 수 없으니 지금 확인해 주세요.',
+  leagueLineupShortBody:
+    '{round}라운드 경기가 {time}에 열려요. {lock}부터 명단이 잠기는데 선발이 {filled}/11명이라 빈 자리는 유스 선수가 뛰어요.',
   leaguePlacedTitle: '시즌 {season} 오프사이드 리그 배치 결과',
   leaguePlacedBody: '{team} 팀은 {tier}부 {title}예요. 1라운드는 오늘 {time}부터 열려요.',
   leagueDroppedTitle: '시즌 {season} 오프사이드 리그 참가가 취소됐어요',

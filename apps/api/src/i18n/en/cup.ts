@@ -127,6 +127,11 @@ export const CUP_EN: Record<CupTextKey, string> = {
   leagueRemindTitle: 'The OFFSIDE League placement is tomorrow',
   leagueRemindBody:
     'You need {n} players in your Season {season} starting XI at placement to take part. You have {filled} now.',
+  leagueLineupTitle: 'Your league lineup locks in 1 hour',
+  leagueLineupBody:
+    "Your Round {round} match starts at {time}. You can't change your starting XI from {lock} until it ends, so check it now.",
+  leagueLineupShortBody:
+    'Your Round {round} match starts at {time}. Your lineup locks at {lock} and your starting XI has {filled}/11 players, so youth players fill the gaps.',
   leaguePlacedTitle: 'Season {season} OFFSIDE League placement',
   leaguePlacedBody: '{team} is in Tier {tier}, {title}. Round 1 starts today from {time}.',
   leagueDroppedTitle: 'Your Season {season} OFFSIDE League entry was cancelled',
