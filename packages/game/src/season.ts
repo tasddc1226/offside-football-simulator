@@ -61,7 +61,8 @@ import { HOF_LOCAL_MAX, loadHOF, rememberCareerName } from './hof-store.js';
 import { saveKey } from './storage.js';
 import { ballonWinsOf, legendScore, legendSnapshot, legendTermsOf } from './legend.js';
 import { gSeasonText as T } from './i18n/ko/gSeason.js';
-import { tn } from './i18n/names.js';
+// 진행 중에 만드는 문장은 세이브에 남으므로 유저가 바꾼 이름 없이 원래 이름으로(T-11-647).
+import { tnBase as tn } from './i18n/names.js';
 import { eraSeasonEnd, type EraNote } from './era.js';
 import { careKeep, peakEndAge } from './care.js';
 

@@ -33,8 +33,55 @@ export const koName = (ko: string): string =>
     (_, club = '', k: string) => club + (KO_RENAME[k] ?? '월드 챔피언십'),
   );
 
-/** 저장된 한국어 이름을 지금 언어로. 한국어거나 대응이 없으면 그대로 돌려준다. */
+// ───────── 유저가 바꾼 이름 (T-11-647) ─────────
+// 대회·수상·리그 이름을 이 기기에서만 바꿔 부른다(설정 → 대회·수상 이름 바꾸기). 키는 저장된 한국어 이름, 값은 유저가 쓴 이름.
+// 저장값·판정·서버 기록은 그대로고 화면에 그릴 때만 바뀐다. 키가 앞에 붙은 이름(`K리그1 득점왕`, `코리아컵 우승`)도
+// 그 부분만 바뀐다. 공유 이미지처럼 남에게 나가는 그림은 withDefaultNames로 원래 이름을 쓴다.
+let custom: Readonly<Record<string, string>> = {};
+/** 긴 키부터 — `AFC 챔피언스리그 엘리트`가 `AFC 챔피언스리그`보다 먼저 맞는다. */
+let customKeys: readonly string[] = [];
+let customOff = 0;
+const YEAR_HEAD = /^\d{4} /;
+
+/** 유저 이름표를 바꾼다(부팅 때 · 설정에서 바꿀 때). 빈 값은 빠진다. */
+export function setCustomNames(map: Readonly<Record<string, string>>): void {
+  const clean: Record<string, string> = {};
+  for (const [k, v] of Object.entries(map)) if (k && v) clean[k] = v;
+  custom = clean;
+  customKeys = Object.keys(clean).sort((a, b) => b.length - a.length);
+}
+/** fn 안에서는 유저 이름표 없이 원래 이름으로 그린다(남에게 보이는 공유 이미지). fn은 동기로 끝나야 한다. */
+export function withDefaultNames<T>(fn: () => T): T {
+  customOff++;
+  try {
+    return fn();
+  } finally {
+    customOff--;
+  }
+}
+
+/** 저장된 한국어 이름을 지금 언어로. 한국어거나 대응이 없으면 그대로 돌려준다. 유저가 바꾼 이름이 있으면 그 이름. */
 export function tn(ko: string): string {
+  const out = defaultName(ko);
+  if (customOff || !customKeys.length || !ko) return out;
+  const exact = custom[ko];
+  if (exact !== undefined) return exact;
+  // 대표팀 대회 기록은 연도가 앞에 붙는다(`2030 FIFA 월드컵 (개최지)`) — 연도 뒤부터 맞춘다.
+  const body = YEAR_HEAD.test(ko) ? ko.slice(5) : ko;
+  for (const k of customKeys) {
+    if (!body.startsWith(k) || (body.length > k.length && body.charAt(k.length) !== ' ')) continue;
+    // 원래 이름 안의 그 부분을 유저 이름으로 바꾼다(언어마다 어순이 달라도 원래 번역 안에서 찾는다).
+    const part = defaultName(k);
+    if (out.includes(part)) return out.replace(part, () => custom[k]!);
+  }
+  return out;
+}
+
+/** 유저가 바꾼 이름 없이 지금 언어의 원래 이름. 게임 진행 중에 만드는 문장(소식 줄 · 이벤트 · 시즌 결산)은 이걸 쓴다 —
+ * 그 문장은 세이브에 그대로 남으므로, 바꾼 이름이 섞이면 되돌려도 남고 백업으로 다른 기기까지 따라간다. */
+export const tnBase = (ko: string): string => defaultName(ko);
+
+function defaultName(ko: string): string {
   const t = localeData<NameTable>('__names');
   if (!ko) return ko;
   if (!t) return koName(ko);
@@ -51,7 +98,7 @@ export function tn(ko: string): string {
     for (const [re, f] of t.patterns) {
       const m = re.exec(ko);
       if (m) {
-        out = f(m, tn);
+        out = f(m, defaultName);
         break;
       }
     }

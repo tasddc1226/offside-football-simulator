@@ -22,6 +22,7 @@ import { appState, prefs } from '../store';
 import {
   checkNews,
   loadClubCustom,
+  loadCustomNames,
   syncClubCustom,
   uploadLegacyRetirement,
   uploadRetirement,
@@ -48,6 +49,8 @@ export async function boot(): Promise<void> {
     .catch(() => {});
   // 유저 클럽 이름을 먼저 CLUBS에 반영해야 세이브를 읽을 때 현재 소속 이름이 커스텀 이름을 읽는다.
   loadClubCustom();
+  // T-11-647 유저가 바꾼 대회·수상 이름을 첫 화면을 그리기 전에 tn()에 건다.
+  loadCustomNames();
   appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });
   // T-11-438 중계 도중 끊긴 구간 리포트가 있으면 시즌 탭 맨 위에 다시 보여 준다.
   appState.report = takePhaseReport(appState.G) ?? appState.report;

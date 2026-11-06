@@ -26,7 +26,8 @@ import type { GameState, Season, LogEntry } from './types.js';
 import { leagueOf, clubsIn } from './player.js';
 import { log } from './stats.js';
 import { gTurnText as M } from './i18n/ko/gTurn.js';
-import { tn } from './i18n/names.js';
+// 진행 중에 만드는 문장은 세이브에 남으므로 유저가 바꾼 이름 없이 원래 이름으로(T-11-647).
+import { tnBase as tn } from './i18n/names.js';
 import { nationOf } from './nation.js';
 import { createLookState, type CreateLook } from './create-look.js';
 import { DEFAULT_NATION } from '@offside/contracts/nations';

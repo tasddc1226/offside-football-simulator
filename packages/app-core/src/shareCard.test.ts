@@ -3,6 +3,7 @@ import type { PlayStyle } from '@offside/contracts';
 import { STYLE_COUNTERS } from '@offside/contracts/play-style';
 import type { CareerRecord, LegendSource } from '@offside/game/types';
 import type { LegendView } from './state.js';
+import { setCustomNames } from '@offside/game/i18n/names';
 import { shareCardData, shareCardKey } from './shareCard.js';
 
 const season = (
@@ -173,5 +174,21 @@ describe('T-11-439 이미 만든 공유 이미지가 낡았는지', () => {
     expect(shareCardKey(shareCardData(v, 'wall_of_honor'))).not.toBe(base);
     const rn = { kind: 'granted' as const, clubId: 'k1-1', club: 'A', number: 17, seq: 1 };
     expect(shareCardKey(shareCardData({ ...v, rn }, null))).not.toBe(base);
+  });
+});
+
+describe('T-11-647 유저가 바꾼 이름', () => {
+  it('공유 이미지는 남에게 보이므로 원래 이름으로 싣는다', () => {
+    setCustomNames({ A: '내 구단' });
+    try {
+      const v = view([season(2027, 'A', 'K리그1')], {
+        rn: { kind: 'granted', clubId: 'k1-1', club: 'A', number: 17, seq: 1 },
+      });
+      const c = shareCardData(v, null);
+      expect(c.pills.map((p) => p.text)).toContain('👑 A');
+      expect(c.clubs.map((x) => x.name)).toEqual(['A']);
+    } finally {
+      setCustomNames({});
+    }
   });
 });

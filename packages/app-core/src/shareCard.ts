@@ -8,7 +8,7 @@ import { flagOf, NATION_BY_CODE } from '@offside/contracts/nations';
 import { legendTitle } from '@offside/game/season';
 import { POS_LABEL } from '@offside/game/pos-label';
 import { titleById } from '@offside/game/titles';
-import { tn } from '@offside/game/i18n/names';
+import { tn, withDefaultNames } from '@offside/game/i18n/names';
 import { totals } from './format.js';
 import type { LegendView } from './state.js';
 import { shareText as L } from './i18n/ko/share.js';
@@ -60,7 +60,12 @@ export interface ShareCardData {
   jersey: JerseyArt | null;
 }
 
+/** 공유 이미지는 남에게 보이므로 유저가 바꾼 대회·수상 이름(T-11-647) 대신 원래 이름으로 싣는다. */
 export function shareCardData(v: LegendView, titleId: string | null | undefined): ShareCardData {
+  return withDefaultNames(() => buildShareCardData(v, titleId));
+}
+
+function buildShareCardData(v: LegendView, titleId: string | null | undefined): ShareCardData {
   const d = v.d;
   const back = v.pos === 'GK' || v.pos === 'DF';
   const t = d ? totals(d) : null;

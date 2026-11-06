@@ -4,7 +4,7 @@ import type { Pos } from '../../data';
 import { agentFee, fmtMoney, labelOf, weakKey } from '../../engine';
 import { rivalName as rivalKo } from '../../stories';
 import type { GameState, StoryState } from '../../types';
-import { personName, tn } from '../names';
+import { personName, tnBase as tn } from '../names'; // 진행 중 문장은 원래 이름(T-11-647)
 
 const byPos =
   <T>(m: Partial<Record<Pos | 'def', T>>) =>

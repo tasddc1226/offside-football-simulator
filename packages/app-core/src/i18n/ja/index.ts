@@ -30,6 +30,7 @@ import { create } from './create';
 import { cup } from './cup';
 import { cupApp } from './cupApp';
 import { cupPush } from './cupPush';
+import { customNames } from './customNames';
 import { dex } from './dex';
 import { era } from './era';
 import { exchange } from './exchange';
@@ -155,6 +156,7 @@ export const ja = {
   cup,
   cupApp,
   cupPush,
+  customNames,
   dex,
   era,
   exchange,

@@ -9,7 +9,7 @@ import { PHASES } from '../data.js';
 import { SANGMU } from '../military.js';
 import { RIVAL } from '../nation.js';
 import { STORIES } from '../story.js';
-import { tn } from './names.js';
+import { setCustomNames, tn, withDefaultNames } from './names.js';
 import { en } from './en/index.js';
 import { ja } from './ja/index.js';
 import { zh } from './zh/index.js';
@@ -306,5 +306,62 @@ describe('FIFA 대회·상 이름은 화면에 보이지 않는다', () => {
       '2026 월드 챔피언십 (미국·캐나다·멕시코)',
     );
     expect(tn('FIFA 푸스카스상')).toBe('올해의 골');
+  });
+});
+
+describe('유저가 바꾼 이름 (T-11-647)', () => {
+  afterEach(() => setCustomNames({}));
+
+  it('정확히 같은 이름과 그 이름이 앞에 붙은 이름을 바꾼다', () => {
+    setCustomNames({ 코리아컵: '오프사이드컵', K리그1: '1부 리그' });
+    expect(tn('코리아컵')).toBe('오프사이드컵');
+    expect(tn('코리아컵 우승')).toBe('오프사이드컵 우승');
+    expect(tn('K리그1 득점왕')).toBe('1부 리그 득점왕');
+    // 이름 가운데에 든 글자는 바꾸지 않는다(다른 대회).
+    expect(tn('K리그1컵')).toBe('K리그1컵');
+  });
+
+  it('긴 이름을 먼저 맞추고, 통째로 바꾼 이름이 앞선다', () => {
+    setCustomNames({
+      'AFC 챔피언스리그': 'ACL',
+      'AFC 챔피언스리그 엘리트': 'ACLE',
+      'AFC 챔피언스리그 엘리트 우승': '아시아 정상',
+    });
+    expect(tn('AFC 챔피언스리그 엘리트 우승')).toBe('아시아 정상');
+    expect(tn('AFC 챔피언스리그 엘리트 4강')).toBe('ACLE 4강');
+    expect(tn('AFC 챔피언스리그 우승')).toBe('ACL 우승');
+  });
+
+  it('영어 화면에서도 원래 번역 안의 그 부분만 바꾼다', () => {
+    setLocale('en', en);
+    const base = tn('코리아컵 우승');
+    const part = tn('코리아컵');
+    expect(base).toContain(part);
+    setCustomNames({ 코리아컵: 'Offside Cup' });
+    expect(tn('코리아컵 우승')).toBe(base.replace(part, 'Offside Cup'));
+    expect(tn('코리아컵')).toBe('Offside Cup');
+  });
+
+  it('연도가 앞에 붙은 대표팀 대회 기록도 대회 이름 부분만 바꾼다', () => {
+    setCustomNames({ 'FIFA 월드컵': '지구컵', '코파 아메리카': '남미컵', 'UEFA 유로': '유럽컵' });
+    expect(tn('2030 FIFA 월드컵 (스페인·포르투갈·모로코)')).toBe(
+      '2030 지구컵 (스페인·포르투갈·모로코)',
+    );
+    expect(tn('2031 코파 아메리카')).toBe('2031 남미컵');
+    expect(tn('UEFA 유로 2032')).toBe('유럽컵 2032');
+    expect(tn('FIFA 월드컵 우승')).toBe('지구컵 우승');
+    // 연도만 맞고 이름이 다른 기록은 그대로다.
+    expect(tn('2030 아시안게임 (카타르)')).toBe('2030 아시안게임 (카타르)');
+    setLocale('en', en);
+    const base = withDefaultNames(() => tn('2030 FIFA 월드컵 (스페인·포르투갈·모로코)'));
+    const part = withDefaultNames(() => tn('FIFA 월드컵'));
+    expect(tn('2030 FIFA 월드컵 (스페인·포르투갈·모로코)')).toBe(base.replace(part, '지구컵'));
+  });
+
+  it('withDefaultNames 안에서는 원래 이름, 빈 값은 원래대로', () => {
+    setCustomNames({ 코리아컵: '오프사이드컵', FA컵: '' });
+    expect(withDefaultNames(() => tn('코리아컵 우승'))).toBe('코리아컵 우승');
+    expect(tn('코리아컵 우승')).toBe('오프사이드컵 우승');
+    expect(tn('FA컵')).toBe('FA컵');
   });
 });

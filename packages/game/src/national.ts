@@ -11,7 +11,8 @@ import type { GameState, NatTour } from './types.js';
 import { isKorean, KR, nationOf, RIVAL, type Confed } from './nation.js';
 import { grantSportsService } from './military.js';
 import { gNationalText as L } from './i18n/ko/gNational.js';
-import { tn } from './i18n/names.js';
+// 진행 중에 만드는 문장은 세이브에 남으므로 유저가 바꾼 이름 없이 원래 이름으로(T-11-647).
+import { tnBase as tn } from './i18n/names.js';
 
 export const NT_THRESHOLD = 80;
 const AFC_NT: [string, number][] = [

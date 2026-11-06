@@ -12,6 +12,7 @@ import { takePlaySignals } from '../platform/playSignals';
 import * as Outbox from '@offside/app-core/outbox';
 import { saveGame } from '@offside/app-core/career';
 import { createClubCustom } from '@offside/app-core/clubCustom';
+import { createCustomNames } from '@offside/app-core/customNames';
 import { createLegends } from '@offside/app-core/legend';
 import { createRetiredNumbers } from '@offside/app-core/retiredNumber';
 import { createNews } from '@offside/app-core/news';
@@ -28,6 +29,7 @@ import {
   accountCache,
   appState,
   clubCustom,
+  customNames,
   newsState,
   prefs,
   pickedTitles,
@@ -124,6 +126,15 @@ export const {
   importClubCustom,
   syncClubCustom,
 } = createClubCustom(clubCustom, { game: () => appState.G, save });
+
+/** T-11-647 대회·수상 이름 바꾸기(이 기기에만 저장, 동기화 없음). */
+export const {
+  loadCustomNames,
+  setCustomName,
+  resetCustomNames,
+  exportCustomNames,
+  importCustomNames,
+} = createCustomNames(customNames);
 
 export const { recordRn, fillGranted, rnOf, rnMissOf, watchRetiredNumberAlerts } =
   createRetiredNumbers(

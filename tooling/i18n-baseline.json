@@ -105,7 +105,7 @@
   "packages/contracts/src/team-logo.ts": 8,
   "packages/contracts/src/team-synergy.ts": 67,
   "packages/contracts/src/teams.ts": 6,
-  "packages/game/src/comps.ts": 194,
+  "packages/game/src/comps.ts": 189,
   "packages/game/src/crests.ts": 1,
   "packages/game/src/data.ts": 29,
   "packages/game/src/event-runner.ts": 4,
