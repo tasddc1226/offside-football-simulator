@@ -1,7 +1,11 @@
 import { FirstsResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../app.js';
-import { ensureFirstsBackfilled } from '../db/repos/firsts.js';
+import {
+  ensureFirstsBackfilled,
+  firstsRescanBudgetMs,
+  runFirstsRescan,
+} from '../db/repos/firsts.js';
 import { firstsCatalog } from '../firsts.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { deleteProfile, issueCookie, putJson, putSeasonsFor, testCareer } from '../test/http.js';
@@ -211,6 +215,20 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
       value: 33,
       holder: { careerId: C },
     });
+  });
+
+  it('T-11-643: 피크(KST 19시~2시)와 백업 조각을 읽은 틱에는 다시 훑기를 쉰다', async () => {
+    const at = (iso: string) => Date.parse(iso);
+    expect(firstsRescanBudgetMs(at('2026-11-05T09:59:00Z'), false)).toBe(20_000); // KST 18:59
+    expect(firstsRescanBudgetMs(at('2026-11-05T10:00:00Z'), false)).toBe(0); // KST 19:00
+    expect(firstsRescanBudgetMs(at('2026-11-05T16:59:00Z'), false)).toBe(0); // KST 01:59
+    expect(firstsRescanBudgetMs(at('2026-11-05T17:00:00Z'), false)).toBe(20_000); // KST 02:00
+    expect(firstsRescanBudgetMs(at('2026-11-05T17:00:00Z'), true)).toBe(0);
+    // 시간 한도가 0이면 다시 훑는 중이어도 한 조각도 읽지 않는다.
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 31 }));
+    await ctx.env.DB.prepare("DELETE FROM app_meta WHERE key LIKE 'server_firsts_%'").run();
+    expect(await runFirstsRescan(ctx.db, 0)).toBe(0);
+    expect(await runFirstsRescan(ctx.db, 20_000)).toBeGreaterThan(0);
   });
 
   it('T-11-029: 시즌마다 따로 겨룬다 — 시즌 1 선수도 같은 기록의 최초가 되고, 서버 기록도 시즌별이다', async () => {

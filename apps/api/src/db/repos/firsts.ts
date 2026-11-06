@@ -292,6 +292,18 @@ export async function ensureFirstsBackfilled(db: Db, chunk = RESCAN_CHUNK): Prom
   return true;
 }
 
+/**
+ * T-11-643 5분 cron이 다시 훑기에 쓰는 시간. 기록 보유자가 숨겨지거나 탈퇴할 때마다 전체(약 36만 커리어, 반나절 분량)를 한 번씩
+ * 다시 봐야 해서 숨김이 잦으면 다시 훑기가 하루 종일 쉬지 않는다. 그동안 다른 무거운 일과 겹치는 틱에서 D1이 "overloaded"로
+ * 사용자 요청까지 거절했다(2026-11-05~06). 사용자가 몰리는 KST 19시~다음 날 2시와 백업 조각을 읽은 틱에는 쉰다. 쉬는 동안에도
+ * 업로드는 자기 커리어를 바로 판정하므로, 늦어지는 것은 빈 기록 자리를 채우는 일뿐이다.
+ */
+export function firstsRescanBudgetMs(nowMs: number, backupRan: boolean): number {
+  if (backupRan) return 0;
+  const kstHour = new Date(nowMs + 9 * 3_600_000).getUTCHours();
+  return kstHour >= 19 || kstHour < 2 ? 0 : 20_000;
+}
+
 /** 전체 재계산을 시간 한도 안에서 이어 간다(5분 cron). 훑은 조각 수를 돌려준다(T-11-156). */
 export async function runFirstsRescan(db: Db, budgetMs = 20_000): Promise<number> {
   const until = Date.now() + budgetMs;
