@@ -667,7 +667,7 @@ export async function listPublicHof(
         ? sql`${careers} INDEXED BY careers_hof_season_score_order_idx`
         : sql`${careers} INDEXED BY careers_hof_score_order_idx`
       : careers;
-  // T-11-644 score가 아닌 순위의 이름 검색은 넓은 커리어 행을 18만 개 훑어 쿼리 하나가 7~9초씩 D1을 붙잡았다.
+  // T-11-646 score가 아닌 순위의 이름 검색은 넓은 커리어 행을 18만 개 훑어 쿼리 하나가 7~9초씩 D1을 붙잡았다.
   // 공개 이름이 든 덮개 인덱스에서 이름이 맞는 선수만 먼저 고르고(hof_hit), 그 선수들만 커리어 행을 읽는다.
   // CROSS JOIN은 SQLite에서 왼쪽을 바깥 루프로 고정한다(플래너가 기록 인덱스로 전체를 훑지 않게).
   const hitSource =
@@ -737,7 +737,7 @@ export async function listPublicHof(
   const entries = rows.map(toPublicEntry);
   if (q && entries.length) {
     // 찾은 선수(최대 limit명)만 전체 순위에서 몇 위인지 — id·순번만 읽는 창 함수 한 번.
-    // T-11-644 score가 아닌 순위는 기록 칸이 모두 든 careers_hof_count_idx로 센다(id가 없어 rowid로 맞춘다).
+    // T-11-646 score가 아닌 순위는 기록 칸이 모두 든 careers_hof_count_idx로 센다(id가 없어 rowid로 맞춘다).
     // 그 인덱스에 없는 세부 포지션(dpos)은 careers_hof_dpos_idx로 그 포지션 행만 찾아 읽는다
     // (고정하지 않으면 기록 인덱스로 은퇴 선수 전체의 커리어 행을 읽는다).
     // id 목록은 JSON 한 개로 넘긴다(limit 100명 + 필터 값이 D1 변수 100개 한도를 넘지 않게).

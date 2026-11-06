@@ -51,7 +51,7 @@ const read = async (ctx: TestD1, query = '') => {
   expect(res.headers.get('Cache-Control')).toContain('public');
   return successEnvelope(FirstsResponseSchema).parse(await res.json()).data;
 };
-/** T-11-644 조회는 다시 훑지 않는다 — cron(runFirstsRescan)이 하는 일을 테스트에서 끝까지 돌린다. */
+/** T-11-646 조회는 다시 훑지 않는다 — cron(runFirstsRescan)이 하는 일을 테스트에서 끝까지 돌린다. */
 const rescan = async (ctx: TestD1) => {
   while (await ensureFirstsBackfilled(ctx.db));
 };
@@ -239,7 +239,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     expect(await runFirstsRescan(ctx.db, 20_000)).toBeGreaterThan(0);
   });
 
-  it('T-11-644: 목록 조회는 다시 훑기를 돕지 않는다(피크에도 cron만 훑는다)', async () => {
+  it('T-11-646: 목록 조회는 다시 훑기를 돕지 않는다(피크에도 cron만 훑는다)', async () => {
     await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 31 }));
     const db = ctx.env.DB;
     await db.prepare("DELETE FROM app_meta WHERE key LIKE 'server_firsts_%'").run();

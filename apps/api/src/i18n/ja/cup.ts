@@ -118,6 +118,11 @@ export const CUP_JA: Record<CupTextKey, string> = {
   leagueRemindTitle: 'オフサイドリーグの組分けは明日です',
   leagueRemindBody:
     '組分け時にシーズン{season}チームのスタメンに選手が{n}人いれば参加できます。今は{filled}人です。',
+  leagueLineupTitle: 'リーグのメンバーが1時間後に固定されます',
+  leagueLineupBody:
+    '第{round}節の試合は{time}に始まります。{lock}から試合終了までスタメンを変更できないので、今のうちに確認してください。',
+  leagueLineupShortBody:
+    '第{round}節の試合は{time}に始まります。{lock}にメンバーが固定されますが、スタメンが{filled}/11人なので空いた枠はユース選手が出場します。',
   leaguePlacedTitle: 'シーズン{season} オフサイドリーグ組分け結果',
   leaguePlacedBody: '{team}は{tier}部 {title}です。第1節は今日{time}に始まります。',
   leagueDroppedTitle: 'シーズン{season} オフサイドリーグの参加が取り消されました',

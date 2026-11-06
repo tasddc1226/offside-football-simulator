@@ -425,7 +425,7 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect((await read('')).total).toBe(4);
     // 검색 결과의 순위도 고른 포지션 안에서 센다.
     expect((await read('pos=DF&q=선수400')).entries.map((e) => e.rank)).toEqual([2]);
-    // T-11-644 기록 순위 검색(이름 인덱스로 먼저 고르고, 순위는 기록 인덱스로 센다)도 같은 결과다.
+    // T-11-646 기록 순위 검색(이름 인덱스로 먼저 고르고, 순위는 기록 인덱스로 센다)도 같은 결과다.
     expect((await read('sort=goals&pos=DF&q=선수400')).entries.map((e) => e.rank)).toEqual([2]);
     expect((await createApp().request('/v1/hof?pos=ST', {}, ctx.env)).status).toBe(400);
     await ctx.db

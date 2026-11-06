@@ -57,6 +57,10 @@ export const LEAGUE_REMIND_MS = 24 * 3600_000;
  * 든다. 300팀(150경기) 라운드는 cron 4번(20분)에 나눠 치른다. 팀을 한 번에 읽으므로 바인드 변수 상한(100)도 넘지 않는다.
  */
 export const LEAGUE_MATCHES_PER_TICK = 40;
+/** T-11-644 명단 잠금 안내는 잠금 1시간 전부터(경기 2시간 전). */
+export const LEAGUE_LINEUP_REMIND_MS = 60 * 60_000;
+/** 선발 자리 수. 빈 자리는 유스 선수가 뛴다. */
+const TEAM_SLOTS = 11;
 /** cron 한 번에 보내는 알림 수(알림 하나에 문장 2~3개). */
 export const LEAGUE_NOTICES_PER_TICK = 100;
 /** json_each 한 문장에 넣는 행 수(바인드 값 하나의 크기를 작게). */
@@ -306,6 +310,69 @@ export async function remindLeague(db: Db, league: LeagueDef, now: string) {
     );
   await d1.batch(stmts);
   return results.length;
+}
+
+/**
+ * T-11-644 명단 잠금 안내: 잠금(경기 CUP_LOCK_MIN분 전) LEAGUE_LINEUP_REMIND_MS 전부터 잠금 전까지, 그 시각 경기에 나가는 리그
+ * 팀에 한 번 알린다(쉬는 팀은 경기가 없어 잠기지 않는다). 경기 시각마다 app_meta에 보낸 표시를 남겨 다음 cron이 다시 보내지 않는다.
+ */
+export async function remindLineups(db: Db, league: LeagueDef, now: string) {
+  const d1 = db.$client;
+  const lockAt = Date.parse(now) + CUP_LOCK_MIN * 60_000;
+  const { results: slots } = await d1
+    .prepare(
+      `SELECT DISTINCT at FROM league_matches
+       WHERE season = ? AND at > ? AND at <= ? AND played_at IS NULL`,
+    )
+    .bind(
+      league.season,
+      new Date(lockAt).toISOString(),
+      new Date(lockAt + LEAGUE_LINEUP_REMIND_MS).toISOString(),
+    )
+    .all<{ at: string }>();
+  if (!slots.length) return 0;
+  const markOf = (at: string) => `league_lineup:${league.season}:${at}`;
+  const { results: done } = await d1
+    .prepare(`SELECT key FROM app_meta WHERE key IN (${slots.map(() => '?').join(', ')})`)
+    .bind(...slots.map((s) => markOf(s.at)))
+    .all<{ key: string }>();
+  const sent = new Set(done.map((r) => r.key));
+  const todo = slots.find((s) => !sent.has(markOf(s.at)));
+  if (!todo) return 0;
+  // 한 시각에 나가는 팀은 전체 리그 팀을 경기 시각 수로 나눈 만큼이라 한 번에 보낸다.
+  const { results } = await d1
+    .prepare(
+      `SELECT e.profile_id AS profileId, m.round AS round, COALESCE(t.filled, 0) AS filled
+       FROM league_matches m
+       JOIN league_entries e ON e.season = m.season AND e.team_id IN (m.home_team_id, m.away_team_id)
+       LEFT JOIN owner_teams t ON t.id = e.team_id
+       WHERE m.season = ? AND m.at = ? AND m.played_at IS NULL AND e.status = 'active'`,
+    )
+    .bind(league.season, todo.at)
+    .all<{ profileId: string; round: number; filled: number }>();
+  const time = kstHm(todo.at);
+  const lock = kstHm(new Date(Date.parse(todo.at) - CUP_LOCK_MIN * 60_000).toISOString());
+  const stmts: D1PreparedStatement[] = [];
+  for (const r of results)
+    stmts.push(
+      ...notify(
+        d1,
+        r.profileId,
+        `league:${league.season}:lineup:r${r.round}`,
+        cupKo('leagueLineupTitle'),
+        r.filled < TEAM_SLOTS
+          ? cupKo('leagueLineupShortBody', { round: r.round, time, lock, filled: r.filled })
+          : cupKo('leagueLineupBody', { round: r.round, time, lock }),
+        now,
+      ),
+    );
+  stmts.push(
+    d1
+      .prepare('INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING')
+      .bind(markOf(todo.at), now),
+  );
+  await d1.batch(stmts);
+  return results.length || 1;
 }
 
 /** T-11-418e 같은 구단주의 지난 시즌 리그 결산(결과가 있는 것만). */
@@ -889,6 +956,8 @@ export async function runLeague(db: Db, now: string, given?: LeagueDef) {
   const entries = await leagueEntriesOf(db, league.season);
   const n = await playLeagueMatches(db, league, entries, now);
   if (n) return { season: league.season, step: 'play', n };
+  const reminded = await remindLineups(db, league, now);
+  if (reminded) return { season: league.season, step: 'lineup', n: reminded };
   const { played, last } = await leagueProgress(db, league.season);
   // T-11-540 게이지가 시즌 마감을 당기면 마감 뒤로 잡힌 라운드(아직 안 치른 경기)를 지운다. 마감은 48시간 넘게 남기고
   // 확정되므로 그 라운드는 아직 치르지 않았다.
