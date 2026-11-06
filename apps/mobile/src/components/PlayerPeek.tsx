@@ -12,6 +12,7 @@ import { prefs } from '../store';
 import { Btn, Txt } from '../ui';
 import { Toast } from '../ui/Toast';
 import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
+import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
 import {
   CARD_BODY_ROW,
   CARD_HEIGHT,
@@ -48,6 +49,7 @@ export function PlayerPeek({
   origin,
   onclose,
   onshare,
+  onenhance,
 }: {
   player: TeamPlayer;
   name: string;
@@ -58,6 +60,8 @@ export function PlayerPeek({
   onclose: () => void;
   /** 내 팀 그라운드에서만 준다. 라운지에 이 선수를 올린다. */
   onshare?: ((careerId: string) => void) | undefined;
+  /** 내 팀 그라운드에서 강화할 수 있을 때만 준다. 모달을 겹치지 않게 닫은 뒤에 부른다. */
+  onenhance?: ((player: TeamPlayer) => void) | undefined;
 }) {
   const { motionOK } = useSnapshot(prefs);
   const { width, height } = useWindowDimensions();
@@ -75,19 +79,29 @@ export function PlayerPeek({
         scale: origin.w / CARD_W,
       }
     : { dx: 0, dy: 0, scale: zoom };
-  function close() {
+  function close(after?: () => void) {
     if (closing.current) return;
     closing.current = true;
-    if (!motionOK) return onclose();
+    const done = () => {
+      onclose();
+      after?.();
+    };
+    if (!motionOK) return done();
     Animated.timing(t, {
       toValue: 0,
       duration: 200,
       easing: Easing.inOut(Easing.quad),
       useNativeDriver: true,
-    }).start(() => onclose());
+    }).start(done);
   }
   return (
-    <Modal visible transparent animationType="none" statusBarTranslucent onRequestClose={close}>
+    <Modal
+      visible
+      transparent
+      animationType="none"
+      statusBarTranslucent
+      onRequestClose={() => close()}
+    >
       <Animated.View
         // 카드 아래 설명 줄 뒤로 화면 글자가 비치지 않게 일반 시트보다 어둡게 깐다.
         style={{ position: 'absolute', inset: 0, backgroundColor: '#000000c4', opacity: t }}
@@ -95,7 +109,7 @@ export function PlayerPeek({
         <Pressable
           testID="peek-backdrop"
           accessibilityLabel={L.close}
-          onPress={close}
+          onPress={() => close()}
           style={{ flex: 1 }}
         />
       </Animated.View>
@@ -186,6 +200,16 @@ export function PlayerPeek({
           <View
             style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 8 }}
           >
+            {onenhance && player.cardValue != null ? (
+              <Btn
+                sm
+                kind="primary"
+                testID="player-enhance"
+                onPress={() => close(() => onenhance(player))}
+              >
+                {CE.go}
+              </Btn>
+            ) : null}
             {onshare ? (
               <Btn
                 sm
@@ -196,7 +220,7 @@ export function PlayerPeek({
                 {LC.sharePlayerAct}
               </Btn>
             ) : null}
-            <Btn sm onPress={close}>
+            <Btn sm onPress={() => close()}>
               {L.close}
             </Btn>
           </View>

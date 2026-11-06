@@ -2,7 +2,7 @@ import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
 import { ShareIcon } from '../../components/ShareIcon';
 import { RADIUS } from '@offside/app-core/design-tokens';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
-import { Keyboard, View, useWindowDimensions } from 'react-native';
+import { Keyboard, Platform, View, useWindowDimensions } from 'react-native';
 import {
   positionRole,
   slotRating,
@@ -690,6 +690,14 @@ export function TeamLineup({
                 origin={peek.origin}
                 onclose={() => setPeek(null)}
                 onshare={onShare}
+                onenhance={
+                  onEnhance
+                    ? (x) => {
+                        // iOS는 닫히는 모달 위에 새 모달을 띄우면 무시하므로 다 닫힌 뒤에 연다.
+                        setTimeout(() => onEnhance(x), Platform.OS === 'ios' ? 350 : 0);
+                      }
+                    : undefined
+                }
               />
             ) : null;
           })()
