@@ -1,9 +1,12 @@
 import { z } from 'zod';
 import { CareerIdParamSchema, CareerPosSchema, DetailPosSchema } from './careers.js';
 import {
+  MANAGER3_ATTRS,
+  MANAGER3_LICENSES,
+  MANAGER3_SEASONS_MAX,
   MANAGER_ENDINGS,
+  MANAGER_ENGINES,
   MANAGER_GRADES,
-  MANAGER_SEASONS_MAX,
   MANAGER_SPECIALS,
   MANAGER_SPECIALS_MAX,
   MANAGER_STYLES,
@@ -38,6 +41,22 @@ export const ManagerOriginSchema = z.strictObject({
 });
 
 const small = z.number().int().min(0).max(200);
+const attr = z.number().int().min(0).max(100);
+
+/** T-11-648 감독 커리어 3 결과에만 있는 값(감독 카드 화면). */
+export const Manager3ResultExtraSchema = z.strictObject({
+  attrs: z.strictObject(
+    Object.fromEntries(MANAGER3_ATTRS.map((k) => [k, attr])) as Record<
+      (typeof MANAGER3_ATTRS)[number],
+      typeof attr
+    >,
+  ),
+  license: z.enum(MANAGER3_LICENSES),
+  rep: attr,
+  awards: small,
+  youthStars: small,
+});
+export type Manager3ResultExtra = z.infer<typeof Manager3ResultExtraSchema>;
 
 /** 끝낸 감독 커리어의 결과(기기가 보낸다). 감독 칸 효과는 숙련 · 성향 · 특기만 쓴다. */
 export const ManagerResultSchema = z.strictObject({
@@ -49,7 +68,8 @@ export const ManagerResultSchema = z.strictObject({
     .refine((a) => new Set(a).size === a.length, 'duplicate special'),
   grade: z.enum(MANAGER_GRADES),
   ending: z.enum(MANAGER_ENDINGS),
-  seasons: z.number().int().min(1).max(MANAGER_SEASONS_MAX),
+  /** 감독 커리어 2는 MANAGER_SEASONS_MAX까지(서버가 엔진별로 다시 본다), 3은 MANAGER3_SEASONS_MAX까지. */
+  seasons: z.number().int().min(1).max(MANAGER3_SEASONS_MAX),
   /** 리그 우승 · 컵 우승 · 승격 · 경질 횟수, 거친 구단 수. */
   titles: small,
   cups: small,
@@ -59,12 +79,13 @@ export const ManagerResultSchema = z.strictObject({
     .number()
     .int()
     .min(1)
-    .max(MANAGER_SEASONS_MAX + 2),
+    .max(MANAGER3_SEASONS_MAX + 2),
   /** 이끈 가장 높은 리그 id(contracts club-names LEAGUE_BASE). */
   topLeague: z.string().max(8),
   wins: z.number().int().min(0).max(1000),
   draws: z.number().int().min(0).max(1000),
   losses: z.number().int().min(0).max(1000),
+  v3: Manager3ResultExtraSchema.optional(),
 });
 export type ManagerResult = z.infer<typeof ManagerResultSchema>;
 
@@ -73,6 +94,8 @@ export const ManagerCareerSchema = z.strictObject({
   id: ManagerCareerIdSchema,
   careerId: CareerIdParamSchema,
   status: z.enum(['active', 'done']),
+  /** 감독 커리어 엔진(2 옛 방식 · 3 감독 키우기). 옛 행은 2. */
+  engine: z.union([z.literal(MANAGER_ENGINES[0]), z.literal(MANAGER_ENGINES[1])]),
   /** 기기가 감독 커리어를 처음 만들 때 쓰는 시드. */
   seed: z.number().int().min(0),
   origin: ManagerOriginSchema,
@@ -116,7 +139,11 @@ export const ManagersResponseSchema = z.strictObject({
 });
 export type ManagersResponse = z.infer<typeof ManagersResponseSchema>;
 
-export const StartManagerBodySchema = z.strictObject({ careerId: CareerIdParamSchema });
+export const StartManagerBodySchema = z.strictObject({
+  careerId: CareerIdParamSchema,
+  /** T-11-648 3이면 감독 커리어 3. 옛 클라이언트는 보내지 않는다(2). */
+  engine: z.literal(3).optional(),
+});
 export type StartManagerBody = z.infer<typeof StartManagerBodySchema>;
 
 export const ManagerCareerResponseSchema = z.strictObject({ career: ManagerCareerSchema });
@@ -146,3 +173,7 @@ export const TeamCoachSchema = z.strictObject({
   ending: z.enum(MANAGER_ENDINGS),
 });
 export type TeamCoach = z.infer<typeof TeamCoachSchema>;
+
+/** T-11-648 후보 이력서: 그 카드로 감독을 시작하면 쓰일 시작값의 재료(열 때만 부른다). */
+export const ManagerPreviewResponseSchema = z.strictObject({ origin: ManagerOriginSchema });
+export type ManagerPreviewResponse = z.infer<typeof ManagerPreviewResponseSchema>;

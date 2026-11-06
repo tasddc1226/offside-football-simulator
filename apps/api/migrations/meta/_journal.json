@@ -1030,6 +1030,13 @@
       "when": 1793881698151,
       "tag": "0149_league_kickoff_slots",
       "breakpoints": true
+    },
+    {
+      "idx": 150,
+      "version": "6",
+      "when": 1793949543998,
+      "tag": "0150_manager_engine",
+      "breakpoints": true
     }
   ]
 }

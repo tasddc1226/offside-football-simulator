@@ -40,6 +40,8 @@ function server() {
   const s = {
     gets: 0,
     started: [] as unknown[],
+    engines: [] as number[],
+    previews: 0,
     finished: null as unknown,
     abandoned: 0,
     released: 0,
@@ -64,14 +66,16 @@ function server() {
           s.gets++;
           return r.fulfill(ok(body()));
         }
-        const { careerId } = r.request().postDataJSON() as { careerId: string };
+        const { careerId, engine } = r.request().postDataJSON() as { careerId: string; engine?: 3 };
         s.started.push(careerId);
+        s.engines.push(engine ?? 2);
         const c = s.candidates.find((x) => x.careerId === careerId)!;
         s.candidates = s.candidates.filter((x) => x.careerId !== careerId);
         s.active = {
           id: MGR,
           careerId,
           status: 'active',
+          engine: engine ?? 2,
           seed: 12345,
           origin: ORIGIN,
           result: null,
@@ -83,6 +87,10 @@ function server() {
         return r.fulfill(ok({ career: s.active }, 201));
       },
     );
+    await page.route(`${API}/v1/managers/preview/**`, (r) => {
+      s.previews++;
+      return r.fulfill(ok({ origin: ORIGIN }));
+    });
     await page.route(`${API}/v1/managers/${MGR}/abandon`, (r) => {
       s.abandoned++;
       const id = s.active!.careerId as string;
@@ -161,7 +169,7 @@ async function step(page: Page): Promise<boolean> {
   throw new Error('진행할 버튼이 없어요');
 }
 
-test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌다', async ({ page }) => {
+test('옛 방식 진행 중 감독 커리어를 끝까지 하고 감독 칸에 앉힌다', async ({ page }) => {
   // 열 시즌을 넘기고 확정 확인(T-11-443)까지 거쳐 기본 30초가 빠듯하다.
   test.slow();
   await stubOwner(page);
@@ -171,7 +179,7 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="manager"]').click();
-  await expect(page.locator('[data-manager-start]')).toContainText('감독 후보');
+  await expect(page.locator('[data-manager-start]')).toContainText('다른 후보');
   // 화면을 오가도 목록을 다시 묻지 않는다(메모).
   await page.goBack();
   await page.locator('[data-act="manager"]').click();
@@ -180,18 +188,26 @@ test('은퇴 선수로 감독 커리어를 끝까지 하고 감독 칸에 앉힌
   const { violations } = await new AxeBuilder({ page }).analyze();
   expect(violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
 
-  // 확인 창이 잃는 것을 보여 준다(선발 · 구단 가치 · 팔 수 없음 · 포기).
-  await page
-    .locator('[data-manager-candidate]')
-    .first()
-    .locator('[data-act="manager-pick"]')
-    .click();
-  const dialog = page.locator('[data-manager-confirm]');
-  await expect(dialog).toContainText('선발 · 친선 편성 · 프리셋에서 빠지고');
-  await expect(dialog).toContainText('구단 가치가');
-  await expect(dialog).toContainText('팔거나 방출하거나 잠글 수 없어요');
-  await page.locator('[data-act="manager-start"]').click();
-  await expect.poll(() => s.started).toEqual([A]);
+  // T-11-648 새 커리어는 감독 키우기(엔진 3)로 시작한다. 옛 방식은 진행 중 커리어만 끝까지 간다.
+  s.active = {
+    id: MGR,
+    careerId: A,
+    status: 'active',
+    engine: 2,
+    seed: 12345,
+    origin: ORIGIN,
+    result: null,
+    publicName: '감독 후보',
+    number: 8,
+    startedAt: '2026-10-16T00:00:00.000Z',
+    finishedAt: null,
+  };
+  s.candidates = s.candidates.filter((c) => c.careerId !== A);
+  await page.reload();
+  if (!(await page.locator('[data-manager]').isVisible())) {
+    await page.locator('[data-act="owner"]').click();
+    await page.locator('[data-act="manager"]').click();
+  }
   await expect(page.locator('[data-manager-play]')).toHaveAttribute('data-manager-play', 'offers');
 
   // T-11-329 시즌 단계 막대가 보인다(제의 → 준비).
@@ -289,10 +305,10 @@ test('감독 커리어를 포기하면 원래 선수로 돌아온다', async ({ 
     .locator('[data-act="manager-pick"]')
     .click();
   await page.locator('[data-act="manager-start"]').click();
-  await expect(page.locator('[data-manager-play]')).toBeVisible();
-  await page.locator('[data-act="manager-abandon"]').click();
+  await expect(page.locator('[data-manager3]')).toBeVisible();
+  await page.locator('[data-act="m3-abandon"]').click();
   await expect(page.locator('[data-manager-abandon]')).toContainText('원래 선수로 돌아와요');
-  await page.locator('[data-act="manager-abandon-confirm"]').click();
+  await page.locator('[data-act="m3-abandon-confirm"]').click();
   await expect.poll(() => s.abandoned).toBe(1);
   await expect(page.locator('[data-manager-start]')).toContainText('감독 후보');
 });
@@ -359,4 +375,98 @@ test('T-11-345 끝낸 감독은 확인 창에서 받을 자금을 보고 경질�
   await expect.poll(() => s.released).toBe(1);
   await expect(page.locator('[data-manager-released]')).toContainText('명장 감독을 경질했어요');
   await expect(card).toHaveCount(0);
+});
+
+/** 감독 커리어 3에서 다음에 누를 진행 버튼 하나를 누른다. 은퇴할 수 있으면 은퇴한다. 확정 단계면 false. */
+async function step3(page: Page): Promise<boolean> {
+  const order = [
+    'm3-finish',
+    'm3-retire-confirm',
+    'm3-retire',
+    'm3-accept',
+    'm3-stay',
+    'm3-rest',
+    'm3-season',
+    'm3-close-window',
+    'm3-play',
+    'm3-choice',
+    'm3-next',
+    'm3-continue',
+  ];
+  for (const act of order) {
+    const btn = page.locator(`[data-act="${act}"]`).first();
+    if (await btn.isVisible()) {
+      if (act === 'm3-finish') return false;
+      await btn.click();
+      return true;
+    }
+  }
+  throw new Error('진행할 버튼이 없어요');
+}
+
+test('T-11-648 이력서를 보고 감독 키우기를 시작해 5시즌 뒤 은퇴하고 감독 카드로 확정한다', async ({
+  page,
+}) => {
+  test.slow();
+  await stubOwner(page);
+  const { s, install } = server();
+  await install(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="manager"]').click();
+  await expect(page.locator('[data-manager-start]')).toContainText('감독실');
+
+  // 이력서는 확인 창을 열 때만 부른다. 같은 카드를 다시 열면 메모에서 읽는다.
+  expect(s.previews).toBe(0);
+  const pick = page
+    .locator('[data-manager-candidate]')
+    .first()
+    .locator('[data-act="manager-pick"]');
+  await pick.click();
+  const dialog = page.locator('[data-manager-confirm]');
+  await expect(dialog.locator('[data-manager-cv]')).toContainText('전술 이해');
+  await expect(dialog).toContainText('선발 · 친선 편성 · 프리셋에서 빠지고');
+  await dialog.getByRole('button', { name: '취소' }).click();
+  await pick.click();
+  await expect(dialog.locator('[data-manager-cv]')).toContainText('명성');
+  expect(s.previews).toBe(1);
+  {
+    const { violations } = await new AxeBuilder({ page }).analyze();
+    expect(violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
+  }
+  await page.locator('[data-act="manager-start"]').click();
+  await expect.poll(() => s.engines).toEqual([3]);
+  await expect(page.locator('[data-manager3]')).toHaveAttribute('data-manager3', 'offers');
+
+  // 첫 구간까지 가서 새로 고쳐도 기기 세이브로 이어 한다.
+  for (let i = 0; i < 10 && !(await page.locator('[data-manager3-block]').isVisible()); i++)
+    await step3(page);
+  await expect(page.locator('[data-manager3-block]')).toHaveAttribute('data-manager3-block', '0');
+  await page.locator('[data-manager3-block] [role="radio"]', { hasText: '4-4-2' }).click();
+  await page.reload();
+  if (!(await page.locator('[data-manager]').isVisible())) {
+    await page.locator('[data-act="owner"]').click();
+    await page.locator('[data-act="manager"]').click();
+  }
+  await expect(page.locator('[data-manager3-block]')).toBeVisible();
+  await expect(
+    page.locator('[data-manager3-block] [role="radio"][aria-checked="true"]', { hasText: '4-4-2' }),
+  ).toBeVisible();
+  await page.locator('[data-act="m3-play"]').click();
+  await expect(page.locator('[data-manager3-result]')).toBeVisible();
+  {
+    const { violations } = await new AxeBuilder({ page }).analyze();
+    expect(violations.map((v) => `${v.id} (${v.impact})`)).toEqual([]);
+  }
+
+  for (let i = 0; i < 600 && (await step3(page)); i++);
+  await expect(page.locator('[data-manager3-card]')).toContainText('등급');
+  await page.locator('[data-act="m3-finish"]').click();
+  await expect
+    .poll(() => s.finished)
+    .toMatchObject({ seasons: expect.any(Number), v3: { license: expect.any(String) } });
+  expect((s.finished as { seasons: number }).seasons).toBeGreaterThanOrEqual(5);
+  await expect(page.locator(`[data-manager-card="${A}"]`)).toBeVisible();
+  // 처음 · 시작 뒤 · 새로 고침(새 페이지) · 확정 뒤 한 번씩. 구간을 치르는 동안에는 서버를 부르지 않는다.
+  expect(s.gets).toBe(4);
 });

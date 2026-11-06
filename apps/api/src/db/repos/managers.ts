@@ -1,5 +1,6 @@
 // T-11-310 감독 커리어 저장소. 감독 커리어는 기기에서 돌고 서버는 시작값(origin · 시드)과 끝낸 결과(감독 카드)만 가진다.
 // 카드는 cards.manager로 감독 분류를 표시한다 — 선발 · 판매 · 방출 · 잠금 쿼리가 이 칸을 본다.
+import type { ManagerEngine } from '@offside/contracts/manager-rules';
 import {
   ManagerOriginSchema,
   ManagerResultSchema,
@@ -72,7 +73,15 @@ export async function cardForManager(db: Db, careerId: string) {
  */
 export async function startManagerCareer(
   db: Db,
-  r: { profileId: string; careerId: string; seed: number; origin: ManagerOrigin; now: string },
+  r: {
+    profileId: string;
+    careerId: string;
+    seed: number;
+    origin: ManagerOrigin;
+    /** 없으면 2(옛 방식). */
+    engine?: ManagerEngine;
+    now: string;
+  },
 ): Promise<string | null> {
   const d1 = db.$client;
   const id = newId('mgr');
@@ -81,8 +90,8 @@ export async function startManagerCareer(
   const statements = [
     d1
       .prepare(
-        `INSERT INTO manager_careers (id, profile_id, career_id, status, seed, origin_json, created_at)
-         SELECT ?, ?, ?, 'active', ?, ?, ? WHERE EXISTS
+        `INSERT INTO manager_careers (id, profile_id, career_id, status, seed, engine, origin_json, created_at)
+         SELECT ?, ?, ?, 'active', ?, ?, ?, ? WHERE EXISTS
            (SELECT 1 FROM cards WHERE career_id = ? AND owner_id = ? AND manager = 0)`,
       )
       .bind(
@@ -90,6 +99,7 @@ export async function startManagerCareer(
         r.profileId,
         r.careerId,
         r.seed,
+        r.engine ?? 2,
         JSON.stringify(r.origin),
         r.now,
         r.careerId,
@@ -148,7 +158,15 @@ export async function abandonManagerCareer(
 /** 감독 커리어를 끝낸다(결과를 적는다). 진행 중인 내 커리어일 때만. 바꿨으면 true. */
 export async function finishManagerCareer(
   db: Db,
-  r: { id: string; profileId: string; result: ManagerResult; season: number; now: string },
+  r: {
+    id: string;
+    profileId: string;
+    result: ManagerResult;
+    season: number;
+    now: string;
+    /** 감독 커리어 3 결과라 엔진 3 커리어에만 적는다. */
+    v3Only?: boolean;
+  },
 ): Promise<boolean> {
   const res = await db
     .update(managerCareers)
@@ -163,6 +181,7 @@ export async function finishManagerCareer(
         eq(managerCareers.id, r.id),
         eq(managerCareers.profileId, r.profileId),
         eq(managerCareers.status, 'active'),
+        r.v3Only ? eq(managerCareers.engine, 3) : undefined,
       ),
     )
     .returning({ id: managerCareers.id });
@@ -177,6 +196,7 @@ const rowCols = {
   careerId: managerCareers.careerId,
   status: managerCareers.status,
   seed: managerCareers.seed,
+  engine: managerCareers.engine,
   originJson: managerCareers.originJson,
   resultJson: managerCareers.resultJson,
   createdAt: managerCareers.createdAt,
@@ -191,6 +211,7 @@ type Row = {
   careerId: string;
   status: 'active' | 'done';
   seed: number;
+  engine: number;
   originJson: string;
   resultJson: string | null;
   createdAt: string;
@@ -219,6 +240,7 @@ function toCareer(r: Row): ManagerCareer {
     id: r.id,
     careerId: r.careerId,
     status: r.status,
+    engine: r.engine === 3 ? 3 : 2,
     seed: r.seed,
     origin: ManagerOriginSchema.parse(parseJson(r.originJson)),
     result: resultOf(r.resultJson),

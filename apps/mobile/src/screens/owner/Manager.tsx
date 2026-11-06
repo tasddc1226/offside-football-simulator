@@ -70,6 +70,7 @@ import {
 } from '@offside/app-core/manager';
 import { fundsText } from '@offside/app-core/funds';
 import { managerText as M } from '@offside/app-core/i18n/ko/manager';
+import { manager3Text as T3 } from '@offside/app-core/i18n/ko/manager3';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { ActionBar, Btn, Card, Opt, Press, Screen, Topbar, Txt } from '../../ui';
@@ -237,7 +238,11 @@ export default function Manager() {
     }
     setLoginNeeded(false);
     setData(r.data);
-    const s = r.data.active ? loadManagerState(r.data.active, nameOf(r.data.active)) : null;
+    // T-11-648 감독 키우기(엔진 3) 커리어는 옛 엔진으로 열지 않는다(앱 화면은 다음 단계).
+    const s =
+      r.data.active && r.data.active.engine !== 3
+        ? loadManagerState(r.data.active, nameOf(r.data.active))
+        : null;
     // T-11-338 서버에 진행 중 감독이 없으면(다른 기기에서 끝냄 · 포기) 남은 세이브를 지워 이어 하기 카드가 뜨지 않게 한다.
     if (!r.data.active) clearManagerState();
     setSt(s);
@@ -409,7 +414,14 @@ export default function Manager() {
   ) : null;
 
   const play =
-    st && data?.active ? (
+    data?.active?.engine === 3 ? (
+      <Card gap={10} testID="manager3-web-only">
+        <Txt v="h2">{nameOf(data.active)}</Txt>
+        <Txt tone="muted" style={small}>
+          {T3.appWebOnly}
+        </Txt>
+      </Card>
+    ) : st && data?.active ? (
       <>
         <Card gap={10} testID={`manager-play-${st.phase}`}>
           <View style={{ gap: 2 }}>

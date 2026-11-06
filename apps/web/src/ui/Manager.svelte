@@ -5,6 +5,7 @@
   import Topbar from './Topbar.svelte';
   import LoginButtons from './LoginButtons.svelte';
   import ManagerLive from './ManagerLive.svelte';
+  import Manager3 from './Manager3.svelte';
   import PopSheet from './PopSheet.svelte';
   import Chips from './sheets/Chips.svelte';
   import CountUp from './CountUp.svelte';
@@ -71,9 +72,13 @@
     setTeamCoach,
     startConfirmLines,
     finishConfirmLines,
-    startManager,
     type ManagerStatKey,
   } from '@offside/app-core/manager';
+  import { clearManager3State, fetchManagerPreview, startManager3 } from '@offside/app-core/manager3';
+  import { manager3Text as T3 } from '@offside/app-core/i18n/ko/manager3';
+  import type { Manager3Preview } from '@offside/app-core/manager3';
+  import { leagueName as lgName } from '@offside/game/manager';
+  import { M3_ATTRS, M3_LEAGUE_TIERS } from '@offside/game/manager3';
   import { fundsText } from '@offside/app-core/funds';
   import { managerText as M } from '@offside/app-core/i18n/ko/manager';
 
@@ -115,9 +120,13 @@
       return;
     }
     data = r.data;
-    st = r.data.active ? loadManagerState(r.data.active, nameOf(r.data.active)) : null;
+    // T-11-648 감독 커리어 3은 Manager3가 세이브를 맡는다.
+    st = r.data.active && r.data.active.engine !== 3 ? loadManagerState(r.data.active, nameOf(r.data.active)) : null;
     // T-11-338 서버에 진행 중 감독이 없으면(다른 기기에서 끝냄 · 포기) 남은 세이브를 지워 이어 하기 카드가 뜨지 않게 한다.
-    if (!r.data.active) clearManagerState();
+    if (!r.data.active) {
+      clearManagerState();
+      clearManager3State();
+    } else if (r.data.active.engine === 3) clearManagerState();
     if (st) resetPick(st);
   }
   void load();
@@ -151,8 +160,23 @@
     if (!r.ok) error = r.error.message;
     return r.ok;
   }
+  // T-11-648 후보 이력서(확인 창을 열 때만 부른다).
+  let preview = $state<Manager3Preview | null>(null);
+  let previewFailed = $state(false);
+  function openConfirm(c: ManagerCandidate) {
+    confirm = c;
+    error = null;
+    preview = null;
+    previewFailed = false;
+    void fetchManagerPreview(c.careerId).then((r) => {
+      if (confirm?.careerId !== c.careerId) return;
+      if (r.ok) preview = r.preview;
+      else previewFailed = true;
+    });
+  }
   async function start(c: ManagerCandidate) {
-    if (await run(() => startManager(c.careerId))) {
+    // T-11-648 새 감독 커리어는 감독 키우기(엔진 3)로 시작한다. 옛 방식 진행 중 커리어는 그대로 끝까지 간다.
+    if (await run(() => startManager3(c.careerId))) {
       confirm = null;
       await load();
     }
@@ -269,6 +293,10 @@
     </section>
   {:else if !data}
     <Skeleton height={240} />
+  {:else if data.active && data.active.engine === 3}
+    {#key data.active.id}
+      <Manager3 career={data.active} name={nameOf(data.active)} onchange={() => void load()} />
+    {/key}
   {:else if st && data.active}
     <!-- 진행 중 감독 커리어 -->
     <section class="card mg-col" data-manager-play={st.phase}>
@@ -460,15 +488,15 @@
   {:else}
     <!-- 시작 · 내 감독 -->
     <section class="card mg-col" data-manager-start>
-      <h2>{M.startHeading}</h2>
-      <p class="muted fs-sm">{M.startLead}</p>
+      <h2>{T3.officeTitle}</h2>
+      <p class="muted fs-sm">{T3.officeLead}</p>
       {#each data.candidates as c (c.careerId)}
         <div class="mg-row" data-manager-candidate>
           <span class="mg-info">
             <b>{managerName(c, local)}</b>
             <small>{tn(POS_LABEL[c.pos])} · OVR {c.peak}{#if c.inLineup} · {M.inLineup}{/if}{#if c.listed} · {M.listed}{/if}</small>
           </span>
-          <button class="btn btn-sm" data-act="manager-pick" onclick={() => ((confirm = c), (error = null))}>{M.pick}</button>
+          <button class="btn btn-sm" data-act="manager-pick" onclick={() => openConfirm(c)}>{T3.resumeOpen}</button>
         </div>
       {:else}
         <p class="muted fs-sm" data-manager-empty>{M.noCandidates}</p>
@@ -532,12 +560,27 @@
   <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirm = null)}></button>
   <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.confirmTitle({ name: managerName(confirm, local) })} data-manager-confirm>
     <h2>{M.confirmTitle({ name: managerName(confirm, local) })}</h2>
+    <div class="mg-resume" data-manager-cv>
+      <h3>{T3.resumeHeading}</h3>
+      {#if preview}
+        <p class="fs-sm">{T3.resumeRep} {preview.rep} · {T3.resumeStyle} {styleName(preview.style)} · {T3.resumeFormation} {preview.formation} · {T3.resumeLicense} {preview.license}</p>
+        <p class="fs-sm">{T3.resumeFirstLeagues} · {M3_LEAGUE_TIERS.filter((l) => l.tier >= preview!.firstTiers[0] && l.tier <= preview!.firstTiers[1]).map((l) => lgName(l.id)).join(', ')}</p>
+        <div class="mg-attrs">
+          {#each M3_ATTRS as k (k)}<span class="fs-sm">{T3[`attr_${k}`]}</span><b>{preview.attrs[k]}</b>{/each}
+        </div>
+        <small class="muted">{T3.resumeAttrNote}</small>
+      {:else if previewFailed}
+        <p class="muted fs-sm">{T3.resumeLoadFail}</p>
+      {:else}
+        <Skeleton height={120} />
+      {/if}
+    </div>
     <ul class="mg-lines">{#each startConfirmLines(confirm) as line, i (i)}<li>{line}</li>{/each}</ul>
     {#if data?.active}<p class="muted fs-sm">{M.activeOther}</p>{/if}
     {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
     <div class="mg-actions">
       <button class="btn" onclick={() => (confirm = null)}>{M.cancel}</button>
-      <button class="btn btn-primary" data-act="manager-start" disabled={busy} onclick={() => confirm && void start(confirm)}>{M.confirmOk}</button>
+      <button class="btn btn-primary" data-act="manager-start" disabled={busy} onclick={() => confirm && void start(confirm)}>{T3.resumeStart}</button>
     </div>
   </div>
 {/if}
@@ -590,6 +633,19 @@
 {/if}
 
 <style>
+  .mg-resume {
+    display: grid;
+    gap: 0.35rem;
+  }
+  .mg-resume h3 {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+  .mg-attrs {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    gap: 0.2rem 0.6rem;
+  }
   .mg-delta {
     font-size: var(--fs-caption);
     font-weight: 700;

@@ -1,0 +1,1 @@
+ALTER TABLE `manager_careers` ADD `engine` integer DEFAULT 2 NOT NULL;

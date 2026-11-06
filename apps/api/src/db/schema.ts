@@ -2158,6 +2158,8 @@ export const managerCareers = sqliteTable(
     careerId: text('career_id').notNull(),
     status: text('status', { enum: ['active', 'done'] }).notNull(),
     seed: integer('seed').notNull(),
+    // T-11-648 감독 커리어 엔진(2 옛 방식 · 3 감독 키우기).
+    engine: integer('engine').notNull().default(2),
     originJson: text('origin_json').notNull(),
     resultJson: text('result_json'),
     // 끝낸 시각의 서비스 시즌(감독 업적). 진행 중이면 NULL.
