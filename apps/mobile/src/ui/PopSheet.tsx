@@ -13,12 +13,15 @@ import { countTouch } from '../platform/playSignals';
 export function PopSheet({
   label,
   step = '',
+  scrollY,
   testID,
   onClose,
   children,
 }: {
   label: string;
   step?: string;
+  /** 주어지면 처음부터 이 위치까지 내린다(일정 시트의 이번 라운드, T-11-640). */
+  scrollY?: number;
   testID?: string;
   onClose?: () => void;
   children: ReactNode;
@@ -30,6 +33,9 @@ export function PopSheet({
   useEffect(() => {
     scroll.current?.scrollTo({ y: 0, animated: false });
   }, [step]);
+  useEffect(() => {
+    if (scrollY !== undefined) scroll.current?.scrollTo({ y: scrollY, animated: false });
+  }, [scrollY]);
   return (
     <Modal
       visible

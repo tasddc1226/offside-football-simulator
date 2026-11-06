@@ -3,7 +3,8 @@
   "title": "리그 화면 개선",
   "items": [
     "순위표에서 팀을 누르면 그 팀 프로필과 스쿼드를 볼 수 있어요.",
-    "부와 리그 번호를 눌러 리그를 고르고, 화살표나 번호로 라운드를 옮겨요.",
+    "리그마다 임페리움 · 오리온 · 아르카디아 같은 이름이 생겼고, 이름표에서 바로 골라요. 리그마다 아이콘과 우승 트로피도 달라요. 시즌 일정에서 내 경기 결과를 모아 보고, 지난 경기를 바로 다시 봐요.",
+    "경기가 13 · 16 · 19 · 21시에 나눠 열려요. 마지막 라운드는 모두 21시에 함께 시작해요.",
     "폰에서도 옆으로 밀지 않고 승점까지 바로 보여요.",
     "앱의 리그 화면에서도 Apple로 로그인할 수 있어요."
   ],
@@ -11,7 +12,8 @@
     "title": "League screen improvements",
     "items": [
       "Tap a team in the table to see its profile and squad.",
-      "Pick a league by tier and number, and move between rounds with arrows or round numbers.",
+      "Leagues now have names like Imperium, Orion and Arcadia, and you pick them from a list. Season fixtures collect your results, and you can rewatch past matches from there.",
+      "Matches now kick off at 13:00, 16:00, 19:00 and 21:00 KST. All final round matches start together at 21:00.",
       "Points now fit on phone screens without side scrolling.",
       "You can now sign in with Apple on the league screen in the app."
     ]
@@ -20,7 +22,8 @@
     "title": "リーグ画面の改善",
     "items": [
       "順位表のチームをタップすると、プロフィールとスカッドを見られます。",
-      "部とリーグ番号でリーグを選び、矢印や番号で節を移動できます。",
+      "リーグにインペリウム・オリオン・アルカディアのような名前が付き、一覧から選べます。シーズン日程で自分の結果をまとめて見て、過去の試合を見返せます。",
+      "試合は13・16・19・21時に分かれて行われます。最終節は全試合21時に同時に始まります。",
       "スマホでも横にスクロールせず勝点まで見られます。",
       "アプリのリーグ画面でもAppleでログインできます。"
     ]
@@ -29,7 +32,8 @@
     "title": "聯賽畫面改善",
     "items": [
       "點選積分榜上的球隊，就能查看球隊資料與陣容。",
-      "依級別與編號選擇聯賽，並用箭頭或數字切換輪次。",
+      "聯賽有了帝國、獵戶、阿卡迪亞等名字，可從清單直接選擇。賽季賽程彙整自己的戰績，也能重看過去的比賽。",
+      "比賽分別在 13、16、19、21 點開始。最後一輪全部在 21 點同時開賽。",
       "手機上不必橫向滑動，也能直接看到積分。",
       "在 App 的聯賽畫面也能使用 Apple 登入。"
     ]

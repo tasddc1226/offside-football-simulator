@@ -121,7 +121,7 @@ export const CUP_KO = {
   leagueRemindBody:
     '배치 때 시즌 {season} 팀 선발에 선수가 {n}명 있어야 참가할 수 있어요. 지금은 {filled}명이에요.',
   leaguePlacedTitle: '시즌 {season} 오프사이드 리그 배치 결과',
-  leaguePlacedBody: '{team} 팀은 {tier}부 {league}리그예요. 1라운드는 오늘 {time}에 열려요.',
+  leaguePlacedBody: '{team} 팀은 {tier}부 {title}예요. 1라운드는 오늘 {time}부터 열려요.',
   leagueDroppedTitle: '시즌 {season} 오프사이드 리그 참가가 취소됐어요',
   leagueDroppedBody:
     '배치 시각에 시즌 {season} 팀 선발 선수가 {n}명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
@@ -136,19 +136,19 @@ export const CUP_KO = {
   leagueRest: '휴식',
   leagueRestBody: '이번 라운드는 쉬었어요 · 지금 {rank}위예요',
   leagueEndTitle: '시즌 {season} 오프사이드 리그를 마쳤어요',
-  leagueEndBody: '{tier}부 {league}리그 최종 {rank}위예요.',
-  leagueChampionTitle: '시즌 {season} 오프사이드 리그 {tier}부 {league}리그 우승!',
+  leagueEndBody: '{tier}부 {title} 최종 {rank}위예요.',
+  leagueChampionTitle: '시즌 {season} 오프사이드 리그 {tier}부 {title} 우승!',
   // T-11-418e 결산(마지막 라운드 알림 본문 · 빈자리 승격).
   leagueEndBodyChampion:
     '1부 우승! 시즌 {season} 리그 챔피언 칭호와 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
   leagueEndBodyAll:
-    '{tier}부 {league}리그 최종 {rank}위예요. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+    '{tier}부 {title} 최종 {rank}위예요. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
   leagueEndBodyReroll:
-    '{tier}부 {league}리그 최종 {rank}위예요. 선수 후보 리롤권 {n}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+    '{tier}부 {title} 최종 {rank}위예요. 선수 후보 리롤권 {n}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
   leagueEndBodyNext:
-    '{tier}부 {league}리그 최종 {rank}위예요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+    '{tier}부 {title} 최종 {rank}위예요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
   leagueEndBodyForfeited:
-    '{tier}부 {league}리그 최종 {rank}위예요. 기권이 쌓여 보상은 없고, 다음 시즌은 맨 아래 부에서 시작해요.',
+    '{tier}부 {title} 최종 {rank}위예요. 기권이 쌓여 보상은 없고, 다음 시즌은 맨 아래 부에서 시작해요.',
   leagueFillTitle: '오프사이드 리그 승격!',
   leagueFillBody:
     '위 부에 빈자리가 생겨 시즌 {season}에는 {tier}부에서 뛰어요. 프리미엄 스카우트권 {s}장을 받았어요.',

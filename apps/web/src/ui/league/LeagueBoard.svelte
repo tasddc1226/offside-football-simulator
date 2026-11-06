@@ -14,13 +14,18 @@
     leagueZoneLabel,
     leagueFinalReady,
     leagueLastRound,
-    leagueMatchMid,
+    leagueFixtureRows,
+    leagueMyMatches,
+    leagueRoundSlots,
+    leagueSlotMid,
     leagueRecords,
     leagueRound,
     leagueZone,
     type LeagueClinch,
+    type LeagueFixtureRow,
   } from '@offside/app-core/leagueView';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
+  import PopSheet from '../PopSheet.svelte';
   import TeamLogo from '../team/TeamLogo.svelte';
   import LeagueFinalLive from './LeagueFinalLive.svelte';
 
@@ -68,15 +73,50 @@
   const finalReady = $derived(!!table && leagueFinalReady(table));
   const lastRound = $derived(table ? leagueLastRound(table) : 0);
   let live = $state(false);
-  let allRounds = $state(false);
+  let fixtures = $state(false);
+  const fixtureRows = $derived(table && fixtures ? leagueFixtureRows(table, mineId, thisRound) : []);
+  const my = $derived(table ? leagueMyMatches(table, mineId) : null);
+  const slots = $derived(day ? leagueRoundSlots(day.matches) : []);
   function pickRound(n: number) {
     round = n;
-    allRounds = false;
+    fixtures = false;
+  }
+  /** 끝난 내 경기는 바로 중계를 열고, 나머지는 그 라운드로 옮긴다. */
+  function openFixture(f: LeagueFixtureRow) {
+    if (f.mine && !f.mine.rest && f.mine.watch && table) {
+      fixtures = false;
+      onopen(f.mine.watch, table);
+    } else pickRound(f.round);
+  }
+  /** 일정 시트를 열면 이번 라운드가 보이게 내린다. */
+  function showNow(el: HTMLElement) {
+    // PopSheet가 열리며 맨 위로 올리고 첫 버튼에 초점을 둔 뒤에 내린다.
+    const id = setTimeout(() => el.scrollIntoView({ block: 'center' }), 60);
+    return { destroy: () => clearTimeout(id) };
   }
 </script>
 
 <LoadState {status} failText={L.tableFail} retry={load} rows={8}>
   {#if table}
+    {#if my}
+      <section class="card lg-sec" data-league-my>
+        <h2>{L.myMatchTitle}</h2>
+        {#if my.last}
+          <div class="lg-my" data-league-my-last>
+            <span class="lg-my-who"><small class="muted">{L.myMatchLast} · {L.roundName({ n: my.last.match.round })}</small><span>{my.last.opponent} <small class="muted">{my.last.side}</small></span></span>
+            <b class="lg-fx-mid" class:w={my.last.result === 'w'} class:l={my.last.result === 'l'}>{my.last.score}</b>
+            {#if my.last.watch}<button class="btn btn-sm lg-my-watch" type="button" data-act="league-my-watch" onclick={() => onopen(my.last!.match, table!)}>{L.myMatchWatch}</button>{/if}
+          </div>
+        {/if}
+        {#if my.next}
+          <div class="lg-my" data-league-my-next>
+            <span class="lg-my-who"><small class="muted">{L.myMatchNext} · {L.roundName({ n: my.next.match.round })}</small><span>{my.next.opponent} <small class="muted">{my.next.side}</small></span></span>
+            <small class="muted lg-my-when">{my.next.when}</small>
+          </div>
+        {/if}
+      </section>
+    {/if}
+
     <section class="card lg-sec" data-league-table={`${tier}-${league}`}>
       <h2>{L.standingsTitle}</h2>
       <div class="lg-scroll">
@@ -113,39 +153,37 @@
     </section>
 
     <section class="card lg-sec" data-league-rounds>
-      <div class="lg-head">
-        <h2>{L.roundsTitle}</h2>
-        {#if round !== thisRound}<button class="lg-link" type="button" data-act="league-round-now" onclick={() => pickRound(thisRound)}>{L.goThisRound}</button>{/if}
-      </div>
       <div class="lg-step">
         <button class="lg-arrow" type="button" data-act="league-round-prev" aria-label={L.roundPrev} disabled={round <= 1} onclick={() => pickRound(round - 1)}>‹</button>
-        <button class="lg-now" type="button" data-act="league-round-all" data-league-round={round} aria-expanded={allRounds} aria-label={`${L.roundAll} · ${L.roundName({ n: round })}`} onclick={() => (allRounds = !allRounds)}>
-          <b>{L.roundName({ n: round })} <span aria-hidden="true">{allRounds ? '▴' : '▾'}</span></b>
+        <div class="lg-now" data-league-round={round}>
+          <h2>{L.roundName({ n: round })}</h2>
           {#if roundAt}<small class="muted" data-league-round-at>{roundAt}</small>{/if}
-        </button>
+        </div>
         <button class="lg-arrow" type="button" data-act="league-round-next" aria-label={L.roundNext} disabled={round >= lastRound} onclick={() => pickRound(round + 1)}>›</button>
       </div>
-      {#if allRounds}
-        <div class="lg-grid" data-league-round-grid>
-          {#each Array.from({ length: lastRound }, (_, i) => i + 1) as n (n)}
-            <button class="lg-no" class:on={n === round} class:now={n === thisRound} type="button" aria-pressed={n === round} aria-label={L.roundName({ n })} data-league-round-no={n} onclick={() => pickRound(n)}>{n}</button>
-          {/each}
-        </div>
-      {/if}
+      <div class="lg-links">
+        <button class="lg-link" type="button" data-act="league-fixtures-open" aria-haspopup="dialog" onclick={() => (fixtures = true)}>{L.fixtureOpen}</button>
+        {#if round !== thisRound}<button class="lg-link" type="button" data-act="league-round-now" onclick={() => pickRound(thisRound)}>{L.goThisRound}</button>{/if}
+      </div>
       {#if day}
-        <ul class="lg-matches">
-          {#each day.matches as m (m.id)}
-            <li class:mine={m.homeTeamId === mineId || m.awayTeamId === mineId} data-league-match={m.id}>
-              <span class="lg-side">{name(m.homeTeamId)}</span>
-              {#if m.played && !m.forfeit}
-                <button class="lg-mid lg-open" data-act="league-match-open" onclick={() => onopen(m, table!)}>{leagueMatchMid(m)}</button>
-              {:else}
-                <span class="lg-mid">{leagueMatchMid(m)}{#if m.forfeit}<small class="pill warn">{L.forfeitScore}</small>{/if}</span>
-              {/if}
-              <span class="lg-side away">{name(m.awayTeamId)}</span>
-            </li>
-          {/each}
-        </ul>
+        {#each slots as slot (slot.at)}
+          <div class="lg-slot" data-league-slot={slot.time}>
+            <h3>{slot.time}</h3>
+            <ul class="lg-matches">
+              {#each slot.matches as m (m.id)}
+                <li class:mine={m.homeTeamId === mineId || m.awayTeamId === mineId} data-league-match={m.id}>
+                  <span class="lg-side">{name(m.homeTeamId)}</span>
+                  {#if m.played && !m.forfeit}
+                    <button class="lg-mid lg-open" data-act="league-match-open" onclick={() => onopen(m, table!)}>{leagueSlotMid(m)}</button>
+                  {:else}
+                    <span class="lg-mid">{leagueSlotMid(m)}{#if m.forfeit}<small class="pill warn">{L.forfeitScore}</small>{/if}</span>
+                  {/if}
+                  <span class="lg-side away">{name(m.awayTeamId)}</span>
+                </li>
+              {/each}
+            </ul>
+          </div>
+        {/each}
         {#each day.resting as t (t.teamId)}<p class="muted fs-sm" data-league-rest>{L.restTeam({ team: t.name })}</p>{/each}
       {/if}
       {#if round === lastRound && finalReady}
@@ -173,6 +211,32 @@
         </dl>
       </section>
     {/if}
+    {#if fixtures}
+      <PopSheet label={L.fixtureTitle} onclose={() => (fixtures = false)}>
+        <div class="lg-fx">
+          <h2>{L.fixtureTitle}</h2>
+          <ol>
+            {#each fixtureRows as f (f.round)}
+              {#snippet row()}
+                <button class="lg-fx-row" class:on={f.round === round} class:now={f.state === 'now'} class:done={f.state === 'done'} type="button" data-league-fixture={f.round} onclick={() => openFixture(f)}>
+                  <span class="lg-fx-when"><b>{L.roundName({ n: f.round })}</b><small class="muted">{f.day}</small></span>
+                  {#if f.mine && !f.mine.rest}
+                    <span class="lg-fx-vs"><span>{f.mine.opponent}</span><small class="muted">{f.mine.side}</small></span>
+                    <b class="lg-fx-mid" class:w={f.mine.result === 'w'} class:l={f.mine.result === 'l'}>{f.mine.mid}</b>
+                  {:else if f.mine}
+                    <small class="muted lg-fx-state">{L.fixtureRest}</small>
+                  {:else}
+                    <small class="muted lg-fx-state">{f.state === 'now' ? L.fixtureNow : f.state === 'done' ? L.fixtureDone : L.fixtureLater}</small>
+                  {/if}
+                </button>
+              {/snippet}
+              {#if f.state === 'now'}<li use:showNow>{@render row()}</li>{:else}<li>{@render row()}</li>{/if}
+            {/each}
+          </ol>
+          <button class="btn lg-fx-close" type="button" data-act="league-fixtures-close" onclick={() => (fixtures = false)}>{L.sheetClose}</button>
+        </div>
+      </PopSheet>
+    {/if}
     {#if live}<LeagueFinalLive {table} {mineId} onclose={() => (live = false)} />{/if}
   {/if}
 </LoadState>
@@ -180,18 +244,33 @@
 <style>
   .lg-sec { display: flex; flex-direction: column; gap: 10px; }
   .lg-sec h2 { margin: 0; }
-  .lg-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .lg-link { min-height: 44px; margin: -8px 0; padding: 0 2px; border: 0; background: transparent; color: var(--accent-text); font: inherit; font-size: var(--fs-body2); font-weight: 600; cursor: pointer; }
-  .lg-step { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 6px; }
-  .lg-arrow, .lg-now, .lg-no { border: 1px solid var(--line); border-radius: var(--radius-sm, 8px); background: var(--surface); color: inherit; font: inherit; cursor: pointer; }
-  .lg-arrow { min-height: 52px; font-size: 22px; line-height: 1; }
-  .lg-arrow:disabled { opacity: 0.35; cursor: default; }
-  .lg-now { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 52px; padding: 4px; }
+  .lg-links { display: flex; justify-content: center; gap: 16px; margin-top: -6px; }
+  .lg-link { min-height: 44px; padding: 0 2px; border: 0; background: transparent; color: var(--accent-text); font: inherit; font-size: var(--fs-body2); font-weight: 600; cursor: pointer; }
+  .lg-step { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 4px; }
+  .lg-arrow { min-height: 52px; border: 0; border-radius: var(--radius-sm, 8px); background: transparent; color: inherit; font-size: 24px; line-height: 1; cursor: pointer; }
+  .lg-arrow:disabled { opacity: 0.3; cursor: default; }
+  .lg-now { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-width: 0; text-align: center; }
   .lg-now small { font-size: var(--fs-caption); }
-  .lg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); gap: 6px; }
-  .lg-no { min-height: 44px; font-size: var(--fs-body2); font-variant-numeric: tabular-nums; }
-  .lg-no.now { font-weight: 700; color: var(--accent-text); }
-  .lg-no.on { border: 2px solid var(--accent); font-weight: 700; }
+  .lg-slot h3 { margin: 0 0 2px; color: var(--muted); font-family: var(--display); font-size: var(--fs-label); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .lg-my { display: flex; align-items: center; gap: 10px; min-height: 48px; border-top: 1px solid var(--line); padding-top: 8px; font-size: var(--fs-body2); }
+  .lg-my-who { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .lg-my-who small { font-size: 11px; }
+  .lg-my-when { flex: none; font-size: var(--fs-caption); }
+  .lg-my-watch { flex: none; min-height: 44px; }
+  .lg-fx { display: flex; flex-direction: column; gap: 12px; }
+  .lg-fx h2 { margin: 0; }
+  .lg-fx ol { list-style: none; margin: 0; padding: 0; }
+  .lg-fx li + li { border-top: 1px solid var(--line); }
+  .lg-fx-row { display: grid; grid-template-columns: minmax(96px, auto) minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; min-height: 56px; padding: 6px 8px; border: 0; background: transparent; color: inherit; font: inherit; font-size: var(--fs-body2); text-align: left; cursor: pointer; }
+  .lg-fx-row.now { background: color-mix(in srgb, var(--accent) 12%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
+  .lg-fx-row.on b:first-child { color: var(--accent-text); }
+  .lg-fx-when, .lg-fx-vs { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+  .lg-fx-when small, .lg-fx-vs small, .lg-fx-state { font-size: 11px; }
+  .lg-fx-state { grid-column: 2 / -1; text-align: right; }
+  .lg-fx-mid { font-family: var(--display); font-variant-numeric: tabular-nums; }
+  .lg-fx-mid.w { color: var(--good); }
+  .lg-fx-mid.l { color: var(--warn); }
+  .lg-fx-close { min-height: 44px; }
   .lg-scroll { overflow-x: auto; }
   .lg-table { width: 100%; border-collapse: collapse; font-size: var(--fs-label); font-variant-numeric: tabular-nums; }
   .lg-table th, .lg-table td { padding: 8px 2px; text-align: center; white-space: nowrap; }

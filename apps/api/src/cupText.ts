@@ -1,4 +1,5 @@
 import { CUP_DIVISIONS, type CupDef } from '@offside/contracts/cup';
+import { leagueTitleIn, leagueTitleOf } from '@offside/contracts/league-names';
 import { CUP_EN } from './i18n/en/cup.js';
 import { CUP_JA } from './i18n/ja/cup.js';
 import { CUP_ZH } from './i18n/zh/cup.js';
@@ -42,6 +43,7 @@ const LEGACY_KO: [CupTextKey, string][] = [
   ['drawBody', '{team}은(는) {group}조예요. 첫 경기는 오늘 {time}에 열려요.'], // i18n-ignore: 옛 알림 원문
   ['drawTitle', '{cup} 조 추첨 결과'], // i18n-ignore: 옛 알림 원문(T-11-568 전)
   ['leaguePlacedBody', '{team}은(는) {tier}부 {league}리그예요. 1라운드는 오늘 {time}에 열려요.'], // i18n-ignore: 옛 알림 원문
+  ['leaguePlacedBody', '{team} 팀은 {tier}부 {league}리그예요. 1라운드는 오늘 {time}에 열려요.'], // i18n-ignore: 옛 알림 원문(T-11-640 전)
 ];
 const SENTENCES = [
   ...(Object.keys(CUP_KO) as CupTextKey[]).map((key) => [key, CUP_KO[key]] as const),
@@ -72,9 +74,13 @@ export function cupText(ko: string, lang: Lang): string | undefined {
     const vars = Object.fromEntries(
       names.map((n, i) => {
         const v = m[i + 1]!;
+        if (n === 'title') return [n, leagueTitleIn(v, lang)];
         return [n, NESTED.has(n) ? (cupText(v, lang) ?? v) : v];
       }),
     );
+    // T-11-640 리그 번호로 저장된 옛 알림도 지금 이름으로 보여 준다.
+    const no = vars.league ?? /^(\d+)리그$/.exec(vars.title ?? '')?.[1]; // i18n-ignore: 옛 알림 원문
+    if (vars.tier && no) vars.title = leagueTitleOf(lang, Number(vars.tier), Number(no)) ?? no;
     return fill(TABLES[lang][key], vars);
   }
   return undefined;

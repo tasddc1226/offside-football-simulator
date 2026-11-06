@@ -7,6 +7,7 @@ import { lastClosedSeason, teamSeasonAt, teamSeasonName } from '@offside/contrac
 import { and, count, desc, eq, isNotNull, sql } from 'drizzle-orm';
 import type { Lang } from '../../lang.js';
 import { cupHonorsOf } from '../../team/cup.js';
+import { leagueHonorsOf } from '../../team/league.js';
 import type { Db } from '../client.js';
 import {
   careers,
@@ -26,45 +27,47 @@ export async function ownerProfileOf(
 ): Promise<OwnerProfile> {
   const id = profile.id;
   const current = teamSeasonAt(now);
-  const [tiers, cupHonors, teams, records, [live], [rn], [retired]] = await Promise.all([
-    // T-11-489 굳힌 시즌마다 티어(시즌 2부터 상위 비율) — 지난 시즌 티어도 여기서 고른다.
-    ownerTierHistoryOfProfile(db, id, now),
-    cupHonorsOf(db, id),
-    db
-      .select()
-      .from(ownerTeams)
-      .where(eq(ownerTeams.profileId, id))
-      .orderBy(desc(ownerTeams.season))
-      .limit(2), // 가장 최근 팀과 지금 시즌 팀이면 된다
-    db
-      .select()
-      .from(ownerSeasonRecords)
-      .where(eq(ownerSeasonRecords.profileId, id))
-      .orderBy(ownerSeasonRecords.season),
-    current === null
-      ? []
-      : db
-          .select({ score: ownerAchievements.score })
-          .from(ownerAchievements)
-          .where(and(eq(ownerAchievements.profileId, id), eq(ownerAchievements.season, current))),
-    db
-      .select({ n: count() })
-      .from(retiredNumbers)
-      .innerJoin(careers, eq(careers.id, retiredNumbers.careerId))
-      .where(and(eq(careers.profileId, id), eq(careers.hidden, 0))),
-    db
-      .select({ n: count() })
-      // Avoid the global HOF peak index: this count must scan only this owner's retired players.
-      .from(sql`${careers} INDEXED BY careers_profile_status_legend_idx`)
-      .where(
-        and(
-          eq(careers.profileId, id),
-          eq(careers.status, 'retired'),
-          eq(careers.hidden, 0),
-          isNotNull(careers.peak),
+  const [tiers, cupHonors, leagueHonors, teams, records, [live], [rn], [retired]] =
+    await Promise.all([
+      // T-11-489 굳힌 시즌마다 티어(시즌 2부터 상위 비율) — 지난 시즌 티어도 여기서 고른다.
+      ownerTierHistoryOfProfile(db, id, now),
+      cupHonorsOf(db, id),
+      leagueHonorsOf(db, id),
+      db
+        .select()
+        .from(ownerTeams)
+        .where(eq(ownerTeams.profileId, id))
+        .orderBy(desc(ownerTeams.season))
+        .limit(2), // 가장 최근 팀과 지금 시즌 팀이면 된다
+      db
+        .select()
+        .from(ownerSeasonRecords)
+        .where(eq(ownerSeasonRecords.profileId, id))
+        .orderBy(ownerSeasonRecords.season),
+      current === null
+        ? []
+        : db
+            .select({ score: ownerAchievements.score })
+            .from(ownerAchievements)
+            .where(and(eq(ownerAchievements.profileId, id), eq(ownerAchievements.season, current))),
+      db
+        .select({ n: count() })
+        .from(retiredNumbers)
+        .innerJoin(careers, eq(careers.id, retiredNumbers.careerId))
+        .where(and(eq(careers.profileId, id), eq(careers.hidden, 0))),
+      db
+        .select({ n: count() })
+        // Avoid the global HOF peak index: this count must scan only this owner's retired players.
+        .from(sql`${careers} INDEXED BY careers_profile_status_legend_idx`)
+        .where(
+          and(
+            eq(careers.profileId, id),
+            eq(careers.status, 'retired'),
+            eq(careers.hidden, 0),
+            isNotNull(careers.peak),
+          ),
         ),
-      ),
-  ]);
+    ]);
   const tierOf = new Map(tiers.map((t) => [t.season, t.tier]));
   const last = lastClosedSeason(now);
   const tier =
@@ -112,6 +115,7 @@ export async function ownerProfileOf(
         }
       : null,
     cupHonors,
+    leagueHonors,
     seasons,
     stats: {
       retiredNumbers: Number(rn?.n ?? 0),

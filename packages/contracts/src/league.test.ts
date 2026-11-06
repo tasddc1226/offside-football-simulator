@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   LEAGUE_CYCLE,
+  leagueFinalAt,
   leagueFixtures,
+  leagueKickoffAt,
   leagueRoundPairs,
   leagueSeasonAt,
   planLeague,
@@ -42,8 +44,8 @@ describe('leagueSeasonAt (T-11-418c)', () => {
     const seasons = [{ ...s1, endsAt: s2.startsAt }, s2];
     expect(leagueSeasonAt('2026-11-19T05:00:00.000Z', seasons)?.id).toBe(2);
     // T-11-540 마지막 라운드(마감 전날 12/4 13:00 KST) 뒤 하루가 지나면 다음 시즌.
-    expect(leagueSeasonAt('2026-12-05T03:00:00.000Z', seasons)?.id).toBe(2);
-    expect(leagueSeasonAt('2026-12-05T05:00:00.000Z', seasons)?.id).toBe(3);
+    expect(leagueSeasonAt('2026-12-05T11:00:00.000Z', seasons)?.id).toBe(2);
+    expect(leagueSeasonAt('2026-12-05T13:00:00.000Z', seasons)?.id).toBe(3);
   });
 });
 
@@ -68,5 +70,25 @@ describe('planLeague 시즌 내내 (T-11-540)', () => {
     const cycle = leagueFixtures(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
     expect(cycle).toHaveLength(LEAGUE_CYCLE);
     expect(leagueRoundPairs(cycle, LEAGUE_CYCLE + 3)).toEqual(cycle[3]);
+  });
+});
+
+describe('leagueKickoffAt (T-11-640)', () => {
+  const day = '2026-11-06T04:00:00.000Z'; // 13:00 KST
+  const hour = (iso: string) => (new Date(iso).getUTCHours() + 9) % 24;
+
+  it('8팀 리그 네 경기를 네 시각에 하나씩 나누고, 라운드마다 돌린다', () => {
+    const r1 = [0, 1, 2, 3].map((s) => hour(leagueKickoffAt(day, 1, s, 4)));
+    const r2 = [0, 1, 2, 3].map((s) => hour(leagueKickoffAt(day, 2, s, 4)));
+    expect(r1).toEqual([13, 16, 19, 21]);
+    expect(r2).toEqual([16, 19, 21, 13]);
+  });
+
+  it('마지막 라운드는 모두 21시에 함께 열리고, 끝나는 시각도 거기에 맞춘다', () => {
+    expect([0, 1, 2, 3].map((s) => hour(leagueKickoffAt(day, 5, s, 4, true)))).toEqual([
+      21, 21, 21, 21,
+    ]);
+    const l = { rounds: [day] } as never;
+    expect(hour(leagueFinalAt(l))).toBe(21);
   });
 });

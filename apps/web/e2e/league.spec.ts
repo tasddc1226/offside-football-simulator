@@ -58,7 +58,7 @@ test('배너 → 리그 화면 신청 · 취소, 다시 들어와도 리그 조�
   await expect(banner).toContainText('12팀 신청 · 11월 4일 23:59까지');
   await banner.click();
   await expect(page.locator('[data-league-schedule]')).toContainText(
-    '11월 5일 ~ 11월 18일, 매일 13:00',
+    '11월 5일 ~ 11월 18일, 매일 13:00부터',
   );
   await expect(page.locator('[data-league-ovr]')).toContainText('84');
 
@@ -347,7 +347,9 @@ test('T-11-418b 배치 뒤: 내 배치 · 순위표 · 라운드 경기 · 경�
   });
   await page.goto('/');
   await page.locator('[data-league-banner]').click();
-  await expect(page.locator('[data-league-placement="placed"]')).toHaveText('1부 1리그 · 지금 3위');
+  await expect(page.locator('[data-league-placement="placed"]')).toHaveText(
+    '1부 임페리움 리그 · 지금 3위',
+  );
   const board = page.locator('[data-league-table="1-1"]');
   await expect(board.locator('tbody tr')).toHaveCount(8);
   await expect(board.locator('tr.down')).toHaveCount(2);
@@ -367,8 +369,11 @@ test('T-11-418b 배치 뒤: 내 배치 · 순위표 · 라운드 경기 · 경�
   await expect(page.locator('[data-act="league-detail-back"]')).toBeVisible();
   await page.locator('[data-act="league-detail-back"]').click();
   await expect(board).toBeVisible();
-  await page.locator('[data-league-tier="2"]').click();
-  await page.locator('[data-league-no="2"]').click();
+  // T-11-640 리그 이름표에서 고르고, 화살표로 앞뒤 리그로 넘긴다.
+  await page.locator('[data-act="league-pick-open"]').click();
+  await page.locator('[data-league-pick="2-1"]').click();
+  await expect(page.locator('[data-league-picked="2-1"]')).toHaveText(/솔라리스 리그/);
+  await page.locator('[data-act="league-next"]').click();
   await expect(page.locator('[data-league-table="2-2"] tr.up')).toHaveCount(1);
   // T-11-640 순위표 줄을 누르면 그 팀 프로필로 가고, 돌아오면 보던 리그 · 라운드가 그대로다.
   await page
@@ -378,18 +383,27 @@ test('T-11-418b 배치 뒤: 내 배치 · 순위표 · 라운드 경기 · 경�
   await page.goBack();
   await expect(page.locator('[data-league-table="2-2"]')).toBeVisible();
   await expect(page.locator('[data-league-picked="2-2"]')).toBeVisible();
+  // T-11-640 리그마다 아이콘과 우승 트로피가 따라 바뀐다.
+  await expect(page.locator('.lp [data-league-emblem="2-2"]')).toBeVisible();
+  await expect(page.locator('.lp [data-league-trophy="2-2"]')).toBeVisible();
   await expect(page.locator('[data-league-round]')).toHaveAttribute('data-league-round', '3');
-  // '이번 라운드로'와 라운드 번호 고르기.
+  // '이번 라운드로'와 시즌 일정에서 고르기.
   await page.locator('[data-act="league-round-now"]').click();
   await expect(page.locator('[data-league-round]')).toHaveAttribute('data-league-round', '4');
-  await page.locator('[data-act="league-round-all"]').click();
-  await page.locator('[data-league-round-no="3"]').click();
-  await expect(page.locator('[data-league-round-grid]')).toHaveCount(0);
-  await expect(page.locator('[data-league-round]')).toHaveAttribute('data-league-round', '3');
+  await page.locator('[data-act="league-fixtures-open"]').click();
+  await page.locator('[data-league-fixture="5"]').click();
+  await expect(page.locator('[data-league-fixture]')).toHaveCount(0);
+  await expect(page.locator('[data-league-round]')).toHaveAttribute('data-league-round', '5');
   // 같은 리그를 다시 골라도 메모(60초)로 한 번만 부른다.
   await page.locator('[data-act="league-pick-mine"]').click();
   await expect(page.locator('[data-league-table="1-1"]')).toBeVisible();
   expect(hits['/v1/leagues/2/tables/1/1']).toBe(1);
+  // T-11-640 내 경기: 지난 경기를 바로 보고, 시즌 일정의 끝난 내 경기도 바로 연다.
+  await expect(page.locator('[data-league-my-last]')).toBeVisible();
+  await expect(page.locator('[data-league-my-next]')).toBeVisible();
+  await page.locator('[data-act="league-my-watch"]').click();
+  await expect(page.locator('[data-act="league-detail-back"]')).toBeVisible();
+  await page.locator('[data-act="league-detail-back"]').click();
   expect(hits['/v1/leagues/2/matches/lgm_3_2']).toBe(1);
 });
 
@@ -560,7 +574,7 @@ test('T-11-444 다음 시즌 접수 중엔 지난 시즌 결산을 보이고, �
   await page.locator('[data-league-banner]').click();
   const last = page.locator('[data-league-last-final="promoted"]');
   await expect(last).toContainText('시즌 1 결산');
-  await expect(last).toContainText('2부 1리그 최종 1위');
+  await expect(last).toContainText('2부 솔라리스 리그 최종 1위');
   await expect(last).toContainText('이번 시즌에 신청하면 1부에서 시작해요.');
 
   member = false;

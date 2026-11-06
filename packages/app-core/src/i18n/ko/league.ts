@@ -1,3 +1,4 @@
+import { leagueTitles } from '@offside/contracts/league-names';
 // 오프사이드 리그(T-11-418) 화면: 홈 배너 · 리그 화면(일정 · 규칙 · 신청). 웹 · 앱이 함께 쓰는 문구라 키 하나를 같이 쓴다.
 // 날짜는 컵 문구(cup.dayTime)로 만든 값을 넘긴다.
 import { ns } from '../core';
@@ -29,7 +30,8 @@ const ko = {
   scheduleRounds: (p: { n: number }) => `1 ~ ${p.n}라운드`,
   date: (p: { month: number; day: number }) => `${p.month}월 ${p.day}일`,
   range: (p: { from: string; to: string }) => `${p.from} ~ ${p.to}`,
-  daily: (p: { from: string; to: string; time: string }) => `${p.from} ~ ${p.to}, 매일 ${p.time}`,
+  daily: (p: { from: string; to: string; time: string }) =>
+    `${p.from} ~ ${p.to}, 매일 ${p.time}부터`,
   // 규칙
   rulesTitle: '규칙',
   ruleEntry:
@@ -80,11 +82,40 @@ const ko = {
   // T-11-418b 배치 뒤: 내 배치 · 리그 고르기 · 순위표 · 라운드 경기 · 경기 상세.
   runningRounds: (p: { n: number; total: number }) =>
     `${p.total}라운드 중 ${p.n}라운드를 치렀어요.`,
+  // T-11-640 리그 이름(1부 1리그부터 차례로). 이름표는 contracts league-names.
+  leagueTitleAt: (p: { at: number }) => leagueTitles('ko')[p.at] ?? '',
+  weekday: (p: { d: number }) => ['일', '월', '화', '수', '목', '금', '토'][p.d] ?? '',
+  fixtureDay: (p: { date: string; wd: string }) => `${p.date} ${p.wd}요일`,
+  roundRange: (p: { date: string; from: string; to: string }) =>
+    `${p.date} ${p.from} ~ ${p.to} 한국 시간`,
+  tierGroup: (p: { tier: number; n: number }) => `${p.tier}부 · 리그 ${p.n}개`,
+  sheetClose: '닫기',
+  fixtureOpen: '시즌 일정',
+  myMatchTitle: '내 경기',
+  myMatchLast: '지난 경기',
+  myMatchNext: '다음 경기',
+  myMatchWatch: '경기 보기',
+  fixtureTitle: '시즌 일정',
+  fixtureRest: '쉬는 라운드',
+  fixtureDone: '끝남',
+  fixtureLater: '예정',
+  fixtureNow: '이번 라운드',
+  fixtureHome: '홈',
+  fixtureAway: '원정',
+  leaguePrev: '이전 리그',
+  leagueNext: '다음 리그',
+  ruleKickoff:
+    '경기는 13:00 · 16:00 · 19:00 · 21:00(한국 시간)에 나눠 열려요. 시간은 라운드마다 돌아가고, 마지막 라운드는 모두 21:00에 함께 열려요.',
   leagueName: (p: { tier: number; league: number }) => `${p.tier}부 ${p.league}리그`,
+  tierTitle: (p: { tier: number; title: string }) => `${p.tier}부 ${p.title}`,
   tierName: (p: { tier: number }) => `${p.tier}부`,
   goMyLeague: '내 리그로',
-  placedLine: (p: { tier: number; league: number; rank: number }) =>
-    `${p.tier}부 ${p.league}리그 · 지금 ${p.rank}위`,
+  trophyTitle: '이 리그 우승 트로피',
+  trophyNote: '시즌이 끝날 때 1위 구단주의 이름이 새겨져요.',
+  honorsTitle: '리그 우승',
+  honorChampion: ({ title }: { title: string }) => `${title} 우승`,
+  placedLine: (p: { tier: number; title: string; rank: number }) =>
+    `${p.tier}부 ${p.title} · 지금 ${p.rank}위`,
   droppedLine: '이번 시즌 리그에 들어가지 못했어요. 다음 시즌에 다시 신청할 수 있어요.',
   droppedShortLine:
     '배치 때 선발에 내 은퇴 선수가 모자라 이번 시즌 리그에 들어가지 못했어요. 다음 시즌에 다시 신청할 수 있어요.',
@@ -95,8 +126,8 @@ const ko = {
   forfeitedLine: '기권이 3번 쌓여 남은 경기는 모두 0:3 패로 기록돼요.',
   // T-11-418e 결산.
   finalTitle: '시즌 결산',
-  finalLine: (p: { tier: number; league: number; rank: number }) =>
-    `${p.tier}부 ${p.league}리그 최종 ${p.rank}위`,
+  finalLine: (p: { tier: number; title: string; rank: number }) =>
+    `${p.tier}부 ${p.title} 최종 ${p.rank}위`,
   outcomeChampion: '우승',
   outcomePromoted: '승격',
   outcomeStayed: '잔류',
@@ -120,7 +151,6 @@ const ko = {
   roundName: (p: { n: number }) => `${p.n}라운드`,
   roundPrev: '이전 라운드',
   roundNext: '다음 라운드',
-  roundAll: '라운드 고르기',
   goThisRound: '이번 라운드로',
   restTeam: (p: { team: string }) => `쉬는 팀 · ${p.team}`,
   forfeitScore: '기권',

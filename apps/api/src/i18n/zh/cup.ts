@@ -112,7 +112,7 @@ export const CUP_ZH: Record<CupTextKey, string> = {
   leagueRemindTitle: 'OFFSIDE 聯賽明天分級',
   leagueRemindBody: '分級時第 {season} 賽季球隊的先發有 {n} 名球員就能參加。目前有 {filled} 名。',
   leaguePlacedTitle: '第 {season} 賽季 OFFSIDE 聯賽分級結果',
-  leaguePlacedBody: '{team} 分在 {tier} 級 {league} 聯賽。第 1 輪今天 {time} 開踢。',
+  leaguePlacedBody: '{team} 分在 {tier} 級 {title}。第 1 輪今天 {time} 開踢。',
   leagueDroppedTitle: '第 {season} 賽季 OFFSIDE 聯賽參賽已取消',
   leagueDroppedBody: '分級時第 {season} 賽季球隊的先發球員不足 {n} 名。下個賽季可以再報名。',
   leagueLeftBody: '參賽球隊數無法剛好編成聯賽，OVR 最低的 {n} 隊被排除。下個賽季可以再報名。',
@@ -124,17 +124,17 @@ export const CUP_ZH: Record<CupTextKey, string> = {
   leagueRest: '輪空',
   leagueRestBody: '本輪輪空 · 目前第 {rank} 名',
   leagueEndTitle: '第 {season} 賽季 OFFSIDE 聯賽結束了',
-  leagueEndBody: '{tier} 級 {league} 聯賽最終第 {rank} 名。',
-  leagueChampionTitle: '第 {season} 賽季 OFFSIDE 聯賽 {tier} 級 {league} 聯賽奪冠！',
+  leagueEndBody: '{tier} 級 {title}最終第 {rank} 名。',
+  leagueChampionTitle: '第 {season} 賽季 OFFSIDE 聯賽 {tier} 級 {title}奪冠！',
   leagueEndBodyChampion:
     '1 級冠軍！獲得第 {season} 賽季聯賽冠軍稱號、{n} 張球員候選重抽券、{s} 張高級球探券和 {b} 張潛力強化券。',
   leagueEndBodyAll:
-    '{tier} 級 {league} 聯賽最終第 {rank} 名。獲得 {n} 張球員候選重抽券、{s} 張高級球探券和 {b} 張潛力強化券。下個賽季報名將從 {next} 級開始。',
+    '{tier} 級 {title}最終第 {rank} 名。獲得 {n} 張球員候選重抽券、{s} 張高級球探券和 {b} 張潛力強化券。下個賽季報名將從 {next} 級開始。',
   leagueEndBodyReroll:
-    '{tier} 級 {league} 聯賽最終第 {rank} 名。獲得 {n} 張球員候選重抽券。下個賽季報名將從 {next} 級開始。',
-  leagueEndBodyNext: '{tier} 級 {league} 聯賽最終第 {rank} 名。下個賽季報名將從 {next} 級開始。',
+    '{tier} 級 {title}最終第 {rank} 名。獲得 {n} 張球員候選重抽券。下個賽季報名將從 {next} 級開始。',
+  leagueEndBodyNext: '{tier} 級 {title}最終第 {rank} 名。下個賽季報名將從 {next} 級開始。',
   leagueEndBodyForfeited:
-    '{tier} 級 {league} 聯賽最終第 {rank} 名。因多次棄權沒有獎勵，下個賽季將從最低級別開始。',
+    '{tier} 級 {title}最終第 {rank} 名。因多次棄權沒有獎勵，下個賽季將從最低級別開始。',
   leagueFillTitle: 'OFFSIDE 聯賽升級！',
   leagueFillBody: '上一級有空位，第 {season} 賽季將在 {tier} 級出賽。獲得 {s} 張高級球探券。',
   leagueForfeitedTitle: 'OFFSIDE 聯賽剩餘比賽將判不戰而敗',

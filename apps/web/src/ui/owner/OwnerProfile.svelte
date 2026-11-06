@@ -1,4 +1,5 @@
 <script lang="ts">
+  import LeagueHonors from '../league/LeagueHonors.svelte';
   // T-11-150 구단주 프로필 — 팀 프로필의 '구단주 프로필'에서 연다(팀 id로). 시즌을 넘어 쌓이는 기록을 한곳에: 대표 칭호와
   // 지난 시즌 등급, 지금 팀, 영구결번 · 은퇴 선수 · 최고 팀 순위, 컵 트로피 진열장, 시즌별 업적 점수와 팀 순위.
   import { onMount } from 'svelte';
@@ -76,6 +77,7 @@
         {#if mine}<button class="btn btn-sm" data-act="owner-hall" onclick={() => go('honors')}>{L.manage}</button>{:else}<button class="btn btn-sm" data-act="owner-hall-visit" onclick={() => openOwnerHallVisit(teamId)}>{L.openHall}</button>{/if}
       </section>
 
+      <LeagueHonors honors={owner.leagueHonors ?? []} />
       {#if owner.cupHonors.length}
         <CupHonors honors={owner.cupHonors} />
       {:else}

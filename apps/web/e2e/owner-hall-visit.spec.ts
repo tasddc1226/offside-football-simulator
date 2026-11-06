@@ -25,6 +25,7 @@ const owner = {
     seasonName: '시즌 1',
   },
   cupHonors: [],
+  leagueHonors: [{ season: 2, tier: 4, league: 3, teamName: '방문FC', owner: '구단주' }],
   seasons: [],
   stats: { retiredNumbers: 0, retired: 97, bestTeamRank: 31 },
 };
@@ -42,7 +43,12 @@ const hall = {
   titles: ['owner-developer', 'owner-star-cradle'],
 };
 
-async function openProfile(page: Page, mine = false, hallBody: unknown = ok(hall)) {
+async function openProfile(
+  page: Page,
+  mine = false,
+  hallBody: unknown = ok(hall),
+  ownerBody: unknown = owner,
+) {
   const paths: string[] = [];
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.route(`${API}/v1/chat/ticket*`, (route) =>
@@ -83,7 +89,7 @@ async function openProfile(page: Page, mine = false, hallBody: unknown = ok(hall
   );
   await page.route(`${API}/v1/owners/by-team/${TEAM}`, (route) => {
     paths.push(new URL(route.request().url()).pathname);
-    return route.fulfill(ok({ owner, mine }));
+    return route.fulfill(ok({ owner: ownerBody, mine }));
   });
   await page.route(`${API}/v1/owners/by-team/${TEAM}/hall`, (route) => {
     paths.push(new URL(route.request().url()).pathname);
@@ -113,6 +119,9 @@ test('받은 칭호와 기록 배지를 읽기 전용으로 보고, 뒤로 가�
 
   await page.locator('[data-room-zone="2"]').tap();
   await expect(page.locator('[data-trophy-gallery]')).toContainText('업적 랭킹');
+  // T-11-640 리그 우승 트로피.
+  await expect(page.locator('[data-league-honor="2-4-3"]')).toContainText('페가수스 리그 우승');
+  await expect(page.locator('[data-league-trophy="4-3"]')).toBeVisible();
   await expect(page.locator('[data-trophy-gallery]')).toContainText('100위로 마감');
 
   await page.locator('[data-act="owner-hall-visit-back"]').tap();
@@ -125,7 +134,7 @@ test('받은 칭호와 기록 배지를 읽기 전용으로 보고, 뒤로 가�
 });
 
 test('받은 게 없으면 빈 안내', async ({ page }) => {
-  await openProfile(page, false, ok({ honors: [], titles: [] }));
+  await openProfile(page, false, ok({ honors: [], titles: [] }), { ...owner, leagueHonors: [] });
   await page.locator('[data-act="owner-hall-visit"]').tap();
   await expect(page.locator('[data-owner-hall-visit]')).toContainText('아직 받은 칭호가 없어요.');
   await page.locator('[data-room-zone="2"]').tap();

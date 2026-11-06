@@ -24,8 +24,13 @@ import {
   leagueLastRound,
   leagueLive,
   leagueLegend,
-  leagueTierPick,
-  leagueMatchMid,
+  leagueFixtureRows,
+  leagueMyMatches,
+  leagueRoundSlots,
+  leagueSlotMid,
+  leagueStep,
+  leagueTierGroups,
+  leagueTitle,
   leagueRoundAt,
   leagueZoneLabel,
   leagueRecords,
@@ -41,68 +46,46 @@ import { alpha } from '../../theme/colors';
 import { DISPLAY, rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Pill, Press, Skeleton, Txt, scrollTo } from '../../ui';
+import { PopSheet } from '../../ui/PopSheet';
 import { TeamLive } from '../owner/TeamLive';
+import { LeagueEmblem, LeagueTrophy } from '../../ui/LeagueArt';
 
-/** T-11-640 부 · 리그 · 라운드 고르기 버튼 하나. */
-function PickBtn({
-  on,
-  dot,
+/** 머리 줄 양옆의 화살표(리그 · 라운드 넘기기). */
+function Arrow({
+  text,
   label,
-  accessibilityLabel,
+  off,
   onPress,
   testID,
-  fill,
-  strong,
 }: {
-  on: boolean;
-  dot?: boolean;
+  text: string;
   label: string;
-  accessibilityLabel?: string;
+  off: boolean;
   onPress: () => void;
   testID: string;
-  /** 줄을 나눠 채운다(부). 없으면 번호 칸 크기. */
-  fill?: boolean;
-  strong?: boolean;
 }) {
-  const c = useColors();
   return (
     <Press
       testID={testID}
-      accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ selected: on }}
+      accessibilityLabel={label}
+      disabled={off}
       onPress={onPress}
       style={{
-        ...(fill ? { flex: 1 } : { width: 46 }),
-        minHeight: 44,
+        width: 44,
+        minHeight: 52,
         alignItems: 'center',
         justifyContent: 'center',
-        borderRadius: RADIUS.sm,
-        borderWidth: on ? 2 : 1,
-        borderColor: on ? c.accent : c.line,
-        backgroundColor: c.surface,
+        opacity: off ? 0.3 : 1,
       }}
     >
-      <Txt v="sm" bold={on || strong} tone={strong ? 'accent' : 'ink'} num>
-        {label}
+      <Txt v="h3" bold>
+        {text}
       </Txt>
-      {dot ? (
-        <View
-          style={{
-            position: 'absolute',
-            top: 5,
-            right: 5,
-            width: 6,
-            height: 6,
-            borderRadius: 3,
-            backgroundColor: c.accent,
-          }}
-        />
-      ) : null}
     </Press>
   );
 }
 
-/** 카드 머리의 글자 버튼('내 리그로' · '이번 라운드로'). */
+/** 글자 버튼('내 리그로' · '시즌 일정' · '이번 라운드로'). */
 function HeadLink({
   label,
   onPress,
@@ -117,7 +100,7 @@ function HeadLink({
       testID={testID}
       onPress={onPress}
       hitSlop={8}
-      style={{ minHeight: 28, justifyContent: 'center' }}
+      style={{ minHeight: 36, justifyContent: 'center' }}
     >
       <Txt v="sm" bold tone="accent">
         {label}
@@ -126,7 +109,7 @@ function HeadLink({
   );
 }
 
-/** T-11-640 리그 고르기: 부를 먼저 고르고, 리그가 여럿이면 번호를 고른다(웹 LeaguePicker.svelte와 같은 구성). */
+/** T-11-640 리그 고르기: 리그 이름을 크게 두고 앞뒤로 넘긴다. 이름을 누르면 부마다 묶은 이름표가 올라온다(웹 LeaguePicker.svelte와 같은 구성). */
 export function LeaguePicker({
   tiers,
   pick,
@@ -138,48 +121,198 @@ export function LeaguePicker({
   mine: LeaguePick | null;
   onpick: (p: LeaguePick) => void;
 }) {
-  if (tiers.reduce((n, t) => n + t.leagues, 0) < 2) return null;
-  const leagues = tiers.find((t) => t.tier === pick.tier)?.leagues ?? 1;
+  const c = useColors();
+  const [open, setOpen] = useState(false);
+  const groups = leagueTierGroups(tiers);
+  const flat = groups.flatMap((g) => g.leagues);
+  if (flat.length < 2) return null;
+  const prev = leagueStep(flat, pick, -1);
+  const next = leagueStep(flat, pick, 1);
   const isMine = !!mine && mine.tier === pick.tier && mine.league === pick.league;
+  const choose = (p: LeaguePick) => {
+    setOpen(false);
+    onpick({ tier: p.tier, league: p.league });
+  };
   return (
-    <Card gap={10} testID="league-picker">
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 28 }}>
-        <Txt bold style={{ flex: 1 }} testID={`league-picked-${pick.tier}-${pick.league}`}>
-          {`${L.leagueName(pick)}${isMine ? ` · ${L.myLeague}` : ''}`}
-        </Txt>
-        {mine && !isMine ? (
-          <HeadLink label={L.goMyLeague} onPress={() => onpick(mine)} testID="league-pick-mine" />
-        ) : null}
+    <Card gap={4} testID="league-picker">
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Arrow
+          text="‹"
+          label={L.leaguePrev}
+          off={!prev}
+          onPress={() => prev && choose(prev)}
+          testID="league-prev"
+        />
+        <Press
+          testID="league-pick-open"
+          accessibilityLabel={`${L.pickLeague} · ${leagueTitle(pick)}`}
+          onPress={() => setOpen(true)}
+          style={{ flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 2 }}
+        >
+          <LeagueEmblem tier={pick.tier} league={pick.league} size={52} />
+          <Txt v="xs" tone="muted">
+            {`${L.tierName({ tier: pick.tier })}${isMine ? ` · ${L.myLeague}` : ''}`}
+          </Txt>
+          <Txt v="h3" bold testID={`league-picked-${pick.tier}-${pick.league}`}>
+            {`${leagueTitle(pick)} ▾`}
+          </Txt>
+        </Press>
+        <Arrow
+          text="›"
+          label={L.leagueNext}
+          off={!next}
+          onPress={() => next && choose(next)}
+          testID="league-next"
+        />
       </View>
-      <View style={{ flexDirection: 'row', gap: 6 }}>
-        {tiers.map((t) => (
-          <PickBtn
-            key={t.tier}
-            fill
-            on={t.tier === pick.tier}
-            dot={mine?.tier === t.tier}
-            label={L.tierName({ tier: t.tier })}
-            onPress={() => onpick(leagueTierPick(t.tier, mine))}
-            testID={`league-tier-${t.tier}`}
-          />
-        ))}
+      <View
+        testID="league-trophy-row"
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 10,
+          paddingTop: 8,
+          borderTopWidth: 1,
+          borderTopColor: c.line,
+        }}
+      >
+        <LeagueTrophy tier={pick.tier} league={pick.league} size={56} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Txt v="sm" bold>
+            {L.trophyTitle}
+          </Txt>
+          <Txt v="xs" tone="muted">
+            {L.trophyNote}
+          </Txt>
+        </View>
       </View>
-      {leagues > 1 ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {Array.from({ length: leagues }, (_, i) => i + 1).map((no) => {
-            const own = mine?.tier === pick.tier && mine.league === no;
-            return (
-              <PickBtn
-                key={no}
-                on={no === pick.league}
-                dot={own}
-                label={String(no)}
-                accessibilityLabel={`${L.leagueName({ tier: pick.tier, league: no })}${own ? ` · ${L.myLeague}` : ''}`}
-                onPress={() => onpick({ tier: pick.tier, league: no })}
-                testID={`league-no-${no}`}
-              />
-            );
-          })}
+      {mine && !isMine ? (
+        <View style={{ alignItems: 'center' }}>
+          <HeadLink label={L.goMyLeague} onPress={() => choose(mine)} testID="league-pick-mine" />
+        </View>
+      ) : null}
+      {open ? (
+        <PopSheet label={L.pickLeague} testID="league-pick-sheet" onClose={() => setOpen(false)}>
+          <View style={{ gap: 16 }}>
+            <Txt v="h3" bold accessibilityRole="header">
+              {L.pickLeague}
+            </Txt>
+            {groups.map((g) => (
+              <View key={g.tier} style={{ gap: 8 }}>
+                <Txt v="sm" tone="muted" bold>
+                  {g.label}
+                </Txt>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {g.leagues.map((l) => {
+                    const on = l.tier === pick.tier && l.league === pick.league;
+                    const own = mine?.tier === l.tier && mine.league === l.league;
+                    return (
+                      <Press
+                        key={l.league}
+                        testID={`league-pick-${l.tier}-${l.league}`}
+                        accessibilityState={{ selected: on }}
+                        onPress={() => choose(l)}
+                        style={{
+                          flexBasis: g.leagues.length === 1 ? '100%' : '48%',
+                          flexGrow: 1,
+                          minHeight: 48,
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: 6,
+                          paddingHorizontal: 10,
+                          borderRadius: RADIUS.sm,
+                          borderWidth: on ? 2 : 1,
+                          borderColor: on ? c.accent : c.line,
+                          backgroundColor: c.surface,
+                        }}
+                      >
+                        <LeagueEmblem tier={l.tier} league={l.league} size={28} />
+                        <View style={{ flex: 1 }}>
+                          <Txt v="sm" bold={on}>
+                            {l.title}
+                          </Txt>
+                          {own ? (
+                            <Txt v="xs" bold tone="accent">
+                              {L.myLeague}
+                            </Txt>
+                          ) : null}
+                        </View>
+                      </Press>
+                    );
+                  })}
+                </View>
+              </View>
+            ))}
+            <Btn block onPress={() => setOpen(false)} testID="league-pick-close">
+              {L.sheetClose}
+            </Btn>
+          </View>
+        </PopSheet>
+      ) : null}
+    </Card>
+  );
+}
+
+/** T-11-640 순위표 위 '내 경기': 지난 경기(바로 보기)와 다음 경기(웹 data-league-my와 같은 구성). */
+function MyMatches({
+  table,
+  mineId,
+  onopen,
+}: {
+  table: LeagueTableResponse;
+  mineId: string | null;
+  onopen: (m: LeagueMatch) => void;
+}) {
+  const c = useColors();
+  const my = leagueMyMatches(table, mineId);
+  if (!my) return null;
+  const who = (head: string, x: NonNullable<typeof my.last>) => (
+    <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+      <Txt v="xs" tone="muted">
+        {`${head} · ${L.roundName({ n: x.match.round })}`}
+      </Txt>
+      <Txt v="sm">{`${x.opponent} · ${x.side}`}</Txt>
+    </View>
+  );
+  const row = {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    minHeight: 48,
+    borderTopWidth: 1,
+    borderTopColor: c.line,
+    paddingTop: 8,
+  } as const;
+  return (
+    <Card gap={8} testID="league-my">
+      <Txt v="h3" bold accessibilityRole="header">
+        {L.myMatchTitle}
+      </Txt>
+      {my.last ? (
+        <View style={row} testID="league-my-last">
+          {who(L.myMatchLast, my.last)}
+          <Txt
+            bold
+            num
+            tone={my.last.result === 'w' ? 'good' : my.last.result === 'l' ? 'warn' : 'ink'}
+            style={{ fontFamily: DISPLAY[700] }}
+          >
+            {my.last.score}
+          </Txt>
+          {my.last.watch ? (
+            <Btn onPress={() => onopen(my.last!.match)} testID="league-my-watch">
+              {L.myMatchWatch}
+            </Btn>
+          ) : null}
+        </View>
+      ) : null}
+      {my.next ? (
+        <View style={row} testID="league-my-next">
+          {who(L.myMatchNext, my.next)}
+          <Txt v="xs" tone="muted">
+            {my.next.when}
+          </Txt>
         </View>
       ) : null}
     </Card>
@@ -572,37 +705,51 @@ function Rounds({
   const roundAt = leagueRoundAt(day.matches);
   const name = (id: string) => table.teams.find((t) => t.teamId === id)?.name ?? C.tbd;
   const last = leagueLastRound(table);
-  const [all, setAll] = useState(false);
+  const [fixtures, setFixtures] = useState(false);
+  const [nowY, setNowY] = useState<number | undefined>();
   const pickRound = (n: number) => {
     setRound(n);
-    setAll(false);
+    setFixtures(false);
   };
-  const arrow = (text: string, label: string, to: number, off: boolean, testID: string) => (
-    <Press
-      testID={testID}
-      accessibilityLabel={label}
-      disabled={off}
-      onPress={() => pickRound(to)}
-      style={{
-        width: 44,
-        minHeight: 52,
-        alignItems: 'center',
-        justifyContent: 'center',
-        borderWidth: 1,
-        borderColor: c.line,
-        borderRadius: RADIUS.sm,
-        opacity: off ? 0.35 : 1,
-      }}
-    >
-      <Txt bold>{text}</Txt>
-    </Press>
-  );
   return (
     <Card gap={8} testID="league-rounds">
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 28 }}>
-        <Txt v="h3" bold accessibilityRole="header" style={{ flex: 1 }}>
-          {L.roundsTitle}
-        </Txt>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+        <Arrow
+          text="‹"
+          label={L.roundPrev}
+          off={round <= 1}
+          onPress={() => pickRound(round - 1)}
+          testID="league-round-prev"
+        />
+        <View
+          style={{ flex: 1, minHeight: 52, alignItems: 'center', justifyContent: 'center', gap: 2 }}
+        >
+          <Txt v="h3" bold accessibilityRole="header" testID={`league-round-${round}`}>
+            {L.roundName({ n: round })}
+          </Txt>
+          {roundAt ? (
+            <Txt v="xs" tone="muted" testID="league-round-at" style={{ textAlign: 'center' }}>
+              {roundAt}
+            </Txt>
+          ) : null}
+        </View>
+        <Arrow
+          text="›"
+          label={L.roundNext}
+          off={round >= last}
+          onPress={() => pickRound(round + 1)}
+          testID="league-round-next"
+        />
+      </View>
+      <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 16 }}>
+        <HeadLink
+          label={L.fixtureOpen}
+          onPress={() => {
+            setNowY(undefined);
+            setFixtures(true);
+          }}
+          testID="league-fixtures-open"
+        />
         {round !== thisRound ? (
           <HeadLink
             label={L.goThisRound}
@@ -611,105 +758,68 @@ function Rounds({
           />
         ) : null}
       </View>
-      <View style={{ flexDirection: 'row', gap: 6 }}>
-        {arrow('‹', L.roundPrev, round - 1, round <= 1, 'league-round-prev')}
-        <Press
-          testID="league-round-all"
-          accessibilityLabel={`${L.roundAll} · ${L.roundName({ n: round })}`}
-          accessibilityState={{ expanded: all }}
-          onPress={() => setAll((v) => !v)}
-          style={{
-            flex: 1,
-            minHeight: 52,
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 2,
-            borderWidth: 1,
-            borderColor: c.line,
-            borderRadius: RADIUS.sm,
-          }}
-        >
-          <Txt v="sm" bold testID={`league-round-${round}`}>
-            {`${L.roundName({ n: round })} ${all ? '▴' : '▾'}`}
+      {leagueRoundSlots(day.matches).map((slot) => (
+        <View key={slot.at} testID={`league-slot-${slot.time}`}>
+          <Txt v="sm" bold tone="muted" num style={{ fontFamily: DISPLAY[700], marginBottom: 2 }}>
+            {slot.time}
           </Txt>
-          {roundAt ? (
-            <Txt v="xs" tone="muted" testID="league-round-at">
-              {roundAt}
-            </Txt>
-          ) : null}
-        </Press>
-        {arrow('›', L.roundNext, round + 1, round >= last, 'league-round-next')}
-      </View>
-      {all ? (
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {Array.from({ length: last }, (_, i) => i + 1).map((n) => (
-            <PickBtn
-              key={n}
-              on={n === round}
-              strong={n === thisRound}
-              label={String(n)}
-              accessibilityLabel={L.roundName({ n })}
-              onPress={() => pickRound(n)}
-              testID={`league-round-no-${n}`}
-            />
-          ))}
-        </View>
-      ) : null}
-      {day.matches.map((m) => {
-        const mine = m.homeTeamId === mineId || m.awayTeamId === mineId;
-        const open = m.played && !m.forfeit;
-        const mid = (
-          <View style={{ alignItems: 'center', minWidth: 64 }}>
-            <Txt bold num style={{ fontFamily: DISPLAY[700] }}>
-              {leagueMatchMid(m)}
-            </Txt>
-            {m.forfeit ? (
-              <Txt v="xs" tone="warn">
-                {L.forfeitScore}
-              </Txt>
-            ) : null}
-          </View>
-        );
-        return (
-          <View
-            key={m.id}
-            testID={`league-match-${m.id}`}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              gap: 8,
-              minHeight: 44,
-              borderTopWidth: 1,
-              borderTopColor: c.line,
-            }}
-          >
-            <Txt v="sm" bold={mine} style={{ flex: 1, minWidth: 0 }}>
-              {name(m.homeTeamId)}
-            </Txt>
-            {open ? (
-              <Press
-                onPress={() => onopen(m)}
-                testID={`league-match-open-${m.id}`}
-                accessibilityRole="button"
+          {slot.matches.map((m) => {
+            const mine = m.homeTeamId === mineId || m.awayTeamId === mineId;
+            const open = m.played && !m.forfeit;
+            const mid = (
+              <View style={{ alignItems: 'center', minWidth: 64 }}>
+                <Txt bold num style={{ fontFamily: DISPLAY[700] }}>
+                  {leagueSlotMid(m)}
+                </Txt>
+                {m.forfeit ? (
+                  <Txt v="xs" tone="warn">
+                    {L.forfeitScore}
+                  </Txt>
+                ) : null}
+              </View>
+            );
+            return (
+              <View
+                key={m.id}
+                testID={`league-match-${m.id}`}
                 style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
                   minHeight: 44,
-                  justifyContent: 'center',
-                  borderWidth: 1,
-                  borderColor: c.line,
-                  borderRadius: RADIUS.sm,
+                  borderTopWidth: 1,
+                  borderTopColor: c.line,
                 }}
               >
-                {mid}
-              </Press>
-            ) : (
-              mid
-            )}
-            <Txt v="sm" bold={mine} style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
-              {name(m.awayTeamId)}
-            </Txt>
-          </View>
-        );
-      })}
+                <Txt v="sm" bold={mine} style={{ flex: 1, minWidth: 0 }}>
+                  {name(m.homeTeamId)}
+                </Txt>
+                {open ? (
+                  <Press
+                    onPress={() => onopen(m)}
+                    testID={`league-match-open-${m.id}`}
+                    accessibilityRole="button"
+                    style={{
+                      minHeight: 44,
+                      justifyContent: 'center',
+                      borderWidth: 1,
+                      borderColor: c.line,
+                      borderRadius: RADIUS.sm,
+                    }}
+                  >
+                    {mid}
+                  </Press>
+                ) : (
+                  mid
+                )}
+                <Txt v="sm" bold={mine} style={{ flex: 1, minWidth: 0, textAlign: 'right' }}>
+                  {name(m.awayTeamId)}
+                </Txt>
+              </View>
+            );
+          })}
+        </View>
+      ))}
       {day.resting.map((t) => (
         <Txt key={t.teamId} v="sm" tone="muted">
           {L.restTeam({ team: t.name })}
@@ -719,6 +829,93 @@ function Rounds({
         <Btn block kind="primary" onPress={onlive} testID="league-final-live">
           {L.finalLive}
         </Btn>
+      ) : null}
+      {fixtures ? (
+        <PopSheet
+          label={L.fixtureTitle}
+          testID="league-fixtures"
+          scrollY={nowY}
+          onClose={() => setFixtures(false)}
+        >
+          <Txt v="h3" bold accessibilityRole="header" style={{ marginBottom: 8 }}>
+            {L.fixtureTitle}
+          </Txt>
+          {leagueFixtureRows(table, mineId, thisRound).map((f) => (
+            <Press
+              key={f.round}
+              testID={`league-fixture-${f.round}`}
+              onPress={() => {
+                if (f.mine && !f.mine.rest && f.mine.watch) {
+                  setFixtures(false);
+                  onopen(f.mine.watch);
+                } else pickRound(f.round);
+              }}
+              onLayout={
+                f.state === 'now'
+                  ? (e) => setNowY(Math.max(0, e.nativeEvent.layout.y - 160))
+                  : undefined
+              }
+              style={{
+                minHeight: 56,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                paddingHorizontal: 8,
+                borderTopWidth: 1,
+                borderTopColor: c.line,
+                ...(f.state === 'now'
+                  ? {
+                      backgroundColor: alpha(c.accent, 0.12),
+                      borderLeftWidth: 3,
+                      borderLeftColor: c.accent,
+                    }
+                  : null),
+              }}
+            >
+              <View style={{ minWidth: 96, gap: 2 }}>
+                <Txt v="sm" bold tone={f.round === round ? 'accent' : 'ink'}>
+                  {L.roundName({ n: f.round })}
+                </Txt>
+                <Txt v="xs" tone="muted">
+                  {f.day}
+                </Txt>
+              </View>
+              {f.mine && !f.mine.rest ? (
+                <>
+                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                    <Txt v="sm">{f.mine.opponent}</Txt>
+                    <Txt v="xs" tone="muted">
+                      {f.mine.side}
+                    </Txt>
+                  </View>
+                  <Txt
+                    bold
+                    num
+                    tone={f.mine.result === 'w' ? 'good' : f.mine.result === 'l' ? 'warn' : 'ink'}
+                    style={{ fontFamily: DISPLAY[700] }}
+                  >
+                    {f.mine.mid}
+                  </Txt>
+                </>
+              ) : (
+                <Txt v="xs" tone="muted" style={{ flex: 1, textAlign: 'right' }}>
+                  {f.mine
+                    ? L.fixtureRest
+                    : f.state === 'now'
+                      ? L.fixtureNow
+                      : f.state === 'done'
+                        ? L.fixtureDone
+                        : L.fixtureLater}
+                </Txt>
+              )}
+            </Press>
+          ))}
+          <View style={{ marginTop: 12 }}>
+            <Btn block onPress={() => setFixtures(false)} testID="league-fixtures-close">
+              {L.sheetClose}
+            </Btn>
+          </View>
+        </PopSheet>
       ) : null}
     </Card>
   );
@@ -784,6 +981,7 @@ export function LeagueBoard({
     );
   return (
     <>
+      <MyMatches table={table} mineId={mineId} onopen={(m) => onopen(m, table)} />
       <Standings table={table} bottomTier={bottomTier} mineId={mineId} onteam={onteam} />
       <Rounds
         table={table}

@@ -38,6 +38,37 @@ const kst = (iso: string) => {
 
 /** "11월 5일 13:00"(한국 시간). */
 export const leagueWhen = (iso: string) => C.dayTime(kst(iso));
+/** T-11-640 리그 이름("동백 리그"). 이름표보다 리그가 많아지면 번호로 부른다. */
+export function leagueTitle(p: { tier: number; league: number }): string {
+  const at = 2 ** (p.tier - 1) - 1 + p.league - 1;
+  return L.leagueTitleAt({ at }) || L.leagueName(p);
+}
+/** "3부 천둥 리그". */
+export const leagueFullName = (p: { tier: number; league: number }) =>
+  L.tierTitle({ tier: p.tier, title: leagueTitle(p) });
+
+/** T-11-640 부마다 묶은 리그 이름표(리그 고르기 시트). 앞뒤로 넘기는 순서도 이 순서다. */
+export function leagueTierGroups(tiers: readonly { tier: number; leagues: number }[]) {
+  return tiers.map((t) => ({
+    tier: t.tier,
+    label: L.tierGroup({ tier: t.tier, n: t.leagues }),
+    leagues: Array.from({ length: t.leagues }, (_, i) => {
+      const pick = { tier: t.tier, league: i + 1 };
+      return { ...pick, title: leagueTitle(pick) };
+    }),
+  }));
+}
+
+/** T-11-640 고를 수 있는 리그에서 앞뒤로 한 칸. 끝이면 null. */
+export function leagueStep(
+  choices: readonly { tier: number; league: number }[],
+  pick: { tier: number; league: number },
+  by: -1 | 1,
+) {
+  const at = choices.findIndex((c) => c.tier === pick.tier && c.league === pick.league);
+  return at < 0 ? null : (choices[at + by] ?? null);
+}
+
 /** "11월 5일"(한국 시간). */
 const leagueDate = (iso: string) => L.date(kst(iso));
 /** 접수 마감 표시: closesAt은 마감 다음날 0시라 1분 앞당겨 "23:59"로 보인다. */
@@ -102,6 +133,7 @@ export const leagueRules = () => [
   L.ruleTiers,
   L.rulePoints,
   L.ruleMove,
+  L.ruleKickoff,
   L.ruleLock,
   L.ruleForfeit,
   L.ruleReward,
@@ -195,7 +227,9 @@ export function leaguePlacementLine(
   }
   if (p.status === 'forfeited') return { ok: false, text: L.forfeitedLine };
   const at = { tier: p.tier ?? 1, league: p.league ?? 1 };
-  const base = p.rank ? L.placedLine({ ...at, rank: p.rank }) : L.leagueName(at);
+  const base = p.rank
+    ? L.placedLine({ tier: at.tier, title: leagueTitle(at), rank: p.rank })
+    : leagueFullName(at);
   return { ok: true, text: p.forfeits ? `${base} · ${leagueForfeitsTag(p.forfeits)}` : base };
 }
 
@@ -231,7 +265,11 @@ export function leagueFinalView(me: LeagueMeResponse | null, season: number) {
   return {
     outcome: f.outcome,
     label: outcome,
-    line: L.finalLine({ tier: p.tier ?? 1, league: p.league ?? 1, rank: f.rank }),
+    line: L.finalLine({
+      tier: p.tier ?? 1,
+      title: leagueTitle({ tier: p.tier ?? 1, league: p.league ?? 1 }),
+      rank: f.rank,
+    }),
     reward: reward.length ? reward.join(' · ') : L.rewardNone,
     next: f.nextTier === null ? L.finalNextBottom : L.finalNext({ tier: f.nextTier }),
     title: f.outcome === 'champion' ? L.finalChampionTitle({ season }) : null,
@@ -246,10 +284,6 @@ export const leagueChoices = (data: Pick<LeagueResponse, 'tiers'>): LeaguePick[]
   (data.tiers ?? []).flatMap((t) =>
     Array.from({ length: t.leagues }, (_, i) => ({ tier: t.tier, league: i + 1 })),
   );
-
-/** T-11-640 부를 고르면 그 부의 내 리그, 없으면 1리그를 연다. */
-export const leagueTierPick = (tier: number, mine: LeaguePick | null): LeaguePick =>
-  mine?.tier === tier ? mine : { tier, league: 1 };
 
 /** 처음 보여 줄 리그: 내 리그, 없으면 1부 1리그. 배치 전이면 null. */
 export function leagueDefaultPick(
@@ -540,9 +574,121 @@ export const leagueEnterAsk = (data: LeagueResponse) => ({
 
 /** 라운드 경기 시각 "11월 7일 13:00 한국 시간"(경기가 없으면 null). */
 export const leagueRoundAt = (matches: readonly Pick<LeagueMatch, 'at'>[]) => {
-  const at = matches[0]?.at;
-  return at ? L.roundAt({ when: leagueWhen(at) }) : null;
+  const times = [...new Set(matches.map((m) => m.at))].sort();
+  const at = times[0];
+  if (!at) return null;
+  if (times.length < 2) return L.roundAt({ when: leagueWhen(at) });
+  return L.roundRange({ date: leagueDate(at), from: kst(at).time, to: kst(times.at(-1)!).time });
 };
+
+/** T-11-640 한 라운드의 경기를 시각별로 묶는다(이른 시각부터). */
+export function leagueRoundSlots<M extends Pick<LeagueMatch, 'at'>>(matches: readonly M[]) {
+  const slots = new Map<string, M[]>();
+  for (const m of [...matches].sort((a, b) => a.at.localeCompare(b.at)))
+    slots.set(m.at, [...(slots.get(m.at) ?? []), m]);
+  return [...slots].map(([at, list]) => ({ at, time: kst(at).time, matches: list }));
+}
+
+/** 시각별로 묶은 줄의 가운데: 끝난 경기는 스코어, 아니면 vs. */
+export const leagueSlotMid = (m: LeagueMatch) =>
+  m.played ? `${m.homeGoals ?? 0} : ${m.awayGoals ?? 0}` : 'vs';
+
+/** T-11-640 순위표 위 '내 경기': 내가 뛴 가장 최근 경기와 다음 경기. 내 리그가 아니면 null. */
+export function leagueMyMatches(
+  table: Pick<LeagueTableResponse, 'matches' | 'teams'>,
+  mineId: string | null,
+) {
+  if (!mineId || !table.teams.some((t) => t.teamId === mineId)) return null;
+  const mine = table.matches
+    .filter((m) => m.homeTeamId === mineId || m.awayTeamId === mineId)
+    .sort((a, b) => a.round - b.round);
+  const name = (id: string) => table.teams.find((t) => t.teamId === id)?.name ?? C.tbd;
+  const side = (m: LeagueMatch) => {
+    const home = m.homeTeamId === mineId;
+    const us = (home ? m.homeGoals : m.awayGoals) ?? 0;
+    const them = (home ? m.awayGoals : m.homeGoals) ?? 0;
+    return {
+      match: m,
+      opponent: name(home ? m.awayTeamId : m.homeTeamId),
+      side: home ? L.fixtureHome : L.fixtureAway,
+      score: `${us} : ${them}`,
+      result: us > them ? ('w' as const) : us < them ? ('l' as const) : ('d' as const),
+      when: leagueWhen(m.at),
+      watch: m.played && !m.forfeit,
+    };
+  };
+  const last = mine.filter((m) => m.played).at(-1);
+  const next = mine.find((m) => !m.played);
+  if (!last && !next) return null;
+  return { last: last ? side(last) : null, next: next ? side(next) : null };
+}
+
+export interface LeagueFixtureRow {
+  round: number;
+  day: string;
+  state: 'done' | 'now' | 'later';
+  /** 내 경기(내 리그를 볼 때). 쉬는 라운드면 rest. */
+  mine:
+    | null
+    | { rest: true }
+    | {
+        rest: false;
+        opponent: string;
+        side: string;
+        /** 끝났으면 스코어(내 쪽 먼저), 아니면 경기 시각. */
+        mid: string;
+        /** 눌러서 바로 볼 수 있는 경기(끝났고 기권이 아닌 경기). */
+        watch: LeagueMatch | null;
+        result: 'w' | 'd' | 'l' | null;
+      };
+}
+
+/** T-11-640 시즌 일정 시트의 줄. 순위표 응답에 전 라운드가 있어 더 부르지 않는다. */
+export function leagueFixtureRows(
+  table: Pick<LeagueTableResponse, 'matches' | 'teams'>,
+  mineId: string | null,
+  thisRound: number,
+): LeagueFixtureRow[] {
+  const isMine = !!mineId && table.teams.some((t) => t.teamId === mineId);
+  const name = (id: string) => table.teams.find((t) => t.teamId === id)?.name ?? C.tbd;
+  const byRound = new Map<number, LeagueMatch[]>();
+  for (const m of table.matches) byRound.set(m.round, [...(byRound.get(m.round) ?? []), m]);
+  return [...byRound.keys()]
+    .sort((a, b) => a - b)
+    .map((round) => {
+      const list = byRound.get(round)!;
+      const first = [...list].sort((a, b) => a.at.localeCompare(b.at))[0]!;
+      const wd = L.weekday({ d: new Date(Date.parse(first.at) + KST_MS).getUTCDay() });
+      const day = L.fixtureDay({ date: leagueDate(first.at), wd });
+      const state: LeagueFixtureRow['state'] =
+        round === thisRound ? 'now' : list.every((m) => m.played) ? 'done' : 'later';
+      if (!isMine) return { round, day, state, mine: null };
+      const m = list.find((x) => x.homeTeamId === mineId || x.awayTeamId === mineId);
+      if (!m) return { round, day, state, mine: { rest: true as const } };
+      const home = m.homeTeamId === mineId;
+      const us = (home ? m.homeGoals : m.awayGoals) ?? 0;
+      const them = (home ? m.awayGoals : m.homeGoals) ?? 0;
+      return {
+        round,
+        day,
+        state,
+        mine: {
+          rest: false as const,
+          opponent: name(home ? m.awayTeamId : m.homeTeamId),
+          side: home ? L.fixtureHome : L.fixtureAway,
+          mid: m.played ? `${us} : ${them}` : kst(m.at).time,
+          watch: m.played && !m.forfeit ? m : null,
+          result: !m.played
+            ? null
+            : us > them
+              ? ('w' as const)
+              : us < them
+                ? ('l' as const)
+                : ('d' as const),
+        },
+      };
+    });
+}
 
 /** 지난 시즌 내 결산(다음 시즌 배치 전, 서버가 lastFinal을 실을 때만). */
 export function leagueLastFinalView(me: LeagueMeResponse | null) {
@@ -552,7 +698,7 @@ export function leagueLastFinalView(me: LeagueMeResponse | null) {
     outcome: f.outcome,
     title: L.lastFinalTitle({ season: f.season }),
     label: outcomeLabel(f.outcome),
-    line: L.finalLine({ tier: f.tier, league: f.league, rank: f.rank }),
+    line: L.finalLine({ tier: f.tier, title: leagueTitle(f), rank: f.rank }),
     next: f.nextTier === null ? L.lastFinalNextBottom : L.lastFinalNext({ tier: f.nextTier }),
   };
 }
@@ -573,3 +719,7 @@ export function leagueLegend(tier: number, bottomTier: number) {
 /** 내 줄에 붙이는 자리 이름(승격권 · 강등권). 확정 배지가 있으면 그쪽이 먼저라 null. */
 export const leagueZoneLabel = (zone: 'up' | 'down' | null, clinched: boolean) =>
   clinched || !zone ? null : zone === 'up' ? L.zoneUp : L.zoneDown;
+
+/** T-11-640 리그 우승 트로피 받침대 글자: 구단주 닉네임, 없으면 시즌('S1'). */
+export const leagueHonorPlate = (h: { owner: string | null; season: number }) =>
+  h.owner?.trim() || `S${h.season}`;
