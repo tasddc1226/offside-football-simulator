@@ -40,6 +40,27 @@ export const LEAGUE_PLAN_DEFAULTS = {
   minFilled: 8,
 } as const;
 
+/** T-11-640 라운드 하루의 경기 시각(KST). 첫 시각이 matchHour이고, 리그 안의 경기를 이 시각들에 나눈다. */
+export const LEAGUE_KICKOFF_HOURS = [LEAGUE_PLAN_DEFAULTS.matchHour, 16, 19, 21] as const;
+
+/**
+ * T-11-640 한 경기의 시각. dayAt은 그 라운드의 첫 시각(LeagueDef.rounds)이고, 라운드마다 순서를 돌려 한 팀이 같은 시간에만
+ * 뛰지 않게 한다. 마지막 라운드는 승강이 함께 갈리도록 모두 맨 끝 시각에 연다.
+ */
+export function leagueKickoffAt(
+  dayAt: string,
+  round: number,
+  slot: number,
+  matches: number,
+  last = false,
+): string {
+  const hours = LEAGUE_KICKOFF_HOURS;
+  const hour = last
+    ? hours[hours.length - 1]!
+    : hours[((slot + round - 1) % matches) % hours.length]!;
+  return new Date(Date.parse(dayAt) + (hour - hours[0]) * 3_600_000).toISOString();
+}
+
 export interface LeagueDef {
   /** 서비스 시즌(이 시즌 팀만 참가). 시즌마다 리그 일정 하나. */
   season: number;
@@ -115,7 +136,8 @@ export function leagueSeasonAt(
   return upcoming;
 }
 
-export const leagueFinalAt = (l: LeagueDef) => l.rounds.at(-1)!;
+export const leagueFinalAt = (l: LeagueDef) =>
+  leagueKickoffAt(l.rounds.at(-1)!, l.rounds.length, 0, 1, true);
 
 /** 끝난 리그를 '지난 시즌 리그'로 보여 주는 동안(마지막 라운드 뒤 하루)은 'running'으로 둔다 — 결산이 그 안에 끝난다. */
 export const LEAGUE_AFTERGLOW_MS = DAY_MS;

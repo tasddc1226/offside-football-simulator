@@ -18,8 +18,9 @@ import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
 import { leagueText as L } from '@offside/app-core/i18n/ko/league';
 import {
   leagueCancelled,
-  leagueChoices,
   leagueDefaultPick,
+  rememberLeagueReturn,
+  takeLeagueReturn,
   leagueDefaultRound,
   leagueEnterAsk,
   leagueEntryCard,
@@ -43,12 +44,12 @@ import {
 } from '@offside/app-core/leagueView';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { refreshAccount, toast } from '../../game/host';
+import { hofStart } from '@offside/app-core/state';
 import { go } from '../../game/nav';
-import { startGoogleLogin } from '../../platform/auth';
 import { accountCache, appState } from '../../store';
 import { Btn, Card, Pill, Press, Screen, Skeleton, Topbar, Txt, scrollTo } from '../../ui';
-import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
 import { useOnPull } from '../../ui/refresh';
+import { LoginButtons } from '../owner/LoginButtons';
 import { LeagueBoard, LeagueMatchDetail, LeaguePicker } from './LeagueBoard';
 import { askPushAfter } from '../../platform/pushAsk';
 
@@ -203,10 +204,8 @@ function EntryCard({
     return (
       <Card gap={10} testID="league-login">
         <Txt v="sm">{card.text}</Txt>
-        <GoogleLoginButton
-          testID="league-login-google"
-          onPress={() => void startGoogleLogin({ league: true })}
-        />
+        {/* T-11-640 iOS에서는 Apple 로그인도 함께(컵 화면과 같은 LoginButtons). */}
+        <LoginButtons back={{ league: true }} />
       </Card>
     );
   if (card.kind === 'error' || !me)
@@ -341,6 +340,8 @@ export default function League() {
   const [round, setRound] = useState(1);
   const picked = useRef(false);
   const [detail, setDetail] = useState<{ m: LeagueMatch; table: LeagueTableResponse } | null>(null);
+  // T-11-640 팀 프로필에서 돌아오면 보던 리그 · 라운드를 그대로 연다.
+  const [back] = useState(takeLeagueReturn);
   // 홈을 거치지 않고 들어와도(되돌아가기 등) 로그인 상태를 알아야 내 신청을 묻는다.
   useEffect(() => {
     if (accountCache.value === undefined) void refreshAccount();
@@ -360,12 +361,14 @@ export default function League() {
       setMe(mine);
       setMeFailed(!!b && !b.ok);
       if (!picked.current && a.data.tiers) {
-        setPick(leagueDefaultPick(a.data, mine));
-        setRound(leagueDefaultRound(a.data));
+        const kept = back?.season === a.data.league.season ? back : null;
+        setPick(kept?.pick ?? leagueDefaultPick(a.data, mine));
+        setRound(kept?.round ?? leagueDefaultRound(a.data));
+        if (kept) picked.current = true;
       }
       setStatus('ready');
     },
-    [linked],
+    [linked, back],
   );
   useEffect(() => {
     void reload();
@@ -442,7 +445,7 @@ export default function League() {
           {pick && data.tiers ? (
             <>
               <LeaguePicker
-                choices={leagueChoices(data)}
+                tiers={data.tiers}
                 pick={pick}
                 mine={mine}
                 onpick={(x) => {
@@ -456,10 +459,17 @@ export default function League() {
                 bottomTier={data.tiers.at(-1)?.tier ?? 1}
                 mineId={mineId}
                 round={round}
+                thisRound={leagueDefaultRound(data)}
                 setRound={setRound}
                 onopen={(m, table) => {
                   setDetail({ m, table });
                   scrollTo(0);
+                }}
+                onteam={(teamId) => {
+                  const season = data.league.season;
+                  rememberLeagueReturn({ season, pick: { ...pick }, round });
+                  appState.hof = { ...hofStart(), tab: 'teams', team: teamId, season };
+                  go('hof');
                 }}
               />
             </>

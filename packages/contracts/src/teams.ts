@@ -835,6 +835,17 @@ export const CupHonorSchema = z.strictObject({
 });
 export type CupHonor = z.infer<typeof CupHonorSchema>;
 
+/** T-11-640 리그 우승(리그 1위). 부 · 리그 번호로 이름 · 아이콘 · 트로피를 찾는다. */
+export const LeagueHonorSchema = z.strictObject({
+  season: z.number().int(),
+  tier: z.number().int(),
+  league: z.number().int(),
+  teamName: z.string(),
+  /** 트로피 받침대에 새기는 구단주 닉네임(지금 닉네임, 없으면 null). */
+  owner: z.string().nullable(),
+});
+export type LeagueHonor = z.infer<typeof LeagueHonorSchema>;
+
 /** T-11-290 팀 프로필에 싣는 선발 시너지(contracts team-synergy TeamSynergy와 같은 모양 — 서버가 경기 계산과 같은 입력으로 센다). */
 const SynergyLinesSchema = z.strictObject({
   atk: z.number(),
@@ -889,6 +900,8 @@ export const TeamProfileSchema = z.strictObject({
   badges: z.array(TeamBadgeSchema),
   /** T-11-145 이 팀 구단주의 컵 성적(모든 시즌). 배포 전 응답엔 없다. */
   cupHonors: z.array(CupHonorSchema).optional(),
+  /** T-11-640 이 팀 구단주의 리그 우승(모든 시즌, 최근 시즌부터). 배포 전 응답엔 없다. */
+  leagueHonors: z.array(LeagueHonorSchema).optional(),
   /** T-11-150 이 팀 구단주의 대표 칭호. */
   ownerTitle: titleField,
   /** T-11-167 구단주의 공개 닉네임(업적 랭킹에 보이는 이름, 닉네임 신고 대상). 없으면 null, 배포 전 응답엔 없다. */

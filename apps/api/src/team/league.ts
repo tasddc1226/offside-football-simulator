@@ -12,7 +12,9 @@ import {
   leagueSeedOrder,
   type LeagueDef,
   type LeagueOutcome,
+  leagueKickoffAt,
 } from '@offside/contracts/league';
+import { leagueTitleOf } from '@offside/contracts/league-names';
 import { leagueTitleIdOf, TITLE_STAGES } from '@offside/contracts/owner-title';
 import { and, asc, eq, getTableColumns, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { cupKo } from '../cupText.js';
@@ -234,6 +236,8 @@ export async function leagueLineupLocked(db: Db, profileId: string, season: numb
   return !!row;
 }
 
+const leagueTitleKo = (tier: number, no: number) => leagueTitleOf('ko', tier, no) ?? String(no);
+
 const notify = (
   d1: D1Database,
   profileId: string,
@@ -403,11 +407,22 @@ export async function drawLeague(db: Db, league: LeagueDef, now: string) {
         .map((r) => r.team.id);
       // T-11-540 시즌 마감 전날까지 한 바퀴(14라운드) 일정을 되풀이한다.
       const cycle = leagueFixtures(members);
-      league.rounds.forEach((at, r) =>
-        leagueRoundPairs(cycle, r).forEach(([home, away], slot) =>
-          matches.push([newId('lgm'), t.tier, no, r + 1, slot, home, away, at]),
-        ),
-      );
+      league.rounds.forEach((at, r) => {
+        const pairs = leagueRoundPairs(cycle, r);
+        const last = r === league.rounds.length - 1;
+        pairs.forEach(([home, away], slot) =>
+          matches.push([
+            newId('lgm'),
+            t.tier,
+            no,
+            r + 1,
+            slot,
+            home,
+            away,
+            leagueKickoffAt(at, r + 1, slot, pairs.length, last),
+          ]),
+        );
+      });
     }
   const stmts: D1PreparedStatement[] = [
     d1
@@ -716,7 +731,7 @@ export async function settleLeague(
 
 /** 마지막 라운드 알림 본문: 최종 순위 · 받은 보상 · 다음 시즌 부. */
 function endBody(e: LeagueEntryRow, rank: number) {
-  const where = { tier: e.tier!, league: e.leagueNo!, rank };
+  const where = { tier: e.tier!, title: leagueTitleKo(e.tier!, e.leagueNo!), rank };
   const outcome = e.outcome as LeagueOutcome | null;
   if (!outcome) return cupKo('leagueEndBody', where);
   if (outcome === 'forfeited') return cupKo('leagueEndBodyForfeited', where);
@@ -794,7 +809,7 @@ export async function notifyLeague(
       body = cupKo('leaguePlacedBody', {
         team: e.name ?? '-',
         tier: e.tier!,
-        league: e.leagueNo!,
+        title: leagueTitleKo(e.tier!, e.leagueNo!),
         time: kstHm(league.rounds[0]!),
       });
     } else {
@@ -807,7 +822,11 @@ export async function notifyLeague(
         const final = e.finalRank ?? rank;
         title =
           final === 1
-            ? cupKo('leagueChampionTitle', { season, tier: e.tier!, league: e.leagueNo! })
+            ? cupKo('leagueChampionTitle', {
+                season,
+                tier: e.tier!,
+                title: leagueTitleKo(e.tier!, e.leagueNo!),
+              })
             : cupKo('leagueEndTitle', { season });
         body = endBody(e, final);
       } else {
@@ -878,6 +897,17 @@ export async function runLeague(db: Db, now: string, given?: LeagueDef) {
       .prepare('DELETE FROM league_matches WHERE season = ? AND round > ? AND played_at IS NULL')
       .bind(league.season, league.rounds.length)
       .run();
+    // T-11-640 앞당겨진 마지막 라운드도 모두 같은 시각에 연다.
+    await db.$client
+      .prepare(
+        'UPDATE league_matches SET at = ? WHERE season = ? AND round = ? AND played_at IS NULL',
+      )
+      .bind(
+        leagueKickoffAt(league.rounds.at(-1)!, league.rounds.length, 0, 1, true),
+        league.season,
+        league.rounds.length,
+      )
+      .run();
     return { season: league.season, step: 'trim', rounds: league.rounds.length };
   }
   if (last > 0 && played === last) {
@@ -899,6 +929,32 @@ const markDone = (db: Db, season: number, now: string) =>
     .set({ doneAt: now })
     .where(and(eq(leagueState.season, season), isNull(leagueState.doneAt)))
     .run();
+
+/** T-11-640 리그 우승(리그 1위, 기권 퇴출 제외) 최근 시즌부터. league_entries_profile_idx로 그 구단주 줄만 읽는다. */
+export async function leagueHonorsOf(db: Db, profileId: string) {
+  const rows = await db
+    .select({
+      season: leagueEntries.season,
+      tier: leagueEntries.tier,
+      league: leagueEntries.leagueNo,
+      teamName: leagueEntries.name,
+      outcome: leagueEntries.outcome,
+      owner: profiles.nickname,
+    })
+    .from(leagueEntries)
+    .innerJoin(profiles, eq(profiles.id, leagueEntries.profileId))
+    .where(and(eq(leagueEntries.profileId, profileId), eq(leagueEntries.finalRank, 1)));
+  return rows
+    .filter((r) => r.outcome !== 'forfeited' && r.tier !== null && r.league !== null)
+    .sort((a, b) => b.season - a.season)
+    .map((r) => ({
+      season: r.season,
+      tier: r.tier!,
+      league: r.league!,
+      teamName: r.teamName ?? '',
+      owner: r.owner ?? null,
+    }));
+}
 
 /** T-11-418e 리그 1부 우승 시즌(칭호). league_entries_profile_idx로 그 구단주 줄만 읽는다. */
 export async function leagueChampionSeasons(db: Db, profileId: string) {

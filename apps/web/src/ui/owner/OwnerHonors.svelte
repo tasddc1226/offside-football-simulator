@@ -17,6 +17,7 @@
   import LockerArt from './LockerArt.svelte';
   import HonorEmblem from '../HonorEmblem.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
+  import LeagueHonors from '../league/LeagueHonors.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
 
   // T-11-618 visitTeam이 있으면 그 구단주의 명예관을 읽기 전용으로 — 명패와 트로피장 두 칸만 연다.
@@ -41,7 +42,7 @@
   const notes = $derived([L.roomSeasonsNote, visitTeam ? L.visitOwnerNote : L.roomOwnerNote, L.roomTrophiesNote]);
   const badges = $derived(honorViews(data?.honors ?? []));
   const latestSeason = $derived(Math.max(0, ...(data?.owner.seasons.map((s) => s.season) ?? [])));
-  const awards = $derived(badges.length + (data?.owner.cupHonors.length ?? 0));
+  const awards = $derived(badges.length + (data?.owner.cupHonors.length ?? 0) + (data?.owner.leagueHonors?.length ?? 0));
   async function load() {
     failed = false;
     if (visitTeam) {
@@ -119,6 +120,7 @@
         {:else if !awards}<p class="muted">{visitTeam ? L.visitNoAwards : L.roomEmptyAwards}</p>
         {:else}
           {#if badges.length}<h2>{L.roomBadgeCount} <span>{badges.length}</span></h2><div class="gallery-badges">{#each badges as h (`${h.season}-${h.kind}`)}<div class="gallery-badge medal {h.medal}"><div><HonorEmblem {h} /></div><b>{h.title}</b><small>{teamSeasonLabel(h.season)}</small><p>{h.detail}</p></div>{/each}</div>{/if}
+          <LeagueHonors honors={data.owner.leagueHonors ?? []} />
           {#if data.owner.cupHonors.length}<h2>{L.roomCupCount}</h2><CupHonors honors={data.owner.cupHonors} />{/if}
         {/if}
       </div>

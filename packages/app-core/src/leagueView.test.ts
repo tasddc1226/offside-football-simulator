@@ -4,6 +4,11 @@ import type { LeagueMeResponse, LeagueResponse } from './api/league.js';
 import type { LeagueMatch, LeagueStanding, LeagueTableResponse } from './api/league.js';
 import {
   leagueChoices,
+  leagueFixtureRows,
+  leagueMyMatches,
+  leagueRoundSlots,
+  leagueTierGroups,
+  leagueTitle,
   leagueClinches,
   leagueFinalReady,
   leagueLive,
@@ -37,13 +42,65 @@ const plan = planLeague(2, '2026-10-30T15:00:00.000Z', '2026-12-04T15:00:00.000Z
 const league = { ...plan, rounds: [...plan.rounds] };
 const data = (phase: LeagueResponse['phase']): LeagueResponse => ({ league, phase, entries: 12 });
 
+describe('리그 이름 · 일정', () => {
+  it('부 · 번호마다 이름이 하나씩이고 넘치면 번호로 부른다', () => {
+    const groups = leagueTierGroups([
+      { tier: 1, leagues: 1 },
+      { tier: 2, leagues: 2 },
+      { tier: 6, leagues: 2 },
+    ]);
+    const titles = groups.flatMap((g) => g.leagues.map((l) => l.title));
+    expect(new Set(titles).size).toBe(5);
+    expect(leagueTitle({ tier: 9, league: 1 })).toContain('9');
+  });
+
+  const at = (h: number) => `2026-11-06T${String(h).padStart(2, '0')}:00:00.000Z`;
+  const match = (id: string, h: number, home: string, away: string, goals?: [number, number]) =>
+    ({
+      id,
+      round: 2,
+      slot: 0,
+      at: at(h),
+      homeTeamId: home,
+      awayTeamId: away,
+      played: !!goals,
+      homeGoals: goals?.[0] ?? null,
+      awayGoals: goals?.[1] ?? null,
+      forfeit: 0,
+    }) as never;
+
+  it('경기를 이른 시각부터 묶는다', () => {
+    const slots = leagueRoundSlots([match('b', 7, 'c', 'd'), match('a', 4, 'a', 'b')] as never);
+    expect(slots.map((s) => s.time)).toEqual(['13:00', '16:00']);
+  });
+
+  it('내 경기를 내 쪽 스코어부터 보여 준다', () => {
+    const table = {
+      teams: [
+        { teamId: 'a', name: '가' },
+        { teamId: 'b', name: '나' },
+      ],
+      matches: [match('a', 4, 'b', 'a', [0, 2])],
+    } as never;
+    const [row] = leagueFixtureRows(table, 'a', 3);
+    expect(row).toMatchObject({ round: 2, state: 'done' });
+    expect(row!.mine).toMatchObject({ opponent: '나', mid: '2 : 0', result: 'w' });
+    expect(leagueFixtureRows(table, 'zz', 3)[0]!.mine).toBeNull();
+    expect(row!.mine).toMatchObject({ watch: { id: 'a' } });
+    const my = leagueMyMatches(table, 'a')!;
+    expect(my.last).toMatchObject({ opponent: '나', score: '2 : 0', result: 'w', watch: true });
+    expect(my.next).toBeNull();
+    expect(leagueMyMatches(table, 'zz')).toBeNull();
+  });
+});
+
 describe('leagueView (T-11-418)', () => {
   it('일정은 한국 시간으로 신청 · 배치 · 라운드를 보인다', () => {
     expect(leagueSchedule(league).map((r) => r.text)).toEqual([
       '10월 24일 00:00 ~ 11월 4일 23:59',
       '10월 31일 00:00',
       '11월 5일 09:00',
-      '11월 5일 ~ 12월 4일, 매일 13:00',
+      '11월 5일 ~ 12월 4일, 매일 13:00부터',
     ]);
   });
   it('단계마다 배너 한 줄', () => {
@@ -152,8 +209,8 @@ describe('leagueView (T-11-418)', () => {
       team: null,
       placement: { status: 'placed' as const, tier: 2, league: 1, teamId: 't', rank: 3, forfeits },
     });
-    expect(leaguePlacementLine(placed(0))?.text).toBe('2부 1리그 · 지금 3위');
-    expect(leaguePlacementLine(placed(2))?.text).toBe('2부 1리그 · 지금 3위 · 기권 2/3');
+    expect(leaguePlacementLine(placed(0))?.text).toBe('2부 솔라리스 리그 · 지금 3위');
+    expect(leaguePlacementLine(placed(2))?.text).toBe('2부 솔라리스 리그 · 지금 3위 · 기권 2/3');
     expect(leagueForfeitsTag(1)).toBe('기권 1/3');
   });
 
@@ -175,7 +232,7 @@ describe('leagueView (T-11-418)', () => {
     expect(leaguePlacementLine(me(null))).toBeNull();
     expect(
       leaguePlacementLine(me({ status: 'placed', tier: 2, league: 1, teamId: 't', rank: 3 })),
-    ).toEqual({ ok: true, text: '2부 1리그 · 지금 3위' });
+    ).toEqual({ ok: true, text: '2부 솔라리스 리그 · 지금 3위' });
     expect(
       leaguePlacementLine(
         me({ status: 'dropped', tier: null, league: null, teamId: null, rank: null }),
@@ -378,7 +435,7 @@ describe('leagueView (T-11-418)', () => {
     ).toEqual({
       outcome: 'promoted',
       label: '승격',
-      line: '2부 3리그 최종 1위',
+      line: '2부 오리온 리그 최종 1위',
       reward: '리롤권 9장 · 프리미엄 스카우트권 1장 · 잠재력 강화권 1장',
       next: '다음 시즌에 신청하면 1부에서 시작해요.',
       title: null,
@@ -495,7 +552,7 @@ describe('leagueView (T-11-444)', () => {
       outcome: 'promoted',
       title: '시즌 2 결산',
       label: '승격',
-      line: '2부 1리그 최종 1위',
+      line: '2부 솔라리스 리그 최종 1위',
       next: '이번 시즌에 신청하면 1부에서 시작해요.',
     });
     expect(

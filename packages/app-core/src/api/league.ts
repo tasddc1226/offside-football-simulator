@@ -8,6 +8,7 @@ import type {
 import { apiFetch, cachedGet } from './client.js';
 
 export type {
+  LeagueHonor,
   LeagueMatch,
   LeagueMatchResponse,
   LeagueMeResponse,

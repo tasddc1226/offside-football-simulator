@@ -36,6 +36,7 @@ import { shellMoreText } from '@offside/app-core/i18n/ko/shellMore';
 import { useColors } from '../../theme/useColors';
 import { HonorEmblem } from '../../components/HonorEmblem';
 import { CupHonors } from '../../components/CupHonors';
+import { LeagueHonors } from '../../components/LeagueHonors';
 import { OwnerHall } from './OwnerHall';
 import { OwnerHallVisit } from './OwnerHallVisit';
 import { OwnerArchive } from './OwnerArchive';
@@ -172,7 +173,8 @@ function HonorsRoom({ visitTeam }: { visitTeam: string | null }) {
   const wallHeight = Math.max(220, Math.min(windowHeight * 0.37, 370));
   const wallWidth = Math.min(width * 0.82, (wallHeight * 240) / 290);
   const badges = honorViews(data?.honors ?? []);
-  const awards = badges.length + (data?.owner.cupHonors.length ?? 0);
+  const awards =
+    badges.length + (data?.owner.cupHonors.length ?? 0) + (data?.owner.leagueHonors?.length ?? 0);
   const load = useCallback(async () => {
     setFailed(false);
     if (visitTeam) {
@@ -466,6 +468,7 @@ function HonorsRoom({ visitTeam }: { visitTeam: string | null }) {
                       </View>
                     </>
                   ) : null}
+                  <LeagueHonors honors={data.owner.leagueHonors ?? []} />
                   {data.owner.cupHonors.length ? (
                     <>
                       <Txt v="h2" accessibilityRole="header">

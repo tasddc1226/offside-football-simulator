@@ -12,11 +12,18 @@ import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/ser
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cupKo, cupText } from '../cupText.js';
-import { balanceVersions, cards, careers, leagueEntries, ownerTeams } from '../db/schema.js';
+import {
+  balanceVersions,
+  cards,
+  careers,
+  leagueEntries,
+  ownerTeams,
+  profiles,
+} from '../db/schema.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, callJson, issueAdminCookie, issueGoogleCookie } from '../test/http.js';
-import { runLeague } from './league.js';
+import { leagueHonorsOf, runLeague } from './league.js';
 
 // T-11-418b 오프사이드 리그 2차: 배치 · 경기 · 기권 · 알림 · 명단 잠금 · 순위표 API.
 
@@ -26,6 +33,8 @@ const S3 = '2026-11-18T15:00:00.000Z';
 const L = planLeague(2, S2, S3);
 const OPEN = '2026-11-01T03:00:00.000Z';
 const at = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOString();
+/** 라운드 첫 경기(13시)에서 마지막 경기(21시)까지. */
+const DAY_END = 8 * 3_600_000;
 let seq = 0;
 
 const MeRes = successEnvelope(LeagueMeResponseSchema);
@@ -169,7 +178,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     // 배치 결과 알림(다음 cron).
     expect(await run(at(L.drawAt, 300_000))).toMatchObject({ step: 'notify', n: 17 });
     expect((await notices(strong[0]!.profileId)).at(-1)?.body).toMatch(
-      /^리그팀\d+ 팀은 1부 1리그예요\. 1라운드는 오늘 13:00에 열려요\.$/,
+      /^리그팀\d+ 팀은 1부 임페리움 리그예요\. 1라운드는 오늘 13:00부터 열려요\.$/,
     );
     expect((await notices(short.profileId)).at(-1)?.title).toBe(
       '시즌 2 오프사이드 리그 참가가 취소됐어요',
@@ -201,8 +210,8 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
       '배치 시각에 시즌 2 팀 선발 선수가 8명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
     );
 
-    // 1라운드 1시간 전부터 명단이 잠긴다.
-    vi.setSystemTime(new Date(at(L.rounds[0]!, -30 * 60_000)));
+    // 내 경기 1시간 전부터 명단이 잠긴다(1라운드 마지막 경기 30분 전이면 모두 잠겨 있다).
+    vi.setSystemTime(new Date(at(L.rounds[0]!, DAY_END - 30 * 60_000)));
     const locked = await call('PUT', '/v1/owner-team', {
       cookie: strong[1]!.cookie,
       body: strong[1]!.body,
@@ -212,9 +221,15 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
       (ErrorEnvelopeSchema.parse(await locked.json()).error.details as { reason: string }).reason,
     ).toBe('LEAGUE_LINEUP_LOCKED');
 
-    // 1라운드: 경기(1부 4 + 2부 3) → 알림.
-    expect(await run(L.rounds[0]!)).toEqual({ season: 2, step: 'play', n: 7 });
-    expect(await run(at(L.rounds[0]!, 300_000))).toMatchObject({
+    // 1라운드: 경기(1부 4 + 2부 3)를 네 시각에 나눠 치른 뒤 → 알림.
+    for (const [h, n] of [
+      [0, 2],
+      [3, 2],
+      [6, 2],
+      [8, 1],
+    ] as const)
+      expect(await run(at(L.rounds[0]!, h * 3_600_000))).toEqual({ season: 2, step: 'play', n });
+    expect(await run(at(L.rounds[0]!, DAY_END + 300_000))).toMatchObject({
       step: 'notify',
       n: 15,
       played: 1,
@@ -254,7 +269,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     expect((await call('GET', '/v1/leagues/2/tables/3/1')).status).toBe(404);
 
     // 나머지 라운드를 끝까지.
-    await drain(at(L.rounds.at(-1)!, 3600_000));
+    await drain(at(L.rounds.at(-1)!, DAY_END + 3600_000));
     // T-11-418e 결산: 최종 순위 · 결과 · 보상(한 번만), 1부 우승 칭호, 마지막 알림에 보상과 다음 시즌 부.
     const settled = await ctx.db.select().from(leagueEntries);
     const placed = settled.filter((r) => r.tier !== null);
@@ -285,21 +300,21 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
       .first<{ title: string | null }>();
     expect(title?.title).toBe('league-2-champion');
     const end = (await notices(champ)).at(-1)!;
-    expect(end.title).toBe('시즌 2 오프사이드 리그 1부 1리그 우승!');
+    expect(end.title).toBe('시즌 2 오프사이드 리그 1부 임페리움 리그 우승!');
     expect(end.body).toBe(
       '1부 우승! 시즌 2 리그 챔피언 칭호와 선수 후보 리롤권 17장, 프리미엄 스카우트권 3장, 잠재력 강화권 3장을 받았어요.',
     );
     expect((await notices(at1(1, 8).profileId)).at(-1)!.body).toBe(
-      '1부 1리그 최종 8위예요. 선수 후보 리롤권 2장을 받았어요. 다음 시즌에 신청하면 2부에서 시작해요.',
+      '1부 임페리움 리그 최종 8위예요. 선수 후보 리롤권 2장을 받았어요. 다음 시즌에 신청하면 2부에서 시작해요.',
     );
     expect((await notices(at1(2, 1).profileId)).at(-1)!.body).toBe(
-      '2부 1리그 최종 1위예요. 선수 후보 리롤권 9장, 프리미엄 스카우트권 1장, 잠재력 강화권 1장을 받았어요. 다음 시즌에 신청하면 1부에서 시작해요.',
+      '2부 솔라리스 리그 최종 1위예요. 선수 후보 리롤권 9장, 프리미엄 스카우트권 1장, 잠재력 강화권 1장을 받았어요. 다음 시즌에 신청하면 1부에서 시작해요.',
     );
     // 다시 돌려도 보상은 한 번.
-    expect(await drain(at(L.rounds.at(-1)!, 7200_000))).toEqual([]);
+    expect(await drain(at(L.rounds.at(-1)!, DAY_END + 7200_000))).toEqual([]);
     expect((await items(champ)).reroll).toBe(17);
     const champCookie = [...strong, ...weak].find((x) => x.profileId === champ)!.cookie;
-    vi.setSystemTime(new Date(at(L.rounds.at(-1)!, 7200_000)));
+    vi.setSystemTime(new Date(at(L.rounds.at(-1)!, DAY_END + 7200_000)));
     expect((await me(champCookie)).placement).toMatchObject({
       rank: 1,
       final: { rank: 1, outcome: 'champion', rerolls: 17, scouts: 3, boosts: 3, nextTier: 1 },
@@ -361,7 +376,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     const gone = teams[0]!;
     await ctx.db.delete(ownerTeams).where(eqProfile(gone.profileId));
     // 3라운드까지 한 라운드씩 치른다(라운드마다 알림).
-    for (const r of [0, 1, 2]) await drain(L.rounds[r]!);
+    for (const r of [0, 1, 2]) await drain(at(L.rounds[r]!, DAY_END));
     const [e] = await ctx.db.select().from(leagueEntries).where(eqEntry(gone.profileId));
     expect(e).toMatchObject({ status: 'forfeited', forfeits: 3 });
     // T-11-430 1 · 2번째 기권패 알림에 쌓인 기권 수와 남은 횟수를 싣는다.
@@ -375,7 +390,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     expect((await notices(gone.profileId)).map((n) => n.title)).toContain(
       '오프사이드 리그 남은 경기가 기권패로 처리돼요',
     );
-    await drain(at(L.rounds.at(-1)!, 60_000));
+    await drain(at(L.rounds.at(-1)!, DAY_END + 60_000));
     const table = TableRes.parse(await (await call('GET', '/v1/leagues/2/tables/1/1')).json()).data;
     const row = table.standings.find((s) => s.teamId === e!.teamId)!;
     expect(row).toMatchObject({
@@ -406,13 +421,13 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     });
     await run(L.drawAt);
     await drain(at(L.drawAt, 60_000));
-    for (const r of [0, 1, 2]) await drain(L.rounds[r]!);
+    for (const r of [0, 1, 2]) await drain(at(L.rounds[r]!, DAY_END));
     const row = await ctx.env.DB.prepare(
       'SELECT detail_json AS d FROM league_matches WHERE round = 3 AND played_at IS NOT NULL LIMIT 1',
     ).first<{ d: string }>();
     const detail = JSON.parse(row!.d) as { home: { xi?: Record<string, unknown> } };
     expect(Object.keys(detail.home.xi ?? {})).toHaveLength(8);
-    vi.setSystemTime(new Date(at(L.rounds[2]!, 600_000)));
+    vi.setSystemTime(new Date(at(L.rounds[2]!, DAY_END + 600_000)));
     const res = (await (
       await call('GET', '/v1/owner-team', { cookie: teams[0]!.cookie })
     ).json()) as { data: { fatigue?: { rate: number; streaks: Record<string, number> } } };
@@ -436,7 +451,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
       .update(cards)
       .set({ ownerId: teams[1]!.profileId })
       .where(eq(cards.careerId, card!.careerId));
-    await drain(L.rounds[0]!);
+    await drain(at(L.rounds[0]!, DAY_END));
     const [e] = await ctx.db.select().from(leagueEntries).where(eqEntry(sold.profileId));
     expect(e).toMatchObject({ status: 'active', forfeits: 1 });
     const m = await ctx.env.DB.prepare(
@@ -587,6 +602,51 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
 
 const eqProfile = (p: string) => eq(ownerTeams.profileId, p);
 const eqEntry = (p: string) => eq(leagueEntries.profileId, p);
+
+describe('T-11-640 리그 우승 기록', () => {
+  let ctx: TestD1;
+  beforeEach(async () => {
+    ctx = await createTestD1();
+  });
+  afterEach(() => ctx.dispose());
+
+  it('1위만 최근 시즌부터 돌려주고, 기권 퇴출과 다른 구단주 줄은 뺀다', async () => {
+    const now = '2026-11-20T00:00:00.000Z';
+    for (const id of ['p1', 'p2'])
+      await ctx.db.insert(profiles).values({
+        id,
+        nickname: id === 'p1' ? '구단주' : null,
+        settingsJson: '{}',
+        lastSeenAt: now,
+        createdAt: now,
+      });
+    const row = (season: number, profileId: string, finalRank: number, outcome: string) => ({
+      season,
+      profileId,
+      tier: 4,
+      leagueNo: 3,
+      name: `S${season}팀`,
+      finalRank,
+      outcome,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await ctx.db
+      .insert(leagueEntries)
+      .values([
+        row(1, 'p1', 1, 'promoted'),
+        row(2, 'p1', 1, 'champion'),
+        row(3, 'p1', 1, 'forfeited'),
+        row(4, 'p1', 2, 'stayed'),
+        row(2, 'p2', 1, 'promoted'),
+      ]);
+    expect(await leagueHonorsOf(ctx.db, 'p1')).toEqual([
+      { season: 2, tier: 4, league: 3, teamName: 'S2팀', owner: '구단주' },
+      { season: 1, tier: 4, league: 3, teamName: 'S1팀', owner: '구단주' },
+    ]);
+    expect((await leagueHonorsOf(ctx.db, 'p2'))[0]?.owner).toBeNull();
+  });
+});
 
 describe('T-11-430 리그 알림 문구', () => {
   it('기권패 알림 · 빠진 이유 알림을 영어 · 일본어로 옮긴다(라운드 결과 문구와 섞이지 않는다)', () => {
