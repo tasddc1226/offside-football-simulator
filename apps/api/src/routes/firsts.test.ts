@@ -51,6 +51,10 @@ const read = async (ctx: TestD1, query = '') => {
   expect(res.headers.get('Cache-Control')).toContain('public');
   return successEnvelope(FirstsResponseSchema).parse(await res.json()).data;
 };
+/** T-11-644 조회는 다시 훑지 않는다 — cron(runFirstsRescan)이 하는 일을 테스트에서 끝까지 돌린다. */
+const rescan = async (ctx: TestD1) => {
+  while (await ensureFirstsBackfilled(ctx.db));
+};
 const achieved = (data: Awaited<ReturnType<typeof read>>) =>
   data.items.filter((x) => x.holder).length;
 const holderOf = (data: Awaited<ReturnType<typeof read>>, id: string) =>
@@ -137,10 +141,11 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     expect((await deleteProfile(ctx.env, cookie, 'idem-firsts-del')).status).toBe(204);
 
     await putJson(ctx, late, `/v1/careers/${C}/seasons/2030`, seasonBody({ goals: 31 }));
+    await rescan(ctx);
     expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(B);
   });
 
-  it('배포 전 기록은 첫 조회 때 한 번 소급하고, 업로드 순서와 상관없이 더 이른 시각이 이긴다', async () => {
+  it('배포 전 기록은 다시 훑기가 한 번 소급하고, 업로드 순서와 상관없이 더 이른 시각이 이긴다', async () => {
     await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 35 }));
     await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 35 }));
     // 규칙 도입 전 상태로 되돌리고, B의 시즌이 먼저 올라온 것으로 바꾼다.
@@ -152,13 +157,15 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
       )
       .bind(B)
       .run();
+    await rescan(ctx);
     const data = await read(ctx);
     expect(holderOf(data, 'sgoals30')?.careerId).toBe(B);
     expect(data.items.find((x) => x.id === 'sgoals30')?.achievedAt).toBe(
       '2026-01-01T00:00:00.000Z',
     );
-    // 두 번째 조회는 버전이 같아 다시 훑지 않는다.
+    // 끝난 뒤에는 버전이 같아 다시 훑지 않는다.
     await db.prepare('DELETE FROM server_firsts').run();
+    await rescan(ctx);
     expect(achieved(await read(ctx))).toBe(0);
   });
 
@@ -182,6 +189,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 50 }));
     await putJson(ctx, other, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 40 }));
     expect((await deleteProfile(ctx.env, cookie, 'idem-records-del')).status).toBe(204);
+    await rescan(ctx);
     const r = (await read(ctx)).records.find((x) => x.id === 'sgoals');
     expect(r).toMatchObject({ value: 40, holder: { careerId: B } });
   });
@@ -231,6 +239,17 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     expect(await runFirstsRescan(ctx.db, 20_000)).toBeGreaterThan(0);
   });
 
+  it('T-11-644: 목록 조회는 다시 훑기를 돕지 않는다(피크에도 cron만 훑는다)', async () => {
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 31 }));
+    const db = ctx.env.DB;
+    await db.prepare("DELETE FROM app_meta WHERE key LIKE 'server_firsts_%'").run();
+    await read(ctx);
+    const meta = await db
+      .prepare("SELECT key FROM app_meta WHERE key LIKE 'server_firsts_%'")
+      .all<{ key: string }>();
+    expect(meta.results).toEqual([]);
+  });
+
   it('T-11-029: 시즌마다 따로 겨룬다 — 시즌 1 선수도 같은 기록의 최초가 되고, 서버 기록도 시즌별이다', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z')); // 프리시즌
@@ -274,7 +293,7 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     await db.prepare('DELETE FROM server_firsts').run();
     await db.prepare('DELETE FROM server_records').run();
     await db.prepare("DELETE FROM app_meta WHERE key LIKE 'server_firsts_%'").run();
-    // 첫 조회가 한 조각(전체)을 판정한다.
+    await rescan(ctx);
     expect(holderOf(await read(ctx, '?season=1'), 'sgoals30')?.careerId).toBe(B);
     expect(holderOf(await read(ctx, '?season=0'), 'sgoals30')?.careerId).toBe(A);
   });

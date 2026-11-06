@@ -652,12 +652,10 @@ export async function listPublicHof(
     pos && eq(careers.pos, pos),
     dpos && eq(careers.dpos, dpos),
   );
-  const where = q
-    ? and(
-        ranked,
-        sql`${careers.publicName} like ${`%${q.replace(/[\\%_]/g, '\\$&')}%`} escape '\\'`,
-      )
-    : ranked;
+  const nameLike = q
+    ? sql`${careers.publicName} like ${`%${q.replace(/[\\%_]/g, '\\$&')}%`} escape '\\'`
+    : undefined;
+  const where = q ? and(ranked, nameLike) : ranked;
   // Do not repeat legend_score for score sorting: SQLite otherwise sorts the duplicate suffix.
   const order =
     sort === 'score'
@@ -669,12 +667,35 @@ export async function listPublicHof(
         ? sql`${careers} INDEXED BY careers_hof_season_score_order_idx`
         : sql`${careers} INDEXED BY careers_hof_score_order_idx`
       : careers;
+  // T-11-644 score가 아닌 순위의 이름 검색은 넓은 커리어 행을 18만 개 훑어 쿼리 하나가 7~9초씩 D1을 붙잡았다.
+  // 공개 이름이 든 덮개 인덱스에서 이름이 맞는 선수만 먼저 고르고(hof_hit), 그 선수들만 커리어 행을 읽는다.
+  // CROSS JOIN은 SQLite에서 왼쪽을 바깥 루프로 고정한다(플래너가 기록 인덱스로 전체를 훑지 않게).
+  const hitSource =
+    q && sort !== 'score'
+      ? sql`(${db
+          .select({ id: sql<string>`${careers.id}`.as('hof_hit_id') })
+          .from(
+            season
+              ? sql`${careers} INDEXED BY careers_hof_season_score_order_idx`
+              : sql`${careers} INDEXED BY careers_hof_score_order_idx`,
+          )
+          .where(
+            and(
+              isPublicRetired,
+              season && inSeason(season),
+              pos && eq(careers.pos, pos),
+              dpos && eq(careers.dpos, dpos),
+              nameLike,
+            ),
+          )}) as "hof_hit" cross join ${careers} on ${careers.id} = "hof_hit"."hof_hit_id"`
+      : undefined;
+  const byIdPage = sort === 'score' || hitSource !== undefined;
   // Primary-anchored read sessions send later reads to a caught-up replica.
   // Await the page before count so its bookmark is established first.
   // For score sorting, filter/page on the covering index before fetching display columns.
   const pageIds = db
     .select({ id: sql<string>`${careers.id}`.as('hof_career_id') })
-    .from(rankSource)
+    .from(hitSource ?? rankSource)
     .where(where)
     .orderBy(...order)
     .limit(limit)
@@ -690,7 +711,7 @@ export async function listPublicHof(
       .leftJoin(profiles, withRaiserProfile)
       .leftJoin(ownerTeams, withRaiserTeam)
       .$dynamic();
-    return sort === 'score'
+    return byIdPage
       ? query.innerJoin(pageIds, eq(careers.id, sql`"hof_page"."hof_career_id"`)).orderBy(...order)
       : query
           .where(where)
@@ -704,7 +725,7 @@ export async function listPublicHof(
         .select({ n: sql<number>`count(*)` })
         .from(
           q
-            ? rankSource
+            ? (hitSource ?? rankSource)
             : dpos
               ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
               : sql`${careers} INDEXED BY careers_hof_count_idx`,
@@ -716,24 +737,37 @@ export async function listPublicHof(
   const entries = rows.map(toPublicEntry);
   if (q && entries.length) {
     // 찾은 선수(최대 limit명)만 전체 순위에서 몇 위인지 — id·순번만 읽는 창 함수 한 번.
+    // T-11-644 score가 아닌 순위는 기록 칸이 모두 든 careers_hof_count_idx로 센다(id가 없어 rowid로 맞춘다).
+    // 그 인덱스에 없는 세부 포지션(dpos)은 careers_hof_dpos_idx로 그 포지션 행만 찾아 읽는다
+    // (고정하지 않으면 기록 인덱스로 은퇴 선수 전체의 커리어 행을 읽는다).
+    // id 목록은 JSON 한 개로 넘긴다(limit 100명 + 필터 값이 D1 변수 100개 한도를 넘지 않게).
+    const ids = sql`(select value from json_each(${JSON.stringify(entries.map((e) => e.id))}))`;
+    const byRowid = sort !== 'score' && !dpos;
     const all = db
       .select({
-        id: sql<string>`${careers.id}`.as('id'),
+        id: (byRowid ? sql<string>`rowid` : sql<string>`${careers.id}`).as('hof_rank_id'),
         rk: sql<number>`row_number() over (order by ${sql.join([...order], sql`, `)})`.as('rk'),
       })
-      .from(rankSource)
+      .from(
+        byRowid
+          ? sql`${careers} INDEXED BY careers_hof_count_idx`
+          : dpos && sort !== 'score'
+            ? sql`${careers} INDEXED BY careers_hof_dpos_idx`
+            : rankSource,
+      )
       .where(ranked)
       .as('ranked');
     const ranks = await retryTransientRead(async () =>
-      db
-        .select({ id: all.id, rk: all.rk })
-        .from(all)
-        .where(
-          inArray(
-            all.id,
-            entries.map((e) => e.id),
-          ),
-        ),
+      byRowid
+        ? db
+            .select({ id: careers.id, rk: all.rk })
+            .from(all)
+            .innerJoin(careers, sql`${careers}.rowid = ${all.id}`)
+            .where(sql`${all.id} in (select rowid from ${careers} where ${careers.id} in ${ids})`)
+        : db
+            .select({ id: all.id, rk: all.rk })
+            .from(all)
+            .where(sql`${all.id} in ${ids}`),
     );
     const at = new Map(ranks.map((r) => [r.id, Number(r.rk)]));
     for (const e of entries) e.rank = at.get(e.id);
