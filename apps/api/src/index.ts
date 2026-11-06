@@ -14,7 +14,7 @@ import { runScheduledBalance } from './cron/balanceSchedule.js';
 import { loadSeasonSchedule } from './seasonSchedule.js';
 import { runInfraHealth } from './cron/infraHealth.js';
 import { createDb } from './db/client.js';
-import { runFirstsRescan } from './db/repos/firsts.js';
+import { firstsRescanBudgetMs, runFirstsRescan } from './db/repos/firsts.js';
 import type { Bindings } from './env.js';
 import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
@@ -199,9 +199,13 @@ export default {
       // T-11-274 D1 → R2 백업을 5분마다 한 조각씩. UTC 19:00(KST 04:00) 뒤 첫 틱에 시작해 끝까지 이어받는다.
       // 15분 상한 안에 들게 한 조각은 45초만 읽고, 실패하면 다음 틱이 같은 조각을 다시 만든다.
       // Keep backup reads away from the hourly archive/reminder burst.
+      let backupRan = false;
       if (env.BACKUP && new Date(controller.scheduledTime).getUTCMinutes() !== 0)
         await runBackupStep(env.DB, env.BACKUP, env.ENVIRONMENT, controller.scheduledTime)
-          .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'backup', ...r })))
+          .then((r) => {
+            backupRan = !!r;
+            if (r) console.log(JSON.stringify({ level: 'info', job: 'backup', ...r }));
+          })
           .catch(logged('backup'));
       // T-11-467 이 기능 전에 은퇴한 선수의 주 리그 · 클럽을 조금씩 채운다(다 채우면 멈춘다).
       await runMainClubBackfill(env.DB)
@@ -221,8 +225,11 @@ export default {
         logged('infra-health'),
       );
       // T-11-156 서버 최초 기록 전체 재계산을 몰아서 훑는다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
-      // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다.
-      await runFirstsRescan(createDb(env.DB))
+      // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다. 피크와 백업 조각을 읽은 틱에는 쉰다(T-11-643).
+      await runFirstsRescan(
+        createDb(env.DB),
+        firstsRescanBudgetMs(controller.scheduledTime, backupRan),
+      )
         .then(
           (n) =>
             n && console.log(JSON.stringify({ level: 'info', job: 'firsts-rescan', chunks: n })),
