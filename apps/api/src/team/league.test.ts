@@ -210,6 +210,23 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
       '배치 시각에 시즌 2 팀 선발 선수가 8명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
     );
 
+    // T-11-644 잠금 1시간 전(경기 2시간 전)부터 그 시각 경기에 나가는 팀에만 한 번 알린다(13:00 경기 2개 = 4팀).
+    expect(await run(at(L.rounds[0]!, -3 * 3_600_000))).toBeNull();
+    expect(await run(at(L.rounds[0]!, -115 * 60_000))).toEqual({
+      season: 2,
+      step: 'lineup',
+      n: 4,
+    });
+    expect(await run(at(L.rounds[0]!, -110 * 60_000))).toBeNull();
+    const { results: lineup } = await ctx.env.DB.prepare(
+      "SELECT title, body FROM notifications WHERE source_key = 'league:2:lineup:r1'",
+    ).all<{ title: string; body: string }>();
+    expect(lineup).toHaveLength(4);
+    expect(lineup[0]).toEqual({
+      title: '리그 명단이 1시간 뒤 잠겨요',
+      body: '1라운드 경기가 13:00에 열려요. 12:00부터 명단이 잠기는데 선발이 8/11명이라 빈 자리는 유스 선수가 뛰어요.',
+    });
+
     // 내 경기 1시간 전부터 명단이 잠긴다(1라운드 마지막 경기 30분 전이면 모두 잠겨 있다).
     vi.setSystemTime(new Date(at(L.rounds[0]!, DAY_END - 30 * 60_000)));
     const locked = await call('PUT', '/v1/owner-team', {
@@ -665,5 +682,23 @@ describe('T-11-430 리그 알림 문구', () => {
     expect(cupText(cupKo('leagueDroppedBody', { season: 2, n: 8 }), 'ja')).toContain(
       '次のシーズンにまた申し込めます',
     );
+  });
+
+  it('T-11-644 명단 잠금 안내를 영어 · 일본어로 옮긴다(선발이 찬 팀 · 빈 자리가 있는 팀)', () => {
+    const full = cupKo('leagueLineupBody', { round: 3, time: '16:00', lock: '15:00' });
+    expect(full).toBe(
+      '3라운드 경기가 16:00에 열려요. 15:00부터 경기가 끝날 때까지 선발 명단을 바꿀 수 없으니 지금 확인해 주세요.',
+    );
+    expect(cupText(full, 'en')).toBe(
+      "Your Round 3 match starts at 16:00. You can't change your starting XI from 15:00 until it ends, so check it now.",
+    );
+    const short = cupKo('leagueLineupShortBody', {
+      round: 3,
+      time: '16:00',
+      lock: '15:00',
+      filled: 10,
+    });
+    expect(cupText(short, 'ja')).toContain('スタメンが10/11人');
+    expect(cupText(cupKo('leagueLineupTitle'), 'en')).toBe('Your league lineup locks in 1 hour');
   });
 });
