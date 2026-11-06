@@ -603,8 +603,9 @@ export function friendlyTeamOf(row: OwnerTeamRow): OwnerTeamRow {
  */
 export const foundersOf = (db: Db, profileIds: readonly string[]) =>
   db
-    .selectDistinct({ profileId: careers.profileId })
-    .from(careers)
+    .selectDistinct({ profileId: sql<string>`${careers.profileId}`.as('profile_id') })
+    // T-11-646 인덱스를 고정하지 않으면 플래너가 명예의 전당 인덱스로 프리시즌 은퇴 전체(약 4만 행)를 훑어 한 번에 1~2초 걸렸다.
+    .from(sql`${careers} INDEXED BY careers_profile_status_season_idx`)
     .where(
       and(
         inArray(careers.profileId, [...profileIds]),

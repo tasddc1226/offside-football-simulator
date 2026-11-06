@@ -425,6 +425,8 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect((await read('')).total).toBe(4);
     // 검색 결과의 순위도 고른 포지션 안에서 센다.
     expect((await read('pos=DF&q=선수400')).entries.map((e) => e.rank)).toEqual([2]);
+    // T-11-646 기록 순위 검색(이름 인덱스로 먼저 고르고, 순위는 기록 인덱스로 센다)도 같은 결과다.
+    expect((await read('sort=goals&pos=DF&q=선수400')).entries.map((e) => e.rank)).toEqual([2]);
     expect((await createApp().request('/v1/hof?pos=ST', {}, ctx.env)).status).toBe(400);
     await ctx.db
       .update(careers)
@@ -438,6 +440,26 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(cb.total).toBe(1);
     expect(cb.entries.map((e) => e.id)).toEqual([rows[1].id]);
     expect((await read('dpos=FB&q=선수400')).entries.map((e) => e.rank)).toEqual([1]);
+    expect((await read('sort=goals&dpos=FB&q=선수400')).entries.map((e) => e.rank)).toEqual([1]);
+    // 시즌을 고른 기록 순위 검색도 이름 인덱스에서 그 시즌 선수만 고른다. 업로드는 모두 지금 시즌(1)에
+    // 들어가므로 FW·GK를 프리시즌으로 옮겨 시즌 필터가 실제로 걸러내는지 본다.
+    await ctx.db
+      .update(careers)
+      .set({ serviceSeason: 0 })
+      .where(inArray(careers.id, [rows[0].id, rows[3].id]));
+    const s1 = await read('season=1&sort=goals&q=선수');
+    expect(s1.total).toBe(2);
+    expect(s1.entries.map((e) => [e.id, e.rank])).toEqual([
+      [rows[1].id, 1],
+      [rows[2].id, 2],
+    ]);
+    expect((await read('season=1&q=선수')).total).toBe(2);
+    const s0 = await read('season=0&sort=goals&q=선수');
+    expect(s0.total).toBe(2);
+    expect(s0.entries.map((e) => [e.id, e.rank])).toEqual([
+      [rows[0].id, 1],
+      [rows[3].id, 2],
+    ]);
     expect((await read('dpos=FB&page=2&limit=1')).entries).toEqual([]);
     expect((await read('dpos=FB&page=2&limit=1')).total).toBe(1);
     expect((await read('pos=FW&dpos=CB')).total).toBe(0);
@@ -498,6 +520,13 @@ describe('공개 명예의 전당 /v1/hof', () => {
     expect(pick(await read(`limit=1&page=2&q=${encodeURIComponent('오프')}`))).toEqual([
       ['오프_100%', 3],
     ]);
+    // limit 100(최대)에 시즌 · 포지션 필터가 붙어도 D1 변수 한도에 걸리지 않는다.
+    expect(
+      pick(await read(`limit=100&season=1&pos=FW&sort=goals&q=${encodeURIComponent('오프')}`)),
+    ).toBeDefined();
+    const goalsPage = await read(`sort=goals&limit=1&page=2&q=${encodeURIComponent('오프')}`);
+    expect(goalsPage.total).toBe(2);
+    expect(pick(goalsPage)).toEqual([['김오프', 4]]);
     const blank = await read('q=%20');
     expect(blank.total).toBe(4);
     expect(blank.entries.every((e) => e.rank === undefined)).toBe(true);
