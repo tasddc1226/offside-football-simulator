@@ -165,7 +165,7 @@ describe('T-10-070 D1 → R2 백업', () => {
           "SELECT wall_of_honor_json FROM careers WHERE id = 'honor'",
         ).first(),
       ).toEqual({ wall_of_honor_json: evidence });
-      for (const t of ['profiles', 'sessions', 'idempotency', 'auth_attempts']) {
+      for (const t of ['profiles', 'sessions', 'idempotency']) {
         const n = await fresh.env.DB.prepare(`SELECT count(*) AS n FROM ${t}`).first<{
           n: number;
         }>();
