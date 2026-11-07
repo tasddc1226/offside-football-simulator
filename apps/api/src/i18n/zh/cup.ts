@@ -74,6 +74,7 @@ export const CUP_ZH: Record<CupTextKey, string> = {
   cardReleaseLocked: '參加 OFFSIDE 盃期間，先發球員無法釋出。',
   cardManager: '參加 OFFSIDE 盃期間，先發球員無法開始總教練生涯。',
   cardEnhance: 'OFFSIDE 盃比賽開始前 1 小時到比賽結束，盃賽陣容球員無法強化。',
+  pastCards: '本屆 OFFSIDE 盃只限賽季 {season} 球員參加。請將往季球員移出盃賽陣容。',
   enhanceCap: '強化成功後盃賽陣容 OVR 會超過{division}上限 {n}。請調整盃賽陣容後再試。',
   leagueEnhance: 'OFFSIDE 聯賽比賽開始前 1 小時到比賽結束期間，先發球員無法強化。',
   droppedTitle: '你的{cup}報名已被取消',

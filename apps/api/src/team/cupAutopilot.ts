@@ -2,6 +2,7 @@ import {
   CUP_DIVISIONS,
   CUP_DIVISIONS_FROM,
   CUP_SEASON_OPEN_DAYS,
+  CUP_SEASON_CARDS_FROM,
   cupFinalAt,
   cupIdOf,
   divisionCaps,
@@ -42,8 +43,10 @@ const STALL_TEXT = {
  * T-11-410 구간 대회 회차면 개막 CUP_SEASON_OPEN_DAYS일 뒤 21:10(팀 OVR 분포가 생긴 뒤)으로 미루고, 구간마다 대회를 낸다.
  */
 export function nextCupsFor(prev: CupDef): CupDef[] {
-  const head = nextCupFor(prev);
-  if (!head) return [];
+  const found = nextCupFor(prev);
+  if (!found) return [];
+  // T-11-656 제5회부터 이번 시즌 카드만 나간다.
+  const head = found.edition >= CUP_SEASON_CARDS_FROM ? { ...found, seasonCardsOnly: true } : found;
   if (head.edition < CUP_DIVISIONS_FROM) return [head];
   return CUP_DIVISIONS.map((division) => ({
     ...head,
@@ -99,8 +102,8 @@ export async function scheduleNextCup(db: Db, now: string, all?: CupDef[]) {
         .prepare(
           `INSERT OR IGNORE INTO cups
         (id, season, edition, opens_at, closes_at, draw_at, rounds_json, capacity, min_filled, created_at,
-         division, ovr_max)
-       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+         division, ovr_max, season_cards_only)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
        WHERE NOT EXISTS (SELECT 1 FROM cups WHERE (opens_at > ? OR edition >= ?) AND edition <> ?)`,
         )
         .bind(
@@ -116,6 +119,7 @@ export async function scheduleNextCup(db: Db, now: string, all?: CupDef[]) {
           now,
           cup.division ?? null,
           cup.ovrMax ?? null,
+          cup.seasonCardsOnly ? 1 : 0,
           last.opensAt,
           cup.edition,
           cup.edition,
@@ -136,10 +140,16 @@ export async function fillDivisionCaps(db: Db, now: string, all: CupDef[]) {
   if (!open.length) return [];
   const d1 = db.$client;
   const head = open[0]!;
-  const { results } = await d1
-    .prepare('SELECT ovr FROM owner_teams WHERE season = ? AND filled >= ?')
-    .bind(head.season, head.minFilled)
-    .all<{ ovr: number }>();
+  // T-11-656 이번 시즌 선수 컵은 팀 명단 OVR(지난 시즌 선수 포함)이 컵 명단 힘을 부풀린다 — 기본 상한으로 열고, 신청 팀이
+  // CUP_RESORT_MIN 이상이면 추첨 때 신청 팀 OVR로 다시 나눈다(T-11-552). 운영 도구에서 미리 정한 상한은 그대로 둔다.
+  const results = head.seasonCardsOnly
+    ? []
+    : (
+        await d1
+          .prepare('SELECT ovr FROM owner_teams WHERE season = ? AND filled >= ?')
+          .bind(head.season, head.minFilled)
+          .all<{ ovr: number }>()
+      ).results;
   const caps = divisionCaps(results.map((r) => r.ovr));
   const filled: string[] = [];
   for (const cup of open) {

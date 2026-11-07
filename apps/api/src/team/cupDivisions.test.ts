@@ -93,6 +93,16 @@ describe('T-11-410 다음 회차', () => {
     expect(next.every((c) => c.ovrMax === null)).toBe(true);
     // T-11-527 주니어만 참가 자격을 낮춘다.
     expect(next.map((c) => c.minFilled)).toEqual([CUP_JUNIOR_MIN_FILLED, 8, 8]);
+    // T-11-656 제5회 전에는 모든 선수 컵이다.
+    expect(next.every((c) => !c.seasonCardsOnly)).toBe(true);
+  });
+
+  it('T-11-656 제5회부터는 구간마다 이번 시즌 카드만 나가는 컵으로 연다', () => {
+    applySeasonSchedule(closeSeasonSchedule(1, '2026-10-30T15:00:00.000Z', false));
+    const fourth = nextCupsFor(PREV)[0]!;
+    const fifth = nextCupsFor({ ...fourth, edition: 4, id: 's2-4-junior' });
+    expect(fifth.map((c) => c.edition)).toEqual([5, 5, 5]);
+    expect(fifth.every((c) => c.seasonCardsOnly)).toBe(true);
   });
 });
 

@@ -21,7 +21,7 @@ describe('cupEntryTeamAction', () => {
   const el = (reason: string | null, ok = false) => ({ ok, reason, filled: 3 }) as never;
   it('팀이 없으면 팀 만들기, 편성으로 풀리는 이유면 편성으로 가기', () => {
     expect(cupEntryTeamAction(el('no-team'))).toBe(C.toMakeTeam);
-    for (const r of ['not-enough', 'listed', 'over-cap'])
+    for (const r of ['not-enough', 'listed', 'over-cap', 'past-cards'])
       expect(cupEntryTeamAction(el(r))).toBe(C.toLineup);
   });
   it('편성으로 풀리지 않는 이유 · 신청 가능 · 정보 없음이면 버튼 없음', () => {
@@ -40,6 +40,12 @@ describe('cupEnterConfirmLines', () => {
       C.enterAskWithdraw,
     ]);
     expect(cupEnterConfirmLines({ ovrMax: null })).toEqual([C.enterLockNote, C.enterAskWithdraw]);
+    // T-11-656 이번 시즌 선수 컵은 규칙을 맨 앞에 알린다.
+    expect(cupEnterConfirmLines({ ovrMax: null, seasonCardsOnly: true })).toEqual([
+      C.ruleSeasonCards,
+      C.enterLockNote,
+      C.enterAskWithdraw,
+    ]);
   });
 });
 

@@ -124,6 +124,7 @@ export const cup: Translation<CupMsgs> = {
   reasonFull: '已額滿。',
   reasonClosed: '目前不是報名期間。',
   reasonOverCap: (p) => `球隊 OVR ${p.ovr} 超過此組別上限 ${p.cap}。可以報名更高的組別。`,
+  reasonPastCards: (p) => `本屆盃賽只限本賽季球員參加。請將 ${p.n} 名往季球員移出盃賽陣容。`,
   reasonEnteredOther: '你已報名本屆的其他組別。取消該報名後即可轉換。',
   divisionJunior: '青年組',
   divisionSenior: '成人組',
@@ -184,6 +185,8 @@ export const cup: Translation<CupMsgs> = {
   ruleDaily: (p) => `比賽每天 1 場，於 ${p.time} 由伺服器進行。不需要開著 App 或網站。`,
   ruleLock: (p) =>
     `陣容會在比賽前 1 小時（${p.time}）鎖定，比賽結束後解除。盃賽沒有主場優勢，也不計入一般比賽的戰績・評分。`,
+  ruleSeasonCards:
+    '本屆盃賽只能把本賽季培養或簽下的球員放進盃賽陣容。聯賽、排位賽和友誼賽仍可使用所有球員。',
   ruleForfeit: '參賽中的先發球員無法上架轉會市場或解約。無法出賽時以 0-3 判負。',
   schedEntry: '報名',
   schedDraw: '小組抽籤',

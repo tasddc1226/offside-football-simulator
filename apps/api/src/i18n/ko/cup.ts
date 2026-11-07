@@ -80,6 +80,8 @@ export const CUP_KO = {
   cardManager: '오프사이드 컵에 참가 중인 선발 선수는 감독 커리어를 시작할 수 없어요.',
   cardEnhance:
     '오프사이드 컵 경기 1시간 전부터 경기가 끝날 때까지 컵 명단 선수를 강화할 수 없어요.',
+  pastCards:
+    '이번 오프사이드 컵은 시즌 {season} 선수만 나가요. 컵 명단에서 지난 시즌 선수를 빼 주세요.',
   enhanceCap:
     '강화에 성공하면 컵 명단 OVR이 {division} 상한(OVR {n})을 넘어요. 컵 명단을 바꾼 뒤 다시 시도해 주세요.',
   leagueEnhance:

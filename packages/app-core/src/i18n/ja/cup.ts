@@ -128,6 +128,8 @@ export const cup: Translation<CupMsgs> = {
   reasonClosed: '今は受付期間ではありません。',
   reasonOverCap: (p) =>
     `チームOVR ${p.ovr}はこの部門の上限${p.cap}を超えています。上の部門に申し込めます。`,
+  reasonPastCards: (p) =>
+    `今回のカップは今シーズンの選手だけが出場できます。カップメンバーから過去シーズンの選手${p.n}人を外してください。`,
   reasonEnteredOther: '今回の別の部門に申し込んでいます。その申し込みを取り消すと移れます。',
   divisionJunior: 'ジュニア',
   divisionSenior: 'シニア',
@@ -196,6 +198,8 @@ export const cup: Translation<CupMsgs> = {
     `試合は1日1回、${p.time}にサーバーが行います。アプリやサイトを開いておく必要はありません。`,
   ruleLock: (p) =>
     `メンバーは試合の1時間前(${p.time})にロックされ、試合が終わると解除されます。カップ戦にはホームの利がなく、通常試合の戦績・レーティングには入りません。`,
+  ruleSeasonCards:
+    '今回のカップは、今シーズンに育てたか獲得した選手だけをカップメンバーに入れられます。リーグ・ランク戦・親善試合はこれまでどおり全選手を使えます。',
   ruleForfeit:
     '参加中の先発選手は移籍市場への出品も放出もできません。試合に出られないと0-3の敗戦になります。',
   schedEntry: '申込',

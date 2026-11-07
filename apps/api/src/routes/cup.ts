@@ -45,6 +45,7 @@ import {
   editionCups,
   fitsDivision,
   lockAt,
+  pastCardsIn,
   OWNER_ITEMS,
   shopPriceAt,
   type CupDef,
@@ -58,6 +59,7 @@ import type { Context, Hono } from 'hono';
 import type { Db } from '../db/client.js';
 import { cupEntries, cupMatches } from '../db/schema.js';
 import {
+  careersByIds,
   cupTeamOf,
   myTeamIn,
   publicNamesOf,
@@ -179,6 +181,7 @@ export const cupInfo = (cup: CupDef) => ({
   capacity: cup.capacity,
   minFilled: cup.minFilled,
   ...(cup.division ? { division: cup.division, ovrMax: cup.ovrMax ?? null } : {}),
+  ...(cup.seasonCardsOnly ? { seasonCardsOnly: true } : {}),
 });
 
 /** T-11-410 같은 회차 구간들과 구간별 신청 수(쿼리 1번). 통합 대회면 undefined. */
@@ -500,7 +503,10 @@ async function eligibility(
   const lineups = await lineupsOf(db, cup.season, team, team, { coaches: false });
   const filled = filledCount(lineups.home);
   const ids = slotIdsOf(team).filter((x): x is string => !!x);
-  const listed = await countOpenListingsAmong(db, ids);
+  const [listed, past] = await Promise.all([
+    countOpenListingsAmong(db, ids),
+    pastCardsAmong(db, cup, ids),
+  ]);
   // 아랫 구간 상한은 접수가 열린 뒤 cron이 채운다(그 몇 분 동안은 아직 열리지 않은 것으로).
   const capless = !!cup.division && cup.division !== 'master' && cup.ovrMax == null;
   const reason =
@@ -510,14 +516,35 @@ async function eligibility(
         ? ('not-enough' as const)
         : listed > 0
           ? ('listed' as const)
-          : other
-            ? ('entered-other' as const)
-            : !fitsDivision(cup, team.ovr)
-              ? ('over-cap' as const)
-              : activeCount(entries) >= cup.capacity
-                ? ('full' as const)
-                : null;
-  return { ok: reason === null, reason, filled, team };
+          : past > 0
+            ? ('past-cards' as const)
+            : other
+              ? ('entered-other' as const)
+              : !fitsDivision(cup, team.ovr)
+                ? ('over-cap' as const)
+                : activeCount(entries) >= cup.capacity
+                  ? ('full' as const)
+                  : null;
+  return {
+    ok: reason === null,
+    reason,
+    filled,
+    team,
+    ...(cup.seasonCardsOnly ? { past } : {}),
+  };
+}
+
+/**
+ * T-11-656 이번 시즌 선수 컵이면 명단 카드 중 컵 시즌보다 앞 시즌 카드 수(아니면 0, 조회하지 않는다). 카드 시즌은 cards 행으로
+ * 본다(내 선수 판정과 같은 careersByIds, PK 조회).
+ */
+async function pastCardsAmong(db: Db, cup: CupDef, ids: readonly string[]) {
+  if (!cup.seasonCardsOnly || !ids.length) return 0;
+  const rows = await careersByIds(db, [...ids]);
+  return pastCardsIn(
+    rows.map((r) => ({ season: r.serviceSeason })),
+    cup.season,
+  );
 }
 
 /** 리롤권 상점 응답(T-11-244 스카우트권 포함). */
@@ -628,6 +655,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
           ok: el.ok && (!mine || mine.status === 'withdrawn'),
           reason: el.reason,
           filled: el.filled,
+          ...('past' in el && el.past !== undefined ? { past: el.past } : {}),
         },
         next: next ? toCupMatch(next) : null,
         nextOdds: next && mine ? await nextOddsOf(db, cup, next, mine.teamId) : null,
@@ -661,6 +689,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
         full: cupKo('full'),
         'entered-other': cupKo('enteredOther'),
         'over-cap': cupKo('overCap', { n: cup.ovrMax ?? 0 }),
+        'past-cards': cupKo('pastCards', { season: cup.season }),
       };
       throw conflictError(
         msg[el.reason ?? 'closed'],
@@ -1092,6 +1121,9 @@ export async function checkCupLineup(
       throw conflictError(cupKo('lineupLocked'), 'CUP_LINEUP_LOCKED');
     if (verdict.short)
       throw conflictError(cupKo('minFilled', { n: cup.minFilled }), 'CUP_MIN_FILLED');
+    // T-11-656 이번 시즌 선수 컵이면 컵 명단에 지난 시즌 카드를 넣을 수 없다.
+    if ((await pastCardsAmong(db, cup, ids)) > 0)
+      throw conflictError(cupKo('pastCards', { season: cup.season }), 'CUP_PAST_CARDS');
     if ((await (listed ??= countOpenListingsAmong(db, ids))) > 0)
       throw conflictError(cupKo('cardListed'), 'CUP_CARD_LISTED');
   }

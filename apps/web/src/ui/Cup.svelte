@@ -255,6 +255,7 @@
         <section class="card cup-sec cup-info" data-cup-rules>
           <h2>{L.secRules}</h2>
           <ul class="cup-rules">
+            {#if data.cup.seasonCardsOnly}<li data-cup-rule-season-cards><b>{L.ruleSeasonCards}</b></li>{/if}
             <li>{L.rulePlay({ min: data.cup.minFilled, cap: data.cup.capacity })}</li>
             <li>{L.ruleGroup}</li>
             <li>{L.rulePoints}</li>
