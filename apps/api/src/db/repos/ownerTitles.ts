@@ -114,10 +114,19 @@ export async function refreshOwnerTitles(db: Db, profileId: string, now: string,
     // A batch is transactional: progress and awards commit together, including retry/concurrent requests.
     const progress = db
       .insert(ownerTitleProgress)
-      .values({ profileId, ...metrics, criteriaVersion: TITLE_CRITERIA_VERSION, updatedAt: now })
+      .values({
+        profileId,
+        metricsJson: JSON.stringify(metrics),
+        criteriaVersion: TITLE_CRITERIA_VERSION,
+        updatedAt: now,
+      })
       .onConflictDoUpdate({
         target: ownerTitleProgress.profileId,
-        set: { ...metrics, criteriaVersion: TITLE_CRITERIA_VERSION, updatedAt: now },
+        set: {
+          metricsJson: JSON.stringify(metrics),
+          criteriaVersion: TITLE_CRITERIA_VERSION,
+          updatedAt: now,
+        },
         setWhere: sql`${ownerTitleProgress.updatedAt} <= ${now}`,
       });
     if (newlyEarned.length) {
@@ -145,6 +154,17 @@ export async function refreshOwnerTitles(db: Db, profileId: string, now: string,
 
 /** T-11-556 Team metrics (cups, seasons, division) change without a career write; recount at most once a day on hall open. */
 export const TITLE_PROGRESS_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** T-11-661 저장된 진행도(조건별 값). 읽지 못하면 빈 값(모두 0으로 본다). */
+export function metricsOf(json: string | null | undefined): Partial<Metrics> {
+  if (!json) return {};
+  try {
+    const v = JSON.parse(json) as unknown;
+    return v && typeof v === 'object' ? (v as Partial<Metrics>) : {};
+  } catch {
+    return {};
+  }
+}
 
 /** Read persisted progress only. Initial private hall entry seeds legacy/newly-linked accounts once. */
 export async function permanentTitlesOf(db: Db, profileId: string, now: string) {
@@ -178,6 +198,7 @@ export async function permanentTitlesOf(db: Db, profileId: string, now: string) 
       .from(ownerTitleProgress)
       .where(eq(ownerTitleProgress.profileId, profileId));
   }
+  const saved = metricsOf(progress?.metricsJson);
   const [held, rules] = await Promise.all([
     db.select().from(ownerTitleAwards).where(eq(ownerTitleAwards.profileId, profileId)),
     enhanceRules(db),
@@ -187,7 +208,7 @@ export async function permanentTitlesOf(db: Db, profileId: string, now: string) 
     (t) =>
       t.category !== 'enhance' ||
       rules.open ||
-      (progress?.enhanceTries ?? 0) > 0 ||
+      (saved.enhanceTries ?? 0) > 0 ||
       held.some((a) => a.titleId === t.id),
   );
   return shown.map((t) => {
@@ -195,7 +216,7 @@ export async function permanentTitlesOf(db: Db, profileId: string, now: string) 
     return {
       id: t.id,
       target: t.target,
-      value: Math.max(progress?.[t.metric] ?? 0, award?.evidence ?? 0),
+      value: Math.max(saved[t.metric] ?? 0, award?.evidence ?? 0),
       earnedAt: award?.earnedAt ?? null,
       isNew: !!award && !award.seenAt,
     };
