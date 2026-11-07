@@ -30,6 +30,8 @@ test('주력 능력치 두 개를 골라야 후보를 볼 수 있고, 고른 주
   await expect(focus('phy')).toHaveAttribute('aria-pressed', 'true');
 
   await next.click();
+  // T-11-654 후보를 고르는 화면에 지금 만들면 어느 시즌 선수인지 알린다.
+  await expect(page.locator('[data-create-season-note]')).toContainText('선수예요. 은퇴하면');
   await page.locator('[data-cand="0"]').click();
   await page.locator('[data-act="start"]').click();
   await expect(page.locator('.player')).toContainText('주력 스피드·피지컬');

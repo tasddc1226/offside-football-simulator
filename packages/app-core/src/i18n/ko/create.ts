@@ -236,6 +236,9 @@ const ko = {
   candEdge: (p: { k: string }) => `세 후보 중 ${p.k}${iGa(p.k)} 가장 높아요`,
   candEdgeEven: '다른 후보보다 크게 앞서는 능력치는 없어요',
   sameCandidates: '포지션과 주력이 같으면 후보도 같아요. 둘 중 하나를 바꾸면 새 후보가 나와요.',
+  // T-11-654 지금 시작하면 이 시즌 선수 — 기록실 · 시즌 업적으로 이어진다.
+  seasonNote: (p: { season: string }) =>
+    `지금 시작하면 ${p.season} 선수예요. 은퇴하면 ${p.season} 기록실과 구단주 시즌 업적에 들어가요.`,
 };
 
 export type CreateMsgs = typeof ko;

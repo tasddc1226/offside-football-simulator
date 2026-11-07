@@ -304,4 +304,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpCupSetDone: 'カップ用に設定しました。カップ戦はこの編成で戦います。',
   tpCupUnsetDone: 'カップ用を解除しました。カップ戦もチームメンバーで戦います。',
   tpCupLocked: 'カップ用メンバーが締め切られているため、今は変更できません。',
+  seasonRaised: (p) => `${p.season}に育てた選手 ${p.n}人`,
+  seasonRaisedNone: (p) => `${p.season}に育てた選手はまだいません`,
+  seasonRaisedAch: 'シーズン実績を見る',
 };

@@ -53,6 +53,7 @@ import type {
 import { tn } from '@offside/game/i18n/names';
 import { num, signedNum } from './teamText.js';
 import { teamCoreText as L } from './i18n/ko/teamCore.js';
+import { teamSeasonLabel } from './seasonName.js';
 import { teamHomeText as TH } from './i18n/ko/teamHome.js';
 import { teamAchText as TA } from './i18n/ko/teamAch.js';
 import { teamSynergyText as SY } from './i18n/ko/teamSynergy.js';
@@ -79,6 +80,20 @@ export function assignSlot(
   return next;
 }
 
+/** T-11-654 이 팀 시즌에 직접 키운 내 선수 수(라커룸 기준, 영입한 선수는 빼고) — 라커룸의 시즌 업적 한 줄. */
+export const raisedInSeason = (
+  players: readonly Pick<TeamPlayer, 'raised' | 'season'>[],
+  season: number,
+) => players.filter((p) => p.raised && p.season === season).length;
+/** T-11-654 라커룸 한 줄: '시즌 2에 키운 선수 3명'(없으면 아직 없다는 문구). */
+export function seasonRaisedText(
+  players: readonly Pick<TeamPlayer, 'raised' | 'season'>[],
+  season: number,
+) {
+  const n = raisedInSeason(players, season);
+  const name = teamSeasonLabel(season);
+  return n > 0 ? TH.seasonRaised({ season: name, n }) : TH.seasonRaisedNone({ season: name });
+}
 // T-11-571 리그 체력(docs/tracking/league-fatigue-plan.md). 서버가 켰을 때만 응답에 온다.
 export type LeagueFatigue = { rate: number; streaks: Record<string, number> };
 /** 체력 게이지 칸 수(문제없음 + 단계마다 한 칸씩). */

@@ -16,6 +16,7 @@ import {
   STAMINA_CELLS,
   staminaOf,
   type LeagueFatigue,
+  seasonRaisedText,
 } from '@offside/app-core/teamOwner';
 import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { lockToggleable } from '@offside/app-core/market';
@@ -66,6 +67,8 @@ export function TeamLineup({
   belowPitch,
   focusSlot = null,
   onFocused,
+  season,
+  onAch,
   fatigue = null,
   onEnhance,
 }: {
@@ -95,6 +98,10 @@ export function TeamLineup({
   /** T-11-379 경기 리포트 '고칠 곳'으로 고른 자리 — 골라 두고 맞는 선수 순으로 라커룸을 정렬한다. */
   focusSlot?: number | null;
   onFocused?: () => void;
+  /** 팀 시즌. */
+  season: number;
+  /** T-11-654 지금 시즌 팀이면 라커룸에 '이번 시즌 키운 선수 N명 · 시즌 업적 보기'를 단다. */
+  onAch?: (() => void) | undefined;
   /** T-11-571 리그 체력(서버가 켰을 때만). */
   fatigue?: LeagueFatigue | null | undefined;
   /** T-11-373 카드 강화 창을 연다. */
@@ -369,6 +376,19 @@ export function TeamLineup({
             <Txt v="sm" tone="muted">
               {L.lockerNoteApp}
             </Txt>
+            {onAch ? (
+              <Press
+                testID="locker-season-ach"
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={onAch}
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <Txt v="sm" bold style={{ color: c.accentText }}>
+                  {`${seasonRaisedText(players, season)} · ${L.seasonRaisedAch} ›`}
+                </Txt>
+              </Press>
+            ) : null}
             <TextField
               value={query}
               onChangeText={setQuery}
