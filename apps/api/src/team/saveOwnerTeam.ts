@@ -1,6 +1,5 @@
 import { PutOwnerTeamBodySchema } from '@offside/contracts';
 import { isAcceptablePublicName, isReservedNickname } from '@offside/contracts/content-filter';
-import { pastSalarySum, pastSalaryOverText } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
@@ -15,7 +14,6 @@ import {
   type FriendlyLineup,
 } from '../db/repos/ownerTeams.js';
 import { teamCoachOf } from '../db/repos/managers.js';
-import { pastSalaryBudgetOf } from '../db/repos/balance.js';
 import { AppError } from '../errors.js';
 import { conflictError } from '../routes/shared.js';
 import { activeCupSeasonsQuery } from './cup.js';
@@ -82,7 +80,7 @@ function checkName(value: string, what: string) {
 }
 
 /**
- * 저장할 선발 검사(팀 저장 · T-11-570 컵 명단 프리셋): 한 선수는 한 자리, 지금 가진 내 선수만, 지난 시즌 선수 급여 예산 안.
+ * 저장할 선발 검사(팀 저장 · T-11-570 컵 명단 프리셋): 한 선수는 한 자리, 지금 가진 내 선수만.
  */
 export async function checkLineupPlayers(
   db: Db,
@@ -109,21 +107,6 @@ export async function checkLineupPlayers(
           : '지금 가진 프리시즌 선수만 프리시즌 팀에 넣을 수 있어요.',
       details: { reason: 'PLAYER_NOT_ELIGIBLE' },
     });
-  }
-  // T-11-376 지난 시즌 선수는 급여(최고 OVR) 합이 예산 안에서만. 지난 시즌 선수가 없으면 밸런스를 읽지 않는다.
-  const salary = pastSalarySum(
-    ids.map((id) => eligible.get(id)),
-    season,
-  );
-  if (salary > 0) {
-    const budget = await pastSalaryBudgetOf(db, season);
-    if (salary > budget) {
-      throw new AppError({
-        code: 'VALIDATION_FAILED',
-        message: pastSalaryOverText(salary, budget),
-        details: { reason: 'PAST_SALARY_BUDGET', salary, budget },
-      });
-    }
   }
   return { ids, eligible };
 }

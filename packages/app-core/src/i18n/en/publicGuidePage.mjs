@@ -98,7 +98,7 @@ export default (guideCopy) => {
       [
         'Achievements for players you raised yourself are judged by their service seasons after retirement. Long service means 10 or more cumulative seasons at one regular professional club, counting periods after returning from a transfer and excluding Sangmu and active-duty service. One-club man requires 10 or more professional seasons in total and one regular club, and Sangmu and active-duty service is excluded from the club count. High school and university seasons are not counted toward either achievement.',
         guideCopy.teamAssembly,
-        guideCopy.salaryBudget,
+        guideCopy.pastSeasonPlayers,
         guideCopy.ownerRecords,
         guideCopy.achRewards,
         guideCopy.ownerGrades,
@@ -122,7 +122,7 @@ export default (guideCopy) => {
     [
       'Card enhancement',
       [
-        'You enhance a player card with club funds in the owner team locker room. Players you raised and retired and players signed from the transfer market can reach +10, and each level adds 1 enhancement OVR. Attempts are available only while the feature is open. Manager cards and cards listed for sale cannot be enhanced, and you cannot attempt an enhancement if success would put your starting lineup over the salary budget. If you release an enhanced card or hand it in for a card challenge, its level and the funds spent on enhancing are not returned. Each level’s enhancement value (half the average cost to reach it) is added to your club value and to the card’s transfer market price range.',
+        'You enhance a player card with club funds in the owner team locker room. Players you raised and retired and players signed from the transfer market can reach +10, and each level adds 1 enhancement OVR. Attempts are available only while the feature is open. Manager cards and cards listed for sale cannot be enhanced. If you release an enhanced card or hand it in for a card challenge, its level and the funds spent on enhancing are not returned. Each level’s enhancement value (half the average cost to reach it) is added to your club value and to the card’s transfer market price range.',
         'An attempt ends in success (+1), no change, or failure (-1). A card never drops below +0, is never destroyed, and there is no pity system. From +0 upward, the success chances are 90%, 75%, 60%, 45%, 30%, 25%, 20%, 15%, 10%, 10% and the failure chances are 0%, 5%, 10%, 15%, 20%, 20%, 20%, 20%, 20%, 20%; the rest is no change.',
         'Cards with a peak OVR of 90 to 94 have 0.9x the success chance and 95 or higher have 0.8x. The failure chance stays the same, and the difference becomes no change. Legend score does not affect the odds. Attempts cost ₩1 billion, ₩2 billion, ₩4 billion, ₩7 billion, ₩10 billion, ₩15 billion, ₩20 billion, ₩30 billion, ₩50 billion, ₩100 billion, paid with club funds only. Nothing sold for real money changes the odds or grants attempts.',
       ],
@@ -130,7 +130,7 @@ export default (guideCopy) => {
     [
       'Transfer market and club funds',
       [
-        `You buy and sell retired player cards in the transfer market on the ${guideCopy.hub} screen. Past-season player cards can be bought and sold too, and starting a past-season player in an owner team uses salary budget. Each card has a base price set from the value of its peak-OVR season, and you can see recent prices for players of the same position and grade in a chart. Market value has a smaller age multiplier from age 30, so a card that reached peak OVR after 30 can have a base price below its top career market value.`,
+        `You buy and sell retired player cards in the transfer market on the ${guideCopy.hub} screen. Past-season player cards can be bought and sold too, and players you buy can go straight into your owner team lineup. Each card has a base price set from the value of its peak-OVR season, and you can see recent prices for players of the same position and grade in a chart. Market value has a smaller age multiplier from age 30, so a card that reached peak OVR after 30 can have a base price below its top career market value.`,
         'Releasing a player you raised yourself gives you club funds equal to the card’s base price. Club value is your club funds plus the base prices of the player cards you own; enhanced cards also add their enhancement value (half the average cost to reach that level).',
         'You can lock players you want to keep in the owner team locker room. A locked player cannot be put on the transfer market or released, and both players you raised and players you signed can be locked. Take a player off sale before locking them, and you can unlock from the locker room or from the sell and release screens in the transfer market.',
         `You can buy player reroll tickets with club funds. Buy them in the reroll ticket shop on the ${guideCopy.hub} screen. The price rises each time you buy another one on the same day, and there is a daily purchase limit (starting at ₩10 billion and doubling each time, 3 tickets a day). The price and count reset at 00:00 KST every day. Bought reroll tickets are used together with reroll tickets earned in the Offside Cup. In the app, on top of reroll tickets, you can also watch a rewarded ad to redraw candidates up to 2 times a day.`,
@@ -205,7 +205,7 @@ export default (guideCopy) => {
       guideCopy.transferPreview,
     ],
     ['When do dating rumor events appear?', guideCopy.datingRumor],
-    ['How is the salary of past-season players decided?', guideCopy.salaryBudget],
+    ['How many past-season players can I start?', guideCopy.pastSeasonPlayers],
     ['What is expected goals (xG) in the match report?', guideCopy.matchReport],
     ['What are the choices that appear during ranked matches?', guideCopy.teamMoments],
     ['How is the match rating decided?', guideCopy.ratingParts],

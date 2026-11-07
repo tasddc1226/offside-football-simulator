@@ -18,7 +18,6 @@ import { DragPlayer, type PlayerDrag } from './DragPlayer';
 import { DEFAULT_NATION, NATION_BY_CODE } from '@offside/contracts/nations';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
-import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { coachLineTag } from '@offside/app-core/managerCard';
 import { tn } from '@offside/game/i18n/names';
 
@@ -42,12 +41,9 @@ export function TeamPitch({
   focus = null,
   applied = [],
   caption = null,
-  salaries = [],
 }: {
   formation: FormationId;
   cells: readonly PitchCell[];
-  /** T-11-376 자리마다 지난 시즌 선수 급여(0이면 칩 없음). */
-  salaries?: readonly number[];
   layout?: TeamLayout | null;
   onpick?: ((i: number) => void) | undefined;
   ondrag?: PlayerDrag | undefined;
@@ -233,31 +229,6 @@ export function TeamPitch({
             </View>
           );
         })}
-        {/* 급여 칩은 카드 위쪽에 걸쳐 있어 윗줄 카드에 덮이지 않게 모든 카드 위에 따로 그린다. */}
-        {positions.map((pos, i) =>
-          cells[i] && salaries[i] ? (
-            <View
-              key={`salary-${i}`}
-              pointerEvents="none"
-              testID={`slot-${i}-salary`}
-              style={{
-                position: 'absolute',
-                left: `${pos.x}%`,
-                top: `${pos.y}%`,
-                marginLeft: -35,
-                marginTop: -52,
-                zIndex: 4,
-                paddingHorizontal: 4,
-                borderRadius: 999,
-                backgroundColor: '#000c',
-              }}
-            >
-              <Txt style={{ fontSize: 8, lineHeight: 11, fontWeight: '700', color: '#ffd76a' }}>
-                {TC.salaryChip({ n: salaries[i]! })}
-              </Txt>
-            </View>
-          ) : null,
-        )}
       </View>
     </View>
   );

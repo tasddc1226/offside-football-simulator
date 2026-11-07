@@ -49,8 +49,6 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   rankAtkK: '排位賽戰力差反映',
   leagueFatigue: '聯賽體力',
   leagueHomeAdv: '聯賽主場優勢',
-  pastSalaryBudget: '過去賽季球員薪資預算',
-  pastSalaryBudgetStep: '每賽季薪資預算增加',
   teamMatchRechargeMin: '排名賽恢復間隔（分鐘）',
   rerollPrice: '重抽券價格',
   rerollPriceGrowth: '重抽券價格上漲倍率',
