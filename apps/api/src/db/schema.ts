@@ -332,7 +332,6 @@ export const pushDevices = sqliteTable(
   (t) => [
     uniqueIndex('push_devices_token_unique').on(t.token),
     index('push_devices_session_idx').on(t.sessionId),
-    index('push_devices_profile_idx').on(t.profileId),
     index('push_devices_profile_updated_idx').on(t.profileId, t.updatedAt, t.installationHash),
     index('push_devices_updated_idx').on(t.updatedAt),
     index('push_devices_engagement_updated_idx').on(t.engagementEnabled, t.updatedAt),
@@ -459,7 +458,7 @@ export const careers = sqliteTable(
   },
   (table) => [
     index('careers_detail_archive_idx').on(table.detailArchiveKey),
-    index('careers_profile_id_idx').on(table.profileId),
+    // T-11-659 profile_id 단일 인덱스는 지웠다. 아래 (profile_id, …) 복합 인덱스들이 같은 조회 · 외래키 삭제를 맡는다.
     index('careers_owner_title_updated_idx').on(table.profileId, table.status, table.updatedAt),
     index('careers_automation_updated_idx').on(table.updatedAt, table.id),
     // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
@@ -1305,7 +1304,6 @@ export const teamMatches = sqliteTable(
   },
   (table) => [
     index('team_matches_profile_created_idx').on(table.profileId, table.createdAt),
-    index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
     index('team_matches_home_recent_idx').on(table.homeTeamId, table.createdAt, table.id),
     index('team_matches_away_recent_idx').on(table.awayTeamId, table.createdAt, table.id),
   ],
@@ -1336,6 +1334,9 @@ export const teamLiveMatches = sqliteTable(
   },
   (table) => [
     index('team_live_matches_profile_idx').on(table.profileId, table.createdAt),
+    // T-11-659 팀이 지워질 때 cascade가 표 전체를 훑지 않게.
+    index('team_live_matches_home_team_idx').on(table.homeTeamId),
+    index('team_live_matches_away_team_idx').on(table.awayTeamId),
     index('team_live_matches_open_idx').on(table.doneAt, table.createdAt),
   ],
 );
@@ -2374,7 +2375,11 @@ export const best11Slots = sqliteTable(
     /** T-11-463b 시즌 확정 뒤 자리 주인 구단주에게 보상을 준 시각(한 번만 준다). */
     rewardedAt: text('rewarded_at'),
   },
-  (t) => [primaryKey({ columns: [t.season, t.slot] })],
+  (t) => [
+    primaryKey({ columns: [t.season, t.slot] }),
+    // T-11-659 커리어가 지워질 때 cascade가 표 전체를 훑지 않게.
+    index('best11_slots_career_idx').on(t.careerId),
+  ],
 );
 
 /** T-11-463 시즌 BEST 11의 상태: 확정 시각, 마지막 갱신, 은퇴 때 후보를 거르는 자리별 기준(정규화 최댓값 · 커트라인). */
@@ -2396,7 +2401,12 @@ export const best11Changes = sqliteTable(
     outCareerId: text('out_career_id').references(() => careers.id, { onDelete: 'set null' }),
     at: text('at').notNull(),
   },
-  (t) => [index('best11_changes_season_idx').on(t.season, t.at)],
+  (t) => [
+    index('best11_changes_season_idx').on(t.season, t.at),
+    // T-11-659 커리어가 지워질 때 set null이 표 전체를 훑지 않게.
+    index('best11_changes_in_career_idx').on(t.inCareerId),
+    index('best11_changes_out_career_idx').on(t.outCareerId),
+  ],
 );
 
 /**
