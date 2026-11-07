@@ -228,7 +228,7 @@ describe('오프사이드 데일리 (T-11-652)', () => {
     expect(mine.items[0]).toMatchObject({ matchId: big.id, round: 1, pick: 'away' });
     expect(mine.total).toBe(1);
     expect(mine.hit).toBe(mine.items[0]!.result === 'away' ? 1 : 0);
-  });
+  }, 60_000); // 15팀 배치 · 1라운드를 치러 보는 흐름이라 혼자 돌려도 10초 넘게 걸린다(전체 실행 부하에서 20초 기본값을 넘는다).
 
   it('잘못된 시즌 · 라운드는 404', async () => {
     expect(await news(0)).toBe(404);
