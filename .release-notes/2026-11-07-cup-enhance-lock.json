@@ -1,0 +1,30 @@
+{
+  "id": "t-11-655-cup-enhance-lock",
+  "title": "컵 참가 중 강화 잠금 완화",
+  "items": [
+    "오프사이드 컵에 참가 중이어도 컵 명단 선수를 강화할 수 있어요. 컵 경기 1시간 전부터 경기가 끝날 때까지만 막혀요.",
+    "조 추첨 뒤에는 강화에 성공했을 때 컵 명단 OVR이 구간 상한을 넘으면 강화할 수 없어요."
+  ],
+  "en": {
+    "title": "Fewer enhance locks during the cup",
+    "items": [
+      "You can now enhance cup lineup players while your club is in the OFFSIDE Cup. Enhancing is blocked only from 1 hour before a cup match until it ends.",
+      "After the group draw, you can't enhance if success would push your cup lineup OVR over your division's cap."
+    ]
+  },
+  "ja": {
+    "title": "カップ参加中の強化制限を緩和",
+    "items": [
+      "オフサイドカップ参加中でもカップメンバーの選手を強化できます。カップの試合1時間前から試合終了までだけ制限されます。",
+      "組み合わせ抽選の後は、強化に成功するとカップメンバーのOVRが区分の上限を超える場合は強化できません。"
+    ]
+  },
+  "zh": {
+    "title": "放寬盃賽期間的強化限制",
+    "items": [
+      "參加 OFFSIDE 盃期間也能強化盃賽陣容球員。只有盃賽比賽開始前 1 小時到比賽結束無法強化。",
+      "分組抽籤後，如果強化成功會讓盃賽陣容 OVR 超過組別上限，就無法強化。"
+    ]
+  },
+  "availability": "web-app"
+}

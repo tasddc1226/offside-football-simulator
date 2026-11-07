@@ -8,7 +8,8 @@ import {
   successEnvelope,
   type EnhanceBody,
 } from '@offside/contracts';
-import { ENHANCE_COSTS } from '@offside/contracts/card-enhance';
+import { ENHANCE_COSTS, enhanceDownBp, enhanceRateBp } from '@offside/contracts/card-enhance';
+import { planCup } from '@offside/contracts/cup';
 import { tradeBand, tradeValue } from '@offside/contracts/card-enhance';
 import { eq, inArray } from 'drizzle-orm';
 import { applySeasonSchedule } from '@offside/contracts/service-seasons';
@@ -20,6 +21,8 @@ import {
   cardEnhanceLog,
   cards,
   careers,
+  cupEntries,
+  cups,
   marketListings,
   ownerFunds,
   ownerTeams,
@@ -593,6 +596,79 @@ describe('카드 강화 (T-11-373)', () => {
     expect(row!.ovr).toBe(60);
     expect(row!.cupOvr).not.toBe(30);
     expect(JSON.parse(row!.presetsJson!)[0].ovr).toBe(row!.cupOvr);
+  });
+
+  it('T-11-655 컵 참가 중에도 명단 선수를 강화하되, 추첨 뒤엔 성공 때 구간 상한을 넘는 시도를 막는다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const players = await Promise.all(Array.from({ length: 11 }, () => addCard(owner.profileId)));
+    const bench = await addCard(owner.profileId);
+    await fund(owner.profileId, 100_000_000);
+    const cup = planCup({ id: 's1-9', season: 1, edition: 9, opensOn: '2026-10-08', capacity: 64 });
+    vi.setSystemTime(new Date(cup.drawAt)); // 시즌 1, 추첨 직후(잠긴 경기 없음)
+    await activate({ enhanceOpen: 1 });
+    const teamId = await addTeam(owner.profileId, players, 1);
+    // 팀 OVR은 11명 평균이라 한 명 +1로 늘 오르지는 않는다 — 다음 단계에서 팀 OVR이 오르는 단계를 고른다.
+    const rows = await careersByIds(ctx.db, players);
+    const ovrAt = (level: number) =>
+      lineupOvr(
+        buildLineup(
+          '4-3-3',
+          players,
+          eligibleMap(
+            rows.map((r) => (r.id === players[0] ? { ...r, enhance: level } : r)),
+            owner.profileId,
+            1,
+            true,
+          ),
+        ),
+      );
+    const level = [...Array(9).keys()].find((l) => ovrAt(l + 1) > ovrAt(l))!;
+    const ovr = ovrAt(level);
+    await ctx.db.update(cards).set({ enhance: level }).where(eq(cards.careerId, players[0]!));
+    await ctx.db.update(ownerTeams).set({ ovr }).where(eq(ownerTeams.id, teamId));
+    const atLevel = {
+      level,
+      fails: 0,
+      cost: ENHANCE_COSTS[level]!,
+      rateBp: enhanceRateBp(level, { rateScale: 1 }),
+      downBp: enhanceDownBp(level, { rateScale: 1 }),
+    };
+    await ctx.db.insert(cups).values({
+      id: cup.id,
+      season: 1,
+      edition: 9,
+      opensAt: cup.opensAt,
+      closesAt: cup.closesAt,
+      drawAt: cup.drawAt,
+      roundsJson: JSON.stringify(cup.rounds),
+      capacity: 64,
+      minFilled: 8,
+      createdAt: cup.opensAt,
+      division: 'junior',
+      ovrMax: ovr,
+    });
+    await ctx.db.insert(cupEntries).values({
+      cupId: cup.id,
+      teamId,
+      profileId: owner.profileId,
+      name: '강화 FC',
+      manager: '감독',
+      ovr,
+      createdAt: cup.opensAt,
+      updatedAt: cup.opensAt,
+    });
+    // 컵 명단 프리셋이 없어 팀 명단이 컵 명단이다. 성공하면 OVR이 상한을 넘으니 막는다.
+    expect(await reason(await enhance(owner.cookie, players[0]!, atLevel))).toBe('CUP_OVR_CAP');
+    expect(await balanceOf(owner.profileId)).toBe(100_000_000);
+    // 상한이 넉넉하면 참가 중이어도 강화한다(예전에는 대회가 끝날 때까지 막았다). 명단 밖 카드도 그대로 된다.
+    await ctx.db
+      .update(cups)
+      .set({ ovrMax: ovr + 5 })
+      .where(eq(cups.id, cup.id));
+    nextRoll(0);
+    expect((await enhance(owner.cookie, players[0]!, atLevel)).status).toBe(200);
+    nextRoll(0);
+    expect((await enhance(owner.cookie, bench, first)).status).toBe(200);
   });
 
   it('등록에 강화 단계를 남기고, 거래 기록 %는 그 단계로 잰다', async () => {
