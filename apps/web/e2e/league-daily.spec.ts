@@ -11,10 +11,9 @@ test('리그 화면 신문 → 예측 → 기사 읽기 · 공유, 신문은 한
   const daily = page.locator('[data-league-daily="3"]');
   await expect(daily).toContainText('3라운드 소식');
   await expect(daily.locator('[data-league-news]')).toHaveCount(6);
-  await expect(daily.locator('[data-league-news="upset"] h3')).toHaveText(
-    '숲속 FC, OVR 7 차를 뒤집다',
-  );
-  await expect(daily.locator('[data-league-news="derby"] h3')).toHaveText('3위와 4위의 맞대결');
+  // 헤드라인은 기사마다 정해진 변형이라 팀 이름 · 순위로 확인한다.
+  await expect(daily.locator('[data-league-news="upset"] h3')).toContainText(/숲속 FC|남산 시티/);
+  await expect(daily.locator('[data-league-news="derby"] h3')).toContainText(/3위.*4위/);
   await expect(daily.locator('[data-league-pred-record]')).toHaveText('내 적중 2/3');
   await expect(daily.locator('[data-league-pred-split]')).toHaveText(
     '80명 예측 · 홈 51% · 무 15% · 원정 34%',

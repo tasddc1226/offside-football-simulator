@@ -2,13 +2,16 @@ import type {
   LeagueBigMatch,
   LeagueNewsItem,
   LeagueNewsMatch,
+  LeagueNewsPlayer,
   LeagueNewsResponse,
   LeagueNewsTeam,
 } from '@offside/contracts';
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
+import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
 import { logoOf, type MatchDetail } from '../db/repos/ownerTeams.js';
-import { leagueEntries, leagueMatches, ownerTeams } from '../db/schema.js';
+import { cardPublicName } from '../db/cardName.js';
+import { cards, careers, leagueEntries, leagueMatches, ownerTeams } from '../db/schema.js';
 import {
   inLeague,
   leagueEntriesOf,
@@ -18,8 +21,8 @@ import {
   type LeagueMatchRow,
 } from './league.js';
 
-// T-11-652 오프사이드 데일리(라운드 신문). 끝난 라운드 하나의 기사 재료를 고른다: 이변 · 골 잔치 · 더비 · 이 라운드의 팀 · 1부
-// 선두 · 연승, 그리고 이 라운드 빅매치 결과와 다음 라운드 빅매치. 끝난 라운드는 바뀌지 않아 라우트가 엣지에 오래 둔다.
+// T-11-652 오프사이드 데일리(라운드 신문). 끝난 라운드 하나의 기사 재료를 고른다: 이변 · 골 잔치 · 더비 · 역전승 · 극장골 ·
+// 해트트릭 · 시즌 첫 승 · 이 라운드의 팀 · 1부 선두 · 연승, 그리고 이 라운드 빅매치 결과와 다음 라운드 빅매치. 끝난 라운드는 바뀌지 않아 라우트가 엣지에 오래 둔다.
 // 문장은 화면이 만든다(app-core leagueNews) — 서버는 언어와 상관없는 숫자 · 이름만 보낸다.
 
 /** 이변으로 싣는 최소 OVR 차. */
@@ -28,6 +31,10 @@ export const NEWS_UPSET_GAP = 3;
 export const NEWS_GOALFEST_GOALS = 5;
 /** 더비: 라운드 전 순위가 붙어 있고 승점 차가 이 안. */
 export const NEWS_DERBY_POINTS = 3;
+/** 극장골: 한 골 차 경기의 결승골이 이 분 뒤. */
+export const NEWS_LATE_MINUTE = 85;
+/** 시즌 첫 승 기사: 그 전에 이만큼 이기지 못했다. */
+export const NEWS_FIRST_WIN_AFTER = 3;
 /** 연승 기사로 싣는 최소 연승. */
 export const NEWS_STREAK_MIN = 3;
 
@@ -252,6 +259,128 @@ export async function buildLeagueNews(
         )
       : null;
   if (derby) used.add(derby.id);
+
+  // 골 기록(분 · 넣은 쪽 · 득점자)은 SQL에서 이 라운드 경기의 골만 꺼낸다(경기 기록 전체를 읽지 않는다).
+  const { results: goalRows } = await db.$client
+    .prepare(
+      `SELECT m.id AS id, json_extract(e.value, '$.minute') AS minute, json_extract(e.value, '$.side') AS side,
+         json_extract(e.value, '$.scorer.careerId') AS careerId
+       FROM league_matches m, json_each(m.detail_json, '$.events') e
+       WHERE m.season = ? AND m.round = ? AND m.detail_json IS NOT NULL AND m.forfeit = 0`,
+    )
+    .bind(season, round)
+    .all<{ id: string; minute: number; side: 'home' | 'away'; careerId: string | null }>();
+  const goalsOf = new Map<string, typeof goalRows>();
+  for (const g of goalRows) goalsOf.set(g.id, [...(goalsOf.get(g.id) ?? []), g]);
+  for (const list of goalsOf.values()) list.sort((a, b) => a.minute - b.minute);
+  const byId = new Map(games.map((m) => [m.id, m]));
+  // 역전승: 이긴 쪽이 가장 크게 뒤졌던 골 수.
+  const trailedOf = (m: LeagueMatchRow) => {
+    const w = winnerSide(m);
+    if (!w) return 0;
+    let h = 0;
+    let a = 0;
+    let worst = 0;
+    for (const g of goalsOf.get(m.id) ?? []) {
+      if (g.side === 'home') h++;
+      else a++;
+      worst = Math.max(worst, w === 'home' ? a - h : h - a);
+    }
+    return worst;
+  };
+  const comeback = best(
+    games.filter((m) => !used.has(m.id) && trailedOf(m) >= 1),
+    (a, b) => trailedOf(a) > trailedOf(b) || (trailedOf(a) === trailedOf(b) && a.tier < b.tier),
+  );
+  if (comeback) used.add(comeback.id);
+  // 극장골: 한 골 차 경기에서 이긴 쪽이 마지막으로 앞서 나간 골이 늦게.
+  const deciderOf = (m: LeagueMatchRow) => {
+    const w = winnerSide(m);
+    if (!w || margin(m) !== 1) return null;
+    let h = 0;
+    let a = 0;
+    let d: (typeof goalRows)[number] | null = null;
+    for (const g of goalsOf.get(m.id) ?? []) {
+      const tied = h === a;
+      if (g.side === 'home') h++;
+      else a++;
+      if (tied && g.side === w) d = g;
+    }
+    return d && d.minute >= NEWS_LATE_MINUTE ? d : null;
+  };
+  const late = best(
+    games.filter((m) => !used.has(m.id) && deciderOf(m)),
+    (a, b) =>
+      deciderOf(a)!.minute > deciderOf(b)!.minute ||
+      (deciderOf(a)!.minute === deciderOf(b)!.minute && a.tier < b.tier),
+  );
+  if (late) used.add(late.id);
+  // 해트트릭: 한 경기 3골 이상 넣은 선수(유스 빼고, 많은 골 · 높은 부 순).
+  const tricks = [...goalsOf.entries()].flatMap(([id, list]) => {
+    const m = byId.get(id);
+    if (!m) return [];
+    const by = new Map<string, { n: number; side: 'home' | 'away' }>();
+    for (const g of list)
+      if (g.careerId) by.set(g.careerId, { n: (by.get(g.careerId)?.n ?? 0) + 1, side: g.side });
+    return [...by.entries()]
+      .filter(([, x]) => x.n >= 3)
+      .map(([careerId, x]) => ({ m, careerId, ...x }));
+  });
+  const trick = best(tricks, (a, b) => a.n > b.n || (a.n === b.n && a.m.tier < b.m.tier));
+  // 시즌 첫 승: 그 전에 NEWS_FIRST_WIN_AFTER경기 넘게 이기지 못한 팀이 이겼다.
+  const winsBefore = (teamId: string) =>
+    matches.filter(
+      (x) =>
+        x.round < round &&
+        x.playedAt &&
+        ((x.homeTeamId === teamId &&
+          (x.forfeit === 2 || (!x.forfeit && (x.homeGoals ?? 0) > (x.awayGoals ?? 0)))) ||
+          (x.awayTeamId === teamId &&
+            (x.forfeit === 1 || (!x.forfeit && (x.awayGoals ?? 0) > (x.homeGoals ?? 0))))),
+    ).length;
+  const playedBefore = (teamId: string) =>
+    matches.filter(
+      (x) => x.round < round && x.playedAt && (x.homeTeamId === teamId || x.awayTeamId === teamId),
+    ).length;
+  const firstWinOf = (m: LeagueMatchRow) => {
+    const w = winnerSide(m);
+    if (!w) return 0;
+    const id = w === 'home' ? m.homeTeamId : m.awayTeamId;
+    const n = playedBefore(id);
+    return n >= NEWS_FIRST_WIN_AFTER && winsBefore(id) === 0 ? n : 0;
+  };
+  const firstWin = best(
+    games.filter((m) => !used.has(m.id) && firstWinOf(m) > 0),
+    (a, b) => firstWinOf(a) > firstWinOf(b) || (firstWinOf(a) === firstWinOf(b) && a.tier < b.tier),
+  );
+  if (firstWin) used.add(firstWin.id);
+  // 기사에 실을 선수(해트트릭 · 극장골)의 공개 이름 · 포지션 · 등번호.
+  const playerIds = [trick?.careerId, late ? deciderOf(late)?.careerId : null].filter(
+    (x): x is string => !!x,
+  );
+  const people = new Map(
+    playerIds.length
+      ? (
+          await db
+            .select({
+              id: cards.careerId,
+              name: cardPublicName,
+              pos: cards.pos,
+              number: sql<number | null>`coalesce(${careers.shirtNumber}, ${cards.number})`,
+            })
+            .from(cards)
+            .leftJoin(careers, eq(careers.id, cards.careerId))
+            .where(inArray(cards.careerId, playerIds))
+        ).map((c) => [c.id, c] as const)
+      : [],
+  );
+  const player = (id: string | null | undefined): LeagueNewsPlayer => {
+    const c = id ? people.get(id) : undefined;
+    return c
+      ? { name: c.name, pos: c.pos as NonNullable<LeagueNewsPlayer>['pos'], number: c.number }
+      : null;
+  };
+
   // 이 라운드의 팀: 가장 크게 이긴 팀(같으면 높은 부, 다음은 OVR이 낮은 팀).
   const winnerOvr = (m: LeagueMatchRow) =>
     ovrOf(winnerSide(m) === 'home' ? m.homeTeamId : m.awayTeamId);
@@ -263,11 +392,19 @@ export async function buildLeagueNews(
         (a.tier < b.tier || (a.tier === b.tier && winnerOvr(a) < winnerOvr(b)))),
   );
 
-  // 기대 득점 · 경기 때 OVR은 고른 경기만 읽는다(많아야 다섯 경기).
+  // 기대 득점 · 경기 때 OVR은 고른 경기만 읽는다(많아야 아홉 경기).
   const lastBigPick = pickBig(matches, round, pre);
-  const picked = [upset, goalfest, derby, top, lastBigPick?.m].filter(
-    (m): m is LeagueMatchRow => !!m,
-  );
+  const picked = [
+    upset,
+    goalfest,
+    derby,
+    top,
+    comeback,
+    late,
+    trick?.m,
+    firstWin,
+    lastBigPick?.m,
+  ].filter((m): m is LeagueMatchRow => !!m);
   const details = new Map(
     picked.length
       ? (
@@ -330,7 +467,39 @@ export async function buildLeagueNews(
     const [h, a] = ranksOf(derby);
     items.push({ kind: 'derby', match: newsMatch(derby), homeRank: h!.rank, awayRank: a!.rank });
   }
+  if (comeback)
+    items.push({
+      kind: 'comeback',
+      match: newsMatch(comeback),
+      side: winnerSide(comeback)!,
+      trailed: trailedOf(comeback),
+    });
+  if (late) {
+    const d = deciderOf(late)!;
+    items.push({
+      kind: 'lateWinner',
+      match: newsMatch(late),
+      side: winnerSide(late)!,
+      minute: d.minute,
+      scorer: player(d.careerId),
+    });
+  }
+  if (trick)
+    items.push({
+      kind: 'hattrick',
+      match: newsMatch(trick.m),
+      side: trick.side,
+      goals: trick.n,
+      scorer: player(trick.careerId),
+    });
   if (goalfest) items.push({ kind: 'goalfest', match: newsMatch(goalfest) });
+  if (firstWin)
+    items.push({
+      kind: 'firstWin',
+      match: newsMatch(firstWin),
+      side: winnerSide(firstWin)!,
+      before: firstWinOf(firstWin),
+    });
   // 연승: 지금 이어지는 가장 긴 연승(같으면 높은 부).
   const playedDesc = matches
     .filter((m) => m.round <= round && m.playedAt)
@@ -361,4 +530,77 @@ export async function buildLeagueNews(
         ? newsMatch(lastBigPick.m)
         : null,
   };
+}
+
+/** 푸시 1면으로 고르는 순서(앞일수록 먼저). 선두 기사는 거의 매번 있어 맨 뒤다. */
+const PUSH_ORDER: LeagueNewsItem['kind'][] = [
+  'upset',
+  'comeback',
+  'lateWinner',
+  'hattrick',
+  'derby',
+  'goalfest',
+  'firstWin',
+  'streak',
+  'teamOfRound',
+  'leader',
+];
+
+/** 기사 하나의 주인공 팀(이긴 팀 · 선두 · 연승 팀 · 무승부면 홈). */
+function heroOf(item: LeagueNewsItem): LeagueNewsTeam {
+  if (item.kind === 'leader' || item.kind === 'streak') return item.team;
+  const m = item.match;
+  if ('side' in item) return item.side === 'home' ? m.home : m.away;
+  return m.homeGoals >= m.awayGoals ? m.home : m.away;
+}
+const teamsOf = (item: LeagueNewsItem) =>
+  item.kind === 'leader' || item.kind === 'streak'
+    ? [item.team.teamId]
+    : [item.match.home.teamId, item.match.away.teamId];
+
+/** 한 줄 헤드라인(한국어, 알림함에 저장되고 요청 언어로 옮겨진다). */
+export function newsHeadKo(item: LeagueNewsItem): string {
+  const team = heroOf(item).name;
+  switch (item.kind) {
+    case 'upset':
+      return cupKo('dailyUpset', { team, gap: item.gap });
+    case 'comeback':
+      return cupKo('dailyComeback', { team, n: item.trailed });
+    case 'lateWinner':
+      return cupKo('dailyLate', { team, n: item.minute });
+    case 'hattrick':
+      return cupKo('dailyHattrick', { team });
+    case 'derby':
+      return cupKo(
+        item.match.homeGoals === item.match.awayGoals ? 'dailyDerbyDraw' : 'dailyDerby',
+        {
+          team,
+        },
+      );
+    case 'goalfest':
+      return cupKo('dailyGoalfest', { team, n: item.match.homeGoals + item.match.awayGoals });
+    case 'firstWin':
+      return cupKo('dailyFirstWin', { team, n: item.before + 1 });
+    case 'streak':
+      return cupKo('dailyStreak', { team, n: item.n });
+    case 'teamOfRound':
+      return cupKo('dailyRout', {
+        team,
+        n: Math.abs(item.match.homeGoals - item.match.awayGoals),
+      });
+    case 'leader':
+      return cupKo(item.changed ? 'dailyLeaderNew' : 'dailyLeaderKeep', { team, n: item.tier });
+  }
+}
+
+/**
+ * 라운드 결과 알림에 붙일 신문 1면. 내 팀이 실린 기사가 있으면 그 기사(mine), 없으면 순서대로 첫 기사. 기사가 없으면 null.
+ */
+export function pushHeadline(news: LeagueNewsResponse, teamId: string | null) {
+  const sorted = [...news.items].sort(
+    (a, b) => PUSH_ORDER.indexOf(a.kind) - PUSH_ORDER.indexOf(b.kind),
+  );
+  const mine = teamId ? sorted.find((x) => teamsOf(x).includes(teamId)) : undefined;
+  const item = mine ?? sorted[0];
+  return item ? { mine: !!mine, head: newsHeadKo(item) } : null;
 }

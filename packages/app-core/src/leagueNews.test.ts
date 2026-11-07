@@ -77,18 +77,27 @@ describe('T-11-652 오프사이드 데일리 문장', () => {
         { kind: 'teamOfRound', match: nm({ id: 'm4', homeGoals: 0, awayGoals: 5 }), side: 'away' },
       ],
     });
-    expect(cards.map((c) => [c.tag, c.head])).toEqual([
-      ['이변', '하늘 FC, OVR 8 차를 뒤집다'],
-      ['골 잔치', '하늘 FC · 바다 FC, 7골 난타전'],
-      ['더비', '2위와 3위의 맞대결'],
-      ['선두', '하늘 FC, 1부 선두로'],
-      ['연승', '숲 FC, 4연승 행진'],
-      ['이 라운드의 팀', '바다 FC, 5골 차 완승'],
+    expect(cards.map((c) => c.tag)).toEqual([
+      '이변',
+      '골 잔치',
+      '더비',
+      '선두',
+      '연승',
+      '이 라운드의 팀',
     ]);
-    expect(cards[0]!.body).toBe(
-      '하늘 FC가 바다 FC를 2:1로 꺾었습니다. 경기 전 OVR은 바다 FC 쪽이 8 높았습니다. 기대 득점은 1.2 대 2.0이었습니다.',
-    );
-    expect(cards[2]!.body).toContain('1:1로 비겼습니다');
+    // 헤드라인은 기사마다 정해진 변형이다(같은 기사는 늘 같은 문장).
+    const again = newsCards({
+      season: 2,
+      round: 3,
+      bigMatch: null,
+      lastBig: null,
+      items: [{ kind: 'upset', match: nm({ homeXg: 1.24, awayXg: 2 }), gap: 8 }],
+    });
+    expect(again[0]!.head).toBe(cards[0]!.head);
+    expect(cards[0]!.head).toMatch(/하늘 FC/);
+    expect(cards[0]!.body).toContain('2:1');
+    expect(cards[0]!.body).toContain('기대 득점은 1.2 대 2.0이었습니다.');
+    expect(cards[2]!.body).toMatch(/1:1(로 비겼습니다| 무승부)/);
     expect(cards[3]!.match).toBeNull();
     expect(cards[3]!.where).toBe('1부 1리그 · 3라운드');
   });
@@ -140,6 +149,54 @@ describe('T-11-652 오프사이드 데일리 문장', () => {
       away: 33,
       n: 3,
     });
+  });
+});
+
+describe('T-11-652 기사 다양화', () => {
+  it('같은 꼭지라도 경기마다 다른 헤드라인이 나오고, 새 꼭지(역전승 · 극장골 · 해트트릭 · 첫 승)도 그린다', () => {
+    const heads = new Set(
+      Array.from(
+        { length: 12 },
+        (_, i) =>
+          newsCards({
+            season: 2,
+            round: 3,
+            bigMatch: null,
+            lastBig: null,
+            items: [{ kind: 'upset', match: nm({ id: `m${i}` }), gap: 5 }],
+          })[0]!.head,
+      ),
+    );
+    expect(heads.size).toBeGreaterThanOrEqual(3);
+    const cards = newsCards({
+      season: 2,
+      round: 3,
+      bigMatch: null,
+      lastBig: null,
+      items: [
+        { kind: 'comeback', match: nm({ id: 'c1' }), side: 'home', trailed: 2 },
+        {
+          kind: 'lateWinner',
+          match: nm({ id: 'c2' }),
+          side: 'home',
+          minute: 89,
+          scorer: { name: '김선수', pos: 'FW', number: 9 },
+        },
+        {
+          kind: 'hattrick',
+          match: nm({ id: 'c3', homeGoals: 4, awayGoals: 1 }),
+          side: 'home',
+          goals: 3,
+          scorer: null,
+        },
+        { kind: 'firstWin', match: nm({ id: 'c4' }), side: 'home', before: 5 },
+      ],
+    });
+    expect(cards.map((c) => c.tag)).toEqual(['역전승', '극장골', '해트트릭', '첫 승']);
+    expect(cards[1]!.body).toContain('89분');
+    expect(cards[1]!.body).toContain('김선수');
+    expect(cards[2]!.head + cards[2]!.body).toContain('유스 선수');
+    expect(cards[3]!.head + cards[3]!.body).toMatch(/6경기 만에|첫 승|승리/);
   });
 });
 

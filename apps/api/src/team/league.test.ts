@@ -253,7 +253,8 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     });
     const r1 = (await notices(strong[0]!.profileId)).at(-1)!;
     expect(r1.title).toMatch(/^오프사이드 리그 1라운드 · (이겼어요|비겼어요|졌어요)$/);
-    expect(r1.body).toMatch(/ · 지금 \d위예요$/);
+    // T-11-652 그날 신문 1면이 한 줄 더 붙는다(내 팀이 실렸으면 그 기사).
+    expect(r1.body).toMatch(/ · 지금 \d위예요\n(오늘의 신문|우리 팀이 신문에 실렸어요): .+$/);
     // 7팀 리그는 라운드마다 한 팀이 쉰다.
     const rested = [];
     for (const w of weak)

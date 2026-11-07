@@ -13,7 +13,9 @@ import { cards, careers, leagueMatches } from '../db/schema.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, callJson, issueGoogleCookie } from '../test/http.js';
+import { cupText } from '../cupText.js';
 import { runLeague } from './league.js';
+import { pushHeadline } from './leagueNews.js';
 
 // T-11-652 오프사이드 데일리(라운드 신문) · 빅매치 예측 API.
 
@@ -199,11 +201,31 @@ describe('오프사이드 데일리 (T-11-652)', () => {
       .set({ homeGoals: 4, awayGoals: 3 })
       .where(eq(leagueMatches.id, fest.id));
 
+    // 역전승: 끌려가다 뒤집은 경기(골 기록으로 판단한다).
+    const turn = round1.find((m) => ![mixed.id, fest.id, big.id].includes(m.id))!;
+    const d = JSON.parse(turn.detailJson!) as { events: unknown[] };
+    const goal = (minute: number, side: 'home' | 'away') => ({
+      minute,
+      side,
+      scorer: { careerId: null, anon: '유스 선수' },
+      assist: null,
+    });
+    d.events = [goal(10, 'away'), goal(50, 'home'), goal(80, 'home')];
+    await ctx.db
+      .update(leagueMatches)
+      .set({ homeGoals: 2, awayGoals: 1, detailJson: JSON.stringify(d) })
+      .where(eq(leagueMatches.id, turn.id));
+
     const n1 = await news(1);
     if (typeof n1 === 'number') throw new Error(`news 1: ${n1}`);
     const kinds = n1.items.map((i) => i.kind);
     expect(kinds).toContain('leader');
     expect(kinds).toContain('teamOfRound');
+    expect(n1.items.find((i) => i.kind === 'comeback')).toMatchObject({
+      match: { id: turn.id },
+      side: 'home',
+      trailed: 1,
+    });
     // 1라운드에는 라운드 전 순위가 없어 더비가 없다.
     expect(kinds).not.toContain('derby');
     const upset = n1.items.find((i) => i.kind === 'upset');
@@ -234,5 +256,61 @@ describe('오프사이드 데일리 (T-11-652)', () => {
     expect(await news(0)).toBe(404);
     expect((await call('GET', '/v1/leagues/2/news/abc')).status).toBe(404);
     expect((await call('GET', '/v1/leagues/2/news/100')).status).toBe(404);
+  });
+});
+
+describe('T-11-652 라운드 결과 알림의 신문 1면', () => {
+  const t = (teamId: string, name: string) => ({
+    teamId,
+    name,
+    owner: '감독',
+    logo: null,
+    ovr: 80,
+  });
+  const m = {
+    id: 'm1',
+    tier: 1,
+    league: 1,
+    round: 3,
+    home: t('a', '하늘 FC'),
+    away: t('b', '바다 FC'),
+    homeGoals: 0,
+    awayGoals: 2,
+  };
+  const news = {
+    season: 2,
+    round: 3,
+    bigMatch: null,
+    lastBig: null,
+    items: [
+      {
+        kind: 'leader' as const,
+        tier: 1,
+        league: 1,
+        team: t('c', '숲 FC'),
+        points: 9,
+        changed: false,
+      },
+      { kind: 'upset' as const, match: m, gap: 7 },
+    ],
+  };
+
+  it('내 팀이 실린 기사를 먼저, 없으면 이변 같은 큰 기사를 1면으로 고른다', () => {
+    expect(pushHeadline(news, 'c')).toEqual({ mine: true, head: '숲 FC, 1부 선두 자리 지켜' });
+    expect(pushHeadline(news, 'z')).toEqual({ mine: false, head: '바다 FC, OVR 7 차를 뒤집다' });
+    expect(pushHeadline({ ...news, items: [] }, 'a')).toBeNull();
+  });
+
+  it('알림 본문은 한국어로 저장되고 요청 언어로 옮겨진다', () => {
+    const body = '하늘 FC 0 : 2 바다 FC · 지금 5위예요\n오늘의 신문: 바다 FC, OVR 7 차를 뒤집다';
+    expect(cupText(body, 'en')).toBe(
+      '하늘 FC 0 : 2 바다 FC · Position 5\nToday’s paper: 바다 FC overturn a 7-point OVR gap',
+    );
+    expect(
+      cupText(
+        '숲 FC 1 : 0 하늘 FC · 지금 1위예요\n우리 팀이 신문에 실렸어요: 숲 FC, 1부 선두로',
+        'ja',
+      ),
+    ).toBe('숲 FC 1 : 0 하늘 FC・現在1位です\nチームが新聞に載りました: 숲 FC、1部首位に浮上');
   });
 });

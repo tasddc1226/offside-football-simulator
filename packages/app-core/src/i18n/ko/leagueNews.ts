@@ -4,6 +4,8 @@ import { iGa, waGwa, withEulReul } from '../../format.js';
 import { ns } from '../core';
 
 type Score = { score: string };
+/** 변형 번호로 문장 하나를 고른다. */
+const pick = (v: number, list: string[]) => list[Math.abs(v) % list.length]!;
 /** 숫자 뒤 '였/이었'(받침이 있으면 이었). */
 const was = (n: string) => `${n}${iGa(n) === '이' ? '이었' : '였'}`;
 type Pair = { home: string; away: string };
@@ -25,31 +27,135 @@ const ko = {
   tagLeader: '선두',
   tagStreak: '연승',
   tagBig: '빅매치',
-  // 라운드 신문 헤드라인 · 본문
-  upsetHead: (p: Win & { gap: number }) => `${p.winner}, OVR ${p.gap} 차를 뒤집다`,
-  upsetBody: (p: Win & Score & { gap: number }) =>
-    `${p.winner}${iGa(p.winner)} ${withEulReul(p.loser)} ${p.score}로 꺾었습니다. 경기 전 OVR은 ${p.loser} 쪽이 ${p.gap} 높았습니다.`,
-  goalfestHead: (p: Pair & { goals: number }) => `${p.home} · ${p.away}, ${p.goals}골 난타전`,
-  goalfestBody: (p: Pair & Score & { goals: number }) =>
-    `${p.home}${waGwa(p.home)} ${p.away}의 경기에서 ${p.goals}골이 터졌습니다. 최종 스코어는 ${p.score}입니다.`,
-  derbyHead: (p: { homeRank: number; awayRank: number }) =>
-    `${Math.min(p.homeRank, p.awayRank)}위와 ${Math.max(p.homeRank, p.awayRank)}위의 맞대결`,
-  derbyWin: (p: Win & Score) =>
-    `${p.winner}${iGa(p.winner)} ${withEulReul(p.loser)} ${p.score}로 누르고 순위 싸움에서 앞섰습니다.`,
-  derbyDraw: (p: Pair & Score) =>
-    `${p.home}${waGwa(p.home)} ${p.away}는 ${p.score}로 비겼습니다. 순위 싸움은 다음 라운드로 넘어갑니다.`,
-  teamOfRoundHead: (p: { team: string; margin: number }) => `${p.team}, ${p.margin}골 차 완승`,
-  teamOfRoundBody: (p: Win & Score) =>
-    `${p.winner}${iGa(p.winner)} ${withEulReul(p.loser)} ${p.score}로 크게 이겼습니다.`,
-  leaderNewHead: (p: { team: string; tier: number }) => `${p.team}, ${p.tier}부 선두로`,
-  leaderKeepHead: (p: { team: string }) => `${p.team}, 선두 자리 지켜`,
+  tagComeback: '역전승',
+  tagLateWinner: '극장골',
+  tagHattrick: '해트트릭',
+  tagFirstWin: '첫 승',
+  // 라운드 신문 헤드라인 · 본문. v는 기사마다 정해진 변형 번호라 같은 기사는 늘 같은 문장, 기사마다 다른 문장이 나온다.
+  upsetHead: (p: Win & { gap: number; v: number }) =>
+    pick(p.v, [
+      `${p.winner}, OVR ${p.gap} 차를 뒤집다`,
+      `이변의 주인공 ${p.winner}, ${withEulReul(p.loser)} 쓰러뜨리다`,
+      `${p.loser} 덜미 잡혔다… ${p.winner}의 반란`,
+      `약체 평가 비웃은 ${p.winner}`,
+    ]),
+  upsetBody: (p: Win & Score & { gap: number; v: number }) =>
+    pick(p.v, [
+      `${p.winner}${iGa(p.winner)} ${withEulReul(p.loser)} ${p.score}로 꺾었습니다. 경기 전 OVR은 ${p.loser} 쪽이 ${p.gap} 높았습니다.`,
+      `OVR ${p.gap} 열세는 숫자에 불과했습니다. ${p.winner}${iGa(p.winner)} ${p.score} 승리로 ${p.loser}의 발목을 잡았습니다.`,
+      `누구도 예상하지 못한 결과입니다. ${p.loser}${iGa(p.loser)} 고개를 숙였고, ${p.winner}${iGa(p.winner)} ${p.score}로 승점 3점을 가져갔습니다.`,
+    ]),
+  goalfestHead: (p: Pair & { goals: number; v: number }) =>
+    pick(p.v, [
+      `${p.home} · ${p.away}, ${p.goals}골 난타전`,
+      `골, 골, 또 골… ${p.goals}골 터진 ${p.home} 대 ${p.away}`,
+      `수비는 쉬었다, ${p.goals}골 공방전`,
+    ]),
+  goalfestBody: (p: Pair & Score & { goals: number; v: number }) =>
+    pick(p.v, [
+      `${p.home}${waGwa(p.home)} ${p.away}의 경기에서 ${p.goals}골이 터졌습니다. 최종 스코어는 ${p.score}입니다.`,
+      `양 팀 공격수들이 쉬지 않고 골망을 흔들었습니다. 90분 동안 ${p.goals}골이 오간 끝에 ${p.score}로 끝났습니다.`,
+      `관중석이 쉴 틈이 없었습니다. ${p.home}${waGwa(p.home)} ${p.away}${iGa(p.away)} 주고받은 골은 모두 ${p.goals}골, 스코어는 ${p.score}였습니다.`,
+    ]),
+  derbyHead: (p: { homeRank: number; awayRank: number; v: number }) => {
+    const hi = Math.min(p.homeRank, p.awayRank);
+    const lo = Math.max(p.homeRank, p.awayRank);
+    return pick(p.v, [
+      `${hi}위와 ${lo}위의 맞대결`,
+      `순위표를 건 한판, ${hi}위 대 ${lo}위`,
+      `승점 6점짜리 경기, ${hi}위와 ${lo}위가 만났다`,
+    ]);
+  },
+  derbyWin: (p: Win & Score & { v: number }) =>
+    pick(p.v, [
+      `${p.winner}${iGa(p.winner)} ${withEulReul(p.loser)} ${p.score}로 누르고 순위 싸움에서 앞섰습니다.`,
+      `바로 앞뒤 순위끼리 붙은 경기에서 ${p.winner}${iGa(p.winner)} 웃었습니다. ${p.score} 승리로 ${p.loser}와의 간격을 벌렸습니다.`,
+    ]),
+  derbyDraw: (p: Pair & Score & { v: number }) =>
+    pick(p.v, [
+      `${p.home}${waGwa(p.home)} ${p.away}는 ${p.score}로 비겼습니다. 순위 싸움은 다음 라운드로 넘어갑니다.`,
+      `누구도 물러서지 않았습니다. ${p.score} 무승부로 두 팀은 승점 1점씩 나눠 가졌습니다.`,
+    ]),
+  teamOfRoundHead: (p: { team: string; margin: number; v: number }) =>
+    pick(p.v, [
+      `${p.team}, ${p.margin}골 차 완승`,
+      `이 라운드의 팀은 ${p.team}`,
+      `${p.team}, 압도적인 경기력으로 ${p.margin}골 차 대승`,
+    ]),
+  teamOfRoundBody: (p: Win & Score & { v: number }) =>
+    pick(p.v, [
+      `${p.winner}${iGa(p.winner)} ${withEulReul(p.loser)} ${p.score}로 크게 이겼습니다.`,
+      `경기 내내 주도권은 ${p.winner} 쪽에 있었습니다. ${p.loser}${iGa(p.loser)} 손쓸 틈도 없이 ${p.score}로 무너졌습니다.`,
+    ]),
+  leaderNewHead: (p: { team: string; tier: number; v: number }) =>
+    pick(p.v, [
+      `${p.team}, ${p.tier}부 선두로`,
+      `${p.tier}부 새 주인 ${p.team}`,
+      `${p.team}, 마침내 정상에 서다`,
+    ]),
+  leaderKeepHead: (p: { team: string; v: number }) =>
+    pick(p.v, [
+      `${p.team}, 선두 자리 지켜`,
+      `흔들림 없는 ${p.team}, 여전히 1위`,
+      `${p.team}의 독주는 계속된다`,
+    ]),
   leaderNewBody: (p: { team: string; tier: number; points: number }) =>
     `${p.team}${iGa(p.team)} 승점 ${p.points}점으로 ${p.tier}부 1위에 올랐습니다.`,
   leaderKeepBody: (p: { team: string; tier: number; points: number }) =>
     `${p.team}${iGa(p.team)} 승점 ${p.points}점으로 ${p.tier}부 1위를 지켰습니다.`,
-  streakHead: (p: { team: string; n: number }) => `${p.team}, ${p.n}연승 행진`,
+  streakHead: (p: { team: string; n: number; v: number }) =>
+    pick(p.v, [
+      `${p.team}, ${p.n}연승 행진`,
+      `멈추지 않는 ${p.team}, 벌써 ${p.n}연승`,
+      `${p.team}의 상승세, 어느덧 ${p.n}연승`,
+    ]),
   streakBody: (p: { team: string; n: number }) =>
     `${p.team}${iGa(p.team)} ${p.n}경기 연속 이겼습니다.`,
+  comebackHead: (p: { team: string; n: number; v: number }) =>
+    pick(p.v, [
+      `${p.team}, ${p.n}골 차를 뒤집은 역전승`,
+      `포기는 없었다, ${p.team}의 대역전극`,
+      `끌려가던 ${p.team}, 경기를 뒤집다`,
+    ]),
+  comebackBody: (p: Win & Score & { n: number; v: number }) =>
+    pick(p.v, [
+      `${p.winner}${iGa(p.winner)} ${p.n}골 차로 끌려가다 ${withEulReul(p.loser)} ${p.score}로 꺾었습니다.`,
+      `먼저 웃은 쪽은 ${p.loser}였습니다. 하지만 ${p.winner}${iGa(p.winner)} 차례로 골을 몰아넣으며 ${p.score} 역전승을 완성했습니다.`,
+    ]),
+  lateHead: (p: { team: string; minute: number; v: number }) =>
+    pick(p.v, [
+      `${p.minute}분의 기적, ${p.team} 극장골`,
+      `${p.team}, 종료 직전 결승골`,
+      `마지막에 웃은 건 ${p.team}`,
+    ]),
+  lateBody: (p: Win & Score & { minute: number; name: string; v: number }) =>
+    pick(p.v, [
+      `${p.minute}분 ${p.name}의 골이 승부를 갈랐습니다. ${p.winner}${iGa(p.winner)} ${withEulReul(p.loser)} ${p.score}로 꺾었습니다.`,
+      `무승부로 끝나는 듯했던 경기는 ${p.minute}분에 뒤집혔습니다. ${p.name}${iGa(p.name)} 결승골을 넣었고 ${p.winner}${iGa(p.winner)} ${p.score}로 이겼습니다.`,
+    ]),
+  hattrickHead: (p: { name: string; team: string; goals: number; v: number }) =>
+    pick(p.v, [
+      `${p.name}, ${p.goals}골 원맨쇼`,
+      `${p.team}의 ${p.name}, 해트트릭 폭발`,
+      `혼자서 ${p.goals}골, ${p.name}의 날`,
+    ]),
+  hattrickBody: (p: { name: string; team: string; goals: number; score: string; v: number }) =>
+    pick(p.v, [
+      `${p.team}의 ${p.name}${iGa(p.name)} 한 경기에서 ${p.goals}골을 넣었습니다. 경기는 ${p.score}로 끝났습니다.`,
+      `${p.name}${iGa(p.name)} 골문 앞에서 자비를 보이지 않았습니다. ${p.goals}골을 몰아친 활약으로 경기의 주인공이 됐습니다(${p.score}).`,
+    ]),
+  firstWinHead: (p: { team: string; n: number; v: number }) =>
+    pick(p.v, [
+      `${p.team}, ${p.n}경기 만에 시즌 첫 승`,
+      `기다림 끝에 첫 승, ${p.team}`,
+      `${p.team}, 마침내 승리를 맛보다`,
+    ]),
+  firstWinBody: (p: Win & Score & { n: number; v: number }) =>
+    pick(p.v, [
+      `${p.winner}${iGa(p.winner)} ${withEulReul(p.loser)} ${p.score}로 꺾고 ${p.n}경기 만에 첫 승을 올렸습니다.`,
+      `이번 시즌 승리가 없던 ${p.winner}${iGa(p.winner)} 드디어 웃었습니다. ${p.score} 승리로 반등의 발판을 마련했습니다.`,
+    ]),
+  youth: '유스 선수',
   xgLine: (p: { hx: string; ax: string }) => `기대 득점은 ${p.hx} 대 ${was(p.ax)}습니다.`,
   // 경기 기사(경기 상세)
   articleTitle: '경기 기사',

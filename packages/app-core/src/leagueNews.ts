@@ -4,11 +4,13 @@ import type { TeamMatch } from '@offside/contracts';
 import type {
   LeagueNewsItem,
   LeagueNewsMatch,
+  LeagueNewsPlayer,
   LeagueNewsResponse,
   LeaguePredictionCounts,
   LeaguePredictionPick,
   LeagueTableResponse,
 } from './api/league.js';
+import { playerName } from './format.js';
 import { leagueNewsText as N } from './i18n/ko/leagueNews.js';
 
 /** 이변 · 한 수 위 상대로 보는 OVR 차(서버 NEWS_UPSET_GAP와 같다). */
@@ -54,13 +56,28 @@ const TAG: Record<LeagueNewsItem['kind'], () => string> = {
   teamOfRound: () => N.tagTeamOfRound,
   leader: () => N.tagLeader,
   streak: () => N.tagStreak,
+  comeback: () => N.tagComeback,
+  lateWinner: () => N.tagLateWinner,
+  hattrick: () => N.tagHattrick,
+  firstWin: () => N.tagFirstWin,
 };
+
+/** 기사마다 정해진 변형 번호(같은 기사는 늘 같은 문장, 기사마다 다른 문장). */
+export function variantOf(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) h = Math.imul(h ^ seed.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+
+/** 기사에 실린 선수 이름(공개 이름 · 익명 표기, 유스는 '유스 선수'). */
+const nameOf = (p: LeagueNewsPlayer) => (p ? playerName(p.name, p.pos, p.number) : N.youth);
 
 function cardOf(item: LeagueNewsItem, round: number): NewsCard {
   const base = { key: `${item.kind}`, kind: item.kind, tag: TAG[item.kind]() };
   if (item.kind === 'leader' || item.kind === 'streak') {
     const where = N.where({ tier: item.tier, league: item.league, round });
-    const t = { team: item.team.name, tier: item.tier };
+    const v = variantOf(`${item.kind}:${item.team.teamId}:${round}`);
+    const t = { team: item.team.name, tier: item.tier, v };
     return {
       ...base,
       where,
@@ -75,7 +92,7 @@ function cardOf(item: LeagueNewsItem, round: number): NewsCard {
               body: N.leaderKeepBody({ ...t, points: item.points }),
             }
         : {
-            head: N.streakHead({ team: item.team.name, n: item.n }),
+            head: N.streakHead({ team: item.team.name, n: item.n, v }),
             body: N.streakBody({ team: item.team.name, n: item.n }),
           }),
     };
@@ -90,43 +107,78 @@ function cardOf(item: LeagueNewsItem, round: number): NewsCard {
     tier: m.tier,
     league: m.league,
   };
+  const v = variantOf(`${item.kind}:${m.id}`);
+  // 본문은 헤드라인과 다른 변형을 고르게 한 칸 민다.
+  const vb = v >>> 3;
   const s = score(m);
+  const ws = winScore(m);
   const xg = xgText(m.homeXg, m.awayXg);
   const pair = { home: m.home.name, away: m.away.name };
+  const hero = 'side' in item ? (item.side === 'home' ? m.home.name : m.away.name) : m.home.name;
   switch (item.kind) {
     case 'upset':
       return {
         ...common,
-        head: N.upsetHead({ ...sides(m), gap: item.gap }),
-        body: join(N.upsetBody({ ...sides(m), score: winScore(m), gap: item.gap }), xg),
+        head: N.upsetHead({ ...sides(m), gap: item.gap, v }),
+        body: join(N.upsetBody({ ...sides(m), score: ws, gap: item.gap, v: vb }), xg),
       };
     case 'goalfest': {
       const goals = m.homeGoals + m.awayGoals;
       return {
         ...common,
-        head: N.goalfestHead({ ...pair, goals }),
-        body: join(N.goalfestBody({ ...pair, score: s, goals }), xg),
+        head: N.goalfestHead({ ...pair, goals, v }),
+        body: join(N.goalfestBody({ ...pair, score: s, goals, v: vb }), xg),
       };
     }
     case 'derby':
       return {
         ...common,
-        head: N.derbyHead({ homeRank: item.homeRank, awayRank: item.awayRank }),
+        head: N.derbyHead({ homeRank: item.homeRank, awayRank: item.awayRank, v }),
         body: join(
           m.homeGoals === m.awayGoals
-            ? N.derbyDraw({ ...pair, score: s })
-            : N.derbyWin({ ...sides(m), score: winScore(m) }),
+            ? N.derbyDraw({ ...pair, score: s, v: vb })
+            : N.derbyWin({ ...sides(m), score: ws, v: vb }),
           xg,
         ),
       };
-    case 'teamOfRound': {
-      const team = item.side === 'home' ? m.home.name : m.away.name;
+    case 'teamOfRound':
       return {
         ...common,
-        head: N.teamOfRoundHead({ team, margin: Math.abs(m.homeGoals - m.awayGoals) }),
-        body: join(N.teamOfRoundBody({ ...sides(m), score: winScore(m) }), xg),
+        head: N.teamOfRoundHead({ team: hero, margin: Math.abs(m.homeGoals - m.awayGoals), v }),
+        body: join(N.teamOfRoundBody({ ...sides(m), score: ws, v: vb }), xg),
+      };
+    case 'comeback':
+      return {
+        ...common,
+        head: N.comebackHead({ team: hero, n: item.trailed, v }),
+        body: join(N.comebackBody({ ...sides(m), score: ws, n: item.trailed, v: vb }), xg),
+      };
+    case 'lateWinner':
+      return {
+        ...common,
+        head: N.lateHead({ team: hero, minute: item.minute, v }),
+        body: N.lateBody({
+          ...sides(m),
+          score: ws,
+          minute: item.minute,
+          name: nameOf(item.scorer),
+          v: vb,
+        }),
+      };
+    case 'hattrick': {
+      const name = nameOf(item.scorer);
+      return {
+        ...common,
+        head: N.hattrickHead({ name, team: hero, goals: item.goals, v }),
+        body: N.hattrickBody({ name, team: hero, goals: item.goals, score: s, v: vb }),
       };
     }
+    case 'firstWin':
+      return {
+        ...common,
+        head: N.firstWinHead({ team: hero, n: item.before + 1, v }),
+        body: N.firstWinBody({ ...sides(m), score: ws, n: item.before + 1, v: vb }),
+      };
   }
 }
 

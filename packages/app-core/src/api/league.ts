@@ -49,6 +49,7 @@ export type {
   LeagueBigMatch,
   LeagueNewsItem,
   LeagueNewsMatch,
+  LeagueNewsPlayer,
   LeagueNewsResponse,
   LeaguePredictionCounts,
   LeaguePredictionMeResponse,

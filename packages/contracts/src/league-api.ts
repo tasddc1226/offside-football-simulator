@@ -215,6 +215,16 @@ export const LeagueNewsMatchSchema = z.strictObject({
 });
 export type LeagueNewsMatch = z.infer<typeof LeagueNewsMatchSchema>;
 
+/** 기사에 실린 선수(공개 이름, 비공개면 null이라 화면이 포지션 · 등번호로 익명 표기를 만든다). 유스 선수는 null. */
+export const LeagueNewsPlayerSchema = z
+  .strictObject({
+    name: z.string().nullable(),
+    pos: CareerPosSchema,
+    number: z.number().int().nullable(),
+  })
+  .nullable();
+export type LeagueNewsPlayer = z.infer<typeof LeagueNewsPlayerSchema>;
+
 /**
  * 기사 한 꼭지. upset: OVR이 낮은 팀이 이긴 경기(gap = OVR 차). goalfest: 골이 가장 많이 난 경기. derby: 라운드 전 순위가 붙어
  * 있고 승점 차가 작은 두 팀의 맞대결(라운드 전 순위). teamOfRound: 가장 크게 이긴 팀. leader: 1부 선두(changed: 이 라운드에
@@ -241,6 +251,36 @@ export const LeagueNewsItemSchema = z.discriminatedUnion('kind', [
     team: LeagueNewsTeamSchema,
     points: z.number().int(),
     changed: z.boolean(),
+  }),
+  // 끌려가다 뒤집은 경기(trailed: 가장 크게 뒤졌던 골 수).
+  z.strictObject({
+    kind: z.literal('comeback'),
+    match: LeagueNewsMatchSchema,
+    side: z.enum(['home', 'away']),
+    trailed: z.number().int().min(1),
+  }),
+  // 한 골 차 경기의 결승골이 늦게 나왔다.
+  z.strictObject({
+    kind: z.literal('lateWinner'),
+    match: LeagueNewsMatchSchema,
+    side: z.enum(['home', 'away']),
+    minute: z.number().int(),
+    scorer: LeagueNewsPlayerSchema,
+  }),
+  // 한 경기 3골 이상.
+  z.strictObject({
+    kind: z.literal('hattrick'),
+    match: LeagueNewsMatchSchema,
+    side: z.enum(['home', 'away']),
+    goals: z.number().int().min(3),
+    scorer: LeagueNewsPlayerSchema,
+  }),
+  // 이번 시즌 첫 승(before: 그 전에 치른 경기 수).
+  z.strictObject({
+    kind: z.literal('firstWin'),
+    match: LeagueNewsMatchSchema,
+    side: z.enum(['home', 'away']),
+    before: z.number().int().min(1),
   }),
   z.strictObject({
     kind: z.literal('streak'),
