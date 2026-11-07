@@ -332,7 +332,8 @@ export const analytics = {
   play: (s: Career, firstAction = false) => tracker?.play(s, firstAction),
   firstSeason: (s: Career) => {
     tracker?.firstSeason(s);
-    trackMeta('FirstSeason');
+    // game-actions는 시즌이 끝날 때마다 부른다. Meta 첫 시즌 전환은 첫 시즌을 마친 그때만 보낸다.
+    if (s.career.length === 1) trackMeta('FirstSeason');
     metric(() => playerMetrics.season());
   },
   retire: (s: Career) => {
