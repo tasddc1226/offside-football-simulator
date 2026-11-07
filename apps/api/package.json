@@ -9,16 +9,16 @@
     "test": "vitest run",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "db:generate": "drizzle-kit generate",
+    "db:generate": "drizzle-kit generate && drizzle-kit generate --config drizzle-ops.config.ts",
     "db:query": "wrangler d1 execute offside-local --local --command",
     "db:query:staging": "wrangler d1 execute offside-staging --remote --env staging --command",
     "db:query:production": "wrangler d1 execute offside-production --remote --env production --command",
-    "db:migrate": "wrangler d1 migrations apply offside-local --local",
-    "db:migrate:staging": "wrangler d1 migrations apply offside-staging --remote --env staging",
-    "db:migrate:production": "wrangler d1 migrations apply offside-production --remote --env production",
+    "db:migrate": "wrangler d1 migrations apply offside-local --local && wrangler d1 migrations apply offside-ops-local --local",
+    "db:migrate:staging": "wrangler d1 migrations apply offside-staging --remote --env staging && wrangler d1 migrations apply offside-ops-staging --remote --env staging",
+    "db:migrate:production": "wrangler d1 migrations apply offside-production --remote --env production && wrangler d1 migrations apply offside-ops-production --remote --env production",
     "deploy:staging": "wrangler deploy --env staging",
     "deploy:production": "wrangler deploy --env production",
-    "db:check": "drizzle-kit generate && test -z \"$(git status --porcelain -- migrations)\""
+    "db:check": "drizzle-kit generate && drizzle-kit generate --config drizzle-ops.config.ts && test -z \"$(git status --porcelain -- migrations migrations-ops)\""
   },
   "dependencies": {
     "@offside/contracts": "workspace:*",

@@ -11,7 +11,7 @@ const MAX_CHUNKS = 40;
 
 /** 표마다: 이 열이 (지금 - keepMs)보다 이르면 지운다. 열마다 인덱스가 있어 묶음마다 표 전체를 훑지 않는다
  * (auth_attempts는 (kind, subject)당 한 행이라 작다). */
-const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
+const TARGETS: readonly { table: string; column: string; keepMs: number; ops?: true }[] = [
   { table: 'push_deliveries', column: 'expires_at', keepMs: 30 * DAY_MS },
   { table: 'notifications', column: 'expires_at', keepMs: 0 },
   // 만료 30일 뒤 토큰·접수 번호를 정리한다. day PK가 지워져도 과거 글을 재발송하지 않는다.
@@ -23,6 +23,7 @@ const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
     table: 'auth_attempts',
     column: 'window_start',
     keepMs: Math.max(DAY_MS, 2 * RATE_LIMIT_WINDOW_MS),
+    ops: true,
   },
   // 만료된 세션도 한 달은 둔다(문의가 오면 언제 로그인했는지 볼 수 있게). 폐기된 세션은 만료 뒤에 지워진다.
   { table: 'sessions', column: 'expires_at', keepMs: 30 * DAY_MS },
@@ -34,24 +35,25 @@ const TARGETS: readonly { table: string; column: string; keepMs: number }[] = [
   // T-11-146 번역 캐시. 다시 누르면 새로 번역한다.
   { table: 'translations', column: 'created_at', keepMs: 30 * DAY_MS },
   // T-11-321 서버 상태 화면(최근 30일만 보여 준다).
-  { table: 'api_status_buckets', column: 'bucket', keepMs: 35 * DAY_MS },
+  { table: 'api_status_buckets', column: 'bucket', keepMs: 35 * DAY_MS, ops: true },
   // T-11-331 앱·웹 오류(마지막으로 본 지 35일 지난 것).
-  { table: 'client_errors', column: 'last_at', keepMs: 35 * DAY_MS },
+  { table: 'client_errors', column: 'last_at', keepMs: 35 * DAY_MS, ops: true },
 ];
 
 export type CleanupResult = Record<string, number>;
 
-/** 표마다 지운 행 수. */
+/** 표마다 지운 행 수. T-11-662 운영 기록 표(ops)는 ops DB에서 지운다(없으면 게임 DB). */
 export async function cleanupExpired(
   db: D1Database,
   now: number,
   budget: { chunk?: number; maxChunks?: number } = {},
+  ops: D1Database = db,
 ): Promise<CleanupResult> {
   const chunk = Math.min(budget.chunk ?? CHUNK, CHUNK);
   const maxChunks = Math.min(budget.maxChunks ?? MAX_CHUNKS, MAX_CHUNKS);
   const out: CleanupResult = {};
   for (const t of TARGETS) {
-    const stmt = db
+    const stmt = (t.ops ? ops : db)
       .prepare(
         `DELETE FROM ${t.table} WHERE rowid IN (SELECT rowid FROM ${t.table} WHERE ${t.column} < ?1 LIMIT ${chunk})`,
       )

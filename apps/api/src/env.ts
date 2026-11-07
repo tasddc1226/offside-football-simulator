@@ -1,5 +1,5 @@
 import type { Context } from 'hono';
-import { createDb, type Db } from './db/client.js';
+import { createDb, linkOps, type Db } from './db/client.js';
 import type { SessionChannel } from './db/repos/sessions.js';
 import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
@@ -50,6 +50,8 @@ export type Bindings = {
   SEASON_TELEMETRY_ARCHIVE_DISABLED?: string;
   D1_READ_SESSIONS_DISABLED?: string;
   DB: D1Database;
+  /** T-11-662 운영 기록 DB. 로컬 · 스테이징 · 운영 모두 있다(없으면 DB로 대신한다). */
+  OPS_DB?: D1Database;
   /** local|staging|production. */
   ENVIRONMENT: string;
   /** 쉼표 구분 origin 목록. */
@@ -160,9 +162,14 @@ export function getDb(c: Context<AppEnv>): Db {
     return existing;
   }
   const db = createDb(c.env.DB);
+  // T-11-662 운영 기록 DB를 짝지어 둔다(opsOf).
+  if (c.env.OPS_DB) linkOps(db, createDb(c.env.OPS_DB));
   c.set('db', db);
   return db;
 }
+
+/** T-11-662 운영 기록 DB(요청 횟수 제한 · 서버 상태 · 클라이언트 오류 · 운영 지표). 없으면 게임 DB. */
+export const opsD1 = (env: Pick<Bindings, 'DB' | 'OPS_DB'>): D1Database => env.OPS_DB ?? env.DB;
 
 /** Only for explicitly public, read-only multi-query loaders. Auth/writes use getDb.
  * Anchor the first query on primary; subsequent reads can use a caught-up replica.

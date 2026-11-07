@@ -1,8 +1,8 @@
+import { authAttempts } from '../db/opsSchema.js';
 import { ErrorEnvelopeSchema } from '@offside/contracts';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
-  authAttempts,
   boardBlocks,
   boardCommentReports,
   boardComments,
@@ -425,7 +425,7 @@ describe('게시판 /v1/boards', () => {
       ).status,
     ).toBe(404);
 
-    await ctx.db.insert(authAttempts).values({
+    await ctx.ops.insert(authAttempts).values({
       id: 'att_x',
       kind: 'BOARD_COMMENT',
       subject: user.profileId,

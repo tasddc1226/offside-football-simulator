@@ -1,3 +1,4 @@
+import { authAttempts } from '../db/opsSchema.js';
 import {
   ErrorEnvelopeSchema,
   MyCareersResponseSchema,
@@ -15,14 +16,7 @@ import { cardValue, retireValue } from '@offside/contracts/market-value';
 import { gzipToR2 } from '../cron/backup.js';
 import { createApp } from '../app.js';
 import { UPLOAD_LIMIT } from './careers.js';
-import {
-  authAttempts,
-  cards,
-  careers,
-  careerSeasons,
-  profiles,
-  seasonTelemetry,
-} from '../db/schema.js';
+import { cards, careers, careerSeasons, profiles, seasonTelemetry } from '../db/schema.js';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import {
   deleteProfile,
@@ -455,7 +449,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       );
     // 한도 직전까지 쓴 상태를 바로 만든다 — 한도만큼 PUT하면 느리다. 그 한 번은 통과하고 다음부터 429다.
     expect((await put(heavy.cookie, CAREER_ID)).status).toBe(200);
-    await ctx.db
+    await ctx.ops
       .update(authAttempts)
       .set({ count: UPLOAD_LIMIT.CAREER_SEASON - 1 })
       .where(
@@ -473,7 +467,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       Array.from({ length: 4 }, async () => put(heavy.cookie, CAREER_ID)),
     );
     expect(rejected.every((res) => res.status === 429)).toBe(true);
-    const counter = await ctx.db
+    const counter = await ctx.ops
       .select({ count: authAttempts.count })
       .from(authAttempts)
       .where(
@@ -1279,14 +1273,18 @@ describe('T-11-276 업로드의 D1 왕복 수', () => {
   afterEach(async () => {
     await ctx.dispose();
   });
+  // T-11-662 한도(요청 횟수 제한)는 운영 기록 DB로 간다. 두 DB 왕복을 함께 센다.
   const spied = async (path: string, body: unknown) => {
     const { DB, trips } = spyDb(ctx.env.DB);
+    const ops = spyDb(ctx.env.OPS_DB!);
     const res = await createApp().request(path, jsonInit({ method: 'PUT', body, cookie }), {
       ...ctx.env,
       DB,
+      OPS_DB: ops.DB,
     });
     expect(res.status).toBe(200);
-    return { n: trips.n, log: trips.log };
+    expect(ops.trips.n, ops.trips.log.join('\n')).toBe(1);
+    return { n: trips.n + ops.trips.n, log: [...trips.log, ...ops.trips.log] };
   };
 
   it('시즌 PUT: 세션 1 · 머리+지난 OVR 1 · 한도 1 · 저장 1 · 기록 판정 3(커리어+시즌 읽기 · 보유 기록 읽기 · 쓰기) = 7', async () => {
