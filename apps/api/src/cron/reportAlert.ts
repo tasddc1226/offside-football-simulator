@@ -89,41 +89,56 @@ export function reportAlertText(batch: ReportBatch, since: string, until: string
 }
 
 async function readBatch(db: D1Database, since: string, until: string): Promise<ReportBatch> {
-  // 처리 전 신고만(이름 · 채팅은 resolved_at 인덱스, 댓글은 created_at 인덱스). 같은 대상은 한 줄로 묶는다.
-  const [names, chats, boardComments, teamComments] = await db.batch([
-    db
+  // T-11-661 네 신고 표를 한 보기(report_feed)로 읽는다. 처리 전 신고만, 같은 대상은 한 줄로 묶고 종류마다 FETCH줄까지.
+  // 보기의 WHERE는 표마다 내려가 이름 · 채팅은 resolved_at 인덱스, 댓글은 created_at 인덱스를 탄다.
+  const rows = (
+    await db
       .prepare(
-        `SELECT kind, target_id, min(name) AS name, count(*) AS n FROM name_reports
-         WHERE resolved_at IS NULL AND created_at > ?1 AND created_at <= ?2
-         GROUP BY kind, target_id LIMIT ${FETCH}`,
+        `SELECT source, target_kind, target_id, label, room, reasons, n FROM (
+           SELECT source, target_kind, target_id, min(label) AS label, min(room) AS room,
+                  group_concat(DISTINCT reason) AS reasons, count(*) AS n,
+                  row_number() OVER (PARTITION BY source ORDER BY min(created_at)) AS k
+             FROM report_feed
+            WHERE resolved_at IS NULL AND created_at > ?1 AND created_at <= ?2
+            GROUP BY source, target_kind, target_id)
+          WHERE k <= ${FETCH}`,
       )
-      .bind(since, until),
-    db
-      .prepare(
-        `SELECT message_id, min(room) AS room, min(nickname) AS nickname,
-           group_concat(DISTINCT reason) AS reasons, count(*) AS n FROM chat_reports
-         WHERE resolved_at IS NULL AND created_at > ?1 AND created_at <= ?2
-         GROUP BY message_id LIMIT ${FETCH}`,
-      )
-      .bind(since, until),
-    db
-      .prepare(
-        `SELECT comment_id, group_concat(DISTINCT reason) AS reasons, count(*) AS n FROM board_comment_reports
-         WHERE created_at > ?1 AND created_at <= ?2 GROUP BY comment_id LIMIT ${FETCH}`,
-      )
-      .bind(since, until),
-    db
-      .prepare(
-        `SELECT comment_id, group_concat(DISTINCT reason) AS reasons, count(*) AS n FROM team_comment_reports
-         WHERE created_at > ?1 AND created_at <= ?2 GROUP BY comment_id LIMIT ${FETCH}`,
-      )
-      .bind(since, until),
-  ]);
+      .bind(since, until)
+      .all<{
+        source: string;
+        target_kind: string;
+        target_id: string;
+        label: string | null;
+        room: string | null;
+        reasons: string | null;
+        n: number;
+      }>()
+  ).results;
+  const of = (source: string) => rows.filter((r) => r.source === source);
   return {
-    names: (names?.results ?? []) as NameRow[],
-    chats: (chats?.results ?? []) as ChatRow[],
-    boardComments: (boardComments?.results ?? []) as CommentRow[],
-    teamComments: (teamComments?.results ?? []) as CommentRow[],
+    names: of('name').map((r) => ({
+      kind: r.target_kind,
+      target_id: r.target_id,
+      name: r.label ?? '',
+      n: r.n,
+    })),
+    chats: of('chat').map((r) => ({
+      message_id: r.target_id,
+      room: r.room ?? '',
+      nickname: r.label ?? '',
+      reasons: r.reasons ?? '',
+      n: r.n,
+    })),
+    boardComments: of('board_comment').map((r) => ({
+      comment_id: r.target_id,
+      reasons: r.reasons ?? '',
+      n: r.n,
+    })),
+    teamComments: of('team_comment').map((r) => ({
+      comment_id: r.target_id,
+      reasons: r.reasons ?? '',
+      n: r.n,
+    })),
   };
 }
 
