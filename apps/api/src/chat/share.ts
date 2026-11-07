@@ -1,5 +1,7 @@
 import type { ChatShareInput } from '@offside/contracts';
-import type { ChatRoomKey, ChatShare } from '@offside/contracts/chat';
+import type { ChatNewsShare, ChatRoomKey, ChatShare } from '@offside/contracts/chat';
+import { and, eq } from 'drizzle-orm';
+import { leagueMatches } from '../db/schema.js';
 import type { FormationId } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import {
@@ -12,8 +14,10 @@ import {
   logoOf,
   peakOf,
   slotIdsOf,
+  teamLogosByIds,
   teamPlayerCard,
   toLineupCareer,
+  type MatchDetail,
 } from '../db/repos/ownerTeams.js';
 import type { Db } from '../db/client.js';
 import { chatShareText as en } from '../i18n/en/chatShare.js';
@@ -32,7 +36,8 @@ export async function buildChatShare(
   input: ChatShareInput,
   room: ChatRoomKey,
   now: string,
-): Promise<{ body: string; share: ChatShare } | null> {
+): Promise<{ body: string; share: ChatShare | ChatNewsShare } | null> {
+  if (input.kind === 'leagueMatch') return leagueMatchShare(db, input, room);
   const season = teamSeasonAt(now);
   const teams = await listMyTeams(db, profileId);
   // 시즌 사이 휴식기면 가장 최근 팀.
@@ -96,5 +101,48 @@ export async function buildChatShare(
         youth: !s.careerId,
       })),
     },
+  };
+}
+
+/** T-11-652 끝난 리그 경기 기사(누구 경기든). 팀 이름 · OVR은 경기 기록, 로고는 지금 팀. */
+async function leagueMatchShare(
+  db: Db,
+  input: Extract<ChatShareInput, { kind: 'leagueMatch' }>,
+  room: ChatRoomKey,
+): Promise<{ body: string; share: ChatNewsShare } | null> {
+  const [m] = await db
+    .select()
+    .from(leagueMatches)
+    .where(and(eq(leagueMatches.season, input.season), eq(leagueMatches.id, input.matchId)))
+    .limit(1);
+  if (!m?.playedAt || m.forfeit || !m.detailJson) return null;
+  const d = JSON.parse(m.detailJson) as MatchDetail;
+  const logos = await teamLogosByIds(db, [d.home.teamId, d.away.teamId]);
+  const side = (s: MatchDetail['home'], goals: number) => ({
+    teamId: s.teamId,
+    name: s.name,
+    logo: logos.get(s.teamId) ?? null,
+    ovr: s.ovr,
+    goals,
+  });
+  const share: ChatNewsShare = {
+    kind: 'leagueMatch',
+    season: m.season,
+    matchId: m.id,
+    tier: m.tier,
+    league: m.leagueNo,
+    round: m.round,
+    home: side(d.home, m.homeGoals ?? 0),
+    away: side(d.away, m.awayGoals ?? 0),
+  };
+  return {
+    body: TEXT[room].league({
+      tier: m.tier,
+      round: m.round,
+      home: share.home.name,
+      away: share.away.name,
+      score: `${share.home.goals}:${share.away.goals}`,
+    }),
+    share,
   };
 }

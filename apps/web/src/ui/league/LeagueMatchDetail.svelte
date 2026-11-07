@@ -11,6 +11,11 @@
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import TeamLogo from '../team/TeamLogo.svelte';
   import TeamLive from '../team/TeamLive.svelte';
+  import { leagueNewsText as N } from '@offside/app-core/i18n/ko/leagueNews';
+  import { matchArticle } from '@offside/app-core/leagueNews';
+  import { accountCache } from '../account-state.svelte.js';
+  import { isMember } from '@offside/app-core/account';
+  import { shareToLounge } from '../team/loungeShare.js';
 
   let { season, m, table, mineId, onback }: { season: number; m: LeagueMatch; table: LeagueTableResponse; mineId: string | null; onback: () => void } = $props();
 
@@ -29,6 +34,17 @@
     status = 'ready';
   }
   onMount(() => void load());
+  const linked = $derived.by(() => {
+    const acct = accountCache.value;
+    return !!acct && acct !== 'error' && isMember(acct);
+  });
+  let sharing = $state(false);
+  async function share() {
+    if (sharing) return;
+    sharing = true;
+    await shareToLounge({ kind: 'leagueMatch', season, matchId: m.id });
+    sharing = false;
+  }
   const mineSide = $derived(m.homeTeamId === mineId ? 'home' : m.awayTeamId === mineId ? 'away' : null);
 </script>
 
@@ -39,6 +55,7 @@
     <TeamLive match={v.match} neutral={v.neutral} name={keep} onend={() => ((live = false), window.scrollTo(0, 0))} />
   {:else if detail}
     {@const d = detail.match}
+    {@const article = matchArticle(d)}
     <section class="card stack lmd" style="gap:14px" data-league-detail={m.id}>
       <div>
         <div class="eyebrow">Offside League</div>
@@ -55,6 +72,11 @@
           <b>{d.away.name}</b><small class="muted">{owners.get(d.away.teamId) ?? d.away.owner} · OVR {d.away.ovr}</small>
         </div>
       </div>
+      <article class="lmd-article" data-league-article>
+        <small class="eyebrow">{N.articleTitle}</small>
+        <h2>{article.head}</h2>
+        {#each article.body as line (line)}<p class="fs-sm">{line}</p>{/each}
+      </article>
       {#if d.events.length}
         <ol class="lmd-events">
           {#each d.events as e, k (k)}
@@ -68,12 +90,20 @@
         <p class="muted">{C.noGoals}</p>
       {/if}
       <p class="muted fs-sm">{kstMonthDayTime(d.createdAt)}</p>
-      <button class="btn self-start" data-act="league-replay" onclick={() => (live = true)}>{TM.replay}</button>
+      <div class="lmd-acts">
+        <button class="btn" data-act="league-replay" onclick={() => (live = true)}>{TM.replay}</button>
+        {#if linked && !detail.league.forfeit}<button class="btn" data-act="league-article-share" disabled={sharing} aria-label={N.shareAria({ home: d.home.name, away: d.away.name })} onclick={() => void share()}>{N.shareAct}</button>{/if}
+      </div>
     </section>
   {/if}
 </LoadState>
 
 <style>
+  .lmd-article { display: flex; flex-direction: column; gap: 6px; padding: 12px; border-left: 3px solid var(--accent); background: var(--surface-2, transparent); border-radius: var(--radius-sm, 8px); }
+  .lmd-article h2, .lmd-article p { margin: 0; }
+  .lmd-article h2 { font-size: 1.1rem; line-height: 1.35; }
+  .lmd-article p { line-height: 1.55; }
+  .lmd-acts { display: flex; gap: 8px; flex-wrap: wrap; }
   .lmd-score { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
   .lmd-side { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
   .lmd-side.away { text-align: right; align-items: flex-end; }

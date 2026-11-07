@@ -6,7 +6,14 @@ import {
 } from '@offside/contracts/chat';
 import type { AdminChatReport, ChatTicketResponse } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { cards, careers, chatReports, marketListings, ownerTeams } from '../db/schema.js';
+import {
+  cards,
+  careers,
+  chatReports,
+  leagueMatches,
+  marketListings,
+  ownerTeams,
+} from '../db/schema.js';
 import worker from '../index.js';
 import { fakeRoom, type FakeSocket } from '../test/chatRoom.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -383,6 +390,59 @@ describe('T-11-015 채팅 /v1/chat', () => {
       expect(m.body).toBe('하늘선수 선수를 공유했어요. OVR 85');
       expect(m.share).toMatchObject({ kind: 'player', name: '하늘선수', player: { peak: 85 } });
       expect((await share(me.cookie, { kind: 'player', careerId: 'car_mine' })).status).toBe(429);
+    });
+
+    it('T-11-652 끝난 리그 경기 기사를 news 칸으로 올리고(옛 앱은 body만), 안 끝난 경기 · 기권 경기는 404', async () => {
+      const me = await issueGoogleCookie(ctx, { nickname: '도하람' });
+      const snap = (teamId: string, name: string, ovr: number) => ({
+        teamId,
+        name,
+        owner: '감독',
+        formation: '4-3-3',
+        ovr,
+      });
+      const row = (id: string, slot: number, played: boolean, forfeit = 0) => ({
+        id,
+        season: 2,
+        tier: 1,
+        leagueNo: 1,
+        round: 3,
+        slot,
+        homeTeamId: 'tm_home',
+        awayTeamId: 'tm_away',
+        at: '2026-11-07T04:00:00.000Z',
+        playedAt: played ? '2026-11-07T04:00:36.000Z' : null,
+        homeGoals: played ? 2 : null,
+        awayGoals: played ? 1 : null,
+        forfeit,
+        detailJson: played
+          ? JSON.stringify({
+              home: snap('tm_home', '하늘 FC', 88),
+              away: snap('tm_away', '바다 FC', 91),
+              events: [],
+            })
+          : null,
+      });
+      await ctx.db
+        .insert(leagueMatches)
+        .values([row('lgm_done', 1, true), row('lgm_open', 2, false), row('lgm_ff', 3, true, 1)]);
+      const reader = await chat.join();
+      for (const matchId of ['lgm_open', 'lgm_ff', 'lgm_none'])
+        expect((await share(me.cookie, { kind: 'leagueMatch', season: 2, matchId })).status).toBe(
+          404,
+        );
+      const res = await share(me.cookie, { kind: 'leagueMatch', season: 2, matchId: 'lgm_done' });
+      expect(res.status).toBe(201);
+      const { m } = reader.sent.at(-1) as Extract<ChatServerEvent, { t: 'msg' }>;
+      expect(m.body).toBe('[1부 3라운드] 하늘 FC 2:1 바다 FC');
+      expect(m).not.toHaveProperty('share');
+      expect(m.news).toMatchObject({
+        kind: 'leagueMatch',
+        matchId: 'lgm_done',
+        round: 3,
+        home: { name: '하늘 FC', goals: 2, ovr: 88 },
+        away: { name: '바다 FC', goals: 1, ovr: 91 },
+      });
     });
 
     it('이적시장에 내놓은 선수면 등록과 가격을 함께 싣는다', async () => {

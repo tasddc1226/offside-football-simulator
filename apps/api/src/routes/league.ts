@@ -1,6 +1,11 @@
 import {
   LeagueMatchResponseSchema,
   LeagueMeResponseSchema,
+  LeagueNewsResponseSchema,
+  LeaguePredictionCountsSchema,
+  LeaguePredictionMeResponseSchema,
+  PutLeaguePredictionBodySchema,
+  type LeaguePredictionCounts,
   LeagueResponseSchema,
   LeagueTableResponseSchema,
   type LeagueDef,
@@ -27,7 +32,7 @@ import {
   type MatchDetail,
 } from '../db/repos/ownerTeams.js';
 import { leagueEntries, leagueMatches, ownerTeams } from '../db/schema.js';
-import { edgeCached } from '../edgeCache.js';
+import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { idempotency } from '../middleware/idempotency.js';
@@ -44,16 +49,22 @@ import {
   type LeagueEntryRow,
 } from '../team/league.js';
 import { currentLeague } from '../team/leagueSchedule.js';
+import { buildLeagueNews } from '../team/leagueNews.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { reqLang } from '../lang.js';
 import { filledCount } from '../team/sim.js';
 import { requireOwner } from '../middleware/requireOwner.js';
-import { conflictError, NO_STORE, notFoundError, nowIso, ok } from './shared.js';
+import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
 
 // T-11-418 오프사이드 리그: 일정 · 접수(사전 신청 포함 · 취소 · 준비 상태). T-11-418b 배치 결과 · 순위표 · 경기 상세.
 // 오류 문구는 컵과 같은 문장이라 컵 서버 문구(cupKo)를 그대로 쓴다 — 영어 · 일본어도 컵 표로 옮겨진다.
 
 const PUBLIC_CACHE = 'public, max-age=0, s-maxage=30';
+/** T-11-652 신문 라운드 상한(캐시 키가 무한히 늘지 않게). */
+const MAX_ROUND = 99;
+/** T-11-652 내 예측 목록 상한(한 시즌 빅매치 수보다 넉넉히). */
+const PREDICTIONS_ME_MAX = 100;
+
 /** 배치 뒤 부 · 리그 번호의 상한(캐시 키가 무한히 늘지 않게, 배치 결과로 다시 검사한다). */
 const MAX_TIER = 12;
 
@@ -199,6 +210,18 @@ const mineOf = (db: Db, season: number, profileId: string) =>
       ),
     )
     .limit(1);
+
+/** 그 경기의 예측 수(고른 쪽마다). */
+async function predictionCounts(db: Db, season: number, matchId: string) {
+  const row = await db.$client
+    .prepare(
+      `SELECT coalesce(sum(pick = 'home'), 0) AS home, coalesce(sum(pick = 'draw'), 0) AS draw,
+      coalesce(sum(pick = 'away'), 0) AS away FROM league_predictions WHERE match_id = ? AND season = ?`,
+    )
+    .bind(matchId, season)
+    .first<Omit<LeaguePredictionCounts, 'matchId'>>();
+  return { matchId, home: row?.home ?? 0, draw: row?.draw ?? 0, away: row?.away ?? 0 };
+}
 
 export function registerLeagueRoutes(app: Hono<AppEnv>): void {
   // 리그 한눈에: 일정 · 단계 · 신청 수. 누구나 본다(엣지 30초).
@@ -381,6 +404,99 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
       };
     });
     return ok(c, LeagueTableResponseSchema, data, 200, 'public, max-age=0, s-maxage=60');
+  });
+
+  // T-11-652 오프사이드 데일리: 끝난 라운드 하나의 신문(기사 재료 · 빅매치). 누구나 본다. 끝난 라운드는 바뀌지 않아 엣지에
+  // 한 시간 둔다. 아직 끝나지 않은 라운드는 404라 캐시에 남지 않는다.
+  app.get('/v1/leagues/:season/news/:round', async (c) => {
+    const season = intParam(c.req.param('season'), 999);
+    const round = c.req.param('round') === '0' ? 0 : intParam(c.req.param('round'), MAX_ROUND);
+    if (!season || round === null) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
+    const data = await edgeCached(c, EDGE.leagueNews(season, round), 3600, async () => {
+      const news = await buildLeagueNews(getDb(c), season, round);
+      if (!news) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
+      return news;
+    });
+    return ok(c, LeagueNewsResponseSchema, data, 200, 'public, max-age=60, s-maxage=3600');
+  });
+
+  // T-11-652 빅매치 예측 수(누구나, 엣지 30초 · 예측하면 지운다).
+  app.get('/v1/leagues/:season/matches/:matchId/predictions', async (c) => {
+    const season = intParam(c.req.param('season'), 999);
+    const matchId = c.req.param('matchId');
+    if (!season) throw notFoundError(cupKo('matchNotFound'), 'LEAGUE_MATCH_NOT_FOUND');
+    const data = await edgeCached(c, EDGE.leaguePredictions(season, matchId), 30, () =>
+      predictionCounts(getDb(c), season, matchId),
+    );
+    return ok(c, LeaguePredictionCountsSchema, data, 200, 'public, max-age=0, s-maxage=30');
+  });
+
+  // T-11-652 빅매치 예측(경기 시각 전까지 바꿀 수 있다). 보상 없이 적중 기록만 남긴다. 마감 검사는 쓰기 안에서 한다.
+  app.put('/v1/leagues/:season/matches/:matchId/prediction', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const season = intParam(c.req.param('season'), 999);
+    const matchId = c.req.param('matchId');
+    const { pick } = readBody(c, PutLeaguePredictionBodySchema);
+    const now = nowIso();
+    const db = getDb(c);
+    const r = season
+      ? await db.$client
+          .prepare(
+            `INSERT INTO league_predictions (season, match_id, profile_id, pick, created_at, updated_at)
+        SELECT season, id, ?, ?, ?, ? FROM league_matches
+        WHERE season = ? AND id = ? AND played_at IS NULL AND at > ?
+          AND EXISTS (SELECT 1 FROM profiles WHERE id = ? AND deleted_at IS NULL)
+        ON CONFLICT (match_id, profile_id) DO UPDATE SET pick = excluded.pick, updated_at = excluded.updated_at`,
+          )
+          .bind(me.id, pick, now, now, season, matchId, now, me.id)
+          .run()
+      : null;
+    if (!r?.meta.changes)
+      throw conflictError(cupKo('predictionClosed'), 'LEAGUE_PREDICTION_CLOSED');
+    purgeEdge(c, [EDGE.leaguePredictions(season!, matchId)]);
+    return ok(
+      c,
+      LeaguePredictionCountsSchema,
+      await predictionCounts(db, season!, matchId),
+      200,
+      NO_STORE,
+    );
+  });
+
+  // T-11-652 내 빅매치 예측과 적중 기록(최근 순). 리그 화면의 데일리를 열 때만 부른다.
+  app.get('/v1/leagues/:season/predictions/me', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const season = intParam(c.req.param('season'), 999);
+    const { results } = season
+      ? await getDb(c)
+          .$client.prepare(
+            `SELECT p.match_id AS matchId, m.round AS round, p.pick AS pick,
+          CASE WHEN m.played_at IS NULL OR m.forfeit <> 0 THEN NULL
+            WHEN m.home_goals > m.away_goals THEN 'home'
+            WHEN m.home_goals < m.away_goals THEN 'away' ELSE 'draw' END AS result
+        FROM league_predictions p JOIN league_matches m ON m.id = p.match_id
+        WHERE p.profile_id = ? AND p.season = ? ORDER BY m.round DESC LIMIT ?`,
+          )
+          .bind(me.id, season, PREDICTIONS_ME_MAX)
+          .all<{
+            matchId: string;
+            round: number;
+            pick: 'home' | 'draw' | 'away';
+            result: 'home' | 'draw' | 'away' | null;
+          }>()
+      : { results: [] };
+    const settled = results.filter((x) => x.result !== null);
+    return ok(
+      c,
+      LeaguePredictionMeResponseSchema,
+      {
+        items: results,
+        hit: settled.filter((x) => x.pick === x.result).length,
+        total: settled.length,
+      },
+      200,
+      NO_STORE,
+    );
   });
 
   // T-11-418b 리그 경기 상세(득점 기록). 누구나 본다. 선수 이름은 공개 이름 · 익명.
