@@ -1547,6 +1547,8 @@ export const cups = sqliteTable(
     division: text('division'),
     /** T-11-410 팀 OVR 상한. 마스터 · 통합 대회는 NULL, 아랫 구간은 접수가 열릴 때 채운다. */
     ovrMax: integer('ovr_max'),
+    /** T-11-656 1이면 그 시즌 카드만 컵 명단에 넣는다(제5회부터). */
+    seasonCardsOnly: integer('season_cards_only').notNull().default(0),
   },
   // 한 회차에 구간마다 한 대회(통합 대회는 회차에 하나).
   (table) => [

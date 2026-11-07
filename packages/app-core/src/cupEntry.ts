@@ -9,14 +9,22 @@ export function cupEntryTeamAction(
 ): string | null {
   if (!e || e.ok) return null;
   if (e.reason === 'no-team') return L.toMakeTeam;
-  if (e.reason === 'not-enough' || e.reason === 'listed' || e.reason === 'over-cap')
+  if (
+    e.reason === 'not-enough' ||
+    e.reason === 'listed' ||
+    e.reason === 'over-cap' ||
+    e.reason === 'past-cards'
+  )
     return L.toLineup;
   return null;
 }
 
-/** 신청 확인 창의 줄: 선발 잠금, 구간 상한(있으면), 접수 중 취소 가능. */
-export function cupEnterConfirmLines(cup: Pick<CupResponse['cup'], 'ovrMax'>): string[] {
+/** 신청 확인 창의 줄: 이번 시즌 선수만(T-11-656), 선발 잠금, 구간 상한(있으면), 접수 중 취소 가능. */
+export function cupEnterConfirmLines(
+  cup: Pick<CupResponse['cup'], 'ovrMax' | 'seasonCardsOnly'>,
+): string[] {
   return [
+    ...(cup.seasonCardsOnly ? [L.ruleSeasonCards] : []),
     L.enterLockNote,
     ...(cup.ovrMax != null ? [L.divisionLockNote({ cap: cup.ovrMax })] : []),
     L.enterAskWithdraw,

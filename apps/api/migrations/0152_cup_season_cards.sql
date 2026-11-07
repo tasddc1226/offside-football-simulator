@@ -1,0 +1,1 @@
+ALTER TABLE `cups` ADD `season_cards_only` integer DEFAULT 0 NOT NULL;

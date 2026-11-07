@@ -75,7 +75,17 @@ export interface CupDef {
   division?: CupDivision | null;
   /** T-11-410 팀 OVR 상한(마스터 · 통합 대회는 없음). 접수가 열릴 때 정해진다 — 그 전에는 null일 수 있다. */
   ovrMax?: number | null;
+  /** T-11-656 그 시즌 카드만 컵 명단에 넣는다(제5회부터). 옛 회차 · 옛 응답에는 없다. */
+  seasonCardsOnly?: boolean;
 }
+
+/** T-11-656 이번 시즌 카드만 나가는 컵을 여는 첫 회차(docs/tracking/cup-season-players-plan.md). */
+export const CUP_SEASON_CARDS_FROM = 5;
+/** T-11-656 컵 명단 카드 중 그 컵 시즌보다 앞 시즌 카드 수(시즌을 모르는 옛 카드는 그 시즌으로 본다). */
+export const pastCardsIn = (
+  cards: readonly ({ season?: number | null } | null | undefined)[],
+  cupSeason: number,
+) => cards.filter((c) => c && (c.season ?? cupSeason) < cupSeason).length;
 
 export const CUP_LOCK_MIN = 60;
 

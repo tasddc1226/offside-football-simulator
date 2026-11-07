@@ -45,6 +45,7 @@ import {
   editionCups,
   fitsDivision,
   lockAt,
+  pastCardsIn,
   OWNER_ITEMS,
   shopPriceAt,
   type CupDef,
@@ -58,6 +59,7 @@ import type { Context, Hono } from 'hono';
 import type { Db } from '../db/client.js';
 import { cupEntries, cupMatches } from '../db/schema.js';
 import {
+  careersByIds,
   cupTeamOf,
   myTeamIn,
   publicNamesOf,
@@ -179,6 +181,7 @@ export const cupInfo = (cup: CupDef) => ({
   capacity: cup.capacity,
   minFilled: cup.minFilled,
   ...(cup.division ? { division: cup.division, ovrMax: cup.ovrMax ?? null } : {}),
+  ...(cup.seasonCardsOnly ? { seasonCardsOnly: true } : {}),
 });
 
 /** T-11-410 같은 회차 구간들과 구간별 신청 수(쿼리 1번). 통합 대회면 undefined. */
@@ -500,7 +503,10 @@ async function eligibility(
   const lineups = await lineupsOf(db, cup.season, team, team, { coaches: false });
   const filled = filledCount(lineups.home);
   const ids = slotIdsOf(team).filter((x): x is string => !!x);
-  const listed = await countOpenListingsAmong(db, ids);
+  const [listed, past] = await Promise.all([
+    countOpenListingsAmong(db, ids),
+    pastCardsAmong(db, cup, ids),
+  ]);
   // 아랫 구간 상한은 접수가 열린 뒤 cron이 채운다(그 몇 분 동안은 아직 열리지 않은 것으로).
   const capless = !!cup.division && cup.division !== 'master' && cup.ovrMax == null;
   const reason =
@@ -510,14 +516,35 @@ async function eligibility(
         ? ('not-enough' as const)
         : listed > 0
           ? ('listed' as const)
-          : other
-            ? ('entered-other' as const)
-            : !fitsDivision(cup, team.ovr)
-              ? ('over-cap' as const)
-              : activeCount(entries) >= cup.capacity
-                ? ('full' as const)
-                : null;
-  return { ok: reason === null, reason, filled, team };
+          : past > 0
+            ? ('past-cards' as const)
+            : other
+              ? ('entered-other' as const)
+              : !fitsDivision(cup, team.ovr)
+                ? ('over-cap' as const)
+                : activeCount(entries) >= cup.capacity
+                  ? ('full' as const)
+                  : null;
+  return {
+    ok: reason === null,
+    reason,
+    filled,
+    team,
+    ...(cup.seasonCardsOnly ? { past } : {}),
+  };
+}
+
+/**
+ * T-11-656 이번 시즌 선수 컵이면 명단 카드 중 컵 시즌보다 앞 시즌 카드 수(아니면 0, 조회하지 않는다). 카드 시즌은 cards 행으로
+ * 본다(내 선수 판정과 같은 careersByIds, PK 조회).
+ */
+async function pastCardsAmong(db: Db, cup: CupDef, ids: readonly string[]) {
+  if (!cup.seasonCardsOnly || !ids.length) return 0;
+  const rows = await careersByIds(db, [...ids]);
+  return pastCardsIn(
+    rows.map((r) => ({ season: r.serviceSeason })),
+    cup.season,
+  );
 }
 
 /** 리롤권 상점 응답(T-11-244 스카우트권 포함). */
@@ -628,6 +655,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
           ok: el.ok && (!mine || mine.status === 'withdrawn'),
           reason: el.reason,
           filled: el.filled,
+          ...('past' in el && el.past !== undefined ? { past: el.past } : {}),
         },
         next: next ? toCupMatch(next) : null,
         nextOdds: next && mine ? await nextOddsOf(db, cup, next, mine.teamId) : null,
@@ -661,6 +689,7 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
         full: cupKo('full'),
         'entered-other': cupKo('enteredOther'),
         'over-cap': cupKo('overCap', { n: cup.ovrMax ?? 0 }),
+        'past-cards': cupKo('pastCards', { season: cup.season }),
       };
       throw conflictError(
         msg[el.reason ?? 'closed'],
@@ -1092,6 +1121,9 @@ export async function checkCupLineup(
       throw conflictError(cupKo('lineupLocked'), 'CUP_LINEUP_LOCKED');
     if (verdict.short)
       throw conflictError(cupKo('minFilled', { n: cup.minFilled }), 'CUP_MIN_FILLED');
+    // T-11-656 이번 시즌 선수 컵이면 컵 명단에 지난 시즌 카드를 넣을 수 없다.
+    if ((await pastCardsAmong(db, cup, ids)) > 0)
+      throw conflictError(cupKo('pastCards', { season: cup.season }), 'CUP_PAST_CARDS');
     if ((await (listed ??= countOpenListingsAmong(db, ids))) > 0)
       throw conflictError(cupKo('cardListed'), 'CUP_CARD_LISTED');
   }
@@ -1134,8 +1166,11 @@ export async function checkCupRelease(db: Db, profileId: string, careerIds: read
 }
 
 /**
- * T-11-373 카드 강화 검사: 컵 참가 중이면 선발에 든 선수(지난 시즌 컵 · 컵 명단 프리셋 포함)는 대회가 끝날 때까지 강화할 수 없고(추첨
- * 뒤 OVR 구간 · 배당을 지킨다), 리그 경기 1시간 전부터 끝날 때까지는 그 시즌 팀 선발을 강화할 수 없다.
+ * T-11-373 카드 강화 검사. T-11-655 컵 명단 선수도 리그와 같이 경기 1시간 전부터 그 경기가 끝날 때까지만 막는다 — 그 밖에는
+ * 명단에서 빼고 강화한 뒤 다시 넣을 수 있어 막아도 지키는 게 없다. 지키는 것은 둘이다: 예상(배당)이 고정되는 잠금 시간에는
+ * 명단과 강화가 함께 묶이고, 추첨 뒤에는 강화에 성공했을 때 컵 명단 OVR이 구간 상한을 넘는 시도를 막는다(명단을 다시 저장할
+ * 때와 같은 상한 검사). 끝나지 않은 지난 시즌 컵의 명단은 그 시즌 팀으로 다시 셀 수 없어 지금처럼 대회 끝까지 막는다.
+ * cupOvrAfter: 이번 시즌 팀에서 강화에 성공했을 때의 컵 명단 OVR(그 카드가 이번 시즌 컵 명단에 없으면 null).
  */
 export async function checkCupEnhance(
   db: Db,
@@ -1144,10 +1179,45 @@ export async function checkCupEnhance(
   season: number | null,
   now: string,
   team: OwnerTeamRow | undefined,
+  cupOvrAfter: () => number | null = () => null,
 ) {
-  const known = season === null ? undefined : { season, team };
-  if ((await cupLineupIds(db, profileId, known)).has(careerId))
-    throw conflictError(cupKo('cardEnhance'), 'CUP_CARD_LOCKED');
+  const entries = await activeEntriesOf(db, profileId);
+  if (entries.length) {
+    const all = await cupSchedule(db);
+    const mine = entries.flatMap((entry) => {
+      const cup = cupById(entry.cupId, all);
+      return cup ? [{ cup, entry }] : [];
+    });
+    const teams = new Map<number, OwnerTeamRow | undefined>();
+    const teamIn = async (s: number) => {
+      if (!teams.has(s)) teams.set(s, s === season ? team : (await myTeamIn(db, profileId, s))[0]);
+      return teams.get(s);
+    };
+    let matches: Awaited<ReturnType<typeof cupMatchesIn>> | undefined;
+    for (const { cup, entry } of mine) {
+      const row = await teamIn(cup.season);
+      if (!row || !slotIdsOf(cupTeamOf(row)).includes(careerId)) continue;
+      if (cup.season !== season) throw conflictError(cupKo('cardEnhance'), 'CUP_CARD_LOCKED');
+      matches ??= await cupMatchesIn(
+        db,
+        mine.map(({ cup: c }) => c.id),
+      );
+      if (
+        lineupLocked(
+          matches.filter((m) => m.cupId === cup.id),
+          entry.teamId,
+          now,
+        )
+      )
+        throw conflictError(cupKo('cardEnhance'), 'CUP_CARD_LOCKED');
+      const after = now >= cup.drawAt ? cupOvrAfter() : null;
+      if (after !== null && !fitsDivision(cup, after))
+        throw conflictError(
+          cupKo('enhanceCap', { division: cupKo(cup.division!), n: cup.ovrMax ?? 0 }),
+          'CUP_OVR_CAP',
+        );
+    }
+  }
   if (season === null || !(await leagueLineupLocked(db, profileId, season, now))) return;
   if (team && slotIdsOf(team).includes(careerId))
     throw conflictError(cupKo('leagueEnhance'), 'LEAGUE_LINEUP_LOCKED');

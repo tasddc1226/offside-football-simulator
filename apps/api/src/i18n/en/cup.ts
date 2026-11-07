@@ -84,7 +84,12 @@ export const CUP_EN: Record<CupTextKey, string> = {
   cardReleaseLocked: "You can't release a starting player while your club is in the OFFSIDE Cup.",
   cardManager:
     "A starting player can't begin a manager career while your club is in the OFFSIDE Cup.",
-  cardEnhance: "You can't enhance a starting player while your club is in the OFFSIDE Cup.",
+  cardEnhance:
+    "You can't enhance cup lineup players from 1 hour before an OFFSIDE Cup match until it ends.",
+  pastCards:
+    'This OFFSIDE Cup is for season {season} players only. Take past-season players out of your cup lineup.',
+  enhanceCap:
+    'If this enhancement succeeds, your cup lineup OVR would go over the {division} cap of {n}. Change your cup lineup and try again.',
   leagueEnhance:
     "You can't enhance a starting player from 1 hour before an OFFSIDE League match until it ends.",
   droppedTitle: 'Your {cup} entry was cancelled',

@@ -1,0 +1,31 @@
+{
+  "id": "t-11-656-cup-season-cards",
+  "title": "제5회 오프사이드 컵부터 이번 시즌 선수만",
+  "items": [
+    "제5회 오프사이드 컵부터는 이번 시즌에 키우거나 영입한 선수만 컵 명단에 넣을 수 있어요. 리그 · 랭크 · 친선전은 지금처럼 모든 선수를 써요.",
+    "컵 명단 프리셋을 이번 시즌 선수로 꾸려 두면 팀 명단은 그대로 두고 컵에 신청할 수 있어요."
+  ],
+  "en": {
+    "title": "This season's players only, from the 5th OFFSIDE Cup",
+    "items": [
+      "From the 5th OFFSIDE Cup, only players you raised or signed this season can be in your cup lineup. League, ranked and friendly matches still use all your players.",
+      "Set up a cup lineup preset with this season's players to enter the cup without changing your team lineup."
+    ]
+  },
+  "ja": {
+    "title": "第5回オフサイドカップから今シーズンの選手のみ",
+    "items": [
+      "第5回オフサイドカップからは、今シーズンに育てたか獲得した選手だけをカップメンバーに入れられます。リーグ・ランク戦・親善試合はこれまでどおり全選手を使えます。",
+      "今シーズンの選手でカップメンバーのプリセットを作っておけば、チームメンバーはそのままでカップに申し込めます。"
+    ]
+  },
+  "zh": {
+    "title": "第 5 屆 OFFSIDE 盃起只限本賽季球員",
+    "items": [
+      "從第 5 屆 OFFSIDE 盃起，只有本賽季培養或簽下的球員能放進盃賽陣容。聯賽、排位賽和友誼賽仍可使用所有球員。",
+      "先用本賽季球員建立盃賽陣容預設，就能維持球隊陣容不變並報名盃賽。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

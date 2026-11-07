@@ -224,8 +224,14 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
     // 팀 행은 한 번만 읽어 컵 · 리그 잠금 · OVR 계산에 함께 쓴다.
     const season = teamSeasonAt(now);
     const [team] = season === null ? [] : await myTeamIn(db, me.id, season);
-    await checkCupEnhance(db, me.id, careerId, season, now, team);
     const lineups = season === null ? null : await lineupsWith(db, careerId, team);
+    // T-11-655 추첨 뒤에는 성공했을 때의 컵 명단 OVR이 구간 상한 안이어야 한다(컵 명단 프리셋이 없으면 팀 명단이 컵 명단).
+    await checkCupEnhance(db, me.id, careerId, season, now, team, () => {
+      if (!lineups || season === null) return null;
+      if (lineups.cup ? !lineups.inCup : !lineups.inTeam) return null;
+      const after = teamOvrAfter(lineups, me.id, careerId, season, card.level + 1);
+      return lineups.cup ? (after.cupOvr ?? null) : after.ovr;
+    });
 
     const r = roll();
     const out = enhanceOutcome(card.level, card.fails, r, odds);

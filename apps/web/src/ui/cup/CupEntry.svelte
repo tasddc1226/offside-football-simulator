@@ -38,6 +38,7 @@
       case 'closed': return L.reasonClosed;
       case 'over-cap': return L.reasonOverCap({ ovr: me?.ovr ?? 0, cap: data.cup.ovrMax ?? 0 });
       case 'entered-other': return L.reasonEnteredOther;
+      case 'past-cards': return L.reasonPastCards({ n: e.past ?? 0 });
       default: return null;
     }
   });
