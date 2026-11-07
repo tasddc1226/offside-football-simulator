@@ -182,9 +182,9 @@ describe('결과 귀속 (실제 완료 경계 · 같은 계정)', () => {
   });
 
   it('A 노출 → 로그아웃 → B 로그인 뒤의 다음 플레이 · 구단 결과는 A에 붙지 않는다', () => {
-    const h = setup();
+    const h = setup({ account: 'A' });
     h.m.view(X({ pk: 'A' }));
-    h.state.account = 'A';
+    expect(parseRetireExpStore(h.state.raw).cur).toBeDefined(); // A로 노출됐다
     // 로그아웃(계정 없음)
     h.state.account = null;
     h.m.account(null);
@@ -196,8 +196,9 @@ describe('결과 귀속 (실제 완료 경계 · 같은 계정)', () => {
     expect(h.outcomes()).toEqual([]);
 
     // 계정 변경 알림이 오기 전에 결과가 먼저 와도 지금 계정이 다르면 귀속하지 않고 지운다.
-    const g = setup();
+    const g = setup({ account: 'A' });
     g.m.view(X({ pk: 'A' }));
+    expect(parseRetireExpStore(g.state.raw).cur).toBeDefined();
     g.state.account = 'B';
     g.m.complete({ cid: 'c2', year: 2030, phase: 1, matches: 3 });
     expect(g.outcomes()).toEqual([]);
@@ -208,8 +209,9 @@ describe('결과 귀속 (실제 완료 경계 · 같은 계정)', () => {
   });
 
   it('계정을 아직 모르면(확인 중 · 연결 실패) 귀속하지 않고, 확인되면 그때 귀속한다', () => {
-    const h = setup({ account: undefined });
+    const h = setup({ account: 'A' });
     h.m.view(X({ pk: 'A' }));
+    h.state.account = undefined;
     h.m.complete({ cid: 'c2', year: 2030, phase: 1, matches: 3 });
     h.m.club('club_match', undefined);
     h.m.account(undefined);
@@ -221,9 +223,8 @@ describe('결과 귀속 (실제 완료 경계 · 같은 계정)', () => {
   });
 
   it('A로 보낸 구단 요청의 응답이 B로 바뀐 뒤 오면 귀속하지 않는다', async () => {
-    const h = setup();
+    const h = setup({ account: 'A' });
     h.m.view(X({ pk: 'A' }));
-    h.state.account = 'A';
     const off = onClubSignal((sig, key) => h.m.club(sig, key));
     setClubAccountKey(() => h.state.account);
     let resolve!: (r: { ok: boolean }) => void;
@@ -235,9 +236,8 @@ describe('결과 귀속 (실제 완료 경계 · 같은 계정)', () => {
     expect(h.outcomes()).toEqual([]);
 
     // 요청 당시 계정을 몰랐으면(undefined) 지금 계정이 같아도 귀속하지 않는다.
-    const k = setup();
+    const k = setup({ account: 'A' });
     k.m.view(X({ pk: 'A' }));
-    k.state.account = 'A';
     k.m.club('club_match', undefined);
     expect(k.outcomes()).toEqual([]);
     k.m.club('club_match', 'A');
@@ -343,7 +343,7 @@ describe('clubSignals', () => {
 describe('계정을 모를 때', () => {
   it('귀속 기록이 있으면 계정 확인을 부탁하고 귀속은 미룬다', () => {
     let asked = 0;
-    let account: AccountKey = undefined;
+    let account: AccountKey = 'A';
     const sent: string[] = [];
     let raw: string | null = null;
     const m = createRetireExpMetrics({
@@ -357,14 +357,65 @@ describe('계정을 모를 때', () => {
       account: () => account,
       needAccount: () => asked++,
     });
+    account = undefined;
     m.complete({ cid: 'x', year: 1, phase: 1, matches: 1 }); // 기록 없음: 묻지 않는다
     expect(asked).toBe(0);
+    account = 'A';
     m.view(X({ pk: 'A' }));
+    account = undefined; // 다음 실행처럼 계정을 아직 모른다
     m.complete({ cid: 'x', year: 1, phase: 1, matches: 1 });
     expect(asked).toBe(1);
     expect(sent).toEqual(['retire_exp_exposure:']);
     account = 'A';
     m.complete({ cid: 'x', year: 1, phase: 2, matches: 1 });
     expect(sent).toEqual(['retire_exp_exposure:', 'retire_exp_outcome:next_play']);
+  });
+});
+
+describe('보류 · 표시 중 계정 변경 (2차 리뷰)', () => {
+  it('동의 전 A 화면 보류 → 로그아웃 · B → ready()여도 A 노출 · 클릭 · 귀속 기록이 생기지 않는다', () => {
+    for (const next of [null, 'B'] as const) {
+      const h = setup({ allowed: false, account: 'A' });
+      h.m.view(X({ pk: 'A' }));
+      h.state.account = next;
+      h.m.account(next); // 계정 변경 알림(동의 전이어도 보류 화면을 버린다)
+      h.state.allowed = true;
+      h.m.ready();
+      h.m.cta('treatment', 'team');
+      h.m.scene('treatment', 'first_apps');
+      h.m.leave('treatment', { dwellMs: 1, interacted: true, via: 'nav' });
+      expect(h.sent).toEqual([]);
+      expect(parseRetireExpStore(h.state.raw).cur).toBeUndefined();
+    }
+  });
+
+  it('계정 변경 알림 없이 ready()가 먼저 와도 지금 계정이 다르면 보내지 않는다', () => {
+    const h = setup({ allowed: false, account: 'A' });
+    h.m.view(X({ pk: 'A' }));
+    h.state.account = 'B';
+    h.state.allowed = true;
+    h.m.ready();
+    h.state.account = 'A'; // 버린 화면은 되살리지 않는다
+    h.m.ready();
+    h.m.cta('treatment', 'team');
+    expect(h.sent).toEqual([]);
+  });
+
+  it('계정을 모르는 동안은 노출을 미루고, 같은 계정으로 확인되면 보낸다', () => {
+    const h = setup({ account: undefined });
+    h.m.view(X({ pk: 'A' }));
+    expect(h.names()).toEqual([]);
+    h.state.account = 'A';
+    h.m.account('A');
+    expect(h.names()).toEqual(['retire_exp_exposure']);
+  });
+
+  it('노출 뒤 계정이 바뀌면 그 화면의 클릭 · 떠남을 보내지 않는다', () => {
+    const h = setup({ account: 'A' });
+    h.m.view(X({ pk: 'A' }));
+    h.state.account = 'B';
+    h.m.cta('treatment', 'team');
+    h.m.leave('treatment', { dwellMs: 1, interacted: true, via: 'nav' });
+    expect(h.names()).toEqual(['retire_exp_exposure']);
   });
 });

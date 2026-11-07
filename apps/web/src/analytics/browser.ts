@@ -171,6 +171,8 @@ async function loadTag() {
   Reflect.set(window, `ga-disable-${id}`, false);
   if (loaded) {
     pageView();
+    // T-11-669 태그를 이미 한 번 불러온 뒤 철회 → 재동의한 경우에도 보류한 은퇴 화면 노출을 보낸다.
+    retireExp.ready();
     return;
   }
   loaded = true;

@@ -272,8 +272,9 @@ describe('push opt-in analytics', () => {
 });
 
 describe('T-11-669 retire experiment (native)', () => {
-  function withStore(initial: Consent, account: string | null | undefined = 'k') {
+  function withStore(initial: Consent, initialAccount: string | null | undefined = 'k') {
     let raw: string | null = null;
+    let account: string | null | undefined = initialAccount;
     const h = setup({ initial });
     const io = {
       ...h.io,
@@ -285,7 +286,14 @@ describe('T-11-669 retire experiment (native)', () => {
     };
     const a = createNativeAnalytics(io);
     a.initialize('retired', null);
-    return { a, events: h.events, raw: () => raw };
+    return {
+      a,
+      events: h.events,
+      raw: () => raw,
+      setAccount: (v: string | null | undefined) => {
+        account = v;
+      },
+    };
   }
   const exposure = {
     arm: 'treatment' as const,
@@ -336,6 +344,19 @@ describe('T-11-669 retire experiment (native)', () => {
     expect(h.raw()).not.toBeNull();
     h.a.setConsent('denied');
     await h.a.settled();
+    expect(h.raw()).toBeNull();
+  });
+  it('drops a pending view when the account changes before the async SDK becomes ready', async () => {
+    const h = withStore('unknown');
+    await h.a.settled();
+    h.a.retireExp.view(exposure);
+    h.setAccount('other');
+    h.a.retireExp.account('other');
+    h.a.setConsent('granted'); // SDK 준비는 비동기 큐에서 끝난다
+    await h.a.settled();
+    h.a.retireExp.cta('treatment', 'team');
+    await h.a.settled();
+    expect(h.events.filter((e) => e.name.startsWith('retire_exp_'))).toEqual([]);
     expect(h.raw()).toBeNull();
   });
 });

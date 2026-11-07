@@ -402,3 +402,114 @@ test('notice region starts on without the sheet and keeps an earlier denial', as
   expect(await page.evaluate((key) => localStorage.getItem(key), consentKey)).toBe('denied');
   expect(await commands(page)).toEqual([]);
 });
+
+// T-11-669 은퇴 화면 실험: 태그를 한 번 불러온 뒤 철회 → 은퇴(노출 보류) → 재동의하면 그때 노출을 보내고,
+// 철회 중에 누른 장면은 되돌려 보내지 않는다(실제 웹 어댑터 경로, loaded 분기의 ready()).
+test('retire experiment exposure waits for re-consent after the tag was loaded once', async ({
+  page,
+  context,
+}) => {
+  await grantAnalytics(page);
+  await prepare(page);
+  await page.route(`${API}/v1/balance`, (r) =>
+    r.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          version: 9,
+          values: { retireExpShare: 0.5 },
+          activatedAt: '2026-11-08T00:00:00.000Z',
+        },
+      }),
+    }),
+  );
+  await page.route(`${API}/v1/profile`, (r) =>
+    r.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id: 'e2e-profile-1', // 실험군(retireExperiment 해시)
+          linked: { google: false, toss: false, apple: false },
+          googleEmailMasked: null,
+          recoveryCodeIssuedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          nickname: null,
+        },
+      }),
+    }),
+  );
+  await page.route(/\/v1\/careers\/[^/]+\/(seasons\/\d+|retirement)$/, (r) =>
+    r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: {} }) }),
+  );
+  await startCareer(page);
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+  await page.evaluate(() => {
+    const g = JSON.parse(localStorage.getItem('ft_save')!);
+    g.pending = { type: 'market', res: null, m: null };
+    g.age = 25;
+    g.career = [
+      {
+        year: 2026,
+        age: 18,
+        club: '서울 FC',
+        league: 'K리그1',
+        apps: 10,
+        goals: 2,
+        assists: 1,
+        cs: 0,
+        rating: 6.4,
+        rank: 5,
+        ovr: 60,
+        honors: [],
+      },
+      {
+        year: 2027,
+        age: 19,
+        club: '서울 FC',
+        league: 'K리그1',
+        apps: 30,
+        goals: 9,
+        assists: 4,
+        cs: 0,
+        rating: 7.1,
+        rank: 2,
+        ovr: 66,
+        honors: [],
+      },
+    ];
+    localStorage.setItem('ft_save', JSON.stringify(g));
+  });
+  await page.reload();
+  await page.locator('[data-act="continue"]').click();
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+
+  // 다른 탭에서 철회한다(이 탭은 storage 이벤트로 stop()).
+  const tab = await context.newPage();
+  await tab.goto('/app-ads.txt');
+  await tab.evaluate((key) => localStorage.setItem(key, 'denied'), consentKey);
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('offside_retire_exp_v1')))
+    .toBeNull();
+
+  const sheet = page.locator('#sheet');
+  await sheet.getByRole('button', { name: '은퇴하기' }).click();
+  await sheet.getByRole('button', { name: '은퇴한다' }).click();
+  const box = page.locator('[data-retire-exp="treatment"]');
+  await expect(box).toBeVisible();
+  await box.locator('[data-act="retire-scene"]').first().click(); // 노출 전 클릭
+  const names = async () =>
+    (await commands(page))
+      .filter((x) => x[0] === 'event' && String(x[1]).startsWith('retire_exp_'))
+      .map((x) => x[1]);
+  expect(await names()).toEqual([]);
+  expect(await page.evaluate(() => localStorage.getItem('offside_retire_exp_v1'))).toBeNull();
+
+  // 재동의: 태그는 이미 불러왔으므로 loaded 분기에서 보류한 노출을 보낸다.
+  await tab.evaluate((key) => localStorage.setItem(key, 'granted'), consentKey);
+  await expect.poll(names).toEqual(['retire_exp_exposure']);
+  await box.locator('[data-act="retire-scene"]').nth(1).click();
+  await expect.poll(names).toEqual(['retire_exp_exposure', 'retire_exp_scene_open']);
+  const wire = JSON.stringify(await commands(page));
+  expect(wire).not.toContain('e2e-profile-1');
+  expect(await page.evaluate(() => localStorage.getItem('offside_retire_exp_v1'))).not.toBeNull();
+});

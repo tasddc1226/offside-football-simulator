@@ -149,9 +149,18 @@ export function createRetireExpMetrics(io: {
   // 지금 보고 있는 은퇴 화면 하나. 노출이 실제로 나간(또는 이미 나갔던) 뒤에만 장면 · 다음 행동 · 떠남을 보낸다.
   // 동의 · SDK가 늦게 준비되면 ready()에서 노출을 보내고, 그 전에 누른 것은 되돌려 보내지 않는다.
   let view: { x: RetireExposure; exposed: boolean } | null = null;
+  // 보류한 화면의 계정(노출 때 계정 키)이 지금 계정과 엄격히 같을 때만 노출 · 상호작용을 보낸다.
+  const sameAccount = (v: { x: RetireExposure }) => io.account() === v.x.pk;
   function tryExpose(): void {
     const v = view;
     if (!v || v.exposed || !io.allowed()) return;
+    const now = io.account();
+    if (now !== undefined && now !== v.x.pk) {
+      // 보류하는 사이 로그아웃 · 다른 계정이 됐으면 그 화면은 버린다.
+      view = null;
+      return;
+    }
+    if (now === undefined) return;
     update((s) => {
       if (s.seen.includes(v.x.cid)) {
         // 같은 커리어 화면을 다시 연 것: 노출은 한 번만 세고 상호작용은 받는다.
@@ -173,7 +182,8 @@ export function createRetireExpMetrics(io: {
       return s;
     });
   }
-  const live = (arm: RetireArm) => !!view && view.exposed && view.x.arm === arm;
+  const live = (arm: RetireArm) =>
+    !!view && view.exposed && view.x.arm === arm && sameAccount(view);
   return {
     /** 은퇴 화면에서 군이 정해졌을 때. 같은 커리어는 한 번만 센다(대조군도 같은 이름 · 같은 필드 = 같은 분모). */
     view(x: RetireExposure): void {
@@ -222,7 +232,10 @@ export function createRetireExpMetrics(io: {
     /** 계정 확인 결과가 바뀌었을 때(로그인 · 로그아웃 · 삭제 · 다른 계정). 다르면 이전 귀속을 지운다. */
     account(now: AccountKey) {
       if (now === undefined) return;
+      // 보류 · 표시 중인 화면도 다른 계정이면 버린다(동의 여부와 상관없이 메모리에서).
+      if (view && now !== view.x.pk) view = null;
       update((s) => (s.cur && differs(s.cur, now) ? { v: 1, seen: s.seen } : null));
+      tryExpose();
     },
   };
 }
