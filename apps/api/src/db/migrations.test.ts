@@ -428,6 +428,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'closed_at',
   ],
+  owner_fund_ledger: ['id', 'profile_id', 'kind', 'delta', 'balance', 'ref', 'created_at'],
   owner_funds: ['profile_id', 'balance', 'updated_at'],
   notifications: [
     'id',

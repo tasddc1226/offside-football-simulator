@@ -57,6 +57,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'market_listings',
   'manager_careers',
   'owner_achievements',
+  'owner_fund_ledger',
   'owner_funds',
   'owner_honors',
   'owner_title_awards',

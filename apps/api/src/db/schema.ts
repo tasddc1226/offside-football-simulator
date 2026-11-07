@@ -694,6 +694,28 @@ export const ownerFunds = sqliteTable(
 );
 
 /**
+ * T-11-660 구단 자금 거래 기록. 잔액(owner_funds)을 바꾸는 batch마다 같은 조건으로 한 줄을 더한다(바뀌지 않으면 기록도 없다).
+ * delta는 증감(만 원), balance는 그 직후 잔액. kind: opening(기록을 시작할 때 잔액) · retire_bonus · release · manager_release ·
+ * market_sale · market_buy · enhance · item. ref는 카드(career id) · 판매 등록 · 구매 id. 배포 뒤 모든 구단주는
+ * sum(delta) = balance여야 한다.
+ */
+export const ownerFundLedger = sqliteTable(
+  'owner_fund_ledger',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    delta: integer('delta').notNull(),
+    balance: integer('balance').notNull(),
+    ref: text('ref'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('owner_fund_ledger_profile_idx').on(t.profileId, t.id)],
+);
+
+/**
  * T-11-080e 이적시장 시세 집계. 같은 시즌 · 포지션군 · OVR대(최고 OVR 5 단위) 선수가 그날(KST) 기준가의 몇 %에
  * 팔렸는지 모은다. 영입 batch가 한 문장으로 갱신하고, 시세 차트는 이 표만 읽는다(거래 기록을 다시 훑지 않음).
  * 비율은 기준가 대비 천분율(1000 = 기준가 그대로), 거래 대금은 만 원.

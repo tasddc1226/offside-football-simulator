@@ -228,12 +228,15 @@ describe('오프사이드 데일리 (T-11-652)', () => {
     expect((cb as { trailed: number }).trailed).toBeGreaterThanOrEqual(1);
     // 1라운드에는 라운드 전 순위가 없어 더비가 없다.
     expect(kinds).not.toContain('derby');
-    const upset = n1.items.find((i) => i.kind === 'upset');
-    expect(upset).toMatchObject({ match: { id: mixed.id }, gap: expect.any(Number) });
-    expect((upset as { gap: number }).gap).toBeGreaterThanOrEqual(3);
-    expect(n1.items.find((i) => i.kind === 'goalfest')).toMatchObject({
-      match: { id: fest.id, homeGoals: 4, awayGoals: 3 },
-    });
+    // 무작위로 치른 다른 경기가 더 큰 이변 · 더 많은 골이면 그 경기가 실린다. 실린 기사는 기준을 넘는다.
+    const upset = n1.items.find((i) => i.kind === 'upset') as
+      { match: { id: string }; gap: number } | undefined;
+    expect(upset?.gap).toBeGreaterThanOrEqual(3);
+    const fest2 = n1.items.find((i) => i.kind === 'goalfest') as
+      { match: { id: string; homeGoals: number; awayGoals: number } } | undefined;
+    expect(fest2!.match.homeGoals + fest2!.match.awayGoals).toBeGreaterThanOrEqual(7);
+    if (fest2!.match.id === fest.id)
+      expect(fest2!.match).toMatchObject({ homeGoals: 4, awayGoals: 3 });
     expect(n1.items.find((i) => i.kind === 'leader')).toMatchObject({
       tier: 1,
       league: 1,
@@ -295,7 +298,9 @@ describe('오프사이드 데일리 (T-11-652)', () => {
     expect(asked.sort()).toEqual(['en', 'ja', 'ko', 'zh']);
     const a1 = await news(1);
     if (typeof a1 === 'number') throw new Error(`news 1: ${a1}`);
-    expect(a1.ai).toMatchObject({ kind: 'upset', ref: mixed.id });
+    // 1면은 이변 기사(무작위로 치른 다른 경기의 이변이 더 크면 그 경기다).
+    const front = n1.items.find((i) => i.kind === 'upset') as { match: { id: string } };
+    expect(a1.ai).toMatchObject({ kind: 'upset', ref: front.match.id });
     expect(Object.keys(a1.ai!.text).sort()).toEqual(['en', 'ko']);
     expect(a1.ai!.text.ko!.body).toContain('1라운드');
     asked.length = 0;

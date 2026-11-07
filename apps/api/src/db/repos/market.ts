@@ -20,7 +20,14 @@ import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 import { eventNotificationStatements } from '../../push/events.js';
 import { bodyOf, peakOf } from './ownerTeams.js';
-import { cards, careers, marketDaily, marketListings, ownerFunds } from '../schema.js';
+import {
+  cards,
+  careers,
+  marketDaily,
+  marketListings,
+  ownerFundLedger,
+  ownerFunds,
+} from '../schema.js';
 import { cardPublicName } from '../cardName.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md 5~7절.
@@ -491,11 +498,27 @@ export async function buyListing(
         `UPDATE owner_funds SET balance = balance - ?, updated_at = ? WHERE profile_id = ? AND ${won}`,
       )
       .bind(b.price, b.now, b.buyerId, ...mark),
+    // T-11-660 자금 거래 기록: 영입(산 사람).
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT buyer_id, 'market_buy', -price, (SELECT balance FROM owner_funds WHERE profile_id = buyer_id), id, ?
+           FROM market_listings WHERE id = ? AND buyer_id = ? AND closed_at = ?`,
+      )
+      .bind(b.now, ...mark),
     d1
       .prepare(
         `INSERT INTO owner_funds (profile_id, balance, updated_at)
          SELECT seller_id, price - fee, ? FROM market_listings WHERE id = ? AND buyer_id = ? AND closed_at = ?
          ON CONFLICT (profile_id) DO UPDATE SET balance = balance + excluded.balance, updated_at = excluded.updated_at`,
+      )
+      .bind(b.now, ...mark),
+    // T-11-660 자금 거래 기록: 판매(판 사람, 수수료를 뺀 금액).
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT seller_id, 'market_sale', price - fee, (SELECT balance FROM owner_funds WHERE profile_id = seller_id), id, ?
+           FROM market_listings WHERE id = ? AND buyer_id = ? AND closed_at = ?`,
       )
       .bind(b.now, ...mark),
     d1
@@ -576,6 +599,15 @@ export async function releaseCards(
          ON CONFLICT (profile_id) DO UPDATE SET balance = balance + excluded.balance, updated_at = excluded.updated_at`,
       )
       .bind(r.profileId, r.rate, r.now, ids),
+    // T-11-660 자금 거래 기록: 방출(여러 장이면 ref 없이 합계 한 줄).
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT ?, 'release', sum(${amountOf}), (SELECT balance FROM owner_funds WHERE profile_id = ?),
+                CASE WHEN count(*) = 1 THEN max(career_id) END, ?
+           FROM cards WHERE ${mine} HAVING count(*) > 0`,
+      )
+      .bind(r.profileId, r.rate, r.profileId, r.now, ids),
     d1
       .prepare(
         `SELECT count(*) AS n, coalesce(sum(${amountOf}), 0) AS amount FROM cards WHERE ${mine}`,
@@ -584,8 +616,8 @@ export async function releaseCards(
     d1.prepare(`UPDATE cards SET released_value = ${amountOf} WHERE ${mine}`).bind(r.rate, ids),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(r.profileId),
   ]);
-  const sum = results[2]!.results[0] as { n: number; amount: number };
-  const bal = results[4]!.results[0] as { balance: number } | undefined;
+  const sum = results[3]!.results[0] as { n: number; amount: number };
+  const bal = results[5]!.results[0] as { balance: number } | undefined;
   return { released: sum.n, amount: sum.amount, balance: bal?.balance ?? 0 };
 }
 
@@ -616,6 +648,8 @@ export function marketDeleteStatements(db: Db, profileId: string, now: string) {
       .set({ status: 'cancelled', closedAt: now })
       .where(and(eq(marketListings.sellerId, profileId), eq(marketListings.status, 'open'))),
     db.delete(ownerFunds).where(eq(ownerFunds.profileId, profileId)),
+    // T-11-660 자금 거래 기록도 함께 지운다(소프트 삭제라 FK CASCADE가 돌지 않는다).
+    db.delete(ownerFundLedger).where(eq(ownerFundLedger.profileId, profileId)),
   ] as const;
 }
 
