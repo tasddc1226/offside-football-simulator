@@ -1100,6 +1100,13 @@
       "when": 1794061063689,
       "tag": "0159_hof_partial",
       "breakpoints": true
+    },
+    {
+      "idx": 160,
+      "version": "6",
+      "when": 1794066200882,
+      "tag": "0160_drop_legacy_ops_tables",
+      "breakpoints": true
     }
   ]
 }

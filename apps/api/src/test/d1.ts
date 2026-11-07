@@ -3,7 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getPlatformProxy, unstable_splitSqlQuery as splitSqlQuery } from 'wrangler';
 import { eq } from 'drizzle-orm';
-import { createDb, type Db } from '../db/client.js';
+import { createDb, linkOps, type Db } from '../db/client.js';
 import { profiles } from '../db/schema.js';
 import type { Bindings } from '../env.js';
 
@@ -54,11 +54,13 @@ export async function createTestD1({ migrate = true } = {}): Promise<TestD1> {
 
   // T-10-072 홈 라이브 허브(Durable Object)는 빼 둔다 — 업로드가 뒤에서 허브를 부르지 않게. 허브를 보는 테스트는
   // 가짜를 넣는다(routes/liveSocket.test.ts).
+  const ops = createDb(proxy.env.OPS_DB ?? proxy.env.DB);
   const env: Bindings = { ...proxy.env };
   delete env.LIVE;
   return {
-    db: createDb(proxy.env.DB),
-    ops: createDb(proxy.env.OPS_DB ?? proxy.env.DB),
+    // T-11-662 운영처럼 게임 DB에 운영 기록 DB를 짝지어 둔다(요청 횟수 제한 저장소가 opsOf로 찾는다).
+    db: linkOps(createDb(proxy.env.DB), ops),
+    ops,
     env,
     dispose: () => proxy.dispose(),
   };
