@@ -638,7 +638,10 @@ const withRetiredNumber = eq(retiredNumbers.careerId, careers.id);
 
 /** 공개 명예의 전당(목록·상세·공유 링크·홈 라이브 은퇴 소식)에 오르는 은퇴. 짧은 커리어(T-10-032)는 내 선수에만 남는다. */
 /** 내 선수 목록은 짧은 커리어도 보여 준다. */
-const isOwnRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore));
+// T-11-663 명예의 전당 인덱스는 은퇴 커리어만 담는 부분 인덱스(WHERE status = 'retired')다. 플래너가 그 인덱스를 고르려면
+// 조건이 매개변수가 아닌 글자 그대로여야 해서 status는 SQL에 직접 쓴다(INDEXED BY로 고른 쿼리는 아니면 실패한다).
+export const retiredLiteral = sql`${careers.status} = 'retired'`;
+const isOwnRetired = and(retiredLiteral, isNotNull(careers.legendScore));
 export const isPublicRetired = and(
   isOwnRetired,
   gte(careers.retireAge, HOF_MIN_RETIRE_AGE),

@@ -473,70 +473,99 @@ export const careers = sqliteTable(
     index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
     // Cover name filtering and search ranks without loading every retired career's detail columns.
-    index('careers_hof_score_order_idx').on(
-      table.status,
-      table.hidden,
-      sql`${table.legendScore} desc`,
-      table.retiredAt,
-      table.id,
-      table.retireAge,
-      table.serviceSeason,
-      table.pos,
-      table.dpos,
-      table.publicName,
-    ),
-    index('careers_hof_season_score_order_idx').on(
-      table.status,
-      table.hidden,
-      table.serviceSeason,
-      sql`${table.legendScore} desc`,
-      table.retiredAt,
-      table.id,
-      table.retireAge,
-      table.pos,
-      table.dpos,
-      table.publicName,
-    ),
-    index('careers_hof_dpos_idx').on(
-      table.status,
-      table.hidden,
-      table.dpos,
-      table.serviceSeason,
-      table.legendScore,
-      table.retiredAt,
-      table.retireAge,
-      table.pos,
-    ),
+    index('careers_hof_score_order_idx')
+      .on(
+        table.status,
+        table.hidden,
+        sql`${table.legendScore} desc`,
+        table.retiredAt,
+        table.id,
+        table.retireAge,
+        table.serviceSeason,
+        table.pos,
+        table.dpos,
+        table.publicName,
+      )
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_season_score_order_idx')
+      .on(
+        table.status,
+        table.hidden,
+        table.serviceSeason,
+        sql`${table.legendScore} desc`,
+        table.retiredAt,
+        table.id,
+        table.retireAge,
+        table.pos,
+        table.dpos,
+        table.publicName,
+      )
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_dpos_idx')
+      .on(
+        table.status,
+        table.hidden,
+        table.dpos,
+        table.serviceSeason,
+        table.legendScore,
+        table.retiredAt,
+        table.retireAge,
+        table.pos,
+      )
+      .where(sql`${table.status} = 'retired'`),
     // Count HOF filters without reading the large snapshot/profile table payloads.
-    index('careers_hof_count_idx').on(
-      table.status,
-      table.hidden,
-      table.serviceSeason,
-      table.pos,
-      table.retireAge,
-      table.legendScore,
-      table.retiredAt,
-      table.goals,
-      table.assists,
-      table.apps,
-      table.trophies,
-      table.awards,
-      table.ballon,
-      table.caps,
-      table.peak,
-      table.value,
-    ),
+    index('careers_hof_count_idx')
+      .on(
+        table.status,
+        table.hidden,
+        table.serviceSeason,
+        table.pos,
+        table.retireAge,
+        table.legendScore,
+        table.retiredAt,
+        table.goals,
+        table.assists,
+        table.apps,
+        table.trophies,
+        table.awards,
+        table.ballon,
+        table.caps,
+        table.peak,
+        table.value,
+      )
+      .where(sql`${table.status} = 'retired'`),
     // 명예의 전당 순위 유형(GET /v1/hof?sort=): status로 은퇴만 좁히고 기록 내림차순 → 레전드 점수로 동점을 가린다.
-    index('careers_hof_goals_idx').on(table.status, table.goals, table.legendScore),
-    index('careers_hof_assists_idx').on(table.status, table.assists, table.legendScore),
-    index('careers_hof_ga_idx').on(table.status, goalsPlusAssists(table), table.legendScore),
-    index('careers_hof_apps_idx').on(table.status, table.apps, table.legendScore),
-    index('careers_hof_trophies_idx').on(table.status, table.trophies, table.legendScore),
-    index('careers_hof_awards_idx').on(table.status, table.awards, table.legendScore),
-    index('careers_hof_ballon_idx').on(table.status, table.ballon, table.legendScore),
-    index('careers_hof_caps_idx').on(table.status, table.caps, table.legendScore),
-    index('careers_hof_peak_idx').on(table.status, table.peak, table.legendScore),
-    index('careers_hof_value_idx').on(table.status, table.value, table.legendScore),
+    // T-11-663 명예의 전당 인덱스 14개는 은퇴 커리어만 담는다(진행 중 커리어를 만들거나 고칠 때 이 인덱스들을 쓰지 않는다).
+    index('careers_hof_goals_idx')
+      .on(table.status, table.goals, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_assists_idx')
+      .on(table.status, table.assists, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_ga_idx')
+      .on(table.status, goalsPlusAssists(table), table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_apps_idx')
+      .on(table.status, table.apps, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_trophies_idx')
+      .on(table.status, table.trophies, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_awards_idx')
+      .on(table.status, table.awards, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_ballon_idx')
+      .on(table.status, table.ballon, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_caps_idx')
+      .on(table.status, table.caps, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_peak_idx')
+      .on(table.status, table.peak, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_value_idx')
+      .on(table.status, table.value, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
     // T-10-030 홈 라이브 현황: 지금 뛰는 중·오늘 새 선수·오늘 은퇴와 최근 은퇴 소식을 시각 범위로 찾는다.
     index('careers_status_updated_idx').on(table.status, table.updatedAt),
     index('careers_created_idx').on(table.createdAt),
