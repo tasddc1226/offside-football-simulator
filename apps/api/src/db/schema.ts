@@ -2078,6 +2078,26 @@ export const leaguePredictions = sqliteTable(
   ],
 );
 
+/**
+ * T-11-658 AI 기자가 쓴 오프사이드 데일리 1면(라운드마다 한 줄). text_json은 언어별 { head, body }이고 검증에 걸린 언어는
+ * 빠진다(화면은 그 언어만 템플릿 문장을 쓴다). tries는 AI를 부른 횟수(LEAGUE_AI_TRIES에서 멈춘다).
+ */
+export const leagueNewsAi = sqliteTable(
+  'league_news_ai',
+  {
+    season: integer('season').notNull(),
+    round: integer('round').notNull(),
+    kind: text('kind').notNull(),
+    ref: text('ref').notNull(),
+    textJson: text('text_json').notNull(),
+    tries: integer('tries').notNull(),
+    model: text('model').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.season, t.round] })],
+);
+
 /** Kept outside profiles so session/account reads never load image bytes. */
 export const profileAvatars = sqliteTable('profile_avatars', {
   profileId: text('profile_id')

@@ -50,6 +50,7 @@ import {
 } from '../team/league.js';
 import { currentLeague } from '../team/leagueSchedule.js';
 import { buildLeagueNews } from '../team/leagueNews.js';
+import { leagueNewsAiOf } from '../team/leagueNewsAi.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { reqLang } from '../lang.js';
 import { filledCount } from '../team/sim.js';
@@ -412,12 +413,29 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
     const season = intParam(c.req.param('season'), 999);
     const round = c.req.param('round') === '0' ? 0 : intParam(c.req.param('round'), MAX_ROUND);
     if (!season || round === null) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
-    const data = await edgeCached(c, EDGE.leagueNews(season, round), 3600, async () => {
-      const news = await buildLeagueNews(getDb(c), season, round);
-      if (!news) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
-      return news;
-    });
-    return ok(c, LeagueNewsResponseSchema, data, 200, 'public, max-age=60, s-maxage=3600');
+    // T-11-658 AI 1면을 아직 쓰는 중이면(라운드가 막 끝난 몇 분) 엣지에 담지 않는다. 다 쓰면 cron이 키를 지운다.
+    let final = true;
+    const data = await edgeCached(
+      c,
+      EDGE.leagueNews(season, round),
+      3600,
+      async () => {
+        const db = getDb(c);
+        const news = await buildLeagueNews(db, season, round);
+        if (!news) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
+        const ai = await leagueNewsAiOf(db, news, !!c.env.AI);
+        final = ai.final;
+        return ai.ai ? { ...news, ai: ai.ai } : news;
+      },
+      () => final,
+    );
+    return ok(
+      c,
+      LeagueNewsResponseSchema,
+      data,
+      200,
+      final ? 'public, max-age=60, s-maxage=3600' : 'public, max-age=30, s-maxage=30',
+    );
   });
 
   // T-11-652 빅매치 예측 수(누구나, 엣지 30초 · 예측하면 지운다).

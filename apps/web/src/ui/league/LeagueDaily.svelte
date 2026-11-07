@@ -104,7 +104,7 @@
     {/if}
     {#each cards as c, i (c.key)}
       <article class="ld-item" class:lead={i === 0} data-league-news={c.kind}>
-        <div class="ld-tagrow"><span class="pill ld-tag" class:hot={c.kind === 'upset'}>{c.tag}</span><small class="muted">{c.where}</small></div>
+        <div class="ld-tagrow"><span class="pill ld-tag" class:hot={c.kind === 'upset'}>{c.tag}</span>{#if c.ai}<span class="pill ld-tag" title={N.aiNote} aria-label={N.aiNote} data-league-news-ai>{N.aiBadge}</span>{/if}<small class="muted">{c.where}</small></div>
         <h3>{c.head}</h3>
         <p class="fs-sm">{c.body}</p>
         {#if c.match}

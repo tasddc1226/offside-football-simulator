@@ -21,6 +21,8 @@ export const leagueNews: Translation<LeagueNewsMsgs> = {
   tagHattrick: '帽子戲法',
   tagFirstWin: '首勝',
   tagBig: '焦點戰',
+  aiBadge: 'AI 記者',
+  aiNote: '這篇報導由 AI 記者根據比賽結果撰寫。',
   upsetHead: (p) =>
     pick(p.v, [
       `${p.winner} 逆轉 ${p.gap} 點 OVR 差距`,

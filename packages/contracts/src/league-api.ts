@@ -310,12 +310,35 @@ export type LeagueBigMatch = z.infer<typeof LeagueBigMatchSchema>;
  * `GET /v1/leagues/:season/news/:round` — 그 라운드가 끝난 뒤의 신문. round 0이면 기사 없이 1라운드 빅매치만. 끝난 라운드는
  * 바뀌지 않아 엣지에 오래 둔다. lastBig: 이 라운드 빅매치의 결과(round 1부터).
  */
+/** T-11-658 AI 기자 1면 한 언어(헤드라인 · 본문). */
+export const LeagueNewsAiTextSchema = z.strictObject({
+  head: z.string().min(1).max(200),
+  body: z.string().min(1).max(900),
+});
+/**
+ * T-11-658 AI 기자가 쓴 1면. kind · ref(경기 id, 선두 · 연승은 팀 id)로 어떤 기사를 다시 썼는지 알린다. 검증을 통과한 언어만
+ * 담기고, 없는 언어는 템플릿 문장을 쓴다.
+ */
+export const LeagueNewsAiSchema = z.strictObject({
+  kind: z.string(),
+  ref: z.string(),
+  text: z.strictObject({
+    ko: LeagueNewsAiTextSchema.optional(),
+    en: LeagueNewsAiTextSchema.optional(),
+    ja: LeagueNewsAiTextSchema.optional(),
+    zh: LeagueNewsAiTextSchema.optional(),
+  }),
+});
+export type LeagueNewsAi = z.infer<typeof LeagueNewsAiSchema>;
+
 export const LeagueNewsResponseSchema = z.strictObject({
   season: z.number().int(),
   round: z.number().int().min(0),
   items: z.array(LeagueNewsItemSchema),
   bigMatch: LeagueBigMatchSchema.nullable(),
   lastBig: LeagueNewsMatchSchema.nullable(),
+  /** T-11-658 AI 기자 1면(아직 없거나 못 썼으면 빠진다). */
+  ai: LeagueNewsAiSchema.optional(),
 });
 export type LeagueNewsResponse = z.infer<typeof LeagueNewsResponseSchema>;
 

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockDaily } from './leagueDailyMock.js';
+import { mockDaily, news } from './leagueDailyMock.js';
 
 // T-11-652 오프사이드 데일리: 끝난 라운드 신문 · 빅매치 예측 · 경기 기사 · 라운지 공유 · 라이벌 · 더비.
 test('리그 화면 신문 → 예측 → 기사 읽기 · 공유, 신문은 한 번만 부른다', async ({ page }) => {
@@ -14,6 +14,12 @@ test('리그 화면 신문 → 예측 → 기사 읽기 · 공유, 신문은 한
   // 헤드라인은 기사마다 정해진 변형이라 팀 이름 · 순위로 확인한다.
   await expect(daily.locator('[data-league-news="upset"] h3')).toContainText(/숲속 FC|남산 시티/);
   await expect(daily.locator('[data-league-news="derby"] h3')).toContainText(/3위.*4위/);
+  // T-11-658 AI 기자가 쓴 1면이 맨 앞에 오고 'AI 기자' 표시가 붙는다. 나머지 기사는 템플릿 문장이다.
+  const front = daily.locator('[data-league-news]').first();
+  await expect(front).toHaveAttribute('data-league-news', 'upset');
+  await expect(front.locator('[data-league-news-ai]')).toHaveText('AI 기자');
+  await expect(front.locator('h3')).toHaveText(news.ai.text.ko.head);
+  await expect(daily.locator('[data-league-news-ai]')).toHaveCount(1);
   await expect(daily.locator('[data-league-pred-record]')).toHaveText('내 적중 2/3');
   await expect(daily.locator('[data-league-pred-split]')).toHaveText(
     '80명 예측 · 홈 51% · 무 15% · 원정 34%',

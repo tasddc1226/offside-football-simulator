@@ -21,6 +21,8 @@ export const leagueNews: Translation<LeagueNewsMsgs> = {
   tagHattrick: 'ハットトリック',
   tagFirstWin: '初勝利',
   tagBig: 'ビッグマッチ',
+  aiBadge: 'AI記者',
+  aiNote: 'AI記者が試合結果をもとに書いた記事です。',
   upsetHead: (p) =>
     pick(p.v, [
       `${p.winner}、OVR差${p.gap}をひっくり返す`,
