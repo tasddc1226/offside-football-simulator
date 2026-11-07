@@ -9,7 +9,7 @@ export const owner: Translation<OwnerMsgs> = {
   currentSeason: '今シーズン',
   seasonTierHistory: 'シーズン別最終ランク',
   valueInfoTitle: 'クラブ価値の計算方法',
-  valueInfoFormula: 'クラブ価値 = クラブ資金 + 保有選手カードの基準価格の合計',
+  valueInfoFormula: 'クラブ価値 = クラブ資金 + 保有選手カードの基準価格・強化価値の合計',
   valueInfoOwned: '育成した選手と獲得した選手を、シーズンを問わず含みます。',
   valueInfoPrice:
     'カードの基準価格は最高OVRを記録したシーズンのうち、市場価値が最も高かったシーズンの市場価値です。リーグの資金力・OVR・年齢で計算するので、最高OVRの後に長くプレーしても下がりません。',
@@ -17,7 +17,8 @@ export const owner: Translation<OwnerMsgs> = {
     '市場価値には年齢倍率がかかります。24歳までは5倍、25〜29歳は4倍、30歳からは2倍です。そのため30歳を過ぎて最高OVRに達した選手は、キャリア記録の最高市場価値より基準価格が低くなることがあります。',
   valueInfoFallback:
     'そのシーズンの市場価値がない場合は最も高かったプロシーズンを使い、プロ記録もなければ1億ウォンを適用します。',
-  valueInfoExcluded: '出品価格やレジェンドスコアを直接加算することはありません。',
+  valueInfoExcluded:
+    '強化したカードは強化価値（その段階までの平均強化費用の半分）を加えます。移籍市場の販売価格範囲に加わる額と同じです。出品価格やレジェンドスコアを直接加算することはありません。',
   valueInfoGuest:
     '未ログイン時は、この端末に保存された現シーズンの引退選手カードの基準価格を合算します。',
   profileEdit: 'プロフィール編集',

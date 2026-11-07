@@ -10,6 +10,7 @@ import {
   TeamStatsResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
+import { enhanceValueSql, tradeValue } from '@offside/contracts/card-enhance';
 import { createApp } from '../app.js';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -192,6 +193,49 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     expect(await stored()).toMatchObject({ lineupValueOpen: 0, lineupValueClosed: 300 });
     await ctx.db.delete(cards).where(eq(cards.careerId, c!));
     expect(await stored()).toMatchObject({ lineupValueOpen: 0, lineupValueClosed: 0 });
+  });
+
+  it('T-11-650: 구단 가치 랭킹에 카드 강화 가치를 더하고, 강화 단계가 바뀌면 다시 센다', async () => {
+    const deep = await team(2, 90, '둘감독');
+    const [a, b] = deep.team.slots.flatMap((x) => (x.careerId ? [x.careerId] : []));
+    await ctx.db.update(cards).set({ cardValue: 500 }).where(eq(cards.careerId, a!));
+    await ctx.db.update(cards).set({ cardValue: 400 }).where(eq(cards.careerId, b!));
+    const stored = async () =>
+      (await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, deep.team.id)))[0]!;
+    expect(await stored()).toMatchObject({ lineupValueOpen: 900, lineupValueClosed: 900 });
+
+    // 강화 단계만 바뀌어도 트리거가 다시 센다(판매가 범위와 같은 tradeValue).
+    await ctx.db.update(cards).set({ enhance: 3 }).where(eq(cards.careerId, a!));
+    expect(await stored()).toMatchObject({
+      lineupValueOpen: tradeValue(500, 3) + 400,
+      lineupValueClosed: tradeValue(500, 3) + 400,
+    });
+    // 실패 수만 바뀐 갱신은 다시 세지 않아도 값이 같다.
+    await ctx.db.update(cards).set({ enhanceFails: 2 }).where(eq(cards.careerId, a!));
+    expect((await stored()).lineupValueOpen).toBe(tradeValue(500, 3) + 400);
+    await ctx.db.update(cards).set({ enhance: 2 }).where(eq(cards.careerId, a!));
+    expect((await stored()).lineupValueOpen).toBe(tradeValue(500, 2) + 400);
+
+    // 0150 마이그레이션의 강화 가치 숫자는 계약의 enhanceValueSql과 같고, 그 백필이 같은 값을 낸다.
+    const migration = readFileSync(
+      new URL('../../migrations/0150_club_value_enhance.sql', import.meta.url),
+      'utf8',
+    );
+    expect(migration.split(enhanceValueSql('c.enhance')).length - 1).toBe(18);
+    const backfill = migration
+      .split('--> statement-breakpoint')
+      .map((x) => x.trim())
+      .find((x) => x.startsWith('UPDATE owner_teams SET lineup_value_open'))!;
+    await ctx.env.DB.prepare(
+      'UPDATE owner_teams SET lineup_value_open = 0, lineup_value_closed = 0',
+    ).run();
+    await ctx.env.DB.prepare(backfill).run();
+    expect(await stored()).toMatchObject({
+      lineupValueOpen: tradeValue(500, 2) + 400,
+      lineupValueClosed: tradeValue(500, 2) + 400,
+    });
+    const data = (await rank('?sort=value')).data;
+    expect(data.items.find((i) => i.teamId === deep.team.id)?.value).toBe(tradeValue(500, 2) + 400);
   });
 
   it('최근 5경기는 홈·원정을 합쳐 최신순으로 읽고 상대 결과는 뒤집는다', async () => {

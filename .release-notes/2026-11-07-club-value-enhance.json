@@ -1,0 +1,26 @@
+{
+  "id": "t-11-650-club-value-enhance",
+  "title": "구단 가치에 강화 반영",
+  "items": [
+    "강화한 선수 카드의 강화 가치가 구단 가치와 구단 가치 랭킹에 더해져요. 이적시장 판매가 범위에 붙는 강화 가치와 같은 값이에요."
+  ],
+  "en": {
+    "title": "Enhancement now counts toward club value",
+    "items": [
+      "Enhanced player cards now add their enhancement value to your club value and the club value ranking. It is the same amount added to the card's transfer market price range."
+    ]
+  },
+  "ja": {
+    "title": "クラブ価値に強化を反映",
+    "items": [
+      "強化した選手カードの強化価値が、クラブ価値とクラブ価値ランキングに加わります。移籍市場の販売価格範囲に加わる強化価値と同じ額です。"
+    ]
+  },
+  "zh": {
+    "title": "俱樂部價值計入強化",
+    "items": [
+      "強化過的球員卡，其強化價值會計入俱樂部價值與俱樂部價值排行榜，金額與轉會市場售價範圍加上的強化價值相同。"
+    ]
+  },
+  "availability": "web-app"
+}

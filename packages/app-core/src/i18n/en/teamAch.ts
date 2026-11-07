@@ -118,7 +118,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   teamsFoot: 'Rating moves with team match results. The ranking updates every 5 minutes.',
   teamsFootRp: 'RP moves with ranked match results. The ranking updates every 5 minutes.',
   valueFoot:
-    'Club value is the sum of the starting XI card prices. The ranking updates every 5 minutes.',
+    'Club value is the sum of the starting XI card prices plus their enhancement value. The ranking updates every 5 minutes.',
   homeValueTitle: 'Top 3 club values',
   homeValueSub: 'Starting XI card prices added up.',
   homeValueEmpty: 'No teams are ranked yet.',
