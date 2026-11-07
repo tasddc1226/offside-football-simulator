@@ -173,6 +173,11 @@ export function LeagueDaily({
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}
               >
                 <Pill tone={card.kind === 'upset' ? 'warn' : undefined}>{card.tag}</Pill>
+                {card.ai ? (
+                  <View testID="league-news-ai" accessibilityLabel={N.aiNote}>
+                    <Pill>{N.aiBadge}</Pill>
+                  </View>
+                ) : null}
                 <Txt v="xs" tone="muted">
                   {card.where}
                 </Txt>

@@ -10,6 +10,7 @@ import type {
   LeaguePredictionPick,
   LeagueTableResponse,
 } from './api/league.js';
+import { getLocale } from './i18n/core.js';
 import { playerName } from './format.js';
 import { leagueNewsText as N } from './i18n/ko/leagueNews.js';
 
@@ -33,6 +34,8 @@ export type NewsCard = {
   match: LeagueNewsMatch | null;
   tier: number;
   league: number;
+  /** T-11-658 AI 기자가 다시 쓴 1면(맨 앞에 온다). */
+  ai?: boolean;
 };
 
 const score = (m: { homeGoals: number; awayGoals: number }) => `${m.homeGoals}:${m.awayGoals}`;
@@ -183,8 +186,22 @@ function cardOf(item: LeagueNewsItem, round: number): NewsCard {
 }
 
 /** 신문 꼭지(서버가 보낸 순서 그대로). */
-export const newsCards = (news: LeagueNewsResponse): NewsCard[] =>
-  news.items.map((item) => cardOf(item, news.round));
+const refOf = (item: LeagueNewsItem) =>
+  item.kind === 'leader' || item.kind === 'streak' ? item.team.teamId : item.match.id;
+
+/**
+ * 신문 카드. T-11-658 AI 기자가 지금 언어로 1면을 썼으면 그 기사의 헤드라인 · 본문을 AI 문장으로 바꿔 맨 앞에 둔다. 그 언어를
+ * 못 썼으면 템플릿 문장 그대로다.
+ */
+export function newsCards(news: LeagueNewsResponse): NewsCard[] {
+  const cards = news.items.map((item) => cardOf(item, news.round));
+  const text = news.ai?.text[getLocale()];
+  if (!news.ai || !text) return cards;
+  const i = news.items.findIndex((x) => x.kind === news.ai!.kind && refOf(x) === news.ai!.ref);
+  if (i < 0) return cards;
+  const front = { ...cards[i]!, head: text.head, body: text.body, ai: true };
+  return [front, ...cards.filter((_, k) => k !== i)];
+}
 
 /** 지난 빅매치 한 줄. */
 export const lastBigLine = (news: LeagueNewsResponse) =>

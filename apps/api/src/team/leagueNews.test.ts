@@ -16,6 +16,7 @@ import { ADMIN_EMAIL, callJson, issueGoogleCookie } from '../test/http.js';
 import { cupText } from '../cupText.js';
 import { runLeague } from './league.js';
 import { pushHeadline } from './leagueNews.js';
+import { LEAGUE_AI_TRIES, writeLeagueNewsAi } from './leagueNewsAi.js';
 
 // T-11-652 오프사이드 데일리(라운드 신문) · 빅매치 예측 API.
 
@@ -240,6 +241,69 @@ describe('오프사이드 데일리 (T-11-652)', () => {
     });
     expect(n1.lastBig?.id).toBe(big.id);
     expect(n1.bigMatch).toMatchObject({ tier: 1, league: 1, round: 2 });
+
+    // T-11-658 AI 기자: AI 바인딩이 없으면 1면을 쓰지 않는다. 가짜 AI는 한국어 · 영어는 맞게, 일본어는 없는 숫자를 지어내고
+    // 중국어는 빈 답을 낸다. 검사를 통과한 언어만 실리고, 못 쓴 언어만 정해진 횟수까지 다시 부른다.
+    expect(n1.ai).toBeUndefined();
+    const now1 = at(L.rounds[0]!, DAY_END + 600_000);
+    expect(await writeLeagueNewsAi(ctx.env, db(), now1)).toBeNull();
+    const asked: string[] = [];
+    const fakeAi = {
+      run: async (_m: string, input: { messages: { content: string }[] }) => {
+        const sys = input.messages[0]!.content;
+        const f = JSON.parse(input.messages[1]!.content) as {
+          story: string;
+          winner: string | null;
+          home: { team: string };
+          where: string;
+        };
+        const lang = sys.includes('in Korean')
+          ? 'ko'
+          : sys.includes('in English')
+            ? 'en'
+            : sys.includes('in Japanese')
+              ? 'ja'
+              : 'zh';
+        asked.push(lang);
+        const hero = f.winner ?? f.home.team;
+        const reply = {
+          ko: {
+            head: `${hero}, 모두를 놀라게 하다`,
+            body: `${hero}의 승리가 ${f.where} 최고의 이야기였습니다. 경기장은 술렁였습니다.`,
+          },
+          en: {
+            head: `${hero} stun the league`,
+            body: `${hero} were the story of ${f.where}. Nobody saw it coming.`,
+          },
+          ja: {
+            head: `${hero}が大金星`,
+            body: `${hero}が99分に決勝ゴールを決めました。スタジアムは沸きました。`,
+          },
+          zh: null,
+        }[lang];
+        return { response: reply ? JSON.stringify(reply) : '' };
+      },
+    } as unknown as Ai;
+    const env = { ...ctx.env, AI: fakeAi };
+    expect(await writeLeagueNewsAi(env, db(), now1)).toEqual({
+      season: 2,
+      round: 1,
+      wrote: 2,
+      failed: 2,
+      why: 'ja:number,zh:empty',
+    });
+    expect(asked.sort()).toEqual(['en', 'ja', 'ko', 'zh']);
+    const a1 = await news(1);
+    if (typeof a1 === 'number') throw new Error(`news 1: ${a1}`);
+    expect(a1.ai).toMatchObject({ kind: 'upset', ref: mixed.id });
+    expect(Object.keys(a1.ai!.text).sort()).toEqual(['en', 'ko']);
+    expect(a1.ai!.text.ko!.body).toContain('1라운드');
+    asked.length = 0;
+    for (let i = 1; i < LEAGUE_AI_TRIES; i++)
+      expect(await writeLeagueNewsAi(env, db(), now1)).toMatchObject({ wrote: 0, failed: 2 });
+    expect(asked.sort()).toEqual(['ja', 'ja', 'zh', 'zh']);
+    // 정해진 횟수를 다 쓰면 더 부르지 않는다.
+    expect(await writeLeagueNewsAi(env, db(), now1)).toBeNull();
 
     // 내 예측 기록: 끝난 경기는 결과와 적중 수.
     const mine = PredMeRes.parse(

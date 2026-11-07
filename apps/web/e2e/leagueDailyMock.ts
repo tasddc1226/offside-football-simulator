@@ -139,6 +139,29 @@ export const news = {
     awayRank: 3,
   },
   lastBig: nm('lgm_3_0', 0, 6, 1, 1),
+  // T-11-658 AI 기자 1면(실제 Workers AI가 이 목업 사실로 쓴 문장, 이름 자리표를 채운 결과).
+  ai: {
+    kind: 'upset',
+    ref: 'lgm_3_3',
+    text: {
+      ko: {
+        head: '숲속 FC, 남산 시티 상대로 이변의 승리 거두며 대이변 연출',
+        body: '오프사이드 리그 1부 1리그 3라운드에서 숲속 FC가 남산 시티를 상대로 2-0 승리를 거두었습니다. 경기 전 남산 시티가 숲속 FC보다 7 높은 OVR을 기록했으나 숲속 FC가 승리를 가져가는 이변이 일어났습니다.',
+      },
+      en: {
+        head: 'Shock defeat for 남산 시티 as 숲속 FC pull off massive upset',
+        body: 'A stunning result in OFFSIDE League Tier 1 (group 1), Round 3 saw 숲속 FC snatch all three points away from home. Despite 남산 시티 boasting a higher OVR by 7 and dominating with 1.9 xG, they failed to find the net. 숲속 FC clinical edge proved decisive as they secured a 2-0 victory against the heavy favourites.',
+      },
+      ja: {
+        head: '【番狂わせ】숲속 FCが남산 시티を撃破、格上を破る快挙',
+        body: 'オフサイドリーグ 1部 1組 第3節が行われ、숲속 FCが남산 시티に対し2-0で勝利しました。試合前、남산 시티は숲속 FCよりもOVRが7高い状態でしたが、숲속 FCが格上の남산 시티を相手にジャイアントキリングを成し遂げました。',
+      },
+      zh: {
+        head: '숲속 FC客場爆冷擊敗남산 시티',
+        body: '在OFFSIDE 聯賽 第1級 第1組 第3輪中，숲속 FC以2-0擊敗남산 시티。儘管남산 시티擁有較高的隊伍OVR，但숲속 FC成功在客場取得爆冷勝利。',
+      },
+    },
+  },
 };
 const side = (i: number, goals: number, xg: number) => ({
   ...team(i),

@@ -596,10 +596,15 @@ export function newsHeadKo(item: LeagueNewsItem): string {
 /**
  * 라운드 결과 알림에 붙일 신문 1면. 내 팀이 실린 기사가 있으면 그 기사(mine), 없으면 순서대로 첫 기사. 기사가 없으면 null.
  */
+const byPushOrder = (news: LeagueNewsResponse) =>
+  [...news.items].sort((a, b) => PUSH_ORDER.indexOf(a.kind) - PUSH_ORDER.indexOf(b.kind));
+
+/** 신문 1면 기사(푸시 순서의 첫 기사). T-11-658 AI 기자가 이 기사를 다시 쓴다. */
+export const frontItem = (news: LeagueNewsResponse): LeagueNewsItem | undefined =>
+  byPushOrder(news)[0];
+
 export function pushHeadline(news: LeagueNewsResponse, teamId: string | null) {
-  const sorted = [...news.items].sort(
-    (a, b) => PUSH_ORDER.indexOf(a.kind) - PUSH_ORDER.indexOf(b.kind),
-  );
+  const sorted = byPushOrder(news);
   const mine = teamId ? sorted.find((x) => teamsOf(x).includes(teamId)) : undefined;
   const item = mine ?? sorted[0];
   return item ? { mine: !!mine, head: newsHeadKo(item) } : null;

@@ -1,4 +1,5 @@
 import type { TeamMatch } from '@offside/contracts';
+import { setLocale } from '@offside/contracts/i18n';
 import { describe, expect, it } from 'vitest';
 import type { LeagueNewsMatch, LeagueTableResponse } from './api/league.js';
 import { derbyIds, leagueRival, matchArticle, newsCards, predictionSplit } from './leagueNews.js';
@@ -253,5 +254,52 @@ describe('T-11-652 라이벌 · 더비', () => {
 
   it('더비는 안 치른 경기 중 순위가 붙고 승점 차 3 안인 경기', () => {
     expect([...derbyIds(table)]).toEqual(['m3']);
+  });
+});
+
+describe('T-11-658 AI 기자 1면', () => {
+  const news = {
+    season: 2,
+    round: 3,
+    bigMatch: null,
+    lastBig: null,
+    items: [
+      {
+        kind: 'leader' as const,
+        tier: 1,
+        league: 1,
+        team: team('c', '숲 FC', 90),
+        points: 9,
+        changed: false,
+      },
+      { kind: 'upset' as const, match: nm(), gap: 8 },
+    ],
+    ai: {
+      kind: 'upset',
+      ref: 'm1',
+      text: {
+        ko: { head: '하늘 FC, 거인을 쓰러뜨리다', body: '하늘 FC가 바다 FC를 2-1로 꺾었습니다.' },
+      },
+    },
+  };
+  it('지금 언어로 쓴 AI 기사가 있으면 그 기사를 AI 문장으로 바꿔 맨 앞에 둔다', () => {
+    const cards = newsCards(news);
+    expect(cards.map((c) => c.kind)).toEqual(['upset', 'leader']);
+    expect(cards[0]).toMatchObject({
+      ai: true,
+      head: '하늘 FC, 거인을 쓰러뜨리다',
+      match: { id: 'm1' },
+    });
+    expect(cards[1]!.ai).toBeUndefined();
+  });
+  it('그 언어를 못 썼거나 기사를 찾지 못하면 템플릿 문장 그대로다', () => {
+    setLocale('ja');
+    try {
+      expect(newsCards(news).some((c) => c.ai)).toBe(false);
+    } finally {
+      setLocale('ko');
+    }
+    expect(newsCards({ ...news, ai: { ...news.ai, ref: 'zz' } }).some((c) => c.ai)).toBe(false);
+    expect(newsCards({ ...news, ai: undefined }).map((c) => c.kind)).toEqual(['leader', 'upset']);
   });
 });

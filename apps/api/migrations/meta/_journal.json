@@ -1051,6 +1051,13 @@
       "when": 1794051496523,
       "tag": "0152_cup_season_cards",
       "breakpoints": true
+    },
+    {
+      "idx": 153,
+      "version": "6",
+      "when": 1794054889960,
+      "tag": "0153_league_news_ai",
+      "breakpoints": true
     }
   ]
 }
