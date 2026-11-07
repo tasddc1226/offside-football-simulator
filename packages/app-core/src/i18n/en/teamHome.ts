@@ -296,7 +296,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpSaved: 'Preset saved.',
   tpLoaded: 'Preset loaded. Save to apply it to your team.',
   tpLoadedMissing: (p) =>
-    `Preset loaded. ${plural(p.n, 'spot')} left empty for players you no longer have.`,
+    `Preset loaded. ${plural(p.n, 'spot')} left empty for players you no longer have. Save to apply it to your team.`,
   tpLocked: 'Your cup lineup is locked, so presets can’t be loaded right now.',
   tpCupBadge: 'Cup lineup',
   tpCupTitle: 'Cup lineup',

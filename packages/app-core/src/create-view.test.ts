@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { generateCandidates } from '@offside/game/candidates';
-import { defaultFocus, type Pos } from '@offside/game/data';
+import { defaultFocus, typeForFocus, type Pos } from '@offside/game/data';
 import { newGame } from '@offside/game/engine';
 import { GK_SUBS, ovr, SUBS } from '@offside/game/attributes';
 import { BODY_DEFAULT } from '@offside/contracts/body';
 import { createRng, setActiveRng } from '@offside/game/rng';
-import { bodyNote, focusNote, hiddenStrength, scoutLine, startOvr } from './create-view.js';
+import {
+  bodyNote,
+  focusNote,
+  hiddenStrength,
+  ovrFocusView,
+  scoutLine,
+  startOvr,
+} from './create-view.js';
 import { iGa, polyPoints } from './format.js';
 
 describe('선수 생성 표시 로직', () => {
@@ -25,6 +32,23 @@ describe('선수 생성 표시 로직', () => {
     expect(scoutLine('GK', { pac: 48, sho: 30, pas: 38, dri: 40, def: 60, phy: 48 })).toBe(
       '다이빙이 특출난 슈퍼 세이버',
     );
+  });
+
+  it('T-11-651 주력을 주면 스카우트 코멘트는 그 주력 조합의 실제 유형 이름을 쓴다', () => {
+    const attrs = { pac: 46, sho: 42, pas: 55, dri: 54, def: 40, phy: 44 };
+    // 패스가 가장 높아도 드리블 · 피지컬 주력이면 윙어다(라운지 제보: 플메를 노렸는데 윙어).
+    expect(scoutLine('MF', attrs, ['dri', 'phy'])).toBe('패스·드리블이 고루 좋은 윙어');
+    expect(scoutLine('MF', attrs, ['pas', 'phy'])).toBe('패스·드리블이 고루 좋은 박스 투 박스');
+    expect(scoutLine('MF', attrs, [])).toBe('패스·드리블이 고루 좋은 플레이메이커');
+  });
+
+  it('T-11-651 주력 고르기 화면은 그 조합으로 정해지는 유형을 보여 준다', () => {
+    const winger = ovrFocusView('MF', ['dri', 'phy'], 'DM');
+    expect(winger.typeId).toBe(typeForFocus('MF', ['dri', 'phy']));
+    expect(winger.typeId).toBe('winger');
+    expect(winger.typeLine).toContain('이 조합의 유형: 윙어');
+    expect(ovrFocusView('MF', ['pas', 'sho']).typeLine).toContain('플레이메이커');
+    expect(ovrFocusView('FW', ['pac', 'dri']).typeLine).toContain('스피드스터');
   });
 
   it('후보 카드의 시작 OVR은 실제 시작 OVR과 1 이내로 맞는다', () => {

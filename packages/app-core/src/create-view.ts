@@ -7,6 +7,8 @@ import {
   FOCUS_GROWTH,
   OFF_FOCUS_GROWTH,
   typeForFocus,
+  typeName,
+  TYPES,
   type AttrKey,
   type Pos,
   type DetailPos,
@@ -38,11 +40,19 @@ export function focusNote(focused: boolean, d: number): string {
 export const startOvr = (pos: Pos, attrs: Record<AttrKey, number>): number =>
   Math.round(legacyOvr(pos, attrs));
 
-/** 한 줄 스카우트 코멘트: 가장 높은 능력치 + 그 능력치로 정한 유형. 1·2위가 거의 같으면 둘 다 말한다. */
-export function scoutLine(pos: Pos, attrs: Record<AttrKey, number>): string {
+/**
+ * 한 줄 스카우트 코멘트: 가장 높은 능력치 + 유형. 1·2위가 거의 같으면 둘 다 말한다. T-11-651 주력(focus)을 주면 유형은 그 주력
+ * 조합으로 정해지는 실제 유형 이름을 쓴다(가장 높은 능력치로 고른 이름이 실제 유형과 어긋나지 않게).
+ */
+export function scoutLine(
+  pos: Pos,
+  attrs: Record<AttrKey, number>,
+  focus?: readonly AttrKey[],
+): string {
   const [a, b] = ATTR_KEYS.slice().sort((x, y) => attrs[y] - attrs[x]) as [AttrKey, AttrKey];
   const labels = attrLabels(pos);
-  const kind = L.archetype({ pos, k: a });
+  const kind =
+    (focus?.length ? typeName(pos, typeForFocus(pos, focus)) : null) ?? L.archetype({ pos, k: a });
   if (attrs[a] - attrs[b] <= 1) return L.scoutBoth({ a: labels[a], b: labels[b], kind });
   return L.scoutOne({ a: labels[a], kind });
 }
@@ -67,7 +77,9 @@ export function bodyNote(pos: Pos, body: Body): string {
 
 /** Display the same role used after creation, including legacy focus-based roles. No RNG or save writes. */
 export function ovrFocusView(pos: Pos, focus: readonly AttrKey[], dpos?: DetailPos | null) {
-  const role = mainRole({ pos, type: typeForFocus(pos, [...focus]), ...(dpos ? { dpos } : {}) });
+  const typeId = typeForFocus(pos, [...focus]);
+  const role = mainRole({ pos, type: typeId, ...(dpos ? { dpos } : {}) });
+  const type = TYPES[pos].find((t) => t.id === typeId)!;
   const weights = ROLES[role]!;
   const labels = attrLabels(pos);
   const headingOnly =
@@ -89,5 +101,8 @@ export function ovrFocusView(pos: Pos, focus: readonly AttrKey[], dpos?: DetailP
     groups: groups.join(' · '),
     subs: L.ovrFocusSubs({ list: subs }),
     note: headingOnly ? L.ovrHeadingNote : L.ovrFocusNote,
+    /** T-11-651 이 주력 조합으로 정해지는 선수 유형(은퇴 카드에 남는다). 능력치를 나중에 올려도 바뀌지 않는다. */
+    typeId,
+    typeLine: L.focusTypeLine({ name: type.name, desc: type.desc }),
   };
 }

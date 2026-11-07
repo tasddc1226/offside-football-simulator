@@ -200,6 +200,8 @@ export const create: Translation<CreateMsgs> = {
   extraNote: 'All optional. You can start with the defaults.',
   focusMeaning:
     'Start is the change to your first attributes. Growth is how fast they rise from the same training.',
+  focusTypeLine: (p: { name: string; desc: string }) =>
+    `Player type for this pair: ${p.name} (${p.desc}). Raising attributes later won’t change it.`,
   ovrWhy:
     'Estimated OVR uses the attributes each position values most, so it changes with your position and focus.',
   tendencyLine: (p) => `Goals ${p.goal} · Assists ${p.assist}`,

@@ -216,6 +216,8 @@ const ko = {
   moreCustomize: '체격 · 주발 · 외형 더 꾸미기',
   extraNote: '바꾸지 않아도 돼요. 기본값으로 바로 시작할 수 있어요.',
   focusMeaning: '시작은 처음 능력치 변화, 성장은 같은 훈련에서 오르는 속도예요.',
+  focusTypeLine: (p: { name: string; desc: string }) =>
+    `이 조합의 유형: ${p.name} (${p.desc}). 능력치를 나중에 올려도 유형은 바뀌지 않아요.`,
   ovrWhy:
     '예상 OVR은 포지션마다 중요하게 보는 능력치로 계산해요. 그래서 포지션이나 주력을 바꾸면 달라져요.',
   tendencyLine: (p: { goal: string; assist: string }) =>
