@@ -14,6 +14,8 @@ import {
   playHintOf,
   raisedInSeason,
   seasonRaisedText,
+  pastInSlots,
+  seasonCupSlots,
 } from './teamOwner.js';
 import {
   loadPreset,
@@ -26,6 +28,7 @@ import {
   replacePreset,
   setCupPreset,
   cupPresetOf,
+  withSeasonCupPreset,
 } from './teamPresets.js';
 
 const player = (careerId: string, over: Partial<TeamPlayer> = {}): TeamPlayer => ({
@@ -247,6 +250,41 @@ describe('T-11-217 팀 프리셋', () => {
     expect(presetsFull(list)).toBe(true);
     expect(presetsFull(removePreset(list, 0))).toBe(false);
     expect(renamePreset(list, 1, ' 새 이름 ')[1]!.name).toBe('새 이름');
+  });
+
+  it('T-11-657 이번 시즌 선수 컵 명단: 자리가 있으면 새로 더해 컵 명단으로, 가득 차면 원래 컵 명단 자리를 바꾼다', () => {
+    const list = setCupPreset(
+      Array.from({ length: 3 }, (_, i) => presetOf(`p${i}`, '4-3-3', slots, null)),
+      1,
+    );
+    const made = withSeasonCupPreset(list, presetOf('S2 컵 명단', '4-3-3', slots, null))!;
+    expect(made.map((p) => [p.name, !!p.cup])).toEqual([
+      ['p0', false],
+      ['p1', false],
+      ['p2', false],
+      ['S2 컵 명단', true],
+    ]);
+    expect('cup' in made[1]!).toBe(false);
+    const full = setCupPreset(
+      Array.from({ length: 5 }, (_, i) => presetOf(`p${i}`, '4-3-3', slots, null)),
+      3,
+    );
+    const swapped = withSeasonCupPreset(full, presetOf('새 컵', '4-4-2', slots, null))!;
+    expect(swapped.map((p) => p.name)).toEqual(['p0', 'p1', 'p2', '새 컵', 'p4']);
+    expect(cupPresetOf(swapped)?.name).toBe('새 컵');
+    expect(
+      withSeasonCupPreset(setCupPreset(full, null), presetOf('x', '4-3-3', slots, null)),
+    ).toBeNull();
+  });
+
+  it('T-11-657 지난 시즌 카드를 세고, 이번 시즌 카드만으로 자동 배치한다', () => {
+    const old = player('old', { pos: 'FW', dpos: 'ST', peak: 99, season: 1 });
+    const fresh = player('new', { pos: 'FW', dpos: 'ST', peak: 70, season: 2 });
+    const byId = new Map([old, fresh].map((p) => [p.careerId, p]));
+    expect(pastInSlots(['old', 'new', null], byId, 2)).toBe(1);
+    const filledSlots = seasonCupSlots(['ST'], [old, fresh], 2);
+    expect(filledSlots[0]).toBe('new');
+    expect(filledSlots).not.toContain('old');
   });
 
   it('T-11-570 컵 명단은 하나만, 덮어써도 컵 명단 표시가 남는다', () => {

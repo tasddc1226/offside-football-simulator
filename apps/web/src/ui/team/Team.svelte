@@ -66,13 +66,15 @@
   import TeamResult from './TeamResult.svelte';
   import TeamFriends from './TeamFriends.svelte';
   import TeamPresets from './TeamPresets.svelte';
-  import { cupPresetOf, loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
+  import { cupPresetOf, loadPreset, presetOf, withSeasonCupPreset, type TeamPreset } from '@offside/app-core/teamPresets';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
   import { fixSlot, slotName } from '@offside/app-core/matchReport';
   import type { ReportLine } from '@offside/contracts/owner-team';
-  import { assignSlot, autoFillSlots, draftLines, matchHintOf, slotsSynergy, teamEditableIn } from '@offside/app-core/teamOwner';
+  import { cupText as CT } from '@offside/app-core/i18n/ko/cup';
+  import { cardSeasonBadge } from '@offside/app-core/format';
+  import { assignSlot, autoFillSlots, draftLines, matchHintOf, pastInSlots, seasonCupSlots, slotsSynergy, teamEditableIn } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
@@ -219,7 +221,8 @@
   const filled = $derived(slots.filter((s) => s !== null).length);
   // T-11-570 컵 명단 프리셋이 있으면 컵은 그 편성으로 뛴다 — 줄은 프리셋 값을 보이고 팀 저장은 막지 않는다.
   const cupPreset = $derived(cupPresetOf(presets));
-  const cupDraft = $derived(cupPreset ? { ovr: cupPreset.ovr ?? 0, filled: cupPreset.filled ?? cupPreset.slots.filter(Boolean).length } : { ovr, filled });
+  // T-11-657 past: 이번 시즌 선수 컵이면 컵 명단(프리셋 · 없으면 팀 명단)에 든 지난 시즌 카드 수.
+  const cupDraft = $derived(cupPreset ? { ovr: cupPreset.ovr ?? 0, filled: cupPreset.filled ?? cupPreset.slots.filter(Boolean).length, past: pastInSlots(cupPreset.slots, byId, season) } : { ovr, filled, past: pastInSlots(slots, byId, season) });
   // T-11-436 서버 저장 검사와 같은 판정. block이 있으면 저장을 막고 이유를 보인다.
   const cupBar = $derived(editable && cupRule ? cupLineupBar(cupRule.cup, cupRule.me, cupDraft, new Date().toISOString()) : null);
   const cupBlock = $derived(cupPreset ? null : (cupBar?.block ?? null));
@@ -295,6 +298,15 @@
     if (team) team = { ...team, presets: r.data.presets };
     if (saved) toast(L.tpSaved);
     return true;
+  }
+  /** T-11-657 이번 시즌 카드만 자동 배치한 편성을 컵 명단 프리셋으로 둔다(팀 명단 · 초안은 그대로). */
+  async function makeSeasonCup() {
+    const ids = seasonCupSlots(slotCodes, players, season);
+    if (!ids.some(Boolean)) return toast(CT.seasonCupEmpty);
+    const name = CT.seasonCupName({ badge: cardSeasonBadge(season) });
+    const next = withSeasonCupPreset(presets, presetOf(name, formation, ids, season > 0 ? previewLayout : null));
+    if (!next) return toast(CT.seasonCupFull);
+    if (await persistPresets(next)) toast(CT.seasonCupMade({ name }));
   }
   function applyPreset(p: TeamPreset) {
     const r = loadPreset(p, new Set(players.map((x) => x.careerId)));
@@ -675,7 +687,7 @@
       {:else if restoredDraft && dirty}
         <section class="card draft-notice" role="status"><p>{L.draftRestoredWeb}</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">{L.draftDiscardWeb}</button></section>
       {/if}
-      {#if editable && (cupBar || (cupBand && (cupBand.locked || cupBand.when)))}<CupLineupBand locked={!!cupBand?.locked} when={cupBand?.when ?? null} bar={cupBar} preset={cupPreset?.name ?? null} />{/if}
+      {#if editable && (cupBar || (cupBand && (cupBand.locked || cupBand.when)))}<CupLineupBand locked={!!cupBand?.locked} when={cupBand?.when ?? null} bar={cupBar} preset={cupPreset?.name ?? null} onseason={cupBar?.past && !cupBand?.locked ? makeSeasonCup : undefined} />{/if}
       <TeamHead
         {team}
         {logo}

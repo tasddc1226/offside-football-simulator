@@ -94,6 +94,26 @@ export function seasonRaisedText(
   const name = teamSeasonLabel(season);
   return n > 0 ? TH.seasonRaised({ season: name, n }) : TH.seasonRaisedNone({ season: name });
 }
+/** T-11-657 이번 시즌 선수 컵: 편성 슬롯 중 그 팀 시즌보다 앞 시즌 카드 수. */
+export const pastInSlots = (
+  slots: readonly (string | null)[],
+  byId: ReadonlyMap<string, Pick<TeamPlayer, 'season'>>,
+  season: number,
+) =>
+  slots.filter((id) => {
+    const p = id ? byId.get(id) : undefined;
+    return !!p && (p.season ?? season) < season;
+  }).length;
+/** T-11-657 이번 시즌 카드만으로 자리마다 가장 잘 맞는 선수를 채운 편성(이번 시즌 선수 컵 명단 만들기). */
+export const seasonCupSlots = (
+  slotCodes: readonly DetailPos[],
+  players: readonly TeamPlayer[],
+  season: number,
+) =>
+  autoFillSlots(
+    slotCodes,
+    players.filter((p) => (p.season ?? season) >= season),
+  );
 // T-11-571 리그 체력(docs/tracking/league-fatigue-plan.md). 서버가 켰을 때만 응답에 온다.
 export type LeagueFatigue = { rate: number; streaks: Record<string, number> };
 /** 체력 게이지 칸 수(문제없음 + 단계마다 한 칸씩). */

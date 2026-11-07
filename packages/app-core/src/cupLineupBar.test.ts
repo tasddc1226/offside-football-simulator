@@ -114,4 +114,28 @@ describe('cupLineupBar', () => {
     expect(bar?.ovrText).toBeNull();
     expect(bar?.block).toBeNull();
   });
+  it('T-11-657 이번 시즌 선수 컵: 지난 시즌 카드는 참가 중이면 막고 신청 전이면 알린다', () => {
+    const season = cup('group', { seasonCardsOnly: true });
+    const entered = cupLineupBar(
+      season,
+      me('s2-3-master', true),
+      { ovr: 75, filled: 9, past: 2 },
+      AFTER,
+    )!;
+    expect(entered.past).toBe(2);
+    expect(entered.block).toContain('지난 시즌 선수 2명');
+    const open = cupLineupBar(
+      cup('open', { seasonCardsOnly: true }),
+      me('s2-3-master', false),
+      { ovr: 75, filled: 9, past: 1 },
+      BEFORE,
+    )!;
+    expect(open.block).toBeNull();
+    expect(open.notes.some((n) => n.includes('지난 시즌 선수 1명'))).toBe(true);
+    // 규칙이 꺼진 회차는 세지 않는다.
+    expect(
+      cupLineupBar(cup('group'), me('s2-3-master', true), { ovr: 75, filled: 9, past: 2 }, AFTER)!
+        .past,
+    ).toBe(0);
+  });
 });

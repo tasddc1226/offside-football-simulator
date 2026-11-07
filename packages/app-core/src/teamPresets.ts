@@ -37,6 +37,25 @@ export function nextPresetName(
 
 export const presetsFull = (presets: readonly TeamPreset[]) => presets.length >= TEAM_PRESET_MAX;
 
+/**
+ * T-11-657 이번 시즌 선수 컵용 컵 명단 프리셋을 둔 목록. 자리가 있으면 새 프리셋을 컵 명단으로 더하고 원래 컵 명단은 일반
+ * 프리셋으로 남긴다. 가득 찼으면 원래 컵 명단 프리셋 자리를 바꾸고, 그것도 없으면 null.
+ */
+export function withSeasonCupPreset(
+  presets: readonly TeamPreset[],
+  next: TeamPreset,
+): TeamPreset[] | null {
+  const cup: TeamPreset = { ...next, cup: true };
+  const plain = (p: TeamPreset): TeamPreset => {
+    const rest = { ...p };
+    delete rest.cup;
+    return rest;
+  };
+  if (!presetsFull(presets)) return [...presets.map(plain), cup];
+  const i = presets.findIndex((p) => p.cup);
+  return i < 0 ? null : presets.map((p, k) => (k === i ? cup : p));
+}
+
 /** 프리셋을 초안으로 펼친다. 지금 넣을 수 없는 선수(판매 · 방출)는 자리를 비우고 그 수를 센다. */
 export function loadPreset(preset: TeamPreset, owned: ReadonlySet<string>) {
   const slots = preset.slots.map((id) => (id && owned.has(id) ? id : null));
