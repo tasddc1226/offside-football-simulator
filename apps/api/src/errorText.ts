@@ -148,8 +148,6 @@ const EXACT: Record<string, string> = {
   '판매 등록 중인 선수는 강화할 수 없어요.': "Players on the transfer list can't be enhanced.",
   '이미 가장 높은 단계예요.': 'This card is already at the highest level.',
   '지금은 카드 강화를 쉬고 있어요.': 'Card enhance is closed right now.',
-  '강화에 성공하면 선발 급여가 예산을 넘어요. 선발을 바꾼 뒤 다시 시도해 주세요.':
-    "Enhancing this player would put your lineup's wages over budget. Change the lineup and try again.",
   '강화 상태가 바뀌었어요. 다시 확인해 주세요.': 'The enhance status changed. Please check again.',
   // T-11-310 감독 커리어
   '감독으로 분류된 선수는 내놓거나 방출하거나 잠글 수 없어요.':
@@ -201,11 +199,6 @@ const PATTERNS: [RegExp, (m: RegExpExecArray) => string][] = [
   [
     /^오늘 경기는 모두 치렀어요\(하루 (\d+)경기\)\. 시간이 지나면 1경기씩 더 열려요\.$/,
     (m) => `You've played all of today's matches (${m[1]} a day). One more opens as time passes.`,
-  ],
-  [
-    /^지난 시즌 선수 급여가 예산을 넘어요\((\d+)\/(\d+)\)\. 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요\.$/,
-    (m) =>
-      `Past-season player salaries are over budget (${m[1]}/${m[2]}). Swap in lower-salary or this-season players.`,
   ],
   [
     /^운영자 계정의 댓글 닉네임은 '(.+)'로 고정돼요\.$/,

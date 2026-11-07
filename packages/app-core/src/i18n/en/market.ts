@@ -37,7 +37,7 @@ export const market: Translation<MarketMsgs> = {
   openListing: (p) => `View ${p.name} to sign`,
   cardMeta: (p) =>
     `Legend ${p.score} · ${p.transfers} ${p.transfers === 1 ? 'transfer' : 'transfers'}`,
-  pastCardMeta: (p) => `${p.season} · Salary ${p.salary} · ${p.meta}`,
+  pastCardMeta: (p) => `${p.season} · ${p.meta}`,
   listFailed: "Couldn't load the market.",
   reload: 'Reload',
   more: 'Load more',

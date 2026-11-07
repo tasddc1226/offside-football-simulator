@@ -56,12 +56,10 @@ describe('오류 문구 영어(T-11-106)', () => {
     expect(localizeMessage('글 항목을 찾을 수 없어요.', 'en')).toBe("We couldn't find that post.");
     expect(
       localizeMessage(
-        '지난 시즌 선수 급여가 예산을 넘어요(80/60). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.',
+        '오늘 경기는 모두 치렀어요(하루 10경기). 시간이 지나면 1경기씩 더 열려요.',
         'en',
       ),
-    ).toBe(
-      'Past-season player salaries are over budget (80/60). Swap in lower-salary or this-season players.',
-    );
+    ).toBe("You've played all of today's matches (10 a day). One more opens as time passes.");
     expect(localizeMessage('표에 없는 문장', 'en')).toBe('표에 없는 문장');
     expect(localizeMessage('팀을 찾을 수 없어요.', 'ja')).toBe('チームが見つかりません。');
     expect(localizeMessage('친구는 신청 중인 사람을 포함해 50명까지예요.', 'ja')).toBe(

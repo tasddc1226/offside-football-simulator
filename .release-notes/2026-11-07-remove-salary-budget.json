@@ -1,0 +1,30 @@
+{
+  "id": "t-11-653-remove-salary-budget",
+  "title": "지난 시즌 선수 급여 제한 폐지",
+  "items": [
+    "구단주 팀 선발에 지난 시즌 선수를 몇 명이든 넣을 수 있어요. 급여 예산이 없어져서 지난 시즌에 키운 선수를 모두 데려가 쓸 수 있어요.",
+    "카드 강화도 급여 때문에 막히지 않아요. 자동 배치는 가진 선수 중 자리마다 가장 센 선수로 채워요."
+  ],
+  "en": {
+    "title": "Past-season salary limit removed",
+    "items": [
+      "You can now start as many past-season players as you like in your owner team. The salary budget is gone, so every player you raised last season can join your lineup.",
+      "Card enhance is no longer blocked by salaries, and auto-fill picks the strongest player for each slot from all your players."
+    ]
+  },
+  "ja": {
+    "title": "過去シーズン選手の年俸制限を廃止",
+    "items": [
+      "オーナーチームの先発に過去シーズンの選手を何人でも入れられます。年俸予算がなくなり、前のシーズンに育てた選手をすべて使えます。",
+      "カード強化も年俸で止められません。自動配置は持っている選手の中から各ポジションで最も強い選手を選びます。"
+    ]
+  },
+  "zh": {
+    "title": "取消往季球員薪資限制",
+    "items": [
+      "老闆球隊的先發可以放入任意數量的往季球員。薪資預算已取消，上個賽季培養的球員都能帶進陣容。",
+      "卡片強化也不再因薪資受限。自動配置會從所有持有球員中，為每個位置挑出最強的球員。"
+    ]
+  },
+  "availability": "web-app"
+}

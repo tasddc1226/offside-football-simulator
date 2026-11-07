@@ -13,7 +13,6 @@ import {
   enhanceView,
 } from './cardEnhance.js';
 import { cardEnhanceText as L } from './i18n/ko/cardEnhance.js';
-import { marketSalaryText } from './salary.js';
 
 describe('카드 강화 창 (T-11-373)', () => {
   const open = { ...DEFAULT_ENHANCE_RULES, open: true };
@@ -84,14 +83,6 @@ describe('카드 강화 창 (T-11-373)', () => {
   it('방출 · 과제 확인에는 강화한 선수가 있을 때만 경고한다', () => {
     expect(enhanceLossNote([{ enhance: 0 }, {}])).toBeNull();
     expect(enhanceLossNote([{ enhance: 3 }, { enhance: 1 }, {}])).toBe(L.lossNote({ n: 2 }));
-  });
-
-  it('이적시장 급여는 강화 OVR까지 넣어 보인다', () => {
-    const plain = { peak: 85, season: 0 };
-    expect(marketSalaryText({ ...plain, enhance: 10 }, 1)).not.toBe(marketSalaryText(plain, 1));
-    expect(marketSalaryText({ ...plain, enhance: 10 }, 1)).toBe(
-      marketSalaryText({ peak: 95, season: 0 }, 1),
-    );
   });
 });
 

@@ -69,11 +69,6 @@ const ko = {
     '프리시즌에 키운 선수 중 지금 가진 선수로 꾸려요. 이 팀은 친구와 하는 친선전에만 나가고, 프리시즌 랭킹과 업적은 그대로예요.',
   hintCupTeam: '이 팀은 오프사이드 컵에만 나가요. 랭크 경기는 지금 시즌 팀으로 해요.',
   hintPreseason: '프리시즌 팀은 친구와 하는 친선전에만 나가요. 랭크 경기는 지금 시즌 팀으로 해요.',
-  salaryBar: (p: { n: number; max: number }) => `지난 시즌 선수 급여 ${p.n} / ${p.max}`,
-  salaryFull: (p: { salary: number; left: number }) =>
-    `이 선수 급여(${p.salary})가 남은 예산(${p.left})보다 커요. 지난 시즌 선수를 빼거나 이번 시즌 선수로 채워 주세요.`,
-  salaryChip: (p: { n: number }) => `급여 ${p.n}`,
-  salaryOver: '예산 초과',
   // T-11-571 리그 체력
   staminaLabel: '체력',
   staminaAria: (p: { left: number; total: number; pct: number }) =>
@@ -82,11 +77,6 @@ const ko = {
       : `체력 ${p.left}/${p.total}칸 · 문제없음`,
   fatigueHint:
     '리그에 3경기 연속 선발로 나가면 지쳐서 실력이 조금 떨어져요. 한 경기 쉬면 회복해요.',
-  salaryLeft: (p: { n: number }) => `남은 예산 ${p.n}`,
-  salaryOpen: '급여 안내 보기',
-  salaryOverSave: (p: { n: number; max: number }) =>
-    `지난 시즌 선수 급여가 예산을 넘어 저장할 수 없어요(${p.n}/${p.max}). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.`,
-  salaryLater: (p: { n: number }) => `이번 시즌은 없음 · 다음 시즌부터 ${p.n}`,
 };
 
 export type TeamCoreMsgs = typeof ko;

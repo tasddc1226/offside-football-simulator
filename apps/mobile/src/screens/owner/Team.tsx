@@ -14,7 +14,6 @@ import {
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
   MANAGER_NAME_MIN,
-  PAST_SALARY_BUDGET,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
   TEAM_RATING_START,
@@ -57,10 +56,6 @@ import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-cor
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import {
   autoFillSlots,
-  budgetOf,
-  salaryBar,
-  salaryBlocks,
-  salaryFullText,
   draftLines,
   cupTeamLink,
   cupTeamNote,
@@ -107,8 +102,6 @@ import { TeamRankInfo } from './TeamRankInfo';
 import { TeamRankQueue } from './TeamRankQueue';
 import { OvrBadge } from './TeamParts';
 import { TeamLineup } from './TeamLineup';
-import { SalaryBar } from './SalaryGuide';
-import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TeamLogoEditor } from './TeamLogoEditor';
 import { TeamShare, type TeamShareData } from './TeamShare';
@@ -170,7 +163,6 @@ export default function Team() {
   const [perDay, setPerDay] = useState(0);
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   const [season, setSeason] = useState(0);
-  const [budget, setBudget] = useState(PAST_SALARY_BUDGET);
   const [fatigue, setFatigue] = useState<OwnerTeamResponse['fatigue'] | null>(null);
   const [synFocus, setSynFocus] = useState<string | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
@@ -280,8 +272,6 @@ export default function Team() {
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = useMemo(() => localCareerNames(), []);
   const byId = new Map(players.map((p) => [p.careerId, p]));
-  // T-11-376 지난 시즌 선수 급여 예산(서버가 팀 시즌에 맞춰 계산한 값, 옛 응답이면 기본 80).
-  const salary = salaryBar(slots, byId, season, budget);
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
   // T-11-266 익명으로 은퇴한 내 선수 중 이 기기가 이름을 아는 카드(이적시장에 팔린 선수 포함) — 한꺼번에 이름을 공개할 수 있다.
@@ -482,7 +472,6 @@ export default function Team() {
     setMatchesNextAt(d.matchesNextAt ?? null);
     setPerDay(d.matchesPerDay);
     setEnhanceOpen(!!d.enhanceOpen);
-    setBudget(budgetOf(d));
     setFatigue(d.fatigue ?? null);
     if (silent) {
       if (JSON.stringify(d.team) !== JSON.stringify(teamNow.current)) {
@@ -545,10 +534,6 @@ export default function Team() {
   // ───────── 편성 ─────────
   async function save(): Promise<boolean> {
     if (savingRef.current || !nameOk) return false;
-    if (salary?.state === 'over') {
-      toast(TC.salaryOverSave({ n: salary.sum, max: salary.budget }));
-      return false;
-    }
     if (cupBlock) {
       toast(cupBlock);
       return false;
@@ -1046,7 +1031,7 @@ export default function Team() {
                       sm
                       testID="team-auto"
                       disabled={!players.length}
-                      onPress={() => setSlots(autoFillSlots(slotCodes, players, season, budget))}
+                      onPress={() => setSlots(autoFillSlots(slotCodes, players))}
                     >
                       {L.autoPlace}
                     </Btn>
@@ -1088,7 +1073,6 @@ export default function Team() {
                   </Press>
                 </View>
               </View>
-              {salary ? <SalaryBar salary={salary} /> : null}
               {editable ? (
                 <View
                   style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
@@ -1243,15 +1227,8 @@ export default function Team() {
               onEnhance={editable && enhanceOpen ? setEnhancing : undefined}
               focusSlot={focusSlot}
               onFocused={() => setFocusSlot(null)}
-              season={season}
-              salary={salary}
               fatigue={fatigue}
               change={(nextSlots, nextLayout) => {
-                // T-11-376 지난 시즌 선수는 급여 예산 안에서만.
-                if (salaryBlocks(slots, nextSlots, byId, season, budget)) {
-                  const added = nextSlots.find((id) => id !== null && !slots.includes(id)) ?? null;
-                  return toast(salaryFullText(nextSlots, added, byId, season, budget));
-                }
                 setSlots(nextSlots);
                 setLayout(nextLayout);
               }}

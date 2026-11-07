@@ -246,7 +246,7 @@ describe('카드 강화 (T-11-373)', () => {
     expect(power(maxed)).toBeGreaterThan(power(before));
   });
 
-  it('실패하면 한 단계 내려가 급여 · 팀 실력도 줄고, 유지되면 그대로다', async () => {
+  it('실패하면 한 단계 내려가 팀 실력도 줄고, 유지되면 그대로다', async () => {
     const { owner, id } = await ready();
     await ctx.db.update(cards).set({ enhance: 3 }).where(eq(cards.careerId, id));
     const body: EnhanceBody = { level: 3, fails: 0, cost: 700_000, rateBp: 4500, downBp: 1500 };
@@ -490,7 +490,7 @@ describe('카드 강화 (T-11-373)', () => {
     );
   });
 
-  it('성공하면 선발 급여가 예산을 넘는 시도는 막고, 선발 밖 카드는 막지 않는다', async () => {
+  it('지난 시즌 선수로 채운 선발도 급여 예산 없이 강화한다', async () => {
     const owner = await issueGoogleCookie(ctx);
     const starter = await addCard(owner.profileId);
     const bench = await addCard(owner.profileId);
@@ -501,18 +501,17 @@ describe('카드 강화 (T-11-373)', () => {
     ];
     const low = await addCard(owner.profileId);
     await fund(owner.profileId, 100_000_000);
-    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1(예산 80), 카드는 시즌 0(지난 시즌)
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1, 카드는 시즌 0(지난 시즌)
     await activate({ enhanceOpen: 1 });
-    // 급여 합: 96 세 명 60 + 95 한 명 16 + 80 한 명 4 = 80. 95가 강화로 96이 되면 20이라 84로 넘는다.
+    // 예전 급여 예산(80)이었다면 95가 96이 되는 순간 넘었던 선발이다.
     await ctx.db.update(cards).set({ peak: 96 }).where(inArray(cards.careerId, stars));
     await ctx.db.update(cards).set({ peak: 95 }).where(eq(cards.careerId, starter));
     await ctx.db.update(cards).set({ peak: 80 }).where(eq(cards.careerId, low));
     await addTeam(owner.profileId, [starter, ...stars, low, ...Array<null>(6).fill(null)], 1);
     // 최고 OVR 95라 성공 확률은 0.8배(72%)다.
-    expect(await reason(await enhance(owner.cookie, starter, { ...first, rateBp: 7200 }))).toBe(
-      'ENHANCE_SALARY',
-    );
-    expect(await balanceOf(owner.profileId)).toBe(100_000_000);
+    nextRoll(0);
+    expect((await enhance(owner.cookie, starter, { ...first, rateBp: 7200 })).status).toBe(200);
+    expect((await cardOf(starter)).enhance).toBe(1);
     nextRoll(0);
     expect((await enhance(owner.cookie, bench, first)).status).toBe(200);
   });
@@ -564,14 +563,14 @@ describe('카드 강화 (T-11-373)', () => {
     expect(await ovrNow()).toBe(await expected());
   });
 
-  it('컵 명단에만 든 카드도 컵 OVR을 고치고 급여 예산을 본다', async () => {
+  it('컵 명단에만 든 카드도 컵 OVR을 고친다', async () => {
     const owner = await issueGoogleCookie(ctx);
     const stars = await Promise.all(Array.from({ length: 3 }, () => addCard(owner.profileId)));
     const starter = await addCard(owner.profileId);
     const low = await addCard(owner.profileId);
     const spare = await addCard(owner.profileId);
     await fund(owner.profileId, 100_000_000);
-    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1(예산 80), 카드는 시즌 0(지난 시즌)
+    vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1, 카드는 시즌 0(지난 시즌)
     await activate({ enhanceOpen: 1 });
     await ctx.db.update(cards).set({ peak: 96 }).where(inArray(cards.careerId, stars));
     await ctx.db.update(cards).set({ peak: 95 }).where(eq(cards.careerId, starter));
@@ -587,16 +586,7 @@ describe('카드 강화 (T-11-373)', () => {
         ]),
       })
       .where(eq(ownerTeams.id, teamId));
-    // 급여 합이 넘는 시도는 컵 명단에서도 막는다.
-    await ctx.db.update(cards).set({ peak: 81 }).where(eq(cards.careerId, spare));
-    expect(await reason(await enhance(owner.cookie, starter, { ...first, rateBp: 7200 }))).toBe(
-      'ENHANCE_SALARY',
-    );
-    // 예산이 넉넉하면 강화되고, 컵 OVR과 프리셋 OVR이 함께 바뀌고 팀 OVR은 그대로다.
-    await ctx.db
-      .update(cards)
-      .set({ peak: 60 })
-      .where(inArray(cards.careerId, [...stars, starter]));
+    // 강화되면 컵 OVR과 프리셋 OVR이 함께 바뀌고 팀 OVR은 그대로다.
     nextRoll(0);
     expect((await enhance(owner.cookie, spare, first)).status).toBe(200);
     const [row] = await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, teamId));

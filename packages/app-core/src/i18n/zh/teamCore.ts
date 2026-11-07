@@ -63,11 +63,6 @@ export const teamCore: Translation<TeamCoreMsgs> = {
     '從季前賽培養的球員中，用目前擁有的球員組隊。這支球隊只參加與好友的友誼賽，季前賽排行榜與成就維持不變。',
   hintCupTeam: '這支球隊只參加 OFFSIDE 盃。排位賽請用目前賽季的球隊進行。',
   hintPreseason: '季前賽球隊只參加與好友的友誼賽。排位賽請用目前賽季的球隊進行。',
-  salaryBar: (p) => `過去賽季球員薪資 ${p.n} / ${p.max}`,
-  salaryFull: (p) =>
-    `這名球員的薪資（${p.salary}）超過剩餘預算（${p.left}）。請移除過去賽季的球員，或改用本賽季的球員。`,
-  salaryChip: (p) => `薪資 ${p.n}`,
-  salaryOver: '超出預算',
   // T-11-571 리그 체력
   staminaLabel: '體力',
   staminaAria: (p: { left: number; total: number; pct: number }) =>
@@ -75,9 +70,4 @@ export const teamCore: Translation<TeamCoreMsgs> = {
       ? `體力 ${p.left}/${p.total} · 下場聯賽實力 −${p.pct}%`
       : `體力 ${p.left}/${p.total} · 狀態良好`,
   fatigueHint: '聯賽連續先發3場會疲勞，實力稍微下降。休息一場就會恢復。',
-  salaryLeft: (p) => `剩餘預算 ${p.n}`,
-  salaryOpen: '查看薪資說明',
-  salaryOverSave: (p) =>
-    `過去賽季球員薪資超出預算，無法儲存（${p.n}/${p.max}）。請換成薪資較低的球員或本賽季的球員。`,
-  salaryLater: (p) => `本賽季無 · 下賽季起 ${p.n}`,
 };
