@@ -25,6 +25,8 @@ export const gift: Translation<GiftMsgs> = {
   recordBallon: (p) => `金球獎得主${p.n}名`,
   adFreeTitle: '感謝你搶先購買移除廣告',
   adFreeSub: (p) => `作為感謝禮物，可以領取${itemsOf(p)}。`,
+  updateTitle: '更新感謝禮物已送達',
+  updateSub: (p) => `11月9日前可以領取${itemsOf(p)}。`,
   doneTitle: '已領取禮物',
   useHint:
     '重抽券用於建立球員時重抽候選，強化券用於球員分頁的潛力強化，球探券用於建立球員時挑選候選。',

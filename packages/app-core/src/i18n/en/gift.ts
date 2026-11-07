@@ -25,6 +25,8 @@ export const gift: Translation<GiftMsgs> = {
   recordBallon: (p) => `${p.n} Ballon d'Or winner${p.n === 1 ? '' : 's'}`,
   adFreeTitle: 'Thank you for buying Remove Ads early',
   adFreeSub: (p) => `As a thank-you gift, you can claim ${itemsOf(p)}.`,
+  updateTitle: 'An update thank-you gift has arrived',
+  updateSub: (p) => `Claim ${itemsOf(p)} by November 9.`,
   doneTitle: 'Gift claimed',
   useHint:
     'Use reroll tickets to redraw candidates when creating a player, boost tickets in Potential Boost on the Player tab, and scout tickets at the candidate step when creating a player.',

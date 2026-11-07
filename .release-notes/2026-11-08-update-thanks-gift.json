@@ -1,0 +1,24 @@
+{
+  "id": "t-11-664-update-thanks-gift",
+  "title": "업데이트 감사 선물",
+  "items": [
+    "로그인한 구단주는 11월 9일까지 홈 선물 칸에서 프리미엄 스카우트권 5장을 한 번 받을 수 있어요."
+  ],
+  "en": {
+    "title": "Update thank-you gift",
+    "items": [
+      "Signed-in club owners can claim 5 premium scout tickets once from the gift slot on Home until November 9."
+    ]
+  },
+  "ja": {
+    "title": "アップデート感謝のプレゼント",
+    "items": [
+      "ログインしたオーナーは11月9日まで、ホームのプレゼント欄でプレミアムスカウト券5枚を1回受け取れます。"
+    ]
+  },
+  "zh": {
+    "title": "更新感謝禮物",
+    "items": ["已登入的老闆在11月9日前，可以在首頁禮物欄領取一次高級球探券5張。"]
+  },
+  "availability": "web-app"
+}
