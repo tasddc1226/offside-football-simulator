@@ -151,7 +151,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json --command \
-            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles; SELECT 'sessions' table_name, COUNT(*) row_count FROM sessions; SELECT 'idempotency' table_name, COUNT(*) row_count FROM idempotency; SELECT 'auth_attempts' table_name, COUNT(*) row_count FROM auth_attempts; SELECT 'audit_log' table_name, COUNT(*) row_count FROM audit_log;" > .release/counts-before.json
+            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles; SELECT 'sessions' table_name, COUNT(*) row_count FROM sessions; SELECT 'idempotency' table_name, COUNT(*) row_count FROM idempotency; SELECT 'audit_log' table_name, COUNT(*) row_count FROM audit_log;" > .release/counts-before.json
           node tooling/scripts/production-release.mjs counts .release/counts-before.json
 
       - name: Apply production migrations
@@ -168,7 +168,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json --command \
-            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles; SELECT 'sessions' table_name, COUNT(*) row_count FROM sessions; SELECT 'idempotency' table_name, COUNT(*) row_count FROM idempotency; SELECT 'auth_attempts' table_name, COUNT(*) row_count FROM auth_attempts; SELECT 'audit_log' table_name, COUNT(*) row_count FROM audit_log;" > .release/counts-after.json
+            "SELECT 'profiles' table_name, COUNT(*) row_count FROM profiles; SELECT 'sessions' table_name, COUNT(*) row_count FROM sessions; SELECT 'idempotency' table_name, COUNT(*) row_count FROM idempotency; SELECT 'audit_log' table_name, COUNT(*) row_count FROM audit_log;" > .release/counts-after.json
           node tooling/scripts/production-release.mjs counts .release/counts-after.json
           pnpm --filter @offside/api exec wrangler d1 execute offside-production --remote --env production --json \
             --command "SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_cf_%' ORDER BY name" > .release/schema-after.json
