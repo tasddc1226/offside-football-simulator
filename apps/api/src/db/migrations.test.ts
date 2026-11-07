@@ -40,22 +40,6 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
-  api_status_buckets: ['bucket', 'requests', 'total_ms', 'slow', 'errors'],
-  client_errors: [
-    'day',
-    'fingerprint',
-    'platform',
-    'kind',
-    'message',
-    'frame',
-    'place',
-    'stack',
-    'first_version',
-    'last_version',
-    'count',
-    'first_at',
-    'last_at',
-  ],
   billing_alerts: [
     'id',
     'store',
@@ -492,7 +476,6 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'revoked_at',
     'last_seen_at',
   ],
-  auth_attempts: ['id', 'kind', 'subject', 'window_start', 'count'],
   app_auth_tickets: [
     'id',
     'session_id',
@@ -514,7 +497,6 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'expires_at',
   ],
   // T-11-572 운영 지표 대시보드(하루 한 번 모은 값).
-  kpi_daily: ['day', 'metric', 'dim', 'value', 'source', 'updated_at'],
   // T-9-009: 커리어·시즌 요약 저장(익명 포함 전체 사용자).
   careers: [
     'id',

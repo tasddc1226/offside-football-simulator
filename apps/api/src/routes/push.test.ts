@@ -280,7 +280,9 @@ describe('app push registration and own-device test', () => {
       "UPDATE push_devices SET updated_at = '2000-01-01T00:00:00.000Z'",
     ).run();
     expect(await ownPushDevice(ctx.env.DB, a.session, INSTALL, now)).toBeNull();
-    expect((await cleanupExpired(ctx.env.DB, Date.parse(now))).push_devices).toBe(1);
+    expect(
+      (await cleanupExpired(ctx.env.DB, Date.parse(now), {}, ctx.env.OPS_DB)).push_devices,
+    ).toBe(1);
   });
   it('defaults test delivery off, including for registered non-admin users', async () => {
     const a = await identity();
