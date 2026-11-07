@@ -295,7 +295,9 @@ describe('오프사이드 데일리 (T-11-652)', () => {
     expect(asked.sort()).toEqual(['en', 'ja', 'ko', 'zh']);
     const a1 = await news(1);
     if (typeof a1 === 'number') throw new Error(`news 1: ${a1}`);
-    expect(a1.ai).toMatchObject({ kind: 'upset', ref: mixed.id });
+    // 1면은 이변 기사(무작위로 치른 다른 경기의 이변이 더 크면 그 경기다).
+    const front = n1.items.find((i) => i.kind === 'upset') as { match: { id: string } };
+    expect(a1.ai).toMatchObject({ kind: 'upset', ref: front.match.id });
     expect(Object.keys(a1.ai!.text).sort()).toEqual(['en', 'ko']);
     expect(a1.ai!.text.ko!.body).toContain('1라운드');
     asked.length = 0;
