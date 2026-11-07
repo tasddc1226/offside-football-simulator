@@ -15,6 +15,7 @@ import {
   divisionMinFilled,
   planCup,
   type CupDef,
+  CUP_SEASON_CARDS_FROM,
 } from '@offside/contracts/cup';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import { and, eq, inArray, ne, sql } from 'drizzle-orm';
@@ -111,6 +112,8 @@ export function registerAdminCupRoutes(app: Hono<AppEnv>): void {
         createdAt: now,
         division: cup.division ?? null,
         ovrMax: cup.ovrMax ?? null,
+        // T-11-656 운영 도구로 연 회차도 제5회부터는 이번 시즌 카드만.
+        seasonCardsOnly: cup.edition >= CUP_SEASON_CARDS_FROM ? 1 : 0,
       })),
     );
     return ok(c, AdminCupSchema, (await adminViews(db, [made.at(-1)!], now))[0]!, 201, NO_STORE);

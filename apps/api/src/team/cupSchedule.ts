@@ -17,6 +17,7 @@ export const toCupDef = (r: CupRow): CupDef => ({
   capacity: r.capacity,
   minFilled: r.minFilled,
   ...(r.division ? { division: r.division as CupDivision, ovrMax: r.ovrMax } : {}),
+  ...(r.seasonCardsOnly ? { seasonCardsOnly: true } : {}),
 });
 
 /** 모든 대회(접수 시작 순, 같은 회차 구간은 아래에서 위). */

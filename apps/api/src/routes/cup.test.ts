@@ -525,6 +525,37 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     expect((await a.put([...a.ids.slice(0, 7), ...Array(4).fill(null)])).status).toBe(200);
   });
 
+  it('T-11-656 이번 시즌 선수 컵: 지난 시즌 카드가 든 명단은 신청 · 저장을 막고, 옛 회차는 그대로 받는다', async () => {
+    const a = await owner(9);
+    const toSeason = async (id: string, season: number) => {
+      await ctx.db.update(cards).set({ serviceSeason: season }).where(eq(cards.careerId, id));
+      await ctx.db.update(careers).set({ serviceSeason: season }).where(eq(careers.id, id));
+    };
+    await toSeason(a.ids[0]!, 0);
+    // 규칙이 꺼진 회차(지금 회차들)는 지난 시즌 카드가 있어도 받는다.
+    expect((await me(a.cookie)).eligibility).toMatchObject({ ok: true, reason: null });
+    await ctx.db.update(cups).set({ seasonCardsOnly: 1 }).where(eq(cups.id, CUP.id));
+    const cur = CupRes.parse(await (await call('GET', '/v1/cups/current')).json()).data;
+    expect(cur.cup.seasonCardsOnly).toBe(true);
+    expect((await me(a.cookie)).eligibility).toMatchObject({
+      ok: false,
+      reason: 'past-cards',
+      past: 1,
+    });
+    const refused = await enter(a.cookie);
+    expect(refused.status).toBe(409);
+    expect(await reason(refused)).toBe('CUP_PAST_CARDS');
+    // 이번 시즌 카드만 남기면 신청하고, 참가 중에는 지난 시즌 카드를 컵 명단에 넣을 수 없다.
+    await toSeason(a.ids[0]!, 1);
+    expect((await enter(a.cookie)).status).toBe(204);
+    await toSeason(a.ids[1]!, 0);
+    const blocked = await a.put([...a.ids, ...Array(2).fill(null)]);
+    expect(blocked.status).toBe(409);
+    expect(await reason(blocked)).toBe('CUP_PAST_CARDS');
+    // 빼면 저장된다(8명).
+    expect((await a.put([a.ids[0]!, ...a.ids.slice(2), ...Array(3).fill(null)])).status).toBe(200);
+  });
+
   it('T-11-655 컵 명단 선수 강화는 경기 1시간 전부터 끝날 때까지만 막고, 추첨 뒤엔 구간 상한을 넘는 강화를 막는다', async () => {
     const a = await owner(8);
     expect((await enter(a.cookie)).status).toBe(204);

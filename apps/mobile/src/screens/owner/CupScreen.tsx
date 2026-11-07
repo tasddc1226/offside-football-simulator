@@ -841,6 +841,7 @@ function CupBody({
         <Txt v="h2" accessibilityRole="header">
           {L.secRules}
         </Txt>
+        {data.cup.seasonCardsOnly ? <Bullet>{L.ruleSeasonCards}</Bullet> : null}
         <Bullet>{L.rulePlay({ min: data.cup.minFilled, cap: data.cup.capacity })}</Bullet>
         <Bullet>{L.ruleGroup}</Bullet>
         <Bullet>{L.rulePoints}</Bullet>

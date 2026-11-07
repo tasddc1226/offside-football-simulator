@@ -135,6 +135,8 @@ export const cup: Translation<CupMsgs> = {
   reasonClosed: "Entries aren't open right now.",
   reasonOverCap: (p) =>
     `Your team OVR ${p.ovr} is above this division's cap of ${p.cap}. You can enter a higher division.`,
+  reasonPastCards: (p) =>
+    `This cup is for this season's players only. Take ${p.n} past-season ${p.n === 1 ? 'player' : 'players'} out of your cup lineup.`,
   reasonEnteredOther: 'You entered another division of this cup. Withdraw that entry to switch.',
   divisionJunior: 'Junior',
   divisionSenior: 'Senior',
@@ -204,6 +206,8 @@ export const cup: Translation<CupMsgs> = {
     `One match a day at ${p.time}, played by the server. You don't need to keep the app or site open.`,
   ruleLock: (p) =>
     `Lineups lock 1 hour before the match (${p.time}) and unlock when it ends. Cup matches have no home advantage and don't count toward regular match records or rating.`,
+  ruleSeasonCards:
+    'Only players you raised or signed this season can be in your cup lineup. League, ranked and friendly matches still use all your players.',
   ruleForfeit:
     "Starters of an entered team can't be listed on the market or released. A team that can't play loses 0-3.",
   schedEntry: 'Entries',
