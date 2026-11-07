@@ -128,7 +128,8 @@ describe('critical query result and read-cost regressions (local D1)', () => {
     expect(await plan(q)).toContain(
       'careers_profile_status_season_idx (profile_id=? AND status=?)',
     );
-    expect(current.meta.rows_read).toBeLessThan(old.meta.rows_read / 5);
+    // T-11-663 비교 대상(전역 careers_hof_peak_idx)이 은퇴만 담는 부분 인덱스가 되어 그쪽도 읽는 행이 줄었다(5배 → 2배).
+    expect(current.meta.rows_read).toBeLessThan(old.meta.rows_read / 2);
     console.info('owner-title rows read', {
       before: old.meta.rows_read,
       after: current.meta.rows_read,
