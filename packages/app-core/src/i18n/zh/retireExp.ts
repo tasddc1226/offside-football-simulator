@@ -1,0 +1,30 @@
+import type { Translation } from '../core';
+import type { RetireExpMsgs } from '../ko/retireExp';
+
+export const retireExp: Translation<RetireExpMsgs> = {
+  eyebrow: 'Key Scenes',
+  title: '這段生涯的場面',
+  note: '從已儲存的賽季紀錄中挑選。',
+  firstApps: '首次出場紀錄',
+  peakRating: '最高評分賽季',
+  lastApps: '最後一個出場賽季',
+  when: (p) => `${p.year} · ${p.age}歲 · ${p.club}`,
+  stats: (p) => `${p.apps}場 ${p.goals}球 ${p.assists}助攻`,
+  statsBack: (p) => `${p.apps}場 ${p.goals}球 零封 ${p.cs}`,
+  rating: (p) => `評分 ${p.rating}`,
+  league: (p) => `${p.league} · OVR ${p.ovr}`,
+  leagueRank: (p) => `${p.league} 第${p.rank}名 · OVR ${p.ovr}`,
+  honors: (p) => `本賽季冠軍 · 獎項：${p.list}`,
+  open: '詳細',
+  close: '收起',
+  nextEyebrow: 'My Club',
+  nextTitle: '在我的球隊',
+  nextTeam: '紀錄已同步到伺服器。可以在我的球隊陣容中選擇這名球員。',
+  nextLogin: '紀錄已同步到伺服器。登入後可以用這名球員組成球隊，和其他球隊老闆對戰。',
+  nextClub: '同步到伺服器的退休球員會加入我的球隊持有球員。',
+  nextWait: '正在將紀錄傳送到伺服器。同步後會加入我的球隊持有球員。',
+  nextBlocked: '紀錄未同步到伺服器，因此無法在我的球隊中使用。',
+  ctaTeam: '開啟我的球隊陣容',
+  ctaLogin: '登入並組成球隊',
+  ctaClub: '查看我的球隊',
+};

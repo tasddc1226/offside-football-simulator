@@ -7,7 +7,12 @@ import {
   parseConsent,
   parseLedger,
 } from '@offside/app-core/analytics-model';
+import { subscribe } from 'valtio';
+import { onClubSignal, setClubAccountKey } from '@offside/app-core/clubSignals';
+import { profileKey } from '@offside/app-core/retireExperiment';
+import { RETIRE_EXP_STORE } from '@offside/app-core/retireExpMetrics';
 import { kv } from '../platform/setup';
+import { accountCache } from '../store';
 
 // No web measurement ID, user ID, URL, campaign or gameplay state crosses this boundary.
 const configured = Constants.expoConfig?.extra?.nativeAnalytics;
@@ -52,5 +57,22 @@ export const nativeAnalytics = createNativeAnalytics({
   writeLedger: (value) => kv.set(LEDGER_KEY, JSON.stringify(value)),
   now: Date.now,
   appVersion: Constants.expoConfig?.version ?? 'unknown',
+  readRetireExp: () => kv.getString(RETIRE_EXP_STORE) ?? null,
+  writeRetireExp: (raw) =>
+    raw === null ? kv.remove(RETIRE_EXP_STORE) : kv.set(RETIRE_EXP_STORE, raw),
+  retireAccountKey: () => accountKeyNow(),
 });
 export const { analytics, trackPage } = nativeAnalytics;
+/** T-11-669 지금 계정 키(원래 ID가 아니라 profileKey). null = 계정 없음, undefined = 확인 중 · 연결 실패. */
+function accountKeyNow(): string | null | undefined {
+  const p = accountCache.value;
+  if (p === undefined || p === 'error') return undefined;
+  return p ? profileKey(p.id) : null;
+}
+/** T-11-669 은퇴 화면 실험 계측(웹 analytics retireExp와 같은 이벤트). */
+export const { retireExp } = nativeAnalytics;
+setClubAccountKey(accountKeyNow);
+// 서버가 팀 저장 · 구단 경기 결과를 돌려준 순간(api/team). 요청 당시 계정 키와 함께 넘긴다.
+onClubSignal((sig, requestKey) => retireExp.club(sig, requestKey));
+// 계정 확인 결과가 바뀌면(로그인 · 로그아웃 · 삭제 · 다른 계정) 이전 노출 귀속을 지운다.
+subscribe(accountCache, () => retireExp.account(accountKeyNow()));

@@ -5,6 +5,11 @@ import {
   type Progress,
 } from '@offside/app-core/player-metrics';
 import type { OperationResult } from '@offside/app-core/measurement';
+import {
+  createRetireExpMetrics,
+  RETIRE_EXP_STORE,
+  type AccountKey,
+} from '@offside/app-core/retireExpMetrics';
 import type { AppStoreOs } from '@offside/app-core/appPromo';
 import type { AppStorePlace } from './index.js';
 import {
@@ -37,6 +42,20 @@ const playerMetrics = createPlayerMetrics({
   write: (raw) => localStorage.setItem(PLAYER_METRICS_KEY, raw),
   send: (name, params) => send(name, { ...params, identity_scope: 'device' }),
 });
+// T-11-669 은퇴 화면 실험. 동의한 사람만 기기에 결과 귀속 기록을 남기고 보낸다(동의를 거두면 stop()이 지운다).
+export const retireExp = createRetireExpMetrics({
+  allowed: () => allowed() && loaded && screen !== 'admin',
+  read: () => localStorage.getItem(RETIRE_EXP_STORE),
+  write: (raw) => localStorage.setItem(RETIRE_EXP_STORE, raw),
+  send: (name, params) => send(name, params),
+  now: Date.now,
+  account: () => accountKey(),
+});
+let accountKey: () => AccountKey = () => undefined;
+/** index.ts가 지금 계정 키를 읽는 함수를 건다(이 모듈이 화면 상태를 직접 import하지 않게). */
+export function setRetireAccountKey(fn: () => AccountKey) {
+  accountKey = fn;
+}
 let metricQueue = Promise.resolve();
 function metric(fn: () => void) {
   if (!allowed() || !loaded || screen === 'admin') return;
@@ -197,6 +216,7 @@ async function loadTag() {
   // Consent withdrawal disables an in-flight load too.
   document.head.append(script);
   pageView();
+  retireExp.ready();
   for (const result of initialOperations.splice(0)) trackOperation(result);
 }
 function stop() {
@@ -211,6 +231,7 @@ function stop() {
   try {
     localStorage.removeItem(LEDGER_KEY);
     localStorage.removeItem(PLAYER_METRICS_KEY);
+    localStorage.removeItem(RETIRE_EXP_STORE);
   } catch {
     /* denied storage */
   }
@@ -328,6 +349,7 @@ export const analytics = {
   complete: (p: Progress) => {
     const snapshot = { ...p };
     metric(() => playerMetrics.complete(snapshot));
+    retireExp.complete(snapshot);
   },
   play: (s: Career, firstAction = false) => tracker?.play(s, firstAction),
   firstSeason: (s: Career) => {

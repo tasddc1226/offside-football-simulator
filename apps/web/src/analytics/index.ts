@@ -3,6 +3,9 @@ import type { Progress } from '@offside/app-core/player-metrics';
 import { enabled } from './config.js';
 import type { Career } from '@offside/app-core/analytics-model';
 import type { AppStoreOs } from '@offside/app-core/appPromo';
+import { onClubSignal, setClubAccountKey } from '@offside/app-core/clubSignals';
+import { profileKey } from '@offside/app-core/retireExperiment';
+import { accountCache, onAccountChange } from '../ui/account-state.svelte.js';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';
@@ -29,6 +32,7 @@ export function initializeAnalytics(initialScreen: string, restoredCareerId: str
   void import('./browser.js')
     .then((m) => {
       adapter = m;
+      attachRetireExp(m);
       m.initializeAnalytics(screen, restoredCareerId);
       for (const result of pending.splice(0)) m.trackOperation(result);
     })
@@ -65,3 +69,39 @@ export const trackAppConversion = (
 export type PartnerPopupAction = 'view' | 'click' | 'close' | 'hide_today';
 export const trackPartnerPopup = (action: PartnerPopupAction, variant: 'a' | 'b') =>
   adapter?.trackPartnerPopup(action, variant);
+
+/** T-11-669 은퇴 화면 실험 계측. 노출은 이용 분석이 준비될 때까지 보류하고(어댑터 · 동의 · 태그), 노출이 나가기 전의
+ * 장면 · 다음 행동 클릭은 보내지 않는다(되돌려 보내지 않음). 계정 키는 원래 ID가 아니라 profileKey다. */
+type RetireExpApi = typeof import('./browser.js').retireExp;
+let retireView: Parameters<RetireExpApi['view']>[0] | null = null;
+const accountKeyNow = (): string | null | undefined => {
+  const p = accountCache.value;
+  if (p === undefined || p === 'error') return undefined;
+  return p ? profileKey(p.id) : null;
+};
+setClubAccountKey(accountKeyNow);
+function attachRetireExp(m: typeof import('./browser.js')) {
+  m.setRetireAccountKey(accountKeyNow);
+  if (retireView) m.retireExp.view(retireView);
+}
+export const retireExp = {
+  view: (x: Parameters<RetireExpApi['view']>[0]) => {
+    retireView = x;
+    adapter?.retireExp.view(x);
+  },
+  leave: (...a: Parameters<RetireExpApi['leave']>) => {
+    retireView = null;
+    adapter?.retireExp.leave(...a);
+  },
+  end: () => {
+    retireView = null;
+    adapter?.retireExp.end();
+  },
+  scene: (...a: Parameters<RetireExpApi['scene']>) => adapter?.retireExp.scene(...a),
+  cta: (...a: Parameters<RetireExpApi['cta']>) => adapter?.retireExp.cta(...a),
+  error: (...a: Parameters<RetireExpApi['error']>) => adapter?.retireExp.error(...a),
+};
+// 서버가 팀 저장 · 구단 경기 결과를 돌려준 순간(api/team). 요청 당시 계정 키와 함께 넘긴다.
+onClubSignal((sig, requestKey) => adapter?.retireExp.club(sig, requestKey));
+// 계정 확인 결과가 바뀌면(로그인 · 로그아웃 · 삭제 · 다른 계정) 이전 노출 귀속을 지운다.
+onAccountChange(() => adapter?.retireExp.account(accountKeyNow()));
