@@ -367,6 +367,17 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'forfeit',
     'detail_json',
   ],
+  league_news_ai: [
+    'season',
+    'round',
+    'kind',
+    'ref',
+    'text_json',
+    'tries',
+    'model',
+    'created_at',
+    'updated_at',
+  ],
   league_predictions: ['season', 'match_id', 'profile_id', 'pick', 'created_at', 'updated_at'],
   league_seasons: [
     'season',

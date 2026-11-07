@@ -27,6 +27,9 @@ const ko = {
   tagLeader: '선두',
   tagStreak: '연승',
   tagBig: '빅매치',
+  // T-11-658 AI 기자가 쓴 1면 표시
+  aiBadge: 'AI 기자',
+  aiNote: 'AI 기자가 경기 결과로 쓴 기사예요.',
   tagComeback: '역전승',
   tagLateWinner: '극장골',
   tagHattrick: '해트트릭',

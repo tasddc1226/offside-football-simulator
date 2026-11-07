@@ -22,6 +22,8 @@ export const leagueNews: Translation<LeagueNewsMsgs> = {
   tagHattrick: 'Hat-trick',
   tagFirstWin: 'First win',
   tagBig: 'Big match',
+  aiBadge: 'AI reporter',
+  aiNote: 'Written by our AI reporter from the match result.',
   upsetHead: (p) =>
     pick(p.v, [
       `${p.winner} overturn a ${p.gap}-point OVR gap`,

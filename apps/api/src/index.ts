@@ -32,6 +32,7 @@ import { runCupAutopilot } from './team/cupAutopilot.js';
 import { alertNewReports } from './cron/reportAlert.js';
 import { runLeague } from './team/league.js';
 import { alertLeagueStalls } from './team/leagueAlert.js';
+import { writeLeagueNewsAi } from './team/leagueNewsAi.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
@@ -149,6 +150,14 @@ export default {
       await runLeague(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'league', ...r })))
         .catch(logged('league'));
+      // T-11-658 AI 기자: 끝난 라운드의 신문 1면을 네 언어로 다시 쓴다(라운드마다 최대 3번, 못 쓴 언어는 템플릿 그대로).
+      await writeLeagueNewsAi(
+        env,
+        createDb(env.DB),
+        new Date(controller.scheduledTime).toISOString(),
+      )
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'league-ai', ...r })))
+        .catch(logged('league-ai'));
       // T-11-445 리그가 밀리면 운영 슬랙에 알린다(15분마다, 문제마다 한 번).
       if (new Date(controller.scheduledTime).getUTCMinutes() % 15 === 0)
         await alertLeagueStalls(
