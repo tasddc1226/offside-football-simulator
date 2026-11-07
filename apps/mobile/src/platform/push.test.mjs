@@ -110,7 +110,8 @@ vi.mock('react-native', () => ({
   },
   AppState: { addEventListener() {} },
 }));
-vi.mock('valtio', () => ({ proxy: (state) => state }));
+// push.ts → analytics(T-11-669)가 계정 캐시를 subscribe한다. 계정 구독 동작은 analytics/retireExp.test.mjs가 실제 valtio로 본다.
+vi.mock('valtio', () => ({ proxy: (state) => state, subscribe: () => () => {} }));
 vi.mock('@offside/app-core/api/client', () => ({ apiFetch: f.api }));
 vi.mock('./session', () => ({
   ensureSession: async () => true,
