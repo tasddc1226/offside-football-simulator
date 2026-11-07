@@ -25,7 +25,14 @@ import { callJson, issueGoogleCookie } from '../test/http.js';
 import { installFakeEdgeCache, flushEdge } from '../test/edgeCache.js';
 import { drawCup, runCup } from '../team/cup.js';
 import { cupTeamsOf } from '../team/cupOdds.js';
-import { checkCupListing, cupChampionView, cupHomeView, recentCupFor } from './cup.js';
+import { myTeamIn } from '../db/repos/ownerTeams.js';
+import {
+  checkCupEnhance,
+  checkCupListing,
+  cupChampionView,
+  cupHomeView,
+  recentCupFor,
+} from './cup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
 const CupRes = successEnvelope(CupResponseSchema);
@@ -516,6 +523,45 @@ describe('/v1/cups (T-11-145 오프사이드 컵 신청)', () => {
     await call('DELETE', `/v1/cups/${CUP.id}/entries/me`, { cookie: a.cookie });
     await expect(checkCupListing(ctx.db, a.profileId, a.ids[0]!)).resolves.toBeUndefined();
     expect((await a.put([...a.ids.slice(0, 7), ...Array(4).fill(null)])).status).toBe(200);
+  });
+
+  it('T-11-655 컵 명단 선수 강화는 경기 1시간 전부터 끝날 때까지만 막고, 추첨 뒤엔 구간 상한을 넘는 강화를 막는다', async () => {
+    const a = await owner(8);
+    expect((await enter(a.cookie)).status).toBe(204);
+    const [team] = await myTeamIn(ctx.db, a.profileId, 1);
+    const check = (now: string, after: number | null = null, id = a.ids[0]!) =>
+      checkCupEnhance(ctx.db, a.profileId, id, 1, now, team, () => after);
+    const reasonOf = (p: Promise<unknown>) =>
+      p.then(
+        () => null,
+        (e: { details?: { reason?: string } }) => e.details?.reason ?? 'unknown',
+      );
+    // 접수 중에는 컵 명단 선수도 강화한다(예전에는 대회가 끝날 때까지 막았다).
+    expect(await reasonOf(check(OPEN))).toBeNull();
+    const at = CUP.rounds[0]!;
+    const minutesBefore = (m: number) => new Date(Date.parse(at) - m * 60_000).toISOString();
+    await ctx.db.insert(cupMatches).values({
+      id: 'cm_enh',
+      cupId: CUP.id,
+      round: 'g1',
+      grp: 1,
+      slot: 0,
+      homeTeamId: team!.id,
+      awayTeamId: 'tem_other',
+      at,
+    });
+    // 경기 1시간 전부터는 막고, 그 전에는 막지 않는다. 컵 명단 밖 카드는 잠금 시간에도 강화한다.
+    expect(await reasonOf(check(minutesBefore(61)))).toBeNull();
+    expect(await reasonOf(check(minutesBefore(30)))).toBe('CUP_CARD_LOCKED');
+    expect(await reasonOf(check(minutesBefore(30), null, 'not-a-starter'))).toBeNull();
+    // 경기가 끝나면 풀린다.
+    await ctx.db.update(cupMatches).set({ playedAt: at }).where(eq(cupMatches.id, 'cm_enh'));
+    expect(await reasonOf(check(minutesBefore(30)))).toBeNull();
+    // 구간 대회: 추첨 뒤에만 성공했을 때의 컵 명단 OVR이 상한을 넘는 시도를 막는다.
+    await ctx.db.update(cups).set({ division: 'junior', ovrMax: 85 }).where(eq(cups.id, CUP.id));
+    expect(await reasonOf(check(OPEN, 90))).toBeNull();
+    expect(await reasonOf(check(CUP.drawAt, 85))).toBeNull();
+    expect(await reasonOf(check(CUP.drawAt, 86))).toBe('CUP_OVR_CAP');
   });
 
   it('T-11-570 컵 명단 프리셋: 컵은 그 프리셋으로 뛰고, 팀 명단은 컵 검사 없이 바꾼다', async () => {
