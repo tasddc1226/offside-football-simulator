@@ -70,6 +70,8 @@ export async function collectD1Day(
   d1: D1Database,
   day: string,
   withActive: boolean,
+  /** T-11-662 클라이언트 오류는 운영 기록 DB에 있다(없으면 게임 DB). */
+  ops: D1Database = d1,
 ): Promise<KpiRow[]> {
   const { start, end } = kstDayRange(day);
   const [
@@ -86,7 +88,6 @@ export async function collectD1Day(
     memberRenewed,
     memberExpired,
     autoRenewOff,
-    errors,
   ] = await d1.batch<Record<string, unknown>>([
     d1
       .prepare(
@@ -162,10 +163,11 @@ export async function collectD1Day(
            WHERE test = 0 AND auto_renew = 0 AND created_at < ?1 AND until >= ?1 GROUP BY 1`,
       )
       .bind(end),
-    d1
-      .prepare('SELECT platform, sum(count) n FROM client_errors WHERE day = ?1 GROUP BY 1')
-      .bind(day),
   ]);
+  const errors = await ops
+    .prepare('SELECT platform, sum(count) n FROM client_errors WHERE day = ?1 GROUP BY 1')
+    .bind(day)
+    .all<Record<string, unknown>>();
   const rows: KpiRow[] = [];
   const add = (metric: string, dim: string, value: unknown) =>
     rows.push({ metric, dim, value: num(value) });
@@ -277,11 +279,13 @@ export async function runKpiDaily(
   d1: D1Database,
   at: number,
   prior?: KpiDailyResult,
+  /** T-11-662 kpi_daily · client_errors가 있는 운영 기록 DB(없으면 게임 DB). */
+  ops: D1Database = d1,
 ): Promise<KpiDailyResult> {
   const now = new Date(at).toISOString();
   const targets = prior ? [] : kstPastDays(at, KPI_REWRITE_DAYS);
   const oldest = kstPastDays(at, KPI_BACKFILL_DAYS).at(-1)!;
-  const first = await d1
+  const first = await ops
     .prepare("SELECT min(day) day FROM kpi_daily WHERE source = 'd1'")
     .first<{ day: string | null }>();
   const from = first?.day ? first.day : targets.at(-1);
@@ -294,9 +298,9 @@ export async function runKpiDaily(
   const yesterday = kstPastDays(at, 1)[0];
   for (const day of days) {
     const withActive = day === yesterday && !prior;
-    const rows = await collectD1Day(d1, day, withActive);
+    const rows = await collectD1Day(d1, day, withActive, ops);
     await writeKpiDay(
-      d1,
+      ops,
       day,
       'd1',
       rows,

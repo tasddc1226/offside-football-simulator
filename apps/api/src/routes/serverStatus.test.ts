@@ -42,9 +42,9 @@ describe('서버 상태 집계 (T-11-321)', () => {
       slow: 1,
       errors: 1,
     });
-    await flushTallies(ctx.env.DB, first!);
-    await flushTallies(ctx.env.DB, due!);
-    const row = await ctx.env.DB.prepare('SELECT * FROM api_status_buckets').first();
+    await flushTallies(ctx.env.OPS_DB!, first!);
+    await flushTallies(ctx.env.OPS_DB!, due!);
+    const row = await ctx.env.OPS_DB!.prepare('SELECT * FROM api_status_buckets').first();
     expect(row).toMatchObject({ requests: 4, total_ms: 2000, slow: 1, errors: 1 });
   });
 
@@ -58,14 +58,17 @@ describe('서버 상태 집계 (T-11-321)', () => {
     const now = Date.now();
     const recent = bucketOf(now - 10 * 60_000);
     const old = bucketOf(now - 3 * 86_400_000);
-    await ctx.env.DB.batch(
+    // T-11-662 서버 상태 집계는 운영 기록 DB에 있다.
+    await ctx.env.OPS_DB!.batch(
       [
         [recent, 10, 2000, 1, 0],
         [old, 4, 400, 0, 2],
       ].map((r) =>
-        ctx.env.DB.prepare(
-          'INSERT INTO api_status_buckets (bucket, requests, total_ms, slow, errors) VALUES (?1, ?2, ?3, ?4, ?5)',
-        ).bind(...r),
+        ctx.env
+          .OPS_DB!.prepare(
+            'INSERT INTO api_status_buckets (bucket, requests, total_ms, slow, errors) VALUES (?1, ?2, ?3, ?4, ?5)',
+          )
+          .bind(...r),
       ),
     );
     const { cookie } = await issueCookie(ctx);
