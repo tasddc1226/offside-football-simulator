@@ -6,10 +6,9 @@ import {
   type AcquisitionCoverage,
   type AcquisitionUnattributedReason,
 } from '@offside/contracts/acquisition';
+// T-11-661 아이템 · 광고 제거 두 장부는 store_purchase_ledger 보기 하나로 읽는다.
 const ALL_IAP = `all_iap AS (
- SELECT store, transaction_id, profile_id, product_id, test, created_at, purchased_at, price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM iap_purchases
- UNION ALL
- SELECT store, transaction_id, profile_id, product_id, test, created_at, purchased_at, price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM iap_ad_free_purchases
+ SELECT store, transaction_id, profile_id, product_id, test, created_at, purchased_at, price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM store_purchase_ledger
 )`;
 // Rank payers before expanding rows: first purchase remains global across stores and both ledgers.
 const withStores = (source: string) => `report_rows AS (

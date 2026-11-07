@@ -20,6 +20,7 @@ import {
   retiredNumbers,
 } from '../schema.js';
 import {
+  metricsOf,
   backfillOwnerTitles,
   permanentTitlesOf,
   refreshOwnerTitles,
@@ -84,8 +85,7 @@ describe('Permanent owner titles', () => {
     expect(metrics.retired).toBe(0);
     await ctx.db.insert(ownerTitleProgress).values({
       profileId: who.profileId,
-      ...metrics,
-      preseason: 0,
+      metricsJson: JSON.stringify({ ...metrics, preseason: 0 }),
       criteriaVersion: 2,
       updatedAt: NOW,
     });
@@ -452,12 +452,13 @@ describe('Permanent owner titles', () => {
     });
     await ctx.db
       .update(ownerTitleProgress)
-      .set({ criteriaVersion: 3, forwards: 0 })
+      .set({ criteriaVersion: 3, metricsJson: JSON.stringify({ forwards: 0 }) })
       .where(eq(ownerTitleProgress.profileId, who.profileId));
     const later = '2026-10-10T01:00:00.000Z';
     let hall = await permanentTitlesOf(ctx.db, who.profileId, later);
     let [progress] = await ctx.db.select().from(ownerTitleProgress);
-    expect(progress).toMatchObject({ criteriaVersion: 5, forwards: 3, updatedAt: later });
+    expect(progress).toMatchObject({ criteriaVersion: 5, updatedAt: later });
+    expect(metricsOf(progress?.metricsJson).forwards).toBe(3);
     expect(hall.find((t) => t.id === 'owner-exchange')).toMatchObject({
       earnedAt: NOW,
       value: 10,

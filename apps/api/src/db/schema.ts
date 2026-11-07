@@ -6,6 +6,7 @@ import {
   check,
   index,
   primaryKey,
+  sqliteView,
   sqliteTable,
   text,
   uniqueIndex,
@@ -2014,39 +2015,16 @@ export const ownerTitleAwards = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.profileId, t.titleId] })],
 );
-export const ownerTitleProgress = sqliteTable('owner_title_progress', {
+/**
+ * T-11-661 구단주 칭호 진행도(조건별 값). 늘 통째로 다시 세고 통째로 읽는 캐시라 조건마다 칼럼을 두지 않고 metrics_json
+ * 하나에 담는다(칭호 조건을 늘려도 DB 구조를 바꾸지 않는다). 예전 owner_title_progress(조건마다 칼럼)를 바꿨다.
+ */
+export const ownerTitleProgress = sqliteTable('owner_title_metrics', {
   profileId: text('profile_id')
     .primaryKey()
     .references(() => profiles.id, { onDelete: 'cascade' }),
   criteriaVersion: integer('criteria_version').notNull().default(0),
-  preseason: integer('preseason').notNull().default(0),
-  midfield: integer('midfield').notNull().default(0),
-  defense: integer('defense').notNull().default(0),
-  keeper: integer('keeper').notNull().default(0),
-  scorers: integer('scorers').notNull().default(0),
-  creators: integer('creators').notNull().default(0),
-  internationals: integer('internationals').notNull().default(0),
-  retired: integer('retired').notNull(),
-  elite: integer('elite').notNull(),
-  ballon: integer('ballon').notNull(),
-  numbers: integer('numbers').notNull(),
-  firsts: integer('firsts').notNull(),
-  // T-11-374 카드 과제 낸 횟수.
-  exchanges: integer('exchanges').notNull().default(0),
-  // T-11-556 최고 능력치 90 이상 공격수 · 그런 선수의 포지션 가짓수 · 은퇴 선수 국적 가짓수 · 마친 컵 · 컵 4강 이상 ·
-  // 은퇴 선수를 남긴 시즌 · 시즌 마감 디비전 휘장의 최고 index.
-  forwards: integer('forwards').notNull().default(0),
-  positions: integer('positions').notNull().default(0),
-  nations: integer('nations').notNull().default(0),
-  cups: integer('cups').notNull().default(0),
-  podiums: integer('podiums').notNull().default(0),
-  seasons: integer('seasons').notNull().default(0),
-  division: integer('division').notNull().default(0),
-  enhanceTries: integer('enhance_tries').notNull().default(0),
-  enhanceKeeps: integer('enhance_keeps').notNull().default(0),
-  enhanceDowns: integer('enhance_downs').notNull().default(0),
-  enhanceNear: integer('enhance_near').notNull().default(0),
-  enhanceSpent: integer('enhance_spent').notNull().default(0),
+  metricsJson: text('metrics_json').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
 /** One editable prediction per account and cup match; settlement and grant are atomic. */
@@ -2518,3 +2496,54 @@ export const kpiDaily = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.day, table.metric, table.dim] })],
 );
+
+/**
+ * T-11-661 신고 한 줄 보기. 이름 · 채팅 · 게시판 댓글 · 팀 댓글 신고는 대상마다 표가 다르지만(댓글 신고는 댓글이 지워지면
+ * 함께 지워지는 외래키가 있다) 읽을 때는 같은 모양이다. 새 신고 알림 · 운영 도구는 이 보기 하나를 읽는다. 쓰기는 각 표로 한다.
+ * source: name · chat · board_comment · team_comment. 댓글 신고는 처리 시각이 없다(resolved_at NULL).
+ */
+export const reportFeed = sqliteView('report_feed', {
+  source: text('source').notNull(),
+  targetKind: text('target_kind').notNull(),
+  targetId: text('target_id').notNull(),
+  reporterId: text('reporter_id').notNull(),
+  reason: text('reason'),
+  label: text('label'),
+  room: text('room'),
+  createdAt: text('created_at').notNull(),
+  resolvedAt: text('resolved_at'),
+})
+  .as(sql`SELECT 'name' AS source, kind AS target_kind, target_id, profile_id AS reporter_id, NULL AS reason,
+    name AS label, NULL AS room, created_at, resolved_at FROM name_reports
+  UNION ALL SELECT 'chat', 'message', message_id, profile_id, reason, nickname, room, created_at, resolved_at
+    FROM chat_reports
+  UNION ALL SELECT 'board_comment', 'comment', comment_id, profile_id, reason, NULL, NULL, created_at, NULL
+    FROM board_comment_reports
+  UNION ALL SELECT 'team_comment', 'comment', comment_id, profile_id, reason, NULL, NULL, created_at, NULL
+    FROM team_comment_reports`);
+
+/**
+ * T-11-661 스토어 구매 장부 한 줄 보기. 아이템 · 웹 결제(iap_purchases)와 광고 제거(iap_ad_free_purchases)는 칼럼이 거의 같은
+ * 두 장부다. 유입 · 매출처럼 둘을 함께 읽는 쪽은 이 보기를 읽는다(새 상품 장부를 더하면 여기에 한 줄을 더한다). 쓰기 · 환불은 각
+ * 표로 한다. 구독(memberships)은 갱신 때 덮어쓰는 상태 행이라 장부가 아니다.
+ */
+export const storePurchaseLedger = sqliteView('store_purchase_ledger', {
+  ledger: text('ledger').notNull(),
+  store: text('store').notNull(),
+  transactionId: text('transaction_id').notNull(),
+  profileId: text('profile_id'),
+  productId: text('product_id').notNull(),
+  test: integer('test').notNull(),
+  createdAt: text('created_at').notNull(),
+  purchasedAt: text('purchased_at'),
+  priceMilliunits: integer('price_milliunits'),
+  currency: text('currency'),
+  storefront: text('storefront'),
+  refundedAt: text('refunded_at'),
+  firstTouchId: text('first_touch_id'),
+  lastTouchId: text('last_touch_id'),
+})
+  .as(sql`SELECT 'item' AS ledger, store, transaction_id, profile_id, product_id, test, created_at, purchased_at,
+    price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM iap_purchases
+  UNION ALL SELECT 'ad_free', store, transaction_id, profile_id, product_id, test, created_at, purchased_at,
+    price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM iap_ad_free_purchases`);
