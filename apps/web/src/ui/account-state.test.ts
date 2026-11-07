@@ -8,12 +8,18 @@ const { getProfile } = vi.hoisted(() => {
 });
 vi.mock('@offside/app-core/api/client', () => ({ getProfile }));
 vi.mock('@offside/app-core/api/friendPending', () => ({ noteOwner: vi.fn() }));
+const { noteRetireAccount, setRetireAccountSource } = vi.hoisted(() => ({
+  noteRetireAccount: vi.fn(),
+  setRetireAccountSource: vi.fn(),
+}));
+vi.mock('../analytics/index.js', () => ({ noteRetireAccount, setRetireAccountSource }));
 import {
   accountCache,
   accountFresh,
   accountGeneration,
   freshAccount,
   onAccountChange,
+  setAccount,
 } from './account-state.svelte.js';
 
 const prof = (id: string) => ({
@@ -65,4 +71,21 @@ it('같은 계정을 다시 확인하면 세대가 그대로다', async () => {
   accountCache.fetchedAt = 0;
   await freshAccount();
   expect(accountGeneration()).toBe(gen);
+});
+
+it('계측에 원래 ID가 아니라 계정 키를 넘기고, 로그아웃(set null)도 계정 변경으로 알린다', async () => {
+  getProfile.mockResolvedValueOnce(prof('raw-profile-id'));
+  await freshAccount();
+  const source = setRetireAccountSource.mock.calls[0]![0] as () => unknown;
+  const key = source();
+  expect(typeof key).toBe('string');
+  expect(String(key)).not.toContain('raw-profile-id');
+  const gen = accountGeneration();
+  noteRetireAccount.mockClear();
+  setAccount(null, false);
+  expect(source()).toBeNull();
+  expect(accountGeneration()).toBe(gen + 1);
+  expect(noteRetireAccount).toHaveBeenCalled();
+  accountCache.value = 'error';
+  expect(source()).toBeUndefined();
 });

@@ -20,7 +20,7 @@ export const BALANCE_GROUPS = {
   // T-11-375 구단 디비전. 서버가 랭크 경기 · 디비전 랭킹 · 시즌 마감 때 활성 버전을 바로 읽는다.
   division: '구단 디비전',
   // T-11-669 화면 실험. 게임 결과는 바꾸지 않고, 앱이 은퇴 화면을 열 때 서버 최신 값을 바로 읽는다(커리어별 고정 아님).
-  experiment: '화면 실험',
+  experiment: '화면 실험', // i18n-ignore 운영 도구 문구는 한국어로 둔다(CLAUDE.md 다국어 규칙)
 } as const;
 export type BalanceGroup = keyof typeof BALANCE_GROUPS;
 
@@ -436,9 +436,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '마스터 시즌 보상 리롤권',
     desc: '시즌 마감 때 마스터 디비전인 구단주가 받는 선수 후보 리롤권 장수',
   },
+  // T-11-669 운영 도구 문구는 한국어로 둔다(CLAUDE.md 다국어 규칙). 공개 이력 이름은 app-core balanceKeys 4개 언어.
   retireExpShare: {
     group: 'experiment',
-    label: '은퇴 화면 실험 비율',
+    label: '은퇴 화면 실험 비율', // i18n-ignore 운영 도구 이름(ko balanceKeys와 같아야 한다)
+    // i18n-ignore 운영 도구 설명
     desc: '프로필 ID로 고정 배정해 이 비율만큼 실험군(대표 장면 · 내 구단 다음 행동), 같은 비율만큼 대조군(지금 화면)에 넣는다. 0이면 끈다. 나머지와 ID가 없는 사람은 지금 화면이다. 게임 결과는 바꾸지 않는다',
   },
 };

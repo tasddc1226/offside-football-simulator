@@ -50,11 +50,14 @@ export const retireExp = createRetireExpMetrics({
   send: (name, params) => send(name, params),
   now: Date.now,
   account: () => accountKey(),
+  needAccount: () => needAccount(),
 });
 let accountKey: () => AccountKey = () => undefined;
-/** index.ts가 지금 계정 키를 읽는 함수를 건다(이 모듈이 화면 상태를 직접 import하지 않게). */
-export function setRetireAccountKey(fn: () => AccountKey) {
+let needAccount: () => void = () => {};
+/** index.ts가 지금 계정 키를 읽는 함수와, 계정을 모를 때 확인을 부탁하는 함수를 건다(화면 상태를 직접 import하지 않게). */
+export function setRetireAccountKey(fn: () => AccountKey, need: () => void) {
   accountKey = fn;
+  needAccount = need;
 }
 let metricQueue = Promise.resolve();
 function metric(fn: () => void) {

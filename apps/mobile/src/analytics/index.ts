@@ -61,6 +61,10 @@ export const nativeAnalytics = createNativeAnalytics({
   writeRetireExp: (raw) =>
     raw === null ? kv.remove(RETIRE_EXP_STORE) : kv.set(RETIRE_EXP_STORE, raw),
   retireAccountKey: () => accountKeyNow(),
+  // host가 이 모듈을 import하므로 순환을 피해 필요할 때만 불러온다(5분 메모 계정 확인).
+  retireNeedAccount: () => {
+    void import('../game/host').then((m) => m.ensureAccount()).catch(() => {});
+  },
 });
 export const { analytics, trackPage } = nativeAnalytics;
 /** T-11-669 지금 계정 키(원래 ID가 아니라 profileKey). null = 계정 없음, undefined = 확인 중 · 연결 실패. */

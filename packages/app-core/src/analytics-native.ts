@@ -56,6 +56,8 @@ type IO = {
   writeRetireExp?: (raw: string | null) => void;
   /** 지금 계정 키(retireExperiment profileKey, null = 계정 없음, undefined = 모름). */
   retireAccountKey?: () => string | null | undefined;
+  /** 귀속 기록이 있는데 계정을 아직 모를 때(메모된 계정 확인을 한 번 시작한다). */
+  retireNeedAccount?: () => void;
 };
 export function createNativeAnalytics(io: IO) {
   let consent: Consent = 'unknown';
@@ -128,6 +130,7 @@ export function createNativeAnalytics(io: IO) {
     send,
     now: io.now,
     account: () => io.retireAccountKey?.(),
+    needAccount: () => io.retireNeedAccount?.(),
   });
   const makeTracker = (id: string | null) =>
     createTracker({ allowed, read: io.readLedger, write: io.writeLedger, now: io.now, send }, id);

@@ -4,8 +4,7 @@ import { enabled } from './config.js';
 import type { Career } from '@offside/app-core/analytics-model';
 import type { AppStoreOs } from '@offside/app-core/appPromo';
 import { onClubSignal, setClubAccountKey } from '@offside/app-core/clubSignals';
-import { profileKey } from '@offside/app-core/retireExperiment';
-import { accountCache, onAccountChange } from '../ui/account-state.svelte.js';
+import type { AccountKey } from '@offside/app-core/retireExpMetrics';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';
@@ -74,14 +73,24 @@ export const trackPartnerPopup = (action: PartnerPopupAction, variant: 'a' | 'b'
  * 장면 · 다음 행동 클릭은 보내지 않는다(되돌려 보내지 않음). 계정 키는 원래 ID가 아니라 profileKey다. */
 type RetireExpApi = typeof import('./browser.js').retireExp;
 let retireView: Parameters<RetireExpApi['view']>[0] | null = null;
-const accountKeyNow = (): string | null | undefined => {
-  const p = accountCache.value;
-  if (p === undefined || p === 'error') return undefined;
-  return p ? profileKey(p.id) : null;
-};
+// 계정 상태는 ui/account-state가 불러와질 때 여기에 건다(첫 화면 번들에 계정 화면 코드 · 문구를 싣지 않게 의존 방향을 뒤집었다).
+let accountSource: (() => AccountKey) | null = null;
+const accountKeyNow = (): AccountKey => (accountSource ? accountSource() : undefined);
+export function setRetireAccountSource(fn: () => AccountKey) {
+  accountSource = fn;
+}
+/** account-state가 계정 확인 결과가 바뀔 때 부른다. 다른 계정이면 이전 노출 귀속을 지운다. */
+export const noteRetireAccount = () => adapter?.retireExp.account(accountKeyNow());
+let accountAsked = false;
+/** 귀속 기록이 남아 있는데 계정을 아직 모를 때 한 번만(5분 메모 계정 확인) 묻는다. */
+function needRetireAccount() {
+  if (accountAsked) return;
+  accountAsked = true;
+  void import('../ui/account-state.svelte.js').then((m) => m.ensureAccount()).catch(() => {});
+}
 setClubAccountKey(accountKeyNow);
 function attachRetireExp(m: typeof import('./browser.js')) {
-  m.setRetireAccountKey(accountKeyNow);
+  m.setRetireAccountKey(accountKeyNow, needRetireAccount);
   if (retireView) m.retireExp.view(retireView);
 }
 export const retireExp = {
@@ -103,5 +112,3 @@ export const retireExp = {
 };
 // 서버가 팀 저장 · 구단 경기 결과를 돌려준 순간(api/team). 요청 당시 계정 키와 함께 넘긴다.
 onClubSignal((sig, requestKey) => adapter?.retireExp.club(sig, requestKey));
-// 계정 확인 결과가 바뀌면(로그인 · 로그아웃 · 삭제 · 다른 계정) 이전 노출 귀속을 지운다.
-onAccountChange(() => adapter?.retireExp.account(accountKeyNow()));

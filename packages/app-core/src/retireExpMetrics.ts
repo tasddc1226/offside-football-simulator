@@ -95,6 +95,8 @@ export function createRetireExpMetrics(io: {
   now(): number;
   /** 지금 계정 키. 결과를 묻을 때마다 읽어 노출 때 계정과 엄격히 같을 때만 귀속한다. */
   account(): AccountKey;
+  /** 귀속 기록이 있는데 계정을 아직 모를 때 부른다(앱이 메모된 계정 확인을 한 번 시작한다). */
+  needAccount?(): void;
 }) {
   const base = (arm: RetireArm): Params => ({ exp_id: RETIRE_EXP_ID, arm });
   const send = (name: string, params: Params) => {
@@ -125,6 +127,10 @@ export function createRetireExpMetrics(io: {
       if (elapsed < 0 || elapsed > RETIRE_EXP_WINDOW_MS || differs(c, now))
         return { v: 1, seen: s.seen };
       // 노출 때 계정과 지금 계정(구단 결과는 요청 당시 계정까지)이 같다고 확인되기 전에는 귀속하지 않는다.
+      if (now === undefined) {
+        io.needAccount?.();
+        return null;
+      }
       if (now !== c.pk || requestKey !== c.pk) return null;
       if (c.done.includes(kind)) return null;
       // 방금 은퇴한 그 커리어의 기록은 '다음' 플레이가 아니다.

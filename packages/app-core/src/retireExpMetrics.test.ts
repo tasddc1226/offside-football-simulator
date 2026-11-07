@@ -339,3 +339,32 @@ describe('clubSignals', () => {
     expect(got).toEqual(['club_match:A', 'team_save:B', 'team_save:null']);
   });
 });
+
+describe('계정을 모를 때', () => {
+  it('귀속 기록이 있으면 계정 확인을 부탁하고 귀속은 미룬다', () => {
+    let asked = 0;
+    let account: AccountKey = undefined;
+    const sent: string[] = [];
+    let raw: string | null = null;
+    const m = createRetireExpMetrics({
+      allowed: () => true,
+      read: () => raw,
+      write: (r) => {
+        raw = r;
+      },
+      send: (n, p) => sent.push(`${n}:${String(p.outcome ?? '')}`),
+      now: () => 1,
+      account: () => account,
+      needAccount: () => asked++,
+    });
+    m.complete({ cid: 'x', year: 1, phase: 1, matches: 1 }); // 기록 없음: 묻지 않는다
+    expect(asked).toBe(0);
+    m.view(X({ pk: 'A' }));
+    m.complete({ cid: 'x', year: 1, phase: 1, matches: 1 });
+    expect(asked).toBe(1);
+    expect(sent).toEqual(['retire_exp_exposure:']);
+    account = 'A';
+    m.complete({ cid: 'x', year: 1, phase: 2, matches: 1 });
+    expect(sent).toEqual(['retire_exp_exposure:', 'retire_exp_outcome:next_play']);
+  });
+});
