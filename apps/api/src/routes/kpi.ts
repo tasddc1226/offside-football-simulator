@@ -2,7 +2,7 @@ import { KpiIngestSchema, KpiQuerySchema, KpiReportSchema } from '@offside/contr
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
 import { externalMetricAllowed, kpiReport, writeKpiDay } from '../db/repos/kpi.js';
-import type { AppEnv } from '../env.js';
+import { opsD1, type AppEnv } from '../env.js';
 import { AppError, parseWithAppError } from '../errors.js';
 import { NO_STORE, nowIso, ok, readBody, sameSecret } from './shared.js';
 
@@ -13,7 +13,7 @@ export function registerKpiRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/admin/kpi', async (c) => {
     await requireAdmin(c);
     const days = parseWithAppError(KpiQuerySchema, c.req.query('days'));
-    const data = await kpiReport(c.env.DB, new Date(), days);
+    const data = await kpiReport(opsD1(c.env), new Date(), days);
     return ok(c, KpiReportSchema, data, 200, NO_STORE);
   });
 
@@ -29,7 +29,7 @@ export function registerKpiRoutes(app: Hono<AppEnv>): void {
         // i18n-ignore: 에이전트 Worker만 받는 내부 응답
         message: `${input.source}에서 받을 수 없는 지표예요: ${bad.metric}`,
       });
-    await writeKpiDay(c.env.DB, input.day, input.source, input.rows, nowIso());
+    await writeKpiDay(opsD1(c.env), input.day, input.source, input.rows, nowIso());
     return c.json({ ok: true, rows: input.rows.length }, 200, { 'Cache-Control': NO_STORE });
   });
 }

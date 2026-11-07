@@ -9,7 +9,7 @@ import {
   PutPushPreferencesSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { getDb, type AppEnv } from '../env.js';
+import { getDb, opsD1, type AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import {
@@ -101,7 +101,7 @@ export function registerPushRoutes(app: Hono<AppEnv>) {
     const device = await ownPushDevice(c.env.DB, session, installationId, now);
     if (!device)
       throw notFoundError('이 기기의 알림 받기를 먼저 켜 주세요.', 'PUSH_DEVICE_MISSING');
-    const nextTestAt = await reservePushTest(c.env.DB, installationId, session.profileId, now);
+    const nextTestAt = await reservePushTest(opsD1(c.env), installationId, session.profileId, now);
     // 알림함에는 한국어 원문을 남기고(읽을 때 요청 언어로 바꾼다), 지금 보내는 푸시만 요청 언어로 보낸다.
     const notification = await queueNotification(c.env.DB, {
       profileId: session.profileId,
