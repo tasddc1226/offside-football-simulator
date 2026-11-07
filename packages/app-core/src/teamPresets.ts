@@ -9,7 +9,7 @@ import {
   type TeamPosition,
 } from '@offside/contracts/owner-team';
 
-export { TEAM_PRESET_NAME_MAX } from '@offside/contracts/owner-team';
+export { TEAM_PRESET_MAX, TEAM_PRESET_NAME_MAX } from '@offside/contracts/owner-team';
 export type { TeamPreset };
 
 /** 지금 편성 초안으로 만든 프리셋. */
@@ -88,3 +88,10 @@ export const renamePreset = (presets: readonly TeamPreset[], i: number, name: st
   presets.map((p, j) => (j === i ? { ...p, name: name.trim() } : p));
 export const removePreset = (presets: readonly TeamPreset[], i: number) =>
   presets.filter((_, j) => j !== i);
+
+/** T-11-657 지금 편성으로 만드는 컵 명단 프리셋 이름: 기본 이름이 비어 있으면 그 이름, 겹치면 다음 번호 이름. */
+export const cupPresetName = (
+  presets: readonly TeamPreset[],
+  base: string,
+  label: (p: { n: number }) => string,
+) => (presets.some((p) => p.name === base) ? nextPresetName(presets, label) : base);

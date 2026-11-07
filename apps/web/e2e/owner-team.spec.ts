@@ -1912,18 +1912,34 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   await expect.poll(() => puts.length).toBe(4);
   expect(puts[3]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
 
-  // T-11-570 위쪽 컵 경기 명단에서 프리셋을 고르면 cup 표시를 보내고 배지가 붙는다. 팀 명단을 고르면 푼다.
-  await expect(sheet.locator('[data-preset-cup-hint]')).toBeVisible();
-  await expect(sheet.locator('[data-act="preset-cup-team"]')).toBeChecked();
-  await sheet.locator('[data-preset-cup-pick] label', { hasText: '주말 리그' }).click();
+  // T-11-657 명단 관리는 리그 선발 명단 · 컵 선발 명단 · 추가 프리셋 구역으로 나뉜다. 컵 명단이 없으면 리그 명단이 컵에도 나간다고 알린다.
+  await expect(sheet.locator('[data-preset-league]')).toContainText('리그 선발 명단');
+  await expect(sheet.locator('[data-preset-league-cup]')).toBeVisible();
+  await expect(sheet.locator('[data-preset-cup-empty]')).toBeVisible();
+  // T-11-570 추가 프리셋의 관리(⋯)에서 컵 명단으로 정하면 cup 표시를 보내고 컵 선발 명단 구역으로 옮겨 배지가 붙는다.
+  await sheet.locator('[data-preset="0"] [data-act="preset-more"]').click();
+  await sheet.locator('[data-preset="0"] [data-act="preset-cup"]').click();
   await expect.poll(() => puts.length).toBe(5);
   expect(puts[4]!.presets[0]).toMatchObject({ name: '주말 리그', cup: true });
-  await expect(sheet.locator('[data-preset="0"] [data-preset-cup]')).toHaveText('컵 명단');
+  await expect(
+    sheet.locator('[data-preset-cup-sec] [data-preset="0"] [data-preset-cup]'),
+  ).toHaveText('컵 명단');
+  await expect(sheet.locator('[data-preset-extra] [data-preset]')).toHaveCount(0);
   await expect(page.getByText('컵 명단으로 정했어요.')).toBeVisible();
-  await sheet.locator('[data-preset-cup-pick] label', { hasText: '팀 명단' }).click();
+  // 컵 명단 풀기는 다시 추가 프리셋으로 돌린다.
+  await sheet.locator('[data-preset="0"] [data-act="preset-more"]').click();
+  await sheet.locator('[data-preset="0"] [data-act="preset-cup-unset"]').click();
   await expect.poll(() => puts.length).toBe(6);
   expect(puts[5]!.presets[0]!.cup).toBeUndefined();
   await expect(sheet.locator('[data-preset-cup]')).toHaveCount(0);
+  // 지금 편성으로 컵 명단을 바로 만들 수 있다.
+  await sheet.locator('[data-act="preset-cup-new"]').click();
+  await expect.poll(() => puts.length).toBe(7);
+  expect(puts[6]!.presets.map((p) => [p.name, !!p.cup])).toEqual([
+    ['주말 리그', false],
+    ['컵 명단', true],
+  ]);
+  await expectNoA11yViolations(page);
 });
 
 for (const width of [320, 390, 1280]) {

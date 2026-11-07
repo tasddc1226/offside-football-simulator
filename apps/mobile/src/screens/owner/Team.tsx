@@ -129,6 +129,7 @@ import {
   cupPresetOf,
   loadPreset,
   presetOf,
+  presetSummary,
   withSeasonCupPreset,
   type TeamPreset,
 } from '@offside/app-core/teamPresets';
@@ -1504,6 +1505,21 @@ export default function Team() {
           locked={!!cupState.me?.locked && !cupPreset}
           cupLocked={!!cupState.me?.locked}
           cup={season > 0}
+          league={
+            team
+              ? presetSummary(
+                  presetOf(
+                    '',
+                    team.formation as FormationId,
+                    team.slots.map((x) => x.careerId),
+                    team.layout ?? null,
+                  ),
+                )
+              : null
+          }
+          seasonOnly={!!cupState.cup?.cup.seasonCardsOnly && cupState.cup?.cup.season === season}
+          cupPast={cupPreset ? pastInSlots(cupPreset.slots, byId, season) : 0}
+          onSeason={() => void makeSeasonCup()}
           draft={(presetName) =>
             presetOf(presetName, formation, slots, season > 0 ? positions : null)
           }

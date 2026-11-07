@@ -66,7 +66,7 @@
   import TeamResult from './TeamResult.svelte';
   import TeamFriends from './TeamFriends.svelte';
   import TeamPresets from './TeamPresets.svelte';
-  import { cupPresetOf, loadPreset, presetOf, withSeasonCupPreset, type TeamPreset } from '@offside/app-core/teamPresets';
+  import { cupPresetOf, loadPreset, presetOf, presetSummary, withSeasonCupPreset, type TeamPreset } from '@offside/app-core/teamPresets';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
   import { achNudge } from '../achNudge.js';
@@ -285,6 +285,8 @@
   }
 
   // ───────── 프리셋 (T-11-217) ─────────
+  // T-11-657 명단 관리의 리그 선발 명단 요약(저장된 팀 명단).
+  const leagueSummary = $derived(team ? presetSummary(presetOf('', team.formation as FormationId, team.slots.map((x) => x.careerId), team.layout ?? null)) : null);
   const presetDraft = (presetName: string) => presetOf(presetName, formation, slots, season > 0 ? previewLayout : null);
   async function persistPresets(next: TeamPreset[], saved = false): Promise<boolean> {
     const r = await saveTeamPresets({ presets: next, ...(season !== current ? { season } : {}) });
@@ -782,7 +784,7 @@
           <EnhanceSheet player={enhancing} name={nameOf(enhancing)} onclose={() => (enhancing = null)} onresult={(id, r) => (players = players.map((x) => (x.careerId === id ? { ...x, enhance: r.card.level || undefined } : x)))} />
         {/await}
       {/if}
-      <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked && !cupPreset} cupLocked={!!cupBand?.locked} cup={season > 0} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
+      <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked && !cupPreset} cupLocked={!!cupBand?.locked} cup={season > 0} league={leagueSummary} seasonOnly={!!cupRule?.cup.cup.seasonCardsOnly} cupPast={cupPreset ? cupDraft.past : 0} onseason={() => void makeSeasonCup()} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && !ladder && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>

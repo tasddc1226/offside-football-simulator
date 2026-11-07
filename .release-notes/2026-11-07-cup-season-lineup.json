@@ -1,27 +1,31 @@
 {
   "id": "t-11-657-cup-season-lineup",
-  "title": "이번 시즌 선수로 컵 명단 만들기",
+  "title": "명단 관리 · 이번 시즌 선수로 컵 명단 만들기",
   "items": [
+    "팀 화면의 '프리셋' 버튼이 '명단 관리'로 바뀌었어요. 리그 선발 명단, 컵 선발 명단, 추가 프리셋을 나눠서 보여 줘서 어떤 명단이 어느 경기에 나가는지 바로 알 수 있어요.",
     "이번 시즌 선수만 나가는 컵이면 편성 화면의 컵 명단 줄에서 지난 시즌 선수가 몇 명 들어 있는지 알려 줘요.",
     "'이번 시즌 선수로 컵 명단 만들기'를 누르면 이번 시즌 선수로 채운 컵 명단 프리셋을 바로 만들어요. 팀 명단은 그대로예요."
   ],
   "en": {
-    "title": "Build a cup lineup from this season's players",
+    "title": "Lineups · build a cup lineup from this season's players",
     "items": [
+      "The Presets button on the team screen is now Lineups. It shows your league lineup, cup lineup and extra presets separately, so you can see which lineup plays which matches.",
       "For cups limited to this season's players, the cup lineup bar on the lineup screen shows how many past-season players are in your cup lineup.",
       "Tap 'Build a cup lineup from this season's players' to make a cup lineup preset from this season's players right away. Your team lineup stays the same."
     ]
   },
   "ja": {
-    "title": "今シーズンの選手でカップメンバーを作成",
+    "title": "メンバー管理 · 今シーズンの選手でカップメンバーを作成",
     "items": [
+      "チーム画面の「プリセット」ボタンが「メンバー管理」になりました。リーグのスタメン、カップのスタメン、追加プリセットを分けて表示するので、どのメンバーがどの試合に出るかすぐ分かります。",
       "今シーズンの選手だけが出場するカップでは、編成画面のカップメンバー欄に過去シーズンの選手が何人入っているかを表示します。",
       "「今シーズンの選手でカップメンバーを作る」を押すと、今シーズンの選手で埋めたカップメンバーのプリセットをすぐに作ります。チームメンバーはそのままです。"
     ]
   },
   "zh": {
-    "title": "用本賽季球員建立盃賽陣容",
+    "title": "陣容管理 · 用本賽季球員建立盃賽陣容",
     "items": [
+      "球隊畫面的「預設組合」按鈕改為「陣容管理」，分開顯示聯賽先發、盃賽先發與額外預設組合，一眼就能看出哪組陣容參加哪種比賽。",
       "若盃賽只限本賽季球員，編排畫面的盃賽陣容欄會顯示陣容中有幾名往季球員。",
       "點「用本賽季球員建立盃賽陣容」，就會立即建立由本賽季球員組成的盃賽陣容預設，球隊陣容不變。"
     ]
