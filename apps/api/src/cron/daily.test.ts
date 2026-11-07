@@ -72,8 +72,13 @@ describe('T-10-070 매일 정리', () => {
     await run(idem, 'old', ago(2 * DAY), ago(HOUR));
     await run(idem, 'live', ago(HOUR), later(HOUR));
     const att = `INSERT INTO auth_attempts (id, kind, subject, window_start, count) VALUES (?1, 'GOOGLE_START', ?1, ?2, 1)`;
-    await run(att, 'att_old', ago(2 * DAY));
-    await run(att, 'att_new', ago(HOUR));
+    // T-11-662 시도 기록은 운영 기록 DB에 있다.
+    const ops = ctx.env.OPS_DB!;
+    await ops
+      .prepare(att)
+      .bind('att_old', ago(2 * DAY))
+      .run();
+    await ops.prepare(att).bind('att_new', ago(HOUR)).run();
     const ses = `INSERT INTO sessions (id, profile_id, channel, token_hash, created_at, expires_at, revoked_at, last_seen_at) VALUES (?1, 'prf_1', 'web', ?1, ?2, ?3, ?4, ?2)`;
     await run(ses, 'ses_expired_long_ago', ago(90 * DAY), ago(40 * DAY), null);
     await run(ses, 'ses_revoked_not_expired', ago(90 * DAY), later(DAY), ago(40 * DAY));
@@ -92,7 +97,7 @@ describe('T-10-070 매일 정리', () => {
     await run(tr, 'tr_old', ago(31 * DAY));
     await run(tr, 'tr_new', ago(29 * DAY));
 
-    expect(await cleanupExpired(ctx.env.DB, NOW)).toEqual({
+    expect(await cleanupExpired(ctx.env.DB, NOW, {}, ops)).toEqual({
       push_news_events: 0,
       notifications: 0,
       push_deliveries: 0,
@@ -112,7 +117,9 @@ describe('T-10-070 매일 정리', () => {
     expect(await count('chat_mutes')).toBe(1);
     expect(await count('app_auth_tickets')).toBe(1);
     expect(await count('idempotency')).toBe(1);
-    expect(await count('auth_attempts')).toBe(1);
+    expect(
+      (await ops.prepare('SELECT count(*) AS n FROM auth_attempts').first<{ n: number }>())!.n,
+    ).toBe(1);
     const left = await ctx.env.DB.prepare('SELECT id FROM sessions ORDER BY id').all<{
       id: string;
     }>();

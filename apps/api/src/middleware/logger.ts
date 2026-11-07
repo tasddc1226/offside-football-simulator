@@ -61,7 +61,8 @@ export const logger = createMiddleware<AppEnv>(async (c, next) => {
 const STATUS_ENVS = new Set(['production', 'staging']);
 
 function recordStatus(c: Context<AppEnv>, status: number, durationMs: number) {
-  const db = c.env?.DB;
+  // T-11-662 서버 상태 · 클라이언트 오류 집계는 운영 기록 DB에 쓴다(없으면 게임 DB).
+  const db = c.env ? (c.env.OPS_DB ?? c.env.DB) : undefined;
   if (!db || !STATUS_ENVS.has(c.env.ENVIRONMENT ?? '')) return;
   if (!countable(c.req.method, c.req.header('upgrade'))) return;
   let ctx: Pick<ExecutionContext, 'waitUntil'>;

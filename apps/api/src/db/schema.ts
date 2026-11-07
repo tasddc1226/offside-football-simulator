@@ -275,7 +275,8 @@ export const idempotency = sqliteTable(
  * T-1-004 D-14·D-15. 고정 윈도우 rate limit 카운터. `(kind, subject)`당 한 행만 유지하며 윈도우가
  * 지나면 재사용한다(설계: `window_start`가 지금부터 윈도우 길이 이전이면 리셋).
  */
-export const authAttempts = sqliteTable(
+/** @deprecated T-11-662 OPS_DB(opsSchema.ts)로 옮겼다. 데이터를 옮긴 뒤 지운다. */
+export const authAttemptsCoreLegacy = sqliteTable(
   'auth_attempts',
   {
     id: text('id').primaryKey(),
@@ -1150,7 +1151,8 @@ export const translations = sqliteTable(
 
 /** T-11-321 서버 상태 화면. 5분 칸(`bucket` = 칸 시작 UTC ISO)마다 워커가 받은 요청 수·응답 시간 합·느린 요청·서버
  * 오류를 더한다. isolate마다 메모리에 모았다가 1분에 한 번 더하므로 요청마다 쓰지 않는다(status/metrics.ts). 35일 보관. */
-export const apiStatusBuckets = sqliteTable('api_status_buckets', {
+/** @deprecated T-11-662 OPS_DB(opsSchema.ts)로 옮겼다. 데이터를 옮긴 뒤 지운다. */
+export const apiStatusBucketsCoreLegacy = sqliteTable('api_status_buckets', {
   bucket: text('bucket').primaryKey(),
   requests: integer('requests').notNull().default(0),
   totalMs: integer('total_ms').notNull().default(0),
@@ -1164,7 +1166,8 @@ export const apiStatusBuckets = sqliteTable('api_status_buckets', {
  * T-11-331 앱·웹 오류. (KST 날짜 × 지문)마다 한 행이고 같은 오류는 count만 늘린다(status/clientErrors.ts).
  * 지문은 플랫폼 · 종류 · 숫자를 지운 문구 · 첫 코드 위치로 만든다. 세션 · 프로필은 남기지 않는다.
  */
-export const clientErrors = sqliteTable(
+/** @deprecated T-11-662 OPS_DB(opsSchema.ts)로 옮겼다. 데이터를 옮긴 뒤 지운다. */
+export const clientErrorsCoreLegacy = sqliteTable(
   'client_errors',
   {
     day: text('day').notNull(),
@@ -2484,7 +2487,8 @@ export const memberships = sqliteTable(
  * 운영 D1 값은 일일 cron `kpi` 단계가, 외부(GA4 · 광고 · 스토어) 값은 에이전트 Worker가 `/v1/internal/kpi`로 넣는다.
  * 대시보드는 이 표만 읽는다(화면을 열 때 운영 표에 집계 쿼리를 날리지 않는다). 설계: docs/tracking/admin-kpi-dashboard-design.md
  */
-export const kpiDaily = sqliteTable(
+/** @deprecated T-11-662 OPS_DB(opsSchema.ts)로 옮겼다. 데이터를 옮긴 뒤 지운다. */
+export const kpiDailyCoreLegacy = sqliteTable(
   'kpi_daily',
   {
     day: text('day').notNull(),

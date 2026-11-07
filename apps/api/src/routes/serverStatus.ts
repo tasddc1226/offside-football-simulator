@@ -2,7 +2,7 @@ import { ServerStatusSchema, type ServerStatus } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
-import type { AppEnv } from '../env.js';
+import { opsD1, type AppEnv } from '../env.js';
 import { DAY_MS } from '../time.js';
 import { ok } from './shared.js';
 
@@ -53,7 +53,7 @@ export async function loadServerStatus(db: D1Database, now: number): Promise<Ser
 export function registerServerStatusRoutes(app: Hono<AppEnv>): void {
   app.get(EDGE.serverStatus, async (c) => {
     const data = await edgeCached(c, EDGE.serverStatus, TTL, () =>
-      loadServerStatus(c.env.DB, Date.now()),
+      loadServerStatus(opsD1(c.env), Date.now()),
     );
     return ok(c, ServerStatusSchema, data, 200, `public, max-age=${TTL}`);
   });
