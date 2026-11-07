@@ -184,6 +184,15 @@ export const cup: Translation<CupMsgs> = {
     `Your team is over the ${p.division} cap. If it stays this way, you'll move to the division that fits your OVR at the draw.`,
   barShortBlock: (p) =>
     `While you're in the cup, you need at least ${p.min} of your own players in the starting lineup to save.`,
+  barPastBlock: (p) =>
+    `This cup is for this season's players only. Your cup lineup has ${p.n} past-season ${p.n === 1 ? 'player' : 'players'}, so it can't be saved.`,
+  barPastEntry: (p) =>
+    `This cup is for this season's players only. To enter, take ${p.n} past-season ${p.n === 1 ? 'player' : 'players'} out of your cup lineup.`,
+  barMakeSeasonCup: "Build a cup lineup from this season's players",
+  seasonCupName: (p) => `${p.badge} Cup XI`,
+  seasonCupMade: (p) => `'${p.name}' is now your cup lineup. Your team lineup stays the same.`,
+  seasonCupFull: 'Your presets are full. Delete one and try again.',
+  seasonCupEmpty: "You don't have any players from this season yet.",
   barShortEntry: (p) =>
     `To enter the cup, you need at least ${p.min} of your own players in the starting lineup.`,
   secMine: 'My cup',

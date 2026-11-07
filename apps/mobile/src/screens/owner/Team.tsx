@@ -65,7 +65,10 @@ import {
   slotsSynergy,
   synergyFocus,
   teamEditableIn,
+  pastInSlots,
+  seasonCupSlots,
 } from '@offside/app-core/teamOwner';
+import { cupText as CT } from '@offside/app-core/i18n/ko/cup';
 import { MARKET_TOAST, marketName, needsOwnerLogin } from '@offside/app-core/market';
 import { onRetirementSynced, pendingRetirementIds, retryOutboxNow } from '@offside/app-core/outbox';
 import { localCareerNames } from '@offside/game/hof-store';
@@ -122,7 +125,15 @@ import { CupLockNotice, useCup } from './TeamCup';
 import { cupLineupBar } from '@offside/app-core/cupLineupBar';
 import { TeamPresets } from './TeamPresets';
 import { EnhanceSheet } from './EnhanceSheet';
-import { cupPresetOf, loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
+import {
+  cupPresetOf,
+  loadPreset,
+  presetOf,
+  presetSummary,
+  withSeasonCupPreset,
+  type TeamPreset,
+} from '@offside/app-core/teamPresets';
+import { cardSeasonBadge } from '@offside/app-core/format';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { fixSlot, slotName } from '@offside/app-core/matchReport';
 import type { ReportLine } from '@offside/contracts/owner-team';
@@ -349,12 +360,14 @@ export default function Team() {
       ? cupLineupBar(
           cupState.cup,
           cupState.me,
+          // T-11-657 past: 이번 시즌 선수 컵이면 컵 명단에 든 지난 시즌 카드 수.
           cupPreset
             ? {
                 ovr: cupPreset.ovr ?? 0,
                 filled: cupPreset.filled ?? cupPreset.slots.filter(Boolean).length,
+                past: pastInSlots(cupPreset.slots, byId, season),
               }
-            : { ovr, filled },
+            : { ovr, filled, past: pastInSlots(slots, byId, season) },
           new Date().toISOString(),
         )
       : null;
@@ -600,6 +613,18 @@ export default function Team() {
     setTeam((t) => (t ? { ...t, presets: r.data.presets } : t));
     if (saved) toast(L.tpSaved);
     return true;
+  }
+  /** T-11-657 이번 시즌 카드만 자동 배치한 편성을 컵 명단 프리셋으로 둔다(팀 명단 · 초안은 그대로). */
+  async function makeSeasonCup() {
+    const ids = seasonCupSlots(slotCodes, players, season);
+    if (!ids.some(Boolean)) return toast(CT.seasonCupEmpty);
+    const name = CT.seasonCupName({ badge: cardSeasonBadge(season) });
+    const next = withSeasonCupPreset(
+      team?.presets ?? [],
+      presetOf(name, formation, ids, season > 0 ? positions : null),
+    );
+    if (!next) return toast(CT.seasonCupFull);
+    if (await persistPresets(next)) toast(CT.seasonCupMade({ name }));
   }
   function applyPreset(p: TeamPreset) {
     const r = loadPreset(p, new Set(players.map((x) => x.careerId)));
@@ -1011,7 +1036,14 @@ export default function Team() {
         {editable || team ? (
           <>
             {editable && !legacy ? (
-              <CupLockNotice state={cupState} bar={cupBar} preset={cupPreset?.name ?? null} />
+              <CupLockNotice
+                state={cupState}
+                bar={cupBar}
+                preset={cupPreset?.name ?? null}
+                onSeason={
+                  cupBar?.past && !cupState.me?.locked ? () => void makeSeasonCup() : undefined
+                }
+              />
             ) : null}
             <Card gap={8}>
               <View
@@ -1473,6 +1505,21 @@ export default function Team() {
           locked={!!cupState.me?.locked && !cupPreset}
           cupLocked={!!cupState.me?.locked}
           cup={season > 0}
+          league={
+            team
+              ? presetSummary(
+                  presetOf(
+                    '',
+                    team.formation as FormationId,
+                    team.slots.map((x) => x.careerId),
+                    team.layout ?? null,
+                  ),
+                )
+              : null
+          }
+          seasonOnly={!!cupState.cup?.cup.seasonCardsOnly && cupState.cup?.cup.season === season}
+          cupPast={cupPreset ? pastInSlots(cupPreset.slots, byId, season) : 0}
+          onSeason={() => void makeSeasonCup()}
           draft={(presetName) =>
             presetOf(presetName, formation, slots, season > 0 ? positions : null)
           }

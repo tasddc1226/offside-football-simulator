@@ -178,6 +178,15 @@ export const cup: Translation<CupMsgs> = {
     `${p.division}の上限を超えています。このままだと抽選でOVRに合う部門に移ります。`,
   barShortBlock: (p) =>
     `カップ参加中は、スタメンに自分の選手を${p.min}人以上置かないと保存できません。`,
+  barPastBlock: (p) =>
+    `今回のカップは今シーズンの選手だけが出場できます。カップメンバーに過去シーズンの選手が${p.n}人いるため保存できません。`,
+  barPastEntry: (p) =>
+    `今回のカップは今シーズンの選手だけが出場できます。申し込むにはカップメンバーから過去シーズンの選手${p.n}人を外してください。`,
+  barMakeSeasonCup: '今シーズンの選手でカップメンバーを作る',
+  seasonCupName: (p) => `${p.badge}カップ`,
+  seasonCupMade: (p) => `「${p.name}」をカップメンバーにしました。チームメンバーはそのままです。`,
+  seasonCupFull: 'プリセットがいっぱいです。1つ削除してからもう一度押してください。',
+  seasonCupEmpty: '今シーズンの選手がまだいません。',
   barShortEntry: (p) => `カップに申し込むには、スタメンに自分の選手が${p.min}人以上必要です。`,
   secMine: '自分の大会',
   secRules: 'ルール',

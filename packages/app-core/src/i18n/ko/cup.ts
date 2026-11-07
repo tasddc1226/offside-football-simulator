@@ -206,6 +206,17 @@ const ko = {
     `${p.division} 상한을 넘었어요. 이대로면 조 추첨 때 OVR에 맞는 구간으로 옮겨져요.`,
   barShortBlock: (p: { min: number }) =>
     `컵 참가 중에는 선발에 내 선수가 ${p.min}명 이상 있어야 저장할 수 있어요.`,
+  // T-11-657 이번 시즌 선수 컵 편성 안내
+  barPastBlock: (p: { n: number }) =>
+    `이번 컵은 이번 시즌 선수만 나가요. 컵 명단에 지난 시즌 선수 ${p.n}명이 있어 저장할 수 없어요.`,
+  barPastEntry: (p: { n: number }) =>
+    `이번 컵은 이번 시즌 선수만 나가요. 신청하려면 컵 명단에서 지난 시즌 선수 ${p.n}명을 빼야 해요.`,
+  barMakeSeasonCup: '이번 시즌 선수로 컵 명단 만들기',
+  seasonCupName: (p: { badge: string }) => `${p.badge} 컵 명단`,
+  seasonCupMade: (p: { name: string }) =>
+    `'${p.name}' 프리셋을 컵 명단으로 정했어요. 팀 명단은 그대로예요.`,
+  seasonCupFull: '프리셋이 가득 찼어요. 하나를 지운 뒤 다시 눌러 주세요.',
+  seasonCupEmpty: '이번 시즌 선수가 아직 없어요.',
   barShortEntry: (p: { min: number }) =>
     `컵에 신청하려면 선발에 내 선수가 ${p.min}명 이상 있어야 해요.`,
   // 대회 화면
