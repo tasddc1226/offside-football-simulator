@@ -31,7 +31,13 @@ import { cardTrades } from '../db/repos/market.js';
 import { careersByIds, eligibleMap } from '../db/repos/ownerTeams.js';
 import { buildLineup, lineupOvr } from '../team/sim.js';
 import { marketRatio } from '@offside/contracts/market-value';
-import { createTestD1, syncCards, type TestD1 } from '../test/d1.js';
+import {
+  createTestD1,
+  fundLedgerMismatches,
+  seedFunds,
+  syncCards,
+  type TestD1,
+} from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
 
 const StateRes = successEnvelope(EnhanceStateResponseSchema);
@@ -50,6 +56,8 @@ describe('카드 강화 (T-11-373)', () => {
     vi.setSystemTime(new Date('2026-09-30T03:00:00.000Z'));
   });
   afterEach(async () => {
+    // T-11-660 강화 비용 차감은 거래 기록과 함께 남는다.
+    expect(await fundLedgerMismatches(ctx)).toEqual([]);
     vi.restoreAllMocks();
     vi.useRealTimers();
     await ctx.dispose();
@@ -113,8 +121,7 @@ describe('카드 강화 (T-11-373)', () => {
     });
     return id;
   }
-  const fund = (profileId: string, balance: number) =>
-    ctx.db.insert(ownerFunds).values({ profileId, balance, updatedAt: '2026-09-30T00:00:00.000Z' });
+  const fund = (profileId: string, balance: number) => seedFunds(ctx, profileId, balance);
   const balanceOf = async (profileId: string) =>
     (await ctx.db.select().from(ownerFunds).where(eq(ownerFunds.profileId, profileId)))[0]!.balance;
   const cardOf = async (id: string) =>

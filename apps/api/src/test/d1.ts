@@ -142,3 +142,34 @@ export async function syncCards(ctx: TestD1, cardValue: number | null = null): P
     .bind(cardValue)
     .run();
 }
+
+/**
+ * T-11-660 자금 거래 기록이 잔액과 맞지 않는 구단주(sum(delta) ≠ balance). 잔액을 바꾸는 모든 batch가 기록을 남기면 빈 배열이다.
+ * 테스트가 자금을 직접 넣을 때는 `seedFunds`로 opening 기록도 함께 넣는다.
+ */
+export async function fundLedgerMismatches(ctx: TestD1) {
+  return (
+    await ctx.env.DB.prepare(
+      `SELECT f.profile_id AS profileId, f.balance,
+              coalesce((SELECT sum(delta) FROM owner_fund_ledger l WHERE l.profile_id = f.profile_id), 0) AS total
+         FROM owner_funds f WHERE f.balance <> total`,
+    ).all<{ profileId: string; balance: number; total: number }>()
+  ).results;
+}
+
+/** 테스트용 자금 넣기(잔액 + opening 기록). */
+export async function seedFunds(
+  ctx: TestD1,
+  profileId: string,
+  balance: number,
+  at = '2026-09-30T00:00:00.000Z',
+) {
+  await ctx.env.DB.batch([
+    ctx.env.DB.prepare(
+      `INSERT INTO owner_funds (profile_id, balance, updated_at) VALUES (?, ?, ?)`,
+    ).bind(profileId, balance, at),
+    ctx.env.DB.prepare(
+      `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, created_at) VALUES (?, 'opening', ?, ?, ?)`,
+    ).bind(profileId, balance, balance, at),
+  ]);
+}

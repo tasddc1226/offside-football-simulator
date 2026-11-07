@@ -51,6 +51,7 @@ import {
   careerSeasons,
   goalsPlusAssists,
   managerCareers,
+  ownerFundLedger,
   ownerFunds,
   ownerTeams,
   profiles,
@@ -434,6 +435,36 @@ export async function putRetirement(
                 updatedAt: sql`excluded.updated_at`,
               },
             }),
+          // T-11-660 자금 거래 기록(위와 같은 조건 — 카드 insert보다 먼저라 첫 은퇴일 때만 남는다).
+          db.insert(ownerFundLedger).select(
+            db
+              .select({
+                // drizzle insert-select는 표의 모든 칼럼을 순서대로 고르게 한다(id는 NULL이면 새 번호).
+                id: sql<number>`NULL`.as('id'),
+                profileId: careers.profileId,
+                kind: sql<string>`'retire_bonus'`.as('kind'),
+                delta: sql<number>`${bonus}`.as('delta'),
+                balance:
+                  sql<number>`(SELECT balance FROM owner_funds WHERE profile_id = ${careers.profileId})`.as(
+                    'balance',
+                  ),
+                ref: careers.id,
+                createdAt: sql<string>`${now}`.as('created_at'),
+              })
+              .from(careers)
+              .where(
+                and(
+                  eq(careers.id, careerId),
+                  isNotNull(careers.peak),
+                  notExists(
+                    db
+                      .select({ x: sql`1` })
+                      .from(cards)
+                      .where(eq(cards.careerId, careerId)),
+                  ),
+                ),
+              ),
+          ),
         ]
       : []),
     // T-11-080 카드 한 장. 위 update가 쓴 값을 복사한다(같은 커리어를 다시 보내도 PK라 한 장뿐).

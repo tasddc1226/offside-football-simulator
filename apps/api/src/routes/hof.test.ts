@@ -9,7 +9,7 @@ import { createApp } from '../app.js';
 import { cards, careers, ownerFunds } from '../db/schema.js';
 import { eq, inArray } from 'drizzle-orm';
 import { cardValue, releasePayout, retireValue, valueFor } from '@offside/contracts/market-value';
-import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
+import { createTestD1, fundLedgerMismatches, spyDb, type TestD1 } from '../test/d1.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
 import {
   issueCookie,
@@ -835,6 +835,15 @@ describe('공개 명예의 전당 /v1/hof', () => {
     });
     expect(await cardRows()).toHaveLength(3);
     expect(await funds()).toBe(bonuses[0]! + bonuses[2]!);
+    // T-11-660 장려금은 카드마다 거래 기록 한 줄(다시 보낸 은퇴는 기록도 늘지 않는다).
+    expect(await fundLedgerMismatches(ctx)).toEqual([]);
+    const ledger = await ctx.env.DB.prepare(
+      `SELECT kind, delta, ref FROM owner_fund_ledger ORDER BY id`,
+    ).all<{ kind: string; delta: number; ref: string }>();
+    expect(ledger.results.map((r) => [r.kind, r.delta])).toEqual([
+      ['retire_bonus', bonuses[0]],
+      ['retire_bonus', bonuses[2]],
+    ]);
   });
 
   it('T-10-100: 이 기능 전 은퇴 기록(value 없음)은 명예의 전당 조회 때 스냅샷으로 소급한다', async () => {

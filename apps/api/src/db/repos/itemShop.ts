@@ -112,6 +112,13 @@ async function buyItem(
         `UPDATE owner_funds SET balance = balance - ?, updated_at = ? WHERE profile_id = ? AND ${won}`,
       )
       .bind(b.price, b.now, b.profileId, b.id),
+    // T-11-660 자금 거래 기록(같은 조건, 차감 직후 잔액).
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT ?, 'item', -?, (SELECT balance FROM owner_funds WHERE profile_id = ?), ?, ? WHERE ${won}`,
+      )
+      .bind(b.profileId, b.price, b.profileId, b.id, b.now, b.id),
     ...(b.grant
       ? [grantItemStatement(d1, b.profileId, b.grant, 1, b.now, { sql: won, params: [b.id] })]
       : []),

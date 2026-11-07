@@ -154,6 +154,13 @@ export async function attemptEnhance(
         `UPDATE owner_funds SET balance = balance - ?, updated_at = ? WHERE profile_id = ? AND ${won}`,
       )
       .bind(a.cost, a.now, a.profileId, a.id),
+    // T-11-660 자금 거래 기록(같은 조건, 차감 직후 잔액).
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT ?, 'enhance', -?, (SELECT balance FROM owner_funds WHERE profile_id = ?), ?, ? WHERE ${won}`,
+      )
+      .bind(a.profileId, a.cost, a.profileId, a.careerId, a.now, a.id),
     d1
       .prepare(
         `UPDATE cards SET enhance = ?, enhance_fails = ?, updated_at = ?
