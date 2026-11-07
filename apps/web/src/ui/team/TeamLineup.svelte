@@ -5,7 +5,7 @@
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, SHAPE_IDS, presetLayout, positionedLayout, positionRole, shapeBase, matchShape, shapeLayout, slotRating, slotFit, type FormationId, type ShapeId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
-  import { attrLine, STAMINA_CELLS, salaryIn, staminaOf, synergyFocus, type LeagueFatigue, type salaryBar } from '@offside/app-core/teamOwner';
+  import { attrLine, STAMINA_CELLS, staminaOf, synergyFocus, type LeagueFatigue } from '@offside/app-core/teamOwner';
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { lockToggleable } from '@offside/app-core/market';
   import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
@@ -24,16 +24,15 @@
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, salary = null, fatigue = null, budget, onassign, onauto, onsave, onlock, onenhance, onpresets, focusSlot = $bindable(null) }:
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, fatigue = null, onassign, onauto, onsave, onlock, onenhance, onpresets, focusSlot = $bindable(null) }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
       teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean;
       /** T-11-436 컵 규칙에 걸려 서버가 거절할 이유(있으면 저장 버튼 옆에 보인다). */
       saveBlock?: string | null;
       /** T-11-376 지난 시즌 선수 급여 막대(프리시즌은 null). */
-      salary?: ReturnType<typeof salaryBar>; fatigue?: LeagueFatigue | null | undefined; budget: number; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onenhance?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
+      fatigue?: LeagueFatigue | null | undefined; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onenhance?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
   let shareData = $state<TeamShareData | null>(null);
-  let salaryOpen = $state(false);
   let pitch = $state<HTMLElement>();
   let search = $state('');
   let position = $state<PosGroup | 'all'>('all');
@@ -179,13 +178,6 @@
         <button class="ground-tool ground-share" aria-label={L.shareMakeAria} data-act="team-share-make" onclick={openShare}><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 13V2m-4 4 4-4 4 4M5 9H3v8h14V9h-2" /></svg><span>{L.share}</span></button>
       </div>
     </header>
-    {#if salary}
-      <button class="salary-bar" data-team-salary data-state={salary.state} aria-haspopup="dialog" aria-label="{salary.label} · {TC.salaryLeft({ n: salary.left })} · {TC.salaryOpen}" onclick={() => (salaryOpen = true)}>
-        <span class="salary-text"><b>{salary.label}</b><small>{salary.state === 'over' ? TC.salaryOver : TC.salaryLeft({ n: salary.left })}</small></span>
-        <span class="salary-track" aria-hidden="true"><span style:width="{Math.min(100, (salary.sum / Math.max(1, salary.budget)) * 100)}%"></span></span>
-        <span class="salary-help" aria-hidden="true">?</span>
-      </button>
-    {/if}
     <div class="ground-presets" class:few={season <= 0} role="group" aria-label={L.presetsLabel}>
       {#each FORMATION_IDS as f (f)}<button class="hof-sort" aria-pressed={!layout && formation === f} data-formation={f} disabled={!editable} onclick={() => preset(f)}>{f}</button>{/each}
       {#if season > 0}{#each SHAPE_IDS as id (id)}<button class="hof-sort" aria-pressed={shapeOn === id} data-formation={id} disabled={!editable} onclick={() => shape(id)}>{id}</button>{/each}{/if}
@@ -223,7 +215,7 @@
 
 {#if editable}
   <section class="locker-room card" data-team-locker class:drop-active={drag?.moving && drag.from !== null} aria-label={L.lockerTitle}>
-    <div class="locker-head"><div><h2>{L.lockerTitle}</h2><p class="muted fs-sm">{L.lockerCount({ n: players.length, starters: filled, bench: players.length - filled })}{#if salary} · <span class="locker-salary" data-locker-salary>{TC.salaryLeft({ n: salary.left })}</span>{/if}</p></div><span class="locker-count">{roster.length}</span></div>
+    <div class="locker-head"><div><h2>{L.lockerTitle}</h2><p class="muted fs-sm">{L.lockerCount({ n: players.length, starters: filled, bench: players.length - filled })}</p></div><span class="locker-count">{roster.length}</span></div>
     <p class="muted fs-sm">{L.lockerNoteWeb}</p>
     {#if players.length}
       <div class="locker-tools">
@@ -240,16 +232,13 @@
         {#each roster as p (p.careerId)}
           {@const at = slots.indexOf(p.careerId)}
           {@const country = NATION_BY_CODE.get(p.nation ?? DEFAULT_NATION)}
-          {@const pay = salaryIn(p, season)}
-          {@const wontFit = at < 0 && pay > 0 && !!salary && salary.sum + pay > salary.budget}
           {@const stamina = staminaOf(fatigue, p.careerId)}
-          <article class="locker-player" class:chosen={selectedPlayer === p.careerId} class:salary-out={wontFit} data-locker-player={p.careerId}>
+          <article class="locker-player" class:chosen={selectedPlayer === p.careerId} data-locker-player={p.careerId}>
             <button class="locker-select" aria-pressed={selectedPlayer === p.careerId} aria-label={L.lockerPickAria({ who: `${nameOf(p)}${country ? ` · ${tn(country.ko)}` : ''}`, pos: tn(POS_LABEL[p.pos]), peak: p.peak, attrs: attrLine(p) ?? L.noAttrs })} onclick={() => pickPlayer(p.careerId)} onpointerdown={(e) => { if (e.pointerType === 'mouse') start(e, p.careerId, null); }}>
               <PlayerCard player={p} name={nameOf(p)} rating={p.peak} role={detailPosOf(p)} />
             </button>
             <div class="roster-row">
               <span class="roster-state" class:starting={at >= 0}>{at >= 0 ? L.rosterStarting({ slot: positions[at]!.slot }) : L.rosterBench}</span>
-              {#if pay > 0}<span class="salary-chip" class:over={wontFit} data-salary-chip={pay} data-salary-over={wontFit ? '' : undefined}>{wontFit ? `${TC.salaryChip({ n: pay })} · ${TC.salaryOver}` : TC.salaryChip({ n: pay })}</span>{/if}
               {#if stamina}<span class="stamina" data-stamina={stamina.left} role="img" title={TC.fatigueHint} aria-label={TC.staminaAria({ left: stamina.left, total: STAMINA_CELLS, pct: stamina.pct })}><small aria-hidden="true">{TC.staminaLabel}</small><span class="stamina-bar" aria-hidden="true">{#each { length: STAMINA_CELLS } as _, k (k)}<i class:on={k < stamina.left}></i>{/each}</span></span>{/if}
               {#if team}<button class="lock-toggle" aria-label={LC.sharePlayerAria({ name: nameOf(p) })} title={LC.sharePlayerAct} data-act="player-lounge-share" onclick={() => void shareToLounge({ kind: 'player', careerId: p.careerId })}><svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>{/if}
               {#if onlock}<button class="lock-toggle" class:on={p.locked} aria-pressed={!!p.locked} aria-label={L.lockerLockAria({ name: nameOf(p) })} data-act="lock" disabled={!lockToggleable(p)} onclick={() => onlock(p)}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d={p.locked ? 'M5.5 7V5a2.5 2.5 0 0 1 5 0v2' : 'M5.5 7V5a2.5 2.5 0 0 1 4.9-.7'} /></svg><span>{p.locked ? L.lockerLocked : p.listing ? L.lockerListed : L.lockerLock}</span></button>{/if}
@@ -282,7 +271,6 @@
   </div>
 {/if}
 {#if shareData}<TeamShare data={shareData} onclose={() => (shareData = null)} />{/if}
-{#if salaryOpen && salary}{#await import('./SalaryGuide.svelte') then { default: SalaryGuide }}<SalaryGuide sum={salary.sum} {budget} onclose={() => (salaryOpen = false)} />{/await}{/if}
 
 <style>
   .ground-panel {padding:0;background:var(--surface);border: 1px solid transparent;border-radius:var(--radius-lg);overflow:hidden;}
@@ -296,22 +284,9 @@
   .ground-tool:disabled {opacity:.5;cursor:default;}
   .ground-auto {color:var(--accent-text);}
   .ground-share svg {width:15px;height:15px;stroke:currentColor;stroke-width:1.5;fill:none;}
-  .salary-bar {display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;width:100%;min-height:44px;padding:10px 14px;border:0;border-top:1px solid var(--line);background:none;color:var(--ink);font:inherit;text-align:left;cursor:pointer;--salary:var(--good);}
-  .salary-bar[data-state='near'], .salary-bar[data-state='full'] {--salary:var(--warn);}
-  .salary-bar[data-state='over'] {--salary:var(--bad);}
-  .salary-text {display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:0 8px;min-width:0;}
-  .salary-text b {font-size:13px;font-weight:600;}
-  .salary-text small {font-size:12px;color:var(--salary);font-weight:600;white-space:nowrap;}
-  .salary-track {grid-column:1 / -1;grid-row:2;height:6px;border-radius:999px;background:var(--line);overflow:hidden;}
-  .salary-track span {display:block;height:100%;border-radius:inherit;background:var(--salary);}
-  .salary-help {display:grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--line);font-size:11px;font-weight:700;color:var(--muted);}
-  .salary-chip {display:inline-block;padding:1px 7px;border-radius:999px;border:1px solid var(--line);font-size:.68rem;font-weight:600;color:var(--muted);white-space:nowrap;}
-  .salary-chip.over {border-color:var(--bad);color:var(--bad);}
   .stamina {display:inline-flex;align-items:center;gap:4px;--stamina:var(--good);} .stamina[data-stamina='3'],.stamina[data-stamina='2'] {--stamina:var(--warn);} .stamina[data-stamina='1'] {--stamina:var(--bad);}
   .stamina small {font-size:.68rem;font-weight:600;color:var(--muted);}
   .stamina-bar {display:inline-flex;gap:2px;} .stamina-bar i {width:7px;height:10px;border-radius:2px;background:var(--line);} .stamina-bar i.on {background:var(--stamina);}
-  .locker-player.salary-out .locker-select {opacity:.55;}
-  .locker-salary {white-space:nowrap;}
   .ground-presets {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:10px 14px 14px;border-top:1px solid var(--line);}
   .ground-presets.few {grid-template-columns:repeat(3,minmax(0,1fr));}
   .ground-presets .hof-sort {position:relative;min-width:0;min-height:36px;padding:0 2px;border-radius:var(--radius-sm);font-size:13px;font-variant-numeric:tabular-nums;white-space:nowrap;}

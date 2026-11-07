@@ -39,7 +39,6 @@ import {
   type TeamPlayer,
 } from '@offside/app-core/api/team';
 import { enhanceLossNote } from '@offside/app-core/cardEnhance';
-import { marketSalaryText } from '@offside/app-core/salary';
 import {
   MARKET_POS_FILTERS,
   marketDetailFilters,
@@ -1990,12 +1989,6 @@ export default function Market() {
                   </View>
                 ))}
               </View>
-              <Txt
-                testID="market-salary"
-                style={{ fontSize: rem(0.75), fontWeight: '600', color: c.onPitch, opacity: 0.85 }}
-              >
-                {marketSalaryText(buying.card, season)}
-              </Txt>
             </View>
             <View
               style={{

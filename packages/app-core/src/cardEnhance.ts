@@ -157,8 +157,6 @@ export function enhanceErrorText(e: { reason?: string | undefined; message?: str
       return L.max;
     case 'CARD_LISTED':
       return L.listed;
-    case 'ENHANCE_SALARY':
-      return L.salary;
     case 'ENHANCE_STALE':
       return L.stale;
     default:

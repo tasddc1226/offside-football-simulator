@@ -8,10 +8,6 @@ import {
   assignSlot,
   attrLine,
   autoFillSlots,
-  pastSalaryIn,
-  salaryBar,
-  salaryBlocks,
-  salaryFullText,
   matchHintOf,
   outcomeOf,
   teamEditableIn,
@@ -67,7 +63,7 @@ describe('assignSlot', () => {
 
 describe('autoFillSlots', () => {
   it('선수가 없으면 11자리 모두 비운다', () => {
-    const next = autoFillSlots(slots433, [], 0);
+    const next = autoFillSlots(slots433, []);
     expect(next).toHaveLength(11);
     expect(next.every((s) => s === null)).toBe(true);
   });
@@ -77,7 +73,7 @@ describe('autoFillSlots', () => {
       player('st', { pos: 'FW', dpos: 'ST', peak: 85 }),
       player('cb', { pos: 'DF', dpos: 'CB', peak: 75 }),
     ];
-    const next = autoFillSlots(slots433, players, 0);
+    const next = autoFillSlots(slots433, players);
     expect(next[slots433.indexOf('GK')]).toBe('gk');
     expect(next[slots433.indexOf('ST')]).toBe('st');
     expect(next[slots433.indexOf('CB')]).toBe('cb');
@@ -85,100 +81,35 @@ describe('autoFillSlots', () => {
     expect(new Set(used).size).toBe(used.length);
   });
   it('그 자리 실력이 유스 선수(50) 이하면 채우지 않는다', () => {
-    const next = autoFillSlots(slots433, [player('weak', { pos: 'GK', peak: 50 })], 0);
+    const next = autoFillSlots(slots433, [player('weak', { pos: 'GK', peak: 50 })]);
     expect(next.every((s) => s === null)).toBe(true);
     // 골키퍼가 아닌 필드 자리에서는 0.3 적합도라 80 → 24 로 떨어져 GK 자리만 채운다.
-    const gkOnly = autoFillSlots(slots433, [player('gk', { pos: 'GK', peak: 80 })], 0);
+    const gkOnly = autoFillSlots(slots433, [player('gk', { pos: 'GK', peak: 80 })]);
     expect(gkOnly.filter((s) => s !== null)).toEqual(['gk']);
     expect(gkOnly[slots433.indexOf('GK')]).toBe('gk');
   });
   it('선수가 11명보다 적으면 남는 자리는 null 로 둔다', () => {
-    const next = autoFillSlots(
-      slots433,
-      [player('st', { peak: 80 }), player('st2', { peak: 79 })],
-      0,
-    );
+    const next = autoFillSlots(slots433, [player('st', { peak: 80 }), player('st2', { peak: 79 })]);
     expect(next.filter((s) => s !== null)).toHaveLength(2);
   });
   it('실력이 같으면 FILL_ORDER 가 앞선 자리(ST)를 먼저 채운다', () => {
     // 같은 세부 포지션이 없는 공격수 한 명 — ST(0.95)와 W(0.95)가 같아 ST 자리를 차지한다.
-    const next = autoFillSlots(['W', 'ST'], [player('fw', { peak: 80 })], 0);
+    const next = autoFillSlots(['W', 'ST'], [player('fw', { peak: 80 })]);
     expect(next[1]).toBe('fw');
     expect(next[0]).toBeNull();
   });
 
-  it('T-11-376 지난 시즌 선수는 급여 합이 예산(60) 안에서만 채우고, 넘는 배치를 알려 준다', () => {
-    // OVR 96 이상은 급여 20 — 예산 60이면 예전 와일드카드처럼 3명까지 든다.
-    const old = [1, 2, 3, 4].map((i) => player(`old${i}`, { peak: 96, season: 0 }));
-    const fresh = player('new', { peak: 75, season: 1 });
-    const next = autoFillSlots(slots433, [...old, fresh], 1, 60);
-    const byId = new Map([...old, fresh].map((p) => [p.careerId, p]));
-    expect(pastSalaryIn(next, byId, 1)).toBe(60);
-    expect(next.filter((id) => id?.startsWith('old'))).toHaveLength(3);
-    expect(next).toContain('new');
-    const free = next.indexOf(null);
-    const over = assignSlot(next, free, 'old4');
-    expect(salaryBlocks(next, over, byId, 1, 60)).toBe(true);
-    expect(salaryFullText(over, 'old4', byId, 1, 60)).toBe(
-      '이 선수 급여(20)가 남은 예산(0)보다 커요. 지난 시즌 선수를 빼거나 이번 시즌 선수로 채워 주세요.',
-    );
-    // 이미 든 선수끼리 자리를 바꾸는 건 괜찮다. 이번 시즌 선수는 급여가 없다.
-    expect(salaryBlocks(next, assignSlot(next, next.indexOf('old1'), 'old2'), byId, 1, 60)).toBe(
-      false,
-    );
-    expect(salaryBar(next, byId, 1, 60)).toMatchObject({
-      sum: 60,
-      left: 0,
-      state: 'full',
-      label: '지난 시즌 선수 급여 60 / 60',
-    });
-    expect(salaryBar(next, byId, 0, 60)).toBeNull();
-    expect(cardSeasonBadge(0)).toBe('PRE');
-    expect(cardSeasonBadge(2)).toBe('S2');
-  });
-
-  it('T-11-376 예산을 내린 뒤 넘은 선발도 급여를 줄이는 바꾸기는 막지 않는다', () => {
-    const a = player('a', { peak: 96, season: 0 });
-    const b = player('b', { peak: 90, season: 0 });
-    const byId = new Map([a, b].map((p) => [p.careerId, p]));
-    const slots = ['a', null, null, null, null, null, null, null, null, null, null];
-    expect(salaryBar(slots, byId, 1, 15)?.state).toBe('over');
-    expect(salaryBlocks(slots, assignSlot(slots, 0, 'b'), byId, 1, 15)).toBe(false);
-    expect(salaryBlocks(slots, assignSlot(slots, 1, 'b'), byId, 1, 15)).toBe(true);
-  });
-
-  it('T-11-376 OVR 85~87(급여 6) 지난 시즌 선수는 예산 60이면 10명까지 든다', () => {
+  it('지난 시즌 선수도 시즌과 상관없이 몇 명이든 채운다(급여 예산 없음)', () => {
     const old = Array.from({ length: 11 }, (_, i) =>
       player(`m${i}`, {
         pos: i === 0 ? 'GK' : i < 5 ? 'DF' : i < 8 ? 'MF' : 'FW',
-        peak: 85,
+        peak: 99,
         season: 0,
       }),
     );
-    const byId = new Map(old.map((p) => [p.careerId, p]));
-    const next = autoFillSlots(slots433, old, 1, 60);
-    expect(next.filter((x) => x !== null)).toHaveLength(10);
-    expect(pastSalaryIn(next, byId, 1)).toBe(60);
-    // T-11-450 기본 예산 80이면 11명(급여 66) 모두 든다.
-    expect(autoFillSlots(slots433, old, 1).filter((x) => x !== null)).toHaveLength(11);
-  });
-
-  it('T-11-376 예산이 넉넉하면 제한 없을 때와 같은 선발, 빠듯하면 급여 대비 센 조합을 고른다', () => {
-    const players = [
-      player('gk', { pos: 'GK', peak: 88, season: 0 }),
-      player('cb', { pos: 'DF', dpos: 'CB', peak: 84, season: 1 }),
-      player('st', { pos: 'FW', dpos: 'ST', peak: 92, season: 0 }),
-      player('cm', { pos: 'MF', dpos: 'CM', peak: 80, season: 0 }),
-    ];
-    expect(autoFillSlots(slots433, players, 1)).toEqual(autoFillSlots(slots433, players, 1, 1000));
-    // 예산 20: OVR 96 한 명(20)보다 OVR 90 두 명(10 + 10)이 합이 더 세다.
-    const tight = [
-      player('star', { pos: 'FW', dpos: 'ST', peak: 96, season: 0 }),
-      player('fw90', { pos: 'FW', dpos: 'ST', peak: 90, season: 0 }),
-      player('mf90', { pos: 'MF', dpos: 'CM', peak: 90, season: 0 }),
-    ];
-    const next = autoFillSlots(['ST', 'CM'], tight, 1, 20);
-    expect(next).toEqual(['fw90', 'mf90', ...Array(9).fill(null)]);
+    expect(autoFillSlots(slots433, old).filter((x) => x !== null)).toHaveLength(11);
+    expect(cardSeasonBadge(0)).toBe('PRE');
+    expect(cardSeasonBadge(2)).toBe('S2');
   });
 });
 

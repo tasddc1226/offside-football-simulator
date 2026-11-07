@@ -17,7 +17,7 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   balance: 'クラブ資金',
   ovr: (p) => `強化OVR +${p.now} → +${p.next}`,
   effectNote:
-    '強化OVRはオーナーチームのポジション実力・チームOVR・給料に加わります。選手キャリアの最高OVRと記録は変わりません。',
+    '強化OVRはオーナーチームのポジション実力・チームOVRに加わります。選手キャリアの最高OVRと記録は変わりません。',
   fxLabel: 'カード効果',
   fx1: '芝',
   fx2: '照明塔',
@@ -44,8 +44,6 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
     `強化に失敗し、1段階下がりました（+${p.from} → +${p.to}）。`,
   max: '最高段階です。',
   short: 'クラブ資金が足りません。',
-  salary:
-    '強化に成功するとスタメンの給与が予算を超えます。スタメンを変更してからもう一度お試しください。',
   closed: '現在カード強化はお休み中です。',
   listed: '出品中の選手は強化できません。',
   stale: '強化の状態が変わりました。最新の状態を読み込みました。',

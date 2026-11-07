@@ -39,6 +39,7 @@ import {
   matchScore,
   usesRankLadder,
   shapeOf,
+  LEGACY_NO_SALARY_BUDGET,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
@@ -95,7 +96,6 @@ import {
   activeBalanceQuery,
   balanceVersionOf,
   matchRechargeFrom,
-  pastSalaryBudgetFrom,
   enhanceOpenFrom,
   leagueFatigueFrom,
 } from '../db/repos/balance.js';
@@ -334,7 +334,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
         ...matchAllowance([...played, ...openLive], now, matchRechargeFrom(balance)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
-        pastSalaryBudget: pastSalaryBudgetFrom(balance, season),
+        // 급여 예산은 없앴다. OTA 전의 옛 앱이 편성을 막지 않게 닿지 않는 값을 보낸다.
+        pastSalaryBudget: LEGACY_NO_SALARY_BUDGET,
         // T-11-373 강화 버튼을 보일지(이미 읽은 활성 밸런스 한 줄).
         enhanceOpen: enhanceOpenFrom(balance),
         founder: founder.length > 0,

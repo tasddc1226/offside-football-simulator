@@ -35,7 +35,7 @@ export const market: Translation<MarketMsgs> = {
   myListing: '我的上架',
   openListing: (p) => `查看簽下${p.name}`,
   cardMeta: (p) => `傳奇 ${p.score} · 轉會${p.transfers}次`,
-  pastCardMeta: (p) => `${p.season} · 薪資 ${p.salary} · ${p.meta}`,
+  pastCardMeta: (p) => `${p.season} · ${p.meta}`,
   listFailed: '無法載入市場。',
   reload: '重新載入',
   more: '查看更多',

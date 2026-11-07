@@ -45,8 +45,7 @@ const ko = {
   openListing: (p: { name: string }) => `${p.name} 영입 보기`,
   cardMeta: (p: { score: string; transfers: number }) =>
     `레전드 ${p.score} · 이적 ${p.transfers}회`,
-  pastCardMeta: (p: { season: string; salary: number; meta: string }) =>
-    `${p.season} · 급여 ${p.salary} · ${p.meta}`,
+  pastCardMeta: (p: { season: string; meta: string }) => `${p.season} · ${p.meta}`,
   listFailed: '시장을 불러오지 못했어요.',
   reload: '다시 불러오기',
   more: '더 보기',

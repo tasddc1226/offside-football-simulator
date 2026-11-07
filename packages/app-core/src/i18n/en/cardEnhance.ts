@@ -17,7 +17,7 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   balance: 'Club funds',
   ovr: (p) => `Enhance OVR +${p.now} → +${p.next}`,
   effectNote:
-    "Enhance OVR adds to slot ratings, team OVR and wages for your club. The player's career peak OVR and records stay the same.",
+    "Enhance OVR adds to slot ratings and team OVR for your club. The player's career peak OVR and records stay the same.",
   fxLabel: 'Card effect',
   fx1: 'Turf',
   fx2: 'Floodlight',
@@ -44,8 +44,6 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
     `The attempt failed and the card dropped a level (+${p.from} → +${p.to}).`,
   max: 'This card is at the highest level.',
   short: 'Not enough club funds.',
-  salary:
-    "Enhancing this player would put your lineup's wages over budget. Change the lineup and try again.",
   closed: 'Card enhance is closed right now.',
   listed: "Players on the transfer list can't be enhanced.",
   stale: 'The enhance status changed. We loaded the latest one.',
