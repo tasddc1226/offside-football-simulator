@@ -27,6 +27,7 @@ import {
 import {
   ACH_SEASON_GIFT,
   AD_FREE_THANKS_GIFT,
+  UPDATE_THANKS_GIFT,
   RECORD_SEASON_GIFT,
 } from '@offside/contracts/owner-team';
 import { leagueLineupLocked } from '../team/league.js';
@@ -85,6 +86,7 @@ import {
 import { claimSeasonGift, ownerItemsOf, spendItem } from '../db/repos/iap.js';
 import { seasonAchGiftOf } from '../team/ownerAchievements.js';
 import { adFreeThanksGiftOf } from '../team/adFreeThanksGift.js';
+import { updateThanksGiftOf } from '../team/updateThanksGift.js';
 import { seasonRecordGiftOf } from '../team/seasonRecordGift.js';
 import { countOpenListingsAmong } from '../db/repos/market.js';
 import { newId } from '../db/ids.js';
@@ -824,16 +826,28 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
   // T-11-472 구단주 선물(T-11-275)은 없앴다 — 옛 앱이 그 id로 받기를 누르면 409 GIFT_CLAIMED로 카드를 닫는다.
   // T-11-487 업적 보상을 받았거나 없으면 시즌 기록 보상(리롤권 · 갈래별 내역)을 싣는다 — 그 카드를 그리는 기기(?v=2)만.
   // T-11-517 그다음 광고 제거 구매 감사 선물 — 그 문구를 아는 기기(?v=3)만.
+  // T-11-664 업데이트 감사 선물은 기간이 짧아 맨 앞에 싣는다 — 그 문구를 아는 기기(?v=4)만.
   app.get('/v1/items/gift', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const now = nowIso();
+    const v = Number(c.req.query('v') ?? 1);
+    if (v >= 4) {
+      const upd = await updateThanksGiftOf(db, me.id, now);
+      if (upd)
+        return ok(
+          c,
+          HomeGiftResponseSchema,
+          { gift: { id: UPDATE_THANKS_GIFT.id, kind: 'updateThanks', ...upd } },
+          200,
+          NO_STORE,
+        );
+    }
     const r = await seasonAchGiftOf(db, me, now);
     const g = ACH_SEASON_GIFT;
     let gift: HomeGiftResponse['gift'] = r
       ? { id: g.id, kind: 'achSeason', season: g.season, ...r }
       : null;
-    const v = Number(c.req.query('v') ?? 1);
     if (!gift && v >= 2) {
       const rec = await seasonRecordGiftOf(db, me.id, now);
       if (rec)
@@ -864,6 +878,9 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     } else if (id === RECORD_SEASON_GIFT.id) {
       const rec = await seasonRecordGiftOf(db, me.id, now);
       if (rec) items = await claimSeasonGift(db, me.id, RECORD_SEASON_GIFT.id, rec.total, now);
+    } else if (id === UPDATE_THANKS_GIFT.id) {
+      const upd = await updateThanksGiftOf(db, me.id, now);
+      if (upd) items = await claimSeasonGift(db, me.id, UPDATE_THANKS_GIFT.id, upd, now);
     } else if (id === AD_FREE_THANKS_GIFT.id) {
       const thanks = await adFreeThanksGiftOf(db, me.id);
       if (thanks) items = await claimSeasonGift(db, me.id, AD_FREE_THANKS_GIFT.id, thanks, now);

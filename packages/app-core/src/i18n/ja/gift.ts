@@ -25,6 +25,8 @@ export const gift: Translation<GiftMsgs> = {
   recordBallon: (p) => `バロンドール受賞選手${p.n}人`,
   adFreeTitle: '広告削除を先に購入していただきありがとうございます',
   adFreeSub: (p) => `感謝のプレゼントとして${itemsOf(p)}を受け取れます。`,
+  updateTitle: 'アップデート感謝のプレゼントが届きました',
+  updateSub: (p) => `11月9日まで${itemsOf(p)}を受け取れます。`,
   doneTitle: 'プレゼントを受け取りました',
   useHint:
     'リロール券は選手作成の候補引き直しで、強化券は選手タブのポテンシャル強化で、スカウト券は選手作成の候補選びで使います。',

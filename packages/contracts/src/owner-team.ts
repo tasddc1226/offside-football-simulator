@@ -673,6 +673,20 @@ export const AD_FREE_THANKS_GIFT = {
   scout: 0,
   reroll: 5,
 } as const;
+
+/**
+ * T-11-664 업데이트 감사 선물 — 급여 폐지 · 강화 유료화 안내 공지(2026-11-08)와 함께 로그인한 구단주에게 프리미엄 스카우트권
+ * 5장을 홈 선물 칸에서 한 번 준다(2026-11-08 사용자 결정). from 이상 until 미만(11-08 00:00 ~ 11-09 24:00 KST)에만 보인다.
+ * 기간이 짧아 홈 선물 칸에서 다른 선물보다 먼저 보여 준다.
+ */
+export const UPDATE_THANKS_GIFT = {
+  id: 'update-thanks-1108',
+  from: '2026-11-07T15:00:00.000Z',
+  until: '2026-11-09T15:00:00.000Z',
+  boost: 0,
+  scout: 5,
+  reroll: 0,
+} as const;
 export type RecordReward = { reroll: number; scout: number; boost: number };
 /** 명예의 전당 순위(구단주의 가장 높은 선수, 시즌 결산 hof_rank와 같은 순서) 단계. 10-25 1000위 레전드 점수 약 2,245. */
 export const RECORD_HOF_TIERS: readonly ({ maxRank: number } & RecordReward)[] = [
