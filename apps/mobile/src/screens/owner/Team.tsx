@@ -1039,7 +1039,9 @@ export default function Team() {
                 state={cupState}
                 bar={cupBar}
                 preset={cupPreset?.name ?? null}
-                onSeason={cupBar?.past && !cupState.me?.locked ? makeSeasonCup : undefined}
+                onSeason={
+                  cupBar?.past && !cupState.me?.locked ? () => void makeSeasonCup() : undefined
+                }
               />
             ) : null}
             <Card gap={8}>

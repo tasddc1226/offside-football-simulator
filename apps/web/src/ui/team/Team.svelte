@@ -687,7 +687,7 @@
       {:else if restoredDraft && dirty}
         <section class="card draft-notice" role="status"><p>{L.draftRestoredWeb}</p><button class="btn btn-sm" onclick={discardDraft} data-act="team-draft-discard">{L.draftDiscardWeb}</button></section>
       {/if}
-      {#if editable && (cupBar || (cupBand && (cupBand.locked || cupBand.when)))}<CupLineupBand locked={!!cupBand?.locked} when={cupBand?.when ?? null} bar={cupBar} preset={cupPreset?.name ?? null} onseason={cupBar?.past && !cupBand?.locked ? makeSeasonCup : undefined} />{/if}
+      {#if editable && (cupBar || (cupBand && (cupBand.locked || cupBand.when)))}<CupLineupBand locked={!!cupBand?.locked} when={cupBand?.when ?? null} bar={cupBar} preset={cupPreset?.name ?? null} onseason={cupBar?.past && !cupBand?.locked ? () => void makeSeasonCup() : undefined} />{/if}
       <TeamHead
         {team}
         {logo}
