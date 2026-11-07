@@ -433,6 +433,8 @@
             {/each}
           </div>
           <p class="muted fs-sm">{L.focusMeaning}</p>
+          <!-- T-11-651 고른 주력 조합으로 정해지는 유형을 바로 보여 준다(은퇴 카드에 남는 유형). -->
+          <p class="fs-sm focus-type" data-focus-type={ovrFocus.typeId}>{ovrFocus.typeLine}</p>
         </div>
         <details class="ovr-more" data-testid="ovr-guide">
           <summary class="disc-row"><span>{ovrFocus.title}: {ovrFocus.groups}</span><span class="disc-chev" aria-hidden="true"></span></summary>
@@ -582,7 +584,7 @@
             {:else}
               <span class="muted" data-cand-potential={i}>{L.potentialLocked}</span>
             {/if}
-            <span class="cc-scout">“{scoutLine(C.pos, cand.attrs)}”</span>
+            <span class="cc-scout">“{scoutLine(C.pos, cand.attrs, C.focus)}”</span>
             {#if appState.candidatePick === i}
             <span class="cc-detail" transition:slide={{ duration: dur(360), easing: cubicOut }}>
             <span class="muted fs-sm" data-cand-edge={i}>{candidateEdge(C.pos, appState.candidates, i)}</span>
@@ -752,6 +754,7 @@
 .dpos-opt { align-items: center; padding: 4px 6px; text-align: center; font-size: var(--fs-label); line-height: 1.2; word-break: keep-all; }
 .dpos-panel { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 3px solid var(--progress); font-size: var(--fs-label); line-height: 1.4; }
 .focus-opt b.ovr-core { text-decoration: underline; text-underline-offset: 3px; }
+.focus-type { font-weight: 600; }
 .ovr-more .stack { gap: 6px; padding-bottom: 8px; }
 .ovr-more p { margin: 0; }
 .trait-list { gap: 8px; }

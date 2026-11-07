@@ -961,6 +961,10 @@ export default function Create() {
                       <Txt v="sm" tone="muted">
                         {L.focusMeaning}
                       </Txt>
+                      {/* T-11-651 고른 주력 조합으로 정해지는 유형을 바로 보여 준다(은퇴 카드에 남는 유형). */}
+                      <Txt v="sm" testID={`focus-type-${ovrFocus.typeId}`}>
+                        {ovrFocus.typeLine}
+                      </Txt>
                     </Field>
                   </CoachTarget>
                   <DisclosureRow
@@ -1201,7 +1205,7 @@ export default function Create() {
                             {
                               n: i + 1,
                               ovr: startOvr(C.pos, cand.attrs),
-                              line: scoutLine(C.pos, cand.attrs),
+                              line: scoutLine(C.pos, cand.attrs, C.focus),
                             },
                           )}`}
                           testID={`cand-${i}`}
@@ -1290,7 +1294,7 @@ export default function Create() {
                           <Txt
                             tone="accent"
                             style={{ fontSize: rem(FONT.body2), fontWeight: '600' }}
-                          >{`“${scoutLine(C.pos, cand.attrs)}”`}</Txt>
+                          >{`“${scoutLine(C.pos, cand.attrs, C.focus)}”`}</Txt>
                           {isPicked ? (
                             <Txt v="sm" tone="muted" testID={`candidate-edge-${i}`}>
                               {candidateEdge(C.pos, s.candidates!, i)}

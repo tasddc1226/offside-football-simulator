@@ -196,6 +196,8 @@ export const create: Translation<CreateMsgs> = {
   moreCustomize: '体格・利き足・見た目をカスタマイズ',
   extraNote: '変えなくても大丈夫です。初期設定のまますぐ始められます。',
   focusMeaning: '開始は最初の能力値の変化、成長は同じ練習で上がる速さです。',
+  focusTypeLine: (p: { name: string; desc: string }) =>
+    `この組み合わせのタイプ：${p.name}（${p.desc}）。あとで能力値を上げてもタイプは変わりません。`,
   ovrWhy:
     '予想OVRはポジションごとに重視する能力値で計算します。そのためポジションや主力を変えると変わります。',
   tendencyLine: (p) => `ゴール比重 ${p.goal} · アシスト比重 ${p.assist}`,

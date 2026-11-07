@@ -287,7 +287,8 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpNameDone: '確定',
   tpSaved: '預設組合已儲存。',
   tpLoaded: '預設組合已載入。點「儲存」才會套用到球隊。',
-  tpLoadedMissing: (p) => `預設組合已載入。目前不在隊上的 ${p.n} 名球員位置已留空。`,
+  tpLoadedMissing: (p) =>
+    `預設組合已載入。目前不在隊上的 ${p.n} 名球員位置已留空。點「儲存」才會套用到球隊。`,
   tpLocked: '盃賽名單已鎖定，目前無法載入。',
   tpCupBadge: '盃賽陣容',
   tpCupTitle: '盃賽陣容',

@@ -292,7 +292,8 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpNameDone: '決定',
   tpSaved: 'プリセットを保存しました。',
   tpLoaded: 'プリセットを読み込みました。保存を押すとチームに反映されます。',
-  tpLoadedMissing: (p) => `プリセットを読み込みました。今いない選手 ${p.n}人の枠は空けました。`,
+  tpLoadedMissing: (p) =>
+    `プリセットを読み込みました。今いない選手 ${p.n}人の枠は空けました。保存を押すとチームに反映されます。`,
   tpLocked: 'カップの登録メンバーが締め切られているため、今は読み込めません。',
   tpCupBadge: 'カップ用',
   tpCupTitle: 'カップ戦のメンバー',
