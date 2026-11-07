@@ -221,11 +221,10 @@ describe('오프사이드 데일리 (T-11-652)', () => {
     const kinds = n1.items.map((i) => i.kind);
     expect(kinds).toContain('leader');
     expect(kinds).toContain('teamOfRound');
-    expect(n1.items.find((i) => i.kind === 'comeback')).toMatchObject({
-      match: { id: turn.id },
-      side: 'home',
-      trailed: 1,
-    });
+    // 무작위로 치른 다른 경기에 더 큰 역전승이 있으면 그 경기가 실린다. 실린 역전승은 1골 차 이상 끌려갔다.
+    const cb = n1.items.find((i) => i.kind === 'comeback');
+    expect(cb).toBeTruthy();
+    expect((cb as { trailed: number }).trailed).toBeGreaterThanOrEqual(1);
     // 1라운드에는 라운드 전 순위가 없어 더비가 없다.
     expect(kinds).not.toContain('derby');
     const upset = n1.items.find((i) => i.kind === 'upset');
