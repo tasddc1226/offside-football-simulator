@@ -2050,6 +2050,32 @@ export const cupPredictions = sqliteTable(
   ],
 );
 
+/**
+ * T-11-652 오프사이드 데일리 빅매치 예측. 보상 없이 적중 기록만 남긴다(결과는 league_matches를 이어 읽는다). 경기 시각 전까지
+ * 바꿀 수 있다.
+ */
+export const leaguePredictions = sqliteTable(
+  'league_predictions',
+  {
+    season: integer('season').notNull(),
+    matchId: text('match_id')
+      .notNull()
+      .references(() => leagueMatches.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    pick: text('pick', { enum: ['home', 'draw', 'away'] }).notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.matchId, t.profileId] }),
+    index('league_predictions_match_pick_idx').on(t.matchId, t.pick),
+    index('league_predictions_profile_season_idx').on(t.profileId, t.season),
+    check('league_predictions_pick_check', sql`${t.pick} IN ('home', 'draw', 'away')`),
+  ],
+);
+
 /** Kept outside profiles so session/account reads never load image bytes. */
 export const profileAvatars = sqliteTable('profile_avatars', {
   profileId: text('profile_id')

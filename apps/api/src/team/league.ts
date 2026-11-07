@@ -35,6 +35,7 @@ import { grantItemStatement } from '../db/repos/itemShop.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { drawGroups, groupStandings, rngFrom } from './cupRules.js';
 import { currentLeague } from './leagueSchedule.js';
+import { buildLeagueNews, pushHeadline } from './leagueNews.js';
 import type { OwnerTeamRow } from '../db/repos/ownerTeams.js';
 import { FATIGUE_LOOKBACK, startStreaks, withFatigue, type PlayedLeagueMatch } from './fatigue.js';
 import { lineupsOf, matchDetailOf } from './match.js';
@@ -852,6 +853,17 @@ export async function notifyLeague(
     return t;
   };
   const nameOf = new Map(entries.map((e) => [e.teamId, e.name]));
+  // T-11-652 라운드 결과 알림에 그날 신문 1면을 붙인다(따로 푸시를 늘리지 않는다). 신문을 못 만들면 붙이지 않는다.
+  const news =
+    played > 0 && played < last && pending.some((e) => inLeague(e) && e.notifiedRound >= 0)
+      ? await buildLeagueNews(db, league.season, played).catch(() => null)
+      : null;
+  const withDaily = (line: string, teamId: string | null) => {
+    const h = news ? pushHeadline(news, teamId) : null;
+    return h
+      ? cupKo(h.mine ? 'leagueRoundMineBody' : 'leagueRoundDailyBody', { line, head: h.head })
+      : line;
+  };
   const leftOver = entries.filter((x) => x.status === 'dropped' && x.teamId).length;
   const season = league.season;
   const stmts: D1PreparedStatement[] = [];
@@ -904,7 +916,7 @@ export async function notifyLeague(
         if (!m) {
           // 7팀 리그의 쉬는 라운드.
           title = cupKo('leagueRoundTitle', { round: played, result: cupKo('leagueRest') });
-          body = cupKo('leagueRestBody', { rank });
+          body = withDaily(cupKo('leagueRestBody', { rank }), e.teamId);
         } else {
           const home = m.homeTeamId === e.teamId;
           const mine = home ? m.homeGoals! : m.awayGoals!;
@@ -923,7 +935,7 @@ export async function notifyLeague(
                   limit: LEAGUE_FORFEIT_LIMIT,
                   left: LEAGUE_FORFEIT_LIMIT - e.forfeits,
                 })
-              : cupKo('leagueRoundBody', { score, rank });
+              : withDaily(cupKo('leagueRoundBody', { score, rank }), e.teamId);
         }
       }
     }

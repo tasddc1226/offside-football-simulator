@@ -307,4 +307,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpCupSetDone: 'Set as your cup lineup. Cup matches will use this lineup.',
   tpCupUnsetDone: 'Cup lineup cleared. Cup matches will use your team lineup.',
   tpCupLocked: 'Your cup lineup is locked, so it can’t be changed right now.',
+  seasonRaised: (p) => `${plural(p.n, 'player')} raised in ${p.season}`,
+  seasonRaisedNone: (p) => `No players raised in ${p.season} yet`,
+  seasonRaisedAch: 'Season achievements',
 };

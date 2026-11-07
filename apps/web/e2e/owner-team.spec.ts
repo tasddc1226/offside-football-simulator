@@ -1668,6 +1668,7 @@ test('지난 시즌 선수도 급여 예산 없이 몇 명이든 선발에 넣�
     publicName: '새 얼굴',
     peak: 70,
     season: 1,
+    raised: true,
   };
   const puts: { slots: (string | null)[] }[] = [];
   await page.route(ownerTeamUrl, (route) => {
@@ -1698,6 +1699,10 @@ test('지난 시즌 선수도 급여 예산 없이 몇 명이든 선발에 넣�
   await expect(
     page.locator(`[data-locker-player="${fresh.careerId}"] [data-card-season]`),
   ).toHaveText('S1');
+  // T-11-654 지금 시즌 팀 라커룸은 이번 시즌에 키운 선수 수와 시즌 업적 바로가기를 보인다.
+  await expect(page.locator('[data-act="locker-season-ach"]')).toHaveText(
+    '시즌 1에 키운 선수 1명 · 시즌 업적 보기 →',
+  );
   // 급여 막대 · 칩 · 남은 예산은 없다.
   await expect(page.locator('[data-team-salary]')).toHaveCount(0);
   await expect(page.locator('[data-salary-chip]')).toHaveCount(0);

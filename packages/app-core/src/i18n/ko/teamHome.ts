@@ -330,6 +330,10 @@ const ko = {
   tpCupSetDone: '컵 명단으로 정했어요. 컵 경기는 이 편성으로 뛰어요.',
   tpCupUnsetDone: '컵 명단을 풀었어요. 컵 경기도 팀 명단으로 뛰어요.',
   tpCupLocked: '컵 명단이 잠겨 있어 지금은 바꿀 수 없어요.',
+  // T-11-654 라커룸의 이번 시즌 육성 한 줄 → 시즌 업적
+  seasonRaised: (p: { season: string; n: number }) => `${p.season}에 키운 선수 ${p.n}명`,
+  seasonRaisedNone: (p: { season: string }) => `${p.season}에 키운 선수는 아직 없어요`,
+  seasonRaisedAch: '시즌 업적 보기',
 };
 
 export type TeamHomeMsgs = typeof ko;

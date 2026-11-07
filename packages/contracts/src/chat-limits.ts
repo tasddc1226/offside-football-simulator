@@ -74,6 +74,21 @@ export type ChatShare =
       listing?: { id: string; price: number };
     };
 
+/**
+ * T-11-652 라운지에 올린 리그 경기 기사. 옛 앱은 share의 모르는 종류를 선수 카드로 그려 멈추므로 share와 다른 칸(news)으로
+ * 보낸다. 옛 앱은 이 칸을 모르고 body 문장만 그린다.
+ */
+export type ChatNewsShare = {
+  kind: 'leagueMatch';
+  season: number;
+  matchId: string;
+  tier: number;
+  league: number;
+  round: number;
+  home: { teamId: string; name: string; logo: TeamLogo | null; ovr: number; goals: number };
+  away: { teamId: string; name: string; logo: TeamLogo | null; ovr: number; goals: number };
+};
+
 /** 방이 보내는 메시지 한 줄. author는 작성자를 가리키는 불투명한 키다(프로필 id는 내보내지 않는다). */
 export type ChatMessage = {
   id: string;
@@ -94,6 +109,8 @@ export type ChatMessage = {
   reply?: ChatReply | null;
   /** 라운지에 올린 팀 · 선수. 보통 메시지엔 없다. */
   share?: ChatShare;
+  /** T-11-652 라운지에 올린 리그 경기 기사. 보통 메시지엔 없다. */
+  news?: ChatNewsShare;
 };
 
 /** 쓰기를 거절한 이유(보낸 사람에게만 간다). */

@@ -742,6 +742,7 @@
         onlock={toggleLock}
         onenhance={editable && enhanceOpen ? (p) => (enhancing = p) : undefined}
         onpresets={() => (presetsOpen = true)}
+        onach={season > 0 && season === current ? () => open('achievements') : undefined}
         bind:focusSlot
       />
       {#if team && season === current}

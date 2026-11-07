@@ -11,6 +11,7 @@ import {
   hiddenStrength,
   ovrFocusView,
   scoutLine,
+  seasonStartNote,
   startOvr,
 } from './create-view.js';
 import { iGa, polyPoints } from './format.js';
@@ -112,5 +113,14 @@ describe('T-11-437 주력 능력치 버튼 한 줄', () => {
     expect(focusNote(true, 6)).toBe('시작 +6 · 성장 +20%');
     expect(focusNote(false, 0)).toBe('시작 변화 없음 · 성장 -10%');
     expect(focusNote(false, -4)).toBe('시작 -4 · 성장 -10%');
+  });
+});
+
+describe('T-11-654 지금 만들면 어느 시즌 선수인지', () => {
+  it('진행 중인 시즌(개막 전이면 프리시즌)을 기록실 · 시즌 업적과 함께 알린다', () => {
+    expect(seasonStartNote('2026-10-10T00:00:00.000Z')).toBe(
+      '지금 시작하면 시즌 1 선수예요. 은퇴하면 시즌 1 기록실과 구단주 시즌 업적에 들어가요.',
+    );
+    expect(seasonStartNote('2026-09-30T00:00:00.000Z')).toContain('프리시즌 선수예요');
   });
 });

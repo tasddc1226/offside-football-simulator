@@ -13,6 +13,8 @@
   import LeaguePicker from './league/LeaguePicker.svelte';
   import LeagueBoard from './league/LeagueBoard.svelte';
   import LeagueMatchDetail from './league/LeagueMatchDetail.svelte';
+  import LeagueDaily from './league/LeagueDaily.svelte';
+  import type { LeagueNewsMatch } from '@offside/app-core/api/league';
   import PopSheet from './PopSheet.svelte';
   import Topbar from './Topbar.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
@@ -103,6 +105,14 @@
   function openMatch(m: LeagueMatch, table: LeagueTableResponse) {
     detail = { m, table };
     window.scrollTo(0, 0);
+  }
+  /** T-11-652 신문 기사 경기를 경기 상세로 연다(상세는 두 팀 이름 · 감독만 순위표에서 읽는다). */
+  function openNews(n: LeagueNewsMatch) {
+    if (!data) return;
+    openMatch(
+      { id: n.id, round: n.round, homeTeamId: n.home.teamId, awayTeamId: n.away.teamId, at: '', played: true, homeGoals: n.homeGoals, awayGoals: n.awayGoals, forfeit: false },
+      { season: data.league.season, tier: n.tier, league: n.league, teams: [n.home, n.away], standings: [], matches: [] },
+    );
   }
   const account = $derived<LeagueAccount>(
     !accountCache.value || accountCache.value === 'error' ? 'unknown' : linked ? 'member' : 'guest',
@@ -211,6 +221,10 @@
         <!-- 접수 중에는 위 한 줄에 신청 수가 있다. -->
         {#if data.phase !== 'soon' && data.phase !== 'open'}<p class="muted fs-sm" data-league-entries>{L.entries({ n: data.entries })}</p>{/if}
       </section>
+
+      {#if data.tiers && data.playedRounds !== undefined}
+        {#key data.playedRounds}<LeagueDaily season={data.league.season} round={data.playedRounds} {linked} onopen={openNews} />{/key}
+      {/if}
 
       {#if pick && data.tiers}
         {#if choices.length > 1}<LeaguePicker tiers={data.tiers} {pick} {mine} onpick={choose} />{/if}

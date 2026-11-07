@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { CareerPosSchema } from './careers.js';
 import { IsoUtcSchema } from './primitives.js';
-import { CupStandingSchema, CupTeamSchema } from './cup-api.js';
+import {
+  CupPredictionCountsSchema,
+  CupPredictionPickSchema,
+  CupStandingSchema,
+  CupTeamSchema,
+} from './cup-api.js';
 import { LEAGUE_OUTCOMES } from './league.js';
 import { TeamIdSchema, TeamMatchSchema } from './teams.js';
 
@@ -188,6 +193,152 @@ export const LeagueMatchResponseSchema = z.strictObject({
   }),
 });
 export type LeagueMatchResponse = z.infer<typeof LeagueMatchResponseSchema>;
+
+// ───────── T-11-652 오프사이드 데일리(라운드 신문) · 빅매치 예측 ─────────
+// 서버는 기사 재료(경기 · 팀 · 순위 · 연승)만 보내고, 기사 문장은 화면이 지금 언어로 만든다(app-core leagueNews).
+
+export const LeagueNewsTeamSchema = CupTeamSchema;
+export type LeagueNewsTeam = z.infer<typeof LeagueNewsTeamSchema>;
+
+/** 기사에 실린 끝난 경기. xg는 기대 득점(이 기능 전 경기 · 기록이 없는 경기에는 없다). */
+export const LeagueNewsMatchSchema = z.strictObject({
+  id: z.string(),
+  tier: z.number().int().min(1),
+  league: z.number().int().min(1),
+  round: z.number().int().min(1),
+  home: LeagueNewsTeamSchema,
+  away: LeagueNewsTeamSchema,
+  homeGoals: z.number().int().min(0),
+  awayGoals: z.number().int().min(0),
+  homeXg: z.number().min(0).optional(),
+  awayXg: z.number().min(0).optional(),
+});
+export type LeagueNewsMatch = z.infer<typeof LeagueNewsMatchSchema>;
+
+/** 기사에 실린 선수(공개 이름, 비공개면 null이라 화면이 포지션 · 등번호로 익명 표기를 만든다). 유스 선수는 null. */
+export const LeagueNewsPlayerSchema = z
+  .strictObject({
+    name: z.string().nullable(),
+    pos: CareerPosSchema,
+    number: z.number().int().nullable(),
+  })
+  .nullable();
+export type LeagueNewsPlayer = z.infer<typeof LeagueNewsPlayerSchema>;
+
+/**
+ * 기사 한 꼭지. upset: OVR이 낮은 팀이 이긴 경기(gap = OVR 차). goalfest: 골이 가장 많이 난 경기. derby: 라운드 전 순위가 붙어
+ * 있고 승점 차가 작은 두 팀의 맞대결(라운드 전 순위). teamOfRound: 가장 크게 이긴 팀. leader: 1부 선두(changed: 이 라운드에
+ * 바뀌었다). streak: 지금 이어지는 가장 긴 연승.
+ */
+export const LeagueNewsItemSchema = z.discriminatedUnion('kind', [
+  z.strictObject({ kind: z.literal('upset'), match: LeagueNewsMatchSchema, gap: z.number().int() }),
+  z.strictObject({ kind: z.literal('goalfest'), match: LeagueNewsMatchSchema }),
+  z.strictObject({
+    kind: z.literal('derby'),
+    match: LeagueNewsMatchSchema,
+    homeRank: z.number().int().min(1),
+    awayRank: z.number().int().min(1),
+  }),
+  z.strictObject({
+    kind: z.literal('teamOfRound'),
+    match: LeagueNewsMatchSchema,
+    side: z.enum(['home', 'away']),
+  }),
+  z.strictObject({
+    kind: z.literal('leader'),
+    tier: z.number().int().min(1),
+    league: z.number().int().min(1),
+    team: LeagueNewsTeamSchema,
+    points: z.number().int(),
+    changed: z.boolean(),
+  }),
+  // 끌려가다 뒤집은 경기(trailed: 가장 크게 뒤졌던 골 수).
+  z.strictObject({
+    kind: z.literal('comeback'),
+    match: LeagueNewsMatchSchema,
+    side: z.enum(['home', 'away']),
+    trailed: z.number().int().min(1),
+  }),
+  // 한 골 차 경기의 결승골이 늦게 나왔다.
+  z.strictObject({
+    kind: z.literal('lateWinner'),
+    match: LeagueNewsMatchSchema,
+    side: z.enum(['home', 'away']),
+    minute: z.number().int(),
+    scorer: LeagueNewsPlayerSchema,
+  }),
+  // 한 경기 3골 이상.
+  z.strictObject({
+    kind: z.literal('hattrick'),
+    match: LeagueNewsMatchSchema,
+    side: z.enum(['home', 'away']),
+    goals: z.number().int().min(3),
+    scorer: LeagueNewsPlayerSchema,
+  }),
+  // 이번 시즌 첫 승(before: 그 전에 치른 경기 수).
+  z.strictObject({
+    kind: z.literal('firstWin'),
+    match: LeagueNewsMatchSchema,
+    side: z.enum(['home', 'away']),
+    before: z.number().int().min(1),
+  }),
+  z.strictObject({
+    kind: z.literal('streak'),
+    tier: z.number().int().min(1),
+    league: z.number().int().min(1),
+    team: LeagueNewsTeamSchema,
+    n: z.number().int().min(2),
+  }),
+]);
+export type LeagueNewsItem = z.infer<typeof LeagueNewsItemSchema>;
+
+/** 다음 라운드 빅매치(1부 상위 두 팀이 붙는 경기). 순위는 이 라운드 뒤. */
+export const LeagueBigMatchSchema = z.strictObject({
+  id: z.string(),
+  tier: z.number().int().min(1),
+  league: z.number().int().min(1),
+  round: z.number().int().min(1),
+  at: IsoUtcSchema,
+  home: LeagueNewsTeamSchema,
+  away: LeagueNewsTeamSchema,
+  homeRank: z.number().int().min(1),
+  awayRank: z.number().int().min(1),
+});
+export type LeagueBigMatch = z.infer<typeof LeagueBigMatchSchema>;
+
+/**
+ * `GET /v1/leagues/:season/news/:round` — 그 라운드가 끝난 뒤의 신문. round 0이면 기사 없이 1라운드 빅매치만. 끝난 라운드는
+ * 바뀌지 않아 엣지에 오래 둔다. lastBig: 이 라운드 빅매치의 결과(round 1부터).
+ */
+export const LeagueNewsResponseSchema = z.strictObject({
+  season: z.number().int(),
+  round: z.number().int().min(0),
+  items: z.array(LeagueNewsItemSchema),
+  bigMatch: LeagueBigMatchSchema.nullable(),
+  lastBig: LeagueNewsMatchSchema.nullable(),
+});
+export type LeagueNewsResponse = z.infer<typeof LeagueNewsResponseSchema>;
+
+export const LeaguePredictionPickSchema = CupPredictionPickSchema;
+export type LeaguePredictionPick = z.infer<typeof LeaguePredictionPickSchema>;
+export const PutLeaguePredictionBodySchema = z.strictObject({ pick: LeaguePredictionPickSchema });
+export const LeaguePredictionCountsSchema = CupPredictionCountsSchema;
+export type LeaguePredictionCounts = z.infer<typeof LeaguePredictionCountsSchema>;
+
+/** `GET /v1/leagues/:season/predictions/me` — 내 빅매치 예측(최근 순)과 적중 기록. result는 끝난 경기만. */
+export const LeaguePredictionMeResponseSchema = z.strictObject({
+  items: z.array(
+    z.strictObject({
+      matchId: z.string(),
+      round: z.number().int(),
+      pick: LeaguePredictionPickSchema,
+      result: LeaguePredictionPickSchema.nullable(),
+    }),
+  ),
+  hit: z.number().int().min(0),
+  total: z.number().int().min(0),
+});
+export type LeaguePredictionMeResponse = z.infer<typeof LeaguePredictionMeResponseSchema>;
 
 /** T-11-418b 운영 도구: 지금 리그 상태(GET /v1/admin/leagues/current). */
 export const AdminLeagueSchema = z.strictObject({

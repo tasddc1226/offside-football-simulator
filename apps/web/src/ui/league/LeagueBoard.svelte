@@ -24,6 +24,8 @@
     type LeagueClinch,
     type LeagueFixtureRow,
   } from '@offside/app-core/leagueView';
+  import { leagueNewsText as N } from '@offside/app-core/i18n/ko/leagueNews';
+  import { derbyIds, leagueRival } from '@offside/app-core/leagueNews';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
   import PopSheet from '../PopSheet.svelte';
   import TeamLogo from '../team/TeamLogo.svelte';
@@ -77,6 +79,9 @@
   const fixtureRows = $derived(table && fixtures ? leagueFixtureRows(table, mineId, thisRound) : []);
   const my = $derived(table ? leagueMyMatches(table, mineId) : null);
   const slots = $derived(day ? leagueRoundSlots(day.matches) : []);
+  // T-11-652 내 라이벌(바로 위 · 아래 팀 중 승점 차가 작은 팀)과 다음 더비.
+  const rival = $derived(table ? leagueRival(table, mineId) : null);
+  const derbies = $derived(table ? derbyIds(table) : new Set<string>());
   function pickRound(n: number) {
     round = n;
     fixtures = false;
@@ -108,6 +113,7 @@
             {#if my.last.watch}<button class="btn btn-sm lg-my-watch" type="button" data-act="league-my-watch" onclick={() => onopen(my.last!.match, table!)}>{L.myMatchWatch}</button>{/if}
           </div>
         {/if}
+        {#if rival}<p class="fs-sm lg-rival" data-league-rival={rival.teamId}>{rival.line}</p>{/if}
         {#if my.next}
           <div class="lg-my" data-league-my-next>
             <span class="lg-my-who"><small class="muted">{L.myMatchNext} · {L.roundName({ n: my.next.match.round })}</small><span>{my.next.opponent} <small class="muted">{my.next.side}</small></span></span>
@@ -135,7 +141,7 @@
                   <button class="lg-who" type="button" data-act="league-team-open" disabled={!t} onclick={() => onteam(s.teamId)} aria-label={t ? C.teamProfileOpen({ team: t.name }) : undefined}>
                     <span class="rk">{s.rank}</span>
                     <TeamLogo logo={t?.logo} name={t?.name ?? C.tbd} size={24} decorative />
-                    <span class="lg-nm"><b>{t?.name ?? C.tbd}{#if cl}<span class="pill lg-clinch {CLINCH[cl].cls}" data-league-clinch={cl}>{CLINCH[cl].text}</span>{/if}{#if zoneLabel}<span class="pill lg-clinch" class:good={zone === 'up'} class:warn={zone === 'down'} data-league-my-zone={zone}>{zoneLabel}</span>{/if}</b><small class="muted">{C.teamOwnerLabel} {t?.owner ?? C.tbd}{#if s.forfeits || s.teamId === mineId}&nbsp;· <span data-league-forfeits={s.teamId === mineId ? 'mine' : undefined}>{leagueForfeitsTag(s.forfeits)}</span>{/if}</small></span>
+                    <span class="lg-nm"><b>{t?.name ?? C.tbd}{#if cl}<span class="pill lg-clinch {CLINCH[cl].cls}" data-league-clinch={cl}>{CLINCH[cl].text}</span>{/if}{#if rival?.teamId === s.teamId}<span class="pill lg-clinch warn" data-league-rival-tag>{N.rivalTag}</span>{/if}{#if zoneLabel}<span class="pill lg-clinch" class:good={zone === 'up'} class:warn={zone === 'down'} data-league-my-zone={zone}>{zoneLabel}</span>{/if}</b><small class="muted">{C.teamOwnerLabel} {t?.owner ?? C.tbd}{#if s.forfeits || s.teamId === mineId}&nbsp;· <span data-league-forfeits={s.teamId === mineId ? 'mine' : undefined}>{leagueForfeitsTag(s.forfeits)}</span>{/if}</small></span>
                   </button>
                 </td>
                 <td>{s.p}</td><td>{s.w}</td><td>{s.d}</td><td>{s.l}</td><td>{gd(s.gf, s.ga)}</td><td><b>{s.pts}</b></td>
@@ -176,7 +182,7 @@
                   {#if m.played && !m.forfeit}
                     <button class="lg-mid lg-open" data-act="league-match-open" onclick={() => onopen(m, table!)}>{leagueSlotMid(m)}</button>
                   {:else}
-                    <span class="lg-mid">{leagueSlotMid(m)}{#if m.forfeit}<small class="pill warn">{L.forfeitScore}</small>{/if}</span>
+                    <span class="lg-mid">{leagueSlotMid(m)}{#if derbies.has(m.id)}<small class="pill warn" data-league-derby>{N.derbyTag}</small>{/if}{#if m.forfeit}<small class="pill warn">{L.forfeitScore}</small>{/if}</span>
                   {/if}
                   <span class="lg-side away">{name(m.awayTeamId)}</span>
                 </li>
@@ -256,6 +262,7 @@
   .lg-my-who { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .lg-my-who small { font-size: 11px; }
   .lg-my-when { flex: none; font-size: var(--fs-caption); }
+  .lg-rival { margin: 0; border-top: 1px solid var(--line); padding-top: 8px; }
   .lg-my-watch { flex: none; min-height: 44px; }
   .lg-fx { display: flex; flex-direction: column; gap: 12px; }
   .lg-fx h2 { margin: 0; }
