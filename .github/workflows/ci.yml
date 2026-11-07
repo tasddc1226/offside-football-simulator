@@ -53,6 +53,13 @@ jobs:
         env:
           CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           CI_HEAD_SHA: ${{ github.sha }}
+      # T-11-667 큰 표 인덱스 · 같은 이름 재생성 마이그레이션을 막는다(CLAUDE.md "운영 DB 마이그레이션 규칙").
+      - name: Migration weight guard
+        if: steps.scope.outputs.code_changed == 'true'
+        run: node .github/scripts/migration-guard.mjs
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.sha }}
       - name: Documentation-only summary
         if: steps.scope.outputs.code_changed == 'false'
         run: echo 'Documentation-only change; game checks and deployment are not required.' >> "$GITHUB_STEP_SUMMARY"
