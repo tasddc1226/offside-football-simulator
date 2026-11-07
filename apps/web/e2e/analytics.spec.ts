@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { clearPendingEvent, startCareer, API } from './helpers.js';
+import { clearPendingEvent, retireFromMarket, startCareer, API } from './helpers.js';
 
 test.skip(
   process.env.E2E_ANALYTICS !== '1',
@@ -188,6 +188,125 @@ test('shared URLs and player names never enter GA commands', async ({ page }) =>
   expect(wire).toContain('/shared_career');
   expect(wire).not.toContain('00000000');
   expect(wire).not.toContain('PRIVATE');
+});
+
+// T-11-668 공유 버튼의 시도 · 결과가 이름 · share_method · share_contract 로 나뉘어 나간다(네이티브 성공을 복사 성공으로 세지 않는다).
+test('career share sends click, link failure, cancel, native failure with copy fallback and native success separately', async ({
+  page,
+  context,
+}) => {
+  test.setTimeout(120_000);
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await prepare(page);
+  await grantAnalytics(page);
+  // 1번째 시트는 사용자가 닫고(AbortError), 2번째는 브라우저가 거절하고(NotAllowedError), 3번째는 성공한다.
+  await page.addInitScript(() => {
+    let calls = 0;
+    Object.defineProperty(navigator, 'share', {
+      value: () => {
+        calls += 1;
+        if (calls === 1) return Promise.reject(new DOMException('x', 'AbortError'));
+        if (calls === 2) return Promise.reject(new DOMException('x', 'NotAllowedError'));
+        return Promise.resolve();
+      },
+    });
+  });
+  const uploaded = new Map<string, Record<string, unknown>>();
+  let hofUp = false;
+  await page.route(`${API}/v1/profile`, (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id: 'u1',
+          linked: { google: false, toss: false },
+          googleEmailMasked: null,
+          recoveryCodeIssuedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          nickname: null,
+        },
+      }),
+    }),
+  );
+  await page.route(/\/v1\/careers\/[^/]+\/(seasons\/\d+|retirement)$/, async (r) => {
+    const m = /careers\/([^/]+)\/retirement$/.exec(r.request().url());
+    if (m) uploaded.set(m[1]!, r.request().postDataJSON() as Record<string, unknown>);
+    await r.fulfill({ status: 200, contentType: 'application/json', body: '{"data":{}}' });
+  });
+  await page.route(/\/v1\/hof\/[0-9a-f-]{36}$/, async (r) => {
+    const id = r.request().url().split('/').pop()!;
+    const b = uploaded.get(id);
+    if (!hofUp || !b) return r.fulfill({ status: 503, body: '' });
+    const entry = {
+      id,
+      name: b.publicName ?? null,
+      pos: 'FW',
+      number: 10,
+      retireAge: b.retireAge,
+      peak: b.peak,
+      legendScore: b.legendScore,
+      apps: b.apps,
+      goals: b.goals,
+      assists: b.assists,
+      trophies: b.trophies,
+      awards: b.awards,
+      caps: b.caps,
+      ballon: b.ballon,
+      lastClub: b.lastClub,
+      retiredAt: '2026-09-26T00:00:00.000Z',
+      hasDetail: true,
+      title: b.title ?? null,
+    };
+    await r.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { entry, snapshot: b.snapshot } }),
+    });
+  });
+  await retireFromMarket(page, 34);
+  await expect(page.locator('[data-credit="player"]')).toBeVisible();
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+  const share = page.locator('[data-act="share-career"]');
+  const shareEvents = async () =>
+    (await commands(page))
+      .filter((x) => x[0] === 'event' && String(x[1]).startsWith('career_share'))
+      .map((x) => {
+        const p = x[2] as Record<string, unknown>;
+        return [x[1], p.share_method, p.share_contract, p.failure_stage, p.error_kind].filter(
+          (v) => v !== undefined,
+        );
+      });
+
+  // 링크 확인 실패(서버에 기록이 아직 안 보임): 시트를 열지 않는다.
+  await share.click();
+  await expect(page.getByText('서버에 연결하지 못했어요.', { exact: false })).toBeVisible();
+  await expect(share).toBeEnabled();
+  hofUp = true;
+  await share.click(); // 시트를 닫음
+  await expect(page.locator('.share-url')).toBeVisible();
+  await expect(share).toBeEnabled();
+  await share.click(); // 시트 거절 → 복사
+  await expect(page.getByText('공유 링크를 복사했어요.')).toBeVisible();
+  await expect(share).toBeEnabled();
+  await share.click(); // 시트 성공
+  await expect.poll(async () => (await shareEvents()).length).toBe(12);
+  expect(await shareEvents()).toEqual([
+    ['career_share_click', 'pending', '2'],
+    ['career_share_failure', 'native_share', '2', 'link', 'unknown'],
+    ['career_share_click', 'pending', '2'],
+    ['career_share_preview', 'native_share', '2'],
+    ['career_share_cancel', 'native_share', '2'],
+    ['career_share_click', 'pending', '2'],
+    ['career_share_preview', 'native_share', '2'],
+    ['career_share_failure', 'native_share', '2', 'native', 'not_allowed'],
+    ['career_share_copy_success', 'copy_link', '2'],
+    ['career_share_click', 'pending', '2'],
+    ['career_share_preview', 'native_share', '2'],
+    ['career_share_native_success', 'native_share', '2'],
+  ]);
+  const wire = JSON.stringify(await commands(page));
+  expect(wire).not.toMatch(/\/career\/[0-9a-f-]{36}/);
 });
 
 test('actual play measures first action, milestones and a resumed career without reload duplicates', async ({
