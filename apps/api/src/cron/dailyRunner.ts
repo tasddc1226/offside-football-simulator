@@ -1,4 +1,4 @@
-import type { Bindings } from '../env.js';
+import { opsD1, type Bindings } from '../env.js';
 import { createDb } from '../db/client.js';
 import { DAY_MS } from '../time.js';
 import { sweepAutomation, AUTOMATION_SWEEP_KEY } from '../db/repos/automationEnforcement.js';
@@ -56,7 +56,7 @@ function steps(env: Bindings): DailyStep {
     const db = createDb(env.DB);
     switch (stage) {
       case 'cleanup': {
-        const result = await cleanupExpired(env.DB, at, { chunk: 1000, maxChunks: 2 });
+        const result = await cleanupExpired(env.DB, at, { chunk: 1000, maxChunks: 2 }, opsD1(env));
         return { done: Object.values(result).every((n) => n < 2000), result };
       }
       case 'automation': {
@@ -115,7 +115,12 @@ function steps(env: Bindings): DailyStep {
       }
       case 'kpi': {
         // T-11-572 운영 지표 대시보드: 전날까지 KST 하루치를 kpi_daily에 모은다(처음엔 90일 거꾸로 채운다).
-        const result = await runKpiDaily(env.DB, at, prior as KpiDailyResult | undefined);
+        const result = await runKpiDaily(
+          env.DB,
+          at,
+          prior as KpiDailyResult | undefined,
+          opsD1(env),
+        );
         return { done: result.done, result };
       }
     }

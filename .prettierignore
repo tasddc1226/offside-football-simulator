@@ -12,6 +12,7 @@ packages/game/src/avatar-layers.json
 **/*-snapshots
 # drizzle-kit가 생성한다 — 손대지 않는다
 apps/api/migrations
+apps/api/migrations-ops
 # 과거 기록 문서(서식을 바꾸지 않는다)
 docs/archive
 # 배포되는 HTML(SSR 셸 포함) — 서식이 곧 응답 바이트라 손으로 관리한다

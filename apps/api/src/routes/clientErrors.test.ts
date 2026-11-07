@@ -73,11 +73,11 @@ describe('앱·웹 오류 모으기 (T-11-331)', () => {
 
   it('D1에 더하면 같은 날 같은 오류는 count만 늘고 마지막 버전이 바뀐다', async () => {
     await recordClientErrors(report('boom'), T0);
-    await flushClientErrors(ctx.env.DB, takeClientErrors());
+    await flushClientErrors(ctx.env.OPS_DB!, takeClientErrors());
     await recordClientErrors({ ...report('boom'), version: '1.1.4 (19)' }, T0 + 60_000);
     await recordClientErrors({ ...report('boom'), version: '1.1.4 (19)' }, T0 + 61_000);
-    await flushClientErrors(ctx.env.DB, takeClientErrors());
-    const rows = await ctx.env.DB.prepare('SELECT * FROM client_errors').all();
+    await flushClientErrors(ctx.env.OPS_DB!, takeClientErrors());
+    const rows = await ctx.env.OPS_DB!.prepare('SELECT * FROM client_errors').all();
     expect(rows.results).toHaveLength(1);
     expect(rows.results[0]).toMatchObject({
       count: 3,

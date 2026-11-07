@@ -11,6 +11,13 @@
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations",
     },
+    // T-11-662 운영 기록 DB(요청 횟수 제한 · 서버 상태 · 클라이언트 오류 · 운영 지표). 게임 DB와 쓰기 줄을 나눈다.
+    {
+      "binding": "OPS_DB",
+      "database_name": "offside-ops-local",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "migrations-ops",
+    },
   ],
   // T-10-070 로컬(테스트·wrangler dev)은 Miniflare가 흉내 내는 R2. 운영 버킷은 env.production에만 둔다.
   "r2_buckets": [{ "binding": "BACKUP", "bucket_name": "offside-backup-local" }],
@@ -55,6 +62,13 @@
           "database_name": "offside-staging",
           "database_id": "37688e3f-b905-4240-abdb-e23e778dfad9",
           "migrations_dir": "migrations",
+        },
+        // T-11-662 운영 기록 DB(요청 횟수 제한 · 서버 상태 · 클라이언트 오류 · 운영 지표). 게임 DB와 쓰기 줄을 나눈다.
+        {
+          "binding": "OPS_DB",
+          "database_name": "offside-ops-staging",
+          "database_id": "afce3054-916f-44da-9f8f-b5153cb0d092",
+          "migrations_dir": "migrations-ops",
         },
       ],
       "vars": {
@@ -155,6 +169,13 @@
           "database_name": "offside-production",
           "database_id": "2cfe462c-204e-4842-805c-5840fc9b1758",
           "migrations_dir": "migrations",
+        },
+        // T-11-662 운영 기록 DB(요청 횟수 제한 · 서버 상태 · 클라이언트 오류 · 운영 지표). 게임 DB와 쓰기 줄을 나눈다.
+        {
+          "binding": "OPS_DB",
+          "database_name": "offside-ops-production",
+          "database_id": "50692d49-9e3c-4a8c-b418-665e13d654e2",
+          "migrations_dir": "migrations-ops",
         },
       ],
       "vars": {
