@@ -220,4 +220,6 @@ export const create: Translation<CreateMsgs> = {
   candEdgeEven: 'No attribute clearly ahead of the others',
   sameCandidates:
     'The same position and focus give the same candidates. Change either one for new candidates.',
+  seasonNote: (p) =>
+    `Start now and this player belongs to ${p.season}. After retiring, they count toward ${p.season} records and your owner season achievements.`,
 };

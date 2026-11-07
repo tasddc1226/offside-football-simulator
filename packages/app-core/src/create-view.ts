@@ -24,7 +24,9 @@ import {
   mainRole,
 } from '@offside/game/attributes';
 import type { Body } from '@offside/contracts/body';
+import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import { createText as L } from './i18n/ko/create.js';
+import { teamSeasonLabel } from './seasonName.js';
 
 /**
  * T-11-437 주력 능력치 버튼 아래 한 줄. 주력은 시작 보정과 훈련 성장 가산을, 비주력은 시작 보정(없으면 변화 없음)과
@@ -105,4 +107,13 @@ export function ovrFocusView(pos: Pos, focus: readonly AttrKey[], dpos?: DetailP
     typeId,
     typeLine: L.focusTypeLine({ name: type.name, desc: type.desc }),
   };
+}
+
+/**
+ * T-11-654 지금 만들면 어느 서비스 시즌 선수가 되는지(첫 시즌 기록이 서버에 올라가는 시각으로 정해진다). 은퇴하면 그 시즌
+ * 기록실 · 구단주 시즌 업적으로 이어진다는 한 줄. 시즌 사이 휴식기면 null.
+ */
+export function seasonStartNote(now: string): string | null {
+  const season = teamSeasonAt(now);
+  return season === null ? null : L.seasonNote({ season: teamSeasonLabel(season) });
 }

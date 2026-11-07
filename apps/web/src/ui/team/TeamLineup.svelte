@@ -5,7 +5,7 @@
   import { DETAIL_LABEL, FORMATION_IDS, LINEUP_SIZE, SHAPE_IDS, presetLayout, positionedLayout, positionRole, shapeBase, matchShape, shapeLayout, slotRating, slotFit, type FormationId, type ShapeId, type TeamPosition } from '@offside/contracts/owner-team';
   import { POS_LABEL, detailPosOf, type PosGroup } from '@offside/contracts/positions';
   import type { OwnerTeam, TeamLines as Lines, TeamPlayer } from '@offside/app-core/api/team';
-  import { attrLine, STAMINA_CELLS, staminaOf, synergyFocus, type LeagueFatigue } from '@offside/app-core/teamOwner';
+  import { attrLine, seasonRaisedText, STAMINA_CELLS, staminaOf, synergyFocus, type LeagueFatigue } from '@offside/app-core/teamOwner';
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { lockToggleable } from '@offside/app-core/market';
   import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
@@ -24,14 +24,16 @@
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { chatText as LC } from '@offside/app-core/i18n/ko/chat';
 
-  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, fatigue = null, onassign, onauto, onsave, onlock, onenhance, onpresets, focusSlot = $bindable(null) }:
+  let { team, teamName, managerName, teamLogo, editable, formation = $bindable(), layout = $bindable(), slots, lines, synergy, season, cells, players, nameOf, seasonName, filled, saving, nameOk, dirty, saveBlock = null, fatigue = null, onassign, onauto, onsave, onlock, onenhance, onpresets, onach, focusSlot = $bindable(null) }:
     { team: OwnerTeam | null; editable: boolean; formation: FormationId; layout: TeamPosition[] | null; slots: (string | null)[]; lines: Lines; synergy: Synergy; season: number;
       cells: { rating: number; name: string; youth: boolean; player?: TeamPlayer | undefined }[]; players: TeamPlayer[]; nameOf: (p: TeamPlayer) => string;
       teamName: string; managerName: string; teamLogo: TeamLogo | null; seasonName: string; filled: number; saving: boolean; nameOk: boolean; dirty: boolean;
       /** T-11-436 컵 규칙에 걸려 서버가 거절할 이유(있으면 저장 버튼 옆에 보인다). */
       saveBlock?: string | null;
       /** T-11-376 지난 시즌 선수 급여 막대(프리시즌은 null). */
-      fatigue?: LeagueFatigue | null | undefined; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onenhance?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined; focusSlot?: number | null } = $props();
+      fatigue?: LeagueFatigue | null | undefined; onassign: (i: number, id: string | null) => void; onauto: () => void; onsave: () => void; onlock?: ((p: TeamPlayer) => void) | undefined; onenhance?: ((p: TeamPlayer) => void) | undefined; onpresets?: (() => void) | undefined;
+      /** T-11-654 지금 시즌 팀이면 라커룸에 '이번 시즌 키운 선수 N명 · 시즌 업적 보기'를 단다. */
+      onach?: (() => void) | undefined; focusSlot?: number | null } = $props();
   let shareData = $state<TeamShareData | null>(null);
   let pitch = $state<HTMLElement>();
   let search = $state('');
@@ -215,7 +217,7 @@
 
 {#if editable}
   <section class="locker-room card" data-team-locker class:drop-active={drag?.moving && drag.from !== null} aria-label={L.lockerTitle}>
-    <div class="locker-head"><div><h2>{L.lockerTitle}</h2><p class="muted fs-sm">{L.lockerCount({ n: players.length, starters: filled, bench: players.length - filled })}</p></div><span class="locker-count">{roster.length}</span></div>
+    <div class="locker-head"><div><h2>{L.lockerTitle}</h2><p class="muted fs-sm">{L.lockerCount({ n: players.length, starters: filled, bench: players.length - filled })}</p>{#if onach}<button class="link-btn fs-sm season-raised" data-act="locker-season-ach" onclick={onach}>{seasonRaisedText(players, season)} · {L.seasonRaisedAch} →</button>{/if}</div><span class="locker-count">{roster.length}</span></div>
     <p class="muted fs-sm">{L.lockerNoteWeb}</p>
     {#if players.length}
       <div class="locker-tools">

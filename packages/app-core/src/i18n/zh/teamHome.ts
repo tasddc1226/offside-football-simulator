@@ -298,4 +298,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   tpCupSetDone: '已設為盃賽陣容。盃賽將以此陣容出賽。',
   tpCupUnsetDone: '已取消盃賽陣容。盃賽也將以球隊陣容出賽。',
   tpCupLocked: '盃賽陣容已鎖定，目前無法更改。',
+  seasonRaised: (p) => `${p.season}培養的球員 ${p.n} 名`,
+  seasonRaisedNone: (p) => `${p.season}還沒有培養的球員`,
+  seasonRaisedAch: '查看賽季成就',
 };

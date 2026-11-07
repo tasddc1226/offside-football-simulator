@@ -12,6 +12,8 @@ import {
   outcomeOf,
   teamEditableIn,
   playHintOf,
+  raisedInSeason,
+  seasonRaisedText,
 } from './teamOwner.js';
 import {
   loadPreset,
@@ -110,6 +112,20 @@ describe('autoFillSlots', () => {
     expect(autoFillSlots(slots433, old).filter((x) => x !== null)).toHaveLength(11);
     expect(cardSeasonBadge(0)).toBe('PRE');
     expect(cardSeasonBadge(2)).toBe('S2');
+  });
+});
+
+describe('T-11-654 라커룸의 이번 시즌 육성 한 줄', () => {
+  it('이 팀 시즌에 직접 키운 선수만 센다(영입 · 지난 시즌 선수는 빼고)', () => {
+    const players = [
+      player('a', { season: 2, raised: true }),
+      player('b', { season: 2, raised: true }),
+      player('c', { season: 2, raised: false }),
+      player('d', { season: 1, raised: true }),
+    ];
+    expect(raisedInSeason(players, 2)).toBe(2);
+    expect(seasonRaisedText(players, 2)).toBe('시즌 2에 키운 선수 2명');
+    expect(seasonRaisedText(players, 3)).toBe('시즌 3에 키운 선수는 아직 없어요');
   });
 });
 

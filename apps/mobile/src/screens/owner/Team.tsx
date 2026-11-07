@@ -1227,6 +1227,8 @@ export default function Team() {
               onEnhance={editable && enhanceOpen ? setEnhancing : undefined}
               focusSlot={focusSlot}
               onFocused={() => setFocusSlot(null)}
+              season={season}
+              onAch={season > 0 && season === current ? () => open('achievements') : undefined}
               fatigue={fatigue}
               change={(nextSlots, nextLayout) => {
                 setSlots(nextSlots);

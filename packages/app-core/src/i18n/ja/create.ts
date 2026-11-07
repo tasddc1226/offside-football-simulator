@@ -215,4 +215,6 @@ export const create: Translation<CreateMsgs> = {
   candEdgeEven: '他の候補より大きく上回る能力値はありません',
   sameCandidates:
     'ポジションと主力が同じなら候補も同じです。どちらかを変えると新しい候補が出ます。',
+  seasonNote: (p) =>
+    `今始めると${p.season}の選手になります。引退すると${p.season}の記録室とオーナーのシーズン実績に入ります。`,
 };

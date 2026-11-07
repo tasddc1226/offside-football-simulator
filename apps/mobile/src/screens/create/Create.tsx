@@ -39,6 +39,7 @@ import {
   scoutLine,
   startOvr,
   ovrFocusView,
+  seasonStartNote,
 } from '@offside/app-core/create-view';
 import { adText } from '@offside/app-core/i18n/ko/ad';
 import { createText as L } from '@offside/app-core/i18n/ko/create';
@@ -302,6 +303,8 @@ function FlyIn({ index, children }: { index: number; children: ReactNode }) {
 export default function Create() {
   const s = useSnapshot(appState, { sync: true });
   const C = s.C;
+  // T-11-654 지금 만들면 어느 시즌 선수인지 — 기록실 · 시즌 업적으로 이어진다(휴식기면 없음).
+  const [seasonNote] = useState(() => seasonStartNote(new Date().toISOString()));
   const owned = adsOff(useSnapshot(adFree));
   const offer = rewardOffer('candidates', owned);
   const rewardLock = useRef(false);
@@ -1659,6 +1662,11 @@ export default function Create() {
                 </Card>
               </>
             )}
+            {seasonNote ? (
+              <Txt v="sm" tone="muted" testID="create-season-note">
+                {seasonNote}
+              </Txt>
+            ) : null}
           </>
         ) : null}
       </ScrollView>
