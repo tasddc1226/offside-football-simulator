@@ -11,7 +11,7 @@ import {
   type MarketTrade,
   type MarketType,
 } from '@offside/contracts';
-import { tradeValue } from '@offside/contracts/card-enhance';
+import { enhanceValueSql, tradeValue } from '@offside/contracts/card-enhance';
 import { CARD_VALUE_FLOOR, marketRatio } from '@offside/contracts/market-value';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { DetailPos, PosGroup } from '@offside/contracts/positions';
@@ -291,12 +291,14 @@ export async function fundsOf(db: Db, profileId: string): Promise<number> {
 
 /**
  * 구단 가치에 더하는 선수 몫: 가진 카드의 기준가(없으면 방출 지급과 같이 CARD_VALUE_FLOOR). T-11-109 전에는 직접 키운
- * 선수를 은퇴 가치로 셌는데, 방출 지급이 기준가로 바뀌어(T-11-104) 같은 기준으로 맞춘다.
+ * 선수를 은퇴 가치로 셌는데, 방출 지급이 기준가로 바뀌어(T-11-104) 같은 기준으로 맞춘다. T-11-650 강화한 카드는 판매가 범위와
+ * 같은 강화 가치(tradeValue)를 더한다.
  */
+const ENHANCE_VALUE = sql.raw(enhanceValueSql('enhance'));
 async function ownedCardsValue(db: Db, profileId: string): Promise<number> {
   const [row] = await db
     .select({
-      v: sql<number>`coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR})), 0)`,
+      v: sql<number>`coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR}) + ${ENHANCE_VALUE}), 0)`,
     })
     .from(cards)
     .where(eq(cards.ownerId, profileId));

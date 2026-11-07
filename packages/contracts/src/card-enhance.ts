@@ -155,6 +155,13 @@ export const tradeValue = (cardValue: number, enhance?: number | null) =>
   cardValue + enhanceValue(enhance ?? 0);
 
 /**
+ * T-11-650 강화 단계 열(SQL)을 강화 가치(만 원)로 바꾸는 식. 구단 가치(자금 + 카드 몫)와 구단 가치 랭킹(선발 가치)이 카드 기준가에
+ * 이 값을 더한다. 값은 코드 상수라 그대로 넣는다. 선발 가치 트리거(마이그레이션 0150)는 같은 숫자를 직접 적고 테스트가 맞춰 본다.
+ */
+export const enhanceValueSql = (col: string) =>
+  `CASE ${col} ${Array.from({ length: ENHANCE_MAX }, (_, i) => `WHEN ${i + 1} THEN ${enhanceValue(i + 1)}`).join(' ')} ELSE 0 END`;
+
+/**
  * T-11-373 강화 단계까지 넣은 판매가 범위(만 원, 100 단위). 하한은 전체 가치에 priceMin을 곱하고, 상한은 기준가에만 priceMax를
  * 곱한 뒤 강화 가치를 더한다. 강화해서 파는 일이 평균적으로 남지 않게 하고, 카드 한 장으로 옮길 수 있는 자금을 넓히지 않으려는 규칙이다.
  */
