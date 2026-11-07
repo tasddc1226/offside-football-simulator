@@ -65,6 +65,7 @@ import { iap } from './iap';
 import { inbox } from './inbox';
 import { keyMoment } from './keyMoment';
 import { league } from './league';
+import { leagueNews } from './leagueNews';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
@@ -190,6 +191,7 @@ export const ja = {
   inbox,
   keyMoment,
   league,
+  leagueNews,
   legend,
   legendRn,
   legendStyle,

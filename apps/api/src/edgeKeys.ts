@@ -13,6 +13,11 @@ export const EDGE = {
   /** T-11-418 오프사이드 리그(일정 · 신청 수). TTL로만 새로 읽는다. */
   leagueCurrent: '/v1/leagues/current',
   /** T-11-418b 리그 하나(순위표 · 경기). 부 · 리그 번호는 배치 결과 안에서만 받는다. TTL로만 새로 읽는다. */
+  /** T-11-652 오프사이드 데일리(끝난 라운드 신문). 끝난 라운드는 바뀌지 않아 TTL로만 새로 읽는다. */
+  leagueNews: (season: number, round: number) => `/v1/leagues/${season}/news/${round}`,
+  /** T-11-652 빅매치 예측 수. 예측을 바꾸면 지운다. */
+  leaguePredictions: (season: number, matchId: string) =>
+    `/v1/leagues/${season}/matches/${matchId}/predictions`,
   leagueTable: (season: number, tier: number, league: number) =>
     `/v1/leagues/${season}/tables/${tier}/${league}`,
   /** T-11-410 구간 대회 한 개(회차마다 3개). */

@@ -51,6 +51,7 @@ import { Btn, Card, Pill, Press, Screen, Skeleton, Topbar, Txt, scrollTo } from 
 import { useOnPull } from '../../ui/refresh';
 import { LoginButtons } from '../owner/LoginButtons';
 import { LeagueBoard, LeagueMatchDetail, LeaguePicker } from './LeagueBoard';
+import { LeagueDaily } from './LeagueDaily';
 import { askPushAfter } from '../../platform/pushAsk';
 
 /** 홈의 리그 배너(누구나 보는 리그 소식). 리그가 끝났거나 불러오지 못하면 그리지 않는다. */
@@ -442,6 +443,39 @@ export default function League() {
             meFailed={meFailed}
             reload={() => reload(true)}
           />
+          {data.tiers && data.playedRounds !== undefined ? (
+            <LeagueDaily
+              key={data.playedRounds}
+              season={data.league.season}
+              round={data.playedRounds}
+              linked={linked}
+              onopen={(n) => {
+                // T-11-652 신문 기사 경기를 경기 상세로 연다(상세는 두 팀 이름 · 감독만 순위표에서 읽는다).
+                setDetail({
+                  m: {
+                    id: n.id,
+                    round: n.round,
+                    homeTeamId: n.home.teamId,
+                    awayTeamId: n.away.teamId,
+                    at: '',
+                    played: true,
+                    homeGoals: n.homeGoals,
+                    awayGoals: n.awayGoals,
+                    forfeit: false,
+                  },
+                  table: {
+                    season: data.league.season,
+                    tier: n.tier,
+                    league: n.league,
+                    teams: [n.home, n.away],
+                    standings: [],
+                    matches: [],
+                  },
+                });
+                scrollTo(0);
+              }}
+            />
+          ) : null}
           {pick && data.tiers ? (
             <>
               <LeaguePicker

@@ -139,6 +139,21 @@ export const CUP_KO = {
   // T-11-430 1 · 2번째 기권패(3번째는 leagueForfeitedBody가 따로 간다).
   leagueRoundForfeitBody:
     '{score} · 선발 선수가 모자라 기권패했어요. 기권 {n}/{limit}번, {left}번 더 기권하면 남은 경기는 모두 0:3 패예요.',
+  // T-11-652 라운드 결과 알림에 붙는 그날 신문 1면(내 팀이 실렸으면 그 기사).
+  leagueRoundDailyBody: '{line}\n오늘의 신문: {head}',
+  leagueRoundMineBody: '{line}\n우리 팀이 신문에 실렸어요: {head}',
+  dailyUpset: '{team}, OVR {gap} 차를 뒤집다',
+  dailyComeback: '{team}, {n}골 차를 뒤집은 역전승',
+  dailyLate: '{team}, {n}분 극장골로 승리',
+  dailyHattrick: '{team}에서 해트트릭이 나왔어요',
+  dailyDerby: '{team}, 순위 맞대결에서 웃다',
+  dailyDerbyDraw: '{team}, 순위 맞대결에서 무승부',
+  dailyGoalfest: '{team} 경기에서 {n}골 난타전',
+  dailyFirstWin: '{team}, {n}경기 만에 시즌 첫 승',
+  dailyStreak: '{team}, {n}연승 행진',
+  dailyRout: '{team}, {n}골 차 완승',
+  dailyLeaderNew: '{team}, {n}부 선두로',
+  dailyLeaderKeep: '{team}, {n}부 선두 자리 지켜',
   leagueRest: '휴식',
   leagueRestBody: '이번 라운드는 쉬었어요 · 지금 {rank}위예요',
   leagueEndTitle: '시즌 {season} 오프사이드 리그를 마쳤어요',

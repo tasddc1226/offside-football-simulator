@@ -32,7 +32,7 @@ export const cupTitle = (cup: CupDef) =>
     : cupKo('title', { season: cup.season, edition: cup.edition });
 
 /** 자리 안에 다시 컵 문구가 들어가는 자리(대회 이름·라운드·결과). 팀 이름은 구단주가 지은 이름이라 옮기지 않는다. */
-const NESTED = new Set(['cup', 'round', 'result', 'stage', 'division']);
+const NESTED = new Set(['cup', 'round', 'result', 'stage', 'division', 'line', 'head']);
 // T-11-514 문구를 다듬기 전에 알림함에 저장된 옛 한국어 틀. 옛 알림도 같은 키로 옮긴다.
 const LEGACY_KO: [CupTextKey, string][] = [
   ['completeTitle', '{cup}이 끝났어요'], // i18n-ignore: 옛 알림 원문

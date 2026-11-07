@@ -28,6 +28,7 @@
   import OwnerAvatar from './OwnerAvatar.svelte';
   import PopSheet from './PopSheet.svelte';
   import ChatShareCard from './ChatShareCard.svelte';
+  import ChatNewsCard from './ChatNewsCard.svelte';
 
   /** 채팅 티어는 보낸 때의 지난 시즌 티어 — 시즌 이름(툴팁)은 지금 기준 지난 시즌으로 보인다. */
   const tierSeason = lastClosedSeason(new Date().toISOString()) ?? 0;
@@ -314,6 +315,8 @@
           <div class="chat-body-row">
             {#if m.share}
               <ChatShareCard share={m.share} label={m.body} onteam={openTeam} onlisting={goMarketListing} />
+            {:else if m.news}
+              <ChatNewsCard news={m.news} label={m.body} onopen={() => go('league')} />
             {:else}
               <p class="chat-bubble" lang={tr.translated(m.id) ? getLocale() : undefined}>{tr.text(m.id, m.body)}</p>
             {/if}
@@ -325,7 +328,7 @@
               </button>
             {/if}
           </div>
-          {#if !mine(m) && !m.share && canTranslate(m.body)}
+          {#if !mine(m) && !m.share && !m.news && canTranslate(m.body)}
             <button class="translate-btn" data-act="translate" disabled={tr.busy(m.id)} onclick={() => void tr.toggle(m.id, m.body)}>{tr.label(m.id)}</button>
           {/if}
         </li>

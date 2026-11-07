@@ -44,6 +44,7 @@ import {
 import type { ApiResult } from '@offside/app-core/api/client';
 import { REPORT_REASON_LABEL } from '@offside/app-core/boardText';
 import { ChatShareCard } from '../../components/ChatShareCard';
+import { ChatNewsCard } from '../../components/ChatNewsCard';
 import { NicknameForm } from '../../components/NicknameForm';
 import { OwnerAvatar } from '../../components/OwnerAvatar';
 import { TierBadge } from '../../components/TierBadge';
@@ -663,6 +664,8 @@ export default function Chat() {
                         onteam={openTeam}
                         onlisting={goMarketListing}
                       />
+                    ) : m.news ? (
+                      <ChatNewsCard news={m.news} label={m.body} onopen={() => go('league')} />
                     ) : (
                       <View
                         style={{
@@ -716,7 +719,7 @@ export default function Chat() {
                       </Press>
                     ) : null}
                   </View>
-                  {!mine(m) && !m.share ? tr.button(m.id, m.body) : null}
+                  {!mine(m) && !m.share && !m.news ? tr.button(m.id, m.body) : null}
                 </View>
               );
             })

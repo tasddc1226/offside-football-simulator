@@ -48,6 +48,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'kpi_daily',
   'league_entries',
   'league_matches',
+  'league_predictions',
   'league_seasons',
   'league_state',
   'name_reports',
