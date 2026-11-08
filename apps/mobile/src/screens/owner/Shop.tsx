@@ -30,6 +30,8 @@ export default function Shop() {
   const guest = acct === null || (!!acct && acct !== 'error' && !isMember(acct));
   // T-11-152 후보 화면 '리롤권 상점 가기'로 들어왔으면 리롤권 상점을 펼친 채로 연다(한 번만 읽힌다).
   const [shopFocus] = useState(() => takeFocus('rerollShop'));
+  // 후보 화면 '프리미엄 스카우트권 보기'로 들어왔으면 스카우트권 상점을 펼친 채로 연다.
+  const [scoutFocus] = useState(() => takeFocus('scoutShop'));
   const { tick, track } = useRefresh();
   const [market, setMarket] = useState<MarketFundsResponse | null>(null);
   useEffect(() => {
@@ -84,7 +86,7 @@ export default function Shop() {
           <RerollShop focus={shopFocus} onBought={bought} />
           <BoostShop />
           <RenameShop />
-          <ScoutShop onBought={bought} />
+          <ScoutShop focus={scoutFocus} onBought={bought} />
         </>
       ) : guest ? (
         <Card gap={12} testID="shop-guest">

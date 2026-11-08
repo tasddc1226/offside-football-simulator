@@ -22,6 +22,8 @@ export default {
       'src/platform/iapItems.test.mjs',
       'src/platform/playSignals.test.mjs',
       'src/analytics/retireExp.test.mjs',
+      'src/game/nav.test.mjs',
+      'src/screens/owner/ScoutShop.test.mjs',
     ],
   },
 };

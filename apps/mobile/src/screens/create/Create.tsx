@@ -97,7 +97,7 @@ import {
 import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
 import { adFree, adsOff } from '../../platform/adFree';
 import { adRerollLeft, claimAdReroll } from '../../platform/adReroll';
-import { goHome, goRerollShop } from '../../game/nav';
+import { goHome, goRerollShop, goScoutShop } from '../../game/nav';
 import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, num, rem } from '../../theme/type';
@@ -1500,7 +1500,7 @@ export default function Create() {
                     ) : owner ? (
                       <>
                         {pity.used > 0 ? <ScoutPityGauge pity={pity} empty /> : null}
-                        <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
+                        <Btn sm kind="ghost" testID="premium-scout-go" onPress={goScoutShop}>
                           {SL.shopGo}
                         </Btn>
                       </>
