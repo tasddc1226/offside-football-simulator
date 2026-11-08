@@ -226,7 +226,7 @@ describe('provider quota', () => {
 
 it('reviewed free-provider configuration covers every game club without cross-league mappings', () => {
   const sources = SourcesSchema.parse(sourceConfig);
-  expect(sources).toHaveLength(6);
+  expect(sources.map((s) => s.league)).toEqual(['ere', 'l1', 'bl', 'sa', 'll', 'pl', 'bra', 'por']);
   for (const source of sources) {
     const rows = [...Object.keys(source.teams), ...source.exclude].map((team) => ({
       team,

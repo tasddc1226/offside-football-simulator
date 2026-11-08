@@ -11,6 +11,7 @@ import {
   type AccountKey,
 } from '@offside/app-core/retireExpMetrics';
 import type { AppStoreOs } from '@offside/app-core/appPromo';
+import { shareEventParams, type ShareOutcome } from '@offside/app-core/shareMeasurement';
 import type { AppStorePlace } from './index.js';
 import {
   AD_CONSENT_KEY,
@@ -379,16 +380,11 @@ export const trackAppStoreClick = (place: AppStorePlace, store: AppStoreOs) => {
     /* optional */
   }
 };
-export const trackShareClick = () => {
+// T-11-668 공유 시트 · 복사 · 취소 · 실패를 따로 보낸다. 옛 판은 네이티브 성공도 career_share_copy_success(copy_link)로 보냈다.
+export const trackShare = (o: ShareOutcome) => {
   try {
-    send('career_share_click', { share_method: 'copy_link' });
-  } catch {
-    /* optional */
-  }
-};
-export const trackShareSuccess = () => {
-  try {
-    send('career_share_copy_success', { share_method: 'copy_link' });
+    const { name, params } = shareEventParams(o);
+    send(name, params);
   } catch {
     /* optional */
   }

@@ -5,6 +5,7 @@ import type { Career } from '@offside/app-core/analytics-model';
 import type { AppStoreOs } from '@offside/app-core/appPromo';
 import { onClubSignal, setClubAccountKey } from '@offside/app-core/clubSignals';
 import type { AccountKey } from '@offside/app-core/retireExpMetrics';
+import type { ShareOutcome } from '@offside/app-core/shareMeasurement';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';
@@ -49,12 +50,12 @@ export const analytics = {
   firstSeason: (s: Career) => adapter?.analytics.firstSeason(s),
   retire: (s: Career) => adapter?.analytics.retire(s),
 };
-export const trackShareClick = () => adapter?.trackShareClick();
+/** T-11-668 커리어 링크 공유 시도와 결과(의미는 @offside/app-core/shareMeasurement). */
+export const trackShare = (o: ShareOutcome) => adapter?.trackShare(o);
 /** T-11-092 앱 스토어 링크를 누른 곳(T-11-449 어느 스토어인지도 남긴다). */
 export type AppStorePlace = 'home' | 'home_top' | 'retire' | 'sheet' | 'settings' | 'shop';
 export const trackAppStoreClick = (place: AppStorePlace, store: AppStoreOs) =>
   adapter?.trackAppStoreClick(place, store);
-export const trackShareSuccess = () => adapter?.trackShareSuccess();
 
 /** T-11-506 home_top: 휴대폰 웹 홈 맨 위 한 줄 띠. T-11-611 retire: 은퇴 리포트 끝. */
 export type AppConversionPlace = 'home' | 'home_top' | 'shop' | 'retire';

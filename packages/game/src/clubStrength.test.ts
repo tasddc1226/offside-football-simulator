@@ -146,4 +146,23 @@ describe('server strength staging', () => {
     expect(s.cs?.v).toBe(20000);
     expect(str('pl-0')).toBe(before - 3);
   });
+
+  it('brazil and portugal are daily-updated leagues', async () => {
+    const { setLatestClubStrength, latestClubStrength } = await import('./clubStrength.js');
+    const s = game();
+    const bra = baseStr('bra-0')!,
+      por = baseStr('por-0')!;
+    setLatestClubStrength({
+      v: 30000,
+      asOf: '2026-11-08',
+      source: 'test',
+      values: { 'bra-0': bra + 2, 'por-0': por - 2 },
+    });
+    expect(latestClubStrength().v).toBe(30000);
+    s.season = newSeason(s);
+    expect(str('bra-0')).toBe(bra + 2);
+    expect(str('por-0')).toBe(por - 2);
+    setLatestClubStrength(null);
+    applyClubStrength();
+  });
 });
