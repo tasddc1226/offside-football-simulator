@@ -49,7 +49,7 @@ apps/packages에서 gtag·dataLayer·Google Analytics/GTM 식별자·Cloudflare 
 | `career_start`              | startCareer가 새 상태를 만들고 저장을 시도한 후 게임 화면으로 전환 | 커리어당 1회. 후보 뽑기·이어서 하기는 제외   | `start_context`, `position_changed`, `trait_changed` |
 | `first_season_complete`     | 새 커리어의 첫 시즌 종료 기록이 생성됨                             | 커리어당 1회. 학교 마지막 시즌도 포함        | `career_origin`                                      |
 | `career_retire`             | doRetire에서 실제 은퇴 기록 생성                                   | 커리어당 1회. 옛 기록 소급 업로드·조회 제외  | `career_origin`, `completed_seasons_bucket`          |
-| `career_share_click`        | 활성 공유 버튼의 사용자 클릭                                       | 비활성 중 재클릭 제외. 별도 재시도는 새 시도 | `share_method=copy_link`                             |
+| `career_share_click`        | 활성 공유 버튼의 사용자 클릭                                       | 비활성 중 재클릭 제외. 별도 재시도는 새 시도 | `share_method=pending` (T-11-668 전: `copy_link`)    |
 | `career_share_copy_success` | 해당 시도의 clipboard write가 resolve                              | 시도당 1회. 실패/수동 복사 안내는 제외       | `share_method=copy_link`                             |
 
 새 커리어 시작은 별도 이벤트를 또 보내지 않고 `career_start.start_context`로 구분한다:
@@ -65,8 +65,40 @@ true/false/unknown이다. 후속 생성 정보를 사용자 입력 원문으로 
 완료 시즌 수는 0/1/2–5/6–10/11+ 구간으로 보낸다. 은퇴 이벤트는 명예의 전당 등재를 뜻하지 않는다.
 
 초기 핵심 이벤트(key event)는 `career_start`, `career_retire` 두 개만 제안한다.
-복사 성공은 실제 공유 게시나 유입 성과로 이름 붙이지 않는다. 이미지 저장·네이티브 공유 등은
+복사 성공은 실제 공유 게시나 유입 성과로 이름 붙이지 않는다. 이미지 저장 등은
 실제로 반영된 경로를 확인한 뒤 별도 계약으로 추가한다.
+
+### 3.1 커리어 링크 공유 (T-11-668)
+
+은퇴 커리어 공유 버튼(`ShareBar.svelte`)은 네이티브 공유 시트(`navigator.share`)를 먼저 쓰고, 없거나
+취소가 아닌 오류면 클립보드 복사로 넘어간다. 이벤트 이름·매개변수의 코드 정본은
+`packages/app-core/src/shareMeasurement.ts`, 순서는 `apps/web/src/ui/shareFlow.ts`다.
+모든 공유 이벤트에 `share_contract=2`를 붙여 옛 판과 나눈다.
+
+| 이벤트                        | 언제                                                                                         | `share_method`               | 추가 값                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------- |
+| `career_share_click`          | 활성 공유 버튼 클릭(시도 1회의 시작)                                                         | `pending`                    |                               |
+| `career_share_preview`        | 링크 확인 · `canShare` 통과 뒤 `navigator.share`를 호출하기 직전(OS 공유 시트를 열려는 시도) | `native_share`               |                               |
+| `career_share_native_success` | `navigator.share`가 resolve(사용자가 OS 시트에서 대상을 고름)                                | `native_share`               |                               |
+| `career_share_cancel`         | `navigator.share`가 `AbortError`(사용자가 시트를 닫음). 복사로 넘어가지 않는다               | `native_share`               |                               |
+| `career_share_copy_success`   | 클립보드 쓰기가 resolve                                                                      | `copy_link`                  |                               |
+| `career_share_failure`        | 링크 확인 실패(`link`), 취소가 아닌 시트 오류(`native`, 뒤이어 복사), 클립보드 거절(`copy`)  | `native_share` / `copy_link` | `failure_stage`, `error_kind` |
+
+- **preview는 시트가 실제로 떴다는 뜻이 아니다.** 호출 직후 브라우저가 거절하면(제스처 만료 등)
+  `failure`(`native`)가 뒤따른다. `canShare`가 false면 preview 없이 바로 복사하며 실패로 세지 않는다.
+- **OS 공유 성공은 실제 SNS 게시 완료를 보장하지 않는다.** 대상 앱에서 게시를 취소해도 resolve될 수 있다.
+  복사 성공도 붙여 넣기·게시를 뜻하지 않는다.
+- 네이티브 실패 뒤 복사로 넘어가면 `failure`(`native`)와 복사 결과(`copy_success` 또는 `failure`(`copy`))가
+  한 번씩 남는다. 한 시도는 끝 이벤트(`native_success` · `cancel` · `copy_success` · 마지막 `failure`) 하나로 끝난다.
+- `failure_stage=link`는 링크 확인·업로드 준비가 실패해 공유를 시작하지 못한 경우다(은퇴 기록 미업로드·거절·네트워크).
+  이때 `share_method`는 시도하려던 경로(시트가 있으면 `native_share`)다. `error_kind`는
+  `not_allowed`/`invalid_data`/`unknown` 고정 목록이고 오류 원문은 보내지 않는다.
+- 이중 전송은 하지 않는다. 같은 성공이 두 이름으로 나가지 않으므로 합쳐 세지 않는다.
+- **과거 한계:** T-11-668 배포 전(`share_contract` 없음)의 `career_share_copy_success`에는 네이티브 공유
+  성공이 섞여 있고(`share_method=copy_link`로 잘못 표시), 취소·실패·미리보기는 남지 않았다. 배포 전 수치는
+  "네이티브 성공 + 복사 성공" 합계로만 읽고, 복사율이나 네이티브 비율 추이에 쓰지 않는다.
+  배포 뒤 같은 이름은 복사 성공만 뜻한다. 옛 판과 비교할 때는 `native_success + copy_success`를 쓴다.
+- 앱(`apps/mobile`)은 아직 공유 이벤트를 보내지 않는다. 붙일 때 같은 계약(`shareEventParams`)을 쓴다.
 
 ## 4. 지표·보고서 정의
 

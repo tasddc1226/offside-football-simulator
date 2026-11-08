@@ -166,6 +166,36 @@ test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보
   await expect(page.locator('[data-act="continue"], [data-act="new"]').first()).toBeVisible();
 });
 
+test('T-11-668 공유 시트를 닫으면 조용히 끝나고, 시트가 거절되면 복사로 넘어간다', async ({
+  page,
+  context,
+}) => {
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  // 첫 탭은 사용자가 시트를 닫고(AbortError), 둘째 탭은 브라우저가 시트를 거절한다(NotAllowedError).
+  await page.addInitScript(() => {
+    let calls = 0;
+    Object.defineProperty(navigator, 'share', {
+      value: () => {
+        calls += 1;
+        return Promise.reject(
+          new DOMException('x', calls === 1 ? 'AbortError' : 'NotAllowedError'),
+        );
+      },
+    });
+  });
+  await stubApi(page, { google: true });
+  await retireNow(page);
+  const share = page.locator('[data-act="share-career"]');
+  await share.click();
+  await expect(page.locator('.share-url')).toBeVisible();
+  await expect(share).toBeEnabled();
+  await expect(page.getByText('공유 링크를 복사했어요.')).toHaveCount(0);
+  await share.click();
+  await expect(page.getByText('공유 링크를 복사했어요.')).toBeVisible();
+  const url = await page.locator('.share-url').inputValue();
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(url);
+});
+
 test('없는 공유 링크는 안내와 시작 버튼을 보여 준다', async ({ page }) => {
   await stubApi(page, { google: false });
   await page.goto('/career/00000000-0000-4000-8000-000000000000');
