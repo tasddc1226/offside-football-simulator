@@ -8,6 +8,7 @@ import {
   type Params,
 } from './analytics-model.js';
 import { createTracker } from './analytics-tracker.js';
+import { COMMERCE_EVENT, commerceParams, type CommerceObservation } from './commerceStage.js';
 import { createRetireExpMetrics } from './retireExpMetrics.js';
 import type { Progress } from './player-metrics.js';
 
@@ -83,12 +84,13 @@ export function createNativeAnalytics(io: IO) {
       await sdk?.reset().catch(() => {});
     });
   }
-  function send(name: string, params: Params = {}) {
-    if (!allowed() || screen === 'admin') return;
+  // alive: 보내는 쪽이 따로 보는 조건(구매 퍼널의 계정 · 동의 epoch). 줄에 올린 뒤 실제 SDK 호출 직전에 다시 본다.
+  function send(name: string, params: Params = {}, alive?: () => boolean) {
+    if (!allowed() || screen === 'admin' || (alive && !alive())) return;
     const epoch = generation;
     const data = { measurement_version: '2', app_version: io.appVersion, ...params };
     enqueue(async () => {
-      if (epoch === generation && allowed()) await sdk?.event(name, data);
+      if (epoch === generation && allowed() && (!alive || alive())) await sdk?.event(name, data);
     });
   }
   function pageView() {
@@ -231,6 +233,15 @@ export function createNativeAnalytics(io: IO) {
         askSeen.add(place);
       }
       send('push_optin_' + action, { place, ...(action === 'result' && result ? { result } : {}) });
+    },
+    /** 강화권 · 스카우트권 구매 퍼널(commerceStage). 보내는 순간의 이용 분석 동의만 본다. 쌓아 두거나 다시 보내지 않는다. */
+    commerce(o: CommerceObservation, alive?: () => boolean) {
+      try {
+        const params = commerceParams(o);
+        if (params) send(COMMERCE_EVENT, params, alive);
+      } catch {
+        /* 계측은 결제 · 지급 · 화면에 영향을 주지 않는다. */
+      }
     },
     retireExp,
     analytics: {

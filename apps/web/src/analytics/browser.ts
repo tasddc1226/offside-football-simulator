@@ -12,6 +12,11 @@ import {
 } from '@offside/app-core/retireExpMetrics';
 import type { AppStoreOs } from '@offside/app-core/appPromo';
 import { shareEventParams, type ShareOutcome } from '@offside/app-core/shareMeasurement';
+import {
+  COMMERCE_EVENT,
+  commerceParams,
+  type CommerceObservation,
+} from '@offside/app-core/commerceStage';
 import type { AppStorePlace } from './index.js';
 import {
   AD_CONSENT_KEY,
@@ -119,9 +124,9 @@ export function onConsent(fn: () => void): () => void {
     listeners.delete(fn);
   };
 }
-function tag(...args: unknown[]) {
+function tag(...args: unknown[]): unknown {
   try {
-    w().gtag?.(...args);
+    return w().gtag?.(...args);
   } catch {
     /* browser blockers */
   }
@@ -137,9 +142,9 @@ function pageParams(): Params {
     page_referrer: referrer,
   };
 }
-function send(event: string, params: Params = {}) {
+function send(event: string, params: Params = {}): unknown {
   if (!allowed() || !loaded || screen === 'admin') return;
-  tag('event', event, {
+  return tag('event', event, {
     ...pageParams(),
     measurement_version: '3',
     test_marker: env.VITE_GA4_TEST_MARKER === 'qa' || id !== prodId ? 'qa' : 'live',
@@ -385,6 +390,19 @@ export const trackShare = (o: ShareOutcome) => {
   try {
     const { name, params } = shareEventParams(o);
     send(name, params);
+  } catch {
+    /* optional */
+  }
+};
+
+/** 강화권 · 스카우트권 구매 퍼널(commerceStage). 보내는 순간의 이용 분석 동의 · 태그만 본다. 쌓아 두지 않는다. */
+export const trackCommerce = (o: CommerceObservation) => {
+  try {
+    const params = commerceParams(o);
+    if (!params) return;
+    // 막는 확장 · 대체 gtag가 promise를 돌려주고 거절해도 결제 흐름 · 콘솔에 새지 않게 여기서 삼킨다.
+    const r = send(COMMERCE_EVENT, params) as { then?: unknown } | undefined;
+    if (r && typeof r.then === 'function') (r as Promise<unknown>).then(undefined, () => {});
   } catch {
     /* optional */
   }

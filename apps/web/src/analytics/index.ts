@@ -6,6 +6,7 @@ import type { AppStoreOs } from '@offside/app-core/appPromo';
 import { onClubSignal, setClubAccountKey } from '@offside/app-core/clubSignals';
 import type { AccountKey } from '@offside/app-core/retireExpMetrics';
 import type { ShareOutcome } from '@offside/app-core/shareMeasurement';
+import type { CommerceObservation } from '@offside/app-core/commerceStage';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';
@@ -52,6 +53,34 @@ export const analytics = {
 };
 /** T-11-668 커리어 링크 공유 시도와 결과(의미는 @offside/app-core/shareMeasurement). */
 export const trackShare = (o: ShareOutcome) => adapter?.trackShare(o);
+/**
+ * 강화권 · 스카우트권 구매 퍼널(@offside/app-core/commerceStage). 어댑터 · 동의 전이면 버린다(쌓거나 나중에 다시 보내지 않는다).
+ * alive: commerceContext()가 만든 조건. 결제 시도를 시작한 뒤 계정이나 이용 분석 동의가 바뀌었으면 늦게 온 단계를 버린다.
+ */
+export const trackCommerce = (o: CommerceObservation, alive?: () => boolean) => {
+  try {
+    if (alive && !alive()) return;
+    adapter?.trackCommerce(o);
+  } catch {
+    /* optional */
+  }
+};
+let commerceEpoch = 0;
+let commerceKey: AccountKey | 'unset' = 'unset';
+/** 계정 키가 바뀔 때마다 세대를 올린다(A → B → A로 돌아와도 A 때 시작한 시도는 무효). */
+function noteCommerceAccount() {
+  const key = accountKeyNow();
+  if (key === commerceKey) return;
+  commerceKey = key;
+  commerceEpoch++;
+}
+/** 지금 계정(profileKey) · 동의 상태에 묶인 조건. 동의가 한 번이라도 바뀌거나(거절 → 재동의 포함) 계정이 한 번이라도 바뀌면
+ * (다시 돌아와도) false. */
+export function commerceContext(): () => boolean {
+  const epoch = commerceEpoch;
+  const key = accountKeyNow();
+  return () => epoch === commerceEpoch && accountKeyNow() === key;
+}
 /** T-11-092 앱 스토어 링크를 누른 곳(T-11-449 어느 스토어인지도 남긴다). */
 export type AppStorePlace = 'home' | 'home_top' | 'retire' | 'sheet' | 'settings' | 'shop';
 export const trackAppStoreClick = (place: AppStorePlace, store: AppStoreOs) =>
@@ -81,7 +110,10 @@ export function setRetireAccountSource(fn: () => AccountKey) {
   accountSource = fn;
 }
 /** account-state가 계정 확인 결과가 바뀔 때 부른다. 다른 계정이면 이전 노출 귀속을 지운다. */
-export const noteRetireAccount = () => adapter?.retireExp.account(accountKeyNow());
+export const noteRetireAccount = () => {
+  noteCommerceAccount();
+  adapter?.retireExp.account(accountKeyNow());
+};
 let accountAsked = false;
 /** 귀속 기록이 남아 있는데 계정을 아직 모를 때 한 번만(5분 메모 계정 확인) 묻는다. */
 function needRetireAccount() {
@@ -92,6 +124,7 @@ function needRetireAccount() {
 setClubAccountKey(accountKeyNow);
 function attachRetireExp(m: typeof import('./browser.js')) {
   m.setRetireAccountKey(accountKeyNow, needRetireAccount);
+  m.onConsent(() => void commerceEpoch++);
   if (retireView) m.retireExp.view(retireView);
 }
 export const retireExp = {

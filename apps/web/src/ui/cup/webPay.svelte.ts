@@ -10,6 +10,8 @@ import {
   type WebPayConfigResponse,
 } from '@offside/app-core/api/webPay';
 import { webPayText as L } from '@offside/app-core/i18n/ko/webPay';
+import { commerceOffer, type CommerceEntry } from '@offside/app-core/commerceStage';
+import { commerceContext, trackCommerce } from '../../analytics/index.js';
 import { toast } from '../helpers.js';
 import { go, goContinue } from '../nav.js';
 import { appState } from '../state.svelte.js';
@@ -55,6 +57,9 @@ export function loadWebPay() {
  */
 export type WebPayBack = 'game' | 'owner' | 'pass' | 'member';
 type Pending = { orderId: string; at: number; back?: WebPayBack };
+/** 구매 퍼널 자리(commerceStage). 결제창에서 돌아갈 화면이 경기면 선수 탭, 아니면 상점. */
+export const commerceEntry = (back: WebPayBack): CommerceEntry =>
+  back === 'game' ? 'player_tab' : 'shop';
 function readPending(): Pending | null {
   try {
     const p = JSON.parse(localStorage.getItem(PENDING_KEY) ?? 'null') as Pending | null;
@@ -106,10 +111,20 @@ async function checkPending() {
 export async function startWebPay(productId: string, back: WebPayBack = 'owner') {
   if (webPay.busy) return;
   webPay.busy = true;
+  // 강화권 · 스카우트권만 구매 퍼널에 남긴다(리롤권 · 이름 변경권 · 패스 · 멤버십은 null). checkout_request는 주문 요청을
+  // 보내기 직전에 남기고, 주문 응답을 기다린 뒤의 실패는 그 사이 계정 · 동의가 바뀌지 않았을 때만 남긴다. 결제창으로 떠난
+  // 뒤의 취소 · 성공은 이 탭 메모리로 이어 갈 수 없어 남기지 않는다(commerceStage 머리말). 주문 · 미확인 주문 저장은 그대로다.
+  const offer = commerceOffer(productId, commerceEntry(back), 'xsolla');
+  const alive = commerceContext();
+  if (offer) {
+    trackCommerce({ ...offer, stage: 'offer_select' }, alive);
+    trackCommerce({ ...offer, stage: 'checkout_request' }, alive);
+  }
   toast(L.opening);
   const r = await createWebPayOrder(productId);
   if (!r.ok) {
     webPay.busy = false;
+    if (offer) trackCommerce({ ...offer, stage: 'checkout_error', reason: 'start_failed' }, alive);
     // 서버 503 문구(webPayUnavailable)는 결제 확인용이라, 결제창을 열지 못했을 때는 여는 실패로 알린다.
     return toast(
       r.error.code === 'SERVICE_UNAVAILABLE' ? L.startFail : r.error.message || L.startFail,
