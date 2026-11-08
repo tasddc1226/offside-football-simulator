@@ -8,6 +8,8 @@ import {
   type Params,
 } from './analytics-model.js';
 import { createTracker } from './analytics-tracker.js';
+import { createRetireExpMetrics } from './retireExpMetrics.js';
+import type { Progress } from './player-metrics.js';
 
 /** 푸시 열기에 붙이는 캠페인과 단계 허용 목록. 서버 push data의 campaign · reminderStage와 같다. */
 const PUSH_CAMPAIGNS = new Map<unknown, readonly number[]>([
@@ -49,6 +51,13 @@ type IO = {
   writeLedger: (v: Ledger) => void;
   now: () => number;
   appVersion: string;
+  /** T-11-669 은퇴 화면 실험 결과 귀속 기록(기기 저장). null이면 지운다. 없으면 실험 계측을 하지 않는다. */
+  readRetireExp?: () => string | null;
+  writeRetireExp?: (raw: string | null) => void;
+  /** 지금 계정 키(retireExperiment profileKey, null = 계정 없음, undefined = 모름). */
+  retireAccountKey?: () => string | null | undefined;
+  /** 귀속 기록이 있는데 계정을 아직 모를 때(메모된 계정 확인을 한 번 시작한다). */
+  retireNeedAccount?: () => void;
 };
 export function createNativeAnalytics(io: IO) {
   let consent: Consent = 'unknown';
@@ -110,8 +119,19 @@ export function createNativeAnalytics(io: IO) {
       }
       ready = true;
       pageView();
+      retireExp.ready();
     });
   }
+  // T-11-669 동의했고 SDK가 준비됐을 때만 기록 · 전송한다. 동의를 거두면 기록을 지운다(setConsent).
+  const retireExp = createRetireExpMetrics({
+    allowed: () => allowed() && screen !== 'admin' && !!io.readRetireExp && !!io.writeRetireExp,
+    read: () => io.readRetireExp?.() ?? null,
+    write: (raw) => io.writeRetireExp?.(raw),
+    send,
+    now: io.now,
+    account: () => io.retireAccountKey?.(),
+    needAccount: () => io.retireNeedAccount?.(),
+  });
   const makeTracker = (id: string | null) =>
     createTracker({ allowed, read: io.readLedger, write: io.writeLedger, now: io.now, send }, id);
   return {
@@ -155,6 +175,11 @@ export function createNativeAnalytics(io: IO) {
         tracker?.reset();
         try {
           io.writeLedger(emptyLedger());
+        } catch {
+          /* optional storage */
+        }
+        try {
+          io.writeRetireExp?.(null);
         } catch {
           /* optional storage */
         }
@@ -207,7 +232,10 @@ export function createNativeAnalytics(io: IO) {
       }
       send('push_optin_' + action, { place, ...(action === 'result' && result ? { result } : {}) });
     },
+    retireExp,
     analytics: {
+      /** 리그 반기 구간 완료. 앱은 은퇴 화면 실험의 '다음 유효 플레이'에만 쓴다(웹 play_complete는 따로). */
+      complete: (p: Progress) => retireExp.complete(p),
       replace: () => tracker?.replace(),
       start: (s: Career, previous: Career | null) => tracker?.start(s, previous),
       play: (s: Career, firstAction = false) => tracker?.play(s, firstAction),

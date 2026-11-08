@@ -564,6 +564,14 @@ export const BALANCE_SPEC = {
     max: 20,
     step: 1,
   },
+  // T-11-669 은퇴 화면 실험 비율. 게임 엔진은 읽지 않는다. 앱이 서버 최신 값(latestBalance)을 은퇴 화면에서 바로 읽는다.
+  retireExpShare: {
+    def: 0,
+    min: 0,
+    max: 0.5,
+    step: 0.05,
+    unit: 'pct',
+  },
 } as const satisfies Record<string, BalanceKnob>;
 
 export type BalanceKey = keyof typeof BALANCE_SPEC;

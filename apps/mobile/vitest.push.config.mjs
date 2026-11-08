@@ -20,6 +20,7 @@ export default {
       'src/platform/interstitial.test.mjs',
       'src/platform/iapItems.test.mjs',
       'src/platform/playSignals.test.mjs',
+      'src/analytics/retireExp.test.mjs',
     ],
   },
 };

@@ -83,6 +83,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivReward5: '菁英 II 賽季獎勵重抽券',
   teamDivReward6: '菁英 I 賽季獎勵重抽券',
   teamDivReward7: '大師賽季獎勵重抽券',
+  retireExpShare: '退休畫面實驗比例',
   eventWeight: (p) => `事件出現頻率調整 ${p.n} 項`,
   choiceBonus: (p) => `選項成功機率調整 ${p.n} 項`,
 };

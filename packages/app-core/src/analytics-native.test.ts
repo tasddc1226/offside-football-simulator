@@ -270,3 +270,93 @@ describe('push opt-in analytics', () => {
     expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
   });
 });
+
+describe('T-11-669 retire experiment (native)', () => {
+  function withStore(initial: Consent, initialAccount: string | null | undefined = 'k') {
+    let raw: string | null = null;
+    let account: string | null | undefined = initialAccount;
+    const h = setup({ initial });
+    const io = {
+      ...h.io,
+      readRetireExp: () => raw,
+      writeRetireExp: (v: string | null) => {
+        raw = v;
+      },
+      retireAccountKey: () => account,
+    };
+    const a = createNativeAnalytics(io);
+    a.initialize('retired', null);
+    return {
+      a,
+      events: h.events,
+      raw: () => raw,
+      setAccount: (v: string | null | undefined) => {
+        account = v;
+      },
+    };
+  }
+  const exposure = {
+    arm: 'treatment' as const,
+    cid: 'PRIVATE-ID',
+    order: 'first' as const,
+    upload: 'done',
+    account: 'member',
+    scenes: 2,
+    readyMs: 40,
+    pk: 'k',
+  };
+  it('records nothing without consent (no storage created)', async () => {
+    const h = withStore('denied');
+    await h.a.settled();
+    h.a.retireExp.view(exposure);
+    h.a.retireExp.cta('treatment', 'team');
+    h.a.analytics.complete({ cid: 'other', year: 2030, phase: 1, matches: 2 });
+    await h.a.settled();
+    expect(h.events).toEqual([]);
+    expect(h.raw()).toBeNull();
+  });
+  it('sends the pending exposure once the SDK becomes ready after a late grant; earlier clicks are not replayed', async () => {
+    const h = withStore('unknown');
+    await h.a.settled();
+    h.a.retireExp.view(exposure);
+    h.a.retireExp.scene('treatment', 'first_apps');
+    await h.a.settled();
+    expect(h.events.filter((e) => e.name.startsWith('retire_exp_'))).toEqual([]);
+    h.a.setConsent('granted');
+    await h.a.settled();
+    h.a.retireExp.cta('treatment', 'team');
+    await h.a.settled();
+    expect(h.events.map((e) => e.name).filter((n) => n.startsWith('retire_exp_'))).toEqual([
+      'retire_exp_exposure',
+      'retire_exp_cta_click',
+    ]);
+  });
+  it('attributes the next league half and clears the record when consent is withdrawn', async () => {
+    const h = withStore('granted');
+    await h.a.settled();
+    h.a.retireExp.view(exposure);
+    h.a.analytics.complete({ cid: 'other', year: 2030, phase: 1, matches: 2 });
+    await h.a.settled();
+    const names = h.events.map((e) => e.name);
+    expect(names).toContain('retire_exp_exposure');
+    expect(names).toContain('retire_exp_outcome');
+    expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
+    expect(h.raw()).not.toBeNull();
+    h.a.setConsent('denied');
+    await h.a.settled();
+    expect(h.raw()).toBeNull();
+  });
+  it('drops a pending view when the account changes before the async SDK becomes ready', async () => {
+    const h = withStore('unknown');
+    await h.a.settled();
+    h.a.retireExp.view(exposure);
+    h.setAccount('other');
+    h.a.retireExp.account('other');
+    h.a.setConsent('granted'); // SDK 준비는 비동기 큐에서 끝난다
+    await h.a.settled();
+    h.a.retireExp.cta('treatment', 'team');
+    await h.a.settled();
+    expect(h.events.filter((e) => e.name.startsWith('retire_exp_'))).toEqual([]);
+    expect(h.raw()).toBeNull();
+  });
+});

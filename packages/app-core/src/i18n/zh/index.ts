@@ -87,6 +87,7 @@ import { push } from './push';
 import { ratingReport } from './ratingReport';
 import { rename } from './rename';
 import { retention } from './retention';
+import { retireExp } from './retireExp';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
 import { reveal } from './reveal';
@@ -213,6 +214,7 @@ export const zh = {
   ratingReport,
   rename,
   retention,
+  retireExp,
   retired,
   retiredLook,
   reveal,
