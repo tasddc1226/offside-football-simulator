@@ -1,19 +1,17 @@
 import { z } from 'zod';
 import { ClubStrengthLeagueSchema } from './club-strength.js';
+import { DYNAMIC_CLUB_ID, DYNAMIC_LEAGUES } from './club-strength-spec.js';
 export const SourceSchema = z.object({
   league: ClubStrengthLeagueSchema,
   provider: z.enum(['football-data', 'api-football']),
   competition: z.string().regex(/^[A-Za-z0-9-]{1,12}$/),
   season: z.number().int().min(2020).max(2100).optional(),
-  teams: z.record(
-    z.string().regex(/^\d+$/),
-    z.string().regex(/^(k1|j1|mls|ere|l1|bl|sa|ll|pl)-\d+$/),
-  ),
+  teams: z.record(z.string().regex(/^\d+$/), z.string().regex(DYNAMIC_CLUB_ID)),
   exclude: z.array(z.string().regex(/^\d+$/)).max(40).default([]),
 });
 export const SourcesSchema = z
   .array(SourceSchema)
-  .max(9)
+  .max(DYNAMIC_LEAGUES.length)
   .refine((s) => new Set(s.map((x) => x.league)).size === s.length);
 export type StrengthSource = z.infer<typeof SourceSchema>;
 const integer = z.number().int().nonnegative();
