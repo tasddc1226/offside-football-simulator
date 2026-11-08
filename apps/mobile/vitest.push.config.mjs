@@ -18,6 +18,7 @@ export default {
       'src/platform/adPersonalization.test.mjs',
       'src/platform/rewarded.test.mjs',
       'src/platform/interstitial.test.mjs',
+      'src/components/AdSlot.test.mjs',
       'src/platform/iapItems.test.mjs',
       'src/platform/playSignals.test.mjs',
       'src/analytics/retireExp.test.mjs',
