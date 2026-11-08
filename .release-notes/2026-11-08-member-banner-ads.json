@@ -1,0 +1,18 @@
+{
+  "id": "t-11-512a-member-banner-ads",
+  "title": "멤버십 배너 광고 수정",
+  "items": ["클럽 멤버십을 구독하는 동안 배너 광고도 보이지 않아요."],
+  "en": {
+    "title": "Membership banner ad fix",
+    "items": ["Banner ads no longer appear while you have a club membership."]
+  },
+  "ja": {
+    "title": "メンバーシップのバナー広告を修正",
+    "items": ["クラブメンバーシップの購読中は、バナー広告も表示されません。"]
+  },
+  "zh": {
+    "title": "會員橫幅廣告修正",
+    "items": ["訂閱俱樂部會員期間，橫幅廣告也不會再出現。"]
+  },
+  "availability": "app"
+}
