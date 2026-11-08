@@ -67,6 +67,11 @@ export const nativeAnalytics = createNativeAnalytics({
   },
 });
 export const { analytics, trackPage } = nativeAnalytics;
+/** 강화권 · 스카우트권 구매 퍼널(@offside/app-core/commerceStage). 동의 · SDK 실패는 결제에 닿지 않는다. */
+export const trackCommerce: typeof nativeAnalytics.commerce = (o, alive) =>
+  nativeAnalytics.commerce(o, alive);
+/** 이용 분석 동의가 바뀔 때(구매 퍼널이 진행 중 시도 · 서버 확인 중 표를 버린다). */
+export const onAnalyticsConsent = (fn: () => void) => nativeAnalytics.onConsent(fn);
 /** T-11-669 지금 계정 키(원래 ID가 아니라 profileKey). null = 계정 없음, undefined = 확인 중 · 연결 실패. */
 function accountKeyNow(): string | null | undefined {
   const p = accountCache.value;

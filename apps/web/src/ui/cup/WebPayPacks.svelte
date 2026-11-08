@@ -5,7 +5,9 @@
   import type { OwnerItem } from '@offside/contracts/cup';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { webPayText as L } from '@offside/app-core/i18n/ko/webPay';
-  import { loadWebPay, startWebPay, webPay, type WebPayBack } from './webPay.svelte.js';
+  import { loadWebPay, startWebPay, webPay, commerceEntry, type WebPayBack } from './webPay.svelte.js';
+  import { trackCommerce } from '../../analytics/index.js';
+  import { observeOfferView } from '@offside/app-core/offerVisibility';
 
   let { item, note, back = 'owner' }: { item: OwnerItem; note?: string; back?: WebPayBack } = $props();
 
@@ -17,10 +19,28 @@
   $effect(() => {
     if (hasSessionHint()) void loadWebPay();
   });
+
+  // 구매 퍼널 노출(commerceStage): 강화권 · 스카우트권 묶음이 화면에 절반 이상(intersectionRatio ≥ 0.5) 들어오고 버튼이 활성일
+  // 때 이 자리에서 한 번. 마운트만으로는 남기지 않고, IntersectionObserver가 없으면 남기지 않는다. 그 순간 동의 · 태그가 준비되지
+  // 않았으면 이 자리의 노출은 버린다(나중에 다시 보내지 않는다).
+  let seen = false;
+  function offerView(node: HTMLElement) {
+    if (seen || (item !== 'boost' && item !== 'scout')) return;
+    const commerceItem = item;
+    const destroy = observeOfferView(node, {
+      IO: typeof IntersectionObserver === 'undefined' ? undefined : IntersectionObserver,
+      ready: () => !webPay.busy,
+      onShown: () => {
+        seen = true;
+        trackCommerce({ stage: 'offer_view', item: commerceItem, entry: commerceEntry(back), store: 'xsolla' });
+      },
+    });
+    return { destroy };
+  }
 </script>
 
 {#if packs.length}
-  <div class="wpp" data-web-pay-packs={item}>
+  <div class="wpp" data-web-pay-packs={item} use:offerView>
     <small class="eyebrow">{L.title}</small>
     {#each packs as p (p.productId)}
       <button
