@@ -7,7 +7,7 @@
   import { onMount } from 'svelte';
   import { appState, type LegendView } from './state.svelte.js';
   import { loadSharedLegend } from './legend.js';
-  import { goHome } from './nav.js';
+  import { goHome, goNew } from './nav.js';
   import Topbar from './Topbar.svelte';
   import LegendReport from './LegendReport.svelte';
   import NameReport from './NameReport.svelte';
@@ -22,10 +22,12 @@
   }
   onMount(load);
 
+  // T-11-676 이 기기에 커리어가 없으면(처음 온 사람) 홈을 거치지 않고 바로 선수 만들기로 간다. 있으면 지금처럼 홈으로.
   function leave() {
     window.history.replaceState(window.history.state, '', '/'); // 방문 기록(T-10-114)은 그대로 둔다.
     appState.sharedCareer = null;
-    goHome();
+    if (appState.G) goHome();
+    else goNew();
     window.scrollTo(0, 0);
   }
   const cta = $derived(appState.G ? L.ctaGame : L.ctaNew);

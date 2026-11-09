@@ -20,8 +20,11 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     'youtube',
     // T-11-584 앱 · 웹 랜딩(/app/)에서 캠페인 없이 들어온 방문.
     'landing',
+    // T-11-676 이용자가 은퇴 커리어 공유 버튼으로 만든 링크. 어디서 공유했는지(앱 · 웹)만 남긴다.
+    'offside_app',
+    'offside_web',
   ],
-  utm_medium: ['social', 'community', 'paid', 'partner', 'web'],
+  utm_medium: ['social', 'community', 'paid', 'partner', 'web', 'share'],
   utm_campaign: [
     'launch',
     'retirement_share',
@@ -31,6 +34,8 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     // T-11-515 크리에이터 협업 시험(유료 숏폼 1건).
     'creator_test',
     'app_landing',
+    // T-11-676 이용자 공유 링크(운영자가 직접 올린 retirement_share와 나눈다).
+    'career_share',
   ],
   utm_content: [
     'career',

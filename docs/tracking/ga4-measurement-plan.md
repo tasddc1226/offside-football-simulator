@@ -98,7 +98,10 @@ true/false/unknown이다. 후속 생성 정보를 사용자 입력 원문으로 
   성공이 섞여 있고(`share_method=copy_link`로 잘못 표시), 취소·실패·미리보기는 남지 않았다. 배포 전 수치는
   "네이티브 성공 + 복사 성공" 합계로만 읽고, 복사율이나 네이티브 비율 추이에 쓰지 않는다.
   배포 뒤 같은 이름은 복사 성공만 뜻한다. 옛 판과 비교할 때는 `native_success + copy_success`를 쓴다.
-- 앱(`apps/mobile`)은 아직 공유 이벤트를 보내지 않는다. 붙일 때 같은 계약(`shareEventParams`)을 쓴다.
+- **앱(T-11-676):** 앱 공유 버튼(`apps/mobile/.../ShareBar.tsx` → `shareFlow.ts`)도 같은 계약으로 보낸다(Firebase, 플랫폼 iOS ·
+  Android). 앱은 RN `Share.share`라 `canShare`가 없어 링크 확인 뒤 항상 `preview`를 보낸다. iOS는 시트를 닫으면 `cancel`,
+  **Android는 대상을 고르지 않아도 `native_success`로 끝난다**(RN이 취소를 알려 주지 않는다). Android `native_success`는
+  "시트를 열었다"로 읽는다. T-11-676 OTA 전 앱 공유는 남지 않았다.
 
 ### 3.2 강화권 · 스카우트권 구매 퍼널 (T-11-671)
 
@@ -178,6 +181,13 @@ MVP는 GA에 careerId를 보내지 않으므로 진행 퍼널은 **사용자 행
 자발적인 이용자 공유에는 UTM이 없거나 원래 홍보 UTM이 그대로 남을 수 있다.
 referrer가 없으면 direct로 남을 수 있으므로 자발적 공유를 모두 찾는 도구라고 설명하지 않는다.
 내부 화면 링크에 UTM을 붙여 원래 유입을 덮어쓰지 않는다.
+
+**이용자 공유 링크(T-11-676):** 은퇴 커리어 공유 버튼이 만드는 `/career/<id>` 링크에는
+`utm_source=offside_app|offside_web&utm_medium=share&utm_campaign=career_share`가 붙는다(`careerShareUrl`).
+source는 받은 사람이 연 곳이 아니라 **공유한 곳(앱 · 웹)** 이다. 받는 쪽 메신저 · SNS referrer는 이 UTM에 덮인다
+(메신저는 원래 대부분 direct였다). 운영자가 직접 올린 공유 글은 계속 `retirement_share`를 쓴다.
+앱이 설치된 사람은 링크가 앱을 열어(유니버설 링크 · 앱 링크) 웹 GA4에 세션이 남지 않는다. 그래서 이 UTM 세션은
+"웹에서 링크를 연 사람"(대부분 앱이 없는 사람)이다. T-11-676 전 링크는 UTM이 없어 `/shared_career` 랜딩으로만 센다.
 
 ## 6. 수집·개인정보·실패 처리 제안
 

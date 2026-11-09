@@ -271,6 +271,33 @@ describe('push opt-in analytics', () => {
   });
 });
 
+describe('T-11-676 career share (native)', () => {
+  it('sends the web share contract only after consent', async () => {
+    const h = setup({ initial: 'unknown' });
+    await h.a.settled();
+    h.a.share({ kind: 'click' });
+    await h.a.settled();
+    expect(h.events).toEqual([]);
+    h.a.setConsent('granted');
+    await h.a.settled();
+    h.a.share({ kind: 'click' });
+    h.a.share({ kind: 'preview' });
+    h.a.share({ kind: 'cancel' });
+    h.a.share({ kind: 'failure', method: 'native_share', stage: 'native', error: 'unknown' });
+    h.a.share({ kind: 'copy_success' });
+    await h.a.settled();
+    const share = h.events.filter((e) => e.name.startsWith('career_share_'));
+    expect(share.map((e) => [e.name, e.params.share_method, e.params.share_contract])).toEqual([
+      ['career_share_click', 'pending', '2'],
+      ['career_share_preview', 'native_share', '2'],
+      ['career_share_cancel', 'native_share', '2'],
+      ['career_share_failure', 'native_share', '2'],
+      ['career_share_copy_success', 'copy_link', '2'],
+    ]);
+    expect(share[3]!.params).toMatchObject({ failure_stage: 'native', error_kind: 'unknown' });
+  });
+});
+
 describe('T-11-669 retire experiment (native)', () => {
   function withStore(initial: Consent, initialAccount: string | null | undefined = 'k') {
     let raw: string | null = null;

@@ -26,6 +26,7 @@ export const {
 // ───────── T-10-029 은퇴 커리어 공유 링크 ─────────
 // 링크는 `/career/<커리어 id>` — 공개 명예의 전당 상세(/v1/hof/:id)를 보기 전용 화면(SharedCareer)으로
 // 그린다. 커리어 id는 클라이언트가 만든 UUID라 추측할 수 없다. 워커(worker.ts APP_PATHS)가 앱 셸로 내려 준다.
-export const shareUrl = (careerId: string) => careerShareUrl(window.location.origin, careerId);
+export const shareUrl = (careerId: string) =>
+  careerShareUrl(window.location.origin, careerId, 'web');
 
 export { routeSharedCareer } from './sharedCareerRoute.js';

@@ -157,7 +157,7 @@ export const {
 } = createLegends({ state: appState, rnOf, toast, uploadRetirement, scrollTop: () => scrollTo(0) });
 
 /** 은퇴 커리어 공유 링크 — 웹 주소로 연다(앱이 없는 사람도 볼 수 있다). */
-export const shareUrl = (careerId: string) => careerShareUrl(WEB_ORIGIN, careerId);
+export const shareUrl = (careerId: string) => careerShareUrl(WEB_ORIGIN, careerId, 'app');
 
 export const { markNewsSeen, dismissNews, checkNews, isNewPost } = createNews(newsState);
 
