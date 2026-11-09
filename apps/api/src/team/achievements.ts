@@ -32,7 +32,7 @@ import {
   managerUnits,
   tenureLabels,
 } from '../i18n/ko/achievements.js';
-import { NATIONAL_WINS } from '@offside/contracts/nations';
+import { DEFAULT_NATION, NATIONAL_WINS } from '@offside/contracts/nations';
 
 export type AchievementCareer = {
   pos: PosGroup;
@@ -966,6 +966,8 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
     const full = team.slots.length === LINEUP_SIZE && players.length === LINEUP_SIZE;
     const all = (pred: (s: AchievementTeamSlot) => boolean) => full && players.every(pred);
     const club = players[0]?.lastClubId;
+    // 대한민국 선수는 국적 없이(NULL) 저장된다(업로드가 DEFAULT_NATION을 싣지 않는다) — 비교 전에 대한민국으로 맞춘다.
+    const nationOf = (s: AchievementTeamSlot) => s.nation || DEFAULT_NATION;
     // T-11-103 팀 업적은 그 시즌에 한 번 닿으면 남는다 — 선수를 팔거나 방출해 선발이 바뀌어도, 레이팅·좋아요가 내려가도.
     const kept = input.kept ?? {};
     const held = (id: string, label: string, done: boolean, pts: number, desc?: string) =>
@@ -1031,7 +1033,7 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
         held(
           'team-nation',
           achievementLabels['team-nation']!,
-          all((s) => !!s.nation && s.nation === players[0]?.nation),
+          all((s) => nationOf(s) === nationOf(players[0]!)),
           80,
         ),
         held(

@@ -1,0 +1,30 @@
+{
+  "id": "t-11-673-team-nation-fix",
+  "title": "같은 국적 업적 수정 · 가이드 보강",
+  "items": [
+    "대한민국 선수 11명으로 선발을 채워도 '11명 모두 같은 국적' 업적이 달성되지 않던 문제를 고쳤어요.",
+    "게임 가이드에 38~40세 재계약 규칙을 더했어요. 이 나이에는 계약이 끝나도 구단이 재계약을 제안하지 않아서, 다른 구단의 제의가 있어야 계속 뛸 수 있어요."
+  ],
+  "en": {
+    "title": "Same-nation achievement fix and guide update",
+    "items": [
+      "Fixed 'All 11 from the same nation' not unlocking for a lineup of 11 Korean players.",
+      "The game guide now explains renewals at ages 38 to 40. Your club does not offer a renewal when your contract ends at these ages, so you need an offer from another club to keep playing."
+    ]
+  },
+  "ja": {
+    "title": "同じ国籍の実績を修正・ガイドを追加",
+    "items": [
+      "韓国の選手11人でスタメンを組んでも「11人全員が同じ国籍」が達成されなかった問題を修正しました。",
+      "ゲームガイドに38〜40歳の再契約ルールを追加しました。この年齢では契約が切れてもクラブから再契約の提案がないため、プレーを続けるにはほかのクラブのオファーが必要です。"
+    ]
+  },
+  "zh": {
+    "title": "修正同國籍成就・補充指南",
+    "items": [
+      "修正以 11 名韓國球員組成先發時，「11 人國籍相同」成就無法達成的問題。",
+      "遊戲指南新增 38～40 歲的續約規則。這個年齡合約到期後俱樂部不會提出續約，必須收到其他俱樂部的邀約才能繼續踢球。"
+    ]
+  },
+  "availability": "web-app"
+}
