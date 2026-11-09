@@ -114,10 +114,10 @@ export const teamAch: Translation<TeamAchMsgs> = {
   homeValueSub: '為 11 名先發球員卡片基準價的總和。',
   homeValueEmpty: '目前還沒有球隊登上排行榜。',
   homeValueRowAria: (p) =>
-    `第 ${p.rank} 名 ${p.name}，總教練 ${p.manager}，俱樂部價值 ${p.value}，查看球隊詳情`,
+    `第 ${p.rank} 名 ${p.name}，代表 ${p.manager}，俱樂部價值 ${p.value}，查看球隊詳情`,
   profLoadFail: '無法載入球隊。',
-  profManager: '總教練 ',
-  profManagerOwner: '總教練・老闆 ',
+  profManager: '代表 ',
+  profManagerOwner: '代表・老闆 ',
   profMine: ' · 我的球隊',
   profOwner: '老闆 ',
   profRatingAria: (p) => `球隊積分 ${p.n}`,

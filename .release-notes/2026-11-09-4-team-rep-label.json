@@ -1,0 +1,30 @@
+{
+  "id": "t-11-678-team-rep-label",
+  "title": "팀 대표 · 감독 이름 표시 정리",
+  "items": [
+    "팀을 만들 때 적은 이름이 팀 프로필 · 구단주 프로필 · 공유 이미지에서 '감독'으로 나와, 감독 칸에 앉힌 감독 카드와 이름이 달라 보이던 문제를 고쳤어요. 이제 이 이름은 모든 화면에서 '대표'로 나와요.",
+    "구단주 화면의 내 팀 카드에 감독 칸에 앉힌 감독 이름을 함께 보여 줘요."
+  ],
+  "en": {
+    "title": "Team rep and manager names cleaned up",
+    "items": [
+      "The name you enter when creating a team showed as 'Manager' on the team profile, owner profile and share image, which did not match the manager card in your manager slot. It now shows as 'Rep.' on every screen.",
+      "The My team card on the owner screen now also shows the manager seated in your manager slot."
+    ]
+  },
+  "ja": {
+    "title": "チーム代表・監督の名前表示を整理",
+    "items": [
+      "チーム作成時に入力した名前がチームプロフィール・オーナープロフィール・共有画像で「監督」と表示され、監督枠に就任させた監督カードと名前が違って見える問題を修正しました。この名前はすべての画面で「代表」と表示されます。",
+      "オーナー画面のマイチームカードに、監督枠に就任させた監督の名前も表示します。"
+    ]
+  },
+  "zh": {
+    "title": "整理球隊代表・總教練名稱顯示",
+    "items": [
+      "建立球隊時輸入的名稱在球隊資料・老闆資料・分享圖片中顯示為「總教練」，與總教練欄位中的總教練卡名稱不同。現在這個名稱在所有畫面都顯示為「代表」。",
+      "老闆畫面的我的球隊卡片也會顯示總教練欄位中的總教練名稱。"
+    ]
+  },
+  "availability": "web-app"
+}

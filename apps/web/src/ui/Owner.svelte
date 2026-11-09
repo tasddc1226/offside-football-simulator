@@ -11,7 +11,7 @@
   import { fetchMarketFunds, type MarketFundsResponse } from '@offside/app-core/api/market';
   import { fundsText } from '@offside/app-core/market';
   import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
-  import { ownerLockedText, ownerTeamCard, ownerTeamEmptyText, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
+  import { ownerLockedText, ownerTeamCard, ownerTeamEmptyText, ownerTeamLine, type OwnerSummary, type OwnerTeamCard } from '@offside/app-core/ownerHub';
   import { num, recordText } from '@offside/app-core/teamText';
   import { fmtValue } from '@offside/app-core/format';
   import { appState, type TeamView } from './state.svelte.js';
@@ -23,7 +23,7 @@
   import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
   import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
   import TeamLogo from './team/TeamLogo.svelte';
-  import { loadHOF } from '@offside/game/hof-store';
+  import { loadHOF, localCareerNames } from '@offside/game/hof-store';
   import { go } from './nav.js';
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
@@ -191,7 +191,7 @@
         <div class="owner-who">
           <small class="eyebrow">{L.myTeam}{card?.season ? ` · ${card.season}` : ''}</small>
           <h2>{card?.team?.name ?? L.myTeam}</h2>
-          {#if card?.team}<span class="muted fs-sm">{L.manager({ manager: card.team.manager, formation: shapeOf(card.team.formation, card.team.layout) })}</span>{/if}
+          {#if card?.team}<span class="muted fs-sm">{ownerTeamLine(card.team, shapeOf(card.team.formation, card.team.layout), localCareerNames())}</span>{/if}
         </div>
         {#if card?.team}
           <div class="owner-ovr" aria-label={L.teamOvr({ ovr: card.team.ovr })}><small>OVR</small><b>{card.team.ovr}</b></div>
