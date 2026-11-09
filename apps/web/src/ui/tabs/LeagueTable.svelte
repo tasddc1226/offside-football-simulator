@@ -68,7 +68,7 @@
 
 <div class="league-table" data-league-table>
   <div class="row" style="justify-content:space-between;align-items:baseline">
-    <h3 class="sub-title lt-title"><CompIcon ko={leagueName} size={26} />{L.title({ league: tn(leagueName) })}</h3>
+    <div class="lt-title"><CompIcon ko={leagueName} size={26} /><h3 class="sub-title">{L.title({ league: tn(leagueName) })}</h3></div>
     {#if s.season.played && (folded || full)}
       <button class="icon-btn" data-act="table-toggle" aria-expanded={full} onclick={() => (full = !full)}>{full ? L.fold : L.expand}</button>
     {/if}
