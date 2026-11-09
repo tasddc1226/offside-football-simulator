@@ -190,6 +190,37 @@ test('shared URLs and player names never enter GA commands', async ({ page }) =>
   expect(wire).not.toContain('PRIVATE');
 });
 
+// T-11-676 공유 버튼으로 만든 링크(UTM)로 처음 온 사람: 공유 화면 · 선수 만들기 · 시작이 모두 이용자 공유 유입으로 남고,
+// 시작 버튼은 홈을 거치지 않고 선수 만들기로 간다.
+test('user share link keeps its campaign from the shared screen to the first career', async ({
+  page,
+}) => {
+  await prepare(page);
+  await grantAnalytics(page);
+  await page.goto(
+    '/career/00000000-0000-4000-8000-000000000000?utm_source=offside_app&utm_medium=share&utm_campaign=career_share',
+  );
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+  await page.locator('[data-act="shared-start"]').click();
+  await page.locator('[data-act="next-candidates"]').click();
+  await page.locator('[data-cand="0"]').click();
+  await page.locator('[data-act="start"]').click();
+  await expect(page.locator('.player h1')).toBeVisible();
+  const events = (await commands(page)).filter(
+    (x) => x[0] === 'event' && ['page_view', 'career_start'].includes(String(x[1])),
+  );
+  const pages = events
+    .filter((x) => x[1] === 'page_view')
+    .map((x) => new URL((x[2] as { page_location: string }).page_location).pathname);
+  expect(pages).toEqual(['/shared_career', '/create', '/game']);
+  expect(events.filter((x) => x[1] === 'career_start')).toHaveLength(1);
+  for (const event of events) {
+    const url = new URL((event[2] as { page_location: string }).page_location);
+    expect(url.search).toBe('?utm_source=offside_app&utm_medium=share&utm_campaign=career_share');
+  }
+  expect(JSON.stringify(await commands(page))).not.toContain('00000000');
+});
+
 // T-11-668 공유 버튼의 시도 · 결과가 이름 · share_method · share_contract 로 나뉘어 나간다(네이티브 성공을 복사 성공으로 세지 않는다).
 test('career share sends click, link failure, cancel, native failure with copy fallback and native success separately', async ({
   page,

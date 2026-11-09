@@ -10,6 +10,7 @@ import {
 import { createTracker } from './analytics-tracker.js';
 import { COMMERCE_EVENT, commerceParams, type CommerceObservation } from './commerceStage.js';
 import { createRetireExpMetrics } from './retireExpMetrics.js';
+import { shareEventParams, type ShareOutcome } from './shareMeasurement.js';
 import type { Progress } from './player-metrics.js';
 
 /** 푸시 열기에 붙이는 캠페인과 단계 허용 목록. 서버 push data의 campaign · reminderStage와 같다. */
@@ -241,6 +242,15 @@ export function createNativeAnalytics(io: IO) {
         if (params) send(COMMERCE_EVENT, params, alive);
       } catch {
         /* 계측은 결제 · 지급 · 화면에 영향을 주지 않는다. */
+      }
+    },
+    /** T-11-676 은퇴 커리어 공유 시도와 결과(웹 trackShare와 같은 이벤트 · 매개변수, 의미는 shareMeasurement). */
+    share(o: ShareOutcome) {
+      try {
+        const { name, params } = shareEventParams(o);
+        send(name, params);
+      } catch {
+        /* 계측은 공유 동작에 영향을 주지 않는다. */
       }
     },
     retireExp,

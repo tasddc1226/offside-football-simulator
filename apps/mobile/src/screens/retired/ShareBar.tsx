@@ -20,8 +20,10 @@ import {
   uploadStatusLine,
 } from '@offside/app-core/shareLink';
 import { shareText as L } from '@offside/app-core/i18n/ko/share';
+import { trackShare } from '../../analytics';
 import { shareUrl, toast } from '../../game/host';
 import { goHome } from '../../game/nav';
+import { runNativeShare } from './shareFlow';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { ActionBar } from '../../ui/ActionBar';
@@ -63,43 +65,34 @@ export function ShareBar({
   // 링크를 서버에 확인한 뒤 공유한다.
   const checkLink = () => checkShareLink(id, { flush: flushOutbox, url: shareUrl });
 
-  // 공유 시트를 못 쓰거나 실패했을 때: 클립보드로 복사한다.
-  async function copyLink(link: string) {
-    try {
-      await Clipboard.setStringAsync(link);
-      toast(L.linkCopied);
-    } catch {
-      toast(L.linkCopyHint);
-    }
-  }
-
   async function run() {
     if (busy) return;
     setBusy(true);
     try {
-      // 한 번 확인한 링크는 다시 서버에 묻지 않는다.
-      let link = url;
-      if (!link) {
-        try {
-          link = await checkLink();
-        } catch (e) {
-          return toast((e as Error).message);
-        }
-        setUrl(link);
-      }
-      // 네이티브 공유 시트 우선. 사용자가 닫으면 조용히 끝내고, 못 쓰면 복사로 넘어간다.
-      // Android는 message만 실어 보내므로 링크를 글에 함께 넣는다.
-      try {
-        await Share.share({
-          title: shareLinkTitle(),
-          message: Platform.OS === 'ios' ? shareLinkText() : `${shareLinkText()}\n${link}`,
-          url: link,
-        });
-        return;
-      } catch {
-        /* 공유 시트를 못 열면 복사로 */
-      }
-      await copyLink(link);
+      // 네이티브 공유 시트 우선. 사용자가 닫으면 조용히 끝내고, 못 쓰면 클립보드로 복사한다(T-11-676 순서 · 계측은 shareFlow).
+      const r = await runNativeShare({
+        // 한 번 확인한 링크는 다시 서버에 묻지 않는다.
+        link: async () => {
+          if (url) return url;
+          const link = await checkLink();
+          setUrl(link);
+          return link;
+        },
+        // Android는 message만 실어 보내므로 링크를 글에 함께 넣는다.
+        share: async (link) => {
+          const res = await Share.share({
+            title: shareLinkTitle(),
+            message: Platform.OS === 'ios' ? shareLinkText() : `${shareLinkText()}\n${link}`,
+            url: link,
+          });
+          return res.action === Share.dismissedAction ? 'dismissed' : 'shared';
+        },
+        copy: (link) => Clipboard.setStringAsync(link).then(() => {}),
+        track: trackShare,
+      });
+      if (r.kind === 'link_failed') toast((r.error as Error).message);
+      else if (r.kind === 'copied') toast(L.linkCopied);
+      else if (r.kind === 'copy_failed') toast(L.linkCopyHint);
     } finally {
       setBusy(false);
     }

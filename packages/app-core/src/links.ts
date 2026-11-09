@@ -12,6 +12,21 @@ export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com
 export const publicDocPath = (path: '/guide/' | '/faq/', lang = getLocale()) =>
   lang === 'ko' ? path : `/${lang}${path}`;
 
-/** T-11-588 은퇴 커리어 공유 링크. 한국어가 아니면 ?lang=을 붙여 미리보기(웹 워커 share-meta.ts)를 그 언어로 쓴다. */
-export const careerShareUrl = (origin: string, careerId: string, lang = getLocale()) =>
-  `${origin}/career/${careerId}${lang === 'ko' ? '' : `?lang=${lang}`}`;
+/**
+ * T-11-588 은퇴 커리어 공유 링크. 한국어가 아니면 ?lang=을 붙여 미리보기(웹 워커 share-meta.ts)를 그 언어로 쓴다.
+ * T-11-676 공유 버튼으로 만든 링크라는 표시(허용 목록 UTM, @offside/contracts/acquisition)를 붙여, 그 링크로 들어온 방문을
+ * GA4 · 유입 기록이 이용자 공유로 읽게 한다. from은 공유한 곳(앱 · 웹)이다.
+ */
+export const careerShareUrl = (
+  origin: string,
+  careerId: string,
+  from: 'app' | 'web',
+  lang = getLocale(),
+) => {
+  const q = new URLSearchParams();
+  if (lang !== 'ko') q.set('lang', lang);
+  q.set('utm_source', from === 'app' ? 'offside_app' : 'offside_web');
+  q.set('utm_medium', 'share');
+  q.set('utm_campaign', 'career_share');
+  return `${origin}/career/${careerId}?${q}`;
+};

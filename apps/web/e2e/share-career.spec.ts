@@ -103,7 +103,7 @@ test('로그인하지 않아도 공유 버튼이 화면 아래에 고정돼 링�
   await share.click();
   await expect(page.getByText('공유 링크를 복사했어요.')).toBeVisible();
   const url = await page.locator('.share-url').inputValue();
-  expect(uploaded.has(url.split('/').pop()!)).toBe(true);
+  expect(uploaded.has(new URL(url).pathname.split('/').pop()!)).toBe(true);
 
   const card = page.locator('[data-share="login"]');
   await expect(card).toContainText('로그인하고 기록 지키기');
@@ -141,12 +141,15 @@ test('로그인했으면 공유 링크를 만들고, 링크를 연 사람은 보
   await page.locator('[data-act="share-career"]').click();
   await expect(page.locator('.share-url')).toBeVisible();
   const url = await page.locator('.share-url').inputValue();
-  expect(url).toMatch(/^http:\/\/localhost:\d+\/career\/[0-9a-f-]{36}$/);
+  // T-11-676 공유 버튼으로 만든 링크라는 표시(UTM)가 붙는다.
+  expect(url).toMatch(
+    /^http:\/\/localhost:\d+\/career\/[0-9a-f-]{36}\?utm_source=offside_web&utm_medium=share&utm_campaign=career_share$/,
+  );
   expect(
     await page.evaluate(() => (window as unknown as { __shared?: ShareData }).__shared?.url),
   ).toBe(url);
   await expect(page.getByText('공유 링크를 복사했어요.')).toHaveCount(0);
-  expect(uploaded.has(url.split('/').pop()!)).toBe(true);
+  expect(uploaded.has(new URL(url).pathname.split('/').pop()!)).toBe(true);
 
   // 링크를 연다: 환경설정 '선수 이름 공개'가 기본으로 켜져 있어 이름이 보이고(T-10-065), 주인 기능(이름 공개·공유)은 없다.
   await page.goto(url);
@@ -333,6 +336,8 @@ test('T-11-439 공유받은 화면은 맨 위에도 시작 버튼이 있고, 공
   await expect(report).toHaveText('선수 이름 신고');
   // 신고 버튼이 있어도 누르기 전에는 프로필 · 신고 API를 부르지 않는다.
   expect(calls).toEqual([]);
+  // T-11-676 세이브가 없는 사람은 홈을 거치지 않고 바로 선수 만들기로 간다.
   await top.click();
   await expect(page).toHaveURL(/\/$/);
+  await expect(page.locator('[data-act="next-candidates"]').first()).toBeVisible();
 });

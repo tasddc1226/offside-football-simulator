@@ -9,7 +9,7 @@ import { useSnapshot } from 'valtio';
 import type { LegendView } from '@offside/app-core/state';
 import { NameReport, NameReports } from '../../components/NameReport';
 import { loadSharedLegend } from '../../game/host';
-import { goHome } from '../../game/nav';
+import { goHome, goNew } from '../../game/nav';
 import { appState } from '../../store';
 import { rem } from '../../theme/type';
 import { Btn } from '../../ui/Btn';
@@ -34,10 +34,12 @@ export default function Shared() {
     void load();
   }, []);
 
+  // T-11-676 이 기기에 커리어가 없으면(처음 온 사람) 홈을 거치지 않고 바로 선수 만들기로 간다. 있으면 지금처럼 홈으로.
   function leave() {
     // 웹은 주소창을 '/'로 되돌린다 — 앱은 주소가 없으니 공유 링크 상태만 비운다.
     appState.sharedCareer = null;
-    goHome();
+    if (appState.G) goHome();
+    else goNew();
     scrollTo(0);
   }
   const cta = snap.G ? L.ctaGame : L.ctaNew;
