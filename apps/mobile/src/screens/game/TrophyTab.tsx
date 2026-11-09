@@ -16,17 +16,22 @@ import { tn } from '@offside/game/i18n/names';
 import type { EraState } from '@offside/game/era';
 import { eraTab } from '@offside/app-core/era-view';
 import { EraTabCard } from './EraRival';
+import { compOfTrophy } from '@offside/app-core/compEmblem';
+import { CompIcon } from '../../ui/CompIcon';
 
 /** 연도 + 내용 한 줄(웹 .trophy: 44px 연도 칸 + 본문, 위에 구분선). first면 구분선이 없다. */
 export function TrophyRow({
   year,
   first,
   art,
+  icon,
   children,
 }: {
   year: ReactNode;
   first?: boolean;
   art?: TrophyArt;
+  /** T-11-681 트로피 그림 대신 그릴 대회 로고(누르면 바꾼다). */
+  icon?: ReactNode;
   children: ReactNode;
 }) {
   const c = useColors();
@@ -52,7 +57,7 @@ export function TrophyRow({
       >
         {year}
       </Txt>
-      {art ? <CareerTrophy art={art} size={30} color={c.accent} /> : null}
+      {icon ?? (art ? <CareerTrophy art={art} size={30} color={c.accent} /> : null)}
       <View style={{ flex: 1 }}>{children}</View>
     </View>
   );
@@ -79,17 +84,26 @@ export function TrophyTab({ s }: { s: LegendSource & { era?: EraState | undefine
           {L.honours}
         </Txt>
         {trophies.length ? (
-          trophies.map((x, i) => (
-            <TrophyRow key={i} year={x.year} art={careerTrophy(x.t)}>
-              <Txt style={{ fontWeight: '700' }}>{tn(x.t)}</Txt>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <ClubMark name={x.club} id={x.clubId} size={14} />
-                <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
-                  {tn(x.club)}
-                </Txt>
-              </View>
-            </TrophyRow>
-          ))
+          trophies.map((x, i) => {
+            // T-11-681 리그·대회 우승은 그 대회 로고, 로고가 없는 트로피는 예전 트로피 그림.
+            const comp = compOfTrophy(x.t);
+            return (
+              <TrophyRow
+                key={i}
+                year={x.year}
+                art={careerTrophy(x.t)}
+                icon={comp ? <CompIcon ko={comp} size={30} /> : undefined}
+              >
+                <Txt style={{ fontWeight: '700' }}>{tn(x.t)}</Txt>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                  <ClubMark name={x.club} id={x.clubId} size={14} />
+                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
+                    {tn(x.club)}
+                  </Txt>
+                </View>
+              </TrophyRow>
+            );
+          })
         ) : (
           <Empty />
         )}

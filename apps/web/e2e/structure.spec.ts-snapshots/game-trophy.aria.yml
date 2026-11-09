@@ -49,7 +49,12 @@
     - group: /아직 얻지 못한 칭호 \d+개/
     - text: Team Honours
     - heading "우승 연혁" [level=2]
-    - text: /\d+ J1리그 우승 우라와 다이아몬즈 \d+ AFC 챔피언스리그 엘리트 우승 우라와 다이아몬즈 \d+ 일왕배 우승 가시마 사슴뿔 \d+ 전국고교축구선수권 우승 서해공고 Individual/
+    - button "J1리그 로고 바꾸기"
+    - text: /J1리그 우승 우라와 다이아몬즈 \d+/
+    - button "AFC 챔피언스리그 엘리트 로고 바꾸기"
+    - button "일왕배 로고 바꾸기"
+    - button "전국고교축구선수권 로고 바꾸기"
+    - text: /전국고교축구선수권 우승 서해공고 Individual/
     - heading "개인 수상" [level=2]
     - text: /\d+ K리그1 베스트 \d+ \d+ K리그1 득점왕 \d+ AFC 올해의 선수 \d+ K리그1 베스트 \d+ \d+ K리그1 도움왕 \d+ K리그1 득점왕 \d+ J1리그 베스트 \d+ \d+ J리그 MVP \d+ 대회 베스트 \d+ \d+ 대회 MVP \d+ 득점왕 Story Album/
     - heading "완결된 스토리" [level=2]

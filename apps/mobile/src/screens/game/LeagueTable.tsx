@@ -12,6 +12,11 @@ import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn } from '../../ui/Btn';
 import { ClubBadge } from '../../ui/ClubBadge';
+import { CompIcon } from '../../ui/CompIcon';
+import { useSnapshot } from 'valtio';
+import { compIcons } from '../../store';
+import { dismissCompIconHint } from '../../game/host';
+import { compIconsText as CI } from '@offside/app-core/i18n/ko/compIcons';
 import { Txt } from '../../ui/Txt';
 import { gameLeagueText as L } from '@offside/app-core/i18n/ko/gameLeague';
 import { tn } from '@offside/game/i18n/names';
@@ -30,6 +35,8 @@ export interface RankPlay {
 
 export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null }) {
   const c = useColors();
+  const { hinted } = useSnapshot(compIcons);
+  const leagueName = leagueOf(seasonLeagueId(s)).name;
   const [full, setFull] = useState(false);
   const rowBox = useRef(new Map<string, { y: number; height: number }>());
   const shifts = useRef(new Map<string, Animated.Value>());
@@ -106,10 +113,11 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
   );
   return (
     <View testID="league-table" style={{ gap: 10 }}>
-      <View
-        style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}
-      >
-        <SubTitle>{L.title({ league: tn(leagueOf(seasonLeagueId(s)).name) })}</SubTitle>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+          <CompIcon ko={leagueName} size={26} />
+          <SubTitle>{L.title({ league: tn(leagueName) })}</SubTitle>
+        </View>
         {s.season.played && (folded || full) ? (
           <Btn
             sm
@@ -121,6 +129,28 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
           </Btn>
         ) : null}
       </View>
+      {!hinted ? (
+        // T-11-681 로고가 생긴 걸 처음 한 번 알린다(로고를 누르거나 알겠어요를 누르면 다시 뜨지 않는다).
+        <View
+          testID="comp-hint"
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 8,
+            paddingVertical: 8,
+            paddingHorizontal: 10,
+            borderWidth: 1,
+            borderColor: c.accent,
+            borderRadius: 12,
+            backgroundColor: c.surface2,
+          }}
+        >
+          <Txt style={{ flex: 1, fontSize: rem(FONT.body2) }}>{CI.hint}</Txt>
+          <Btn sm testID="comp-hint-close" onPress={dismissCompIconHint}>
+            {CI.hintClose}
+          </Btn>
+        </View>
+      ) : null}
       {s.season.played ? (
         <View>
           <View

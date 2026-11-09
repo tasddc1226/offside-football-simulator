@@ -1,0 +1,34 @@
+{
+  "id": "t-11-681-comp-icons",
+  "title": "리그 · 대회 로고",
+  "items": [
+    "리그와 대회마다 로고가 생겼어요. 시즌 탭 순위표 · 이번 시즌 대회, 트로피 탭 우승 연혁에서 볼 수 있어요.",
+    "로고를 누르면 내가 고른 이미지로 바꿀 수 있어요. 이 기기에만 저장되고, 공유 이미지와 다른 사람 화면에는 기본 로고가 보여요.",
+    "설정 → 대회·수상 이름 · 로고 바꾸기에서 모든 로고를 한곳에서 보고, 에디트 파일로 이름과 함께 다른 기기에 옮길 수 있어요."
+  ],
+  "en": {
+    "title": "League and competition logos",
+    "items": [
+      "Leagues and competitions now have logos. See them in the season tab's league table and this season's competitions, and in your trophy tab honours.",
+      "Tap a logo to swap it for an image you pick. It's saved on this device only, and share images and other players still see the default logo.",
+      "See every logo in Settings → Rename competitions and awards, change logos, and move them to another device with your names in the edit file."
+    ]
+  },
+  "ja": {
+    "title": "リーグ・大会のロゴ",
+    "items": [
+      "リーグと大会にロゴがつきました。シーズンタブの順位表・今シーズンの大会、トロフィータブの優勝歴で見られます。",
+      "ロゴをタップすると自分で選んだ画像に変えられます。この端末にだけ保存され、シェア画像やほかの人の画面には標準のロゴが表示されます。",
+      "設定 → 大会・タイトル名とロゴの変更ですべてのロゴをまとめて見られ、エディットファイルで名前と一緒にほかの端末へ移せます。"
+    ]
+  },
+  "zh": {
+    "title": "聯賽與賽事標誌",
+    "items": [
+      "聯賽與賽事有標誌了。可以在賽季分頁的積分榜・本賽季賽事，以及獎盃分頁的冠軍紀錄中看到。",
+      "點一下標誌就能換成自己選的圖片。只儲存在這台裝置，分享圖片與其他人的畫面仍顯示預設標誌。",
+      "在設定 → 更改賽事・獎項名稱與標誌可以一次看到所有標誌，也能用編輯檔案連同名稱移到其他裝置。"
+    ]
+  },
+  "availability": "web-app"
+}
