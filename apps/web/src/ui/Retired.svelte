@@ -10,6 +10,7 @@
   import LegendReport from './LegendReport.svelte';
   import OwnHofCards from './OwnHofCards.svelte';
   import ShareBar from './ShareBar.svelte';
+  import RetireCohort from './RetireCohort.svelte';
   import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
   import { retirementUploadStatus } from '@offside/app-core/outboxStore';
   import {
@@ -133,6 +134,8 @@
   {#if arm === 'treatment' && Exp}
     <Exp {cid} pos={appState.G?.pos ?? ''} {scenes} {account} onscene={(k) => retireExp.scene('treatment', k)} oncta={onCta} />
   {/if}
+  <!-- T-11-675 같은 시즌 · 같은 포지션 은퇴 선수 중 내 기록의 자리(분포가 있을 때만). -->
+  <RetireCohort {v} />
   <!-- T-10-029: 명예의 전당 공개·다음 버튼은 크레딧 맨 아래에, 공유 버튼은 화면 아래에 고정된다(T-10-067). -->
   <LegendReport {v} fresh={appState.G?.cid}>
     {#snippet end()}

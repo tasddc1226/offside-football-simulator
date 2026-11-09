@@ -14,6 +14,9 @@ import { logErrorText } from '../logError.js';
 import { runBest11Daily, type Best11DailyCursor } from '../db/repos/best11.js';
 import { pruneAbandonedCareers, type PruneResult } from './pruneAbandoned.js';
 import { runKpiDaily, type KpiDailyResult } from '../db/repos/kpi.js';
+import { buildRetireCohort } from '../db/repos/retireCohort.js';
+import { purgeEdgeOrigin } from '../edgeCache.js';
+import { RETIRE_COHORT_PATH } from '@offside/contracts/retire-cohort';
 
 export const DAILY_STATE_KEY = 'cron:daily:state';
 const LEASE_MS = 4 * 60_000;
@@ -28,6 +31,7 @@ export const DAILY_STAGES = [
   'best11',
   'pruneAbandoned',
   'kpi',
+  'retireCohort',
 ] as const;
 type Stage = (typeof DAILY_STAGES)[number];
 export type DailyState = {
@@ -122,6 +126,14 @@ function steps(env: Bindings): DailyStep {
           opsD1(env),
         );
         return { done: result.done, result };
+      }
+      case 'retireCohort': {
+        // T-11-675 은퇴 동기 비교 분포(그 시즌 은퇴 커리어, 포지션마다 한 번 읽기). 결과는 시즌 · 포지션별 인원만 남긴다.
+        const cohort = await buildRetireCohort(env.DB, new Date(at).toISOString());
+        if (env.PUBLIC_API_ORIGIN)
+          await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, [RETIRE_COHORT_PATH]).catch(() => {});
+        const n = Object.fromEntries(Object.entries(cohort.pos).map(([p, v]) => [p, v?.n ?? 0]));
+        return { done: true, result: { season: cohort.season, n } };
       }
     }
   };

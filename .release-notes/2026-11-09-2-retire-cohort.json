@@ -1,0 +1,24 @@
+{
+  "id": "t-11-675-retire-cohort",
+  "title": "은퇴 동기 비교",
+  "items": [
+    "은퇴 화면에서 같은 시즌에 같은 포지션으로 은퇴한 선수 중 내 기록이 상위 몇 %인지 보여 줘요."
+  ],
+  "en": {
+    "title": "Compare with your retirement class",
+    "items": [
+      "The retirement screen now shows where your records rank among players at your position who retired in the same season."
+    ]
+  },
+  "ja": {
+    "title": "同期との比較",
+    "items": [
+      "引退画面で、同じシーズンに同じポジションで引退した選手の中で自分の記録が上位何%かを表示します。"
+    ]
+  },
+  "zh": {
+    "title": "與同期比較",
+    "items": ["退役畫面會顯示你的紀錄在同賽季同位置退役球員中排在前百分之幾。"]
+  },
+  "availability": "web-app"
+}
