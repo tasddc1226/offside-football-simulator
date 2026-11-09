@@ -221,3 +221,157 @@ export async function enhanceActivityIn(
     best: row?.best ?? 0,
   };
 }
+
+/** T-11-679 자동 강화 한 요청의 시도 하나(판정이 끝난 값). */
+export type EnhanceAutoRow = {
+  from: number;
+  to: number;
+  fails: number;
+  success: boolean;
+  rateBp: number;
+  downBp: number;
+  roll: number;
+  cost: number;
+};
+
+/** 자동 강화 요청의 기록 키: 첫 시도는 멱등 키 그대로, 이어지는 시도는 `키~차례`. */
+export const autoRequestKey = (requestKey: string, i: number) =>
+  i === 0 ? requestKey : `${requestKey}~${i}`;
+
+/** 같은 멱등 키로 이미 끝난 자동 강화 요청의 시도들(차례대로). 없으면 빈 배열. card_enhance_log_request_unique 범위를 탄다. */
+export async function enhanceAutoByRequestKey(db: Db, profileId: string, requestKey: string) {
+  const { results } = await db.$client
+    .prepare(
+      `SELECT career_id AS careerId, from_level AS "from", to_level AS "to", success, cost
+         FROM card_enhance_log
+        WHERE profile_id = ?1 AND (request_key = ?2 OR (request_key > ?2 || '~' AND request_key < ?2 || '~~'))
+        ORDER BY rowid`,
+    )
+    .bind(profileId, requestKey)
+    .all<{ careerId: string; from: number; to: number; success: number; cost: number }>();
+  return results;
+}
+
+/**
+ * T-11-679 자동 강화 한 요청을 D1 batch 하나로. 첫 시도 기록이 attemptEnhance와 같은 조건(카드가 본 단계 · 실패 수 그대로, 같은
+ * 키 없음)에 잔액이 이번 요청에서 쓸 합계 이상일 때만 들어가고, 나머지 기록 · 자금 차감 · 원장 한 줄 · 카드 최종 단계 · 팀 OVR은
+ * 그 행이 있을 때만 쓴다. 시도마다 기록 한 줄은 그대로 남긴다(확률 공개 · 이상 기록 점검). 원장은 요청마다 한 줄(합계)이다.
+ */
+export async function attemptEnhanceAuto(
+  db: Db,
+  a: {
+    ids: string[];
+    profileId: string;
+    careerId: string;
+    requestKey: string;
+    rows: EnhanceAutoRow[];
+    nextFails: number;
+    now: string;
+    team?: EnhanceTeamChange;
+  },
+): Promise<{ won: boolean; balance: number }> {
+  const d1 = db.$client;
+  const [first, ...rest] = a.rows;
+  if (!first) throw new Error('attemptEnhanceAuto: no rows');
+  const spent = a.rows.reduce((s, r) => s + r.cost, 0);
+  const last = a.rows.at(-1)!;
+  const firstId = a.ids[0]!;
+  const won = `EXISTS (SELECT 1 FROM card_enhance_log WHERE id = ?)`;
+  const restJson = JSON.stringify(
+    rest.map((r, i) => [
+      a.ids[i + 1],
+      autoRequestKey(a.requestKey, i + 1),
+      r.from,
+      r.to,
+      r.fails,
+      r.success ? 1 : 0,
+      r.rateBp,
+      r.downBp,
+      r.roll,
+      r.cost,
+    ]),
+  );
+  const results = await d1.batch([
+    d1
+      .prepare(
+        `INSERT INTO card_enhance_log
+           (id, profile_id, career_id, request_key, from_level, to_level, fails, success, rate_bp, down_bp, roll, cost, created_at)
+         SELECT ?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13
+         WHERE EXISTS (SELECT 1 FROM cards k
+                        WHERE k.career_id = ?3 AND k.owner_id = ?2 AND k.manager = 0 AND k.card_value IS NOT NULL
+                          AND k.enhance = ?5 AND k.enhance_fails = ?7)
+           AND NOT EXISTS (SELECT 1 FROM market_listings WHERE career_id = ?3 AND status = 'open')
+           AND NOT EXISTS (SELECT 1 FROM card_enhance_log WHERE profile_id = ?2 AND request_key = ?4)
+           AND coalesce((SELECT balance FROM owner_funds WHERE profile_id = ?2), 0) >= ?14`,
+      )
+      .bind(
+        firstId,
+        a.profileId,
+        a.careerId,
+        a.requestKey,
+        first.from,
+        first.to,
+        first.fails,
+        first.success ? 1 : 0,
+        first.rateBp,
+        first.downBp,
+        first.roll,
+        first.cost,
+        a.now,
+        spent,
+      ),
+    ...(rest.length
+      ? [
+          d1
+            .prepare(
+              `INSERT INTO card_enhance_log
+                 (id, profile_id, career_id, request_key, from_level, to_level, fails, success, rate_bp, down_bp, roll, cost, created_at)
+               SELECT json_extract(j.value, '$[0]'), ?1, ?2, json_extract(j.value, '$[1]'), json_extract(j.value, '$[2]'),
+                      json_extract(j.value, '$[3]'), json_extract(j.value, '$[4]'), json_extract(j.value, '$[5]'),
+                      json_extract(j.value, '$[6]'), json_extract(j.value, '$[7]'), json_extract(j.value, '$[8]'),
+                      json_extract(j.value, '$[9]'), ?3
+                 FROM json_each(?4) j WHERE ${won}`,
+            )
+            .bind(a.profileId, a.careerId, a.now, restJson, firstId),
+        ]
+      : []),
+    d1
+      .prepare(
+        `UPDATE owner_funds SET balance = balance - ?, updated_at = ? WHERE profile_id = ? AND ${won}`,
+      )
+      .bind(spent, a.now, a.profileId, firstId),
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT ?, 'enhance', -?, (SELECT balance FROM owner_funds WHERE profile_id = ?), ?, ? WHERE ${won}`,
+      )
+      .bind(a.profileId, spent, a.profileId, a.careerId, a.now, firstId),
+    d1
+      .prepare(
+        `UPDATE cards SET enhance = ?, enhance_fails = ?, updated_at = ?
+          WHERE career_id = ? AND ${won}`,
+      )
+      .bind(last.to, a.nextFails, a.now, a.careerId, firstId),
+    ...(a.team
+      ? [
+          d1
+            .prepare(
+              `UPDATE owner_teams SET ovr = ?, cup_ovr = ?, presets_json = ?
+                WHERE id = ? AND slots_json = ? AND presets_json IS ? AND ${won}`,
+            )
+            .bind(
+              a.team.ovr,
+              a.team.cupOvr,
+              a.team.presetsJson,
+              a.team.id,
+              a.team.slotsJson,
+              a.team.presetsJsonBefore,
+              firstId,
+            ),
+        ]
+      : []),
+    d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(a.profileId),
+  ]);
+  const row = results.at(-1)!.results[0] as { balance: number } | undefined;
+  return { won: results[0]!.meta.changes === 1, balance: row?.balance ?? 0 };
+}

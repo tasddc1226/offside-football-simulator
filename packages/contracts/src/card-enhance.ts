@@ -10,6 +10,18 @@ import { priceBand } from './market-value.js';
 /** 가장 높은 단계. */
 export const ENHANCE_MAX = 10;
 
+/**
+ * T-11-679 자동 강화 요청 한 번에 서버가 굴리는 최대 시도 수. 화면은 멈춤 이유 'more'를 받으면 남은 예산으로 이어서 보낸다
+ * (유저에게는 횟수 제한이 없고, 요청 하나가 너무 길어지지 않게 나눠 보낼 뿐이다).
+ */
+export const ENHANCE_AUTO_CHUNK = 100;
+/**
+ * 자동 강화가 멈춘 이유. target 목표 단계 달성 · funds 다음 시도 비용보다 자금이 적음 · budget 쓸 금액 상한에 닿음 ·
+ * more 이번 요청 몫을 다 씀(이어서 보낸다) · cup 성공하면 컵 명단 OVR이 구간 상한을 넘음.
+ */
+export const ENHANCE_AUTO_STOPS = ['target', 'funds', 'budget', 'more', 'cup'] as const;
+export type EnhanceAutoStop = (typeof ENHANCE_AUTO_STOPS)[number];
+
 /** 지금 단계(0~9)에서 한 단계 올리는 시도의 기본 성공 확률. */
 export const ENHANCE_RATES = [0.9, 0.75, 0.6, 0.45, 0.3, 0.25, 0.2, 0.15, 0.1, 0.1] as const;
 

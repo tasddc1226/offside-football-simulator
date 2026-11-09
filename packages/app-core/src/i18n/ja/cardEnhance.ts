@@ -54,4 +54,25 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
     `+${p.lv}の強化価値${p.value}が販売価格に加わります。最高価格の倍率は強化価値にはかかりません。`,
   lossNote: (p) =>
     `強化した選手が${p.n}人含まれています。強化段階はなくなり、強化に使った資金は戻りません。`,
+  autoTitle: '自動強化',
+  autoTarget: '目標段階',
+  autoBudget: '使う金額',
+  autoBudgetMult: (p) => `${p.value}（期待コスト ×${p.mult}）`,
+  autoBudgetAll: (p) => `${p.value}（所持資金すべて）`,
+  autoExpected: (p) => `目標まで平均${p.value}ほどかかります。運によって増えたり減ったりします。`,
+  autoNote:
+    '目標段階に届くか、資金が次の試行費用より少なくなるか、使う金額を使い切ると止まります。',
+  autoStart: '自動強化を開始',
+  autoRunning: (p) => `${p.n}回試行 · ${p.spent}使用`,
+  autoStop: '止める',
+  autoStopping: 'このまとまりが終わったら止まります…',
+  autoDone: (p) =>
+    `${p.n}回試行しました。成功 ${p.up} · 維持 ${p.keep} · 下落 ${p.down}、${p.spent}使いました。`,
+  stopTarget: (p) => `目標の+${p.lv}に届いたので止まりました。`,
+  stopFunds: 'クラブ資金が次の試行費用より少ないので止まりました。',
+  stopBudget: '決めた金額の中でこれ以上試行できないので止まりました。',
+  stopCup: 'これ以上上がるとカップ登録メンバーのOVRが区分の上限を超えるので止まりました。',
+  stopUser: '途中で止めました。',
+  autoTargetLow: '目標は今の段階より高くしてください。',
+  autoBudgetLow: '使う金額が1回の試行費用より少ないです。',
 };

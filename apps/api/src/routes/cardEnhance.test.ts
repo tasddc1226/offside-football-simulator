@@ -1,4 +1,5 @@
 import {
+  EnhanceAutoResponseSchema,
   EnhanceResponseSchema,
   EnhanceStateResponseSchema,
   ErrorEnvelopeSchema,
@@ -6,9 +7,15 @@ import {
   MarketMeResponseSchema,
   OwnerTeamResponseSchema,
   successEnvelope,
+  type EnhanceAutoBody,
   type EnhanceBody,
 } from '@offside/contracts';
-import { ENHANCE_COSTS, enhanceDownBp, enhanceRateBp } from '@offside/contracts/card-enhance';
+import {
+  ENHANCE_AUTO_CHUNK,
+  ENHANCE_COSTS,
+  enhanceDownBp,
+  enhanceRateBp,
+} from '@offside/contracts/card-enhance';
 import { planCup } from '@offside/contracts/cup';
 import { tradeBand, tradeValue } from '@offside/contracts/card-enhance';
 import { eq, inArray } from 'drizzle-orm';
@@ -24,6 +31,7 @@ import {
   cupEntries,
   cups,
   marketListings,
+  ownerFundLedger,
   ownerFunds,
   ownerTeams,
 } from '../db/schema.js';
@@ -45,6 +53,7 @@ const EnhanceRes = successEnvelope(EnhanceResponseSchema);
 const HistoryRes = successEnvelope(FundsHistoryResponseSchema);
 const TeamRes = successEnvelope(OwnerTeamResponseSchema);
 const MeRes = successEnvelope(MarketMeResponseSchema);
+const AutoRes = successEnvelope(EnhanceAutoResponseSchema);
 
 let seq = 0;
 
@@ -745,5 +754,221 @@ describe('카드 강화 (T-11-373)', () => {
     expect(await reason(await list(band.max + 100))).toBe('PRICE_OUT_OF_BAND');
     expect(band.max).toBeLessThan(tradeValue(1_000_000, 5) * me.rules.priceMax);
     expect((await list(band.max)).status).toBe(201);
+  });
+  describe('T-11-679 자동 강화', () => {
+    /** 판정 난수를 차례대로 고정한다(다 쓰면 마지막 값을 계속). */
+    const rolls = (list: number[]) => {
+      let i = 0;
+      return vi.spyOn(crypto, 'getRandomValues').mockImplementation(((a: Uint32Array) => {
+        a[0] = list[Math.min(i++, list.length - 1)]!;
+        return a;
+      }) as unknown as typeof crypto.getRandomValues);
+    };
+    const auto = (cookie: string, id: string, body: EnhanceAutoBody, key?: string) =>
+      call('POST', `/v1/cards/${id}/enhance/auto`, {
+        cookie,
+        headers: { 'Idempotency-Key': key ?? `auto-${++seq}-key` },
+        body,
+      });
+    const autoData = async (res: Response) => {
+      expect(res.status).toBe(200);
+      return AutoRes.parse(await res.json()).data;
+    };
+    const big = 1_000_000_000;
+
+    it('목표 단계에 닿으면 멈추고, 시도마다 기록 · 요청마다 원장 한 줄 · 카드와 팀 OVR을 한 번에 쓴다', async () => {
+      const { owner, id, team } = await ready();
+      const teamBefore = (
+        await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, team))
+      )[0]!;
+      rolls([0]);
+      const d = await autoData(
+        await auto(
+          owner.cookie,
+          id,
+          { level: 0, fails: 0, target: 3, budget: big },
+          'auto-target-1',
+        ),
+      );
+      const spent = ENHANCE_COSTS[0] + ENHANCE_COSTS[1] + ENHANCE_COSTS[2];
+      expect(d).toMatchObject({
+        stop: 'target',
+        spent,
+        balance: 100_000_000 - spent,
+        card: { level: 3, fails: 0, tier: 'normal' },
+      });
+      expect(d.tries.map((t) => [t.from, t.to, t.success])).toEqual([
+        [0, 1, true],
+        [1, 2, true],
+        [2, 3, true],
+      ]);
+      expect(await cardOf(id)).toMatchObject({ enhance: 3, enhanceFails: 0 });
+      const logs = await ctx.db.select().from(cardEnhanceLog);
+      expect(logs.map((l) => l.requestKey).sort()).toEqual(
+        ['auto-target-1', 'auto-target-1~1', 'auto-target-1~2'].sort(),
+      );
+      const ledger = await ctx.db
+        .select()
+        .from(ownerFundLedger)
+        .where(eq(ownerFundLedger.kind, 'enhance'));
+      expect(ledger.map((l) => l.delta)).toEqual([-spent]);
+      const teamAfter = (await ctx.db.select().from(ownerTeams).where(eq(ownerTeams.id, team)))[0]!;
+      // 저장된 팀 OVR은 편성을 저장할 때와 같은 식으로 +3을 반영해 다시 잰 값이다.
+      const slots = JSON.parse(teamBefore.slotsJson) as (string | null)[];
+      const rows = await careersByIds(ctx.db, [id]);
+      expect(teamAfter.ovr).toBe(
+        lineupOvr(buildLineup('4-3-3', slots, eligibleMap(rows, owner.profileId, 0, true))),
+      );
+    });
+
+    it('쓸 금액 상한에 닿거나 자금이 다음 시도 비용보다 적으면 멈춘다', async () => {
+      const { owner, id } = await ready();
+      rolls([9999]); // +0에서는 실패해도 그대로(유지)
+      const byBudget = await autoData(
+        await auto(owner.cookie, id, { level: 0, fails: 0, target: 1, budget: 250_000 }),
+      );
+      expect(byBudget).toMatchObject({
+        stop: 'budget',
+        spent: 200_000,
+        card: { level: 0, fails: 2 },
+      });
+      expect(byBudget.tries).toHaveLength(2);
+
+      const poor = await issueGoogleCookie(ctx);
+      const pid = await addCard(poor.profileId);
+      await fund(poor.profileId, 250_000);
+      const byFunds = await autoData(
+        await auto(poor.cookie, pid, { level: 0, fails: 0, target: 5, budget: big }),
+      );
+      expect(byFunds).toMatchObject({ stop: 'funds', spent: 200_000, balance: 50_000 });
+      expect(await balanceOf(poor.profileId)).toBe(50_000);
+    });
+
+    it('한 요청은 정해진 몫까지만 굴리고(more), 이어서 보내면 남은 상태에서 계속한다', async () => {
+      const { owner, id } = await ready(big);
+      rolls([9999]);
+      const a = await autoData(
+        await auto(owner.cookie, id, { level: 0, fails: 0, target: 1, budget: big }),
+      );
+      expect(a.stop).toBe('more');
+      expect(a.tries).toHaveLength(ENHANCE_AUTO_CHUNK);
+      expect(a.card).toEqual({ level: 0, fails: ENHANCE_AUTO_CHUNK, tier: 'normal' });
+      rolls([0]);
+      const b = await autoData(
+        await auto(owner.cookie, id, {
+          level: 0,
+          fails: ENHANCE_AUTO_CHUNK,
+          target: 1,
+          budget: big - a.spent,
+        }),
+      );
+      expect(b).toMatchObject({ stop: 'target', card: { level: 1, fails: 0 } });
+      expect(await ctx.db.select().from(cardEnhanceLog)).toHaveLength(ENHANCE_AUTO_CHUNK + 1);
+    });
+
+    it('같은 멱등 키로 다시 보내면 판정 · 차감 없이 같은 결과를 돌려준다', async () => {
+      const { owner, id } = await ready();
+      rolls([0]);
+      const body = { level: 0, fails: 0, target: 2, budget: big };
+      const a = await autoData(await auto(owner.cookie, id, body, 'auto-same-key'));
+      const b = await autoData(await auto(owner.cookie, id, body, 'auto-same-key'));
+      expect(b.tries).toEqual(a.tries);
+      expect(b).toMatchObject({ stop: 'target', spent: a.spent, card: a.card });
+      expect(await ctx.db.select().from(cardEnhanceLog)).toHaveLength(2);
+      expect(await balanceOf(owner.profileId)).toBe(100_000_000 - a.spent);
+    });
+
+    it('본 값이 다르거나 목표 · 예산이 맞지 않거나 막힌 카드는 판정하지 않는다', async () => {
+      const { owner, id } = await ready();
+      expect(
+        await reason(await auto(owner.cookie, id, { level: 1, fails: 0, target: 3, budget: big })),
+      ).toBe('ENHANCE_STALE');
+      await ctx.db.update(cards).set({ enhance: 2 }).where(eq(cards.careerId, id));
+      expect(
+        await reason(await auto(owner.cookie, id, { level: 2, fails: 0, target: 2, budget: big })),
+      ).toBe('ENHANCE_AUTO_TARGET');
+      expect(
+        await reason(await auto(owner.cookie, id, { level: 2, fails: 0, target: 3, budget: 1 })),
+      ).toBe('ENHANCE_AUTO_BUDGET');
+      await activate({ enhanceOpen: 0 }).catch(() => undefined);
+      await ctx.db.update(balanceVersions).set({ valuesJson: JSON.stringify({ enhanceOpen: 0 }) });
+      expect(
+        await reason(await auto(owner.cookie, id, { level: 2, fails: 0, target: 3, budget: big })),
+      ).toBe('ENHANCE_CLOSED');
+      expect(await ctx.db.select().from(cardEnhanceLog)).toHaveLength(0);
+      expect(await balanceOf(owner.profileId)).toBe(100_000_000);
+    });
+
+    it('추첨 뒤 컵 명단 선수는 성공하면 구간 상한을 넘는 단계 앞에서 멈춘다', async () => {
+      const owner = await issueGoogleCookie(ctx);
+      const players = await Promise.all(Array.from({ length: 11 }, () => addCard(owner.profileId)));
+      await fund(owner.profileId, big);
+      const cup = planCup({
+        id: 's1-9',
+        season: 1,
+        edition: 9,
+        opensOn: '2026-10-08',
+        capacity: 64,
+      });
+      vi.setSystemTime(new Date(cup.drawAt));
+      await activate({ enhanceOpen: 1 });
+      const teamId = await addTeam(owner.profileId, players, 1);
+      const rows = await careersByIds(ctx.db, players);
+      const ovrAt = (level: number) =>
+        lineupOvr(
+          buildLineup(
+            '4-3-3',
+            players,
+            eligibleMap(
+              rows.map((r) => (r.id === players[0] ? { ...r, enhance: level } : r)),
+              owner.profileId,
+              1,
+              true,
+            ),
+          ),
+        );
+      const cap = ovrAt(0);
+      await ctx.db.update(ownerTeams).set({ ovr: cap }).where(eq(ownerTeams.id, teamId));
+      await ctx.db.insert(cups).values({
+        id: cup.id,
+        season: 1,
+        edition: 9,
+        opensAt: cup.opensAt,
+        closesAt: cup.closesAt,
+        drawAt: cup.drawAt,
+        roundsJson: JSON.stringify(cup.rounds),
+        capacity: 64,
+        minFilled: 8,
+        createdAt: cup.opensAt,
+        division: 'junior',
+        ovrMax: cap,
+      });
+      await ctx.db.insert(cupEntries).values({
+        cupId: cup.id,
+        teamId,
+        profileId: owner.profileId,
+        name: '강화 FC',
+        manager: '감독',
+        ovr: cap,
+        createdAt: cup.opensAt,
+        updatedAt: cup.opensAt,
+      });
+      const stopLevel = [...Array(10).keys()].find((l) => ovrAt(l + 1) > cap) ?? 10;
+      rolls([0]);
+      const res = await auto(owner.cookie, players[0]!, {
+        level: 0,
+        fails: 0,
+        target: 10,
+        budget: big,
+      });
+      if (stopLevel === 0) {
+        expect(await reason(res)).toBe('CUP_OVR_CAP');
+        expect(await balanceOf(owner.profileId)).toBe(big);
+      } else {
+        const d = await autoData(res);
+        expect(d.card.level).toBe(stopLevel);
+        expect(d.stop).toBe(stopLevel === 10 ? 'target' : 'cup');
+      }
+    });
   });
 });

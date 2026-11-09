@@ -8,7 +8,12 @@ import {
 } from './careers.js';
 import { MARKET_CHART_RANGES, MARKET_TYPES, type MarketType } from './market-value.js';
 import { IsoUtcSchema } from './primitives.js';
-import { ENHANCE_MAX, ENHANCE_TIERS } from './card-enhance.js';
+import {
+  ENHANCE_AUTO_CHUNK,
+  ENHANCE_AUTO_STOPS,
+  ENHANCE_MAX,
+  ENHANCE_TIERS,
+} from './card-enhance.js';
 import { FUNDS_ITEMS, type FundsItem } from './cup.js';
 import { NATION_BY_CODE } from './nations.js';
 import { LEAGUE_BASE, isAmateurClubId, isDefaultClubId } from './club-names.js';
@@ -344,6 +349,38 @@ export const EnhanceResponseSchema = z.strictObject({
   titles: z.array(z.string()).optional(),
 });
 export type EnhanceResponse = z.infer<typeof EnhanceResponseSchema>;
+
+/**
+ * T-11-679 POST /v1/cards/:careerId/enhance/auto — 목표 단계(target)까지, 쓸 금액 상한(budget, 만 원) 안에서 서버가 연달아
+ * 시도한다. 본 단계 · 실패 수가 지금과 다르면 409(ENHANCE_STALE). 같은 요청의 재시도는 같은 Idempotency-Key로 보내 한 번만 판정한다.
+ */
+export const EnhanceAutoBodySchema = z.strictObject({
+  level: enhanceLevelSchema,
+  fails: z.number().int().min(0),
+  target: z.number().int().min(1).max(ENHANCE_MAX),
+  budget: z.number().int().min(1).max(1e13),
+});
+export type EnhanceAutoBody = z.infer<typeof EnhanceAutoBodySchema>;
+
+export const EnhanceAutoTrySchema = z.strictObject({
+  success: z.boolean(),
+  from: enhanceLevelSchema,
+  to: enhanceLevelSchema,
+  cost: man,
+});
+export type EnhanceAutoTry = z.infer<typeof EnhanceAutoTrySchema>;
+
+export const EnhanceAutoResponseSchema = z.strictObject({
+  /** 이번 요청에서 굴린 시도(차례대로). */
+  tries: z.array(EnhanceAutoTrySchema).max(ENHANCE_AUTO_CHUNK),
+  /** 이번 요청에서 쓴 자금(만 원). */
+  spent: man,
+  balance: z.number().int(),
+  card: EnhanceCardStateSchema,
+  stop: z.enum(ENHANCE_AUTO_STOPS),
+  titles: z.array(z.string()).optional(),
+});
+export type EnhanceAutoResponse = z.infer<typeof EnhanceAutoResponseSchema>;
 export type CardLockResponse = z.infer<typeof CardLockResponseSchema>;
 
 export const ReleaseCardsBodySchema = z.strictObject({

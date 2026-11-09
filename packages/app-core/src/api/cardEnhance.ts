@@ -2,7 +2,13 @@
 // 시도마다 바뀐다), 시도는 화면이 본 단계 · 실패 수 · 쓴 시도권 · 비용 · 확률을 함께 보낸다(어긋나면 ENHANCE_STALE). 같은 시도의
 // 재시도는 같은 멱등 키를 보내 서버가 한 번만 판정 · 차감한다. 성공한 쓰기는 apiFetch가 메모를 비운다.
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
-import type { EnhanceBody, EnhanceResponse, EnhanceStateResponse } from '@offside/contracts';
+import type {
+  EnhanceAutoBody,
+  EnhanceAutoResponse,
+  EnhanceBody,
+  EnhanceResponse,
+  EnhanceStateResponse,
+} from '@offside/contracts';
 import { apiFetch } from './client.js';
 
 export type { EnhanceBody, EnhanceResponse, EnhanceStateResponse } from '@offside/contracts';
@@ -12,6 +18,16 @@ export const fetchEnhanceState = (careerId: string) =>
 
 export const enhanceCard = (careerId: string, body: EnhanceBody, requestKey: string) =>
   apiFetch<EnhanceResponse>(`/v1/cards/${encodeURIComponent(careerId)}/enhance`, {
+    method: 'POST',
+    headers: { [IDEMPOTENCY_KEY_HEADER]: requestKey },
+    body: JSON.stringify(body),
+  });
+
+export type { EnhanceAutoBody, EnhanceAutoResponse } from '@offside/contracts';
+
+/** T-11-679 자동 강화 한 요청(서버가 ENHANCE_AUTO_CHUNK번까지 굴린다). */
+export const enhanceCardAuto = (careerId: string, body: EnhanceAutoBody, requestKey: string) =>
+  apiFetch<EnhanceAutoResponse>(`/v1/cards/${encodeURIComponent(careerId)}/enhance/auto`, {
     method: 'POST',
     headers: { [IDEMPOTENCY_KEY_HEADER]: requestKey },
     body: JSON.stringify(body),

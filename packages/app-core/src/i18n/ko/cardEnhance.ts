@@ -55,6 +55,27 @@ const ko = {
     `+${p.lv} 강화 가치 ${p.value}${iGa(p.value)} 판매 가격에 더해져요. 최고가 배수는 강화 가치에 붙지 않아요.`,
   lossNote: (p: { n: number }) =>
     `강화한 선수 ${p.n}명이 들어 있어요. 강화 단계는 사라지고, 강화에 쓴 자금은 돌려받지 못해요.`,
+  autoTitle: '자동 강화',
+  autoTarget: '목표 단계',
+  autoBudget: '쓸 금액',
+  autoBudgetMult: (p: { value: string; mult: string }) => `${p.value} (기대 비용 ×${p.mult})`,
+  autoBudgetAll: (p: { value: string }) => `${p.value} (가진 자금 전부)`,
+  autoExpected: (p: { value: string }) =>
+    `목표까지 평균 ${p.value} 정도 들어요. 운에 따라 더 들거나 덜 들어요.`,
+  autoNote: '목표 단계에 닿거나, 자금이 다음 시도 비용보다 적거나, 쓸 금액을 다 쓰면 멈춰요.',
+  autoStart: '자동 강화 시작',
+  autoRunning: (p: { n: number; spent: string }) => `${p.n}번 시도 · ${p.spent} 썼어요`,
+  autoStop: '멈추기',
+  autoStopping: '이번 묶음이 끝나면 멈춰요…',
+  autoDone: (p: { n: number; up: number; keep: number; down: number; spent: string }) =>
+    `${p.n}번 시도했어요. 성공 ${p.up} · 유지 ${p.keep} · 하락 ${p.down}, ${p.spent} 썼어요.`,
+  stopTarget: (p: { lv: number }) => `목표 +${p.lv}에 닿아 멈췄어요.`,
+  stopFunds: '구단 자금이 다음 시도 비용보다 적어 멈췄어요.',
+  stopBudget: '정한 금액 안에서 더 시도할 수 없어 멈췄어요.',
+  stopCup: '더 오르면 컵 명단 OVR이 구간 상한을 넘어서 멈췄어요.',
+  stopUser: '중간에 멈췄어요.',
+  autoTargetLow: '목표는 지금 단계보다 높아야 해요.',
+  autoBudgetLow: '쓸 금액이 한 번 시도할 비용보다 적어요.',
 };
 
 export type CardEnhanceMsgs = typeof ko;

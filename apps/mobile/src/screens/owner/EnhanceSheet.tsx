@@ -5,19 +5,27 @@ import { View } from 'react-native';
 import type { TeamPlayer } from '@offside/app-core/api/team';
 import {
   enhanceCard,
+  enhanceCardAuto,
   fetchEnhanceState,
   type EnhanceResponse,
   type EnhanceStateResponse,
 } from '@offside/app-core/api/cardEnhance';
 import {
   ENHANCE_CHARGE_MS,
+  enhanceAutoBudgets,
+  enhanceAutoExpected,
+  enhanceAutoSummary,
+  enhanceAutoTargets,
   enhanceErrorText,
   enhanceKeepKey,
   enhanceResultKind,
   enhanceResultText,
   enhanceTitleText,
   enhanceView,
+  runEnhanceAuto,
+  type EnhanceAutoRun,
 } from '@offside/app-core/cardEnhance';
+import { fmtValue } from '@offside/app-core/format';
 import { fundsText } from '@offside/app-core/funds';
 import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
 import { EnhanceFx } from '../../components/EnhanceFx';
@@ -50,6 +58,15 @@ export function EnhanceSheet({
   const [error, setError] = useState<string | null>(null);
   const requestKey = useRef(crypto.randomUUID());
   const alive = useRef(true);
+  // T-11-679 자동 강화 — 목표 단계 · 쓸 금액을 고르면 서버가 연달아 판정한다. 창을 닫으면 다음 묶음을 보내지 않는다.
+  const [autoOpen, setAutoOpen] = useState(false);
+  const [target, setTarget] = useState(0);
+  const [budgetPick, setBudgetPick] = useState(0);
+  const [autoBusy, setAutoBusy] = useState(false);
+  const [autoStopAsked, setAutoStopAsked] = useState(false);
+  const [autoRun, setAutoRun] = useState<EnhanceAutoRun | null>(null);
+  const [autoTarget, setAutoTarget] = useState(0);
+  const stopRef = useRef(false);
 
   async function load() {
     const r = await fetchEnhanceState(careerId);
@@ -65,10 +82,62 @@ export function EnhanceSheet({
     void load();
     return () => {
       alive.current = false;
+      stopRef.current = true;
     };
   }, []);
 
   const view = info ? enhanceView(info.card, info.rules, info.balance, listed) : null;
+  const targets = info ? enhanceAutoTargets(info.card.level) : [];
+  const targetNow = targets.includes(target) ? target : (targets[0] ?? 0);
+  const expected = info && targetNow ? enhanceAutoExpected(info.card, targetNow, info.rules) : 0;
+  const budgets =
+    info && view?.cost
+      ? enhanceAutoBudgets(expected, info.balance, view.cost)
+      : { list: [], pick: 0 };
+  const budgetNow = budgets.list.some((b) => b.value === budgetPick) ? budgetPick : budgets.pick;
+  const autoText = autoRun && !autoBusy ? enhanceAutoSummary(autoRun, autoTarget) : null;
+
+  async function startAuto() {
+    if (!info || !view?.body || busy || autoBusy || !budgetNow || !targetNow) return;
+    setAutoBusy(true);
+    setAutoStopAsked(false);
+    stopRef.current = false;
+    setError(null);
+    setResult(null);
+    setAutoRun(null);
+    setAutoTarget(targetNow);
+    const from = info.card.level;
+    const run = await runEnhanceAuto({
+      start: info.card,
+      target: targetNow,
+      budget: budgetNow,
+      balance: info.balance,
+      send: (body, key) => enhanceCardAuto(careerId, body, key),
+      newKey: () => crypto.randomUUID(),
+      cancelled: () => stopRef.current,
+      onChunk: (r) => {
+        if (!alive.current) return;
+        setAutoRun({ ...r });
+        setInfo((s) => (s ? { ...s, balance: r.balance, card: r.card } : s));
+      },
+    });
+    // 창을 닫은 뒤에 끝나도 그 카드에는 반영한다.
+    if (run.tries)
+      onResult(careerId, {
+        success: run.card.level > from,
+        from,
+        to: run.card.level,
+        cost: run.spent,
+        balance: run.balance,
+        card: run.card,
+        ...(run.titles.length ? { titles: run.titles } : {}),
+      });
+    if (!alive.current) return;
+    setAutoRun(run);
+    setAutoBusy(false);
+    setInfo((s) => (s ? { ...s, balance: run.balance, card: run.card } : s));
+    if (run.stop === 'error') void load();
+  }
 
   async function go() {
     if (!view?.body || busy) return;
@@ -187,12 +256,112 @@ export function EnhanceSheet({
           <Btn
             block
             kind="primary"
-            disabled={busy || !view.body}
+            disabled={busy || autoBusy || !view.body}
             onPress={() => void go()}
             testID="enhance-go"
           >
             {busy ? L.going : L.go}
           </Btn>
+          {view.next !== null ? (
+            <View
+              testID="enhance-auto"
+              style={{ borderWidth: 1, borderColor: c.line, borderRadius: 12, padding: 10, gap: 8 }}
+            >
+              <Btn
+                sm
+                kind="ghost"
+                onPress={() => setAutoOpen(!autoOpen || autoBusy)}
+                accessibilityState={{ expanded: autoOpen || autoBusy }}
+                testID="enhance-auto-toggle"
+              >
+                {`${L.autoTitle} ${autoOpen || autoBusy ? '▲' : '▼'}`}
+              </Btn>
+              {autoOpen || autoBusy ? (
+                <>
+                  <Txt v="xs" tone="muted">
+                    {L.autoTarget}
+                  </Txt>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {targets.map((t) => (
+                      <Btn
+                        key={t}
+                        sm
+                        kind={t === targetNow ? 'accent' : 'ghost'}
+                        disabled={autoBusy}
+                        accessibilityState={{ selected: t === targetNow }}
+                        onPress={() => setTarget(t)}
+                        testID={`enhance-auto-target-${t}`}
+                      >
+                        {`+${t}`}
+                      </Btn>
+                    ))}
+                  </View>
+                  <Txt v="xs" tone="muted">
+                    {L.autoBudget}
+                  </Txt>
+                  <View style={{ gap: 6 }}>
+                    {budgets.list.map((b) => (
+                      <Btn
+                        key={b.value}
+                        sm
+                        kind={b.value === budgetNow ? 'accent' : 'ghost'}
+                        disabled={autoBusy}
+                        accessibilityState={{ selected: b.value === budgetNow }}
+                        onPress={() => setBudgetPick(b.value)}
+                        testID="enhance-auto-budget"
+                      >
+                        {b.label}
+                      </Btn>
+                    ))}
+                  </View>
+                  <Txt v="xs" tone="muted">
+                    {[L.autoExpected({ value: fmtValue(expected) }), L.autoNote].join('\n')}
+                  </Txt>
+                  {autoBusy ? (
+                    <>
+                      <Txt bold testID="enhance-auto-progress">
+                        {L.autoRunning({
+                          n: autoRun?.tries ?? 0,
+                          spent: fmtValue(autoRun?.spent ?? 0),
+                        })}
+                      </Txt>
+                      <Btn
+                        block
+                        disabled={autoStopAsked}
+                        onPress={() => {
+                          stopRef.current = true;
+                          setAutoStopAsked(true);
+                        }}
+                        testID="enhance-auto-stop"
+                      >
+                        {autoStopAsked ? L.autoStopping : L.autoStop}
+                      </Btn>
+                    </>
+                  ) : (
+                    <Btn
+                      block
+                      kind="primary"
+                      disabled={busy || !view.body || !budgetNow}
+                      onPress={() => void startAuto()}
+                      testID="enhance-auto-go"
+                    >
+                      {L.autoStart}
+                    </Btn>
+                  )}
+                  {autoText ? (
+                    <Txt bold testID="enhance-auto-result">
+                      {[autoText.done, autoText.why].filter(Boolean).join('\n')}
+                    </Txt>
+                  ) : null}
+                  {!autoBusy && autoRun && enhanceTitleText(autoRun.titles) ? (
+                    <Txt bold tone="good">
+                      {enhanceTitleText(autoRun.titles)}
+                    </Txt>
+                  ) : null}
+                </>
+              ) : null}
+            </View>
+          ) : null}
           <Txt v="xs" tone="muted">
             {[`${L.balance} ${fundsText(info.balance)}`, L.effectNote].join('\n')}
           </Txt>
