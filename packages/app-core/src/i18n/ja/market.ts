@@ -35,7 +35,7 @@ export const market: Translation<MarketMsgs> = {
   myListing: '自分の出品',
   openListing: (p) => `${p.name}の獲得画面を見る`,
   cardMeta: (p) => `レジェンド ${p.score} · 移籍 ${p.transfers}回`,
-  pastCardMeta: (p) => `${p.season} · 年俸 ${p.salary} · ${p.meta}`,
+  pastCardMeta: (p) => `${p.season} · ${p.meta}`,
   listFailed: '市場を読み込めませんでした。',
   reload: '再読み込み',
   more: 'もっと見る',

@@ -13,6 +13,8 @@
   import LeaguePicker from './league/LeaguePicker.svelte';
   import LeagueBoard from './league/LeagueBoard.svelte';
   import LeagueMatchDetail from './league/LeagueMatchDetail.svelte';
+  import LeagueDaily from './league/LeagueDaily.svelte';
+  import type { LeagueNewsMatch } from '@offside/app-core/api/league';
   import PopSheet from './PopSheet.svelte';
   import Topbar from './Topbar.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
@@ -104,17 +106,25 @@
     detail = { m, table };
     window.scrollTo(0, 0);
   }
+  /** T-11-652 신문 기사 경기를 경기 상세로 연다(상세는 두 팀 이름 · 감독만 순위표에서 읽는다). */
+  function openNews(n: LeagueNewsMatch) {
+    if (!data) return;
+    openMatch(
+      { id: n.id, round: n.round, homeTeamId: n.home.teamId, awayTeamId: n.away.teamId, at: '', played: true, homeGoals: n.homeGoals, awayGoals: n.awayGoals, forfeit: false },
+      { season: data.league.season, tier: n.tier, league: n.league, teams: [n.home, n.away], standings: [], matches: [] },
+    );
+  }
   const account = $derived<LeagueAccount>(
     !accountCache.value || accountCache.value === 'error' ? 'unknown' : linked ? 'member' : 'guest',
   );
   // T-11-444 신청 카드의 단계별 노출은 앱과 같은 규칙(leagueEntryCard)을 쓴다.
   const card = $derived(data ? leagueEntryCard(data, account, me, meFailed) : null);
   const lastFinal = $derived(leagueLastFinalView(me));
-  const enterAsk = $derived(data ? leagueEnterAsk(data) : null);
+  const enterAsk = $derived(data ? leagueEnterAsk(data, me) : null);
   const presign = $derived(data ? leaguePresign(data) : false);
   const ready = $derived(data ? leagueReadiness(data, me) : null);
   // T-11-430 배치 전 신청 카드: 참가 자격 · 기권 규칙, 팀 선발 고치기(팀 편성 화면으로).
-  const entryRules = $derived(data ? leagueEntryRules(data) : []);
+  const entryRules = $derived(data ? leagueEntryRules(data, me) : []);
   const teamAction = $derived(data ? leagueTeamAction(data, me) : null);
   function openTeam() {
     appState.teamView = 'team';
@@ -211,6 +221,10 @@
         <!-- 접수 중에는 위 한 줄에 신청 수가 있다. -->
         {#if data.phase !== 'soon' && data.phase !== 'open'}<p class="muted fs-sm" data-league-entries>{L.entries({ n: data.entries })}</p>{/if}
       </section>
+
+      {#if data.tiers && data.playedRounds !== undefined}
+        {#key data.playedRounds}<LeagueDaily season={data.league.season} round={data.playedRounds} {linked} onopen={openNews} />{/key}
+      {/if}
 
       {#if pick && data.tiers}
         {#if choices.length > 1}<LeaguePicker tiers={data.tiers} {pick} {mine} onpick={choose} />{/if}

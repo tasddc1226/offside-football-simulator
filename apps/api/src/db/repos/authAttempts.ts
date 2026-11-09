@@ -1,7 +1,7 @@
 import { and, eq, sql } from 'drizzle-orm';
-import type { Db } from '../client.js';
+import { opsOf, type Db } from '../client.js';
 import { newId } from '../ids.js';
-import { authAttempts } from '../schema.js';
+import { authAttempts } from '../opsSchema.js';
 
 export type AuthAttemptKind = (typeof authAttempts.$inferSelect)['kind'];
 
@@ -21,7 +21,7 @@ export async function getAttemptCount(
   now: string,
   windowMs: number = RATE_LIMIT_WINDOW_MS,
 ): Promise<number> {
-  const [row] = await db
+  const [row] = await opsOf(db)
     .select()
     .from(authAttempts)
     .where(and(eq(authAttempts.kind, kind), eq(authAttempts.subject, subject)));
@@ -43,7 +43,7 @@ export async function recordAttempt(
   windowMs: number = RATE_LIMIT_WINDOW_MS,
 ): Promise<number> {
   const threshold = new Date(Date.parse(now) - windowMs).toISOString();
-  const [row] = await db
+  const [row] = await opsOf(db)
     .insert(authAttempts)
     .values({ id: newId('att'), kind, subject, windowStart: now, count: 1 })
     .onConflictDoUpdate({
@@ -67,7 +67,7 @@ export async function tryAttempt(
 ): Promise<boolean> {
   if (max <= 0) return false;
   const threshold = new Date(Date.parse(now) - RATE_LIMIT_WINDOW_MS).toISOString();
-  const [row] = await db
+  const [row] = await opsOf(db)
     .insert(authAttempts)
     .values({ id: newId('att'), kind, subject, windowStart: now, count: 1 })
     .onConflictDoUpdate({

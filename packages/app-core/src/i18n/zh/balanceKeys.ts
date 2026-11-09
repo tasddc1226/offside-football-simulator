@@ -49,8 +49,6 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   rankAtkK: '排位賽戰力差反映',
   leagueFatigue: '聯賽體力',
   leagueHomeAdv: '聯賽主場優勢',
-  pastSalaryBudget: '過去賽季球員薪資預算',
-  pastSalaryBudgetStep: '每賽季薪資預算增加',
   teamMatchRechargeMin: '排名賽恢復間隔（分鐘）',
   rerollPrice: '重抽券價格',
   rerollPriceGrowth: '重抽券價格上漲倍率',
@@ -85,6 +83,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivReward5: '菁英 II 賽季獎勵重抽券',
   teamDivReward6: '菁英 I 賽季獎勵重抽券',
   teamDivReward7: '大師賽季獎勵重抽券',
+  retireExpShare: '退休畫面實驗比例',
   eventWeight: (p) => `事件出現頻率調整 ${p.n} 項`,
   choiceBonus: (p) => `選項成功機率調整 ${p.n} 項`,
 };

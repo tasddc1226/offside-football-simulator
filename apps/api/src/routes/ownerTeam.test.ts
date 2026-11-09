@@ -32,6 +32,7 @@ import {
   presetLayout,
   positionedLayout,
   FORMATIONS,
+  LEGACY_NO_SALARY_BUDGET,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
 import * as ids from '../db/ids.js';
@@ -963,6 +964,55 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     });
     expect(res.status).toBe(200);
     expect(await teamOne(owner.cookie)).toBe(true);
+  });
+
+  it('같은 국적 업적: 대한민국 선수(국적 NULL로 저장) 11명이면 달성하고, 보상은 한 번만 준다', async () => {
+    await toSeason2();
+    const read = async (cookie: string) =>
+      AchRes.parse(await (await call('GET', '/v1/owner-team/achievements', { cookie })).json())
+        .data.groups.flatMap((g) => g.items)
+        .find((i) => i.id === 'team-nation');
+    const items = async (profileId: string) =>
+      (await ctx.db.select().from(ownerItems).where(eq(ownerItems.profileId, profileId)))
+        .map((r) => `${r.item}:${r.qty}`)
+        .sort();
+    const lineup = async (nations: (string | null)[]) => {
+      const who = await issueGoogleCookie(ctx, { nickname: `구단주${++seq}` });
+      const ids: string[] = [];
+      for (const nation of nations)
+        ids.push(await addCareer(who.profileId, { nation, serviceSeason: 2 }));
+      const order = [9, 8, 10, 7, 6, 5, 1, 2, 3, 4, 0];
+      const s: (string | null)[] = Array(11).fill(null);
+      ids.forEach((id, i) => (s[order[i]!] = id));
+      expect((await putTeam(who.cookie, { slots: s, name: `팀${seq}` })).status).toBe(200);
+      return { ...who, ids, slots: s };
+    };
+    const korea = await lineup(Array(11).fill(null));
+    // 업로드는 대한민국 국적을 싣지 않는다 → careers · cards.nation 모두 NULL.
+    const stored = await ctx.db.select({ nation: cards.nation }).from(cards);
+    expect(stored.map((r) => r.nation)).toEqual(Array(11).fill(null));
+    const first = await read(korea.cookie);
+    expect(first?.done).toBe(true);
+    // 시즌 2 보상 표(achRewardAt(2, 80)): 80점 위업은 잠재력 강화권 1장.
+    expect(first?.got).toEqual({ boost: 1, scout: 0 });
+    const afterFirst = await items(korea.profileId);
+    expect(afterFirst.length).toBeGreaterThan(0);
+    // 다시 읽어도 보상이 또 생기지 않는다.
+    expect((await read(korea.cookie))?.done).toBe(true);
+    expect(await items(korea.profileId)).toEqual(afterFirst);
+    // 그 시즌에 한 번 닿으면 다른 국적 선수로 바꿔도 남고, 보상도 그대로다.
+    const jp = await addCareer(korea.profileId, { nation: 'JP', serviceSeason: 2 });
+    const swapped = [...korea.slots];
+    swapped[9] = jp;
+    expect((await putTeam(korea.cookie, { slots: swapped })).status).toBe(200);
+    expect((await read(korea.cookie))?.done).toBe(true);
+    expect(await items(korea.profileId)).toEqual(afterFirst);
+
+    // 예전 클라이언트가 'KR'을 실은 기록이 섞여도 대한민국이다.
+    expect((await read((await lineup([...Array(10).fill(null), 'KR'])).cookie))?.done).toBe(true);
+    // 다른 국적이 하나라도 섞이면 아니다.
+    expect((await read((await lineup([...Array(10).fill(null), 'JP'])).cookie))?.done).toBe(false);
+    expect((await read((await lineup(Array(11).fill('JP'))).cookie))?.done).toBe(true);
   });
 
   it('T-11-028 업적 랭킹: 시즌 점수 순, 닉네임과 그 시즌 팀 이름만 보인다', async () => {
@@ -2138,76 +2188,37 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(team).toMatchObject({ season: 0, current: 1, founder: true });
     });
 
-    it('T-11-376 지난 시즌 선수는 급여 합이 예산(시즌 1은 80) 안에서만 넣고, 카드 시즌이 보인다', async () => {
+    it('지난 시즌 선수는 급여 예산 없이 몇 명이든 넣고, 카드 시즌이 보인다', async () => {
       const a = await issueGoogleCookie(ctx, { nickname: '급여' });
-      // OVR 96 이상은 급여 20 — T-11-450부터 시즌 1 예산 80이라 4명까지 든다.
       const stars: string[] = [];
-      for (let i = 0; i < 5; i++) stars.push(await addCareer(a.profileId, { peak: 96 }));
-      const mids: string[] = [];
-      for (let i = 0; i < 11; i++) mids.push(await addCareer(a.profileId, { peak: 88 }));
+      for (let i = 0; i < 10; i++) stars.push(await addCareer(a.profileId, { peak: 99 }));
       vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
       const s1 = await addCareer(a.profileId, { serviceSeason: 1, peak: 99 });
-
-      const view = GetRes.parse(
-        await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
-      ).data;
-      expect(view.season).toBe(1);
-      expect(view.pastSalaryBudget).toBe(80);
-      expect(view.players.find((p) => p.careerId === s1)?.season).toBe(1);
-      expect(view.players.find((p) => p.careerId === stars[0])?.season).toBe(0);
-
-      const over = await putTeam(a.cookie, { slots: slots(s1, ...stars) });
-      expect(over.status).toBe(400);
-      const err = ErrorEnvelopeSchema.parse(await over.json()).error;
-      expect(err.details).toEqual({ reason: 'PAST_SALARY_BUDGET', salary: 100, budget: 80 });
-      expect(err.message).toBe(
-        '지난 시즌 선수 급여가 예산을 넘어요(100/80). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.',
-      );
-      const ok = await putTeam(a.cookie, { slots: slots(s1, ...stars.slice(0, 4)) });
-      expect(ok.status).toBe(200);
-      const team = PutRes.parse(await ok.json()).data.team;
-      expect(team.season).toBe(1);
-      expect(team.slots.slice(0, 5).map((s) => s.season)).toEqual([1, 0, 0, 0, 0]);
-      expect(team.slots[5]!.season).toBeUndefined();
-      // OVR 88~89(급여 8)은 10명까지, 11명이면 88이라 넘는다. 이번 시즌 선수(OVR 99)는 세지 않는다.
-      expect((await putTeam(a.cookie, { slots: slots(s1, ...mids.slice(0, 10)) })).status).toBe(
-        200,
-      );
-      expect(await reason(await putTeam(a.cookie, { slots: slots(...mids) }))).toBe(
-        'PAST_SALARY_BUDGET',
-      );
-      // 영어 요청은 영어 문구.
-      const en = await call('PUT', '/v1/owner-team?lang=en', {
-        cookie: a.cookie,
-        body: { name: '급여 팀', manager: '감독', formation: '4-3-3', slots: slots(...stars) },
-      });
-      expect(ErrorEnvelopeSchema.parse(await en.json()).error.message).toBe(
-        'Past-season player salaries are over budget (100/80). Swap in lower-salary or this-season players.',
-      );
-    });
-
-    it('T-11-376 운영 도구 밸런스의 급여 예산을 바로 읽는다', async () => {
-      const a = await issueGoogleCookie(ctx, { nickname: '예산' });
-      const stars: string[] = [];
-      for (let i = 0; i < 2; i++) stars.push(await addCareer(a.profileId, { peak: 96 }));
-      vi.setSystemTime(new Date('2026-10-10T00:00:00.000Z')); // 시즌 1
+      // 예전 밸런스 버전에 남은 예산 값도 더는 읽지 않는다.
       const now = new Date().toISOString();
       await ctx.db.insert(balanceVersions).values({
         status: 'active',
-        valuesJson: JSON.stringify({ pastSalaryBudget: 30 }),
+        valuesJson: JSON.stringify({ pastSalaryBudget: 20 }),
         createdBy: 'test',
         createdAt: now,
         updatedAt: now,
         activatedAt: now,
       });
+
       const view = GetRes.parse(
         await (await call('GET', '/v1/owner-team', { cookie: a.cookie })).json(),
       ).data;
-      expect(view.pastSalaryBudget).toBe(30);
-      expect(await reason(await putTeam(a.cookie, { slots: slots(...stars) }))).toBe(
-        'PAST_SALARY_BUDGET',
-      );
-      expect((await putTeam(a.cookie, { slots: slots(stars[0]!) })).status).toBe(200);
+      expect(view.season).toBe(1);
+      // OTA 전의 옛 앱이 편성을 막지 않게 닿지 않는 예산을 보낸다.
+      expect(view.pastSalaryBudget).toBe(LEGACY_NO_SALARY_BUDGET);
+      expect(view.players.find((p) => p.careerId === s1)?.season).toBe(1);
+      expect(view.players.find((p) => p.careerId === stars[0])?.season).toBe(0);
+
+      const ok = await putTeam(a.cookie, { slots: slots(s1, ...stars) });
+      expect(ok.status).toBe(200);
+      const team = PutRes.parse(await ok.json()).data.team;
+      expect(team.season).toBe(1);
+      expect(team.slots.map((s) => s.season)).toEqual([1, ...Array(10).fill(0)]);
     });
 
     it('친구를 끊으면 두 줄이 지워지고, 프로필을 지우면 친구 줄과 친선전이 사라진다', async () => {

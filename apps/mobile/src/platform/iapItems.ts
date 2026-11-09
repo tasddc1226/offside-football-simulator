@@ -20,9 +20,16 @@ import {
 } from '@offside/contracts/cup';
 import { claimIap, fetchItems, type OwnerItemsResponse } from '@offside/app-core/api/cup';
 import { needsOwnerLogin } from '@offside/app-core/market';
+import {
+  commerceOffer,
+  createCheckoutFunnel,
+  type CheckoutTicket,
+  type CommerceEntry,
+} from '@offside/app-core/commerceStage';
 import { iapText as L } from '@offside/app-core/i18n/ko/iap';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
 import { toast } from '../game/host';
+import { onAnalyticsConsent, trackCommerce } from '../analytics';
 import { onSessionChanged } from './session';
 import { connectStore, onStoreError, onStorePurchase, STORE_SUPPORTED } from './store';
 
@@ -61,7 +68,24 @@ export const sellablePacks = (
 
 let account: string | null = null;
 
-async function claim(p: Purchase, quiet: boolean) {
+/**
+ * 강화권 · 스카우트권 구매 퍼널 계측(commerceStage). 지금 결제 중인 시도 하나만 기억하고, 끝나면 비운다. 앱 재실행 · '지급 다시
+ * 확인' 복구와 같은 거래의 두 번째 콜백에는 시도가 없어 아무것도 남지 않고, 이미 본 거래 · 시도보다 오래된 거래는 성공으로
+ * 세지 않는다. 계정 · 이용 분석 동의가 바뀌면 서버 확인 중인 표와 SDK 줄의 전송까지 버린다. 계측 실패는 결제 · 지급 · 마무리에
+ * 닿지 않는다(결제 동작은 그대로).
+ */
+const funnel = createCheckoutFunnel((o, alive) => trackCommerce(o, alive));
+try {
+  onAnalyticsConsent(() => funnel.reset());
+} catch {
+  /* 계측이 없는 빌드 */
+}
+/** 묶음 자리가 보일 때(IapPacks). 강화권 · 스카우트권만. */
+export function trackIapOffer(item: OwnerItem, entry: CommerceEntry) {
+  if (item === 'boost' || item === 'scout') funnel.view({ item, entry, store: STORE });
+}
+
+async function claim(p: Purchase, quiet: boolean, attempt: CheckoutTicket | null = null) {
   const productId = p.productId;
   if (!isOurs(productId) || !p.purchaseToken) return true;
   const r = await claimIap({ store: STORE, productId, token: p.purchaseToken });
@@ -69,6 +93,7 @@ async function claim(p: Purchase, quiet: boolean) {
     // 다른 계정의 구매 · 확인 실패는 거래를 남겨 둔다(그 계정으로 로그인하거나 다음 실행에 다시 보낸다).
     // 다시 하면 될 실패면 같은 화면에서 '지급 다시 확인'을 누를 수 있게 한다.
     if (r.error.retryable) iapItems.claimLeft = true;
+    funnel.grantFailed(attempt, r.error.retryable);
     if (!quiet) toast(r.error.retryable ? L.claimFail : r.error.message || L.claimFail);
     return false;
   }
@@ -78,6 +103,8 @@ async function claim(p: Purchase, quiet: boolean) {
     scout: r.data.scout,
     rename: r.data.rename ?? 0,
   };
+  // 서버가 확인 · 지급을 돌려준 뒤에만 성공으로 남긴다(스토어 콜백만으로는 남기지 않는다).
+  funnel.granted(attempt);
   await finishTransaction({ purchase: p, isConsumable: true }).catch(() => {});
   const { item } = IAP_PRODUCTS[productId];
   toast(
@@ -97,14 +124,24 @@ onStorePurchase((p) => {
   const mine = iapItems.busy === p.productId;
   if (mine) iapItems.busy = null;
   if (p.purchaseState === 'pending') {
-    if (mine) toast(L.pending);
+    if (mine) {
+      funnel.pending();
+      toast(L.pending);
+    }
     return;
   }
-  if (p.purchaseState === 'purchased') void claim(p, false);
+  if (p.purchaseState !== 'purchased') return;
+  // 지금 시도의 새 거래로 확실할 때만 표를 꺼낸다(아니면 이미 본 거래로 적어 둔다).
+  let ticket: CheckoutTicket | null = null;
+  if (mine) ticket = funnel.take(p);
+  else funnel.known(p);
+  void claim(p, false, ticket);
 });
 onStoreError((e) => {
   if (!iapItems.busy) return;
   iapItems.busy = null;
+  if (e.code === ErrorCode.UserCancelled) funnel.cancel();
+  else funnel.fail('store_error');
   if (e.code !== ErrorCode.UserCancelled) toast(L.payFail);
 });
 
@@ -155,8 +192,10 @@ export async function syncIapItems(): Promise<boolean> {
     iapItems.open = Object.keys(prices).length > 0;
     // 서버는 파는데 스토어가 가격을 하나도 주지 않았으면 스토어 쪽 문제로 보고 다시 물을 수 있게 한다.
     iapItems.status = iapItems.open ? 'ready' : 'failed';
-    for (const p of pending)
+    for (const p of pending) {
+      funnel.known(p);
       if (isOurs(p.productId) && p.purchaseState === 'purchased') await claim(p, true);
+    }
     return iapItems.open;
   } catch {
     // 스토어에 닿지 못하면 상품 자리에 '다시 확인'을 보인다.
@@ -166,22 +205,28 @@ export async function syncIapItems(): Promise<boolean> {
   }
 }
 
-/** 상품 하나 사기. 결과는 구매 이벤트로 온다. */
-export async function buyIapItem(productId: IapProductId) {
+/** 상품 하나 사기(entry: 누른 자리, 계측에만 쓴다). 결과는 구매 이벤트로 온다. */
+export async function buyIapItem(productId: IapProductId, entry: CommerceEntry = 'shop') {
   if (!STORE_SUPPORTED || iapItems.busy || !account) return;
   iapItems.busy = productId;
+  funnel.begin(productId, commerceOffer(productId, entry, STORE));
   if (!(await connectStore())) {
     iapItems.busy = null;
+    funnel.fail('store_unavailable');
     return toast(L.storeFail);
   }
+  funnel.requested();
   await requestPurchase({
     request: {
       apple: { sku: productId, appAccountToken: account },
       google: { skus: [productId], obfuscatedAccountId: account },
     },
     type: 'in-app',
-  }).catch(() => {
+  }).catch((e: unknown) => {
     iapItems.busy = null;
+    // 스토어가 취소를 거절로 돌려주는 경우도 취소로 센다(오류 문구 · 토스트는 그대로).
+    if ((e as { code?: unknown } | null)?.code === ErrorCode.UserCancelled) funnel.cancel();
+    else funnel.fail('start_failed');
     toast(L.payStartFail);
   });
 }
@@ -190,6 +235,7 @@ let synced: Promise<void> | undefined;
 // 다른 계정으로 바뀌면 구단주 표시와 상품 상태를 다시 받는다.
 onSessionChanged(() => {
   synced = undefined;
+  funnel.reset();
   account = null;
   iapItems.open = false;
   iapItems.status = 'idle';
@@ -232,6 +278,7 @@ export async function retryIapClaims() {
       (p) => isOurs(p.productId) && p.purchaseState === 'purchased',
     );
     if (!left) return toast(L.storeFail);
+    left.forEach((p) => funnel.known(p));
     iapItems.claimLeft = false;
     if (!left.length) return toast(L.claimNone);
     for (const p of left) await claim(p, false);
@@ -244,6 +291,7 @@ export async function retryIapClaims() {
 export async function recoverIapItems() {
   if (!STORE_SUPPORTED || !(await connectStore())) return;
   const left = await getAvailablePurchases().catch(() => []);
+  left.forEach((p) => funnel.known(p));
   if (left.some((p) => isOurs(p.productId) && p.purchaseState === 'purchased')) void ensureSynced();
 }
 /** 상품을 보일 자리가 쓰는 상태. want일 때 앱 실행마다 한 번 서버 · 스토어와 맞춘다(실패하면 다음에 다시). */

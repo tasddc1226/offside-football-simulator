@@ -1034,8 +1034,85 @@
     {
       "idx": 150,
       "version": "6",
-      "when": 1793949543998,
-      "tag": "0150_manager_engine",
+      "when": 1794027564558,
+      "tag": "0150_club_value_enhance",
+      "breakpoints": true
+    },
+    {
+      "idx": 151,
+      "version": "6",
+      "when": 1794042527878,
+      "tag": "0151_league_predictions",
+      "breakpoints": true
+    },
+    {
+      "idx": 152,
+      "version": "6",
+      "when": 1794051496523,
+      "tag": "0152_cup_season_cards",
+      "breakpoints": true
+    },
+    {
+      "idx": 153,
+      "version": "6",
+      "when": 1794054889960,
+      "tag": "0153_league_news_ai",
+      "breakpoints": true
+    },
+    {
+      "idx": 154,
+      "version": "6",
+      "when": 1794058226061,
+      "tag": "0154_index_tidy",
+      "breakpoints": true
+    },
+    {
+      "idx": 155,
+      "version": "6",
+      "when": 1794058448949,
+      "tag": "0155_fund_ledger",
+      "breakpoints": true
+    },
+    {
+      "idx": 156,
+      "version": "6",
+      "when": 1794060062324,
+      "tag": "0156_title_metrics",
+      "breakpoints": true
+    },
+    {
+      "idx": 157,
+      "version": "6",
+      "when": 1794060063302,
+      "tag": "0157_drop_title_progress",
+      "breakpoints": true
+    },
+    {
+      "idx": 158,
+      "version": "6",
+      "when": 1794060295654,
+      "tag": "0158_report_purchase_views",
+      "breakpoints": true
+    },
+    {
+      "idx": 159,
+      "version": "6",
+      "when": 1794061063689,
+      "tag": "0159_hof_partial",
+      "breakpoints": true
+    },
+    {
+      "idx": 160,
+      "version": "6",
+      "when": 1794066200882,
+      "tag": "0160_drop_legacy_ops_tables",
+      "breakpoints": true
+    },
+    {
+      "idx": 161,
+      "version": "6",
+      "when": 1794203604389,
+      "tag": "0161_manager_engine",
       "breakpoints": true
     }
   ]

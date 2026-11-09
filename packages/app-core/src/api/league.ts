@@ -2,6 +2,10 @@
 import type {
   LeagueMatchResponse,
   LeagueMeResponse,
+  LeagueNewsResponse,
+  LeaguePredictionCounts,
+  LeaguePredictionMeResponse,
+  LeaguePredictionPick,
   LeagueResponse,
   LeagueTableResponse,
 } from '@offside/contracts';
@@ -38,4 +42,35 @@ export const fetchLeagueMatch = (season: number, matchId: string) =>
   cachedGet<LeagueMatchResponse>(
     `/v1/leagues/${season}/matches/${encodeURIComponent(matchId)}`,
     10 * 60_000,
+  );
+
+// ───────── T-11-652 오프사이드 데일리 · 빅매치 예측 ─────────
+export type {
+  LeagueBigMatch,
+  LeagueNewsItem,
+  LeagueNewsMatch,
+  LeagueNewsPlayer,
+  LeagueNewsResponse,
+  LeaguePredictionCounts,
+  LeaguePredictionMeResponse,
+  LeaguePredictionPick,
+} from '@offside/contracts';
+
+/** 끝난 라운드 신문(누구나). 끝난 라운드는 바뀌지 않아 오래 둔다. 리그 화면을 열 때만 부른다. */
+export const fetchLeagueNews = (season: number, round: number) =>
+  cachedGet<LeagueNewsResponse>(`/v1/leagues/${season}/news/${round}`, 10 * 60_000);
+/** 빅매치 예측 수(누구나, 서버 캐시 30초). */
+export const fetchLeaguePredictionCounts = (season: number, matchId: string) =>
+  cachedGet<LeaguePredictionCounts>(
+    `/v1/leagues/${season}/matches/${encodeURIComponent(matchId)}/predictions`,
+    30_000,
+  );
+/** 내 예측 · 적중 기록. */
+export const fetchLeaguePredictionsMe = (season: number) =>
+  apiFetch<LeaguePredictionMeResponse>(`/v1/leagues/${season}/predictions/me`);
+/** 빅매치 예측(경기 시각 전까지 바꿀 수 있다). 바뀐 예측 수를 돌려준다. */
+export const putLeaguePrediction = (season: number, matchId: string, pick: LeaguePredictionPick) =>
+  apiFetch<LeaguePredictionCounts>(
+    `/v1/leagues/${season}/matches/${encodeURIComponent(matchId)}/prediction`,
+    { method: 'PUT', body: JSON.stringify({ pick }) },
   );

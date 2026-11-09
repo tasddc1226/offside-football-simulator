@@ -40,6 +40,12 @@ import {
   type LeaguePick,
 } from '@offside/app-core/leagueView';
 import { cupLiveMatch, firstLive } from '@offside/app-core/teamLive';
+import { leagueNewsText as N } from '@offside/app-core/i18n/ko/leagueNews';
+import { derbyIds, leagueRival, matchArticle } from '@offside/app-core/leagueNews';
+import { isMember } from '@offside/app-core/account';
+import { useSnapshot } from 'valtio';
+import { accountCache } from '../../store';
+import { shareToLounge } from '../../components/loungeShare';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
 import { TeamLogo } from '../../components/TeamLogo';
 import { alpha } from '../../theme/colors';
@@ -266,6 +272,8 @@ function MyMatches({
 }) {
   const c = useColors();
   const my = leagueMyMatches(table, mineId);
+  // T-11-652 내 라이벌(바로 위 · 아래 팀 중 승점 차가 작은 팀).
+  const rival = leagueRival(table, mineId);
   if (!my) return null;
   const who = (head: string, x: NonNullable<typeof my.last>) => (
     <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
@@ -307,6 +315,13 @@ function MyMatches({
           ) : null}
         </View>
       ) : null}
+      {rival ? (
+        <View style={row} testID={`league-rival-${rival.teamId}`}>
+          <Txt v="sm" style={{ flex: 1 }}>
+            {rival.line}
+          </Txt>
+        </View>
+      ) : null}
       {my.next ? (
         <View style={row} testID="league-my-next">
           {who(L.myMatchNext, my.next)}
@@ -338,6 +353,7 @@ function Standings({
     </Txt>
   );
   const rows = [...table.standings].sort((a, b) => a.rank - b.rank);
+  const rivalId = leagueRival(table, mineId)?.teamId ?? null;
   const clinches = leagueClinches(table, table.tier, bottomTier);
   const legend = leagueLegend(table.tier, bottomTier);
   return (
@@ -422,6 +438,11 @@ function Standings({
                       {team?.name ?? C.tbd}
                     </Txt>
                     <ClinchPill clinch={clinches.get(s.teamId)} />
+                    {rivalId === s.teamId ? (
+                      <View testID="league-rival-tag">
+                        <Pill tone="warn">{N.rivalTag}</Pill>
+                      </View>
+                    ) : null}
                     {zoneLabel ? (
                       <View testID="league-my-zone">
                         <Pill tone={zone === 'up' ? 'good' : 'warn'}>{zoneLabel}</Pill>
@@ -705,6 +726,7 @@ function Rounds({
   const roundAt = leagueRoundAt(day.matches);
   const name = (id: string) => table.teams.find((t) => t.teamId === id)?.name ?? C.tbd;
   const last = leagueLastRound(table);
+  const derbies = derbyIds(table);
   const [fixtures, setFixtures] = useState(false);
   const [nowY, setNowY] = useState<number | undefined>();
   const pickRound = (n: number) => {
@@ -775,6 +797,11 @@ function Rounds({
                   <Txt v="xs" tone="warn">
                     {L.forfeitScore}
                   </Txt>
+                ) : null}
+                {derbies.has(m.id) ? (
+                  <View testID={`league-derby-${m.id}`}>
+                    <Pill tone="warn">{N.derbyTag}</Pill>
+                  </View>
                 ) : null}
               </View>
             );
@@ -1031,6 +1058,18 @@ export function LeagueMatchDetail({
   }, [season, matchId]);
   const m = data?.match;
   const info = data?.league;
+  const cache = useSnapshot(accountCache);
+  const acct = cache.value;
+  const linked = !!acct && acct !== 'error' && isMember(acct);
+  const [sharing, setSharing] = useState(false);
+  const c = useColors();
+  const share = async () => {
+    if (sharing) return;
+    setSharing(true);
+    await shareToLounge({ kind: 'leagueMatch', season, matchId });
+    setSharing(false);
+  };
+  const article = m ? matchArticle(m) : null;
   const owner = (id: string, fallback: string) =>
     table.teams.find((t) => t.teamId === id)?.owner ?? fallback;
   const goalStyle = { fontFamily: DISPLAY[700], fontSize: rem(2.5), lineHeight: rem(2.5) } as const;
@@ -1088,6 +1127,29 @@ export function LeagueMatchDetail({
               </View>
               {side(m.away, true)}
             </View>
+            {article ? (
+              <View
+                testID="league-article"
+                style={{
+                  gap: 6,
+                  padding: 12,
+                  borderLeftWidth: 3,
+                  borderLeftColor: c.accent,
+                  borderRadius: RADIUS.sm,
+                  backgroundColor: alpha(c.accent, 0.06),
+                }}
+              >
+                <Txt v="eyebrow">{N.articleTitle}</Txt>
+                <Txt v="h3" bold>
+                  {article.head}
+                </Txt>
+                {article.body.map((line) => (
+                  <Txt key={line} v="sm" style={{ lineHeight: rem(1) * 1.5 }}>
+                    {line}
+                  </Txt>
+                ))}
+              </View>
+            ) : null}
             {m.events.length ? (
               <View style={{ gap: 8 }}>
                 {m.events.map((e, k) => (
@@ -1130,6 +1192,17 @@ export function LeagueMatchDetail({
       {m ? (
         <Btn block onPress={() => setLive(true)} testID="league-replay">
           {TM.replay}
+        </Btn>
+      ) : null}
+      {m && linked && !info?.forfeit ? (
+        <Btn
+          block
+          disabled={sharing}
+          onPress={() => void share()}
+          accessibilityLabel={N.shareAria({ home: m.home.name, away: m.away.name })}
+          testID="league-article-share"
+        >
+          {N.shareAct}
         </Btn>
       ) : null}
       <Btn block onPress={back} testID="league-match-back">

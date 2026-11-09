@@ -1,4 +1,18 @@
-export const DYNAMIC_LEAGUES = ['k1', 'j1', 'mls', 'ere', 'l1', 'bl', 'sa', 'll', 'pl'] as const;
+export const DYNAMIC_LEAGUES = [
+  'k1',
+  'j1',
+  'mls',
+  'ere',
+  'l1',
+  'bl',
+  'sa',
+  'll',
+  'pl',
+  'bra',
+  'por',
+] as const;
+/** `<리그>-<번호>` 구단 id 중 일별 갱신 대상 리그의 것. */
+export const DYNAMIC_CLUB_ID = new RegExp(`^(${DYNAMIC_LEAGUES.join('|')})-\\d+$`);
 export const CLUB_LEAGUE_AVG: Record<string, number> = {
   hs: 46,
   uni: 52,

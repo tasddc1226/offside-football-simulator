@@ -49,8 +49,6 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   rankAtkK: 'ランク戦の戦力差の反映',
   leagueFatigue: 'リーグの疲労',
   leagueHomeAdv: 'リーグのホームアドバンテージ',
-  pastSalaryBudget: '過去シーズン選手の年俸予算',
-  pastSalaryBudgetStep: 'シーズンごとの年俸予算増加',
   teamMatchRechargeMin: 'ランク戦の回復間隔（分）',
   rerollPrice: 'リロールチケットの価格',
   rerollPriceGrowth: 'リロールチケットの値上がり倍率',
@@ -85,6 +83,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivReward5: 'エリートIIシーズン報酬のリロール券',
   teamDivReward6: 'エリートIシーズン報酬のリロール券',
   teamDivReward7: 'マスターシーズン報酬のリロール券',
+  retireExpShare: '引退画面の実験割合',
   eventWeight: (p) => `イベント出現頻度の調整 ${p.n}件`,
   choiceBonus: (p) => `選択肢の成功確率の調整 ${p.n}件`,
 };

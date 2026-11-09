@@ -10,6 +10,7 @@ import {
   type ChatRejectCode,
   type ChatReply,
   type ChatServerEvent,
+  type ChatNewsShare,
   type ChatShare,
 } from '@offside/contracts/chat';
 import { LIVE_PING, LIVE_PONG } from '@offside/contracts/polling';
@@ -75,9 +76,13 @@ const toMessage = (r: Row): StoredMessage => ({
           )
         : null,
   }),
-  ...(r.share_json != null && { share: JSON.parse(String(r.share_json)) as ChatShare }),
+  ...(r.share_json != null &&
+    shareField(JSON.parse(String(r.share_json)) as ChatShare | ChatNewsShare)),
   profileId: String(r.profile_id),
 });
+/** T-11-652 리그 기사는 news 칸으로(옛 앱이 share의 모르는 종류에서 멈추지 않게). 저장은 같은 share_json이다. */
+const shareField = (s: ChatShare | ChatNewsShare) =>
+  s.kind === 'leagueMatch' ? { news: s } : { share: s };
 const publicOf = ({ profileId: _, ...m }: StoredMessage): ChatMessage => m;
 const send = (ws: WebSocket, message: string) => {
   try {
@@ -250,7 +255,7 @@ export class ChatRoom extends DurableObject<Bindings> {
   }
 
   /** 라운지에 팀 · 선수를 올린다(API가 내용을 만들어 부른다). 올렸으면 메시지 id, 너무 잦으면 null. */
-  postShare(writer: ChatWriter, body: string, share: ChatShare): string | null {
+  postShare(writer: ChatWriter, body: string, share: ChatShare | ChatNewsShare): string | null {
     const now = Date.now();
     const [recent] = this.sql
       .exec<Row>(
@@ -269,7 +274,7 @@ export class ChatRoom extends DurableObject<Bindings> {
     body: string,
     now: number,
     reply: ChatReply | null,
-    share?: ChatShare,
+    share?: ChatShare | ChatNewsShare,
   ): string {
     const {
       profileId,
@@ -291,7 +296,7 @@ export class ChatRoom extends DurableObject<Bindings> {
       title,
       avatarId,
       ...(reply ? { replyTo: reply.id, reply } : {}),
-      ...(share ? { share } : {}),
+      ...(share ? shareField(share) : {}),
     };
     const notify = !admin && !!communityOwnerEmail(this.env);
     this.ctx.storage.transactionSync(() => {

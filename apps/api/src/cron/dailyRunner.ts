@@ -1,4 +1,4 @@
-import type { Bindings } from '../env.js';
+import { opsD1, type Bindings } from '../env.js';
 import { createDb } from '../db/client.js';
 import { DAY_MS } from '../time.js';
 import { sweepAutomation, AUTOMATION_SWEEP_KEY } from '../db/repos/automationEnforcement.js';
@@ -14,6 +14,9 @@ import { logErrorText } from '../logError.js';
 import { runBest11Daily, type Best11DailyCursor } from '../db/repos/best11.js';
 import { pruneAbandonedCareers, type PruneResult } from './pruneAbandoned.js';
 import { runKpiDaily, type KpiDailyResult } from '../db/repos/kpi.js';
+import { buildRetireCohort } from '../db/repos/retireCohort.js';
+import { purgeEdgeOrigin } from '../edgeCache.js';
+import { RETIRE_COHORT_PATH } from '@offside/contracts/retire-cohort';
 
 export const DAILY_STATE_KEY = 'cron:daily:state';
 const LEASE_MS = 4 * 60_000;
@@ -28,6 +31,7 @@ export const DAILY_STAGES = [
   'best11',
   'pruneAbandoned',
   'kpi',
+  'retireCohort',
 ] as const;
 type Stage = (typeof DAILY_STAGES)[number];
 export type DailyState = {
@@ -56,7 +60,7 @@ function steps(env: Bindings): DailyStep {
     const db = createDb(env.DB);
     switch (stage) {
       case 'cleanup': {
-        const result = await cleanupExpired(env.DB, at, { chunk: 1000, maxChunks: 2 });
+        const result = await cleanupExpired(env.DB, at, { chunk: 1000, maxChunks: 2 }, opsD1(env));
         return { done: Object.values(result).every((n) => n < 2000), result };
       }
       case 'automation': {
@@ -115,8 +119,21 @@ function steps(env: Bindings): DailyStep {
       }
       case 'kpi': {
         // T-11-572 운영 지표 대시보드: 전날까지 KST 하루치를 kpi_daily에 모은다(처음엔 90일 거꾸로 채운다).
-        const result = await runKpiDaily(env.DB, at, prior as KpiDailyResult | undefined);
+        const result = await runKpiDaily(
+          env.DB,
+          at,
+          prior as KpiDailyResult | undefined,
+          opsD1(env),
+        );
         return { done: result.done, result };
+      }
+      case 'retireCohort': {
+        // T-11-675 은퇴 동기 비교 분포(그 시즌 은퇴 커리어, 포지션마다 한 번 읽기). 결과는 시즌 · 포지션별 인원만 남긴다.
+        const cohort = await buildRetireCohort(env.DB, new Date(at).toISOString());
+        if (env.PUBLIC_API_ORIGIN)
+          await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, [RETIRE_COHORT_PATH]).catch(() => {});
+        const n = Object.fromEntries(Object.entries(cohort.pos).map(([p, v]) => [p, v?.n ?? 0]));
+        return { done: true, result: { season: cohort.season, n } };
       }
     }
   };

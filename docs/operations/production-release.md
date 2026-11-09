@@ -134,11 +134,45 @@ read-only 보고 유틸리티. 시즌/manifest 관련 커맨드(`seasons`, `plan
 풀타임 전환의 첫 `deploy`가 `0015`로 원작 게임 테이블을 드롭했다(2026-09-24). 당시 절차는
 [fulltime-cutover.md](fulltime-cutover.md)에 기록으로 남아 있다.
 
+## 운영 DB 마이그레이션 (2026-11-08)
+
+배경: T-11-663(#1099)이 `careers` 인덱스 14개를 한 마이그레이션(0159)에서 지우고 다시 만들었다. 01:16 KST에 마이그레이션이
+30초 동안 DB를 붙잡다가 `D1 DB storage operation exceeded timeout which caused object to be reset`(7429)로 끊겼고,
+01:15~01:20 5분 칸에 요청 2,906건 중 느린 요청 1,748건 · 오류 390건(평균 44초)이 났다. 마이그레이션은 실제로는 적용돼
+`d1_migrations`에 기록이 남았지만 배포는 실패로 멈춰 Worker는 옛 코드 그대로였다. 옛 코드의 명예의 전당 쿼리가 조건이 바뀐 부분
+인덱스를 `INDEXED BY`로 찾다가 실패해 `/v1/hof`가 전부 503이 됐고, 같은 SHA로 배포를 다시 돌려 01:22쯤 회복했다.
+
+### 배포 전
+
+- 마이그레이션이 건드리는 표의 운영 행 수를 확인한다(`SELECT COUNT(*)`는 피크 밖에서, 큰 표는 `sqlite_stat1`이나 최근 집계로).
+- 수십만 행 이상인 표에 인덱스를 만들거나 다시 만드는 문장은 한 마이그레이션에 2개까지만 넣는다. 테이블을 다시 쓰는 변경(열
+  타입 변경 · 테이블 재생성 · 대량 UPDATE)도 같은 무게로 본다.
+- 이런 배포는 KST 19시부터 24시를 피하고 새벽 3시부터 7시에 낸다. PR 본문에 표 · 행 수 · 인덱스 수를 적는다.
+- 확장 → 전환 → 정리로 나눈다. 인덱스의 열 · 조건을 바꿀 때는 새 이름으로 추가(1차 배포) → 새 이름을 쓰는 코드(같은
+  배포 또는 2차) → 옛 인덱스 삭제(그다음 배포). 같은 이름 DROP + CREATE는 옛 코드가 바로 깨진다.
+
+PR 검사 `Migration weight guard`(T-11-667, `.github/scripts/migration-guard.mjs`)가 위 두 규칙(큰 표 작업 2개 상한, 같은 이름
+DROP + CREATE 금지)을 막는다. 큰 표 목록은 2026-11-08 운영 `max(rowid)` 5만 이상인 13개다. 계획한 예외는 마이그레이션 파일에
+`-- migration-guard: allow <이유>`를 넣으면 경고만 남긴다.
+
+### 마이그레이션 단계가 실패하면
+
+1. 진행 중인 배포 run이 있는지 본다(`gh run list --workflow deploy-production.yml`). 다른 세션이 이미 다시 돌리고 있으면
+   기다린다.
+2. 운영 D1에서 실제 상태를 읽는다.
+   - `SELECT name FROM d1_migrations ORDER BY id DESC LIMIT 3`
+   - `SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='<표>'`
+3. 적용됐으면 같은 SHA로 `mode=deploy`를 다시 돌린다(또는 실패한 잡만 다시 실행). 적용된 마이그레이션은 건너뛰고 Worker
+   코드까지 올라간다.
+4. 적용되지 않았으면 원인(무게 · 잠금 · SQL)을 고친 마이그레이션을 새 PR로 낸다. 같은 마이그레이션을 그대로 다시 돌리지 않는다.
+5. `/v1/status` 5분 칸과 마이그레이션이 건드린 표를 쓰는 API(이번엔 `/v1/hof`)를 직접 불러 회복을 확인한다.
+
 ## 실패 시 점검 순서
 
 - `expected_sha` 불일치: 최신 main SHA로 다시 실행한다. 다른 브랜치/오래된 SHA를 강제로 배포하지 않는다.
 - Google secret 절반만 설정: 워크플로가 그 단계에서 멈춘다. 두 secret을 모두 채우거나 모두 비운다.
 - migration 후 스키마 불일치: 배포를 중단하고 원인을 조사한다. 강제로 다음 단계를 진행하지 않는다.
+- migration 단계 실패(타임아웃 · 7429 리셋 등): 실패로 믿지 말고 위 "마이그레이션 단계가 실패하면" 순서대로 실제 적용 여부부터 본다.
 - web-readiness 실패(자산 전파 지연): 몇 분 뒤 워크플로를 다시 실행하거나, Cloudflare 대시보드에서
   실제 배포된 Worker 버전을 확인한다. 이 gate를 끄거나 이전 해시를 허용해 진행하지 않는다.
 - release-tag 실패: 운영 배포 자체는 끝난 상태다. 워크플로를 다시 돌리지 말고(같은 SHA면 앱은 그대로

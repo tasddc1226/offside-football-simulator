@@ -4,7 +4,8 @@ import {
   type KpiReport,
 } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { billingAlerts, clientErrors, iapPurchases, memberships } from '../db/schema.js';
+import { clientErrors } from '../db/opsSchema.js';
+import { billingAlerts, iapPurchases, memberships } from '../db/schema.js';
 import {
   KPI_BACKFILL_DAYS,
   kstDayRange,
@@ -122,7 +123,7 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
       test: false,
       createdAt: mid,
     });
-    await ctx.db.insert(clientErrors).values(
+    await ctx.ops.insert(clientErrors).values(
       [3, 4].map((count, i) => ({
         day: yesterday!,
         fingerprint: `f${i}`,
@@ -143,13 +144,13 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     let result: KpiDailyResult | undefined;
     let steps = 0;
     do {
-      result = await runKpiDaily(env.DB, at, result);
+      result = await runKpiDaily(env.DB, at, result, env.OPS_DB);
       steps++;
     } while (!result.done && steps < 30);
     expect(result.done).toBe(true);
     // 3일 다시 쓰기 + 90일 거꾸로 채우기(7일씩).
     expect(steps).toBeLessThanOrEqual(Math.ceil(KPI_BACKFILL_DAYS / 7) + 1);
-    await runKpiDaily(env.DB, at);
+    await runKpiDaily(env.DB, at, undefined, env.OPS_DB);
 
     const r = await report(admin.cookie);
     expect(value(r, yesterday!, 'iap_krw', 'google')).toBe(5500);
@@ -168,7 +169,9 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     expect(value(r, yesterday!, 'client_errors', 'android')).toBe(7);
     expect(r.sources.map((s) => s.source)).toEqual(['d1']);
     expect(r.sources[0]!.lastDay).toBe(yesterday);
-    const count = await env.DB.prepare('SELECT min(day) d FROM kpi_daily').first<{ d: string }>();
+    const count = await env
+      .OPS_DB!.prepare('SELECT min(day) d FROM kpi_daily')
+      .first<{ d: string }>();
     expect(count!.d).toBe(kstPastDays(at, KPI_BACKFILL_DAYS).at(-1));
   });
 

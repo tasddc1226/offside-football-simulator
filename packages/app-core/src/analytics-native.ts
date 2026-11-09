@@ -8,6 +8,10 @@ import {
   type Params,
 } from './analytics-model.js';
 import { createTracker } from './analytics-tracker.js';
+import { COMMERCE_EVENT, commerceParams, type CommerceObservation } from './commerceStage.js';
+import { createRetireExpMetrics } from './retireExpMetrics.js';
+import { shareEventParams, type ShareOutcome } from './shareMeasurement.js';
+import type { Progress } from './player-metrics.js';
 
 /** 푸시 열기에 붙이는 캠페인과 단계 허용 목록. 서버 push data의 campaign · reminderStage와 같다. */
 const PUSH_CAMPAIGNS = new Map<unknown, readonly number[]>([
@@ -49,6 +53,13 @@ type IO = {
   writeLedger: (v: Ledger) => void;
   now: () => number;
   appVersion: string;
+  /** T-11-669 은퇴 화면 실험 결과 귀속 기록(기기 저장). null이면 지운다. 없으면 실험 계측을 하지 않는다. */
+  readRetireExp?: () => string | null;
+  writeRetireExp?: (raw: string | null) => void;
+  /** 지금 계정 키(retireExperiment profileKey, null = 계정 없음, undefined = 모름). */
+  retireAccountKey?: () => string | null | undefined;
+  /** 귀속 기록이 있는데 계정을 아직 모를 때(메모된 계정 확인을 한 번 시작한다). */
+  retireNeedAccount?: () => void;
 };
 export function createNativeAnalytics(io: IO) {
   let consent: Consent = 'unknown';
@@ -74,12 +85,13 @@ export function createNativeAnalytics(io: IO) {
       await sdk?.reset().catch(() => {});
     });
   }
-  function send(name: string, params: Params = {}) {
-    if (!allowed() || screen === 'admin') return;
+  // alive: 보내는 쪽이 따로 보는 조건(구매 퍼널의 계정 · 동의 epoch). 줄에 올린 뒤 실제 SDK 호출 직전에 다시 본다.
+  function send(name: string, params: Params = {}, alive?: () => boolean) {
+    if (!allowed() || screen === 'admin' || (alive && !alive())) return;
     const epoch = generation;
     const data = { measurement_version: '2', app_version: io.appVersion, ...params };
     enqueue(async () => {
-      if (epoch === generation && allowed()) await sdk?.event(name, data);
+      if (epoch === generation && allowed() && (!alive || alive())) await sdk?.event(name, data);
     });
   }
   function pageView() {
@@ -110,8 +122,19 @@ export function createNativeAnalytics(io: IO) {
       }
       ready = true;
       pageView();
+      retireExp.ready();
     });
   }
+  // T-11-669 동의했고 SDK가 준비됐을 때만 기록 · 전송한다. 동의를 거두면 기록을 지운다(setConsent).
+  const retireExp = createRetireExpMetrics({
+    allowed: () => allowed() && screen !== 'admin' && !!io.readRetireExp && !!io.writeRetireExp,
+    read: () => io.readRetireExp?.() ?? null,
+    write: (raw) => io.writeRetireExp?.(raw),
+    send,
+    now: io.now,
+    account: () => io.retireAccountKey?.(),
+    needAccount: () => io.retireNeedAccount?.(),
+  });
   const makeTracker = (id: string | null) =>
     createTracker({ allowed, read: io.readLedger, write: io.writeLedger, now: io.now, send }, id);
   return {
@@ -155,6 +178,11 @@ export function createNativeAnalytics(io: IO) {
         tracker?.reset();
         try {
           io.writeLedger(emptyLedger());
+        } catch {
+          /* optional storage */
+        }
+        try {
+          io.writeRetireExp?.(null);
         } catch {
           /* optional storage */
         }
@@ -207,7 +235,28 @@ export function createNativeAnalytics(io: IO) {
       }
       send('push_optin_' + action, { place, ...(action === 'result' && result ? { result } : {}) });
     },
+    /** 강화권 · 스카우트권 구매 퍼널(commerceStage). 보내는 순간의 이용 분석 동의만 본다. 쌓아 두거나 다시 보내지 않는다. */
+    commerce(o: CommerceObservation, alive?: () => boolean) {
+      try {
+        const params = commerceParams(o);
+        if (params) send(COMMERCE_EVENT, params, alive);
+      } catch {
+        /* 계측은 결제 · 지급 · 화면에 영향을 주지 않는다. */
+      }
+    },
+    /** T-11-676 은퇴 커리어 공유 시도와 결과(웹 trackShare와 같은 이벤트 · 매개변수, 의미는 shareMeasurement). */
+    share(o: ShareOutcome) {
+      try {
+        const { name, params } = shareEventParams(o);
+        send(name, params);
+      } catch {
+        /* 계측은 공유 동작에 영향을 주지 않는다. */
+      }
+    },
+    retireExp,
     analytics: {
+      /** 리그 반기 구간 완료. 앱은 은퇴 화면 실험의 '다음 유효 플레이'에만 쓴다(웹 play_complete는 따로). */
+      complete: (p: Progress) => retireExp.complete(p),
       replace: () => tracker?.replace(),
       start: (s: Career, previous: Career | null) => tracker?.start(s, previous),
       play: (s: Career, firstAction = false) => tracker?.play(s, firstAction),

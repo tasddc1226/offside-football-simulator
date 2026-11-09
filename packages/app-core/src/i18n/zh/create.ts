@@ -188,6 +188,7 @@ export const create: Translation<CreateMsgs> = {
   moreCustomize: '自訂體格・慣用腳・外觀',
   extraNote: '不改也沒關係，可以直接用預設值開始。',
   focusMeaning: '開始是初始能力值的變化，成長是同樣訓練下提升的速度。',
+  focusTypeLine: (p) => `這個組合的類型：${p.name}（${p.desc}）。之後提升能力值，類型也不會改變。`,
   ovrWhy: '預估 OVR 依各位置重視的能力值計算，所以更換位置或主力時會改變。',
   tendencyLine: (p) => `進球比重 ${p.goal} · 助攻比重 ${p.assist}`,
   levelHigh: '高',
@@ -203,4 +204,6 @@ export const create: Translation<CreateMsgs> = {
   candEdge: (p) => `3 名候選中${p.k}最高`,
   candEdgeEven: '沒有明顯領先其他候選的能力值',
   sameCandidates: '位置和主力相同，候選也會相同。更換其中之一就會出現新的候選。',
+  seasonNote: (p) =>
+    `現在開始就是${p.season}的球員。退役後會列入${p.season}的紀錄室與老闆賽季成就。`,
 };

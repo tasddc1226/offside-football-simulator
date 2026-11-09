@@ -26,15 +26,7 @@ pnpm workspaces + Turborepo 모노레포. Node ≥22.13, TypeScript strict. 게�
 ## 자주 쓰는 명령
 
 ```bash
-pnpm dev                  # web(vite) + api(wrangler dev) 동시 실행
-pnpm test                 # 전체 Vitest (turbo)
-pnpm lint                 # ESLint 전체
-pnpm lint:deps            # 패키지 의존 방향 검사 (tooling/scripts/check-deps.mjs)
-pnpm lint:i18n            # 하드코딩 한국어 문구 게이트 (tooling/scripts/check-i18n.mjs, 기준선 래칫)
-pnpm typecheck            # tsc --noEmit 전체
-pnpm build                # 전체 빌드
-pnpm format               # prettier --write (apps·packages·tooling·루트 설정)
-pnpm format:check         # 서식 검사 (CI가 돌린다)
+# 루트 스크립트(lint:deps · lint:i18n · format 등)는 package.json을 본다.
 
 # 단일 패키지 테스트
 pnpm --filter @offside/web test
@@ -137,6 +129,29 @@ pnpm --filter @offside/fulltime-sim analyze
   받는다"는 순수성 규칙은 더 이상 적용되지 않는다 — `packages/game/src`은
   일반 TypeScript 모듈이며, RNG 시드는 게임 상태의 일부로 저장·복원된다.
 
+## 운영 DB 마이그레이션 규칙 (2026-11-08, T-11-663 장애)
+
+D1은 마이그레이션이 도는 동안 운영 DB가 다른 요청을 받지 못한다. 2026-11-08 01:16 KST에 `careers` 인덱스
+14개를 한 마이그레이션에서 다시 만들다가 30초 만에 DB가 리셋됐고(7429), 5분 동안 오류 390건 · 평균 응답 44초가 났다.
+마이그레이션은 실제로 적용됐는데 배포는 실패로 멈춰, 옛 코드가 새 인덱스를 만나 명예의 전당이 503을 냈다.
+세부 절차는 [운영 배포 런북](docs/operations/production-release.md)의 "운영 DB 마이그레이션"을 본다.
+
+- **큰 테이블 인덱스는 한 번에 조금씩.** 수십만 행 이상인 표(`careers` · `career_seasons` · `cards` · `team_matches` 등)에
+  인덱스를 만들거나 다시 만드는 마이그레이션은 한 배포에 2개까지만 넣는다. 더 필요하면 배포를 나눈다.
+- **시간대를 고른다.** 큰 테이블 인덱스 · 데이터 이전 마이그레이션은 KST 19시부터 24시까지 배포하지 않고, 접속이 적은 새벽(KST
+  3시부터 7시)에 낸다. PR 본문에 대상 표의 운영 행 수와 인덱스 수를 적는다.
+- **확장 → 전환 → 정리.** 한 배포에서 옛 코드와 새 스키마, 새 코드와 옛 스키마가 모두 돌아야 한다. 인덱스의 열 · 조건(부분
+  인덱스)을 바꿀 때는 같은 이름을 DROP 후 CREATE하지 않는다. 새 이름으로 추가 → 새 이름을 쓰는 코드 배포 → 다음 배포에서
+  옛 인덱스 삭제 순서로 나눈다. `INDEXED BY`로 이름을 박아 둔 인덱스는 반드시 이렇게 한다.
+- **마이그레이션 실패는 실제 상태부터 본다.** 배포의 마이그레이션 단계가 실패하면 운영 D1의 `d1_migrations`와
+  `sqlite_master`로 적용 여부를 바로 확인한다. 적용됐으면 같은 SHA로 배포를 다시 돌려 코드까지 올리고(적용된 마이그레이션은
+  건너뛴다), 적용되지 않았으면 원인을 고치기 전에 재시도하지 않는다. 다른 세션의 배포가 실패했으면 진행 중인 run이 있는지
+  먼저 보고 겹쳐 실행하지 않는다.
+- **CI가 막는다(T-11-667).** PR 검사의 `Migration weight guard`(`.github/scripts/migration-guard.mjs`)가 새 마이그레이션에서
+  큰 표(스크립트의 `BIG_TABLES`) 인덱스 · 표 재생성 · 대량 UPDATE가 3개 이상이거나 같은 이름 인덱스를 DROP 후 CREATE하면
+  실패한다. 새벽 배포처럼 계획한 예외만 마이그레이션 파일에 `-- migration-guard: allow <이유>`를 적는다. 표가 커지면
+  `BIG_TABLES`에 더한다.
+
 ## 화면 문구 규칙 (2026-10-02, T-11-043)
 
 문구를 쓰거나 고치거나 리뷰할 때는 [`docs/tracking/copy-style.md`](docs/tracking/copy-style.md)(정본)를 먼저 연다.
@@ -165,14 +180,6 @@ pnpm --filter @offside/fulltime-sim analyze
 - 새 게임 기능은 규칙·문구를 `packages/game`·`packages/app-core`에 두고 웹·앱에 함께 낸다.
 - 게임 규칙·수치가 바뀌면 공개 가이드 · FAQ(`packages/app-core/src/i18n/{ko,en,ja,zh}/publicGuidePage.mjs`, 웹 `/guide/`·`/en/guide/` 등 · 앱 설정의 게임 가이드)도 같은 PR에서 네 언어를 함께 고친다(T-11-112, T-11-588).
 - 결제(IAP)·푸시·보상형 광고만 앱 전용이다. 배경과 축소 검토 기준은 [결정 로그](docs/tracking/decision-log.md)(2026-10-04)를 본다.
-
-## 로딩 표시 규칙 (2026-10-18, T-11-389)
-
-- 서버 데이터를 기다리는 자리는 글자("불러오는 중…") 대신 뼈대를 그린다. 웹은 `LoadState`(`rows`로 줄 수)나 `Skeleton.svelte`, 앱은
-  `components/LoadState`나 `ui/Skeleton`(`height`를 주면 카드 한 장, T-11-391). 줄 · 카드가 맞지 않는 화면은 `LoadState`의
-  `skeleton`에 화면 모양 뼈대를 넘긴다(웹 snippet, 앱 `SkeletonFrame` + `useSkeletonBlock`, 예: 팀 그라운드 T-11-392). 뼈대는 0.2초 뒤에 나타나고(메모에서 바로 오는 재방문이 번쩍이지 않게) 움직임 줄이기를 따른다.
-- 기기 안 데이터로 바로 그리는 화면(커리어 진행 · 만들기 · 세이브 · 설정)에는 넣지 않는다.
-- 웹 뼈대는 첫 화면 번들에 실리므로 요소 하나의 CSS 배경으로 그린다(`style.css` `.sk-list` · `.sk-wait`). 화면 모양 뼈대를 새로 만들면 그 화면 청크 안에 둔다.
 
 ## 문서 정본 우선순위
 

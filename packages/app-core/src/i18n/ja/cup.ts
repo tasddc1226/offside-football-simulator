@@ -128,6 +128,8 @@ export const cup: Translation<CupMsgs> = {
   reasonClosed: '今は受付期間ではありません。',
   reasonOverCap: (p) =>
     `チームOVR ${p.ovr}はこの部門の上限${p.cap}を超えています。上の部門に申し込めます。`,
+  reasonPastCards: (p) =>
+    `今回のカップは今シーズンの選手だけが出場できます。カップメンバーから過去シーズンの選手${p.n}人を外してください。`,
   reasonEnteredOther: '今回の別の部門に申し込んでいます。その申し込みを取り消すと移れます。',
   divisionJunior: 'ジュニア',
   divisionSenior: 'シニア',
@@ -176,6 +178,15 @@ export const cup: Translation<CupMsgs> = {
     `${p.division}の上限を超えています。このままだと抽選でOVRに合う部門に移ります。`,
   barShortBlock: (p) =>
     `カップ参加中は、スタメンに自分の選手を${p.min}人以上置かないと保存できません。`,
+  barPastBlock: (p) =>
+    `今回のカップは今シーズンの選手だけが出場できます。カップメンバーに過去シーズンの選手が${p.n}人いるため保存できません。`,
+  barPastEntry: (p) =>
+    `今回のカップは今シーズンの選手だけが出場できます。申し込むにはカップメンバーから過去シーズンの選手${p.n}人を外してください。`,
+  barMakeSeasonCup: '今シーズンの選手でカップメンバーを作る',
+  seasonCupName: (p) => `${p.badge}カップ`,
+  seasonCupMade: (p) => `「${p.name}」をカップメンバーにしました。チームメンバーはそのままです。`,
+  seasonCupFull: 'プリセットがいっぱいです。1つ削除してからもう一度押してください。',
+  seasonCupEmpty: '今シーズンの選手がまだいません。',
   barShortEntry: (p) => `カップに申し込むには、スタメンに自分の選手が${p.min}人以上必要です。`,
   secMine: '自分の大会',
   secRules: 'ルール',
@@ -196,6 +207,8 @@ export const cup: Translation<CupMsgs> = {
     `試合は1日1回、${p.time}にサーバーが行います。アプリやサイトを開いておく必要はありません。`,
   ruleLock: (p) =>
     `メンバーは試合の1時間前(${p.time})にロックされ、試合が終わると解除されます。カップ戦にはホームの利がなく、通常試合の戦績・レーティングには入りません。`,
+  ruleSeasonCards:
+    '今回のカップは、今シーズンに育てたか獲得した選手だけをカップメンバーに入れられます。リーグ・ランク戦・親善試合はこれまでどおり全選手を使えます。',
   ruleForfeit:
     '参加中の先発選手は移籍市場への出品も放出もできません。試合に出られないと0-3の敗戦になります。',
   schedEntry: '申込',

@@ -51,6 +51,12 @@ export type ChatBlockListResponse = z.infer<typeof ChatBlockListResponseSchema>;
 export const ChatShareInputSchema = z.discriminatedUnion('kind', [
   z.strictObject({ kind: z.literal('team') }),
   z.strictObject({ kind: z.literal('player'), careerId: z.string().min(1).max(64) }),
+  // T-11-652 리그 경기 기사(누구 경기든 끝난 경기면 올린다).
+  z.strictObject({
+    kind: z.literal('leagueMatch'),
+    season: z.number().int().min(1).max(999),
+    matchId: z.string().min(1).max(64),
+  }),
 ]);
 export type ChatShareInput = z.infer<typeof ChatShareInputSchema>;
 export const ChatShareResponseSchema = z.strictObject({ id: z.string() });

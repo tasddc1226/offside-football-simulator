@@ -39,6 +39,7 @@ import {
   scoutLine,
   startOvr,
   ovrFocusView,
+  seasonStartNote,
 } from '@offside/app-core/create-view';
 import { adText } from '@offside/app-core/i18n/ko/ad';
 import { createText as L } from '@offside/app-core/i18n/ko/create';
@@ -96,7 +97,7 @@ import {
 import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
 import { adFree, adsOff } from '../../platform/adFree';
 import { adRerollLeft, claimAdReroll } from '../../platform/adReroll';
-import { goHome, goRerollShop } from '../../game/nav';
+import { goHome, goRerollShop, goScoutShop } from '../../game/nav';
 import { appState, prefs } from '../../store';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, num, rem } from '../../theme/type';
@@ -302,6 +303,8 @@ function FlyIn({ index, children }: { index: number; children: ReactNode }) {
 export default function Create() {
   const s = useSnapshot(appState, { sync: true });
   const C = s.C;
+  // T-11-654 지금 만들면 어느 시즌 선수인지 — 기록실 · 시즌 업적으로 이어진다(휴식기면 없음).
+  const [seasonNote] = useState(() => seasonStartNote(new Date().toISOString()));
   const owned = adsOff(useSnapshot(adFree));
   const offer = rewardOffer('candidates', owned);
   const rewardLock = useRef(false);
@@ -961,6 +964,10 @@ export default function Create() {
                       <Txt v="sm" tone="muted">
                         {L.focusMeaning}
                       </Txt>
+                      {/* T-11-651 고른 주력 조합으로 정해지는 유형을 바로 보여 준다(은퇴 카드에 남는 유형). */}
+                      <Txt v="sm" testID={`focus-type-${ovrFocus.typeId}`}>
+                        {ovrFocus.typeLine}
+                      </Txt>
                     </Field>
                   </CoachTarget>
                   <DisclosureRow
@@ -1201,7 +1208,7 @@ export default function Create() {
                             {
                               n: i + 1,
                               ovr: startOvr(C.pos, cand.attrs),
-                              line: scoutLine(C.pos, cand.attrs),
+                              line: scoutLine(C.pos, cand.attrs, C.focus),
                             },
                           )}`}
                           testID={`cand-${i}`}
@@ -1290,7 +1297,7 @@ export default function Create() {
                           <Txt
                             tone="accent"
                             style={{ fontSize: rem(FONT.body2), fontWeight: '600' }}
-                          >{`“${scoutLine(C.pos, cand.attrs)}”`}</Txt>
+                          >{`“${scoutLine(C.pos, cand.attrs, C.focus)}”`}</Txt>
                           {isPicked ? (
                             <Txt v="sm" tone="muted" testID={`candidate-edge-${i}`}>
                               {candidateEdge(C.pos, s.candidates!, i)}
@@ -1493,7 +1500,7 @@ export default function Create() {
                     ) : owner ? (
                       <>
                         {pity.used > 0 ? <ScoutPityGauge pity={pity} empty /> : null}
-                        <Btn sm kind="ghost" testID="premium-scout-go" onPress={goRerollShop}>
+                        <Btn sm kind="ghost" testID="premium-scout-go" onPress={goScoutShop}>
                           {SL.shopGo}
                         </Btn>
                       </>
@@ -1655,6 +1662,11 @@ export default function Create() {
                 </Card>
               </>
             )}
+            {seasonNote ? (
+              <Txt v="sm" tone="muted" testID="create-season-note">
+                {seasonNote}
+              </Txt>
+            ) : null}
           </>
         ) : null}
       </ScrollView>

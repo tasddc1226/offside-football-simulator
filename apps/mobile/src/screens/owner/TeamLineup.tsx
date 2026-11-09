@@ -13,11 +13,10 @@ import type { TeamPlayer } from '@offside/app-core/api/team';
 import {
   assignSlot,
   attrLine,
-  salaryIn,
   STAMINA_CELLS,
   staminaOf,
   type LeagueFatigue,
-  type salaryBar,
+  seasonRaisedText,
 } from '@offside/app-core/teamOwner';
 import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { lockToggleable } from '@offside/app-core/market';
@@ -69,8 +68,8 @@ export function TeamLineup({
   focusSlot = null,
   onFocused,
   season,
+  onAch,
   fatigue = null,
-  salary = null,
   onEnhance,
 }: {
   formation: FormationId;
@@ -99,9 +98,10 @@ export function TeamLineup({
   /** T-11-379 경기 리포트 '고칠 곳'으로 고른 자리 — 골라 두고 맞는 선수 순으로 라커룸을 정렬한다. */
   focusSlot?: number | null;
   onFocused?: () => void;
-  /** T-11-376 팀 시즌(카드 급여 계산)과 급여 막대(프리시즌은 null). */
+  /** 팀 시즌. */
   season: number;
-  salary?: ReturnType<typeof salaryBar>;
+  /** T-11-654 지금 시즌 팀이면 라커룸에 '이번 시즌 키운 선수 N명 · 시즌 업적 보기'를 단다. */
+  onAch?: (() => void) | undefined;
   /** T-11-571 리그 체력(서버가 켰을 때만). */
   fatigue?: LeagueFatigue | null | undefined;
   /** T-11-373 카드 강화 창을 연다. */
@@ -331,10 +331,6 @@ export function TeamLineup({
         focus={synFocus}
         applied={synApplied}
         caption={synCaption}
-        salaries={slots.map((id) => {
-          const p = id ? players.find((x) => x.careerId === id) : undefined;
-          return p ? salaryIn(p, season) : 0;
-        })}
         ondrag={editable ? drag : undefined}
         onpick={
           editable
@@ -375,12 +371,24 @@ export function TeamLineup({
               <Txt v="h2">{L.lockerTitle}</Txt>
               <Txt tone="muted" v="sm">
                 {L.lockerCountApp({ n: visible.length })}
-                {salary ? ` · ${TC.salaryLeft({ n: salary.left })}` : ''}
               </Txt>
             </View>
             <Txt v="sm" tone="muted">
               {L.lockerNoteApp}
             </Txt>
+            {onAch ? (
+              <Press
+                testID="locker-season-ach"
+                accessibilityRole="button"
+                hitSlop={8}
+                onPress={onAch}
+                style={{ minHeight: 44, justifyContent: 'center' }}
+              >
+                <Txt v="sm" bold style={{ color: c.accentText }}>
+                  {`${seasonRaisedText(players, season)} · ${L.seasonRaisedAch} ›`}
+                </Txt>
+              </Press>
+            ) : null}
             <TextField
               value={query}
               onChangeText={setQuery}
@@ -441,15 +449,9 @@ export function TeamLineup({
             ) : null}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {visible.slice(0, limit).map((p) => {
-                const pay = salaryIn(p, season);
                 const stamina = staminaOf(fatigue, p.careerId);
-                const wontFit =
-                  pay > 0 &&
-                  !!salary &&
-                  !slots.includes(p.careerId) &&
-                  salary.sum + pay > salary.budget;
                 return (
-                  <View key={p.careerId} style={{ width: '48%', opacity: wontFit ? 0.6 : 1 }}>
+                  <View key={p.careerId} style={{ width: '48%' }}>
                     <DragPlayer index={null} id={p.careerId} drag={drag}>
                       <Press
                         testID={`locker-${p.careerId}`}
@@ -511,24 +513,6 @@ export function TeamLineup({
                             })
                           : L.rosterBench}
                       </Txt>
-                      {pay > 0 ? (
-                        <Txt
-                          v="xs"
-                          bold
-                          testID={`salary-chip-${p.careerId}`}
-                          style={{
-                            paddingHorizontal: 6,
-                            borderRadius: RADIUS.pill,
-                            borderWidth: 1,
-                            borderColor: wontFit ? c.bad : c.line,
-                            color: wontFit ? c.bad : c.muted,
-                          }}
-                        >
-                          {wontFit
-                            ? `${TC.salaryChip({ n: pay })} · ${TC.salaryOver}`
-                            : TC.salaryChip({ n: pay })}
-                        </Txt>
-                      ) : null}
                       {onShare ? (
                         <Press
                           testID={`player-lounge-share-${p.careerId}`}

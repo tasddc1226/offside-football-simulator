@@ -24,6 +24,7 @@ import type {
 } from '@offside/contracts';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
 import { withOwnerHint } from './friendPending.js';
+import { signalOn } from '../clubSignals.js';
 
 export type {
   AchRankItem,
@@ -69,7 +70,10 @@ const seasonQ = (season?: number) => (season === undefined ? '' : `?season=${sea
 export const fetchOwnerTeam = (season?: number) =>
   withOwnerHint(cachedGet<OwnerTeamResponse>(`/v1/owner-team${seasonQ(season)}`, 60_000));
 export const saveOwnerTeam = (body: PutOwnerTeamBody) =>
-  apiFetch<PutOwnerTeamResponse>('/v1/owner-team', { method: 'PUT', body: JSON.stringify(body) });
+  signalOn(
+    apiFetch<PutOwnerTeamResponse>('/v1/owner-team', { method: 'PUT', body: JSON.stringify(body) }),
+    'team_save',
+  );
 /** T-11-217 팀 프리셋 목록 통째 교체(저장 · 덮어쓰기 · 이름 바꾸기 · 삭제). */
 export const saveTeamPresets = (body: PutTeamPresetsBody) =>
   apiFetch<PutTeamPresetsResponse>('/v1/owner-team/presets', {
@@ -80,11 +84,16 @@ export const saveTeamPresets = (body: PutTeamPresetsBody) =>
  * T-11-510 시즌 2부터는 상대 한 팀만 오고, pick(1~3)으로 그 경기의 다른 상대를 찾는다. */
 export const fetchOpponents = (pick = 0) =>
   apiFetch<TeamOpponentsResponse>(`/v1/owner-team/opponents${pick ? `?pick=${pick}` : ''}`);
+// T-11-669 경기 결과가 온 응답에서만 구단 경기 신호를 낸다(장면 경기 시작 응답은 아직 결과가 아니다).
 export const playMatch = (opponentTeamId: string) =>
-  apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
-    method: 'POST',
-    body: JSON.stringify({ opponentTeamId }),
-  });
+  signalOn(
+    apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
+      method: 'POST',
+      body: JSON.stringify({ opponentTeamId }),
+    }),
+    'club_match',
+    (r) => r.ok && !r.data.live,
+  );
 /** 경기 기록 첫 쪽, cursor(앞 쪽의 next)를 주면 그다음 쪽(T-11-269 '더 보기'). */
 export const fetchTeamMatches = (season?: number, cursor?: string) => {
   const q = [
@@ -158,18 +167,30 @@ export const likeTeam = (id: string, like: boolean) =>
 
 /** T-11-387 장면 경기로 시작한다(문자중계 도중 장면을 고른다). 마지막 장면을 고르면 결과가 온다. */
 export const playLiveMatch = (opponentTeamId: string) =>
-  apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
-    method: 'POST',
-    body: JSON.stringify({ opponentTeamId, live: true }),
-  });
+  signalOn(
+    apiFetch<PlayTeamMatchResponse>('/v1/owner-team/matches', {
+      method: 'POST',
+      body: JSON.stringify({ opponentTeamId, live: true }),
+    }),
+    'club_match',
+    (r) => r.ok && !r.data.live,
+  );
 /** 장면 하나를 고른다(choice는 선택지 id, 'auto'면 감독에게 맡긴다). */
 export const chooseMoment = (matchId: string, index: number, choice: string) =>
-  apiFetch<TeamMomentResponse>(
-    `/v1/owner-team/matches/${encodeURIComponent(matchId)}/moments/${index}`,
-    { method: 'POST', body: JSON.stringify({ choice }) },
+  signalOn(
+    apiFetch<TeamMomentResponse>(
+      `/v1/owner-team/matches/${encodeURIComponent(matchId)}/moments/${index}`,
+      { method: 'POST', body: JSON.stringify({ choice }) },
+    ),
+    'club_match',
+    (r) => r.ok && !!r.data.final,
   );
 /** 남은 장면을 감독에게 맡기고 경기를 끝낸다('결과 바로 보기'). */
 export const finishLiveMatch = (matchId: string) =>
-  apiFetch<PlayTeamMatchResponse>(`/v1/owner-team/matches/${encodeURIComponent(matchId)}/finish`, {
-    method: 'POST',
-  });
+  signalOn(
+    apiFetch<PlayTeamMatchResponse>(
+      `/v1/owner-team/matches/${encodeURIComponent(matchId)}/finish`,
+      { method: 'POST' },
+    ),
+    'club_match',
+  );

@@ -141,6 +141,8 @@ const ko = {
   // T-11-410 OVR 구간별 대회
   reasonOverCap: (p: { ovr: number; cap: number }) =>
     `팀 OVR(${p.ovr})이 이 구간 상한(${p.cap})보다 높아요. 윗 구간에 신청할 수 있어요.`,
+  reasonPastCards: (p: { n: number }) =>
+    `이번 컵은 이번 시즌 선수만 나가요. 컵 명단에서 지난 시즌 선수 ${p.n}명을 빼 주세요.`,
   reasonEnteredOther: '이번 회차 다른 구간에 신청했어요. 그 신청을 취소하면 옮길 수 있어요.',
   divisionJunior: '주니어',
   divisionSenior: '시니어',
@@ -204,6 +206,17 @@ const ko = {
     `${p.division} 상한을 넘었어요. 이대로면 조 추첨 때 OVR에 맞는 구간으로 옮겨져요.`,
   barShortBlock: (p: { min: number }) =>
     `컵 참가 중에는 선발에 내 선수가 ${p.min}명 이상 있어야 저장할 수 있어요.`,
+  // T-11-657 이번 시즌 선수 컵 편성 안내
+  barPastBlock: (p: { n: number }) =>
+    `이번 컵은 이번 시즌 선수만 나가요. 컵 명단에 지난 시즌 선수 ${p.n}명이 있어 저장할 수 없어요.`,
+  barPastEntry: (p: { n: number }) =>
+    `이번 컵은 이번 시즌 선수만 나가요. 신청하려면 컵 명단에서 지난 시즌 선수 ${p.n}명을 빼야 해요.`,
+  barMakeSeasonCup: '이번 시즌 선수로 컵 명단 만들기',
+  seasonCupName: (p: { badge: string }) => `${p.badge} 컵 명단`,
+  seasonCupMade: (p: { name: string }) =>
+    `'${p.name}' 프리셋을 컵 명단으로 정했어요. 팀 명단은 그대로예요.`,
+  seasonCupFull: '프리셋이 가득 찼어요. 하나를 지운 뒤 다시 눌러 주세요.',
+  seasonCupEmpty: '이번 시즌 선수가 아직 없어요.',
   barShortEntry: (p: { min: number }) =>
     `컵에 신청하려면 선발에 내 선수가 ${p.min}명 이상 있어야 해요.`,
   // 대회 화면
@@ -226,6 +239,9 @@ const ko = {
     `경기는 하루에 한 번 ${p.time}에 서버가 치러요. 앱이나 웹을 켜 두지 않아도 돼요.`,
   ruleLock: (p: { time: string }) =>
     `명단은 경기 1시간 전(${p.time})에 잠기고 그 경기가 끝나면 풀려요. 컵 경기는 홈 이점이 없고 일반 경기의 전적·레이팅에 들어가지 않아요.`,
+  // T-11-656 이번 시즌 선수 컵(제5회부터)
+  ruleSeasonCards:
+    '이번 컵은 이번 시즌에 키우거나 영입한 선수만 컵 명단에 넣을 수 있어요. 리그 · 랭크 · 친선전은 지금처럼 모든 선수를 써요.',
   ruleForfeit:
     '참가 중인 선발 선수는 이적시장에 올리거나 방출할 수 없어요. 경기에 나오지 못하면 0:3 패배로 처리돼요.',
   schedEntry: '신청',

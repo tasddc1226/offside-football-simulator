@@ -1,6 +1,11 @@
 import {
   LeagueMatchResponseSchema,
   LeagueMeResponseSchema,
+  LeagueNewsResponseSchema,
+  LeaguePredictionCountsSchema,
+  LeaguePredictionMeResponseSchema,
+  PutLeaguePredictionBodySchema,
+  type LeaguePredictionCounts,
   LeagueResponseSchema,
   LeagueTableResponseSchema,
   type LeagueDef,
@@ -9,13 +14,15 @@ import {
 } from '@offside/contracts';
 import {
   LEAGUE_FROM_SEASON,
+  LEAGUE_LATE_MAX_LEAGUES,
+  leagueNextLate,
   leagueNextTier,
   leaguePhase,
   leagueReward,
   type LeagueOutcome,
 } from '@offside/contracts/league';
 import { displaySeasonAt } from '@offside/contracts/service-seasons';
-import { and, count, eq, inArray, ne } from 'drizzle-orm';
+import { and, count, eq, inArray, isNull, ne } from 'drizzle-orm';
 import type { Context, Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
@@ -27,7 +34,7 @@ import {
   type MatchDetail,
 } from '../db/repos/ownerTeams.js';
 import { leagueEntries, leagueMatches, ownerTeams } from '../db/schema.js';
-import { edgeCached } from '../edgeCache.js';
+import { edgeCached, purgeEdge } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
 import { idempotency } from '../middleware/idempotency.js';
@@ -44,16 +51,23 @@ import {
   type LeagueEntryRow,
 } from '../team/league.js';
 import { currentLeague } from '../team/leagueSchedule.js';
+import { buildLeagueNews } from '../team/leagueNews.js';
+import { leagueNewsAiOf } from '../team/leagueNewsAi.js';
 import { lineupsOf, toMatch } from '../team/match.js';
 import { reqLang } from '../lang.js';
 import { filledCount } from '../team/sim.js';
 import { requireOwner } from '../middleware/requireOwner.js';
-import { conflictError, NO_STORE, notFoundError, nowIso, ok } from './shared.js';
+import { conflictError, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
 
 // T-11-418 오프사이드 리그: 일정 · 접수(사전 신청 포함 · 취소 · 준비 상태). T-11-418b 배치 결과 · 순위표 · 경기 상세.
 // 오류 문구는 컵과 같은 문장이라 컵 서버 문구(cupKo)를 그대로 쓴다 — 영어 · 일본어도 컵 표로 옮겨진다.
 
 const PUBLIC_CACHE = 'public, max-age=0, s-maxage=30';
+/** T-11-652 신문 라운드 상한(캐시 키가 무한히 늘지 않게). */
+const MAX_ROUND = 99;
+/** T-11-652 내 예측 목록 상한(한 시즌 빅매치 수보다 넉넉히). */
+const PREDICTIONS_ME_MAX = 100;
+
 /** 배치 뒤 부 · 리그 번호의 상한(캐시 키가 무한히 늘지 않게, 배치 결과로 다시 검사한다). */
 const MAX_TIER = 12;
 
@@ -187,6 +201,23 @@ async function lastFinalOf(db: Db, league: LeagueDef, profileId: string, now: st
   };
 }
 
+/**
+ * T-11-564 늦은 참가를 받는 다음 배치(첫 배치를 마쳤고 리그가 열렸으며 남은 늦은 배치가 있을 때만). 첫 배치 전 · 리그가 열리지
+ * 않은 시즌 · 남은 배치 없음은 null.
+ */
+async function lateOf(db: Db, league: LeagueDef, now: string) {
+  const slot = leagueNextLate(league, now);
+  if (!slot) return null;
+  const [state] = await leagueStateOf(db, league.season);
+  return state && !state.doneAt && tiersOf(state).length ? slot : null;
+}
+
+/** 늦은 참가로 신청할 수 있는 내 신청 상태: 신청 없음 · 취소함 · 배치에서 빠짐. */
+const lateCanEnter = (mine: LeagueEntryRow | undefined) => !mine || mine.status === 'dropped';
+/** 늦은 참가 신청이 다음 배치를 기다리는 중(아직 리그에 들지 않음). */
+const lateWaiting = (mine: LeagueEntryRow | undefined) =>
+  mine?.status === 'active' && mine.tier === null;
+
 const mineOf = (db: Db, season: number, profileId: string) =>
   db
     .select()
@@ -199,6 +230,18 @@ const mineOf = (db: Db, season: number, profileId: string) =>
       ),
     )
     .limit(1);
+
+/** 그 경기의 예측 수(고른 쪽마다). */
+async function predictionCounts(db: Db, season: number, matchId: string) {
+  const row = await db.$client
+    .prepare(
+      `SELECT coalesce(sum(pick = 'home'), 0) AS home, coalesce(sum(pick = 'draw'), 0) AS draw,
+      coalesce(sum(pick = 'away'), 0) AS away FROM league_predictions WHERE match_id = ? AND season = ?`,
+    )
+    .bind(matchId, season)
+    .first<Omit<LeaguePredictionCounts, 'matchId'>>();
+  return { matchId, home: row?.home ?? 0, draw: row?.draw ?? 0, away: row?.away ?? 0 };
+}
 
 export function registerLeagueRoutes(app: Hono<AppEnv>): void {
   // 리그 한눈에: 일정 · 단계 · 신청 수. 누구나 본다(엣지 30초).
@@ -233,17 +276,19 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const league = await leagueOf(c, now);
-    const [[mine], team, lastFinal] = await Promise.all([
+    const [[mine], team, lastFinal, late] = await Promise.all([
       mineOf(db, league.season, me.id),
       teamNow(db, league, me.id),
       lastFinalOf(db, league, me.id, now),
+      lateOf(db, league, now),
     ]);
     return ok(
       c,
       LeagueMeResponseSchema,
       {
         entry: mine ? { createdAt: mine.createdAt } : null,
-        canEnter: !mine && leaguePhase(league, now) === 'open',
+        canEnter: late ? lateCanEnter(mine) : !mine && leaguePhase(league, now) === 'open',
+        lateDrawAt: late && (lateCanEnter(mine) || lateWaiting(mine)) ? late.at : null,
         team,
         lastTeam: team || now >= league.closesAt ? null : await lastTeamOf(db, league, me.id, now),
         placement: now < league.drawAt ? null : await placementOf(db, league.season, mine),
@@ -255,13 +300,43 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
   });
 
   // 신청(접수 기간만, 정원 없음). 참가 의사만 남긴다 — 개막 전 사전 신청은 그 시즌 팀이 아직 없어서 팀은 배치 때 본다.
-  // 이미 신청했으면 그대로 돌려준다(자연 멱등). 취소했던 신청은 되살린다.
+  // 이미 신청했으면 그대로 돌려준다(자연 멱등). 취소했던 신청은 되살린다. T-11-564 리그가 시작한 뒤에는 늦은 참가로 받아
+  // 다음 늦은 배치를 기다리게 한다(배치에서 빠졌던 신청도 다시 받는다).
   app.post('/v1/leagues/current/entries', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
     const now = nowIso();
     const league = await leagueOf(c, now);
-    if (leaguePhase(league, now) !== 'open') throw conflictError(cupKo('closed'), 'LEAGUE_CLOSED');
+    if (leaguePhase(league, now) !== 'open') {
+      if (!(await lateOf(db, league, now))) throw conflictError(cupKo('closed'), 'LEAGUE_CLOSED');
+      await db
+        .insert(leagueEntries)
+        .values({
+          season: league.season,
+          profileId: me.id,
+          status: 'active',
+          createdAt: now,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [leagueEntries.season, leagueEntries.profileId],
+          set: {
+            status: 'active',
+            teamId: null,
+            name: null,
+            manager: null,
+            ovr: null,
+            tier: null,
+            leagueNo: null,
+            notifiedRound: 0,
+            createdAt: now,
+            updatedAt: now,
+          },
+          // 리그에서 뛰는 중이거나 이미 기다리는 신청은 그대로 둔다.
+          setWhere: inArray(leagueEntries.status, ['withdrawn', 'dropped']),
+        });
+      return c.body(null, 204);
+    }
     await db
       .insert(leagueEntries)
       .values({
@@ -286,8 +361,23 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const now = nowIso();
     const league = await leagueOf(c, now);
-    if (leaguePhase(league, now) !== 'open')
-      throw conflictError(cupKo('withdrawClosed'), 'LEAGUE_CLOSED');
+    if (leaguePhase(league, now) !== 'open') {
+      // T-11-564 늦은 참가는 다음 배치에 들기 전(배치 시간 전)까지만 취소할 수 있다.
+      const late = await lateOf(db, league, now);
+      if (!late || now >= late.at) throw conflictError(cupKo('withdrawClosed'), 'LEAGUE_CLOSED');
+      await db
+        .update(leagueEntries)
+        .set({ status: 'withdrawn', updatedAt: now })
+        .where(
+          and(
+            eq(leagueEntries.season, league.season),
+            eq(leagueEntries.profileId, me.id),
+            eq(leagueEntries.status, 'active'),
+            isNull(leagueEntries.tier),
+          ),
+        );
+      return c.body(null, 204);
+    }
     await db
       .update(leagueEntries)
       .set({ status: 'withdrawn', updatedAt: now })
@@ -300,7 +390,10 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/leagues/:season/tables/:tier/:league', async (c) => {
     const season = intParam(c.req.param('season'), 999);
     const tier = intParam(c.req.param('tier'), MAX_TIER);
-    const no = tier ? intParam(c.req.param('league'), 2 ** (tier - 1)) : null;
+    // T-11-564 늦은 참가 리그가 맨 아래 부에 더해질 수 있다.
+    const no = tier
+      ? intParam(c.req.param('league'), 2 ** (tier - 1) + LEAGUE_LATE_MAX_LEAGUES)
+      : null;
     if (!season || !tier || !no) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
     const data = await edgeCached(c, EDGE.leagueTable(season, tier, no), 60, async () => {
       const db = getDb(c);
@@ -381,6 +474,116 @@ export function registerLeagueRoutes(app: Hono<AppEnv>): void {
       };
     });
     return ok(c, LeagueTableResponseSchema, data, 200, 'public, max-age=0, s-maxage=60');
+  });
+
+  // T-11-652 오프사이드 데일리: 끝난 라운드 하나의 신문(기사 재료 · 빅매치). 누구나 본다. 끝난 라운드는 바뀌지 않아 엣지에
+  // 한 시간 둔다. 아직 끝나지 않은 라운드는 404라 캐시에 남지 않는다.
+  app.get('/v1/leagues/:season/news/:round', async (c) => {
+    const season = intParam(c.req.param('season'), 999);
+    const round = c.req.param('round') === '0' ? 0 : intParam(c.req.param('round'), MAX_ROUND);
+    if (!season || round === null) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
+    // T-11-658 AI 1면을 아직 쓰는 중이면(라운드가 막 끝난 몇 분) 엣지에 담지 않는다. 다 쓰면 cron이 키를 지운다.
+    let final = true;
+    const data = await edgeCached(
+      c,
+      EDGE.leagueNews(season, round),
+      3600,
+      async () => {
+        const db = getDb(c);
+        const news = await buildLeagueNews(db, season, round);
+        if (!news) throw notFoundError(cupKo('notFound'), 'LEAGUE_NOT_FOUND');
+        const ai = await leagueNewsAiOf(db, news, !!c.env.AI);
+        final = ai.final;
+        return ai.ai ? { ...news, ai: ai.ai } : news;
+      },
+      () => final,
+    );
+    return ok(
+      c,
+      LeagueNewsResponseSchema,
+      data,
+      200,
+      final ? 'public, max-age=60, s-maxage=3600' : 'public, max-age=30, s-maxage=30',
+    );
+  });
+
+  // T-11-652 빅매치 예측 수(누구나, 엣지 30초 · 예측하면 지운다).
+  app.get('/v1/leagues/:season/matches/:matchId/predictions', async (c) => {
+    const season = intParam(c.req.param('season'), 999);
+    const matchId = c.req.param('matchId');
+    if (!season) throw notFoundError(cupKo('matchNotFound'), 'LEAGUE_MATCH_NOT_FOUND');
+    const data = await edgeCached(c, EDGE.leaguePredictions(season, matchId), 30, () =>
+      predictionCounts(getDb(c), season, matchId),
+    );
+    return ok(c, LeaguePredictionCountsSchema, data, 200, 'public, max-age=0, s-maxage=30');
+  });
+
+  // T-11-652 빅매치 예측(경기 시각 전까지 바꿀 수 있다). 보상 없이 적중 기록만 남긴다. 마감 검사는 쓰기 안에서 한다.
+  app.put('/v1/leagues/:season/matches/:matchId/prediction', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const season = intParam(c.req.param('season'), 999);
+    const matchId = c.req.param('matchId');
+    const { pick } = readBody(c, PutLeaguePredictionBodySchema);
+    const now = nowIso();
+    const db = getDb(c);
+    const r = season
+      ? await db.$client
+          .prepare(
+            `INSERT INTO league_predictions (season, match_id, profile_id, pick, created_at, updated_at)
+        SELECT season, id, ?, ?, ?, ? FROM league_matches
+        WHERE season = ? AND id = ? AND played_at IS NULL AND at > ?
+          AND EXISTS (SELECT 1 FROM profiles WHERE id = ? AND deleted_at IS NULL)
+        ON CONFLICT (match_id, profile_id) DO UPDATE SET pick = excluded.pick, updated_at = excluded.updated_at`,
+          )
+          .bind(me.id, pick, now, now, season, matchId, now, me.id)
+          .run()
+      : null;
+    if (!r?.meta.changes)
+      throw conflictError(cupKo('predictionClosed'), 'LEAGUE_PREDICTION_CLOSED');
+    purgeEdge(c, [EDGE.leaguePredictions(season!, matchId)]);
+    return ok(
+      c,
+      LeaguePredictionCountsSchema,
+      await predictionCounts(db, season!, matchId),
+      200,
+      NO_STORE,
+    );
+  });
+
+  // T-11-652 내 빅매치 예측과 적중 기록(최근 순). 리그 화면의 데일리를 열 때만 부른다.
+  app.get('/v1/leagues/:season/predictions/me', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const season = intParam(c.req.param('season'), 999);
+    const { results } = season
+      ? await getDb(c)
+          .$client.prepare(
+            `SELECT p.match_id AS matchId, m.round AS round, p.pick AS pick,
+          CASE WHEN m.played_at IS NULL OR m.forfeit <> 0 THEN NULL
+            WHEN m.home_goals > m.away_goals THEN 'home'
+            WHEN m.home_goals < m.away_goals THEN 'away' ELSE 'draw' END AS result
+        FROM league_predictions p JOIN league_matches m ON m.id = p.match_id
+        WHERE p.profile_id = ? AND p.season = ? ORDER BY m.round DESC LIMIT ?`,
+          )
+          .bind(me.id, season, PREDICTIONS_ME_MAX)
+          .all<{
+            matchId: string;
+            round: number;
+            pick: 'home' | 'draw' | 'away';
+            result: 'home' | 'draw' | 'away' | null;
+          }>()
+      : { results: [] };
+    const settled = results.filter((x) => x.result !== null);
+    return ok(
+      c,
+      LeaguePredictionMeResponseSchema,
+      {
+        items: results,
+        hit: settled.filter((x) => x.pick === x.result).length,
+        total: settled.length,
+      },
+      200,
+      NO_STORE,
+    );
   });
 
   // T-11-418b 리그 경기 상세(득점 기록). 누구나 본다. 선수 이름은 공개 이름 · 익명.

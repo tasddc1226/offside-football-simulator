@@ -308,20 +308,6 @@ export const BALANCE_SPEC = {
     step: 0.1,
     unit: 'x',
   },
-  // T-11-376 지난 시즌 선수 급여 예산(구단 팀 선발). T-11-450 시즌 1 기준 80(급여 최대 20 × 4명).
-  pastSalaryBudget: {
-    def: 80,
-    min: 20,
-    max: 300,
-    step: 1,
-  },
-  // T-11-450 팀 시즌이 하나 지날 때마다 예산에 더하는 값(시즌 n 예산 = 기준 + 이 값 × (n - 1)).
-  pastSalaryBudgetStep: {
-    def: 10,
-    min: 0,
-    max: 50,
-    step: 1,
-  },
   // 하루 랭크 경기를 다 치른 뒤 1경기가 더 열리는 간격(분, 0이면 끔).
   teamMatchRechargeMin: {
     def: 180,
@@ -577,6 +563,14 @@ export const BALANCE_SPEC = {
     min: 0,
     max: 20,
     step: 1,
+  },
+  // T-11-669 은퇴 화면 실험 비율. 게임 엔진은 읽지 않는다. 앱이 서버 최신 값(latestBalance)을 은퇴 화면에서 바로 읽는다.
+  retireExpShare: {
+    def: 0,
+    min: 0,
+    max: 0.5,
+    step: 0.05,
+    unit: 'pct',
   },
 } as const satisfies Record<string, BalanceKnob>;
 

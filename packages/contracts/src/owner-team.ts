@@ -15,7 +15,7 @@ import {
   type PeakProfile,
   type PosGroup,
 } from './positions.js';
-import { enhancedPeak, enhanceOvr } from './card-enhance.js';
+import { enhanceOvr } from './card-enhance.js';
 import type { TeamSynergy } from './team-synergy.js';
 
 export * from './team-synergy.js';
@@ -138,49 +138,11 @@ export const LINEUP_SIZE = 11;
 /** 팀 시즌보다 앞 시즌 카드면 지난 시즌 선수(T-11-114). 시즌을 모르는 옛 응답은 그 시즌 선수로 본다. */
 export const isWildcardSeason = (cardSeason: number | null | undefined, teamSeason: number) =>
   (cardSeason ?? teamSeason) < teamSeason;
-
-// T-11-376 지난 시즌 선수 급여 예산(docs/tracking/salary-cap-plan.md). T-11-114 "지난 시즌 선수 3명까지"를 대신한다. 이번 시즌
-// 선수는 급여가 없고, 지난 시즌 선수는 카드 최고 OVR로 정한 급여의 합이 예산(밸런스 키 pastSalaryBudget) 안이어야 한다.
-// 급여 최대 20 × 3명 = 60이라 예전 규칙으로 짤 수 있던 선발은 모두 그대로 짤 수 있다.
-/** 지난 시즌 선수 급여 예산의 기본값(BALANCE_SPEC.pastSalaryBudget.def와 같다 — 서버 값이 없는 옛 응답이 쓴다). */
-export const PAST_SALARY_BUDGET = 80;
-/** T-11-450 팀 시즌이 하나 지날 때마다 늘어나는 예산(BALANCE_SPEC.pastSalaryBudgetStep.def와 같다). */
-export const PAST_SALARY_BUDGET_STEP = 10;
-/** 그 팀 시즌의 급여 예산: 시즌 1이 기준, 시즌마다 step씩 는다(프리시즌 0도 기준). */
-export const seasonSalaryBudget = (base: number, step: number, teamSeason: number) =>
-  base + step * Math.max(0, teamSeason - 1);
-/** 급여표: 최고 OVR이 min 이상이면 그 급여(높은 구간부터). 마지막 줄(min 0)은 74 이하. */
-export const PAST_SALARY_TABLE: readonly { readonly min: number; readonly salary: number }[] = [
-  { min: 96, salary: 20 },
-  { min: 94, salary: 16 },
-  { min: 92, salary: 13 },
-  { min: 90, salary: 10 },
-  { min: 88, salary: 8 },
-  { min: 85, salary: 6 },
-  { min: 80, salary: 4 },
-  { min: 75, salary: 2 },
-  { min: 0, salary: 1 },
-];
-/** 카드 최고 OVR의 급여(지난 시즌 선수일 때만 센다). */
-export const salaryOf = (peak: number): number =>
-  PAST_SALARY_TABLE.find((t) => peak >= t.min)?.salary ?? 1;
-/** 그 팀 시즌에서 이 카드가 받는 급여 — 이번 시즌 선수는 0. 강화 OVR을 더한 값으로 잰다(T-11-373). */
-export const seasonSalaryOf = (
-  card: { peak: number; season?: number | null | undefined; enhance?: number | null | undefined },
-  teamSeason: number,
-) => (isWildcardSeason(card.season, teamSeason) ? salaryOf(enhancedPeak(card)) : 0);
-/** 선발 카드들의 지난 시즌 급여 합. */
-export const pastSalarySum = (
-  cards: readonly (
-    | { peak: number; season?: number | null | undefined; enhance?: number | null | undefined }
-    | null
-    | undefined
-  )[],
-  teamSeason: number,
-) => cards.reduce((sum, c) => sum + (c ? seasonSalaryOf(c, teamSeason) : 0), 0);
-/** 예산을 넘는 선발을 저장할 때 서버 오류 문구(영 · 일은 api errorText.ts). */
-export const pastSalaryOverText = (sum: number, budget: number) =>
-  `지난 시즌 선수 급여가 예산을 넘어요(${sum}/${budget}). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.`;
+/**
+ * 지난 시즌 선수 급여 예산(T-11-376)은 없앴다 — 선발에는 시즌과 상관없이 내 선수를 몇 명이든 넣는다. 옛 앱은 팀 응답의
+ * pastSalaryBudget(없으면 80)으로 편성을 막으므로, 서버는 급여 합(카드당 최대 20 × 11명)이 닿지 않는 이 값을 보낸다.
+ */
+export const LEGACY_NO_SALARY_BUDGET = 999;
 
 // T-11-098 친구 · 친선전. 친선전은 레이팅·전적·업적에 들어가지 않고 친구끼리 상대 전적만 남긴다.
 /** 친구(보낸·받은 신청 포함) 상한. */
@@ -710,6 +672,20 @@ export const AD_FREE_THANKS_GIFT = {
   boost: 5,
   scout: 0,
   reroll: 5,
+} as const;
+
+/**
+ * T-11-664 업데이트 감사 선물 — 급여 폐지 · 강화 유료화 안내 공지(2026-11-08)와 함께 로그인한 구단주에게 프리미엄 스카우트권
+ * 5장을 홈 선물 칸에서 한 번 준다(2026-11-08 사용자 결정). from 이상 until 미만(11-08 00:00 ~ 11-09 24:00 KST)에만 보인다.
+ * 기간이 짧아 홈 선물 칸에서 다른 선물보다 먼저 보여 준다.
+ */
+export const UPDATE_THANKS_GIFT = {
+  id: 'update-thanks-1108',
+  from: '2026-11-07T15:00:00.000Z',
+  until: '2026-11-09T15:00:00.000Z',
+  boost: 0,
+  scout: 5,
+  reroll: 0,
 } as const;
 export type RecordReward = { reroll: number; scout: number; boost: number };
 /** 명예의 전당 순위(구단주의 가장 높은 선수, 시즌 결산 hof_rank와 같은 순서) 단계. 10-25 1000위 레전드 점수 약 2,245. */

@@ -216,6 +216,8 @@ const ko = {
   moreCustomize: '체격 · 주발 · 외형 더 꾸미기',
   extraNote: '바꾸지 않아도 돼요. 기본값으로 바로 시작할 수 있어요.',
   focusMeaning: '시작은 처음 능력치 변화, 성장은 같은 훈련에서 오르는 속도예요.',
+  focusTypeLine: (p: { name: string; desc: string }) =>
+    `이 조합의 유형: ${p.name} (${p.desc}). 능력치를 나중에 올려도 유형은 바뀌지 않아요.`,
   ovrWhy:
     '예상 OVR은 포지션마다 중요하게 보는 능력치로 계산해요. 그래서 포지션이나 주력을 바꾸면 달라져요.',
   tendencyLine: (p: { goal: string; assist: string }) =>
@@ -234,6 +236,9 @@ const ko = {
   candEdge: (p: { k: string }) => `세 후보 중 ${p.k}${iGa(p.k)} 가장 높아요`,
   candEdgeEven: '다른 후보보다 크게 앞서는 능력치는 없어요',
   sameCandidates: '포지션과 주력이 같으면 후보도 같아요. 둘 중 하나를 바꾸면 새 후보가 나와요.',
+  // T-11-654 지금 시작하면 이 시즌 선수 — 기록실 · 시즌 업적으로 이어진다.
+  seasonNote: (p: { season: string }) =>
+    `지금 시작하면 ${p.season} 선수예요. 은퇴하면 ${p.season} 기록실과 구단주 시즌 업적에 들어가요.`,
 };
 
 export type CreateMsgs = typeof ko;

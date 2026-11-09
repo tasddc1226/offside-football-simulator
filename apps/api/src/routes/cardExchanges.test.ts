@@ -235,7 +235,7 @@ describe('카드 바치기 과제 (T-11-374)', () => {
       .select()
       .from(ownerTitleProgress)
       .where(eq(ownerTitleProgress.profileId, owner.profileId));
-    expect(progress?.exchanges).toBe(1);
+    expect(JSON.parse(progress!.metricsJson).exchanges).toBe(1);
   });
 
   it('보상 수량은 운영 도구 밸런스 설정의 활성 버전을 따른다 · 0장이어도 완료로 센다', async () => {
@@ -281,7 +281,7 @@ describe('카드 바치기 과제 (T-11-374)', () => {
       .select()
       .from(ownerTitleProgress)
       .where(eq(ownerTitleProgress.profileId, owner.profileId));
-    expect(progress?.exchanges).toBe(2);
+    expect(JSON.parse(progress!.metricsJson).exchanges).toBe(2);
   });
 
   it('영입한 선수는 낼 수 없다', async () => {

@@ -4,6 +4,9 @@ import {
   leagueFinalAt,
   leagueFixtures,
   leagueKickoffAt,
+  leagueLateSlotAt,
+  leagueLateSlots,
+  leagueNextLate,
   leagueRoundPairs,
   leagueSeasonAt,
   planLeague,
@@ -90,5 +93,50 @@ describe('leagueKickoffAt (T-11-640)', () => {
     ]);
     const l = { rounds: [day] } as never;
     expect(hour(leagueFinalAt(l))).toBe(21);
+  });
+});
+
+describe('늦은 참가 배치 (T-11-564)', () => {
+  const S2 = '2026-10-30T15:00:00.000Z';
+  const day = 86_400_000;
+  const at = (iso: string, ms: number) => new Date(Date.parse(iso) + ms).toISOString();
+
+  it('첫 배치 뒤 7일마다 같은 시각, 남은 라운드가 7개 이상인 배치만 열고 마지막을 표시한다', () => {
+    // 11/5 ~ 12/4 30라운드: 11/12(8라운드) · 11/19(15) · 11/26(22)까지, 12/3은 2라운드만 남아 빠진다.
+    const l = planLeague(2, S2, '2026-12-04T15:00:00.000Z');
+    expect(leagueLateSlots(l)).toEqual([
+      { at: '2026-11-12T00:00:00.000Z', firstRound: 8, last: false },
+      { at: '2026-11-19T00:00:00.000Z', firstRound: 15, last: false },
+      { at: '2026-11-26T00:00:00.000Z', firstRound: 22, last: true },
+    ]);
+    // 14라운드 시즌: 11/12에 7라운드가 남아 한 번만.
+    const short = planLeague(2, S2, '2026-11-18T15:00:00.000Z');
+    expect(leagueLateSlots(short)).toEqual([
+      { at: '2026-11-12T00:00:00.000Z', firstRound: 8, last: true },
+    ]);
+    expect(leagueLateSlots(planLeague(2, S2, '2026-11-17T15:00:00.000Z'))).toEqual([]);
+    // 시즌 2 실제 일정(11/5 ~ 12/29, 55라운드): 12/17까지 6번, 12/24는 6라운드만 남아 빠진다.
+    const real = leagueLateSlots(planLeague(2, S2, '2026-12-29T15:00:00.000Z'));
+    expect(real.map((x) => [x.at.slice(5, 10), x.firstRound, x.last])).toEqual([
+      ['11-12', 8, false],
+      ['11-19', 15, false],
+      ['11-26', 22, false],
+      ['12-03', 29, false],
+      ['12-10', 36, false],
+      ['12-17', 43, true],
+    ]);
+  });
+
+  it('배치 시간(09:00 ~ 첫 라운드 13:00) 안에서만 배치하고, 신청은 그 배치가 끝날 때까지 다음 배치로 받는다', () => {
+    const l = planLeague(2, S2, '2026-12-04T15:00:00.000Z');
+    const [a, b] = leagueLateSlots(l);
+    expect(leagueNextLate(l, at(l.drawAt, -1))).toBeNull();
+    expect(leagueNextLate(l, l.drawAt)).toEqual(a);
+    expect(leagueLateSlotAt(l, at(a!.at, -1))).toBeNull();
+    expect(leagueLateSlotAt(l, a!.at)).toEqual(a);
+    expect(leagueLateSlotAt(l, at(a!.at, 4 * 3_600_000 - 1))).toEqual(a);
+    expect(leagueLateSlotAt(l, at(a!.at, 4 * 3_600_000))).toBeNull();
+    expect(leagueNextLate(l, at(a!.at, 4 * 3_600_000))).toEqual(b);
+    expect(leagueNextLate(l, at(l.drawAt, 30 * day))).toBeNull();
   });
 });

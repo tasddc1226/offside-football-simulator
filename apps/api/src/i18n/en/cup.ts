@@ -84,7 +84,12 @@ export const CUP_EN: Record<CupTextKey, string> = {
   cardReleaseLocked: "You can't release a starting player while your club is in the OFFSIDE Cup.",
   cardManager:
     "A starting player can't begin a manager career while your club is in the OFFSIDE Cup.",
-  cardEnhance: "You can't enhance a starting player while your club is in the OFFSIDE Cup.",
+  cardEnhance:
+    "You can't enhance cup lineup players from 1 hour before an OFFSIDE Cup match until it ends.",
+  pastCards:
+    'This OFFSIDE Cup is for season {season} players only. Take past-season players out of your cup lineup.',
+  enhanceCap:
+    'If this enhancement succeeds, your cup lineup OVR would go over the {division} cap of {n}. Change your cup lineup and try again.',
   leagueEnhance:
     "You can't enhance a starting player from 1 hour before an OFFSIDE League match until it ends.",
   droppedTitle: 'Your {cup} entry was cancelled',
@@ -134,6 +139,11 @@ export const CUP_EN: Record<CupTextKey, string> = {
     'Your Round {round} match starts at {time}. Your lineup locks at {lock} and your starting XI has {filled}/11 players, so youth players fill the gaps.',
   leaguePlacedTitle: 'Season {season} OFFSIDE League placement',
   leaguePlacedBody: '{team} is in Tier {tier}, {title}. Round 1 starts today from {time}.',
+  leagueLatePlacedBody: '{team} is in Tier {tier}, {title}. Your matches start today from {time}.',
+  leagueLateDroppedBody:
+    'At the last placement, your Season {season} starting XI had fewer than {n} players. You can enter again next season.',
+  leagueLateLeftBody:
+    "There weren't enough clubs to form a league at the last placement. You can enter again next season.",
   leagueDroppedTitle: 'Your Season {season} OFFSIDE League entry was cancelled',
   leagueDroppedBody:
     'At placement, your Season {season} starting XI had fewer than {n} players. You can enter again next season.',
@@ -144,6 +154,20 @@ export const CUP_EN: Record<CupTextKey, string> = {
   leagueRoundBody: '{score} · Position {rank}',
   leagueRoundForfeitBody:
     '{score} · Forfeited: not enough players in your starting XI. Forfeits {n}/{limit}. {left} more and every remaining match is a 0:3 loss.',
+  leagueRoundDailyBody: '{line}\nToday’s paper: {head}',
+  leagueRoundMineBody: '{line}\nYour team made the paper: {head}',
+  dailyUpset: '{team} overturn a {gap}-point OVR gap',
+  dailyComeback: '{team} come from {n} down to win',
+  dailyLate: '{team} win it in the {n}th minute',
+  dailyHattrick: 'A hat-trick for {team}',
+  dailyDerby: '{team} win the table clash',
+  dailyDerbyDraw: '{team} draw the table clash',
+  dailyGoalfest: 'A {n}-goal thriller involving {team}',
+  dailyFirstWin: '{team} get their first win after {n} games',
+  dailyStreak: '{team} make it {n} in a row',
+  dailyRout: '{team} win by {n}',
+  dailyLeaderNew: '{team} go top of tier {n}',
+  dailyLeaderKeep: '{team} stay top of tier {n}',
   leagueRest: 'Bye',
   leagueRestBody: 'Bye this round · Position {rank}',
   leagueEndTitle: 'Your Season {season} OFFSIDE League is over',

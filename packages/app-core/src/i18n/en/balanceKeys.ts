@@ -49,8 +49,6 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   rankAtkK: 'Ranked strength gap weight',
   leagueFatigue: 'League fatigue',
   leagueHomeAdv: 'League home advantage',
-  pastSalaryBudget: 'Past-season player salary budget',
-  pastSalaryBudgetStep: 'Salary budget increase per season',
   teamMatchRechargeMin: 'Ranked match recharge interval (min)',
   rerollPrice: 'Reroll ticket price',
   rerollPriceGrowth: 'Reroll ticket price growth',
@@ -85,6 +83,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivReward5: 'Elite II season reward rerolls',
   teamDivReward6: 'Elite I season reward rerolls',
   teamDivReward7: 'Master season reward rerolls',
+  retireExpShare: 'Retirement screen experiment share',
   eventWeight: (p) => `Event frequency changes: ${p.n}`,
   choiceBonus: (p) => `Choice success chance changes: ${p.n}`,
 };

@@ -11,7 +11,7 @@ import {
   type MarketTrade,
   type MarketType,
 } from '@offside/contracts';
-import { tradeValue } from '@offside/contracts/card-enhance';
+import { enhanceValueSql, tradeValue } from '@offside/contracts/card-enhance';
 import { CARD_VALUE_FLOOR, marketRatio } from '@offside/contracts/market-value';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { DetailPos, PosGroup } from '@offside/contracts/positions';
@@ -20,7 +20,14 @@ import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 import { eventNotificationStatements } from '../../push/events.js';
 import { bodyOf, peakOf } from './ownerTeams.js';
-import { cards, careers, marketDaily, marketListings, ownerFunds } from '../schema.js';
+import {
+  cards,
+  careers,
+  marketDaily,
+  marketListings,
+  ownerFundLedger,
+  ownerFunds,
+} from '../schema.js';
 import { cardPublicName } from '../cardName.js';
 
 // T-11-080 이적시장 · 구단 자금 · 방출. 설계: docs/tracking/owner-funds-card-market-plan.md 5~7절.
@@ -291,12 +298,14 @@ export async function fundsOf(db: Db, profileId: string): Promise<number> {
 
 /**
  * 구단 가치에 더하는 선수 몫: 가진 카드의 기준가(없으면 방출 지급과 같이 CARD_VALUE_FLOOR). T-11-109 전에는 직접 키운
- * 선수를 은퇴 가치로 셌는데, 방출 지급이 기준가로 바뀌어(T-11-104) 같은 기준으로 맞춘다.
+ * 선수를 은퇴 가치로 셌는데, 방출 지급이 기준가로 바뀌어(T-11-104) 같은 기준으로 맞춘다. T-11-650 강화한 카드는 판매가 범위와
+ * 같은 강화 가치(tradeValue)를 더한다.
  */
+const ENHANCE_VALUE = sql.raw(enhanceValueSql('enhance'));
 async function ownedCardsValue(db: Db, profileId: string): Promise<number> {
   const [row] = await db
     .select({
-      v: sql<number>`coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR})), 0)`,
+      v: sql<number>`coalesce(sum(coalesce(${cards.cardValue}, ${CARD_VALUE_FLOOR}) + ${ENHANCE_VALUE}), 0)`,
     })
     .from(cards)
     .where(eq(cards.ownerId, profileId));
@@ -489,11 +498,27 @@ export async function buyListing(
         `UPDATE owner_funds SET balance = balance - ?, updated_at = ? WHERE profile_id = ? AND ${won}`,
       )
       .bind(b.price, b.now, b.buyerId, ...mark),
+    // T-11-660 자금 거래 기록: 영입(산 사람).
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT buyer_id, 'market_buy', -price, (SELECT balance FROM owner_funds WHERE profile_id = buyer_id), id, ?
+           FROM market_listings WHERE id = ? AND buyer_id = ? AND closed_at = ?`,
+      )
+      .bind(b.now, ...mark),
     d1
       .prepare(
         `INSERT INTO owner_funds (profile_id, balance, updated_at)
          SELECT seller_id, price - fee, ? FROM market_listings WHERE id = ? AND buyer_id = ? AND closed_at = ?
          ON CONFLICT (profile_id) DO UPDATE SET balance = balance + excluded.balance, updated_at = excluded.updated_at`,
+      )
+      .bind(b.now, ...mark),
+    // T-11-660 자금 거래 기록: 판매(판 사람, 수수료를 뺀 금액).
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT seller_id, 'market_sale', price - fee, (SELECT balance FROM owner_funds WHERE profile_id = seller_id), id, ?
+           FROM market_listings WHERE id = ? AND buyer_id = ? AND closed_at = ?`,
       )
       .bind(b.now, ...mark),
     d1
@@ -574,6 +599,15 @@ export async function releaseCards(
          ON CONFLICT (profile_id) DO UPDATE SET balance = balance + excluded.balance, updated_at = excluded.updated_at`,
       )
       .bind(r.profileId, r.rate, r.now, ids),
+    // T-11-660 자금 거래 기록: 방출(여러 장이면 ref 없이 합계 한 줄).
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT ?, 'release', sum(${amountOf}), (SELECT balance FROM owner_funds WHERE profile_id = ?),
+                CASE WHEN count(*) = 1 THEN max(career_id) END, ?
+           FROM cards WHERE ${mine} HAVING count(*) > 0`,
+      )
+      .bind(r.profileId, r.rate, r.profileId, r.now, ids),
     d1
       .prepare(
         `SELECT count(*) AS n, coalesce(sum(${amountOf}), 0) AS amount FROM cards WHERE ${mine}`,
@@ -582,8 +616,8 @@ export async function releaseCards(
     d1.prepare(`UPDATE cards SET released_value = ${amountOf} WHERE ${mine}`).bind(r.rate, ids),
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(r.profileId),
   ]);
-  const sum = results[2]!.results[0] as { n: number; amount: number };
-  const bal = results[4]!.results[0] as { balance: number } | undefined;
+  const sum = results[3]!.results[0] as { n: number; amount: number };
+  const bal = results[5]!.results[0] as { balance: number } | undefined;
   return { released: sum.n, amount: sum.amount, balance: bal?.balance ?? 0 };
 }
 
@@ -614,6 +648,8 @@ export function marketDeleteStatements(db: Db, profileId: string, now: string) {
       .set({ status: 'cancelled', closedAt: now })
       .where(and(eq(marketListings.sellerId, profileId), eq(marketListings.status, 'open'))),
     db.delete(ownerFunds).where(eq(ownerFunds.profileId, profileId)),
+    // T-11-660 자금 거래 기록도 함께 지운다(소프트 삭제라 FK CASCADE가 돌지 않는다).
+    db.delete(ownerFundLedger).where(eq(ownerFundLedger.profileId, profileId)),
   ] as const;
 }
 

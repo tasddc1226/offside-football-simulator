@@ -42,7 +42,7 @@
   import { toast } from './helpers.js';
   import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
   import { go, goHome, goRerollShop } from './nav.js';
-  import { bodyNote, focusNote, hiddenStrength, scoutLine, startOvr, ovrFocusView } from '@offside/app-core/create-view';
+  import { bodyNote, focusNote, hiddenStrength, scoutLine, startOvr, ovrFocusView, seasonStartNote } from '@offside/app-core/create-view';
   import { dur } from './motion.js';
   import { createText as L } from '@offside/app-core/i18n/ko/create';
   import MiniRadar from './MiniRadar.svelte';
@@ -59,6 +59,8 @@
   import { flashEdge, revealShort, revealTone } from './revealPrefs.js';
 
   const C = appState.C;
+  // T-11-654 지금 만들면 어느 시즌 선수인지 — 기록실 · 시즌 업적으로 이어진다(휴식기면 없음).
+  const seasonNote = seasonStartNote(new Date().toISOString());
   const posKeys = Object.keys(POS) as Pos[];
   const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에는 L.foot으로)
   // T-10-091 세부 포지션은 시즌 1 개막부터 고른다. 프리시즌엔 선택지를 보이지 않고, 저장된 선택도 쓰지 않는다.
@@ -433,6 +435,8 @@
             {/each}
           </div>
           <p class="muted fs-sm">{L.focusMeaning}</p>
+          <!-- T-11-651 고른 주력 조합으로 정해지는 유형을 바로 보여 준다(은퇴 카드에 남는 유형). -->
+          <p class="fs-sm focus-type" data-focus-type={ovrFocus.typeId}>{ovrFocus.typeLine}</p>
         </div>
         <details class="ovr-more" data-testid="ovr-guide">
           <summary class="disc-row"><span>{ovrFocus.title}: {ovrFocus.groups}</span><span class="disc-chev" aria-hidden="true"></span></summary>
@@ -582,7 +586,7 @@
             {:else}
               <span class="muted" data-cand-potential={i}>{L.potentialLocked}</span>
             {/if}
-            <span class="cc-scout">“{scoutLine(C.pos, cand.attrs)}”</span>
+            <span class="cc-scout">“{scoutLine(C.pos, cand.attrs, C.focus)}”</span>
             {#if appState.candidatePick === i}
             <span class="cc-detail" transition:slide={{ duration: dur(360), easing: cubicOut }}>
             <span class="muted fs-sm" data-cand-edge={i}>{candidateEdge(C.pos, appState.candidates, i)}</span>
@@ -706,6 +710,7 @@
       <div class="card position-guide-box"><PositionGuide pos={C.pos} /></div>
     {/if}
 
+    {#if seasonNote}<p class="muted fs-sm season-note" data-create-season-note>{seasonNote}</p>{/if}
     <div class="action-bar at-bottom">
       <div class="action-bar-inner with-back">
         <button class="btn" data-act="home" onclick={backToForm}>{L.back}</button>
@@ -752,6 +757,7 @@
 .dpos-opt { align-items: center; padding: 4px 6px; text-align: center; font-size: var(--fs-label); line-height: 1.2; word-break: keep-all; }
 .dpos-panel { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 3px solid var(--progress); font-size: var(--fs-label); line-height: 1.4; }
 .focus-opt b.ovr-core { text-decoration: underline; text-underline-offset: 3px; }
+.focus-type { font-weight: 600; }
 .ovr-more .stack { gap: 6px; padding-bottom: 8px; }
 .ovr-more p { margin: 0; }
 .trait-list { gap: 8px; }

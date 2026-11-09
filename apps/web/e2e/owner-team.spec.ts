@@ -1653,11 +1653,8 @@ test('T-11-113 프리시즌 친선전을 유지하고 자동 창단 멤버 배�
   expect(puts).toMatchObject([{ season: 0, name: '레전드 FC' }]);
 });
 
-test('T-11-376 지난 시즌 선수는 급여 예산 60 안에서 넣고, 급여 막대 · 칩 · 안내 · 저장 거절이 보인다', async ({
-  page,
-}) => {
+test('지난 시즌 선수도 급여 예산 없이 몇 명이든 선발에 넣는다', async ({ page }) => {
   await stubOwner(page, true);
-  // OVR 96 이상은 급여 20 — 세 명이면 예산 60이 다 찬다.
   const old = [1, 2, 3, 4].map((i) => ({
     ...PLAYERS[0]!,
     careerId: `00000000-0000-4000-8000-00000000010${i}`,
@@ -1671,26 +1668,23 @@ test('T-11-376 지난 시즌 선수는 급여 예산 60 안에서 넣고, 급여
     publicName: '새 얼굴',
     peak: 70,
     season: 1,
+    raised: true,
   };
-  const puts: unknown[] = [];
+  const puts: { slots: (string | null)[] }[] = [];
   await page.route(ownerTeamUrl, (route) => {
     if (route.request().method() === 'PUT') {
-      puts.push(route.request().postDataJSON());
-      return route.fulfill(
-        fail(
-          400,
-          'VALIDATION_FAILED',
-          '지난 시즌 선수 급여가 예산을 넘어요(60/40). 급여가 낮은 선수나 이번 시즌 선수로 바꿔 주세요.',
-        ),
-      );
+      const body = route.request().postDataJSON() as Parameters<typeof teamFrom>[0];
+      puts.push(body);
+      return route.fulfill(ok({ team: teamFrom(body) }));
     }
+    // 서버는 옛 앱을 위해 닿지 않는 예산(999)을 계속 보낸다. 웹은 읽지 않는다.
     return route.fulfill(
       ownerTeam({
         season: 1,
         current: 1,
         seasons: SEASONS,
         players: [...old, fresh],
-        pastSalaryBudget: 60,
+        pastSalaryBudget: 999,
       }),
     );
   });
@@ -1699,63 +1693,32 @@ test('T-11-376 지난 시즌 선수는 급여 예산 60 안에서 넣고, 급여
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="team"]').click();
-  const bar = page.locator('[data-team-salary]');
-  await expect(bar).toContainText('지난 시즌 선수 급여 0 / 60');
-  await expect(bar).toHaveAttribute('data-state', 'ok');
   await expect(
     page.locator(`[data-locker-player="${old[0]!.careerId}"] [data-card-season]`),
   ).toHaveText('PRE');
   await expect(
     page.locator(`[data-locker-player="${fresh.careerId}"] [data-card-season]`),
   ).toHaveText('S1');
-  // 지난 시즌 카드에만 급여 칩, 이번 시즌 카드는 칩이 없다.
-  await expect(
-    page.locator(`[data-locker-player="${old[0]!.careerId}"] [data-salary-chip]`),
-  ).toHaveText('급여 20');
-  await expect(
-    page.locator(`[data-locker-player="${fresh.careerId}"] [data-salary-chip]`),
-  ).toHaveCount(0);
+  // T-11-654 지금 시즌 팀 라커룸은 이번 시즌에 키운 선수 수와 시즌 업적 바로가기를 보인다.
+  await expect(page.locator('[data-act="locker-season-ach"]')).toHaveText(
+    '시즌 1에 키운 선수 1명 · 시즌 업적 보기 →',
+  );
+  // 급여 막대 · 칩 · 남은 예산은 없다.
+  await expect(page.locator('[data-team-salary]')).toHaveCount(0);
+  await expect(page.locator('[data-salary-chip]')).toHaveCount(0);
+  await expect(page.locator('[data-locker-salary]')).toHaveCount(0);
 
+  // 자동 배치는 지난 시즌 선수 네 명을 모두 넣는다.
   await page.locator('[data-act="team-auto"]').click();
-  await expect(bar).toContainText('지난 시즌 선수 급여 60 / 60');
-  await expect(bar).toHaveAttribute('data-state', 'full');
-  await expect(page.locator('button[data-slot] [data-card-season="0"]')).toHaveCount(3);
+  await expect(page.locator('button[data-slot] [data-card-season="0"]')).toHaveCount(4);
   await expect(page.locator('button[data-slot] [data-card-season="1"]')).toHaveCount(1);
-  await expect(page.locator('button[data-slot] [data-salary-chip="20"]')).toHaveCount(3);
-  await expect(page.locator('[data-locker-salary]')).toHaveText('남은 예산 0');
-  const fourth = page.locator(`[data-locker-player="${old[3]!.careerId}"]`);
-  await expect(fourth.locator('[data-salary-over]')).toHaveText('급여 20 · 예산 초과');
-  await page
-    .locator('.ground-panel')
-    .screenshot({ path: test.info().outputPath('salary-ground.png') });
-  await page
-    .locator('[data-team-locker]')
-    .screenshot({ path: test.info().outputPath('salary-locker.png') });
 
-  // 네 번째 지난 시즌 선수는 빈 자리에 넣을 수 없다.
-  await fourth.locator('.locker-select').click();
-  await page.locator('button[data-slot]:has(.youth)').first().click();
-  await expect(page.locator('#toast')).toContainText('남은 예산(0)보다 커요');
-  await expect(bar).toContainText('60 / 60');
-
-  // 막대를 누르면 급여 안내(규칙 · 급여표 · 예).
-  await bar.click();
-  const guide = page.locator('[data-salary-guide]');
-  await expect(guide).toContainText('이번 시즌 선수는 급여가 없어요');
-  await expect(guide.locator('[data-salary-table] tbody tr')).toHaveCount(9);
-  await expect(guide).toContainText('OVR 96 이상 선수 3명 (급여 60)');
-  await expect(guide).toContainText('OVR 85~87 선수 10명 (급여 60)');
-  await page.locator('.sheet').screenshot({ path: test.info().outputPath('salary-guide.png') });
-  await page.locator('[data-act="salary-close"]').click();
-  await expect(guide).toHaveCount(0);
-
-  // 서버가 예산을 넘는다고 거절하면 그 문구를 그대로 알린다(운영 도구에서 예산을 내린 직후 등).
-  await page.locator('[data-team-name]').fill('급여 FC');
+  await page.locator('[data-team-name]').fill('프리 FC');
   await page.locator('[data-team-manager]').fill('김감독');
   await page.locator('[data-act="team-save"]').click();
-  await expect(page.locator('#toast')).toContainText('지난 시즌 선수 급여가 예산을 넘어요(60/40)');
+  await expect(page.locator('#toast')).toContainText('팀을 만들었어요');
   expect(puts).toHaveLength(1);
-  await page.screenshot({ path: test.info().outputPath('salary-reject.png') });
+  for (const p of old) expect(puts[0]!.slots).toContain(p.careerId);
 });
 
 // T-11-142 받은 친구 신청 — 구단주 화면을 연 적 있는 브라우저는 시작할 때 한 번 묻고, 하단 '구단주' 탭부터 '친구' 버튼까지 점을
@@ -1949,18 +1912,34 @@ test('T-11-217 팀 프리셋 — 지금 편성을 저장하고, 불러오면 없
   await expect.poll(() => puts.length).toBe(4);
   expect(puts[3]!.presets.map((p) => p.name)).toEqual(['주말 리그']);
 
-  // T-11-570 위쪽 컵 경기 명단에서 프리셋을 고르면 cup 표시를 보내고 배지가 붙는다. 팀 명단을 고르면 푼다.
-  await expect(sheet.locator('[data-preset-cup-hint]')).toBeVisible();
-  await expect(sheet.locator('[data-act="preset-cup-team"]')).toBeChecked();
-  await sheet.locator('[data-preset-cup-pick] label', { hasText: '주말 리그' }).click();
+  // T-11-657 명단 관리는 리그 선발 명단 · 컵 선발 명단 · 추가 프리셋 구역으로 나뉜다. 컵 명단이 없으면 리그 명단이 컵에도 나간다고 알린다.
+  await expect(sheet.locator('[data-preset-league]')).toContainText('리그 선발 명단');
+  await expect(sheet.locator('[data-preset-league-cup]')).toBeVisible();
+  await expect(sheet.locator('[data-preset-cup-empty]')).toBeVisible();
+  // T-11-570 추가 프리셋의 관리(⋯)에서 컵 명단으로 정하면 cup 표시를 보내고 컵 선발 명단 구역으로 옮겨 배지가 붙는다.
+  await sheet.locator('[data-preset="0"] [data-act="preset-more"]').click();
+  await sheet.locator('[data-preset="0"] [data-act="preset-cup"]').click();
   await expect.poll(() => puts.length).toBe(5);
   expect(puts[4]!.presets[0]).toMatchObject({ name: '주말 리그', cup: true });
-  await expect(sheet.locator('[data-preset="0"] [data-preset-cup]')).toHaveText('컵 명단');
+  await expect(
+    sheet.locator('[data-preset-cup-sec] [data-preset="0"] [data-preset-cup]'),
+  ).toHaveText('컵 명단');
+  await expect(sheet.locator('[data-preset-extra] [data-preset]')).toHaveCount(0);
   await expect(page.getByText('컵 명단으로 정했어요.')).toBeVisible();
-  await sheet.locator('[data-preset-cup-pick] label', { hasText: '팀 명단' }).click();
+  // 컵 명단 풀기는 다시 추가 프리셋으로 돌린다.
+  await sheet.locator('[data-preset="0"] [data-act="preset-more"]').click();
+  await sheet.locator('[data-preset="0"] [data-act="preset-cup-unset"]').click();
   await expect.poll(() => puts.length).toBe(6);
   expect(puts[5]!.presets[0]!.cup).toBeUndefined();
   await expect(sheet.locator('[data-preset-cup]')).toHaveCount(0);
+  // 지금 편성으로 컵 명단을 바로 만들 수 있다.
+  await sheet.locator('[data-act="preset-cup-new"]').click();
+  await expect.poll(() => puts.length).toBe(7);
+  expect(puts[6]!.presets.map((p) => [p.name, !!p.cup])).toEqual([
+    ['주말 리그', false],
+    ['컵 명단', true],
+  ]);
+  await expectNoA11yViolations(page);
 });
 
 for (const width of [320, 390, 1280]) {

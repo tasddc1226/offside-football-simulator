@@ -5,7 +5,8 @@
   import type { CupLineupBar } from '@offside/app-core/cupLineupBar';
 
   // T-11-570 preset: 컵 명단 프리셋 이름(있으면 컵은 그 편성으로 뛰고, 줄도 그 프리셋 값이다).
-  let { locked, when, bar = null, preset = null }: { locked: boolean; when: string | null; bar?: CupLineupBar | null; preset?: string | null } = $props();
+  // T-11-657 onseason: 이번 시즌 선수 컵인데 컵 명단에 지난 시즌 선수가 있으면 이번 시즌 선수로 컵 명단을 만든다.
+  let { locked, when, bar = null, preset = null, onseason }: { locked: boolean; when: string | null; bar?: CupLineupBar | null; preset?: string | null; onseason?: (() => void) | undefined } = $props();
   const warn = $derived(locked || !!bar?.notes.length);
 </script>
 
@@ -19,6 +20,7 @@
       <span class:bad={bar.short} data-cup-rule-filled={bar.short ? 'short' : 'ok'}>{bar.filledText}</span>
     </div>
     {#each bar.notes as note (note)}<p class="cb-note" data-cup-rule-note>{note}</p>{/each}
+    {#if onseason}<button class="btn btn-sm cb-season" data-act="cup-season-lineup" onclick={onseason}>{L.barMakeSeasonCup}</button>{/if}
   {/if}
 </section>
 
@@ -55,6 +57,10 @@
   }
   .cup-band p.cb-preset {
     color: var(--ink);
+  }
+  .cb-season {
+    align-self: flex-start;
+    margin-top: 6px;
   }
   .cup-band p.cb-note {
     color: color-mix(in srgb, var(--bad) 70%, var(--ink));

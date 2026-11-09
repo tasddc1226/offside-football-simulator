@@ -13,7 +13,7 @@ import {
   enhanceValue,
   tradeBand,
 } from './card-enhance.js';
-import { salaryOf, seasonSalaryOf, slotFit, slotRating, type SlotPlayer } from './owner-team.js';
+import { slotFit, slotRating, type SlotPlayer } from './owner-team.js';
 
 describe('카드 강화 표 (T-11-373)', () => {
   const r = DEFAULT_ENHANCE_RULES;
@@ -90,7 +90,7 @@ describe('카드 강화 표 (T-11-373)', () => {
   });
 });
 
-describe('강화 OVR이 자리 실력 · 급여에 더해진다 (T-11-373)', () => {
+describe('강화 OVR이 자리 실력에 더해진다 (T-11-373)', () => {
   const p: SlotPlayer = { peak: 84, pos: 'FW', dpos: 'ST', roles: null };
 
   it('자리 실력은 +N, 적합도는 그대로', () => {
@@ -104,11 +104,6 @@ describe('강화 OVR이 자리 실력 · 급여에 더해진다 (T-11-373)', () 
     const withRoles = { ...p, roles } as SlotPlayer;
     expect(slotRating('ST', { ...withRoles, enhance: 2 })).toBe(slotRating('ST', withRoles) + 2);
     expect(slotFit('ST', { ...withRoles, enhance: 2 })).toBe(slotFit('ST', withRoles));
-  });
-
-  it('급여는 강화 OVR을 더한 값으로 잰다', () => {
-    expect(seasonSalaryOf({ peak: 84, season: 0, enhance: 1 }, 1)).toBe(salaryOf(85));
-    expect(seasonSalaryOf({ peak: 84, season: 1, enhance: 5 }, 1)).toBe(0);
   });
 
   it('판매가 상한의 배수는 기준가에만 붙고, 하한은 강화 가치까지 본다', () => {

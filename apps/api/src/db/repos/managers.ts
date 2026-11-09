@@ -394,6 +394,14 @@ export async function releaseManagerCard(
          ON CONFLICT (profile_id) DO UPDATE SET balance = balance + excluded.balance, updated_at = excluded.updated_at`,
       )
       .bind(r.profileId, r.rate, r.now, r.careerId),
+    // T-11-660 자금 거래 기록: 감독 카드 방출.
+    d1
+      .prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+         SELECT ?, 'manager_release', sum(${amountOf}), (SELECT balance FROM owner_funds WHERE profile_id = ?), ?, ?
+           FROM cards WHERE ${marked} HAVING count(*) > 0`,
+      )
+      .bind(r.profileId, r.rate, r.profileId, r.careerId, r.now, r.careerId),
     d1
       .prepare(`SELECT coalesce(sum(${amountOf}), 0) AS amount FROM cards WHERE ${marked}`)
       .bind(r.rate, r.careerId),
@@ -403,7 +411,7 @@ export async function releaseManagerCard(
     d1.prepare(`SELECT balance FROM owner_funds WHERE profile_id = ?`).bind(r.profileId),
   ]);
   if (results[0]!.meta.changes !== 1) return null;
-  const amount = (results[2]!.results[0] as { amount: number } | undefined)?.amount ?? 0;
-  const bal = results[4]!.results[0] as { balance: number } | undefined;
+  const amount = (results[3]!.results[0] as { amount: number } | undefined)?.amount ?? 0;
+  const bal = results[5]!.results[0] as { balance: number } | undefined;
   return { amount, balance: bal?.balance ?? 0 };
 }

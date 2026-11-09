@@ -51,6 +51,7 @@ import { Btn, Card, Pill, Press, Screen, Skeleton, Topbar, Txt, scrollTo } from 
 import { useOnPull } from '../../ui/refresh';
 import { LoginButtons } from '../owner/LoginButtons';
 import { LeagueBoard, LeagueMatchDetail, LeaguePicker } from './LeagueBoard';
+import { LeagueDaily } from './LeagueDaily';
 import { askPushAfter } from '../../platform/pushAsk';
 
 /** 홈의 리그 배너(누구나 보는 리그 소식). 리그가 끝났거나 불러오지 못하면 그리지 않는다. */
@@ -191,7 +192,7 @@ function EntryCard({
       { text: L.withdraw, style: 'destructive', onPress: () => void run('withdraw') },
     ]);
   const askEnter = () => {
-    const ask = leagueEnterAsk(data);
+    const ask = leagueEnterAsk(data, me);
     Alert.alert(ask.title, ask.lines.join('\n\n'), [
       { text: L.askClose, style: 'cancel' },
       { text: L.enter, onPress: () => void run('enter') },
@@ -220,7 +221,7 @@ function EntryCard({
   const ready = leagueReadiness(data, me);
   const placement = leaguePlacementLine(me, leagueCancelled(data));
   // T-11-430 배치 전: 참가 자격 · 기권 규칙, 팀 선발 고치기(팀 편성 화면으로).
-  const rules = leagueEntryRules(data);
+  const rules = leagueEntryRules(data, me);
   const teamAction = leagueTeamAction(data, me);
   const openTeam = () => {
     appState.teamView = 'team';
@@ -442,6 +443,39 @@ export default function League() {
             meFailed={meFailed}
             reload={() => reload(true)}
           />
+          {data.tiers && data.playedRounds !== undefined ? (
+            <LeagueDaily
+              key={data.playedRounds}
+              season={data.league.season}
+              round={data.playedRounds}
+              linked={linked}
+              onopen={(n) => {
+                // T-11-652 신문 기사 경기를 경기 상세로 연다(상세는 두 팀 이름 · 감독만 순위표에서 읽는다).
+                setDetail({
+                  m: {
+                    id: n.id,
+                    round: n.round,
+                    homeTeamId: n.home.teamId,
+                    awayTeamId: n.away.teamId,
+                    at: '',
+                    played: true,
+                    homeGoals: n.homeGoals,
+                    awayGoals: n.awayGoals,
+                    forfeit: false,
+                  },
+                  table: {
+                    season: data.league.season,
+                    tier: n.tier,
+                    league: n.league,
+                    teams: [n.home, n.away],
+                    standings: [],
+                    matches: [],
+                  },
+                });
+                scrollTo(0);
+              }}
+            />
+          ) : null}
           {pick && data.tiers ? (
             <>
               <LeaguePicker

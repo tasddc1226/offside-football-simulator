@@ -10,7 +10,7 @@ import {
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cards, careerSeasons, careers, marketListings } from '../db/schema.js';
-import { createTestD1, syncCards, type TestD1 } from '../test/d1.js';
+import { createTestD1, fundLedgerMismatches, syncCards, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie, issueCookie } from '../test/http.js';
 import { createDb } from '../db/client.js';
 import { managerOriginOf, startManagerCareer } from '../db/repos/managers.js';
@@ -48,6 +48,8 @@ describe('감독 커리어 (T-11-310)', () => {
     vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
   });
   afterEach(async () => {
+    // T-11-660 감독 카드 방출 지급은 거래 기록과 함께 남는다.
+    expect(await fundLedgerMismatches(ctx)).toEqual([]);
     vi.useRealTimers();
     await ctx.dispose();
   });

@@ -3,29 +3,38 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getPlatformProxy, unstable_splitSqlQuery as splitSqlQuery } from 'wrangler';
 import { eq } from 'drizzle-orm';
-import { createDb, type Db } from '../db/client.js';
+import { createDb, linkOps, type Db } from '../db/client.js';
 import { profiles } from '../db/schema.js';
 import type { Bindings } from '../env.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const MIGRATIONS_DIR = path.resolve(__dirname, '../../migrations');
+/** T-11-662 운영 기록 DB(OPS_DB) 마이그레이션. */
+const OPS_MIGRATIONS_DIR = path.resolve(__dirname, '../../migrations-ops');
 const WRANGLER_CONFIG_PATH = path.resolve(__dirname, '../../wrangler.jsonc');
 
 /** `D1Database.exec()`는 한 줄에 한 문장만 받는다. `splitSqlQuery`로 나눈 각 문장의 내부 개행을 지우고 줄로 잇는다.
  * T-11-176 한 번의 exec로 보낸다(문장마다 exec하면 workerd 왕복이 300번 넘어 D1 하나에 1초, 한 번이면 50ms). 파일마다 한 번만 읽는다. */
-let migrationSql: string | undefined;
-function readMigrationSql(): string {
-  return (migrationSql ??= readdirSync(MIGRATIONS_DIR)
-    .filter((name) => name.endsWith('.sql'))
-    .sort()
-    .flatMap((name) => splitSqlQuery(readFileSync(path.join(MIGRATIONS_DIR, name), 'utf8')))
-    .map((statement) => statement.replace(/\s+/g, ' ').trim())
-    .filter((statement) => statement.length > 0)
-    .join('\n'));
+const sqlCache = new Map<string, string>();
+function readMigrationSql(dir = MIGRATIONS_DIR): string {
+  let sql = sqlCache.get(dir);
+  if (sql === undefined) {
+    sql = readdirSync(dir)
+      .filter((name) => name.endsWith('.sql'))
+      .sort()
+      .flatMap((name) => splitSqlQuery(readFileSync(path.join(dir, name), 'utf8')))
+      .map((statement) => statement.replace(/\s+/g, ' ').trim())
+      .filter((statement) => statement.length > 0)
+      .join('\n');
+    sqlCache.set(dir, sql);
+  }
+  return sql;
 }
 
 export type TestD1 = {
   db: Db;
+  /** T-11-662 운영 기록 DB(요청 횟수 제한 · 서버 상태 · 클라이언트 오류 · 운영 지표). */
+  ops: Db;
   /** `wrangler.jsonc`의 바인딩·vars 그대로. HTTP 계층 테스트가 `app.request(path, init, env)`에 넘긴다. */
   env: Bindings;
   dispose: () => Promise<void>;
@@ -40,13 +49,18 @@ export async function createTestD1({ migrate = true } = {}): Promise<TestD1> {
   });
 
   if (migrate) await proxy.env.DB.exec(readMigrationSql());
+  // T-11-662 운영 기록 DB는 늘 마이그레이션한다(게임 DB와 따로).
+  if (proxy.env.OPS_DB) await proxy.env.OPS_DB.exec(readMigrationSql(OPS_MIGRATIONS_DIR));
 
   // T-10-072 홈 라이브 허브(Durable Object)는 빼 둔다 — 업로드가 뒤에서 허브를 부르지 않게. 허브를 보는 테스트는
   // 가짜를 넣는다(routes/liveSocket.test.ts).
+  const ops = createDb(proxy.env.OPS_DB ?? proxy.env.DB);
   const env: Bindings = { ...proxy.env };
   delete env.LIVE;
   return {
-    db: createDb(proxy.env.DB),
+    // T-11-662 운영처럼 게임 DB에 운영 기록 DB를 짝지어 둔다(요청 횟수 제한 저장소가 opsOf로 찾는다).
+    db: linkOps(createDb(proxy.env.DB), ops),
+    ops,
     env,
     dispose: () => proxy.dispose(),
   };
@@ -141,4 +155,35 @@ export async function syncCards(ctx: TestD1, cardValue: number | null = null): P
   )
     .bind(cardValue)
     .run();
+}
+
+/**
+ * T-11-660 자금 거래 기록이 잔액과 맞지 않는 구단주(sum(delta) ≠ balance). 잔액을 바꾸는 모든 batch가 기록을 남기면 빈 배열이다.
+ * 테스트가 자금을 직접 넣을 때는 `seedFunds`로 opening 기록도 함께 넣는다.
+ */
+export async function fundLedgerMismatches(ctx: TestD1) {
+  return (
+    await ctx.env.DB.prepare(
+      `SELECT f.profile_id AS profileId, f.balance,
+              coalesce((SELECT sum(delta) FROM owner_fund_ledger l WHERE l.profile_id = f.profile_id), 0) AS total
+         FROM owner_funds f WHERE f.balance <> total`,
+    ).all<{ profileId: string; balance: number; total: number }>()
+  ).results;
+}
+
+/** 테스트용 자금 넣기(잔액 + opening 기록). */
+export async function seedFunds(
+  ctx: TestD1,
+  profileId: string,
+  balance: number,
+  at = '2026-09-30T00:00:00.000Z',
+) {
+  await ctx.env.DB.batch([
+    ctx.env.DB.prepare(
+      `INSERT INTO owner_funds (profile_id, balance, updated_at) VALUES (?, ?, ?)`,
+    ).bind(profileId, balance, at),
+    ctx.env.DB.prepare(
+      `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, created_at) VALUES (?, 'opening', ?, ?, ?)`,
+    ).bind(profileId, balance, balance, at),
+  ]);
 }

@@ -78,7 +78,12 @@ export const CUP_KO = {
   cardLocked: '오프사이드 컵에 참가 중인 선발 선수는 내놓을 수 없어요.',
   cardReleaseLocked: '오프사이드 컵에 참가 중인 선발 선수는 방출할 수 없어요.',
   cardManager: '오프사이드 컵에 참가 중인 선발 선수는 감독 커리어를 시작할 수 없어요.',
-  cardEnhance: '오프사이드 컵에 참가 중인 선발 선수는 강화할 수 없어요.',
+  cardEnhance:
+    '오프사이드 컵 경기 1시간 전부터 경기가 끝날 때까지 컵 명단 선수를 강화할 수 없어요.',
+  pastCards:
+    '이번 오프사이드 컵은 시즌 {season} 선수만 나가요. 컵 명단에서 지난 시즌 선수를 빼 주세요.',
+  enhanceCap:
+    '강화에 성공하면 컵 명단 OVR이 {division} 상한(OVR {n})을 넘어요. 컵 명단을 바꾼 뒤 다시 시도해 주세요.',
   leagueEnhance:
     '오프사이드 리그 경기 1시간 전부터 경기가 끝날 때까지 선발 선수를 강화할 수 없어요.',
   droppedTitle: '{cup} 참가가 취소됐어요',
@@ -128,6 +133,12 @@ export const CUP_KO = {
     '{round}라운드 경기가 {time}에 열려요. {lock}부터 명단이 잠기는데 선발이 {filled}/11명이라 빈 자리는 유스 선수가 뛰어요.',
   leaguePlacedTitle: '시즌 {season} 오프사이드 리그 배치 결과',
   leaguePlacedBody: '{team} 팀은 {tier}부 {title}예요. 1라운드는 오늘 {time}부터 열려요.',
+  // T-11-564 늦은 참가(첫 배치 뒤 매주 묶는 리그).
+  leagueLatePlacedBody: '{team} 팀은 {tier}부 {title}예요. 첫 경기는 오늘 {time}부터 열려요.',
+  leagueLateDroppedBody:
+    '마지막 배치 시각에 시즌 {season} 팀 선발 선수가 {n}명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
+  leagueLateLeftBody:
+    '마지막 배치에서 함께 리그를 꾸릴 팀이 모자랐어요. 다음 시즌에 다시 신청할 수 있어요.',
   leagueDroppedTitle: '시즌 {season} 오프사이드 리그 참가가 취소됐어요',
   leagueDroppedBody:
     '배치 시각에 시즌 {season} 팀 선발 선수가 {n}명보다 적었어요. 다음 시즌에 다시 신청할 수 있어요.',
@@ -139,6 +150,21 @@ export const CUP_KO = {
   // T-11-430 1 · 2번째 기권패(3번째는 leagueForfeitedBody가 따로 간다).
   leagueRoundForfeitBody:
     '{score} · 선발 선수가 모자라 기권패했어요. 기권 {n}/{limit}번, {left}번 더 기권하면 남은 경기는 모두 0:3 패예요.',
+  // T-11-652 라운드 결과 알림에 붙는 그날 신문 1면(내 팀이 실렸으면 그 기사).
+  leagueRoundDailyBody: '{line}\n오늘의 신문: {head}',
+  leagueRoundMineBody: '{line}\n우리 팀이 신문에 실렸어요: {head}',
+  dailyUpset: '{team}, OVR {gap} 차를 뒤집다',
+  dailyComeback: '{team}, {n}골 차를 뒤집은 역전승',
+  dailyLate: '{team}, {n}분 극장골로 승리',
+  dailyHattrick: '{team}에서 해트트릭이 나왔어요',
+  dailyDerby: '{team}, 순위 맞대결에서 웃다',
+  dailyDerbyDraw: '{team}, 순위 맞대결에서 무승부',
+  dailyGoalfest: '{team} 경기에서 {n}골 난타전',
+  dailyFirstWin: '{team}, {n}경기 만에 시즌 첫 승',
+  dailyStreak: '{team}, {n}연승 행진',
+  dailyRout: '{team}, {n}골 차 완승',
+  dailyLeaderNew: '{team}, {n}부 선두로',
+  dailyLeaderKeep: '{team}, {n}부 선두 자리 지켜',
   leagueRest: '휴식',
   leagueRestBody: '이번 라운드는 쉬었어요 · 지금 {rank}위예요',
   leagueEndTitle: '시즌 {season} 오프사이드 리그를 마쳤어요',

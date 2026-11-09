@@ -51,6 +51,7 @@ import {
   careerSeasons,
   goalsPlusAssists,
   managerCareers,
+  ownerFundLedger,
   ownerFunds,
   ownerTeams,
   profiles,
@@ -434,6 +435,36 @@ export async function putRetirement(
                 updatedAt: sql`excluded.updated_at`,
               },
             }),
+          // T-11-660 자금 거래 기록(위와 같은 조건 — 카드 insert보다 먼저라 첫 은퇴일 때만 남는다).
+          db.insert(ownerFundLedger).select(
+            db
+              .select({
+                // drizzle insert-select는 표의 모든 칼럼을 순서대로 고르게 한다(id는 NULL이면 새 번호).
+                id: sql<number>`NULL`.as('id'),
+                profileId: careers.profileId,
+                kind: sql<string>`'retire_bonus'`.as('kind'),
+                delta: sql<number>`${bonus}`.as('delta'),
+                balance:
+                  sql<number>`(SELECT balance FROM owner_funds WHERE profile_id = ${careers.profileId})`.as(
+                    'balance',
+                  ),
+                ref: careers.id,
+                createdAt: sql<string>`${now}`.as('created_at'),
+              })
+              .from(careers)
+              .where(
+                and(
+                  eq(careers.id, careerId),
+                  isNotNull(careers.peak),
+                  notExists(
+                    db
+                      .select({ x: sql`1` })
+                      .from(cards)
+                      .where(eq(cards.careerId, careerId)),
+                  ),
+                ),
+              ),
+          ),
         ]
       : []),
     // T-11-080 카드 한 장. 위 update가 쓴 값을 복사한다(같은 커리어를 다시 보내도 PK라 한 장뿐).
@@ -607,7 +638,10 @@ const withRetiredNumber = eq(retiredNumbers.careerId, careers.id);
 
 /** 공개 명예의 전당(목록·상세·공유 링크·홈 라이브 은퇴 소식)에 오르는 은퇴. 짧은 커리어(T-10-032)는 내 선수에만 남는다. */
 /** 내 선수 목록은 짧은 커리어도 보여 준다. */
-const isOwnRetired = and(eq(careers.status, 'retired'), isNotNull(careers.legendScore));
+// T-11-663 명예의 전당 인덱스는 은퇴 커리어만 담는 부분 인덱스(WHERE status = 'retired')다. 플래너가 그 인덱스를 고르려면
+// 조건이 매개변수가 아닌 글자 그대로여야 해서 status는 SQL에 직접 쓴다(INDEXED BY로 고른 쿼리는 아니면 실패한다).
+export const retiredLiteral = sql`${careers.status} = 'retired'`;
+const isOwnRetired = and(retiredLiteral, isNotNull(careers.legendScore));
 export const isPublicRetired = and(
   isOwnRetired,
   gte(careers.retireAge, HOF_MIN_RETIRE_AGE),

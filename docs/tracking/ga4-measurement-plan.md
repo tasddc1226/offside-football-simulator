@@ -49,7 +49,7 @@ apps/packages에서 gtag·dataLayer·Google Analytics/GTM 식별자·Cloudflare 
 | `career_start`              | startCareer가 새 상태를 만들고 저장을 시도한 후 게임 화면으로 전환 | 커리어당 1회. 후보 뽑기·이어서 하기는 제외   | `start_context`, `position_changed`, `trait_changed` |
 | `first_season_complete`     | 새 커리어의 첫 시즌 종료 기록이 생성됨                             | 커리어당 1회. 학교 마지막 시즌도 포함        | `career_origin`                                      |
 | `career_retire`             | doRetire에서 실제 은퇴 기록 생성                                   | 커리어당 1회. 옛 기록 소급 업로드·조회 제외  | `career_origin`, `completed_seasons_bucket`          |
-| `career_share_click`        | 활성 공유 버튼의 사용자 클릭                                       | 비활성 중 재클릭 제외. 별도 재시도는 새 시도 | `share_method=copy_link`                             |
+| `career_share_click`        | 활성 공유 버튼의 사용자 클릭                                       | 비활성 중 재클릭 제외. 별도 재시도는 새 시도 | `share_method=pending` (T-11-668 전: `copy_link`)    |
 | `career_share_copy_success` | 해당 시도의 clipboard write가 resolve                              | 시도당 1회. 실패/수동 복사 안내는 제외       | `share_method=copy_link`                             |
 
 새 커리어 시작은 별도 이벤트를 또 보내지 않고 `career_start.start_context`로 구분한다:
@@ -65,8 +65,81 @@ true/false/unknown이다. 후속 생성 정보를 사용자 입력 원문으로 
 완료 시즌 수는 0/1/2–5/6–10/11+ 구간으로 보낸다. 은퇴 이벤트는 명예의 전당 등재를 뜻하지 않는다.
 
 초기 핵심 이벤트(key event)는 `career_start`, `career_retire` 두 개만 제안한다.
-복사 성공은 실제 공유 게시나 유입 성과로 이름 붙이지 않는다. 이미지 저장·네이티브 공유 등은
+복사 성공은 실제 공유 게시나 유입 성과로 이름 붙이지 않는다. 이미지 저장 등은
 실제로 반영된 경로를 확인한 뒤 별도 계약으로 추가한다.
+
+### 3.1 커리어 링크 공유 (T-11-668)
+
+은퇴 커리어 공유 버튼(`ShareBar.svelte`)은 네이티브 공유 시트(`navigator.share`)를 먼저 쓰고, 없거나
+취소가 아닌 오류면 클립보드 복사로 넘어간다. 이벤트 이름·매개변수의 코드 정본은
+`packages/app-core/src/shareMeasurement.ts`, 순서는 `apps/web/src/ui/shareFlow.ts`다.
+모든 공유 이벤트에 `share_contract=2`를 붙여 옛 판과 나눈다.
+
+| 이벤트                        | 언제                                                                                         | `share_method`               | 추가 값                       |
+| ----------------------------- | -------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------- |
+| `career_share_click`          | 활성 공유 버튼 클릭(시도 1회의 시작)                                                         | `pending`                    |                               |
+| `career_share_preview`        | 링크 확인 · `canShare` 통과 뒤 `navigator.share`를 호출하기 직전(OS 공유 시트를 열려는 시도) | `native_share`               |                               |
+| `career_share_native_success` | `navigator.share`가 resolve(사용자가 OS 시트에서 대상을 고름)                                | `native_share`               |                               |
+| `career_share_cancel`         | `navigator.share`가 `AbortError`(사용자가 시트를 닫음). 복사로 넘어가지 않는다               | `native_share`               |                               |
+| `career_share_copy_success`   | 클립보드 쓰기가 resolve                                                                      | `copy_link`                  |                               |
+| `career_share_failure`        | 링크 확인 실패(`link`), 취소가 아닌 시트 오류(`native`, 뒤이어 복사), 클립보드 거절(`copy`)  | `native_share` / `copy_link` | `failure_stage`, `error_kind` |
+
+- **preview는 시트가 실제로 떴다는 뜻이 아니다.** 호출 직후 브라우저가 거절하면(제스처 만료 등)
+  `failure`(`native`)가 뒤따른다. `canShare`가 false면 preview 없이 바로 복사하며 실패로 세지 않는다.
+- **OS 공유 성공은 실제 SNS 게시 완료를 보장하지 않는다.** 대상 앱에서 게시를 취소해도 resolve될 수 있다.
+  복사 성공도 붙여 넣기·게시를 뜻하지 않는다.
+- 네이티브 실패 뒤 복사로 넘어가면 `failure`(`native`)와 복사 결과(`copy_success` 또는 `failure`(`copy`))가
+  한 번씩 남는다. 한 시도는 끝 이벤트(`native_success` · `cancel` · `copy_success` · 마지막 `failure`) 하나로 끝난다.
+- `failure_stage=link`는 링크 확인·업로드 준비가 실패해 공유를 시작하지 못한 경우다(은퇴 기록 미업로드·거절·네트워크).
+  이때 `share_method`는 시도하려던 경로(시트가 있으면 `native_share`)다. `error_kind`는
+  `not_allowed`/`invalid_data`/`unknown` 고정 목록이고 오류 원문은 보내지 않는다.
+- 이중 전송은 하지 않는다. 같은 성공이 두 이름으로 나가지 않으므로 합쳐 세지 않는다.
+- **과거 한계:** T-11-668 배포 전(`share_contract` 없음)의 `career_share_copy_success`에는 네이티브 공유
+  성공이 섞여 있고(`share_method=copy_link`로 잘못 표시), 취소·실패·미리보기는 남지 않았다. 배포 전 수치는
+  "네이티브 성공 + 복사 성공" 합계로만 읽고, 복사율이나 네이티브 비율 추이에 쓰지 않는다.
+  배포 뒤 같은 이름은 복사 성공만 뜻한다. 옛 판과 비교할 때는 `native_success + copy_success`를 쓴다.
+- **앱(T-11-676):** 앱 공유 버튼(`apps/mobile/.../ShareBar.tsx` → `shareFlow.ts`)도 같은 계약으로 보낸다(Firebase, 플랫폼 iOS ·
+  Android). 앱은 RN `Share.share`라 `canShare`가 없어 링크 확인 뒤 항상 `preview`를 보낸다. iOS는 시트를 닫으면 `cancel`,
+  **Android는 대상을 고르지 않아도 `native_success`로 끝난다**(RN이 취소를 알려 주지 않는다). Android `native_success`는
+  "시트를 열었다"로 읽는다. T-11-676 OTA 전 앱 공유는 남지 않았다.
+
+### 3.2 강화권 · 스카우트권 구매 퍼널 (T-11-671)
+
+잠재력 강화권 · 프리미엄 스카우트권 구매 화면의 단계를 이벤트 하나 `commerce_stage`로 남긴다(웹 GA4 · 앱 Firebase).
+코드 정본은 `packages/app-core/src/commerceStage.ts`. **매출 이벤트가 아니다** — `purchase` · `in_app_purchase` · 금액 ·
+통화 · 가격 · 추정 매출은 싣지 않고, 구매 수 · 매출은 서버 거래 원장으로만 센다. iOS 자동 `in_app_purchase`와 더하지 않는다.
+
+매개변수는 허용 목록만: `commerce_contract=1`, `stage`, `offer_item`(`boost`/`scout`), `entrypoint`(`shop`/`player_tab`),
+`store`(`apple`/`google`/`xsolla`), `pack_size`(1·3·5·10·50·100), `reason`(오류 단계만, 고정 목록) + 기존 공통 값(앱 판 등).
+프로필 · 커리어 · 거래 · 주문 ID, 토큰, 영수증, 주소, 오류 원문은 보내지 않는다. 리롤권 · 이름 변경권 · 패스 · 멤버십은 대상이 아니다.
+
+| stage              | 앱(App Store · Google Play)                                                           | 웹(엑솔라)                                |
+| ------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------- |
+| `offer_view`       | 가격을 받은 활성 묶음이 지금 스크롤 창 안에 절반 이상(`measureShown`), 자리마다 한 번 | `intersectionRatio ≥ 0.5`, 자리마다 한 번 |
+| `offer_select`     | 활성 묶음 버튼으로 결제 시작(결제 중 막힌 버튼은 없음)                                | 같음                                      |
+| `checkout_request` | 스토어 연결 뒤 `requestPurchase` 호출 직전                                            | 주문 생성 요청 직전                       |
+| `checkout_pending` | 스토어 보류 알림(이 시도는 여기서 끝)                                                 | 남기지 않음                               |
+| `checkout_cancel`  | 스토어 `UserCancelled`(리스너 또는 거절된 요청)                                       | 남기지 않음                               |
+| `checkout_error`   | `store_unavailable` · `start_failed` · `store_error`                                  | `start_failed`(주문 생성 실패)            |
+| `grant_ack`        | 기존 `POST /v1/items/iap` 성공 응답 뒤(진단용 확인)                                   | 남기지 않음                               |
+| `grant_fail`       | 같은 응답 실패: `grant_retryable` · `grant_rejected`                                  | 남기지 않음                               |
+
+- **동의:** 보내는 순간의 이용 분석 동의만 본다(광고 측정 동의는 보지 않음). 쌓아 두거나 나중에 다시 보내지 않는다. 앱은 SDK 줄에
+  올라간 전송도 실제 호출 직전에 동의 · 계정 epoch를 다시 본다. 웹은 철회 때 기존 `stop()`이 이 탭 gtag 큐를 비운다.
+- **계정 · 동의 변화:** 앱은 세션이 바뀌거나 동의가 바뀌면(거절 → 재동의 포함) 진행 중 시도와 서버 확인 중인 시도를 버려
+  `grant_ack` · `grant_fail`을 남기지 않는다. 웹은 주문 응답을 기다린 뒤의 `checkout_error`를 같은 조건(계정 키 · 동의 epoch)으로 거른다.
+- **복구 · 중복:** 앱 시작 복구 · '지급 다시 확인' · 같은 거래의 두 번째 콜백은 새 시도도 성공도 만들지 않는다. 동기화 · 복구에서
+  이미 본 거래, 스토어 거래 시각이 시도 시작(버튼을 누른 기기 시각)보다 이른 거래(1초 전도 포함), 거래 id · 시각이 없는 콜백은
+  애매한 것으로 보고 시도를 버린다(적게 센다).
+- **한계:** `grant_ack`은 진단용 확인이지 "새 구매 정확히 한 번"이 아니다. 서버 응답에 새 지급 여부가 없어 거래 시각 · 이미 본
+  거래로만 거른다. 기기 시계가 스토어보다 빠르면 진짜 구매도 빠진다(여유를 두지 않음). 보류 뒤 나중에 완료된 구매, 애매한 콜백 뒤의
+  진짜 구매는 세지 않는다. 노출 순간 동의 · SDK · 태그가 준비되지 않았으면 그 자리의 노출은 버리고 나중에 동의해도 다시 보내지
+  않는다(늦은 동의의 노출 유실). 웹 `checkout_request`는 같은 탭 이동 직전이라 일부 유실될 수 있다.
+- **웹 제외 단계:** 결제창은 같은 탭을 떠나고, 주문 상태 `CANCELED`는 환불 · 차지백이며, 결제창 닫기 · 돌아옴 · 포커스 · 잔액
+  변화로는 취소 · 성공을 알 수 없다. 시도를 이어 갈 새 기기 저장(주문 ID 표시)도 만들지 않아 웹은 `checkout_request`까지만 남긴다.
+- **웹 기본 동의 지역:** T-11-597 뒤 유럽 · 영국 · 스위스 밖(쿠키 `offside_consent_region=notice`)은 아직 고르지 않았으면 이용
+  분석을 켠 것으로 둔다. 이 퍼널도 그 이용 분석 동의를 그대로 따른다(따로 묻지 않음). 앱은 지역 기본값 없이 동의 창에서 고른
+  사람만 보낸다. 웹 · 앱 분모를 비교할 때 이 차이를 함께 적는다.
 
 ## 4. 지표·보고서 정의
 
@@ -108,6 +181,13 @@ MVP는 GA에 careerId를 보내지 않으므로 진행 퍼널은 **사용자 행
 자발적인 이용자 공유에는 UTM이 없거나 원래 홍보 UTM이 그대로 남을 수 있다.
 referrer가 없으면 direct로 남을 수 있으므로 자발적 공유를 모두 찾는 도구라고 설명하지 않는다.
 내부 화면 링크에 UTM을 붙여 원래 유입을 덮어쓰지 않는다.
+
+**이용자 공유 링크(T-11-676):** 은퇴 커리어 공유 버튼이 만드는 `/career/<id>` 링크에는
+`utm_source=offside_app|offside_web&utm_medium=share&utm_campaign=career_share`가 붙는다(`careerShareUrl`).
+source는 받은 사람이 연 곳이 아니라 **공유한 곳(앱 · 웹)** 이다. 받는 쪽 메신저 · SNS referrer는 이 UTM에 덮인다
+(메신저는 원래 대부분 direct였다). 운영자가 직접 올린 공유 글은 계속 `retirement_share`를 쓴다.
+앱이 설치된 사람은 링크가 앱을 열어(유니버설 링크 · 앱 링크) 웹 GA4에 세션이 남지 않는다. 그래서 이 UTM 세션은
+"웹에서 링크를 연 사람"(대부분 앱이 없는 사람)이다. T-11-676 전 링크는 UTM이 없어 `/shared_career` 랜딩으로만 센다.
 
 ## 6. 수집·개인정보·실패 처리 제안
 

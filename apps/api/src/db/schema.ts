@@ -6,6 +6,7 @@ import {
   check,
   index,
   primaryKey,
+  sqliteView,
   sqliteTable,
   text,
   uniqueIndex,
@@ -270,45 +271,6 @@ export const idempotency = sqliteTable(
   ],
 );
 
-/**
- * T-1-004 D-14·D-15. 고정 윈도우 rate limit 카운터. `(kind, subject)`당 한 행만 유지하며 윈도우가
- * 지나면 재사용한다(설계: `window_start`가 지금부터 윈도우 길이 이전이면 리셋).
- */
-export const authAttempts = sqliteTable(
-  'auth_attempts',
-  {
-    id: text('id').primaryKey(),
-    kind: text('kind', {
-      enum: [
-        'RECOVERY_ISSUE',
-        'RECOVERY_REDEEM',
-        'GOOGLE_START',
-        'BOARD_COMMENT',
-        'APP_SESSION',
-        'APPLE_SIGNIN',
-        'PROFILE_CREATE',
-        'PROFILE_AVATAR',
-        'CAREER_SEASON',
-        'CAREER_RETIRE',
-        'CAREER_LOOK',
-        'CAREER_NAMES',
-        'PUSH_DEVICE',
-        'PUSH_PREFERENCES',
-        'PUSH_TEST',
-        'FRIEND_REQUEST',
-        'TRANSLATE',
-        'ACQUISITION',
-        'CAREER_ACTIVITY',
-        'WEB_PAY',
-      ],
-    }).notNull(),
-    subject: text('subject').notNull(),
-    windowStart: text('window_start').notNull(),
-    count: integer('count').notNull(),
-  },
-  (table) => [uniqueIndex('auth_attempts_kind_subject_unique').on(table.kind, table.subject)],
-);
-
 /** T-11-059 동의한 앱 기기만 등록한다. 세션 폐기·탈퇴·계정 전환 시 이전 계정으로 보내지 않는다. */
 export const pushDevices = sqliteTable(
   'push_devices',
@@ -332,7 +294,6 @@ export const pushDevices = sqliteTable(
   (t) => [
     uniqueIndex('push_devices_token_unique').on(t.token),
     index('push_devices_session_idx').on(t.sessionId),
-    index('push_devices_profile_idx').on(t.profileId),
     index('push_devices_profile_updated_idx').on(t.profileId, t.updatedAt, t.installationHash),
     index('push_devices_updated_idx').on(t.updatedAt),
     index('push_devices_engagement_updated_idx').on(t.engagementEnabled, t.updatedAt),
@@ -459,7 +420,7 @@ export const careers = sqliteTable(
   },
   (table) => [
     index('careers_detail_archive_idx').on(table.detailArchiveKey),
-    index('careers_profile_id_idx').on(table.profileId),
+    // T-11-659 profile_id 단일 인덱스는 지웠다. 아래 (profile_id, …) 복합 인덱스들이 같은 조회 · 외래키 삭제를 맡는다.
     index('careers_owner_title_updated_idx').on(table.profileId, table.status, table.updatedAt),
     index('careers_automation_updated_idx').on(table.updatedAt, table.id),
     // T-11-064 내 선수·구단주 팀 조회: profile_id로 시작해 status 전체 스캔과 정렬을 피한다.
@@ -472,70 +433,99 @@ export const careers = sqliteTable(
     index('careers_profile_status_legend_idx').on(table.profileId, table.status, table.legendScore),
     index('careers_status_legend_idx').on(table.status, table.legendScore),
     // Cover name filtering and search ranks without loading every retired career's detail columns.
-    index('careers_hof_score_order_idx').on(
-      table.status,
-      table.hidden,
-      sql`${table.legendScore} desc`,
-      table.retiredAt,
-      table.id,
-      table.retireAge,
-      table.serviceSeason,
-      table.pos,
-      table.dpos,
-      table.publicName,
-    ),
-    index('careers_hof_season_score_order_idx').on(
-      table.status,
-      table.hidden,
-      table.serviceSeason,
-      sql`${table.legendScore} desc`,
-      table.retiredAt,
-      table.id,
-      table.retireAge,
-      table.pos,
-      table.dpos,
-      table.publicName,
-    ),
-    index('careers_hof_dpos_idx').on(
-      table.status,
-      table.hidden,
-      table.dpos,
-      table.serviceSeason,
-      table.legendScore,
-      table.retiredAt,
-      table.retireAge,
-      table.pos,
-    ),
+    index('careers_hof_score_order_idx')
+      .on(
+        table.status,
+        table.hidden,
+        sql`${table.legendScore} desc`,
+        table.retiredAt,
+        table.id,
+        table.retireAge,
+        table.serviceSeason,
+        table.pos,
+        table.dpos,
+        table.publicName,
+      )
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_season_score_order_idx')
+      .on(
+        table.status,
+        table.hidden,
+        table.serviceSeason,
+        sql`${table.legendScore} desc`,
+        table.retiredAt,
+        table.id,
+        table.retireAge,
+        table.pos,
+        table.dpos,
+        table.publicName,
+      )
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_dpos_idx')
+      .on(
+        table.status,
+        table.hidden,
+        table.dpos,
+        table.serviceSeason,
+        table.legendScore,
+        table.retiredAt,
+        table.retireAge,
+        table.pos,
+      )
+      .where(sql`${table.status} = 'retired'`),
     // Count HOF filters without reading the large snapshot/profile table payloads.
-    index('careers_hof_count_idx').on(
-      table.status,
-      table.hidden,
-      table.serviceSeason,
-      table.pos,
-      table.retireAge,
-      table.legendScore,
-      table.retiredAt,
-      table.goals,
-      table.assists,
-      table.apps,
-      table.trophies,
-      table.awards,
-      table.ballon,
-      table.caps,
-      table.peak,
-      table.value,
-    ),
+    index('careers_hof_count_idx')
+      .on(
+        table.status,
+        table.hidden,
+        table.serviceSeason,
+        table.pos,
+        table.retireAge,
+        table.legendScore,
+        table.retiredAt,
+        table.goals,
+        table.assists,
+        table.apps,
+        table.trophies,
+        table.awards,
+        table.ballon,
+        table.caps,
+        table.peak,
+        table.value,
+      )
+      .where(sql`${table.status} = 'retired'`),
     // 명예의 전당 순위 유형(GET /v1/hof?sort=): status로 은퇴만 좁히고 기록 내림차순 → 레전드 점수로 동점을 가린다.
-    index('careers_hof_goals_idx').on(table.status, table.goals, table.legendScore),
-    index('careers_hof_assists_idx').on(table.status, table.assists, table.legendScore),
-    index('careers_hof_ga_idx').on(table.status, goalsPlusAssists(table), table.legendScore),
-    index('careers_hof_apps_idx').on(table.status, table.apps, table.legendScore),
-    index('careers_hof_trophies_idx').on(table.status, table.trophies, table.legendScore),
-    index('careers_hof_awards_idx').on(table.status, table.awards, table.legendScore),
-    index('careers_hof_ballon_idx').on(table.status, table.ballon, table.legendScore),
-    index('careers_hof_caps_idx').on(table.status, table.caps, table.legendScore),
-    index('careers_hof_peak_idx').on(table.status, table.peak, table.legendScore),
-    index('careers_hof_value_idx').on(table.status, table.value, table.legendScore),
+    // T-11-663 명예의 전당 인덱스 14개는 은퇴 커리어만 담는다(진행 중 커리어를 만들거나 고칠 때 이 인덱스들을 쓰지 않는다).
+    index('careers_hof_goals_idx')
+      .on(table.status, table.goals, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_assists_idx')
+      .on(table.status, table.assists, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_ga_idx')
+      .on(table.status, goalsPlusAssists(table), table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_apps_idx')
+      .on(table.status, table.apps, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_trophies_idx')
+      .on(table.status, table.trophies, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_awards_idx')
+      .on(table.status, table.awards, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_ballon_idx')
+      .on(table.status, table.ballon, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_caps_idx')
+      .on(table.status, table.caps, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_peak_idx')
+      .on(table.status, table.peak, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
+    index('careers_hof_value_idx')
+      .on(table.status, table.value, table.legendScore)
+      .where(sql`${table.status} = 'retired'`),
     // T-10-030 홈 라이브 현황: 지금 뛰는 중·오늘 새 선수·오늘 은퇴와 최근 은퇴 소식을 시각 범위로 찾는다.
     index('careers_status_updated_idx').on(table.status, table.updatedAt),
     index('careers_created_idx').on(table.createdAt),
@@ -692,6 +682,28 @@ export const ownerFunds = sqliteTable(
     updatedAt: text('updated_at').notNull(),
   },
   (table) => [check('owner_funds_balance_check', sql`${table.balance} >= 0`)],
+);
+
+/**
+ * T-11-660 구단 자금 거래 기록. 잔액(owner_funds)을 바꾸는 batch마다 같은 조건으로 한 줄을 더한다(바뀌지 않으면 기록도 없다).
+ * delta는 증감(만 원), balance는 그 직후 잔액. kind: opening(기록을 시작할 때 잔액) · retire_bonus · release · manager_release ·
+ * market_sale · market_buy · enhance · item. ref는 카드(career id) · 판매 등록 · 구매 id. 배포 뒤 모든 구단주는
+ * sum(delta) = balance여야 한다.
+ */
+export const ownerFundLedger = sqliteTable(
+  'owner_fund_ledger',
+  {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    kind: text('kind').notNull(),
+    delta: integer('delta').notNull(),
+    balance: integer('balance').notNull(),
+    ref: text('ref'),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [index('owner_fund_ledger_profile_idx').on(t.profileId, t.id)],
 );
 
 /**
@@ -1126,45 +1138,6 @@ export const translations = sqliteTable(
   (table) => [index('translations_created_idx').on(table.createdAt)],
 );
 
-/** T-11-321 서버 상태 화면. 5분 칸(`bucket` = 칸 시작 UTC ISO)마다 워커가 받은 요청 수·응답 시간 합·느린 요청·서버
- * 오류를 더한다. isolate마다 메모리에 모았다가 1분에 한 번 더하므로 요청마다 쓰지 않는다(status/metrics.ts). 35일 보관. */
-export const apiStatusBuckets = sqliteTable('api_status_buckets', {
-  bucket: text('bucket').primaryKey(),
-  requests: integer('requests').notNull().default(0),
-  totalMs: integer('total_ms').notNull().default(0),
-  /** 1초 이상 걸린 요청. */
-  slow: integer('slow').notNull().default(0),
-  /** 5xx로 끝난 요청. */
-  errors: integer('errors').notNull().default(0),
-});
-
-/**
- * T-11-331 앱·웹 오류. (KST 날짜 × 지문)마다 한 행이고 같은 오류는 count만 늘린다(status/clientErrors.ts).
- * 지문은 플랫폼 · 종류 · 숫자를 지운 문구 · 첫 코드 위치로 만든다. 세션 · 프로필은 남기지 않는다.
- */
-export const clientErrors = sqliteTable(
-  'client_errors',
-  {
-    day: text('day').notNull(),
-    fingerprint: text('fingerprint').notNull(),
-    platform: text('platform').notNull(),
-    kind: text('kind').notNull(),
-    message: text('message').notNull(),
-    frame: text('frame').notNull(),
-    place: text('place').notNull(),
-    stack: text('stack').notNull(),
-    firstVersion: text('first_version').notNull(),
-    lastVersion: text('last_version').notNull(),
-    count: integer('count').notNull().default(0),
-    firstAt: text('first_at').notNull(),
-    lastAt: text('last_at').notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.day, t.fingerprint] }),
-    index('client_errors_last_at_idx').on(t.lastAt),
-  ],
-);
-
 export const appMeta = sqliteTable('app_meta', {
   key: text('key').primaryKey(),
   value: text('value').notNull(),
@@ -1305,7 +1278,6 @@ export const teamMatches = sqliteTable(
   },
   (table) => [
     index('team_matches_profile_created_idx').on(table.profileId, table.createdAt),
-    index('team_matches_away_created_idx').on(table.awayTeamId, table.createdAt),
     index('team_matches_home_recent_idx').on(table.homeTeamId, table.createdAt, table.id),
     index('team_matches_away_recent_idx').on(table.awayTeamId, table.createdAt, table.id),
   ],
@@ -1336,6 +1308,9 @@ export const teamLiveMatches = sqliteTable(
   },
   (table) => [
     index('team_live_matches_profile_idx').on(table.profileId, table.createdAt),
+    // T-11-659 팀이 지워질 때 cascade가 표 전체를 훑지 않게.
+    index('team_live_matches_home_team_idx').on(table.homeTeamId),
+    index('team_live_matches_away_team_idx').on(table.awayTeamId),
     index('team_live_matches_open_idx').on(table.doneAt, table.createdAt),
   ],
 );
@@ -1547,6 +1522,8 @@ export const cups = sqliteTable(
     division: text('division'),
     /** T-11-410 팀 OVR 상한. 마스터 · 통합 대회는 NULL, 아랫 구간은 접수가 열릴 때 채운다. */
     ovrMax: integer('ovr_max'),
+    /** T-11-656 1이면 그 시즌 카드만 컵 명단에 넣는다(제5회부터). */
+    seasonCardsOnly: integer('season_cards_only').notNull().default(0),
   },
   // 한 회차에 구간마다 한 대회(통합 대회는 회차에 하나).
   (table) => [
@@ -1989,39 +1966,16 @@ export const ownerTitleAwards = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.profileId, t.titleId] })],
 );
-export const ownerTitleProgress = sqliteTable('owner_title_progress', {
+/**
+ * T-11-661 구단주 칭호 진행도(조건별 값). 늘 통째로 다시 세고 통째로 읽는 캐시라 조건마다 칼럼을 두지 않고 metrics_json
+ * 하나에 담는다(칭호 조건을 늘려도 DB 구조를 바꾸지 않는다). 예전 owner_title_progress(조건마다 칼럼)를 바꿨다.
+ */
+export const ownerTitleProgress = sqliteTable('owner_title_metrics', {
   profileId: text('profile_id')
     .primaryKey()
     .references(() => profiles.id, { onDelete: 'cascade' }),
   criteriaVersion: integer('criteria_version').notNull().default(0),
-  preseason: integer('preseason').notNull().default(0),
-  midfield: integer('midfield').notNull().default(0),
-  defense: integer('defense').notNull().default(0),
-  keeper: integer('keeper').notNull().default(0),
-  scorers: integer('scorers').notNull().default(0),
-  creators: integer('creators').notNull().default(0),
-  internationals: integer('internationals').notNull().default(0),
-  retired: integer('retired').notNull(),
-  elite: integer('elite').notNull(),
-  ballon: integer('ballon').notNull(),
-  numbers: integer('numbers').notNull(),
-  firsts: integer('firsts').notNull(),
-  // T-11-374 카드 과제 낸 횟수.
-  exchanges: integer('exchanges').notNull().default(0),
-  // T-11-556 최고 능력치 90 이상 공격수 · 그런 선수의 포지션 가짓수 · 은퇴 선수 국적 가짓수 · 마친 컵 · 컵 4강 이상 ·
-  // 은퇴 선수를 남긴 시즌 · 시즌 마감 디비전 휘장의 최고 index.
-  forwards: integer('forwards').notNull().default(0),
-  positions: integer('positions').notNull().default(0),
-  nations: integer('nations').notNull().default(0),
-  cups: integer('cups').notNull().default(0),
-  podiums: integer('podiums').notNull().default(0),
-  seasons: integer('seasons').notNull().default(0),
-  division: integer('division').notNull().default(0),
-  enhanceTries: integer('enhance_tries').notNull().default(0),
-  enhanceKeeps: integer('enhance_keeps').notNull().default(0),
-  enhanceDowns: integer('enhance_downs').notNull().default(0),
-  enhanceNear: integer('enhance_near').notNull().default(0),
-  enhanceSpent: integer('enhance_spent').notNull().default(0),
+  metricsJson: text('metrics_json').notNull(),
   updatedAt: text('updated_at').notNull(),
 });
 /** One editable prediction per account and cup match; settlement and grant are atomic. */
@@ -2048,6 +2002,52 @@ export const cupPredictions = sqliteTable(
     index('cup_predictions_profile_cup_idx').on(t.profileId, t.cupId),
     check('cup_predictions_pick_check', sql`${t.pick} IN ('home', 'draw', 'away')`),
   ],
+);
+
+/**
+ * T-11-652 오프사이드 데일리 빅매치 예측. 보상 없이 적중 기록만 남긴다(결과는 league_matches를 이어 읽는다). 경기 시각 전까지
+ * 바꿀 수 있다.
+ */
+export const leaguePredictions = sqliteTable(
+  'league_predictions',
+  {
+    season: integer('season').notNull(),
+    matchId: text('match_id')
+      .notNull()
+      .references(() => leagueMatches.id, { onDelete: 'cascade' }),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    pick: text('pick', { enum: ['home', 'draw', 'away'] }).notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.matchId, t.profileId] }),
+    index('league_predictions_match_pick_idx').on(t.matchId, t.pick),
+    index('league_predictions_profile_season_idx').on(t.profileId, t.season),
+    check('league_predictions_pick_check', sql`${t.pick} IN ('home', 'draw', 'away')`),
+  ],
+);
+
+/**
+ * T-11-658 AI 기자가 쓴 오프사이드 데일리 1면(라운드마다 한 줄). text_json은 언어별 { head, body }이고 검증에 걸린 언어는
+ * 빠진다(화면은 그 언어만 템플릿 문장을 쓴다). tries는 AI를 부른 횟수(LEAGUE_AI_TRIES에서 멈춘다).
+ */
+export const leagueNewsAi = sqliteTable(
+  'league_news_ai',
+  {
+    season: integer('season').notNull(),
+    round: integer('round').notNull(),
+    kind: text('kind').notNull(),
+    ref: text('ref').notNull(),
+    textJson: text('text_json').notNull(),
+    tries: integer('tries').notNull(),
+    model: text('model').notNull(),
+    createdAt: text('created_at').notNull(),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.season, t.round] })],
 );
 
 /** Kept outside profiles so session/account reads never load image bytes. */
@@ -2328,7 +2328,11 @@ export const best11Slots = sqliteTable(
     /** T-11-463b 시즌 확정 뒤 자리 주인 구단주에게 보상을 준 시각(한 번만 준다). */
     rewardedAt: text('rewarded_at'),
   },
-  (t) => [primaryKey({ columns: [t.season, t.slot] })],
+  (t) => [
+    primaryKey({ columns: [t.season, t.slot] }),
+    // T-11-659 커리어가 지워질 때 cascade가 표 전체를 훑지 않게.
+    index('best11_slots_career_idx').on(t.careerId),
+  ],
 );
 
 /** T-11-463 시즌 BEST 11의 상태: 확정 시각, 마지막 갱신, 은퇴 때 후보를 거르는 자리별 기준(정규화 최댓값 · 커트라인). */
@@ -2350,7 +2354,12 @@ export const best11Changes = sqliteTable(
     outCareerId: text('out_career_id').references(() => careers.id, { onDelete: 'set null' }),
     at: text('at').notNull(),
   },
-  (t) => [index('best11_changes_season_idx').on(t.season, t.at)],
+  (t) => [
+    index('best11_changes_season_idx').on(t.season, t.at),
+    // T-11-659 커리어가 지워질 때 set null이 표 전체를 훑지 않게.
+    index('best11_changes_in_career_idx').on(t.inCareerId),
+    index('best11_changes_out_career_idx').on(t.outCareerId),
+  ],
 );
 
 /**
@@ -2424,19 +2433,52 @@ export const memberships = sqliteTable(
 );
 
 /**
- * T-11-572 운영 지표 대시보드(admin.offside-lab.com). 하루 한 번 모은 값(KST 날짜 · 지표 · 나눔)을 긴 표로 둔다.
- * 운영 D1 값은 일일 cron `kpi` 단계가, 외부(GA4 · 광고 · 스토어) 값은 에이전트 Worker가 `/v1/internal/kpi`로 넣는다.
- * 대시보드는 이 표만 읽는다(화면을 열 때 운영 표에 집계 쿼리를 날리지 않는다). 설계: docs/tracking/admin-kpi-dashboard-design.md
+ * T-11-661 신고 한 줄 보기. 이름 · 채팅 · 게시판 댓글 · 팀 댓글 신고는 대상마다 표가 다르지만(댓글 신고는 댓글이 지워지면
+ * 함께 지워지는 외래키가 있다) 읽을 때는 같은 모양이다. 새 신고 알림 · 운영 도구는 이 보기 하나를 읽는다. 쓰기는 각 표로 한다.
+ * source: name · chat · board_comment · team_comment. 댓글 신고는 처리 시각이 없다(resolved_at NULL).
  */
-export const kpiDaily = sqliteTable(
-  'kpi_daily',
-  {
-    day: text('day').notNull(),
-    metric: text('metric').notNull(),
-    dim: text('dim').notNull().default('all'),
-    value: real('value').notNull(),
-    source: text('source').notNull(),
-    updatedAt: text('updated_at').notNull(),
-  },
-  (table) => [primaryKey({ columns: [table.day, table.metric, table.dim] })],
-);
+export const reportFeed = sqliteView('report_feed', {
+  source: text('source').notNull(),
+  targetKind: text('target_kind').notNull(),
+  targetId: text('target_id').notNull(),
+  reporterId: text('reporter_id').notNull(),
+  reason: text('reason'),
+  label: text('label'),
+  room: text('room'),
+  createdAt: text('created_at').notNull(),
+  resolvedAt: text('resolved_at'),
+})
+  .as(sql`SELECT 'name' AS source, kind AS target_kind, target_id, profile_id AS reporter_id, NULL AS reason,
+    name AS label, NULL AS room, created_at, resolved_at FROM name_reports
+  UNION ALL SELECT 'chat', 'message', message_id, profile_id, reason, nickname, room, created_at, resolved_at
+    FROM chat_reports
+  UNION ALL SELECT 'board_comment', 'comment', comment_id, profile_id, reason, NULL, NULL, created_at, NULL
+    FROM board_comment_reports
+  UNION ALL SELECT 'team_comment', 'comment', comment_id, profile_id, reason, NULL, NULL, created_at, NULL
+    FROM team_comment_reports`);
+
+/**
+ * T-11-661 스토어 구매 장부 한 줄 보기. 아이템 · 웹 결제(iap_purchases)와 광고 제거(iap_ad_free_purchases)는 칼럼이 거의 같은
+ * 두 장부다. 유입 · 매출처럼 둘을 함께 읽는 쪽은 이 보기를 읽는다(새 상품 장부를 더하면 여기에 한 줄을 더한다). 쓰기 · 환불은 각
+ * 표로 한다. 구독(memberships)은 갱신 때 덮어쓰는 상태 행이라 장부가 아니다.
+ */
+export const storePurchaseLedger = sqliteView('store_purchase_ledger', {
+  ledger: text('ledger').notNull(),
+  store: text('store').notNull(),
+  transactionId: text('transaction_id').notNull(),
+  profileId: text('profile_id'),
+  productId: text('product_id').notNull(),
+  test: integer('test').notNull(),
+  createdAt: text('created_at').notNull(),
+  purchasedAt: text('purchased_at'),
+  priceMilliunits: integer('price_milliunits'),
+  currency: text('currency'),
+  storefront: text('storefront'),
+  refundedAt: text('refunded_at'),
+  firstTouchId: text('first_touch_id'),
+  lastTouchId: text('last_touch_id'),
+})
+  .as(sql`SELECT 'item' AS ledger, store, transaction_id, profile_id, product_id, test, created_at, purchased_at,
+    price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM iap_purchases
+  UNION ALL SELECT 'ad_free', store, transaction_id, profile_id, product_id, test, created_at, purchased_at,
+    price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM iap_ad_free_purchases`);

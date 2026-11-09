@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { clearPendingEvent, startCareer, API } from './helpers.js';
+import { clearPendingEvent, retireFromMarket, startCareer, API } from './helpers.js';
 
 test.skip(
   process.env.E2E_ANALYTICS !== '1',
@@ -188,6 +188,156 @@ test('shared URLs and player names never enter GA commands', async ({ page }) =>
   expect(wire).toContain('/shared_career');
   expect(wire).not.toContain('00000000');
   expect(wire).not.toContain('PRIVATE');
+});
+
+// T-11-676 공유 버튼으로 만든 링크(UTM)로 처음 온 사람: 공유 화면 · 선수 만들기 · 시작이 모두 이용자 공유 유입으로 남고,
+// 시작 버튼은 홈을 거치지 않고 선수 만들기로 간다.
+test('user share link keeps its campaign from the shared screen to the first career', async ({
+  page,
+}) => {
+  await prepare(page);
+  await grantAnalytics(page);
+  await page.goto(
+    '/career/00000000-0000-4000-8000-000000000000?utm_source=offside_app&utm_medium=share&utm_campaign=career_share',
+  );
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+  await page.locator('[data-act="shared-start"]').click();
+  await page.locator('[data-act="next-candidates"]').click();
+  await page.locator('[data-cand="0"]').click();
+  await page.locator('[data-act="start"]').click();
+  await expect(page.locator('.player h1')).toBeVisible();
+  const events = (await commands(page)).filter(
+    (x) => x[0] === 'event' && ['page_view', 'career_start'].includes(String(x[1])),
+  );
+  const pages = events
+    .filter((x) => x[1] === 'page_view')
+    .map((x) => new URL((x[2] as { page_location: string }).page_location).pathname);
+  expect(pages).toEqual(['/shared_career', '/create', '/game']);
+  expect(events.filter((x) => x[1] === 'career_start')).toHaveLength(1);
+  for (const event of events) {
+    const url = new URL((event[2] as { page_location: string }).page_location);
+    expect(url.search).toBe('?utm_source=offside_app&utm_medium=share&utm_campaign=career_share');
+  }
+  expect(JSON.stringify(await commands(page))).not.toContain('00000000');
+});
+
+// T-11-668 공유 버튼의 시도 · 결과가 이름 · share_method · share_contract 로 나뉘어 나간다(네이티브 성공을 복사 성공으로 세지 않는다).
+test('career share sends click, link failure, cancel, native failure with copy fallback and native success separately', async ({
+  page,
+  context,
+}) => {
+  test.setTimeout(120_000);
+  await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+  await prepare(page);
+  await grantAnalytics(page);
+  // 1번째 시트는 사용자가 닫고(AbortError), 2번째는 브라우저가 거절하고(NotAllowedError), 3번째는 성공한다.
+  await page.addInitScript(() => {
+    let calls = 0;
+    Object.defineProperty(navigator, 'share', {
+      value: () => {
+        calls += 1;
+        if (calls === 1) return Promise.reject(new DOMException('x', 'AbortError'));
+        if (calls === 2) return Promise.reject(new DOMException('x', 'NotAllowedError'));
+        return Promise.resolve();
+      },
+    });
+  });
+  const uploaded = new Map<string, Record<string, unknown>>();
+  let hofUp = false;
+  await page.route(`${API}/v1/profile`, (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id: 'u1',
+          linked: { google: false, toss: false },
+          googleEmailMasked: null,
+          recoveryCodeIssuedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          nickname: null,
+        },
+      }),
+    }),
+  );
+  await page.route(/\/v1\/careers\/[^/]+\/(seasons\/\d+|retirement)$/, async (r) => {
+    const m = /careers\/([^/]+)\/retirement$/.exec(r.request().url());
+    if (m) uploaded.set(m[1]!, r.request().postDataJSON() as Record<string, unknown>);
+    await r.fulfill({ status: 200, contentType: 'application/json', body: '{"data":{}}' });
+  });
+  await page.route(/\/v1\/hof\/[0-9a-f-]{36}$/, async (r) => {
+    const id = r.request().url().split('/').pop()!;
+    const b = uploaded.get(id);
+    if (!hofUp || !b) return r.fulfill({ status: 503, body: '' });
+    const entry = {
+      id,
+      name: b.publicName ?? null,
+      pos: 'FW',
+      number: 10,
+      retireAge: b.retireAge,
+      peak: b.peak,
+      legendScore: b.legendScore,
+      apps: b.apps,
+      goals: b.goals,
+      assists: b.assists,
+      trophies: b.trophies,
+      awards: b.awards,
+      caps: b.caps,
+      ballon: b.ballon,
+      lastClub: b.lastClub,
+      retiredAt: '2026-09-26T00:00:00.000Z',
+      hasDetail: true,
+      title: b.title ?? null,
+    };
+    await r.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ data: { entry, snapshot: b.snapshot } }),
+    });
+  });
+  await retireFromMarket(page, 34);
+  await expect(page.locator('[data-credit="player"]')).toBeVisible();
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+  const share = page.locator('[data-act="share-career"]');
+  const shareEvents = async () =>
+    (await commands(page))
+      .filter((x) => x[0] === 'event' && String(x[1]).startsWith('career_share'))
+      .map((x) => {
+        const p = x[2] as Record<string, unknown>;
+        return [x[1], p.share_method, p.share_contract, p.failure_stage, p.error_kind].filter(
+          (v) => v !== undefined,
+        );
+      });
+
+  // 링크 확인 실패(서버에 기록이 아직 안 보임): 시트를 열지 않는다.
+  await share.click();
+  await expect(page.getByText('서버에 연결하지 못했어요.', { exact: false })).toBeVisible();
+  await expect(share).toBeEnabled();
+  hofUp = true;
+  await share.click(); // 시트를 닫음
+  await expect(page.locator('.share-url')).toBeVisible();
+  await expect(share).toBeEnabled();
+  await share.click(); // 시트 거절 → 복사
+  await expect(page.getByText('공유 링크를 복사했어요.')).toBeVisible();
+  await expect(share).toBeEnabled();
+  await share.click(); // 시트 성공
+  await expect.poll(async () => (await shareEvents()).length).toBe(12);
+  expect(await shareEvents()).toEqual([
+    ['career_share_click', 'pending', '2'],
+    ['career_share_failure', 'native_share', '2', 'link', 'unknown'],
+    ['career_share_click', 'pending', '2'],
+    ['career_share_preview', 'native_share', '2'],
+    ['career_share_cancel', 'native_share', '2'],
+    ['career_share_click', 'pending', '2'],
+    ['career_share_preview', 'native_share', '2'],
+    ['career_share_failure', 'native_share', '2', 'native', 'not_allowed'],
+    ['career_share_copy_success', 'copy_link', '2'],
+    ['career_share_click', 'pending', '2'],
+    ['career_share_preview', 'native_share', '2'],
+    ['career_share_native_success', 'native_share', '2'],
+  ]);
+  const wire = JSON.stringify(await commands(page));
+  expect(wire).not.toMatch(/\/career\/[0-9a-f-]{36}/);
 });
 
 test('actual play measures first action, milestones and a resumed career without reload duplicates', async ({
@@ -401,4 +551,115 @@ test('notice region starts on without the sheet and keeps an earlier denial', as
   await expect(page.locator('main')).toBeVisible();
   expect(await page.evaluate((key) => localStorage.getItem(key), consentKey)).toBe('denied');
   expect(await commands(page)).toEqual([]);
+});
+
+// T-11-669 은퇴 화면 실험: 태그를 한 번 불러온 뒤 철회 → 은퇴(노출 보류) → 재동의하면 그때 노출을 보내고,
+// 철회 중에 누른 장면은 되돌려 보내지 않는다(실제 웹 어댑터 경로, loaded 분기의 ready()).
+test('retire experiment exposure waits for re-consent after the tag was loaded once', async ({
+  page,
+  context,
+}) => {
+  await grantAnalytics(page);
+  await prepare(page);
+  await page.route(`${API}/v1/balance`, (r) =>
+    r.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          version: 9,
+          values: { retireExpShare: 0.5 },
+          activatedAt: '2026-11-08T00:00:00.000Z',
+        },
+      }),
+    }),
+  );
+  await page.route(`${API}/v1/profile`, (r) =>
+    r.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        data: {
+          id: 'e2e-profile-1', // 실험군(retireExperiment 해시)
+          linked: { google: false, toss: false, apple: false },
+          googleEmailMasked: null,
+          recoveryCodeIssuedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          nickname: null,
+        },
+      }),
+    }),
+  );
+  await page.route(/\/v1\/careers\/[^/]+\/(seasons\/\d+|retirement)$/, (r) =>
+    r.fulfill({ contentType: 'application/json', body: JSON.stringify({ data: {} }) }),
+  );
+  await startCareer(page);
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+  await page.evaluate(() => {
+    const g = JSON.parse(localStorage.getItem('ft_save')!);
+    g.pending = { type: 'market', res: null, m: null };
+    g.age = 25;
+    g.career = [
+      {
+        year: 2026,
+        age: 18,
+        club: '서울 FC',
+        league: 'K리그1',
+        apps: 10,
+        goals: 2,
+        assists: 1,
+        cs: 0,
+        rating: 6.4,
+        rank: 5,
+        ovr: 60,
+        honors: [],
+      },
+      {
+        year: 2027,
+        age: 19,
+        club: '서울 FC',
+        league: 'K리그1',
+        apps: 30,
+        goals: 9,
+        assists: 4,
+        cs: 0,
+        rating: 7.1,
+        rank: 2,
+        ovr: 66,
+        honors: [],
+      },
+    ];
+    localStorage.setItem('ft_save', JSON.stringify(g));
+  });
+  await page.reload();
+  await page.locator('[data-act="continue"]').click();
+  await expect(page.locator('script[data-offside-analytics]')).toHaveCount(1);
+
+  // 다른 탭에서 철회한다(이 탭은 storage 이벤트로 stop()).
+  const tab = await context.newPage();
+  await tab.goto('/app-ads.txt');
+  await tab.evaluate((key) => localStorage.setItem(key, 'denied'), consentKey);
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem('offside_retire_exp_v1')))
+    .toBeNull();
+
+  const sheet = page.locator('#sheet');
+  await sheet.getByRole('button', { name: '은퇴하기' }).click();
+  await sheet.getByRole('button', { name: '은퇴한다' }).click();
+  const box = page.locator('[data-retire-exp="treatment"]');
+  await expect(box).toBeVisible();
+  await box.locator('[data-act="retire-scene"]').first().click(); // 노출 전 클릭
+  const names = async () =>
+    (await commands(page))
+      .filter((x) => x[0] === 'event' && String(x[1]).startsWith('retire_exp_'))
+      .map((x) => x[1]);
+  expect(await names()).toEqual([]);
+  expect(await page.evaluate(() => localStorage.getItem('offside_retire_exp_v1'))).toBeNull();
+
+  // 재동의: 태그는 이미 불러왔으므로 loaded 분기에서 보류한 노출을 보낸다.
+  await tab.evaluate((key) => localStorage.setItem(key, 'granted'), consentKey);
+  await expect.poll(names).toEqual(['retire_exp_exposure']);
+  await box.locator('[data-act="retire-scene"]').nth(1).click();
+  await expect.poll(names).toEqual(['retire_exp_exposure', 'retire_exp_scene_open']);
+  const wire = JSON.stringify(await commands(page));
+  expect(wire).not.toContain('e2e-profile-1');
+  expect(await page.evaluate(() => localStorage.getItem('offside_retire_exp_v1'))).not.toBeNull();
 });

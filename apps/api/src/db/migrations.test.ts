@@ -40,22 +40,6 @@ function firstProfilesCreateStatement(): string {
  * 5개뿐이다. 컬럼 목록은 schema.ts와 같다(snake_case).
  */
 const EXPECTED_COLUMNS: Record<string, string[]> = {
-  api_status_buckets: ['bucket', 'requests', 'total_ms', 'slow', 'errors'],
-  client_errors: [
-    'day',
-    'fingerprint',
-    'platform',
-    'kind',
-    'message',
-    'frame',
-    'place',
-    'stack',
-    'first_version',
-    'last_version',
-    'count',
-    'first_at',
-    'last_at',
-  ],
   billing_alerts: [
     'id',
     'store',
@@ -100,38 +84,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'earned_at',
     'seen_at',
   ],
-  owner_title_progress: [
-    'profile_id',
-    'criteria_version',
-    'midfield',
-    'defense',
-    'keeper',
-    'scorers',
-    'creators',
-    'internationals',
-    'preseason',
-    'retired',
-    'elite',
-    'ballon',
-    'numbers',
-    'firsts',
-    'updated_at',
-    // T-11-374 카드 과제를 낸 횟수(헌납의 명가).
-    'exchanges',
-    // T-11-556 단계 · 새 칭호.
-    'forwards',
-    'positions',
-    'nations',
-    'cups',
-    'podiums',
-    'seasons',
-    'division',
-    'enhance_tries',
-    'enhance_keeps',
-    'enhance_downs',
-    'enhance_near',
-    'enhance_spent',
-  ],
+  owner_title_metrics: ['profile_id', 'criteria_version', 'metrics_json', 'updated_at'],
   cup_entries: [
     'cup_id',
     'team_id',
@@ -190,6 +143,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'division',
     'ovr_max',
+    'season_cards_only',
   ],
   owner_items: ['profile_id', 'item', 'qty', 'updated_at'],
   gift_claims: ['profile_id', 'gift_id', 'claim_id', 'claimed_at'],
@@ -367,6 +321,18 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'forfeit',
     'detail_json',
   ],
+  league_news_ai: [
+    'season',
+    'round',
+    'kind',
+    'ref',
+    'text_json',
+    'tries',
+    'model',
+    'created_at',
+    'updated_at',
+  ],
+  league_predictions: ['season', 'match_id', 'profile_id', 'pick', 'created_at', 'updated_at'],
   league_seasons: [
     'season',
     'starts_at',
@@ -416,6 +382,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'closed_at',
   ],
+  owner_fund_ledger: ['id', 'profile_id', 'kind', 'delta', 'balance', 'ref', 'created_at'],
   owner_funds: ['profile_id', 'balance', 'updated_at'],
   notifications: [
     'id',
@@ -510,7 +477,6 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'revoked_at',
     'last_seen_at',
   ],
-  auth_attempts: ['id', 'kind', 'subject', 'window_start', 'count'],
   app_auth_tickets: [
     'id',
     'session_id',
@@ -532,7 +498,6 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'expires_at',
   ],
   // T-11-572 운영 지표 대시보드(하루 한 번 모은 값).
-  kpi_daily: ['day', 'metric', 'dim', 'value', 'source', 'updated_at'],
   // T-9-009: 커리어·시즌 요약 저장(익명 포함 전체 사용자).
   careers: [
     'id',

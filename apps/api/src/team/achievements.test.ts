@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  achRewardSteps,
   achievementScore,
   clubAchievements,
   teamKeptOf,
@@ -296,6 +297,44 @@ describe('구단 시즌 업적', () => {
     expect(item(sf, 'team-cup-win')?.done).toBe(false);
     expect(item(judge(dream, 'qf'), 'team-cup-sf')?.done).toBe(false);
     expect(item(localizeAchievements(g, 'ja'), 'team-cup-win')?.label).toBe('オフサイドカップ優勝');
+  });
+
+  it('같은 국적: 대한민국 선수는 국적 없이(NULL) 저장되므로 대한민국(KR)으로 본다', () => {
+    const judge = (slots: AchievementTeamSlot[], kept?: Record<string, number>) =>
+      clubAchievements({
+        careers: [],
+        team: teamOf(slots),
+        owner: OWNER,
+        detail: true,
+        retireAt: 44,
+        ...(kept ? { kept } : {}),
+      });
+    const done = (slots: AchievementTeamSlot[], kept?: Record<string, number>) =>
+      item(judge(slots, kept), 'team-nation')?.done;
+    const eleven = (nation: string | null) => Array.from({ length: 11 }, () => slot({ nation }));
+    // 업로드는 대한민국 국적을 싣지 않는다(game engine · app-core upload) → careers · cards.nation = NULL.
+    expect(done(eleven(null))).toBe(true);
+    // 예전 클라이언트가 'KR'을 실었거나 빈 문자열로 남은 기록도 대한민국이다.
+    expect(done([...eleven(null).slice(0, 9), slot({ nation: 'KR' }), slot({ nation: '' })])).toBe(
+      true,
+    );
+    expect(done(eleven('JP'))).toBe(true);
+    // 다른 국적이 하나라도 섞이면 아니다(첫 자리가 대한민국이든 아니든).
+    expect(done([...eleven(null).slice(0, 10), slot({ nation: 'JP' })])).toBe(false);
+    expect(done([slot({ nation: 'JP' }), ...eleven(null).slice(0, 10)])).toBe(false);
+    // 선발이 11명이 아니면 아니다.
+    expect(done(eleven(null).slice(0, 10))).toBe(false);
+    expect(done([...eleven(null).slice(0, 10), slot({ careerId: null, nation: null })])).toBe(
+      false,
+    );
+    // 그 시즌에 한 번 닿으면 선발이 바뀌어도 남고, 보상 칸은 한 번만 생긴다.
+    const g = judge(eleven(null));
+    const kept = teamKeptOf(g);
+    expect(kept['team-nation']).toBe(1);
+    expect(done([...eleven(null).slice(0, 10), slot({ nation: 'JP' })], kept)).toBe(true);
+    expect(achRewardSteps(g, 2).filter((s) => s.id === 'team-nation')).toEqual([
+      expect.objectContaining({ key: 'team-nation' }),
+    ]);
   });
 
   it('T-11-237 같은 구단에서 뛴 적 있음은 은퇴 구단과 따로, 11명 모두의 프로 구단이 하나라도 겹치면 달성한다', () => {

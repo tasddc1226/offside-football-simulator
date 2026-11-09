@@ -1,0 +1,30 @@
+{
+  "id": "t-11-651-create-type-preview",
+  "title": "선수 만들기에서 유형 미리 보기",
+  "items": [
+    "선수 만들기에서 주력 능력치를 고르면 그 조합으로 정해지는 선수 유형(윙어 · 박스 투 박스 등)이 바로 보여요. 유형은 주력 조합으로 정해지고 나중에 능력치를 올려도 바뀌지 않아요.",
+    "후보 카드의 스카우트 한 줄도 고른 주력 조합의 실제 유형 이름으로 보여 줘요."
+  ],
+  "en": {
+    "title": "Player type preview when creating a player",
+    "items": [
+      "When you pick main attributes while creating a player, the player type that pair gives you (Winger, Box-to-box and so on) now shows right away. The type comes from the pair you pick and won’t change when you raise attributes later.",
+      "The scout line on candidate cards now uses the actual type name for the pair you picked."
+    ]
+  },
+  "ja": {
+    "title": "選手作成でタイプを事前表示",
+    "items": [
+      "選手作成で主力能力値を選ぶと、その組み合わせで決まる選手タイプ（ウインガー・ボックス・トゥ・ボックスなど）がすぐ表示されます。タイプは主力の組み合わせで決まり、あとで能力値を上げても変わりません。",
+      "候補カードのスカウト一言も、選んだ主力の組み合わせの実際のタイプ名で表示します。"
+    ]
+  },
+  "zh": {
+    "title": "建立球員時預覽類型",
+    "items": [
+      "建立球員時選好主力能力值，就會立即顯示這個組合決定的球員類型（邊鋒・全能中場等）。類型由主力組合決定，之後提升能力值也不會改變。",
+      "候選卡片上的球探評語，也會改用所選主力組合的實際類型名稱。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -442,11 +442,14 @@ export function CupLockNotice({
   state,
   bar = null,
   preset = null,
+  onSeason,
 }: {
   state: CupState;
   bar?: CupLineupBar | null;
   /** T-11-570 컵 명단 프리셋 이름(있으면 컵은 그 편성으로 뛰고, 줄도 그 프리셋 값이다). */
   preset?: string | null;
+  /** T-11-657 이번 시즌 선수 컵인데 컵 명단에 지난 시즌 선수가 있으면 이번 시즌 선수로 컵 명단을 만든다. */
+  onSeason?: (() => void) | undefined;
 }) {
   const c = useColors();
   const next = myNext(state);
@@ -511,6 +514,16 @@ export function CupLockNotice({
           {note}
         </Txt>
       ))}
+      {onSeason ? (
+        <Btn
+          sm
+          testID="cup-season-lineup"
+          onPress={onSeason}
+          style={{ alignSelf: 'flex-start', marginTop: 4 }}
+        >
+          {L.barMakeSeasonCup}
+        </Btn>
+      ) : null}
     </View>
   );
 }

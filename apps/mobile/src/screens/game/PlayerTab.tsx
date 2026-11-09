@@ -261,7 +261,12 @@ function BoostCard({ s }: { s: GameState }) {
               {B.ticketBoost({ n: tickets, chance: v.chance })}
             </Btn>
           ) : null}
-          <IapPacks item="boost" note={IL.boostNote({ chance: v.chance })} login={false} />
+          <IapPacks
+            item="boost"
+            note={IL.boostNote({ chance: v.chance })}
+            login={false}
+            entry="player_tab"
+          />
         </View>
       ) : null}
       {sure.offer ? (

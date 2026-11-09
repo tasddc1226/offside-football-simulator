@@ -200,6 +200,8 @@ export const create: Translation<CreateMsgs> = {
   extraNote: 'All optional. You can start with the defaults.',
   focusMeaning:
     'Start is the change to your first attributes. Growth is how fast they rise from the same training.',
+  focusTypeLine: (p: { name: string; desc: string }) =>
+    `Player type for this pair: ${p.name} (${p.desc}). Raising attributes later won’t change it.`,
   ovrWhy:
     'Estimated OVR uses the attributes each position values most, so it changes with your position and focus.',
   tendencyLine: (p) => `Goals ${p.goal} · Assists ${p.assist}`,
@@ -218,4 +220,6 @@ export const create: Translation<CreateMsgs> = {
   candEdgeEven: 'No attribute clearly ahead of the others',
   sameCandidates:
     'The same position and focus give the same candidates. Change either one for new candidates.',
+  seasonNote: (p) =>
+    `Start now and this player belongs to ${p.season}. After retiring, they count toward ${p.season} records and your owner season achievements.`,
 };

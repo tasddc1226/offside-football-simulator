@@ -3,11 +3,13 @@
 // 표시로 남긴다. "받을 게 없다"는 표시는 보상 id · 서비스 시즌마다 남겨, 시즌이 바뀌면 한 번 더 묻는다.
 // T-11-472 구단주 선물(T-11-275)은 없앴다. T-11-487 시즌 기록 보상은 업적 보상 다음 차례로 같은 칸에 온다(?v=2) — 하나를
 // 받으면 다음 것을 다시 묻는다. T-11-517 광고 제거 구매 감사 선물은 그다음 차례(?v=3, T-11-516 멤버십 출시부터 묻는다).
+// T-11-664 업데이트 감사 선물(기간 한정)은 맨 앞 차례다(?v=4).
 import type { HomeGiftResponse, OwnerItemsResponse } from '@offside/contracts';
 import {
   ACH_SEASON_GIFT,
   AD_FREE_THANKS_GIFT,
   RECORD_SEASON_GIFT,
+  UPDATE_THANKS_GIFT,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
@@ -26,7 +28,7 @@ export type HomeGift = NonNullable<HomeGiftResponse['gift']>;
 
 // 받을 수 있는 선물 묶음이 늘면 표시 문자열도 바뀌어, 업적 보상만 있던 때 남긴 "다 받음" 표시로 기록 보상을 놓치지 않는다.
 const doneMark = () =>
-  `${ACH_SEASON_GIFT.id}+${RECORD_SEASON_GIFT.id}+${AD_FREE_THANKS_GIFT.id}:${teamSeasonAt(new Date().toISOString()) ?? 0}`;
+  `${ACH_SEASON_GIFT.id}+${RECORD_SEASON_GIFT.id}+${AD_FREE_THANKS_GIFT.id}+${UPDATE_THANKS_GIFT.id}:${teamSeasonAt(new Date().toISOString()) ?? 0}`;
 
 function giftDone() {
   try {
@@ -47,7 +49,7 @@ function markGiftDone() {
 export async function fetchHomeGift(): Promise<HomeGift | null> {
   if (!hasSessionHint() || ownerHintState() === false || giftDone()) return null;
   const r = await withOwnerHint(
-    ownerCachedGet<HomeGiftResponse>('/v1/items/gift?v=3', 10 * 60_000),
+    ownerCachedGet<HomeGiftResponse>('/v1/items/gift?v=4', 10 * 60_000),
   );
   if (!r.ok) return null;
   if (!r.data.gift) markGiftDone();
@@ -77,6 +79,8 @@ export function giftCopy(g: HomeGift): {
   done: string;
 } {
   const p = { boost: g.boost, scout: g.scout, reroll: g.reroll ?? 0, season: g.season ?? 1 };
+  if (g.kind === 'updateThanks')
+    return { title: L.updateTitle, sub: L.updateSub(p), detail: null, done: L.seasonDone(p) };
   if (g.kind === 'adFreeThanks')
     return { title: L.adFreeTitle, sub: L.adFreeSub(p), detail: null, done: L.seasonDone(p) };
   if (g.kind !== 'recordSeason')

@@ -14,7 +14,6 @@ import {
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
   MANAGER_NAME_MIN,
-  PAST_SALARY_BUDGET,
   TEAM_NAME_MAX,
   TEAM_NAME_MIN,
   TEAM_RATING_START,
@@ -57,10 +56,6 @@ import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-cor
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import {
   autoFillSlots,
-  budgetOf,
-  salaryBar,
-  salaryBlocks,
-  salaryFullText,
   draftLines,
   cupTeamLink,
   cupTeamNote,
@@ -70,7 +65,10 @@ import {
   slotsSynergy,
   synergyFocus,
   teamEditableIn,
+  pastInSlots,
+  seasonCupSlots,
 } from '@offside/app-core/teamOwner';
+import { cupText as CT } from '@offside/app-core/i18n/ko/cup';
 import { MARKET_TOAST, marketName, needsOwnerLogin } from '@offside/app-core/market';
 import { onRetirementSynced, pendingRetirementIds, retryOutboxNow } from '@offside/app-core/outbox';
 import { localCareerNames } from '@offside/game/hof-store';
@@ -107,8 +105,6 @@ import { TeamRankInfo } from './TeamRankInfo';
 import { TeamRankQueue } from './TeamRankQueue';
 import { OvrBadge } from './TeamParts';
 import { TeamLineup } from './TeamLineup';
-import { SalaryBar } from './SalaryGuide';
-import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TeamLogoEditor } from './TeamLogoEditor';
 import { TeamShare, type TeamShareData } from './TeamShare';
@@ -129,7 +125,15 @@ import { CupLockNotice, useCup } from './TeamCup';
 import { cupLineupBar } from '@offside/app-core/cupLineupBar';
 import { TeamPresets } from './TeamPresets';
 import { EnhanceSheet } from './EnhanceSheet';
-import { cupPresetOf, loadPreset, presetOf, type TeamPreset } from '@offside/app-core/teamPresets';
+import {
+  cupPresetOf,
+  loadPreset,
+  presetOf,
+  presetSummary,
+  withSeasonCupPreset,
+  type TeamPreset,
+} from '@offside/app-core/teamPresets';
+import { cardSeasonBadge } from '@offside/app-core/format';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { fixSlot, slotName } from '@offside/app-core/matchReport';
 import type { ReportLine } from '@offside/contracts/owner-team';
@@ -170,7 +174,6 @@ export default function Team() {
   const [perDay, setPerDay] = useState(0);
   /** 보고 있는 시즌 · 지금 고치고 겨루는 시즌(휴식기면 null) · 고를 수 있는 시즌. */
   const [season, setSeason] = useState(0);
-  const [budget, setBudget] = useState(PAST_SALARY_BUDGET);
   const [fatigue, setFatigue] = useState<OwnerTeamResponse['fatigue'] | null>(null);
   const [synFocus, setSynFocus] = useState<string | null>(null);
   const [current, setCurrent] = useState<number | null>(null);
@@ -280,8 +283,6 @@ export default function Team() {
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = useMemo(() => localCareerNames(), []);
   const byId = new Map(players.map((p) => [p.careerId, p]));
-  // T-11-376 지난 시즌 선수 급여 예산(서버가 팀 시즌에 맞춰 계산한 값, 옛 응답이면 기본 80).
-  const salary = salaryBar(slots, byId, season, budget);
   const nameOf = (p: TeamPlayer) => marketName(p, localNames);
   const eventName = (id: string | null, fallback: string) => (id && localNames.get(id)) || fallback;
   // T-11-266 익명으로 은퇴한 내 선수 중 이 기기가 이름을 아는 카드(이적시장에 팔린 선수 포함) — 한꺼번에 이름을 공개할 수 있다.
@@ -359,12 +360,14 @@ export default function Team() {
       ? cupLineupBar(
           cupState.cup,
           cupState.me,
+          // T-11-657 past: 이번 시즌 선수 컵이면 컵 명단에 든 지난 시즌 카드 수.
           cupPreset
             ? {
                 ovr: cupPreset.ovr ?? 0,
                 filled: cupPreset.filled ?? cupPreset.slots.filter(Boolean).length,
+                past: pastInSlots(cupPreset.slots, byId, season),
               }
-            : { ovr, filled },
+            : { ovr, filled, past: pastInSlots(slots, byId, season) },
           new Date().toISOString(),
         )
       : null;
@@ -482,7 +485,6 @@ export default function Team() {
     setMatchesNextAt(d.matchesNextAt ?? null);
     setPerDay(d.matchesPerDay);
     setEnhanceOpen(!!d.enhanceOpen);
-    setBudget(budgetOf(d));
     setFatigue(d.fatigue ?? null);
     if (silent) {
       if (JSON.stringify(d.team) !== JSON.stringify(teamNow.current)) {
@@ -545,10 +547,6 @@ export default function Team() {
   // ───────── 편성 ─────────
   async function save(): Promise<boolean> {
     if (savingRef.current || !nameOk) return false;
-    if (salary?.state === 'over') {
-      toast(TC.salaryOverSave({ n: salary.sum, max: salary.budget }));
-      return false;
-    }
     if (cupBlock) {
       toast(cupBlock);
       return false;
@@ -615,6 +613,18 @@ export default function Team() {
     setTeam((t) => (t ? { ...t, presets: r.data.presets } : t));
     if (saved) toast(L.tpSaved);
     return true;
+  }
+  /** T-11-657 이번 시즌 카드만 자동 배치한 편성을 컵 명단 프리셋으로 둔다(팀 명단 · 초안은 그대로). */
+  async function makeSeasonCup() {
+    const ids = seasonCupSlots(slotCodes, players, season);
+    if (!ids.some(Boolean)) return toast(CT.seasonCupEmpty);
+    const name = CT.seasonCupName({ badge: cardSeasonBadge(season) });
+    const next = withSeasonCupPreset(
+      team?.presets ?? [],
+      presetOf(name, formation, ids, season > 0 ? positions : null),
+    );
+    if (!next) return toast(CT.seasonCupFull);
+    if (await persistPresets(next)) toast(CT.seasonCupMade({ name }));
   }
   function applyPreset(p: TeamPreset) {
     const r = loadPreset(p, new Set(players.map((x) => x.careerId)));
@@ -1026,7 +1036,14 @@ export default function Team() {
         {editable || team ? (
           <>
             {editable && !legacy ? (
-              <CupLockNotice state={cupState} bar={cupBar} preset={cupPreset?.name ?? null} />
+              <CupLockNotice
+                state={cupState}
+                bar={cupBar}
+                preset={cupPreset?.name ?? null}
+                onSeason={
+                  cupBar?.past && !cupState.me?.locked ? () => void makeSeasonCup() : undefined
+                }
+              />
             ) : null}
             <Card gap={8}>
               <View
@@ -1046,7 +1063,7 @@ export default function Team() {
                       sm
                       testID="team-auto"
                       disabled={!players.length}
-                      onPress={() => setSlots(autoFillSlots(slotCodes, players, season, budget))}
+                      onPress={() => setSlots(autoFillSlots(slotCodes, players))}
                     >
                       {L.autoPlace}
                     </Btn>
@@ -1088,7 +1105,6 @@ export default function Team() {
                   </Press>
                 </View>
               </View>
-              {salary ? <SalaryBar salary={salary} /> : null}
               {editable ? (
                 <View
                   style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
@@ -1244,14 +1260,9 @@ export default function Team() {
               focusSlot={focusSlot}
               onFocused={() => setFocusSlot(null)}
               season={season}
-              salary={salary}
+              onAch={season > 0 && season === current ? () => open('achievements') : undefined}
               fatigue={fatigue}
               change={(nextSlots, nextLayout) => {
-                // T-11-376 지난 시즌 선수는 급여 예산 안에서만.
-                if (salaryBlocks(slots, nextSlots, byId, season, budget)) {
-                  const added = nextSlots.find((id) => id !== null && !slots.includes(id)) ?? null;
-                  return toast(salaryFullText(nextSlots, added, byId, season, budget));
-                }
                 setSlots(nextSlots);
                 setLayout(nextLayout);
               }}
@@ -1494,6 +1505,21 @@ export default function Team() {
           locked={!!cupState.me?.locked && !cupPreset}
           cupLocked={!!cupState.me?.locked}
           cup={season > 0}
+          league={
+            team
+              ? presetSummary(
+                  presetOf(
+                    '',
+                    team.formation as FormationId,
+                    team.slots.map((x) => x.careerId),
+                    team.layout ?? null,
+                  ),
+                )
+              : null
+          }
+          seasonOnly={!!cupState.cup?.cup.seasonCardsOnly && cupState.cup?.cup.season === season}
+          cupPast={cupPreset ? pastInSlots(cupPreset.slots, byId, season) : 0}
+          onSeason={() => void makeSeasonCup()}
           draft={(presetName) =>
             presetOf(presetName, formation, slots, season > 0 ? positions : null)
           }

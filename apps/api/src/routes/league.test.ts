@@ -131,6 +131,7 @@ describe('/v1/leagues (T-11-418)', () => {
       team: null,
       lastTeam: null,
       placement: null,
+      lateDrawAt: null,
     });
     const r = await enter(a.cookie);
     expect([r.status, await reason(r)]).toEqual([409, 'LEAGUE_CLOSED']);
@@ -146,6 +147,7 @@ describe('/v1/leagues (T-11-418)', () => {
       team: null,
       lastTeam: null,
       placement: null,
+      lateDrawAt: null,
     });
     expect((await enter(a.cookie)).status).toBe(204);
     expect(await me(a.cookie)).toMatchObject({ entry: { createdAt: PRESIGN }, canEnter: false });

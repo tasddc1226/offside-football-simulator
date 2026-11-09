@@ -256,7 +256,10 @@ export const OwnerTeamResponseSchema = z.strictObject({
   matchesPerDay: z.number().int().min(1),
   /** 하루 경기를 다 치렀을 때 다음 1경기가 열리는 시각. 배포 전 응답엔 없다. */
   matchesNextAt: z.string().nullable().optional(),
-  /** T-11-376 지난 시즌 선수 급여 예산(운영 도구 밸런스 활성 값). 배포 전 응답엔 없다 — 화면은 PAST_SALARY_BUDGET을 쓴다. */
+  /**
+   * 폐기: 지난 시즌 선수 급여 예산(T-11-376). 급여 제한을 없앤 뒤 새 화면은 읽지 않는다. 아직 OTA를 받지 않은 옛 앱이
+   * 이 값으로 편성을 막으므로 서버는 막지 않을 만큼 큰 값(LEGACY_NO_SALARY_BUDGET)을 계속 보낸다.
+   */
   pastSalaryBudget: z.number().int().min(0).optional(),
   /** T-11-373 카드 강화를 받는가(밸런스 enhanceOpen). 구버전 응답에는 없다(닫힘). */
   enhanceOpen: z.boolean().optional(),

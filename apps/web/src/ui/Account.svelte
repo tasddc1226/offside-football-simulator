@@ -9,7 +9,7 @@
   import {
     unlinkGoogle, logout, startProfileDeletion, confirmProfileDeletion,
   } from '@offside/app-core/api/client';
-  import { accountCache, ensureAccount, loadAccount as load } from './account-state.svelte.js';
+  import { accountCache, ensureAccount, loadAccount as load, setAccount } from './account-state.svelte.js';
   import { refreshChatIdentity } from './chat-state.svelte.js';
   import { accountLabel, isMember, runProfileDeletion } from '@offside/app-core/account';
   import { closeSheet, showSheet } from './sheetState.svelte.js';
@@ -24,7 +24,8 @@
   // 로그인 상태는 OAuth 복귀(전체 새로고침)나 이 패널의 버튼으로만 바뀐다 — 설정을 오갈 때마다 다시 묻지 않는다.
   // 화면은 반응형 모듈 캐시를 그대로 그린다(설정의 운영 도구 입구도 같은 값을 본다).
   const profile = $derived(accountCache.value);
-  const set = (v: typeof accountCache.value) => (accountCache.value = v);
+  // T-11-669 로그아웃 · 삭제도 계정 변경으로 알린다(은퇴 화면 실험 귀속을 지운다).
+  const set = (v: typeof accountCache.value) => setAccount(v, false);
 
   onMount(ensureAccount);
 

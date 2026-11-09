@@ -49,8 +49,6 @@ const ko = {
   rankAtkK: '랭크 전력 차이 반영',
   leagueFatigue: '리그 체력',
   leagueHomeAdv: '리그 홈 이점',
-  pastSalaryBudget: '지난 시즌 선수 급여 예산',
-  pastSalaryBudgetStep: '시즌당 급여 예산 증가',
   teamMatchRechargeMin: '랭크 경기 충전 간격(분)',
   rerollPrice: '리롤권 가격',
   rerollPriceGrowth: '리롤권 가격 상승 배율',
@@ -85,6 +83,7 @@ const ko = {
   teamDivReward5: '엘리트 II 시즌 보상 리롤권',
   teamDivReward6: '엘리트 I 시즌 보상 리롤권',
   teamDivReward7: '마스터 시즌 보상 리롤권',
+  retireExpShare: '은퇴 화면 실험 비율',
   eventWeight: (p: { n: number }) => `이벤트 등장 빈도 조정 ${p.n}건`,
   choiceBonus: (p: { n: number }) => `선택지 성공 확률 조정 ${p.n}건`,
 };

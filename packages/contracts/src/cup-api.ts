@@ -104,6 +104,8 @@ export const CupInfoSchema = z.strictObject({
   division: CupDivisionSchema.optional(),
   /** T-11-410 팀 OVR 상한(마스터 · 접수 전 아랫 구간은 null). */
   ovrMax: z.number().int().nullable().optional(),
+  /** T-11-656 이번 시즌 카드만 나가는 컵(옛 회차 · 옛 응답에는 없다). */
+  seasonCardsOnly: z.boolean().optional(),
 });
 export type CupInfo = z.infer<typeof CupInfoSchema>;
 
@@ -166,10 +168,22 @@ export type CupHomeResponse = z.infer<typeof CupHomeResponseSchema>;
 export const CupEligibilitySchema = z.strictObject({
   ok: z.boolean(),
   // T-11-410 over-cap = 팀 OVR이 구간 상한보다 높다, entered-other = 같은 회차 다른 구간에 신청했다.
+  // T-11-656 past-cards = 이번 시즌 선수 컵인데 컵 명단에 지난 시즌 카드가 있다.
   reason: z
-    .enum(['no-team', 'not-enough', 'listed', 'closed', 'full', 'over-cap', 'entered-other'])
+    .enum([
+      'no-team',
+      'not-enough',
+      'listed',
+      'closed',
+      'full',
+      'over-cap',
+      'entered-other',
+      'past-cards',
+    ])
     .nullable(),
   filled: z.number().int(),
+  /** T-11-656 컵 명단의 지난 시즌 카드 수(이번 시즌 선수 컵일 때만). */
+  past: z.number().int().optional(),
 });
 
 export const CupEntryStatusSchema = z.enum(['active', 'out', 'champion', 'withdrawn']);
@@ -306,7 +320,7 @@ export const HomeGiftResponseSchema = z.strictObject({
   gift: z
     .strictObject({
       id: z.string(),
-      kind: z.enum(['achSeason', 'recordSeason', 'adFreeThanks']).optional(),
+      kind: z.enum(['achSeason', 'recordSeason', 'adFreeThanks', 'updateThanks']).optional(),
       season: z.number().int().min(1).optional(),
       boost: z.number().int().min(0),
       scout: z.number().int().min(0),

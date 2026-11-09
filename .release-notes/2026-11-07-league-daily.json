@@ -1,0 +1,30 @@
+{
+  "id": "t-11-652-league-daily",
+  "title": "오프사이드 데일리",
+  "items": [
+    "리그 라운드가 끝나면 리그 화면에 신문이 나와요. 이변 · 역전승 · 극장골 · 해트트릭 소식과 다음 빅매치 예측(보상 없이 적중 기록만)이 있어요.",
+    "라운드 결과 알림에 그날 신문 1면이 함께 와요. 경기 상세 기사는 라운지에 공유할 수 있고, 순위표에 라이벌 · 더비가 표시돼요."
+  ],
+  "en": {
+    "title": "OFFSIDE Daily",
+    "items": [
+      "After each league round, a paper appears on the league screen with upsets, comebacks, late winners and hat-tricks, plus a big match prediction (no rewards).",
+      "Round result notifications now carry the day’s front page. Match reports can be shared to the lounge, and the table marks rivals and derbies."
+    ]
+  },
+  "ja": {
+    "title": "オフサイド・デイリー",
+    "items": [
+      "リーグの節が終わるとリーグ画面に新聞が出ます。番狂わせ・逆転勝ち・劇的ゴール・ハットトリックのニュースとビッグマッチ予想（報酬なし）があります。",
+      "節の結果通知にその日の一面が付きます。試合記事はラウンジで共有でき、順位表にライバル・ダービーが表示されます。"
+    ]
+  },
+  "zh": {
+    "title": "OFFSIDE 日報",
+    "items": [
+      "聯賽每輪結束後，聯賽畫面會出現報紙，有爆冷・逆轉勝・絕殺・帽子戲法消息和焦點戰預測（沒有獎勵）。",
+      "每輪結果通知會附上當天頭條。賽事報導可分享到交誼廳，積分榜會標示宿敵和德比。"
+    ]
+  },
+  "availability": "web-app"
+}

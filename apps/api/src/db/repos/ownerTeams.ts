@@ -367,9 +367,8 @@ export const myTeamIn = (db: Db, profileId: string, season: number) =>
     .where(and(eq(ownerTeams.profileId, profileId), eq(ownerTeams.season, season)));
 
 /**
- * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). T-11-376 지난 시즌 선수는 급여 합이
- * 예산(pastSalaryBudget) 안에서만 선발에 넣는다(PUT이 센다). T-11-080부터 직접 키운 선수 + 영입한
- * 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
+ * 그 시즌에 넣을 수 있는 내 선수 카드(그 시즌까지 올라온 선수, 최고 OVR 순). 지난 시즌 선수도 몇 명이든 선발에 넣는다.
+ * T-11-080부터 직접 키운 선수 + 영입한 선수 — 소유는 cards.owner_id다. 공개 이름·숨김·옛 추정 능력치·키운 사람은 careers에서 붙인다(기록이 지워졌으면 익명).
  */
 function eligibleQuery(db: Db, profileId: string, only: SQL | undefined) {
   return db

@@ -1,12 +1,9 @@
 import { z } from 'zod';
 
-import { DYNAMIC_LEAGUES } from './club-strength-spec.js';
+import { DYNAMIC_CLUB_ID, DYNAMIC_LEAGUES } from './club-strength-spec.js';
 export { DYNAMIC_LEAGUES, CLUB_LEAGUE_AVG } from './club-strength-spec.js';
 export const ClubStrengthLeagueSchema = z.enum(DYNAMIC_LEAGUES);
-const values = z.record(
-  z.string().regex(/^(k1|j1|mls|ere|l1|bl|sa|ll|pl)-\d+$/),
-  z.number().int().min(1).max(99),
-);
+const values = z.record(z.string().regex(DYNAMIC_CLUB_ID), z.number().int().min(1).max(99));
 export const ClubStrengthSnapshotSchema = z.object({
   v: z.number().int().min(1),
   asOf: z.iso.date(),
@@ -31,7 +28,7 @@ export const StrengthRunSchema = z.object({
   day: z.iso.date(),
   at: z.iso.datetime(),
   version: z.number().int(),
-  leagues: z.array(StrengthLeagueRunSchema).max(9),
+  leagues: z.array(StrengthLeagueRunSchema).max(DYNAMIC_LEAGUES.length),
 });
 export type StrengthRun = z.infer<typeof StrengthRunSchema>;
 export const StrengthHistorySchema = z.object({

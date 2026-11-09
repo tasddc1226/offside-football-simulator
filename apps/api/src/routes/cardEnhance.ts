@@ -14,7 +14,7 @@ import {
   enhanceTierRules,
   type EnhanceCardState,
 } from '@offside/contracts/card-enhance';
-import { pastSalarySum, type FormationId } from '@offside/contracts/owner-team';
+import { type FormationId } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import {
@@ -25,7 +25,6 @@ import {
   type EnhanceCardRow,
   type EnhanceTeamChange,
 } from '../db/repos/cardEnhance.js';
-import { pastSalaryBudgetOf } from '../db/repos/balance.js';
 import { enhanceTitlesAfter } from '../db/repos/ownerTitles.js';
 import {
   careersByIds,
@@ -113,37 +112,6 @@ const eligibleAt = (
     season,
     true,
   );
-
-/**
- * 성공하면 이 카드가 든 편성의 지난 시즌 급여가 예산을 넘는 시도는 막는다. 예산은 편성을 저장할 때만 재므로, 여기서 막지 않으면 넘은 채로
- * 경기를 뛰게 된다. 팀 선발과 컵 명단을 함께 본다.
- */
-async function checkEnhanceSalary(
-  db: Db,
-  l: EnhanceLineups,
-  profileId: string,
-  careerId: string,
-  season: number,
-  nextLevel: number,
-) {
-  const eligible = eligibleAt(l, profileId, careerId, season, nextLevel);
-  const salaryOf = (slots: readonly (string | null)[]) =>
-    pastSalarySum(
-      slots.filter((x): x is string => !!x).map((id) => eligible.get(id)),
-      season,
-    );
-  const salary = Math.max(
-    l.inTeam ? salaryOf(l.slots) : 0,
-    l.inCup && l.cup ? salaryOf(l.cup.slots) : 0,
-  );
-  if (salary === 0) return;
-  const budget = await pastSalaryBudgetOf(db, season);
-  if (salary > budget)
-    throw conflictError(
-      '강화에 성공하면 선발 급여가 예산을 넘어요. 선발을 바꾼 뒤 다시 시도해 주세요.',
-      'ENHANCE_SALARY',
-    );
-}
 
 /**
  * 단계가 바뀐 뒤의 팀 OVR · 컵 명단 OVR. 저장된 값이 곧 랭킹 · 매칭 · 컵 구간의 기준이므로, 강화 batch에서 함께 고친다.
@@ -253,13 +221,17 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
       throw stale();
     // 잔액 행이 없거나 모자라면 batch 전에 막는다(batch도 잔액을 다시 본다).
     if (snap.balance < cost) throw fundsShort();
-    // 팀 행은 한 번만 읽어 컵 · 리그 잠금 · 급여 · OVR 계산에 함께 쓴다.
+    // 팀 행은 한 번만 읽어 컵 · 리그 잠금 · OVR 계산에 함께 쓴다.
     const season = teamSeasonAt(now);
     const [team] = season === null ? [] : await myTeamIn(db, me.id, season);
-    await checkCupEnhance(db, me.id, careerId, season, now, team);
     const lineups = season === null ? null : await lineupsWith(db, careerId, team);
-    if (lineups && season !== null)
-      await checkEnhanceSalary(db, lineups, me.id, careerId, season, card.level + 1);
+    // T-11-655 추첨 뒤에는 성공했을 때의 컵 명단 OVR이 구간 상한 안이어야 한다(컵 명단 프리셋이 없으면 팀 명단이 컵 명단).
+    await checkCupEnhance(db, me.id, careerId, season, now, team, () => {
+      if (!lineups || season === null) return null;
+      if (lineups.cup ? !lineups.inCup : !lineups.inTeam) return null;
+      const after = teamOvrAfter(lineups, me.id, careerId, season, card.level + 1);
+      return lineups.cup ? (after.cupOvr ?? null) : after.ovr;
+    });
 
     const r = roll();
     const out = enhanceOutcome(card.level, card.fails, r, odds);

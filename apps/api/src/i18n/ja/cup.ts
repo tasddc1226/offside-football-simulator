@@ -77,7 +77,12 @@ export const CUP_JA: Record<CupTextKey, string> = {
   cardLocked: 'オフサイドカップ参加中のスタメン選手は出品できません。',
   cardReleaseLocked: 'オフサイドカップ参加中のスタメン選手は放出できません。',
   cardManager: 'オフサイドカップ参加中のスタメン選手は監督キャリアを始められません。',
-  cardEnhance: 'オフサイドカップ参加中のスタメン選手は強化できません。',
+  cardEnhance:
+    'オフサイドカップの試合1時間前から試合終了まで、カップメンバーの選手は強化できません。',
+  pastCards:
+    '今回のオフサイドカップはシーズン{season}の選手だけが出場できます。カップメンバーから過去シーズンの選手を外してください。',
+  enhanceCap:
+    '強化に成功するとカップメンバーのOVRが{division}の上限{n}を超えます。カップメンバーを変更してからもう一度お試しください。',
   leagueEnhance: 'オフサイドリーグの試合1時間前から試合終了まで、スタメン選手を強化できません。',
   droppedTitle: '{cup}へのエントリーが取り消されました',
   droppedBody: '抽選時点でスタメン選手が{n}人未満だったため参加できませんでした。',
@@ -125,6 +130,11 @@ export const CUP_JA: Record<CupTextKey, string> = {
     '第{round}節の試合は{time}に始まります。{lock}にメンバーが固定されますが、スタメンが{filled}/11人なので空いた枠はユース選手が出場します。',
   leaguePlacedTitle: 'シーズン{season} オフサイドリーグ組分け結果',
   leaguePlacedBody: '{team}は{tier}部 {title}です。第1節は今日{time}に始まります。',
+  leagueLatePlacedBody: '{team}は{tier}部 {title}です。最初の試合は今日{time}から始まります。',
+  leagueLateDroppedBody:
+    '最後の組分け時刻にシーズン{season}チームのスタメン選手が{n}人に届きませんでした。次のシーズンにまた申し込めます。',
+  leagueLateLeftBody:
+    '最後の組分けでリーグを組めるだけのチームが集まりませんでした。次のシーズンにまた申し込めます。',
   leagueDroppedTitle: 'シーズン{season} オフサイドリーグの参加が取り消されました',
   leagueDroppedBody:
     '組分け時刻にシーズン{season}チームのスタメン選手が{n}人に届きませんでした。次のシーズンにまた申し込めます。',
@@ -135,6 +145,20 @@ export const CUP_JA: Record<CupTextKey, string> = {
   leagueRoundBody: '{score}・現在{rank}位です',
   leagueRoundForfeitBody:
     '{score}・スタメンが足りず不戦敗になりました。棄権{n}/{limit}回、あと{left}回棄権すると残り試合はすべて0:3の負けです。',
+  leagueRoundDailyBody: '{line}\n今日の新聞: {head}',
+  leagueRoundMineBody: '{line}\nチームが新聞に載りました: {head}',
+  dailyUpset: '{team}、OVR差{gap}をひっくり返す',
+  dailyComeback: '{team}、{n}点差からの逆転勝ち',
+  dailyLate: '{team}、{n}分の劇的ゴールで勝利',
+  dailyHattrick: '{team}でハットトリック',
+  dailyDerby: '{team}、順位の直接対決を制す',
+  dailyDerbyDraw: '{team}、順位の直接対決は引き分け',
+  dailyGoalfest: '{team}の試合で{n}ゴールの乱打戦',
+  dailyFirstWin: '{team}、{n}試合目で今季初勝利',
+  dailyStreak: '{team}、{n}連勝',
+  dailyRout: '{team}、{n}点差の完勝',
+  dailyLeaderNew: '{team}、{n}部首位に浮上',
+  dailyLeaderKeep: '{team}、{n}部首位を守る',
   leagueRest: 'お休み',
   leagueRestBody: '今節はお休みでした・現在{rank}位です',
   leagueEndTitle: 'シーズン{season} オフサイドリーグが終わりました',

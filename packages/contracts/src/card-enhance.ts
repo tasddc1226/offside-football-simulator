@@ -1,6 +1,6 @@
 // T-11-373 카드 강화(docs/tracking/card-enhance-plan.md, 2026-10-30 다시 짬). 은퇴 카드를 +1~+10까지 올린다. zod가 없는
 // 서브패스(`@offside/contracts/card-enhance`)라 웹 · 앱 · 서버가 같은 표로 확률 · 비용 · 효과를 그린다. 판정은 서버만 한다.
-// - 효과: 단계마다 정수 강화 OVR(ENHANCE_OVR). 자리 실력 · 팀 OVR · 경기 · 급여 · 컵 구간이 같은 값을 쓴다. 커리어 최고 OVR
+// - 효과: 단계마다 정수 강화 OVR(ENHANCE_OVR). 자리 실력 · 팀 OVR · 경기 · 컵 구간이 같은 값을 쓴다. 커리어 최고 OVR
 //   (레전드 점수 · 명예의 전당 · BEST 11 · 기준가)은 바꾸지 않는다.
 // - 결과는 셋이다: 성공(+1) · 유지(그대로) · 실패(-1, +0에서는 내려가지 않는다). 천장은 없다(확률은 몇 번을 실패해도 그대로다).
 // 표의 모양은 여기에 고정하고, 운영 도구에서는 열기 · 비용 · 확률 배율(balance-spec enhance*)만 바꾼다.
@@ -70,7 +70,7 @@ export const enhanceLevel = (v: unknown): number =>
 /** 그 단계의 강화 OVR. */
 export const enhanceOvr = (level: unknown): number => ENHANCE_OVR[enhanceLevel(level)] ?? 0;
 
-/** 커리어 최고 OVR에 강화 OVR을 더한 값(구단주 팀 전력 · 급여에 쓴다). */
+/** 커리어 최고 OVR에 강화 OVR을 더한 값(구단주 팀 전력에 쓴다). */
 export const enhancedPeak = (card: { peak: number; enhance?: number | null | undefined }) =>
   card.peak + enhanceOvr(card.enhance);
 
@@ -153,6 +153,13 @@ export function enhanceOutcome(
  */
 export const tradeValue = (cardValue: number, enhance?: number | null) =>
   cardValue + enhanceValue(enhance ?? 0);
+
+/**
+ * T-11-650 강화 단계 열(SQL)을 강화 가치(만 원)로 바꾸는 식. 구단 가치(자금 + 카드 몫)와 구단 가치 랭킹(선발 가치)이 카드 기준가에
+ * 이 값을 더한다. 값은 코드 상수라 그대로 넣는다. 선발 가치 트리거(마이그레이션 0150)는 같은 숫자를 직접 적고 테스트가 맞춰 본다.
+ */
+export const enhanceValueSql = (col: string) =>
+  `CASE ${col} ${Array.from({ length: ENHANCE_MAX }, (_, i) => `WHEN ${i + 1} THEN ${enhanceValue(i + 1)}`).join(' ')} ELSE 0 END`;
 
 /**
  * T-11-373 강화 단계까지 넣은 판매가 범위(만 원, 100 단위). 하한은 전체 가치에 priceMin을 곱하고, 상한은 기준가에만 priceMax를

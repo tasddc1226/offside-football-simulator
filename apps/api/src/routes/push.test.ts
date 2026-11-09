@@ -280,7 +280,9 @@ describe('app push registration and own-device test', () => {
       "UPDATE push_devices SET updated_at = '2000-01-01T00:00:00.000Z'",
     ).run();
     expect(await ownPushDevice(ctx.env.DB, a.session, INSTALL, now)).toBeNull();
-    expect((await cleanupExpired(ctx.env.DB, Date.parse(now))).push_devices).toBe(1);
+    expect(
+      (await cleanupExpired(ctx.env.DB, Date.parse(now), {}, ctx.env.OPS_DB)).push_devices,
+    ).toBe(1);
   });
   it('defaults test delivery off, including for registered non-admin users', async () => {
     const a = await identity();
@@ -349,7 +351,7 @@ describe('app push registration and own-device test', () => {
     const result = await Promise.allSettled(
       Array.from({ length: 8 }, (_, i) =>
         reservePushTest(
-          ctx.env.DB,
+          ctx.env.OPS_DB!,
           i % 2 ? INSTALL : OTHER_INSTALL,
           a.session.profileId,
           '2026-10-05T05:00:00.000Z',
@@ -358,14 +360,15 @@ describe('app push registration and own-device test', () => {
     );
     expect(result.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
     expect(result.filter((r) => r.status === 'rejected')).toHaveLength(7);
-    const counters = await ctx.env.DB.prepare(
-      "SELECT count FROM auth_attempts WHERE kind = 'PUSH_TEST'",
-    ).all();
+    const counters = await ctx.env
+      .OPS_DB!.prepare("SELECT count FROM auth_attempts WHERE kind = 'PUSH_TEST'")
+      .all();
     expect(counters.results).toEqual([{ count: 1 }, { count: 1 }]);
   });
   it('limits each KST day to three requests and keeps cooldown across midnight', async () => {
     const a = await identity();
-    const sendAt = (now: string) => reservePushTest(ctx.env.DB, INSTALL, a.session.profileId, now);
+    const sendAt = (now: string) =>
+      reservePushTest(ctx.env.OPS_DB!, INSTALL, a.session.profileId, now);
     await sendAt('2026-10-05T14:30:00.000Z');
     await sendAt('2026-10-05T14:40:00.000Z');
     expect(await sendAt('2026-10-05T14:55:00.000Z')).toBe('2026-10-05T15:05:00.000Z');
@@ -382,7 +385,7 @@ describe('app push registration and own-device test', () => {
     const b = await identity();
     for (const minute of ['00', '10', '20'])
       await reservePushTest(
-        ctx.env.DB,
+        ctx.env.OPS_DB!,
         INSTALL,
         a.session.profileId,
         `2026-10-05T05:${minute}:00.000Z`,
@@ -391,10 +394,15 @@ describe('app push registration and own-device test', () => {
     await call(a.token, 'DELETE', '/v1/push/device', { installationId: INSTALL });
     await call(b.token, 'PUT', '/v1/push/device', { ...INPUT, token: 'ExpoPushToken[rotated]' });
     await expect(
-      reservePushTest(ctx.env.DB, INSTALL, b.session.profileId, '2026-10-05T05:30:00.000Z'),
+      reservePushTest(ctx.env.OPS_DB!, INSTALL, b.session.profileId, '2026-10-05T05:30:00.000Z'),
     ).rejects.toMatchObject({ details: { reason: 'PUSH_TEST_DAILY_LIMIT' } });
     await expect(
-      reservePushTest(ctx.env.DB, OTHER_INSTALL, a.session.profileId, '2026-10-05T05:30:00.000Z'),
+      reservePushTest(
+        ctx.env.OPS_DB!,
+        OTHER_INSTALL,
+        a.session.profileId,
+        '2026-10-05T05:30:00.000Z',
+      ),
     ).rejects.toMatchObject({ details: { reason: 'PUSH_TEST_DAILY_LIMIT' } });
   });
   it('reserves the cooldown before an uncertain external send and does not resend', async () => {

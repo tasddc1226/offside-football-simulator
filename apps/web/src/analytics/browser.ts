@@ -5,7 +5,18 @@ import {
   type Progress,
 } from '@offside/app-core/player-metrics';
 import type { OperationResult } from '@offside/app-core/measurement';
+import {
+  createRetireExpMetrics,
+  RETIRE_EXP_STORE,
+  type AccountKey,
+} from '@offside/app-core/retireExpMetrics';
 import type { AppStoreOs } from '@offside/app-core/appPromo';
+import { shareEventParams, type ShareOutcome } from '@offside/app-core/shareMeasurement';
+import {
+  COMMERCE_EVENT,
+  commerceParams,
+  type CommerceObservation,
+} from '@offside/app-core/commerceStage';
 import type { AppStorePlace } from './index.js';
 import {
   AD_CONSENT_KEY,
@@ -37,6 +48,23 @@ const playerMetrics = createPlayerMetrics({
   write: (raw) => localStorage.setItem(PLAYER_METRICS_KEY, raw),
   send: (name, params) => send(name, { ...params, identity_scope: 'device' }),
 });
+// T-11-669 은퇴 화면 실험. 동의한 사람만 기기에 결과 귀속 기록을 남기고 보낸다(동의를 거두면 stop()이 지운다).
+export const retireExp = createRetireExpMetrics({
+  allowed: () => allowed() && loaded && screen !== 'admin',
+  read: () => localStorage.getItem(RETIRE_EXP_STORE),
+  write: (raw) => localStorage.setItem(RETIRE_EXP_STORE, raw),
+  send: (name, params) => send(name, params),
+  now: Date.now,
+  account: () => accountKey(),
+  needAccount: () => needAccount(),
+});
+let accountKey: () => AccountKey = () => undefined;
+let needAccount: () => void = () => {};
+/** index.ts가 지금 계정 키를 읽는 함수와, 계정을 모를 때 확인을 부탁하는 함수를 건다(화면 상태를 직접 import하지 않게). */
+export function setRetireAccountKey(fn: () => AccountKey, need: () => void) {
+  accountKey = fn;
+  needAccount = need;
+}
 let metricQueue = Promise.resolve();
 function metric(fn: () => void) {
   if (!allowed() || !loaded || screen === 'admin') return;
@@ -96,9 +124,9 @@ export function onConsent(fn: () => void): () => void {
     listeners.delete(fn);
   };
 }
-function tag(...args: unknown[]) {
+function tag(...args: unknown[]): unknown {
   try {
-    w().gtag?.(...args);
+    return w().gtag?.(...args);
   } catch {
     /* browser blockers */
   }
@@ -114,9 +142,9 @@ function pageParams(): Params {
     page_referrer: referrer,
   };
 }
-function send(event: string, params: Params = {}) {
+function send(event: string, params: Params = {}): unknown {
   if (!allowed() || !loaded || screen === 'admin') return;
-  tag('event', event, {
+  return tag('event', event, {
     ...pageParams(),
     measurement_version: '3',
     test_marker: env.VITE_GA4_TEST_MARKER === 'qa' || id !== prodId ? 'qa' : 'live',
@@ -149,6 +177,8 @@ async function loadTag() {
   Reflect.set(window, `ga-disable-${id}`, false);
   if (loaded) {
     pageView();
+    // T-11-669 태그를 이미 한 번 불러온 뒤 철회 → 재동의한 경우에도 보류한 은퇴 화면 노출을 보낸다.
+    retireExp.ready();
     return;
   }
   loaded = true;
@@ -197,6 +227,7 @@ async function loadTag() {
   // Consent withdrawal disables an in-flight load too.
   document.head.append(script);
   pageView();
+  retireExp.ready();
   for (const result of initialOperations.splice(0)) trackOperation(result);
 }
 function stop() {
@@ -211,6 +242,7 @@ function stop() {
   try {
     localStorage.removeItem(LEDGER_KEY);
     localStorage.removeItem(PLAYER_METRICS_KEY);
+    localStorage.removeItem(RETIRE_EXP_STORE);
   } catch {
     /* denied storage */
   }
@@ -328,11 +360,13 @@ export const analytics = {
   complete: (p: Progress) => {
     const snapshot = { ...p };
     metric(() => playerMetrics.complete(snapshot));
+    retireExp.complete(snapshot);
   },
   play: (s: Career, firstAction = false) => tracker?.play(s, firstAction),
   firstSeason: (s: Career) => {
     tracker?.firstSeason(s);
-    trackMeta('FirstSeason');
+    // game-actions는 시즌이 끝날 때마다 부른다. Meta 첫 시즌 전환은 첫 시즌을 마친 그때만 보낸다.
+    if (s.career.length === 1) trackMeta('FirstSeason');
     metric(() => playerMetrics.season());
   },
   retire: (s: Career) => {
@@ -351,16 +385,24 @@ export const trackAppStoreClick = (place: AppStorePlace, store: AppStoreOs) => {
     /* optional */
   }
 };
-export const trackShareClick = () => {
+// T-11-668 공유 시트 · 복사 · 취소 · 실패를 따로 보낸다. 옛 판은 네이티브 성공도 career_share_copy_success(copy_link)로 보냈다.
+export const trackShare = (o: ShareOutcome) => {
   try {
-    send('career_share_click', { share_method: 'copy_link' });
+    const { name, params } = shareEventParams(o);
+    send(name, params);
   } catch {
     /* optional */
   }
 };
-export const trackShareSuccess = () => {
+
+/** 강화권 · 스카우트권 구매 퍼널(commerceStage). 보내는 순간의 이용 분석 동의 · 태그만 본다. 쌓아 두지 않는다. */
+export const trackCommerce = (o: CommerceObservation) => {
   try {
-    send('career_share_copy_success', { share_method: 'copy_link' });
+    const params = commerceParams(o);
+    if (!params) return;
+    // 막는 확장 · 대체 gtag가 promise를 돌려주고 거절해도 결제 흐름 · 콘솔에 새지 않게 여기서 삼킨다.
+    const r = send(COMMERCE_EVENT, params) as { then?: unknown } | undefined;
+    if (r && typeof r.then === 'function') (r as Promise<unknown>).then(undefined, () => {});
   } catch {
     /* optional */
   }

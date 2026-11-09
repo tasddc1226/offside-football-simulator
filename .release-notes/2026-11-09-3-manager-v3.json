@@ -1,0 +1,35 @@
+{
+  "id": "t-11-648-manager-v3",
+  "title": "감독 커리어 개편: 감독 키우기",
+  "items": [
+    "새로 시작하는 감독 커리어는 이름 있는 선수단을 맡아 이적시장, 구간별 전술, 선수 이야기를 직접 정해요.",
+    "감독 능력치 9개와 지도자 자격(C·B·A·P)을 시즌마다 키우고, 5시즌부터 원할 때 은퇴해요.",
+    "진행 중인 감독 커리어는 지금 방식 그대로 끝까지 이어져요."
+  ],
+  "en": {
+    "title": "Manager career rework: grow your manager",
+    "items": [
+      "New manager careers give you a named squad. You decide transfers, tactics for each block of matches, and how to handle player stories.",
+      "Grow nine manager attributes and your coaching licence (C, B, A, P) each season, and retire whenever you like from season 5.",
+      "Manager careers already in progress keep the current rules until they finish."
+    ]
+  },
+  "ja": {
+    "title": "監督キャリア刷新：監督を育てる",
+    "items": [
+      "新しく始める監督キャリアでは名前のある選手団を率い、移籍市場、区間ごとの戦術、選手のイベントを自分で決めます。",
+      "監督能力9種と指導者ライセンス（C・B・A・P）をシーズンごとに育て、5シーズン目から好きなときに引退できます。",
+      "進行中の監督キャリアは今の方式のまま最後まで続きます。"
+    ]
+  },
+  "zh": {
+    "title": "總教練生涯改版：培養總教練",
+    "items": [
+      "新開始的總教練生涯會帶領有名字的球員陣容，親自決定轉會市場、各階段戰術與球員事件。",
+      "每季培養9項總教練能力與教練證照（C·B·A·P），第5季起可隨時退休。",
+      "進行中的總教練生涯會照目前的方式進行到結束。"
+    ]
+  },
+  "availability": "web",
+  "balance": true
+}

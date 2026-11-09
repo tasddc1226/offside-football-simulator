@@ -109,7 +109,7 @@ export const teamAch: Translation<TeamAchMsgs> = {
   teamsEmpty: '目前還沒有球隊登上排行榜。在老闆畫面用退役球員組建球隊，就會出現在這裡。',
   teamsFoot: '積分會隨球隊比賽結果升降。排行榜每 5 分鐘更新一次。',
   teamsFootRp: 'RP 會隨排位賽結果升降。排行榜每 5 分鐘更新一次。',
-  valueFoot: '俱樂部價值為 11 名先發球員卡片基準價的總和。排行榜每 5 分鐘更新一次。',
+  valueFoot: '俱樂部價值為 11 名先發球員卡片基準價加上強化價值的總和。排行榜每 5 分鐘更新一次。',
   homeValueTitle: '俱樂部價值 TOP 3',
   homeValueSub: '為 11 名先發球員卡片基準價的總和。',
   homeValueEmpty: '目前還沒有球隊登上排行榜。',

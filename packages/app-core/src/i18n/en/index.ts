@@ -65,6 +65,7 @@ import { iap } from './iap';
 import { inbox } from './inbox';
 import { keyMoment } from './keyMoment';
 import { league } from './league';
+import { leagueNews } from './leagueNews';
 import { legend } from './legend';
 import { legendRn } from './legendRn';
 import { legendStyle } from './legendStyle';
@@ -87,10 +88,10 @@ import { push } from './push';
 import { ratingReport } from './ratingReport';
 import { rename } from './rename';
 import { retention } from './retention';
+import { retireExp } from './retireExp';
 import { retired } from './retired';
 import { retiredLook } from './retiredLook';
 import { reveal } from './reveal';
-import { salary } from './salary';
 import { scout } from './scout';
 import { seasonGauge } from './seasonGauge';
 import { seasonPass } from './seasonPass';
@@ -192,6 +193,7 @@ export const en = {
   inbox,
   keyMoment,
   league,
+  leagueNews,
   legend,
   legendRn,
   legendStyle,
@@ -214,10 +216,10 @@ export const en = {
   ratingReport,
   rename,
   retention,
+  retireExp,
   retired,
   retiredLook,
   reveal,
-  salary,
   scout,
   seasonGauge,
   seasonPass,

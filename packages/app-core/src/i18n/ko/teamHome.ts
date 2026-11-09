@@ -297,11 +297,27 @@ const ko = {
   retireSyncRetrying: '올리는 중',
   retireSyncFailed: '아직 올리지 못했어요. 연결을 확인하고 다시 올리기를 눌러 주세요.',
   // T-11-217 팀 프리셋
-  tpButton: '프리셋',
-  tpTitle: '팀 프리셋',
-  tpIntro: '포메이션 · 선발 · 배치를 5개까지 저장해요. 불러온 편성은 저장을 눌러야 팀에 반영돼요.',
+  // T-11-657 명단 관리: 리그 선발 명단 · 컵 선발 명단 · 추가 프리셋
+  tpButton: '명단 관리',
+  tpTitle: '명단 관리',
+  tpIntro: '리그 선발 명단, 컵 선발 명단, 추가 프리셋을 나눠서 관리해요.',
+  tpLeagueTitle: '리그 선발 명단',
+  tpLeagueDesc:
+    '리그 · 랭크 경기 · 친선전에 나가요. 그라운드에서 고친 뒤 팀 저장을 누르면 바뀌어요.',
+  tpLeagueAlsoCup: '컵 선발 명단을 따로 정하지 않아서 컵 경기에도 이 명단으로 나가요.',
+  tpCupTitle: '컵 선발 명단',
+  tpCupDesc: '오프사이드 컵 경기에만 나가요. 리그 선발 명단과 같은 선수가 들어가도 돼요.',
+  tpCupEmpty: '따로 정한 컵 선발 명단이 없어요.',
+  tpCupNew: '지금 편성으로 컵 명단 만들기',
+  tpCupDefaultName: '컵 명단',
+  tpCupSet: '컵 명단으로 정하기',
+  tpCupUnset: '컵 명단 풀기',
+  tpExtraTitle: '추가 프리셋',
+  tpExtraDesc: '자주 쓰는 편성을 저장해 두고 불러와요. 경기에는 바로 나가지 않아요.',
+  tpEmpty: '저장한 추가 프리셋이 없어요.',
+  tpCount: (p: { n: number; max: number }) => `${p.n}/${p.max}`,
+  tpCountWithCup: (p: { n: number; max: number }) => `컵 명단 포함 ${p.n}/${p.max}`,
   tpNeedTeam: '팀을 한 번 저장하면 프리셋을 쓸 수 있어요.',
-  tpEmpty: '저장한 프리셋이 없어요.',
   tpSaveCurrent: '지금 편성 저장',
   tpFull: '프리셋은 5개까지예요. 하나를 덮어쓰거나 지워 주세요.',
   tpDefaultName: (p: { n: number }) => `프리셋 ${p.n}`,
@@ -318,18 +334,18 @@ const ko = {
   tpSaved: '프리셋을 저장했어요.',
   tpLoaded: '프리셋을 불러왔어요. 저장을 눌러야 팀에 반영돼요.',
   tpLoadedMissing: (p: { n: number }) =>
-    `프리셋을 불러왔어요. 지금 없는 선수 ${p.n}명의 자리는 비웠어요.`,
+    `프리셋을 불러왔어요. 지금 없는 선수 ${p.n}명의 자리는 비웠어요. 저장을 눌러야 팀에 반영돼요.`,
   tpLocked: '컵 명단이 잠겨 있어 지금은 불러올 수 없어요.',
   // T-11-570 컵 명단 프리셋
   tpCupBadge: '컵 명단',
-  tpCupTitle: '컵 경기 명단',
-  tpCupTeam: '팀 명단',
-  tpCupHint:
-    '컵 경기에 쓸 편성을 골라요. 팀 명단을 고르면 리그와 같은 선발로 뛰어요. 같은 선수가 양쪽에 들어가도 돼요.',
   tpMore: (p: { name: string }) => `${p.name} 관리`,
   tpCupSetDone: '컵 명단으로 정했어요. 컵 경기는 이 편성으로 뛰어요.',
   tpCupUnsetDone: '컵 명단을 풀었어요. 컵 경기도 팀 명단으로 뛰어요.',
   tpCupLocked: '컵 명단이 잠겨 있어 지금은 바꿀 수 없어요.',
+  // T-11-654 라커룸의 이번 시즌 육성 한 줄 → 시즌 업적
+  seasonRaised: (p: { season: string; n: number }) => `${p.season}에 키운 선수 ${p.n}명`,
+  seasonRaisedNone: (p: { season: string }) => `${p.season}에 키운 선수는 아직 없어요`,
+  seasonRaisedAch: '시즌 업적 보기',
 };
 
 export type TeamHomeMsgs = typeof ko;

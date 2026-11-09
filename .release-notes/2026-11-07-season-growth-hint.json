@@ -1,0 +1,30 @@
+{
+  "id": "t-11-654-season-growth-hint",
+  "title": "이번 시즌 육성 안내",
+  "items": [
+    "선수 만들기에서 후보를 고를 때 지금 시작하면 어느 시즌 선수가 되는지 보여 줘요. 은퇴하면 그 시즌 기록실과 구단주 시즌 업적에 들어가요.",
+    "내 팀 라커룸에서 이번 시즌에 키운 선수 수를 보고 바로 시즌 업적으로 갈 수 있어요."
+  ],
+  "en": {
+    "title": "This season's player guide",
+    "items": [
+      "When you pick a candidate while creating a player, you now see which season the player will belong to. After retiring, they count toward that season's records and your owner season achievements.",
+      "Your team's locker room now shows how many players you raised this season, with a shortcut to season achievements."
+    ]
+  },
+  "ja": {
+    "title": "今シーズンの育成案内",
+    "items": [
+      "選手作成で候補を選ぶとき、今始めるとどのシーズンの選手になるかを表示します。引退すると、そのシーズンの記録室とオーナーのシーズン実績に入ります。",
+      "マイチームのロッカールームで今シーズンに育てた選手の数を確認し、そのままシーズン実績へ移動できます。"
+    ]
+  },
+  "zh": {
+    "title": "本賽季培養提示",
+    "items": [
+      "建立球員選擇候選人時，會顯示現在開始的球員屬於哪個賽季。退役後會列入該賽季的紀錄室與老闆賽季成就。",
+      "在我的球隊更衣室可以看到本賽季培養的球員人數，並直接前往賽季成就。"
+    ]
+  },
+  "availability": "web-app"
+}

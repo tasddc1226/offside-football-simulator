@@ -18,6 +18,8 @@ export interface CupLineupBar {
   block: string | null;
   /** 줄 아래에 보이는 이유(막는 이유 먼저, 그다음 경고). */
   notes: string[];
+  /** T-11-657 이번 시즌 선수 컵인데 컵 명단에 든 지난 시즌 카드 수(0이면 문제없음). */
+  past: number;
 }
 
 /** 참가 중인 구간 규칙. 'current'로 부른 대회는 마스터일 수 있어 내 구간(me.cupId)의 상한을 구간 목록에서 읽는다(일정 · 최소 인원은 회차 안에서 같다). */
@@ -40,7 +42,7 @@ function openRule(cup: CupResponse, ovr: number): CupLineupRule {
 export function cupLineupBar(
   cup: CupResponse | null,
   me: CupMeResponse | null,
-  draft: { ovr: number; filled: number },
+  draft: { ovr: number; filled: number; past?: number },
   now: string,
 ): CupLineupBar | null {
   if (!cup || !me) return null;
@@ -64,6 +66,12 @@ export function cupLineupBar(
     if (entered) blocks.push(L.barShortBlock({ min: rule.minFilled }));
     else warns.push(L.barShortEntry({ min: rule.minFilled }));
   }
+  // T-11-656 · 657 이번 시즌 선수 컵: 지난 시즌 카드는 참가 중이면 저장을 막고(서버와 같다), 신청 전이면 알린다.
+  const past = cup.cup.seasonCardsOnly ? (draft.past ?? 0) : 0;
+  if (past > 0) {
+    if (entered) blocks.push(L.barPastBlock({ n: past }));
+    else warns.push(L.barPastEntry({ n: past }));
+  }
   return {
     mode: entered ? 'entered' : 'open',
     ovrText,
@@ -73,5 +81,6 @@ export function cupLineupBar(
     short: v.short,
     block: blocks[0] ?? null,
     notes: [...blocks, ...warns],
+    past,
   };
 }

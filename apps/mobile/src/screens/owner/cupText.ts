@@ -86,6 +86,8 @@ export function reasonText(
       return L.reasonOverCap({ ovr: ovr ?? 0, cap: cap ?? 0 });
     case 'entered-other':
       return L.reasonEnteredOther;
+    case 'past-cards':
+      return L.reasonPastCards({ n: el.past ?? 0 });
     default:
       return null;
   }

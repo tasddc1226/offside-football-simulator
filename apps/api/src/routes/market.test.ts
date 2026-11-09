@@ -12,6 +12,7 @@ import {
   RerollShopResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
+import { tradeValue } from '@offside/contracts/card-enhance';
 import { readFileSync } from 'node:fs';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -26,7 +27,14 @@ import {
 } from '../db/schema.js';
 import { createApp } from '../app.js';
 import { FUNDS_HISTORY_PAGE } from '../db/repos/fundsHistory.js';
-import { createTestD1, spyDb, syncCards, type TestD1 } from '../test/d1.js';
+import {
+  createTestD1,
+  fundLedgerMismatches,
+  seedFunds,
+  spyDb,
+  syncCards,
+  type TestD1,
+} from '../test/d1.js';
 import {
   ADMIN_EMAIL,
   callJson,
@@ -54,7 +62,12 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2026-09-30T00:00:00.000Z'));
   });
+  /** T-11-660 잔액을 기록 밖에서 바꾸는 테스트(자금 대조)는 끝에서 거래 기록 검사를 건너뛴다. */
+  let tampered = false;
   afterEach(async () => {
+    // T-11-660 자금이 오간 모든 흐름(방출 · 판매 · 영입 · 아이템)은 거래 기록 합 = 잔액이어야 한다.
+    if (!tampered) expect(await fundLedgerMismatches(ctx)).toEqual([]);
+    tampered = false;
     vi.useRealTimers();
     await ctx.dispose();
   });
@@ -93,8 +106,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     await syncCards(ctx, 1_000_000);
     return id;
   }
-  const fund = (profileId: string, balance: number) =>
-    ctx.db.insert(ownerFunds).values({ profileId, balance, updatedAt: '2026-09-30T00:00:00.000Z' });
+  const fund = (profileId: string, balance: number) => seedFunds(ctx, profileId, balance);
   const me = async (cookie: string) =>
     MeRes.parse(await (await call('GET', '/v1/market/me', { cookie })).json()).data;
   const list = (cookie: string, careerId: string, price: number) =>
@@ -281,6 +293,14 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     });
     // 구단 가치 = 자금 + 남은 카드 기준가(T-11-109). 방출해도 기준가가 자금으로 옮겨 갈 뿐 구단 가치는 그대로다.
     expect(data.clubValue).toBe(2_000_000);
+    // T-11-650 강화한 카드는 판매가 범위와 같은 강화 가치를 더한다(/me · /funds 같은 값).
+    await ctx.db.update(cards).set({ enhance: 4 }).where(eq(cards.careerId, b));
+    expect((await me(owner.cookie)).clubValue).toBe(1_000_000 + tradeValue(1_000_000, 4));
+    const enhanced = await call('GET', '/v1/market/funds', { cookie: owner.cookie });
+    expect(((await enhanced.json()) as { data: { clubValue: number } }).data.clubValue).toBe(
+      1_000_000 + tradeValue(1_000_000, 4),
+    );
+    await ctx.db.update(cards).set({ enhance: 0 }).where(eq(cards.careerId, b));
     expect(data.trades).toMatchObject([{ kind: 'released', amount: 1_000_000 }]);
     const team = TeamRes.parse(
       await (await call('GET', '/v1/owner-team', { cookie: owner.cookie })).json(),
@@ -630,6 +650,12 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     const rows = await ctx.db.select().from(marketListings);
     expect(rows.map((r) => r.status)).toEqual(['cancelled']);
     expect(await ctx.db.select().from(ownerFunds)).toEqual([]);
+    // T-11-660 자금 거래 기록도 남기지 않는다.
+    expect(
+      (await ctx.env.DB.prepare('SELECT count(*) AS n FROM owner_fund_ledger').first<{
+        n: number;
+      }>())!.n,
+    ).toBe(0);
   });
   it('T-11-153 자금 내역에 구단 자금 사용이 보이고, 운영 도구가 잔액을 기록과 대조한다', async () => {
     const owner = await issueGoogleCookie(ctx, { nickname: '대조구단' });
@@ -669,6 +695,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       mismatches: [],
     });
     // 기록 밖에서 잔액이 바뀌면(직접 넣은 자금) 어긋난 구단주로 잡힌다.
+    tampered = true;
     await ctx.db
       .update(ownerFunds)
       .set({ balance: 5 })
