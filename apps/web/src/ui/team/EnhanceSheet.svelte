@@ -48,6 +48,8 @@
   let autoStopAsked = $state(false);
   let autoRun = $state<EnhanceAutoRun | null>(null);
   let autoTarget = $state(0);
+  // 펼침은 사용자가 정한다(진행이 끝나도 결과가 접히지 않게).
+  let autoOpen = $state(false);
   const targets = $derived(info ? enhanceAutoTargets(info.card.level) : []);
   const targetNow = $derived(targets.includes(target) ? target : (targets[0] ?? 0));
   const expected = $derived(info && targetNow ? enhanceAutoExpected(info.card, targetNow, info.rules) : 0);
@@ -168,7 +170,7 @@
     {#if view.block}<p class="note" data-enhance-block>{view.block}</p>{/if}
     <button class="btn btn-primary btn-block" disabled={busy || autoBusy || !view.body} onclick={go} data-act="enhance-go">{busy ? L.going : L.go}</button>
     {#if view.next !== null}
-      <details class="auto" data-enhance-auto open={autoBusy || undefined}>
+      <details class="auto" data-enhance-auto bind:open={autoOpen}>
         <summary>{L.autoTitle}</summary>
         <div class="auto-body">
           <label>{L.autoTarget}
@@ -176,11 +178,13 @@
               {#each targets as t (t)}<option value={t}>+{t}</option>{/each}
             </select>
           </label>
-          <label>{L.autoBudget}
-            <select value={budgetNow} disabled={autoBusy || !budgets.list.length} onchange={(e) => (budgetPick = Number(e.currentTarget.value))} data-enhance-auto-budget>
-              {#each budgets.list as b (b.value)}<option value={b.value}>{b.label}</option>{/each}
-            </select>
-          </label>
+          {#if budgets.list.length}
+            <label>{L.autoBudget}
+              <select value={budgetNow} disabled={autoBusy} onchange={(e) => (budgetPick = Number(e.currentTarget.value))} data-enhance-auto-budget>
+                {#each budgets.list as b (b.value)}<option value={b.value}>{b.label}</option>{/each}
+              </select>
+            </label>
+          {/if}
           <p class="muted fs-xs">{L.autoExpected({ value: fmtValue(expected) })}<br />{L.autoNote}</p>
           {#if autoBusy}
             <p class="auto-status" role="status" data-enhance-auto-progress>{L.autoRunning({ n: autoRun?.tries ?? 0, spent: fmtValue(autoRun?.spent ?? 0) })}</p>

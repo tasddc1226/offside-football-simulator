@@ -296,9 +296,11 @@ export function EnhanceSheet({
                       </Btn>
                     ))}
                   </View>
-                  <Txt v="xs" tone="muted">
-                    {L.autoBudget}
-                  </Txt>
+                  {budgets.list.length ? (
+                    <Txt v="xs" tone="muted">
+                      {L.autoBudget}
+                    </Txt>
+                  ) : null}
                   <View style={{ gap: 6 }}>
                     {budgets.list.map((b) => (
                       <Btn

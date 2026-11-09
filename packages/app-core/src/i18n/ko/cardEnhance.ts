@@ -68,7 +68,7 @@ const ko = {
   autoStop: '멈추기',
   autoStopping: '이번 묶음이 끝나면 멈춰요…',
   autoDone: (p: { n: number; up: number; keep: number; down: number; spent: string }) =>
-    `${p.n}번 시도했어요. 성공 ${p.up} · 유지 ${p.keep} · 하락 ${p.down}, ${p.spent} 썼어요.`,
+    `${p.n}번 시도했어요(성공 ${p.up} · 유지 ${p.keep} · 하락 ${p.down}). ${p.spent}을 썼어요.`,
   stopTarget: (p: { lv: number }) => `목표 +${p.lv}에 닿아 멈췄어요.`,
   stopFunds: '구단 자금이 다음 시도 비용보다 적어 멈췄어요.',
   stopBudget: '정한 금액 안에서 더 시도할 수 없어 멈췄어요.',

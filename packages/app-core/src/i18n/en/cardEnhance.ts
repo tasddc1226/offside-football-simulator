@@ -69,7 +69,7 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   autoStop: 'Stop',
   autoStopping: 'Stopping after this batch…',
   autoDone: (p) =>
-    `${plural(p.n, 'attempt')}: ${p.up} success · ${p.keep} kept · ${p.down} down, ${p.spent} spent.`,
+    `${plural(p.n, 'attempt')} (${p.up} success · ${p.keep} kept · ${p.down} down). Spent ${p.spent}.`,
   stopTarget: (p) => `Stopped at the +${p.lv} target.`,
   stopFunds: 'Stopped because your club funds are below the next attempt.',
   stopBudget: 'Stopped because the next attempt would go over your spending limit.',

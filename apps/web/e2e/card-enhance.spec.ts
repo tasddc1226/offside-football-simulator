@@ -158,10 +158,14 @@ test('T-11-679 자동 강화: 목표 · 쓸 금액을 골라 시작하면 이어
   const budget = Number(await sheet.locator('[data-enhance-auto-budget]').inputValue());
   expect(budget).toBeGreaterThan(0);
   await sheet.locator('[data-act="enhance-auto-go"]').click();
+  // 끝나도 자동 강화 칸이 접히지 않고 결과가 보인다.
+  await expect(sheet.locator('[data-enhance-auto-result="target"]')).toBeVisible();
   await expect(sheet.locator('[data-enhance-auto-result="target"]')).toContainText(
     '목표 +2에 닿아 멈췄어요.',
   );
-  await expect(sheet.locator('[data-enhance-auto-result]')).toContainText('3번 시도했어요.');
+  await expect(sheet.locator('[data-enhance-auto-result]')).toContainText(
+    '3번 시도했어요(성공 2 · 유지 1 · 하락 0).',
+  );
   await expect(sheet.locator('[data-enhance-level]')).toHaveText('+2');
   // 두 번째 요청은 첫 요청 뒤 상태 · 남은 금액으로 보낸다. 창 상태는 다시 읽지 않는다.
   expect(hits.auto).toEqual([

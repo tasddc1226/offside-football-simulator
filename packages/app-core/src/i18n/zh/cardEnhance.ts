@@ -61,7 +61,7 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   autoStop: '停止',
   autoStopping: '這一批結束後停止…',
   autoDone: (p) =>
-    `共嘗試 ${p.n} 次。成功 ${p.up} · 維持 ${p.keep} · 下降 ${p.down}，花費 ${p.spent}。`,
+    `共嘗試 ${p.n} 次（成功 ${p.up} · 維持 ${p.keep} · 下降 ${p.down}）。花費 ${p.spent}。`,
   stopTarget: (p) => `已到達目標 +${p.lv}，停止。`,
   stopFunds: '俱樂部資金低於下次嘗試費用，停止。',
   stopBudget: '在設定的金額內無法再嘗試，停止。',

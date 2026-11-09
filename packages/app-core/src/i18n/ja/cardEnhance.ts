@@ -67,7 +67,7 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   autoStop: '止める',
   autoStopping: 'このまとまりが終わったら止まります…',
   autoDone: (p) =>
-    `${p.n}回試行しました。成功 ${p.up} · 維持 ${p.keep} · 下落 ${p.down}、${p.spent}使いました。`,
+    `${p.n}回試行しました（成功 ${p.up} · 維持 ${p.keep} · 下落 ${p.down}）。${p.spent}使いました。`,
   stopTarget: (p) => `目標の+${p.lv}に届いたので止まりました。`,
   stopFunds: 'クラブ資金が次の試行費用より少ないので止まりました。',
   stopBudget: '決めた金額の中でこれ以上試行できないので止まりました。',
