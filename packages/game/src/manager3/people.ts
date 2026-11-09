@@ -2,7 +2,8 @@
 import type { ManagerOrigin } from '@offside/contracts/manager-rules';
 import { CLUBS, LEAGUES, type League } from '../data.js';
 import { managerStart } from '../manager.js';
-import { poolRivalName, RIVAL_COUNTRY } from '../rival-names.js';
+import { RIVAL_COUNTRY } from '../rival-names.js';
+import { squadName } from './names.js';
 import {
   M3_ATTRS,
   M3_LICENSE_CAP,
@@ -119,16 +120,34 @@ const ROLE_MIX: readonly M3Role[] = [
   'ST',
 ];
 
+/** 같은 선수단에 같은 이름이 둘 생기지 않게 몇 번 다시 뽑는다(판매 · 방출 때 구분되게). */
+function uniqueName(r: R, nat: string, taken: Set<string>): string {
+  let name = squadName(r, nat);
+  for (let i = 0; i < 12 && taken.has(name); i++) name = squadName(r, nat);
+  taken.add(name);
+  return name;
+}
+
 export function makePlayer(
-  s: Pick<M3State, 'nextId'>,
+  s: Pick<M3State, 'nextId'> & { squad?: readonly M3Player[] },
   r: R,
-  o: { role: M3Role; age: number; ovr: number; pot: number; leagueId: string; academy?: boolean },
+  o: {
+    role: M3Role;
+    age: number;
+    ovr: number;
+    pot: number;
+    leagueId: string;
+    academy?: boolean;
+    /** 피할 이름(없으면 지금 선수단 이름). 새 이름이 더해진다. */
+    taken?: Set<string>;
+  },
 ): M3Player {
   const wealth = leagueOf(o.leagueId).wealth;
   const nat = o.academy ? (RIVAL_COUNTRY[o.leagueId] ?? 'KR') : nationFor(o.leagueId, r);
+  const taken = o.taken ?? new Set((s.squad ?? []).map((p) => p.name));
   const p: M3Player = {
     id: s.nextId++,
-    name: poolRivalName(r, nat),
+    name: uniqueName(r, nat, taken),
     nat,
     role: o.role,
     age: o.age,
@@ -151,6 +170,7 @@ export function makePlayer(
 
 /** 구단 선수단 24명: 주전 11명 평균이 구단 전력 근처가 되게 만든다. */
 export function makeSquad(s: Pick<M3State, 'nextId'>, club: M3Club, r: R): M3Player[] {
+  const taken = new Set<string>();
   return ROLE_MIX.map((role, i) => {
     // 앞쪽(역할마다 첫 번째 · 두 번째)은 주전감, 뒤쪽은 백업 · 유망주.
     const depth = ROLE_MIX.slice(0, i).filter((x) => x === role).length;
@@ -159,7 +179,7 @@ export function makeSquad(s: Pick<M3State, 'nextId'>, club: M3Club, r: R): M3Pla
     const age = young ? ri(r, 17, 21) : starter ? ri(r, 22, 31) : ri(r, 20, 33);
     const ovr = club.base + (starter ? 1 : -4) + gauss(r) * 2.5 - (young ? 5 : 0);
     const pot = ovr + (age <= 21 ? 4 + r() * 12 : age <= 25 ? r() * 5 : 0);
-    return makePlayer(s, r, { role, age, ovr, pot, leagueId: club.leagueId });
+    return makePlayer(s, r, { role, age, ovr, pot, leagueId: club.leagueId, taken });
   });
 }
 
@@ -203,6 +223,7 @@ export function youthIntake(s: M3State, r: R): M3Player[] {
   const L = leagueOf(club.leagueId);
   const n = 3 + (club.youthFac >= 4 ? 1 : 0) + (r() < 0.4 ? 1 : 0);
   const out: M3Player[] = [];
+  const taken = new Set(s.squad.map((p) => p.name));
   for (let i = 0; i < n; i++) {
     const wonder = r() < 0.03 + s.attrs.youth / 3000;
     const ovr = L.avg - 15 + club.youthFac + gauss(r) * 3;
@@ -215,6 +236,7 @@ export function youthIntake(s: M3State, r: R): M3Player[] {
       pot,
       leagueId: club.leagueId,
       academy: true,
+      taken,
     });
     p.contract = 3;
     out.push(p);

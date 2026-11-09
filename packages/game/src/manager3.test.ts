@@ -195,3 +195,16 @@ describe('감독 커리어 3 진행', () => {
     expect(s.points).toBeGreaterThan(0);
   });
 });
+
+describe('감독 커리어 3 선수 이름', () => {
+  it('한 선수단 안에서 이름이 겹치지 않는다(유스 입단 · 보충 뒤에도)', () => {
+    for (let seed = 1; seed <= 12; seed++) {
+      const s = fresh(seed);
+      for (let i = 0; i < 400 && s.phase !== 'done' && s.season < 4; i++) {
+        step(s, 99);
+        const names = s.squad.map((p) => p.name);
+        expect(new Set(names).size).toBe(names.length);
+      }
+    }
+  });
+});

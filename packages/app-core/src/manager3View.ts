@@ -5,6 +5,7 @@ import {
   M3_BLOCKS,
   M3_MIN_SEASONS,
   attrCap,
+  squadDisplayName,
   type M3Event,
   type M3Player,
   type M3State,
@@ -14,7 +15,10 @@ import { manager3Text as T } from './i18n/ko/manager3.js';
 
 export type EventView = { title: string; body: string; choices: string[]; result: string | null };
 
-const nameOf = (s: M3State, id: number | undefined) => s.squad.find((p) => p.id === id)?.name ?? '';
+const nameOf = (s: M3State, id: number | undefined) => {
+  const n = s.squad.find((p) => p.id === id)?.name;
+  return n ? squadDisplayName(n) : '';
+};
 
 /** 이야기 한 건의 제목 · 본문 · 선택지 · (답했으면) 결과 문장. */
 export function eventView(s: M3State, ev: M3Event): EventView {

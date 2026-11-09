@@ -31,7 +31,7 @@ export const manager3: Translation<Manager3Msgs> = {
   ageLabel: (p) => `Age ${p.age}`,
   repLabel: 'Fame',
   boardLabel: 'Board trust',
-  fansLabel: 'Fan support',
+  fansLabel: 'Fan opinion',
   harmonyLabel: 'Dressing room mood',
   licenseLabel: (p) => `License ${p.license}`,
   noClub: 'No team',
@@ -119,7 +119,7 @@ export const manager3: Translation<Manager3Msgs> = {
   fitness: 'Fitness',
   injured: (p) => `Injured · ${p.n} ${p.n === 1 ? 'block' : 'blocks'}`,
   contract: (p) => `Contract ${p.n} ${p.n === 1 ? 'season' : 'seasons'}`,
-  wage: (p) => `Weekly wage bill ${p.wage}`,
+  wage: (p) => `Wage ${p.wage}/wk`,
   academy: 'Academy graduate',
   // Block plan
   blockHeading: (p) => `Block ${p.n}/${p.total}`,
@@ -221,7 +221,7 @@ export const manager3: Translation<Manager3Msgs> = {
   expiringHeading: 'Expiring contracts',
   expiringLead: 'Players you don’t renew leave before next season.',
   renew: 'Renew',
-  renewWage: (p) => `New weekly wage bill ${p.wage}`,
+  renewWage: (p) => `New wage ${p.wage}/wk`,
   pointsHeading: (p) => `Growth points ${p.n}`,
   pointsLead: (p) =>
     `Spend them one at a time on attributes. The cap at your current license is ${p.cap}.`,

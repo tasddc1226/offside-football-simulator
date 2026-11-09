@@ -34,7 +34,7 @@ const ko = {
   ageLabel: (p: { age: number }) => `${p.age}세`,
   repLabel: '명성',
   boardLabel: '이사회 신뢰',
-  fansLabel: '팬 지지',
+  fansLabel: '팬 여론',
   harmonyLabel: '라커룸 분위기',
   licenseLabel: (p: { license: string }) => `자격 ${p.license}`,
   noClub: '무소속',
@@ -97,7 +97,7 @@ const ko = {
   bid_full: '선수단이 가득 찼어요.',
   bid_none: '이미 끝난 후보예요.',
   bidFrom: (p: { club: string; name: string; fee: string }) =>
-    `${p.club}에서 ${p.name}에게 ${p.fee}를 제안했어요.`,
+    `${p.club}에서 ${p.name}에게 이적료 ${p.fee} 제안을 보냈어요.`,
   bidAccept: '팔기',
   bidReject: '거절',
   list: '판매 등록',
@@ -127,7 +127,7 @@ const ko = {
   fitness: '체력',
   injured: (p: { n: number }) => `부상 · ${p.n}구간`,
   contract: (p: { n: number }) => `계약 ${p.n}시즌`,
-  wage: (p: { wage: string }) => `주급 총액 ${p.wage}`,
+  wage: (p: { wage: string }) => `주급 ${p.wage}`,
   academy: '유스 출신',
   // 구간 계획
   blockHeading: (p: { n: number; total: number }) => `구간 ${p.n}/${p.total}`,
@@ -230,7 +230,7 @@ const ko = {
   expiringHeading: '계약 만료',
   expiringLead: '재계약하지 않으면 다음 시즌 전에 떠나요.',
   renew: '재계약',
-  renewWage: (p: { wage: string }) => `새 주급 총액 ${p.wage}`,
+  renewWage: (p: { wage: string }) => `새 주급 ${p.wage}`,
   pointsHeading: (p: { n: number }) => `성장 점수 ${p.n}`,
   pointsLead: (p: { cap: number }) =>
     `능력치에 하나씩 나눠 줘요. 지금 자격의 상한은 ${p.cap}이에요.`,

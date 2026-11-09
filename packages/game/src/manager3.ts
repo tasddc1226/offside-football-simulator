@@ -64,3 +64,4 @@ export {
   specials3,
   type Manager3Result,
 } from './manager3/result.js';
+export { squadDisplayName, squadName } from './manager3/names.js';

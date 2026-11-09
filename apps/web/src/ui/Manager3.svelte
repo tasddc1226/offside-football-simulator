@@ -3,7 +3,6 @@
   import type { ManagerCareer } from '@offside/contracts';
   import type { ManagerStyle } from '@offside/contracts/manager-rules';
   import { tn } from '@offside/game/i18n/names';
-  import { rivalDisplayName } from '@offside/game/rival-names';
   import { endingDesc, endingName, leagueName, specialName, styleName, targetName } from '@offside/game/manager';
   import {
     M3_ATTRS,
@@ -11,6 +10,7 @@
     M3_FORMATIONS,
     M3_TALKS,
     acceptOffer,
+    squadDisplayName,
     answerBid,
     answerEvent,
     attrCap,
@@ -79,7 +79,7 @@
     return out;
   }
 
-  const pname = (n: string) => rivalDisplayName(n);
+  const pname = (n: string) => squadDisplayName(n);
   const lvl = (n: M3Level) => [T.level0, T.level1, T.level2][n]!;
   const ev = $derived(st.phase === 'blockResult' ? (st.lastReport?.event ?? null) : null);
   const evText = $derived(ev ? eventView(st, ev) : null);
@@ -169,7 +169,7 @@
       </ol>
     </div>
   {/if}
-  {#if st.club && st.phase !== 'offers' && st.phase !== 'done'}
+  {#if st.club && st.phase !== 'offers' && st.phase !== 'preseason' && st.phase !== 'done'}
     <p class="muted fs-sm">{T.budgetLabel} {fmtValue(st.club.budget)} · {T.wageLabel} {fmtValue(wageBill(st))} / {fmtValue(st.club.wageBudget)}</p>
   {/if}
 </section>
