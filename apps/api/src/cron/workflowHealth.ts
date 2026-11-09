@@ -1,7 +1,9 @@
 /** The Worker checks the scheduled resource step independently, even when Actions stops.
  * Read one private R2 heartbeat; no GitHub token or public API request from the Worker. */
 export const WORKFLOW_HEARTBEAT_KEY = 'operations/production/infra-resource-workflow.json';
-export const WORKFLOW_STALE_MS = 3 * 60 * 60_000;
+/** T-11-677 GitHub 예약 실행은 매시간 cron이어도 실제로는 4~8시간 간격으로 돈다(11-06~09 실측). 3시간 기준은
+ * 정상 운영에서도 stale 경보를 냈다. Actions가 멈춘 걸 잡는 게 목적이라 12시간으로 둔다. */
+export const WORKFLOW_STALE_MS = 12 * 60 * 60_000;
 export type WorkflowObservation = {
   at: number | null;
   completedAt: number | null;

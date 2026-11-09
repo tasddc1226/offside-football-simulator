@@ -203,7 +203,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   loadFail: "Couldn't load the owner profile.",
   noNickname: 'Unnamed owner',
   mine: 'My profile',
-  teamLine: (p) => `${p.season} · Manager ${p.manager}`,
+  teamLine: (p) => `${p.season} · Rep. ${p.manager}`,
   openTeam: 'View team',
   statRn: 'Retired numbers',
   statRetired: 'Retired players',

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestD1, type TestD1 } from '../test/d1.js';
+import { readFileSync } from 'node:fs';
 import {
+  BILLING_MAX_RETRIES,
   billingAlertId,
   billingSlackMessage,
   consumeBillingAlerts,
@@ -28,8 +30,8 @@ describe('verified billing Slack outbox', () => {
     vi.unstubAllGlobals();
     await ctx.dispose();
   });
-  function batch(id: string) {
-    const message = { body: { version: 1, id }, ack: vi.fn(), retry: vi.fn() };
+  function batch(id: string, attempts = 1) {
+    const message = { body: { version: 1, id }, attempts, ack: vi.fn(), retry: vi.fn() };
     return { message, value: { messages: [message] } as unknown as MessageBatch<unknown> };
   }
   it('deduplicates transactions, separates Sandbox and sends no raw purchase token', async () => {
@@ -71,6 +73,38 @@ describe('verified billing Slack outbox', () => {
     expect(
       await ctx.env.DB.prepare('SELECT sent_at, lease_until FROM billing_alerts').first(),
     ).toEqual({ sent_at: null, lease_until: 0 });
+  });
+  it('T-11-677 마지막 시도에서도 실패하면 DLQ 대신 놓고, 미발송 행은 아웃박스 복구가 다시 넣는다', async () => {
+    const sendBatch = vi.fn().mockResolvedValue(undefined);
+    ctx.env.BILLING_QUEUE = {
+      send: vi.fn().mockResolvedValue(undefined),
+      sendBatch,
+    } as unknown as NonNullable<typeof ctx.env.BILLING_QUEUE>;
+    await recordBillingAlert(ctx.env, event, new Date().toISOString());
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('down', { status: 500 })),
+    );
+    const id = await billingAlertId(event);
+    const mid = batch(id, BILLING_MAX_RETRIES);
+    await consumeBillingAlerts(mid.value, ctx.env);
+    expect(mid.message.retry).toHaveBeenCalled();
+    expect(mid.message.ack).not.toHaveBeenCalled();
+    const last = batch(id, BILLING_MAX_RETRIES + 1);
+    await consumeBillingAlerts(last.value, ctx.env);
+    expect(last.message.ack).toHaveBeenCalled();
+    expect(last.message.retry).not.toHaveBeenCalled();
+    expect(await ctx.env.DB.prepare('SELECT sent_at FROM billing_alerts').first()).toEqual({
+      sent_at: null,
+    });
+    sendBatch.mockClear();
+    await recoverBillingAlerts(ctx.env, Date.now());
+    expect(sendBatch).toHaveBeenCalledTimes(1);
+  });
+  it('T-11-677 놓는 기준이 운영 소비자 max_retries와 같다', () => {
+    const conf = readFileSync(new URL('../../wrangler.jsonc', import.meta.url), 'utf8');
+    const block = conf.slice(conf.indexOf('"queue": "offside-billing-production",'));
+    expect(Number(/"max_retries":\s*(\d+)/.exec(block)?.[1])).toBe(BILLING_MAX_RETRIES);
   });
   it('rejects unauthenticated PubSub and accepts only the configured audience/identity', async () => {
     const fetcher = vi.fn();

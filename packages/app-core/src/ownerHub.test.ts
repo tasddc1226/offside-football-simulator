@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { OwnerTeamResponse } from './api/team.js';
-import { ownerLockedText, ownerSummary, ownerTeamCard, ownerTeamEmptyText } from './ownerHub.js';
+import {
+  ownerLockedText,
+  ownerSummary,
+  ownerTeamCard,
+  ownerTeamEmptyText,
+  ownerTeamLine,
+} from './ownerHub.js';
 
 const base: OwnerTeamResponse = {
   season: 1,
@@ -84,5 +90,21 @@ describe('ownerLockedText', () => {
   it('이 기기의 은퇴 선수 수를 넣는다', () => {
     expect(ownerLockedText(3)).toContain('은퇴한 선수 3명으로');
     expect(ownerLockedText(0)).toContain('은퇴한 선수로 팀을');
+  });
+});
+
+describe('T-11-678 내 팀 한 줄', () => {
+  const coach = { careerId: 'c1', publicName: '요리스', number: 1, pos: 'GK' as const };
+  it('팀을 만들 때 적은 이름은 대표로 부른다', () => {
+    expect(ownerTeamLine({ manager: '김종국', coach: null }, '4-4-2', new Map())).toBe(
+      '대표 김종국 · 4-4-2',
+    );
+  });
+  it('감독 칸에 앉힌 감독 카드를 앞에 둔다(이 기기 이름 우선)', () => {
+    const team = { manager: '김종국', coach } as unknown as Parameters<typeof ownerTeamLine>[0];
+    expect(ownerTeamLine(team, '4-4-2', new Map())).toBe('감독 요리스 · 대표 김종국 · 4-4-2');
+    expect(ownerTeamLine(team, '4-4-2', new Map([['c1', '위고']]))).toBe(
+      '감독 위고 · 대표 김종국 · 4-4-2',
+    );
   });
 });

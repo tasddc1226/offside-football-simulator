@@ -149,12 +149,12 @@ const ko = {
   homeValueSub: '선발 11명의 카드 기준가를 더했어요.',
   homeValueEmpty: '아직 랭킹에 오른 팀이 없어요.',
   homeValueRowAria: (p: { rank: number; name: string; manager: string; value: string }) =>
-    `${p.rank}위 ${p.name}, 감독 ${p.manager}, 구단 가치 ${p.value}, 팀 상세 보기`,
+    `${p.rank}위 ${p.name}, 대표 ${p.manager}, 구단 가치 ${p.value}, 팀 상세 보기`,
   // 팀 프로필
   profLoadFail: '팀을 불러오지 못했어요.',
-  profManager: '감독 ',
-  /** T-11-290 감독과 구단주가 같은 사람일 때 한 줄로. */
-  profManagerOwner: '감독·구단주 ',
+  profManager: '대표 ',
+  /** T-11-290 팀 대표와 구단주가 같은 이름일 때 한 줄로(T-11-678 감독 카드와 헷갈리지 않게 '대표'). */
+  profManagerOwner: '대표·구단주 ',
   profMine: ' · 내 팀',
   profOwner: '구단주 ',
   profRatingAria: (p: { n: number }) => `팀 레이팅 ${p.n}`,

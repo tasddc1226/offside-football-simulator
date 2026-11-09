@@ -55,6 +55,16 @@ export async function recoverBillingAlerts(env: Bindings, nowMs: number) {
     );
 }
 
+/** wrangler.jsonc offside-billing-production 소비자의 max_retries와 같아야 한다. */
+export const BILLING_MAX_RETRIES = 5;
+/** T-11-677 마지막 시도에서 실패하면 DLQ로 보내지 않고 놓는다. 영구 기록은 D1 billing_alerts(아웃박스)이고 5분마다
+ * recoverBillingAlerts가 미발송 행을 다시 넣는다. DLQ에 남는 건 대부분 나중에 발송된 중복이라(11-04 웹훅 지연)
+ * 인프라 점검만 계속 실패시켰다. 1시간 넘게 미발송인 행은 infra-health가 원장으로 따로 잡는다. */
+function retryOrRelease(msg: Message<unknown>, delaySeconds: number) {
+  if (msg.attempts > BILLING_MAX_RETRIES) msg.ack();
+  else msg.retry({ delaySeconds });
+}
+
 type AlertRow = {
   store: string;
   kind: string;
@@ -126,7 +136,7 @@ export async function consumeBillingAlerts(batch: MessageBatch<unknown>, env: Bi
       continue;
     }
     if (!enabled(env) || !env.BILLING_SLACK_WEBHOOK) {
-      msg.retry({ delaySeconds: 300 });
+      retryOrRelease(msg, 300);
       continue;
     }
     const now = Date.now();
@@ -155,7 +165,7 @@ export async function consumeBillingAlerts(batch: MessageBatch<unknown>, env: Bi
         .bind(body.id)
         .run();
       console.error(JSON.stringify({ job: 'billing-slack', id: body.id, result: 'retry' }));
-      msg.retry({ delaySeconds: 60 });
+      retryOrRelease(msg, 60);
     }
   }
 }

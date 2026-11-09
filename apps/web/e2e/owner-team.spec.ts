@@ -1143,7 +1143,7 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await list.locator(`[data-rank-team="${RIVAL}"]`).click();
   const prof = page.locator(`[data-team-profile="${RIVAL}"]`);
   await expect(prof).toContainText('라이벌 FC');
-  await expect(prof).toContainText('감독 라이벌 감독');
+  await expect(prof).toContainText('대표 라이벌 감독');
   await expect(prof).toContainText('RANK #1');
   await expect(page.locator('[data-team-profile-coach]')).toContainText('앉힌 감독');
   await expect(page.locator('[data-team-profile-coach]')).toContainText('명장');

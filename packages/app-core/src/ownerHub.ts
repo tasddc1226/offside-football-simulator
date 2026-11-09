@@ -4,6 +4,7 @@ import type { OwnerTeamResponse } from './api/team.js';
 import { matchHintOf } from './teamOwner.js';
 import { ownerText as L } from './i18n/ko/owner.js';
 import { teamSeasonLabel } from './seasonName.js';
+import { managerName } from './managerCard.js';
 
 /**
  * 구단주 요약 — 은퇴 선수 수 · 레전드 점수 합 · 영구결번 수 · 구단 가치(만 원). 구단 가치는 이 기기 기록의 카드 기준가
@@ -25,6 +26,19 @@ export function ownerSummary(
     value: rows.reduce((s, r) => s + (r.value ?? 0), 0),
   };
 }
+
+/**
+ * T-11-678 '내 팀' 카드의 한 줄. 팀을 만들 때 적은 이름은 '대표'이고, 감독 칸에 감독 카드를 앉혔으면 그 감독을 앞에 둔다
+ * (예전엔 대표 이름을 '감독'이라 불러 앉힌 감독 카드와 이름이 달랐다).
+ */
+export const ownerTeamLine = (
+  team: Pick<OwnerTeamResponse['team'] & object, 'manager' | 'coach'>,
+  formation: string,
+  local: ReadonlyMap<string, string>,
+) =>
+  team.coach
+    ? L.managerCoach({ coach: managerName(team.coach, local), manager: team.manager, formation })
+    : L.manager({ manager: team.manager, formation });
 
 /** 구단주 화면 '내 팀' 카드 — 팀 상태 요약과 경기하기를 막는 이유(없으면 바로 경기할 수 있다). */
 export type OwnerTeamCard = {

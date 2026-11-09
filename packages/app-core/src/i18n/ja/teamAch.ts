@@ -121,10 +121,10 @@ export const teamAch: Translation<TeamAchMsgs> = {
   homeValueSub: 'スタメン11人のカード基準価格の合計です。',
   homeValueEmpty: 'まだランキングに載ったチームはありません。',
   homeValueRowAria: (p) =>
-    `${p.rank}位 ${p.name}、監督 ${p.manager}、クラブ価値 ${p.value}、チーム詳細を見る`,
+    `${p.rank}位 ${p.name}、代表 ${p.manager}、クラブ価値 ${p.value}、チーム詳細を見る`,
   profLoadFail: 'チームを読み込めませんでした。',
-  profManager: '監督 ',
-  profManagerOwner: '監督・オーナー ',
+  profManager: '代表 ',
+  profManagerOwner: '代表・オーナー ',
   profMine: ' · マイチーム',
   profOwner: 'オーナー ',
   profRatingAria: (p) => `チームレーティング ${p.n}`,
