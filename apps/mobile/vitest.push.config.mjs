@@ -24,6 +24,7 @@ export default {
       'src/analytics/retireExp.test.mjs',
       'src/game/nav.test.mjs',
       'src/screens/owner/ScoutShop.test.mjs',
+      'src/banners/useTopBanner.test.mjs',
     ],
   },
 };

@@ -1,4 +1,4 @@
-// 새 공지사항·릴리즈 노트 알림(웹 NewsBanner.svelte, news.svelte.ts). 소식 화면을 보고 있을 때는 띄우지 않는다.
+// 새 공지사항·릴리즈 노트 알림(웹 NewsBanner.svelte, news.svelte.ts). 소식 화면 · 선수 만들기에서는 띄우지 않는다.
 // 이미 본 글이 고쳐져도 같은 자리에 알린다. 다른 배너와의 순서는 useTopBanner.
 import { useState } from 'react';
 import { useSnapshot } from 'valtio';
