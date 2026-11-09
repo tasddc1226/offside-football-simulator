@@ -3051,11 +3051,11 @@ th.n {
 .trophy b {
   display: block;
 }
-/* T-11-679 트로피 그림 · 대회 로고가 있는 줄은 연도 · 그림 · 이름 세 칸 */
+/* T-11-681 트로피 그림 · 대회 로고가 있는 줄은 연도 · 그림 · 이름 세 칸 */
 .trophy:has(> :nth-child(3)) {
   grid-template-columns: 44px auto 1fr;
 }
-/* T-11-679 시즌 탭 대회 줄 · 순위표 제목 앞 로고 */
+/* T-11-681 시즌 탭 대회 줄 · 순위표 제목 앞 로고 */
 .comp-name,
 .lt-title {
   display: flex;

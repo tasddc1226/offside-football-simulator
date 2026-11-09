@@ -32,7 +32,7 @@ afterEach(() => setCustomNames({}));
 
 const IMG = `data:image/webp;base64,${'A'.repeat(200)}`;
 
-describe('리그·대회 로고 바꾸기 저장 (T-11-679)', () => {
+describe('리그·대회 로고 바꾸기 저장 (T-11-681)', () => {
   it('고른 이미지를 이 기기에 저장하고 다시 읽는다', () => {
     const state = initialCompIconsState();
     const c = createCompIcons(state);
@@ -104,7 +104,7 @@ describe('리그·대회 로고 바꾸기 저장 (T-11-679)', () => {
   });
 });
 
-describe('리그·대회 기본 로고 (T-11-679)', () => {
+describe('리그·대회 기본 로고 (T-11-681)', () => {
   it('모든 리그와 바꿀 수 있는 대회에 로고가 있고, 약칭이 비지 않는다', () => {
     const comps = customNameCatalog(null).comp.map((x) => x.ko);
     for (const ko of [...LEAGUE_BASE.map((l) => l.name), ...comps]) {

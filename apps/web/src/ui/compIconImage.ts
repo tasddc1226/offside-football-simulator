@@ -1,4 +1,4 @@
-// T-11-679 리그·대회 로고 이미지 인코딩. 대회 로고는 세로로 긴 트로피 모양이 많아 가운데를 자르지 않고(구단 엠블럼
+// T-11-681 리그·대회 로고 이미지 인코딩. 대회 로고는 세로로 긴 트로피 모양이 많아 가운데를 자르지 않고(구단 엠블럼
 // clubEmblemImage.ts와 다르다) 비율을 지킨 채 96px 안에 맞춰 줄인다. 투명 배경은 WebP나 PNG로 지킨다.
 import { COMP_ICON_IMG_MAX } from '@offside/app-core/compIcons';
 

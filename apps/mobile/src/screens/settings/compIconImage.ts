@@ -1,4 +1,4 @@
-// T-11-679 리그·대회 로고 이미지를 앱에서 고른다(웹 compIconImage.ts와 같은 96px · 비율 유지). 대회 로고는 세로로 긴 트로피
+// T-11-681 리그·대회 로고 이미지를 앱에서 고른다(웹 compIconImage.ts와 같은 96px · 비율 유지). 대회 로고는 세로로 긴 트로피
 // 모양이 많아 구단 엠블럼(clubEmblemImage.ts)처럼 가운데를 자르지 않는다. 사진 권한 없이 시스템 선택기를 쓰고 WebP로 투명을 지킨다.
 import { COMP_ICON_IMG_MAX } from '@offside/app-core/compIcons';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';

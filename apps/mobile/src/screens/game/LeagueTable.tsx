@@ -130,7 +130,7 @@ export function LeagueTable({ s, play }: { s: GameState; play?: RankPlay | null 
         ) : null}
       </View>
       {!hinted ? (
-        // T-11-679 로고가 생긴 걸 처음 한 번 알린다(로고를 누르거나 알겠어요를 누르면 다시 뜨지 않는다).
+        // T-11-681 로고가 생긴 걸 처음 한 번 알린다(로고를 누르거나 알겠어요를 누르면 다시 뜨지 않는다).
         <View
           testID="comp-hint"
           style={{

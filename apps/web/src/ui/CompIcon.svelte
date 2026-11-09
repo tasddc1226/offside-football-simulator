@@ -1,5 +1,5 @@
 <script lang="ts">
-  // T-11-679 리그·대회 로고. 유저가 고른 이미지가 있으면 그 이미지, 없으면 기본 엠블럼(app-core compEmblem.ts, 앱과 공용)을 그린다.
+  // T-11-681 리그·대회 로고. 유저가 고른 이미지가 있으면 그 이미지, 없으면 기본 엠블럼(app-core compEmblem.ts, 앱과 공용)을 그린다.
   // 누르면 그 자리에서 로고 시트(CompIconSheet)가 떠 이미지를 고른다(게임 화면을 떠나지 않는다). 이름이 옆에 있는 장식이라
   // 그림은 스크린 리더에 숨기고, 버튼에만 "○○ 로고 바꾸기"를 단다. still이면 누를 수 없는 그림만 그린다.
   import { COMP_EMBLEM_VIEWBOX, compEmblem } from '@offside/app-core/compEmblem';

@@ -32,7 +32,7 @@
   });
   const visible = $derived(items.slice(0, shown));
   const changed = $derived(Object.keys(customNames.map).length);
-  // T-11-679 리그·대회 로고(이 기기에만). 에디트 파일에 이름과 함께 싣는다.
+  // T-11-681 리그·대회 로고(이 기기에만). 에디트 파일에 이름과 함께 싣는다.
   const changedIcons = $derived(Object.keys(compIcons.map).length);
 
   function rename(ko: string, value: string) {

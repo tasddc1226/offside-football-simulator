@@ -84,7 +84,7 @@ export function CustomNamesSettings() {
   const [pasted, setPasted] = useState('');
   const catalog = useMemo(() => (open ? customNameCatalog(appState.G) : null), [open]);
   const changed = Object.keys(map).length;
-  // T-11-679 리그·대회 로고(이 기기에만). 에디트 파일에 이름과 함께 싣는다.
+  // T-11-681 리그·대회 로고(이 기기에만). 에디트 파일에 이름과 함께 싣는다.
   const icons = useSnapshot(compIcons).map;
   const changedIcons = Object.keys(icons).length;
   const q = query.trim().toLowerCase();

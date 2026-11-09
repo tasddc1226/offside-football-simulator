@@ -1,4 +1,4 @@
-// 리그·대회 로고 바꾸기(T-11-679) — 웹 CompIcon.svelte · CompIconSheet.svelte, 앱 ui/CompIcon.tsx, app-core compIcons.ts · compEmblem.ts.
+// 리그·대회 로고 바꾸기(T-11-681) — 웹 CompIcon.svelte · CompIconSheet.svelte, 앱 ui/CompIcon.tsx, app-core compIcons.ts · compEmblem.ts.
 import { ns } from '../core';
 
 const ko = {

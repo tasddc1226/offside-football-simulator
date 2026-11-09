@@ -138,7 +138,7 @@ export const {
   importCustomNames,
 } = createCustomNames(customNames);
 
-/** T-11-679 리그·대회 로고 바꾸기(이 기기에만 저장, 동기화 없음). */
+/** T-11-681 리그·대회 로고 바꾸기(이 기기에만 저장, 동기화 없음). */
 export const {
   loadCompIcons,
   setCompIcon,

@@ -26,7 +26,7 @@
   {#if trophies.length}
     {#each trophies as x, i (i)}
       {@const comp = compOfTrophy(x.t)}
-      <!-- T-11-679 리그·대회 우승은 그 대회 로고(누르면 바꾼다), 로고가 없는 트로피는 예전 트로피 그림 -->
+      <!-- T-11-681 리그·대회 우승은 그 대회 로고(누르면 바꾼다), 로고가 없는 트로피는 예전 트로피 그림 -->
       <div class="trophy"><span class="y">{x.year}</span>{#if comp}<CompIcon ko={comp} size={30} />{:else}<CareerTrophy art={careerTrophy(x.t)} size={30} />{/if}<div><b>{tn(x.t)}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {tn(x.club)}</span></div></div>
     {/each}
   {:else}

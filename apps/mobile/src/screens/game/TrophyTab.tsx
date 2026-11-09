@@ -30,7 +30,7 @@ export function TrophyRow({
   year: ReactNode;
   first?: boolean;
   art?: TrophyArt;
-  /** T-11-679 트로피 그림 대신 그릴 대회 로고(누르면 바꾼다). */
+  /** T-11-681 트로피 그림 대신 그릴 대회 로고(누르면 바꾼다). */
   icon?: ReactNode;
   children: ReactNode;
 }) {
@@ -85,7 +85,7 @@ export function TrophyTab({ s }: { s: LegendSource & { era?: EraState | undefine
         </Txt>
         {trophies.length ? (
           trophies.map((x, i) => {
-            // T-11-679 리그·대회 우승은 그 대회 로고, 로고가 없는 트로피는 예전 트로피 그림.
+            // T-11-681 리그·대회 우승은 그 대회 로고, 로고가 없는 트로피는 예전 트로피 그림.
             const comp = compOfTrophy(x.t);
             return (
               <TrophyRow

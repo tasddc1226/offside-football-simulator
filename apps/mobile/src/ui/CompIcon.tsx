@@ -1,4 +1,4 @@
-// T-11-679 리그·대회 로고(웹 CompIcon.svelte · CompIconSheet.svelte). 유저가 고른 이미지가 있으면 그 이미지, 없으면 기본 엠블럼
+// T-11-681 리그·대회 로고(웹 CompIcon.svelte · CompIconSheet.svelte). 유저가 고른 이미지가 있으면 그 이미지, 없으면 기본 엠블럼
 // (app-core compEmblem.ts, 웹과 공용)을 react-native-svg로 그린다. 누르면 그 자리에서 로고 시트가 떠 이미지를 고른다.
 // still이면 누를 수 없는 그림만 그린다.
 import { useState } from 'react';

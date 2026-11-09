@@ -1,5 +1,5 @@
 <script lang="ts">
-  // T-11-679 로고 시트: 큰 로고 미리보기 + 이미지 고르기 · 기본 로고로. 저장은 이 기기에만(app-core compIcons.ts).
+  // T-11-681 로고 시트: 큰 로고 미리보기 + 이미지 고르기 · 기본 로고로. 저장은 이 기기에만(app-core compIcons.ts).
   import { compIconsText as T } from '@offside/app-core/i18n/ko/compIcons';
   import { tn } from '@offside/game/i18n/names';
   import PopSheet from './PopSheet.svelte';
