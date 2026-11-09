@@ -14,12 +14,13 @@ import {
   ownerTeamEmptyText,
   type OwnerSummary,
   type OwnerTeamCard,
+  ownerTeamLine,
 } from '@offside/app-core/ownerHub';
 import { tierTitle, type OwnerTierTag } from '@offside/app-core/ownerTier';
 import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
-import { loadHOF } from '@offside/game/hof-store';
+import { loadHOF, localCareerNames } from '@offside/game/hof-store';
 import { ensureAccount } from '../../game/host';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
@@ -460,10 +461,7 @@ export default function Owner() {
               </Txt>
               {team ? (
                 <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
-                  {L.manager({
-                    manager: team.manager,
-                    formation: shapeOf(team.formation, team.layout),
-                  })}
+                  {ownerTeamLine(team, shapeOf(team.formation, team.layout), localCareerNames())}
                 </Txt>
               ) : null}
             </View>

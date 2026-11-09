@@ -123,10 +123,10 @@ export const teamAch: Translation<TeamAchMsgs> = {
   homeValueSub: 'Starting XI card prices added up.',
   homeValueEmpty: 'No teams are ranked yet.',
   homeValueRowAria: (p) =>
-    `#${p.rank} ${p.name}, manager ${p.manager}, club value ${p.value}, view team details`,
+    `#${p.rank} ${p.name}, rep. ${p.manager}, club value ${p.value}, view team details`,
   profLoadFail: "Couldn't load the team.",
-  profManager: 'Manager ',
-  profManagerOwner: 'Manager & owner ',
+  profManager: 'Rep. ',
+  profManagerOwner: 'Rep. & owner ',
   profMine: ' · My team',
   profOwner: 'Owner ',
   profRatingAria: (p) => `Team rating ${p.n}`,

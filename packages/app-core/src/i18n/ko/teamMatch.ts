@@ -178,10 +178,10 @@ const ko = {
   shareDialogApp: '팀 편성 공유',
   // 공유 이미지(그림)
   cardBrand: '오프사이드',
-  cardManagerWeb: (p: { name: string }) => `${p.name} 감독 · `,
+  cardManagerWeb: (p: { name: string }) => `대표 ${p.name} · `,
   cardStarters: (p: { n: number }) => `선발 ${p.n}/11`,
   cardFootWeb: '카드: 최고 OVR · 포지션 OVR: 경기 실력',
-  cardManagerApp: (p: { name: string }) => `${p.name} 감독`,
+  cardManagerApp: (p: { name: string }) => `대표 ${p.name}`,
   cardUnsavedApp: ' · 저장 전',
   cardFootApp: '카드 OVR은 최고 실력 · 배치는 해당 자리 실력',
   cardTaglineApp: '축구 선수 커리어 시뮬레이션 · offside-lab.com',

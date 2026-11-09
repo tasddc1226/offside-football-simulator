@@ -199,7 +199,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   loadFail: 'オーナープロフィールを読み込めませんでした。',
   noNickname: '名無しのオーナー',
   mine: '自分のプロフィール',
-  teamLine: (p) => `${p.season} · 監督 ${p.manager}`,
+  teamLine: (p) => `${p.season} · 代表 ${p.manager}`,
   openTeam: 'チームを見る',
   statRn: '永久欠番',
   statRetired: '引退選手',

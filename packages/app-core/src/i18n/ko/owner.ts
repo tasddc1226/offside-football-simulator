@@ -53,7 +53,10 @@ const ko = {
   numbersCount: (p: { n: number }) => `${p.n}개`,
   fundsLine: (p: { funds: string }) => `구단 자금 ${p.funds}`,
   myTeam: '내 팀',
-  manager: (p: { manager: string; formation: string }) => `${p.manager} 감독 · ${p.formation}`,
+  manager: (p: { manager: string; formation: string }) => `대표 ${p.manager} · ${p.formation}`,
+  /** T-11-678 감독 칸에 감독 카드가 앉아 있을 때. */
+  managerCoach: (p: { coach: string; manager: string; formation: string }) =>
+    `감독 ${p.coach} · 대표 ${p.manager} · ${p.formation}`,
   teamOvr: (p: { ovr: number }) => `팀 OVR ${p.ovr}`,
   statRecord: '전적',
   statRating: '레이팅',
