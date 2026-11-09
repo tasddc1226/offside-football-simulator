@@ -1,0 +1,30 @@
+{
+  "id": "t-11-679-auto-enhance",
+  "title": "카드 자동 강화",
+  "items": [
+    "강화 창에서 목표 강화 단계와 쓸 금액을 정하면 알아서 이어서 강화해요.",
+    "목표에 닿거나, 구단 자금이 다음 시도 비용보다 적어지거나, 정한 금액을 다 쓰면 멈춰요. 진행 중에도 멈추기를 누를 수 있어요."
+  ],
+  "en": {
+    "title": "Auto enhance for cards",
+    "items": [
+      "In the enhance window, set a target level and how much to spend, and enhancing keeps going on its own.",
+      "It stops when the target is reached, when club funds drop below the next attempt's cost, or when the amount you set runs out. You can also tap Stop at any time."
+    ]
+  },
+  "ja": {
+    "title": "カード自動強化",
+    "items": [
+      "強化画面で目標の強化段階と使う金額を決めると、自動で強化を続けます。",
+      "目標に届いたとき、クラブ資金が次の挑戦の費用より少なくなったとき、決めた金額を使い切ったときに止まります。途中で停止を押すこともできます。"
+    ]
+  },
+  "zh": {
+    "title": "卡片自動強化",
+    "items": [
+      "在強化視窗設定目標強化等級和要花的金額，就會自動持續強化。",
+      "達到目標、球隊資金少於下次嘗試的費用，或設定的金額用完時就會停止。進行中也可以按停止。"
+    ]
+  },
+  "availability": "web-app"
+}
