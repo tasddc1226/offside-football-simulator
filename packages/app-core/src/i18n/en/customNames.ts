@@ -3,9 +3,9 @@ import type { CustomNamesMsgs } from '../ko/customNames';
 import { plural } from './_util';
 
 export const customNames: Translation<CustomNamesMsgs> = {
-  title: 'Rename competitions and awards',
+  title: 'Rename competitions and awards, change logos',
   intro:
-    'Give competitions, awards and leagues your own names on your screen only. Your records stay the same, and share images and other players still see the original names.',
+    'Give competitions, awards and leagues your own names on your screen only. Tap a league or competition logo to use your own image. Your records stay the same, and share images and other players still see the original names and default logos.',
   local: 'Saved on this device only. Use an edit file to move them to another device.',
   group: 'Type',
   groupComp: 'Competitions',
@@ -43,8 +43,8 @@ export const customNames: Translation<CustomNamesMsgs> = {
   limit: 'You can rename up to 500 names',
   badFile: 'This edit file isn’t in the right format',
   imported: (p) => `Loaded ${plural(p.n, 'name')}`,
-  resetAllConfirm: 'Change every renamed name back to the original?',
-  allReset: 'All names are back to the originals',
+  resetAllConfirm: 'Change every renamed name and logo back to the original?',
+  allReset: 'All names and logos are back to the originals',
   shareFail: 'Couldn’t share',
   clipEmpty: 'The clipboard is empty',
   clipFail: 'Couldn’t read the clipboard',

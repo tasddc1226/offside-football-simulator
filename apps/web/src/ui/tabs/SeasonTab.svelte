@@ -34,6 +34,7 @@
   import { focusOf } from '@offside/game/player';
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
   import { bracketView } from '@offside/app-core/bracket';
+  import CompIcon from '../CompIcon.svelte';
 
   const { s }: { s: GameState } = $props();
 
@@ -236,8 +237,8 @@
       <h3 class="sub-title" style="margin-bottom:2px">{L.compsTitle}</h3>
       {#each comps as c (c.name)}
         {@const bracket = bracketView(c)}
-        <div class="story-row">
-          <b>{tn(c.name)}</b>
+        <div class="story-row comp-row">
+          <b class="comp-name"><CompIcon ko={c.name} size={24} />{tn(c.name)}</b>
           <span class="muted">{tn(c.stage) || (c.type === 'super' ? L.compSuper : L.compStart)}{c.alive && c.stage ? ` · ${L.compAlive}` : ''}</span>
           <span class="muted">{L.compLine({ apps: c.apps, g: c.g })}</span>
         </div>

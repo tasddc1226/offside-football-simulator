@@ -45,9 +45,9 @@ export interface CustomNameItem {
 
 const WIN = / 우승$/; // i18n-ignore 저장값(트로피 이름 꼬리)
 // i18n-ignore 저장값(대회 이름)
-const CLUB_WORLD = 'FIFA 클럽 월드컵';
+export const CLUB_WORLD = 'FIFA 클럽 월드컵';
 // i18n-ignore 저장값(대회 이름)
-const NATIONAL_EXTRA = ['FIFA 월드컵', '아시안게임', '올림픽'];
+export const NATIONAL_EXTRA = ['FIFA 월드컵', '아시안게임', '올림픽'] as const;
 const CONFED_LIST = Object.values(CONFEDS);
 
 /** 그룹별 이름 — 내 커리어에 나온 이름 먼저, 같은 이름은 한 번. */
@@ -72,7 +72,7 @@ export function customNameCatalog(G: GameState | null): Record<CustomNameGroup, 
       ['club', [...Object.values(CONT).map((c) => c.name), CLUB_WORLD]],
       [
         'national',
-        [NATIONAL_EXTRA[0]!, ...CONFED_LIST.map((c) => c.cup), ...NATIONAL_EXTRA.slice(1)],
+        [NATIONAL_EXTRA[0], ...CONFED_LIST.map((c) => c.cup), ...NATIONAL_EXTRA.slice(1)],
       ],
     ],
     award: [

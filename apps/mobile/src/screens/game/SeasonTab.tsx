@@ -67,6 +67,7 @@ import { Txt } from '../../ui/Txt';
 import { Chevron } from '../../ui/Chevron';
 import { LeagueTable, SubTitle, type RankPlay } from './LeagueTable';
 import { PhaseReport } from './PhaseReport';
+import { CompIcon } from '../../ui/CompIcon';
 import { tn } from '@offside/game/i18n/names';
 import { appFormatText } from '@offside/app-core/i18n/ko/appFormat';
 
@@ -756,6 +757,7 @@ export function SeasonTab({ s }: { s: GameState }) {
                 return (
                   <View key={cp.name}>
                     <StoryRow>
+                      <CompIcon ko={cp.name} size={24} />
                       <Txt style={{ flex: 1, fontSize: rem(FONT.body2), fontWeight: '700' }}>
                         {tn(cp.name)}
                       </Txt>
