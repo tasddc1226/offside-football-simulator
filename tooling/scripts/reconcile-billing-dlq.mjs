@@ -32,6 +32,11 @@ export async function reconcileBillingDlq(api, { apply = false, confirmation } =
   if (audit.sampled === 0) return { mode: 'apply', acknowledged: 0, retained: 0 };
   if (audit.sampled !== audit.sent || audit.invalid || audit.unsent || audit.missing)
     throw new Error('DLQ contains unresolved notifications; no messages leased or acknowledged');
+  // HTTP pull은 큐에 http_pull 소비자가 있어야 한다. 소비자 설정은 자동으로 바꾸지 않는다(런북).
+  if (!queue.consumers?.some((c) => c?.type === 'http_pull'))
+    throw new Error(
+      'DLQ has no http_pull consumer; nothing leased. Wait for retention expiry or add a pull consumer by hand',
+    );
   const databases = await api('/d1/database?per_page=100');
   const db = databases.find((d) => d.name === 'offside-production');
   if (!db?.uuid) throw new Error('Billing ledger unavailable');
@@ -98,9 +103,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     ?.slice('--confirm='.length);
   reconcileBillingDlq(client(), { apply, confirmation })
     .then((result) => console.log(JSON.stringify(result)))
-    .catch(() => {
+    .catch((e) => {
+      // 메시지는 이 파일이 만든 고정 문구뿐이다(ID · 본문 · 토큰 없음). 다른 오류는 원문을 내지 않는다.
+      const reason = /^[A-Za-z ;,._()/-]+$/.test(e?.message ?? '') ? ` (${e.message})` : '';
       console.error(
-        'Billing DLQ reconciliation failed. Do not retry writes without a fresh queue/ledger inspection.',
+        `Billing DLQ reconciliation failed${reason}. Do not retry writes without a fresh queue/ledger inspection.`,
       );
       process.exitCode = 1;
     });

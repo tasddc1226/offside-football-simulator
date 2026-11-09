@@ -7,6 +7,7 @@ const message = (id, lease_id = 'lease') => ({
   lease_id,
 });
 function fake({
+  consumers = [{ type: 'http_pull' }],
   before = 1,
   after = 1,
   pulled = [message(id)],
@@ -18,7 +19,7 @@ function fake({
   const api = async (path, body) => {
     calls.push({ path, body });
     if (path.startsWith('/queues?'))
-      return [{ queue_name: 'offside-billing-production-dlq', queue_id: 'queue' }];
+      return [{ queue_name: 'offside-billing-production-dlq', queue_id: 'queue', consumers }];
     if (path.startsWith('/d1/database?')) return [{ name: 'offside-production', uuid: 'db' }];
     if (path.endsWith('/peek')) return { messages: [message(id)] };
     if (path.endsWith('/pull')) return { messages: pulled };
@@ -76,4 +77,11 @@ it('releases leases without ACK on a failed ledger recheck and rejects ambiguous
       confirmation: ACK_CONFIRMATION,
     }),
   ).rejects.toThrow('uncertain');
+});
+it('T-11-677 http_pull 소비자가 없으면 pull 전에 이유를 밝히고 멈춘다', async () => {
+  const { api, calls } = fake({ consumers: [] });
+  await expect(
+    reconcileBillingDlq(api, { apply: true, confirmation: ACK_CONFIRMATION }),
+  ).rejects.toThrow('http_pull');
+  expect(calls.some((c) => c.path.endsWith('/pull') || c.path.endsWith('/ack'))).toBe(false);
 });
