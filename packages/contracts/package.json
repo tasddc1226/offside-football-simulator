@@ -26,6 +26,7 @@
     "./season-gauge": "./src/season-gauge.ts",
     "./cup": "./src/cup.ts",
     "./league": "./src/league.ts",
+    "./retire-cohort": "./src/retire-cohort.ts",
     "./league-names": "./src/league-names.ts",
     "./attendance": "./src/attendance-rules.ts",
     "./season-pass": "./src/season-pass-rules.ts",

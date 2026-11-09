@@ -18,6 +18,7 @@ import { registerAppVersionRoutes } from './routes/appVersion.js';
 import { registerAuthRoutes } from './routes/auth.js';
 import { registerAppleWebAuthRoutes } from './routes/appleWebAuth.js';
 import { registerClubStrengthRoutes } from './routes/clubStrength.js';
+import { registerRetireCohortRoutes } from './routes/retireCohort.js';
 import { registerBalanceRoutes } from './routes/balance.js';
 import { registerBoardRoutes } from './routes/boards.js';
 import { registerTranslateRoutes } from './routes/translate.js';
@@ -122,6 +123,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerAgentNameRoutes(app);
   registerBalanceRoutes(app);
   registerClubStrengthRoutes(app);
+  registerRetireCohortRoutes(app);
   registerAdminRoutes(app);
   registerKpiRoutes(app);
   registerAdminCupRoutes(app);

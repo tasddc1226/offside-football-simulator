@@ -27,6 +27,7 @@ import { RetiredAdSlot } from './RetiredAdSlot';
 import { OwnHofCards } from './OwnHofCards';
 import { PushAskCard } from '../../components/PushAskCard';
 import { RetireExp } from './RetireExp';
+import { RetireCohort } from './RetireCohort';
 import { ShareBar } from './ShareBar';
 import { retiredText as L } from '@offside/app-core/i18n/ko/retired';
 
@@ -145,6 +146,8 @@ export default function Retired() {
           onCta={onCta}
         />
       ) : null}
+      {/* T-11-675 같은 시즌 · 같은 포지션 은퇴 선수 중 내 기록의 자리(분포가 있을 때만). */}
+      <RetireCohort v={v} />
       {/* T-10-029: 명예의 전당 공개·다음 버튼은 크레딧 맨 아래에, 공유 버튼은 화면 아래에 고정된다(T-10-067). */}
       <LegendReport
         v={v}
