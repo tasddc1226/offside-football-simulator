@@ -108,7 +108,7 @@ export default [
       [
         'Renewing and staying long',
         [
-          'When one year remains on your contract, the club can offer an early extension. You do not have to extend: you can stay on your current terms or move to another club. From age 41 you only get one-year contracts, and renewal depends on how you played last season.',
+          'When one year remains on your contract, the club can offer an early extension (up to age 37). You do not have to extend: you can stay on your current terms or move to another club. From age 38 to 40, your club does not offer a renewal when your contract ends, so you need a transfer offer from another club to keep playing, and you retire if none comes. From age 41 you only get one-year contracts, and renewal depends on how you played last season.',
           'Staying at one club for a long time means more than records. A retired number requires at least 6 seasons at one regular professional club plus meeting the contribution requirement, and the One-club man and Long service achievements are also judged by seasons spent at a single club. If you have a goal for after retirement, factor it in when you choose a transfer.',
         ],
       ],

@@ -966,6 +966,55 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     expect(await teamOne(owner.cookie)).toBe(true);
   });
 
+  it('같은 국적 업적: 대한민국 선수(국적 NULL로 저장) 11명이면 달성하고, 보상은 한 번만 준다', async () => {
+    await toSeason2();
+    const read = async (cookie: string) =>
+      AchRes.parse(await (await call('GET', '/v1/owner-team/achievements', { cookie })).json())
+        .data.groups.flatMap((g) => g.items)
+        .find((i) => i.id === 'team-nation');
+    const items = async (profileId: string) =>
+      (await ctx.db.select().from(ownerItems).where(eq(ownerItems.profileId, profileId)))
+        .map((r) => `${r.item}:${r.qty}`)
+        .sort();
+    const lineup = async (nations: (string | null)[]) => {
+      const who = await issueGoogleCookie(ctx, { nickname: `구단주${++seq}` });
+      const ids: string[] = [];
+      for (const nation of nations)
+        ids.push(await addCareer(who.profileId, { nation, serviceSeason: 2 }));
+      const order = [9, 8, 10, 7, 6, 5, 1, 2, 3, 4, 0];
+      const s: (string | null)[] = Array(11).fill(null);
+      ids.forEach((id, i) => (s[order[i]!] = id));
+      expect((await putTeam(who.cookie, { slots: s, name: `팀${seq}` })).status).toBe(200);
+      return { ...who, ids, slots: s };
+    };
+    const korea = await lineup(Array(11).fill(null));
+    // 업로드는 대한민국 국적을 싣지 않는다 → careers · cards.nation 모두 NULL.
+    const stored = await ctx.db.select({ nation: cards.nation }).from(cards);
+    expect(stored.map((r) => r.nation)).toEqual(Array(11).fill(null));
+    const first = await read(korea.cookie);
+    expect(first?.done).toBe(true);
+    // 시즌 2 보상 표(achRewardAt(2, 80)): 80점 위업은 잠재력 강화권 1장.
+    expect(first?.got).toEqual({ boost: 1, scout: 0 });
+    const afterFirst = await items(korea.profileId);
+    expect(afterFirst.length).toBeGreaterThan(0);
+    // 다시 읽어도 보상이 또 생기지 않는다.
+    expect((await read(korea.cookie))?.done).toBe(true);
+    expect(await items(korea.profileId)).toEqual(afterFirst);
+    // 그 시즌에 한 번 닿으면 다른 국적 선수로 바꿔도 남고, 보상도 그대로다.
+    const jp = await addCareer(korea.profileId, { nation: 'JP', serviceSeason: 2 });
+    const swapped = [...korea.slots];
+    swapped[9] = jp;
+    expect((await putTeam(korea.cookie, { slots: swapped })).status).toBe(200);
+    expect((await read(korea.cookie))?.done).toBe(true);
+    expect(await items(korea.profileId)).toEqual(afterFirst);
+
+    // 예전 클라이언트가 'KR'을 실은 기록이 섞여도 대한민국이다.
+    expect((await read((await lineup([...Array(10).fill(null), 'KR'])).cookie))?.done).toBe(true);
+    // 다른 국적이 하나라도 섞이면 아니다.
+    expect((await read((await lineup([...Array(10).fill(null), 'JP'])).cookie))?.done).toBe(false);
+    expect((await read((await lineup(Array(11).fill('JP'))).cookie))?.done).toBe(true);
+  });
+
   it('T-11-028 업적 랭킹: 시즌 점수 순, 닉네임과 그 시즌 팀 이름만 보인다', async () => {
     const a = await issueGoogleCookie(ctx);
     const b = await issueGoogleCookie(ctx);
