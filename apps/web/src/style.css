@@ -3051,6 +3051,49 @@ th.n {
 .trophy b {
   display: block;
 }
+/* T-11-679 트로피 그림 · 대회 로고가 있는 줄은 연도 · 그림 · 이름 세 칸 */
+.trophy:has(> :nth-child(3)) {
+  grid-template-columns: 44px auto 1fr;
+}
+/* T-11-679 시즌 탭 대회 줄 · 순위표 제목 앞 로고 */
+.comp-name,
+.lt-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.comp-hint {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  font-size: var(--fs-body2);
+}
+.comp-hint::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 10px;
+  width: 10px;
+  height: 10px;
+  border-left: 1px solid var(--accent);
+  border-top: 1px solid var(--accent);
+  background: var(--surface-2);
+  transform: rotate(45deg);
+}
+.comp-hint span {
+  flex: 1;
+  min-width: 0;
+}
+.comp-hint .icon-btn {
+  flex: none;
+}
 .empty {
   color: var(--muted);
   font-size: var(--fs-body2);

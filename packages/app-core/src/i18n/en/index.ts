@@ -26,6 +26,7 @@ import { chatReject } from './chatReject';
 import { club } from './club';
 import { clubStrength } from './clubStrength';
 import { clubSync } from './clubSync';
+import { compIcons } from './compIcons';
 import { create } from './create';
 import { cup } from './cup';
 import { cupApp } from './cupApp';
@@ -153,6 +154,7 @@ export const en = {
   club,
   clubStrength,
   clubSync,
+  compIcons,
   create,
   cup,
   cupApp,

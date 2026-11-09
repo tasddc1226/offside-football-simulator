@@ -9,6 +9,11 @@
   import { appState } from './state.svelte.js';
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';
+  import { hasCompEmblem } from '@offside/app-core/compEmblem';
+  import { COMP_ICONS_NO_SPACE } from '@offside/app-core/compIcons';
+  import { compIconsText as CI } from '@offside/app-core/i18n/ko/compIcons';
+  import CompIcon from './CompIcon.svelte';
+  import { compIcons, exportCompIcons, importCompIcons, resetCompIcons } from './compIcons.svelte.js';
 
   /** 한 번에 그리는 줄 수(더 보기로 늘린다). */
   const PAGE = 40;
@@ -27,6 +32,8 @@
   });
   const visible = $derived(items.slice(0, shown));
   const changed = $derived(Object.keys(customNames.map).length);
+  // T-11-679 리그·대회 로고(이 기기에만). 에디트 파일에 이름과 함께 싣는다.
+  const changedIcons = $derived(Object.keys(compIcons.map).length);
 
   function rename(ko: string, value: string) {
     if (setCustomName(ko, value)) return;
@@ -37,7 +44,8 @@
     shown = PAGE;
   }
   function exportFile() {
-    const url = URL.createObjectURL(new Blob([exportCustomNames()], { type: 'application/json' }));
+    const text = JSON.stringify({ ...JSON.parse(exportCustomNames()), icons: exportCompIcons() }, null, 1);
+    const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
     const a = Object.assign(document.createElement('a'), { href: url, download: 'offside-names.json' });
     a.click();
     URL.revokeObjectURL(url);
@@ -47,12 +55,16 @@
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    const n = importCustomNames(await file.text());
-    toast(n === CUSTOM_NAMES_NO_SPACE ? T.noSpace : n < 0 ? T.badFile : T.imported({ n }));
+    const text = await file.text();
+    const n = importCustomNames(text);
+    if (n < 0) return toast(n === CUSTOM_NAMES_NO_SPACE ? T.noSpace : T.badFile);
+    const icons = importCompIcons(JSON.parse(text) as unknown);
+    toast(icons === COMP_ICONS_NO_SPACE ? CI.noSpace : icons > 0 ? `${T.imported({ n })} · ${CI.imported({ n: icons })}` : T.imported({ n }));
   }
   function resetAll() {
     if (!confirm(T.resetAllConfirm)) return;
     resetCustomNames();
+    resetCompIcons();
     toast(T.allReset);
   }
   const GROUPS: { id: CustomNameGroup; label: () => string }[] = [
@@ -80,7 +92,7 @@
         {/each}
       </div>
       <input type="search" class="name-search" placeholder={T.search} aria-label={T.search} enterkeyhint="search" bind:value={query} oninput={() => (shown = PAGE)} />
-      {#if changed}<p class="muted fs-xs" style="margin:0" data-names-changed={changed}>{T.changed({ n: changed })}</p>{/if}
+      {#if changed || changedIcons}<p class="muted fs-xs" style="margin:0" data-names-changed={changed}>{[changed ? T.changed({ n: changed }) : '', changedIcons ? CI.changed({ n: changedIcons }) : ''].filter(Boolean).join(' · ')}</p>{/if}
       {#if items.length}
         <ul class="name-list">
           {#each visible as x, i (x.ko)}
@@ -89,7 +101,9 @@
             {#if i === 0 || visible[i - 1]!.sec !== x.sec}<li class="name-sec" data-name-sec={x.sec}>{T[customNameSectionKey(x.sec)]}</li>{/if}
             <li class="name-row" data-name={x.ko}>
               <div class="name-head">
+                {#if hasCompEmblem(x.ko)}<CompIcon ko={x.ko} size={28} />{/if}
                 <span class="name-base">{base}</span>
+                {#if compIcons.map[x.ko]}<small class="muted fs-xs">{CI.custom}</small>{/if}
               </div>
               <div class="name-edit">
                 <input
@@ -116,7 +130,7 @@
       <div class="row" style="flex-wrap:wrap;gap:8px">
         <button class="icon-btn" data-act="export-names" onclick={exportFile}>{T.exportFile}</button>
         <label class="icon-btn">{T.importFile}<input type="file" accept="application/json,.json" hidden onchange={importFile} /></label>
-        <button class="icon-btn" disabled={!changed} onclick={resetAll}>{T.resetAll}</button>
+        <button class="icon-btn" disabled={!changed && !changedIcons} onclick={resetAll}>{T.resetAll}</button>
       </div>
     </div>
   {/if}

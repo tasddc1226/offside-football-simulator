@@ -2,6 +2,8 @@
   import CareerTrophy from '../CareerTrophy.svelte';
   import { careerTrophy } from '@offside/app-core/career-trophy';
   import { tn } from '@offside/game/i18n/names';
+  import { compOfTrophy } from '@offside/app-core/compEmblem';
+  import CompIcon from '../CompIcon.svelte';
   // ui.ts trophyTab() 포트 (388~395줄)
   import type { LegendSource } from '@offside/game/types';
   import ClubMark from '../ClubMark.svelte';
@@ -23,7 +25,9 @@
   <h2 style="margin-bottom:4px">{L.honours}</h2>
   {#if trophies.length}
     {#each trophies as x, i (i)}
-      <div class="trophy"><span class="y">{x.year}</span><CareerTrophy art={careerTrophy(x.t)} size={30} /><div><b>{tn(x.t)}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {tn(x.club)}</span></div></div>
+      {@const comp = compOfTrophy(x.t)}
+      <!-- T-11-679 리그·대회 우승은 그 대회 로고(누르면 바꾼다), 로고가 없는 트로피는 예전 트로피 그림 -->
+      <div class="trophy"><span class="y">{x.year}</span>{#if comp}<CompIcon ko={comp} size={30} />{:else}<CareerTrophy art={careerTrophy(x.t)} size={30} />{/if}<div><b>{tn(x.t)}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {tn(x.club)}</span></div></div>
     {/each}
   {:else}
     <p class="empty">{L.empty}</p>

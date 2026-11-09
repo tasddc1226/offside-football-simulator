@@ -5,6 +5,9 @@
   import { tn } from '@offside/game/i18n/names';
   import type { GameState } from '@offside/game/types';
   import ClubBadge from '../ClubBadge.svelte';
+  import CompIcon from '../CompIcon.svelte';
+  import { compIcons, dismissCompIconHint } from '../compIcons.svelte.js';
+  import { compIconsText as CI } from '@offside/app-core/i18n/ko/compIcons';
   import { RANK_SLIDE_MS, rankSlideSpan } from '@offside/app-core/resultTour';
   import { dur } from '../motion.js';
   import { gameLeagueText as L } from '@offside/app-core/i18n/ko/gameLeague';
@@ -12,6 +15,7 @@
   const { s }: { s: GameState } = $props();
   let full = $state(false);
 
+  const leagueName = $derived(leagueOf(seasonLeagueId(s)).name);
   const rows = $derived(leagueTable(s));
   const myRank = $derived(rows.findIndex((r) => r.me) + 1);
   const keep = (rank: number) => rank <= 3 || Math.abs(rank - myRank) <= 2 || rank === rows.length;
@@ -64,11 +68,18 @@
 
 <div class="league-table" data-league-table>
   <div class="row" style="justify-content:space-between;align-items:baseline">
-    <h3 class="sub-title">{L.title({ league: tn(leagueOf(seasonLeagueId(s)).name) })}</h3>
+    <h3 class="sub-title lt-title"><CompIcon ko={leagueName} size={26} />{L.title({ league: tn(leagueName) })}</h3>
     {#if s.season.played && (folded || full)}
       <button class="icon-btn" data-act="table-toggle" aria-expanded={full} onclick={() => (full = !full)}>{full ? L.fold : L.expand}</button>
     {/if}
   </div>
+  {#if !compIcons.hinted}
+    <!-- T-11-679 로고가 생긴 걸 처음 한 번 알린다(로고를 누르거나 알겠어요를 누르면 다시 뜨지 않는다). -->
+    <div class="comp-hint" role="note" data-comp-hint>
+      <span>{CI.hint}</span>
+      <button class="icon-btn" data-act="comp-hint-close" onclick={dismissCompIconHint}>{CI.hintClose}</button>
+    </div>
+  {/if}
   {#if s.season.played}
     <table>
       <thead>

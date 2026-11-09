@@ -13,6 +13,7 @@ import * as Outbox from '@offside/app-core/outbox';
 import { saveGame } from '@offside/app-core/career';
 import { createClubCustom } from '@offside/app-core/clubCustom';
 import { createCustomNames } from '@offside/app-core/customNames';
+import { createCompIcons } from '@offside/app-core/compIcons';
 import { createLegends } from '@offside/app-core/legend';
 import { createRetiredNumbers } from '@offside/app-core/retiredNumber';
 import { createNews } from '@offside/app-core/news';
@@ -29,6 +30,7 @@ import {
   accountCache,
   appState,
   clubCustom,
+  compIcons,
   customNames,
   newsState,
   prefs,
@@ -135,6 +137,16 @@ export const {
   exportCustomNames,
   importCustomNames,
 } = createCustomNames(customNames);
+
+/** T-11-679 리그·대회 로고 바꾸기(이 기기에만 저장, 동기화 없음). */
+export const {
+  loadCompIcons,
+  setCompIcon,
+  resetCompIcons,
+  exportCompIcons,
+  importCompIcons,
+  dismissCompIconHint,
+} = createCompIcons(compIcons);
 
 export const { recordRn, fillGranted, rnOf, rnMissOf, watchRetiredNumberAlerts } =
   createRetiredNumbers(

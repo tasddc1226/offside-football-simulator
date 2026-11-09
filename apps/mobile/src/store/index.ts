@@ -8,6 +8,7 @@ import { initialAppState, type AppState } from '@offside/app-core/state';
 import { initialSheetState, type SheetState } from '@offside/app-core/sheet-controller';
 import { initialClubCustomState } from '@offside/app-core/clubCustom';
 import { initialCustomNamesState } from '@offside/app-core/customNames';
+import { initialCompIconsState } from '@offside/app-core/compIcons';
 import { initialNewsState } from '@offside/app-core/news';
 import type { RnAlert, RnMisses, RnResults } from '@offside/app-core/retiredNumber';
 import type { Profile } from '@offside/app-core/api/client';
@@ -21,6 +22,8 @@ export const toastState = proxy({ text: '', visible: false });
 export const clubCustom = proxy(initialClubCustomState());
 /** T-11-647 유저가 바꾼 대회·수상 이름(이 기기에만 저장). */
 export const customNames = proxy(initialCustomNamesState());
+/** T-11-679 유저가 고른 리그·대회 로고 이미지(이 기기에만 저장). */
+export const compIcons = proxy(initialCompIconsState());
 export const newsState = proxy(initialNewsState());
 /** T-11-464 스토어 업데이트 팝업이 떠 있다(그동안 다시 띄우지 않고, 리뷰 요청도 미룬다). */
 export const storeUpdate = proxy({ showing: false });

@@ -19,13 +19,20 @@ import {
 import { customNamesText as T } from '@offside/app-core/i18n/ko/customNames';
 import { tn, withDefaultNames } from '@offside/game/i18n/names';
 import {
+  exportCompIcons,
   exportCustomNames,
+  importCompIcons,
   importCustomNames,
+  resetCompIcons,
   resetCustomNames,
   setCustomName,
   toast,
 } from '../../game/host';
-import { appState, customNames as customNamesState } from '../../store';
+import { appState, compIcons, customNames as customNamesState } from '../../store';
+import { hasCompEmblem } from '@offside/app-core/compEmblem';
+import { COMP_ICONS_NO_SPACE } from '@offside/app-core/compIcons';
+import { compIconsText as CI } from '@offside/app-core/i18n/ko/compIcons';
+import { CompIcon } from '../../ui/CompIcon';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Btn, Row, Txt } from '../../ui';
@@ -77,6 +84,9 @@ export function CustomNamesSettings() {
   const [pasted, setPasted] = useState('');
   const catalog = useMemo(() => (open ? customNameCatalog(appState.G) : null), [open]);
   const changed = Object.keys(map).length;
+  // T-11-679 리그·대회 로고(이 기기에만). 에디트 파일에 이름과 함께 싣는다.
+  const icons = useSnapshot(compIcons).map;
+  const changedIcons = Object.keys(icons).length;
   const q = query.trim().toLowerCase();
   const items = (catalog?.[group] ?? []).filter(
     (x) => !q || `${x.ko} ${original(x.ko)} ${map[x.ko] ?? ''}`.toLowerCase().includes(q),
@@ -84,18 +94,29 @@ export function CustomNamesSettings() {
 
   async function exportFile() {
     try {
-      await Share.share({ title: 'offside-names.json', message: exportCustomNames() });
+      const text = JSON.stringify(
+        { ...(JSON.parse(exportCustomNames()) as object), icons: exportCompIcons() },
+        null,
+        1,
+      );
+      await Share.share({ title: 'offside-names.json', message: text });
     } catch {
       toast(T.shareFail);
     }
   }
   function doImport(text: string) {
     const n = importCustomNames(text);
-    toast(n === CUSTOM_NAMES_NO_SPACE ? T.noSpace : n < 0 ? T.badFile : T.imported({ n }));
-    if (n >= 0) {
-      setPasted('');
-      setImportOpen(false);
-    }
+    if (n < 0) return toast(n === CUSTOM_NAMES_NO_SPACE ? T.noSpace : T.badFile);
+    const got = importCompIcons(JSON.parse(text) as unknown);
+    toast(
+      got === COMP_ICONS_NO_SPACE
+        ? CI.noSpace
+        : got > 0
+          ? `${T.imported({ n })} · ${CI.imported({ n: got })}`
+          : T.imported({ n }),
+    );
+    setPasted('');
+    setImportOpen(false);
   }
   async function pasteFromClipboard() {
     try {
@@ -114,6 +135,7 @@ export function CustomNamesSettings() {
         style: 'destructive',
         onPress: () => {
           resetCustomNames();
+          resetCompIcons();
           toast(T.allReset);
         },
       },
@@ -178,9 +200,14 @@ export function CustomNamesSettings() {
             returnKeyType="search"
             testID="names-search"
           />
-          {changed ? (
+          {changed || changedIcons ? (
             <Txt tone="muted" v="xs" testID="names-changed">
-              {T.changed({ n: changed })}
+              {[
+                changed ? T.changed({ n: changed }) : '',
+                changedIcons ? CI.changed({ n: changedIcons }) : '',
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </Txt>
           ) : null}
           {items.length ? (
@@ -212,7 +239,13 @@ export function CustomNamesSettings() {
                       }}
                     >
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        {hasCompEmblem(x.ko) ? <CompIcon ko={x.ko} size={28} /> : null}
                         <Txt style={{ flexShrink: 1, fontSize: rem(FONT.body2) }}>{base}</Txt>
+                        {icons[x.ko] ? (
+                          <Txt tone="muted" v="xs">
+                            {CI.custom}
+                          </Txt>
+                        ) : null}
                       </View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                         <CommitInput
@@ -251,7 +284,7 @@ export function CustomNamesSettings() {
             <Btn sm testID="import-names" onPress={() => setImportOpen(!importOpen)}>
               {T.importFile}
             </Btn>
-            <Btn sm disabled={!changed} onPress={resetAll}>
+            <Btn sm disabled={!changed && !changedIcons} onPress={resetAll}>
               {T.resetAll}
             </Btn>
           </Row>
