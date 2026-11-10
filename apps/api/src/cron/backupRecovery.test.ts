@@ -23,7 +23,9 @@ describe('backup recovery assurance', () => {
     await bucket.delete('d1-snapshots/production/fixture/0001.sql.gz');
     expect((await inspectBackupRecovery(bucket, NOW)).status).toBe('unverified');
     await putVerifiedRecovery(bucket, NOW);
-    expect((await inspectBackupRecovery(bucket, NOW + 31 * 3600000)).status).toBe('stale');
+    // 달마다 한 번 찍는 스냅샷이라 35일까지는 verified다(T-11-686).
+    expect((await inspectBackupRecovery(bucket, NOW + 34 * 24 * 3600000)).status).toBe('verified');
+    expect((await inspectBackupRecovery(bucket, NOW + 36 * 24 * 3600000)).status).toBe('stale');
     await bucket.put('d1-snapshots/production/fixture/manifest.json', '{"verified":true}');
     expect((await inspectBackupRecovery(bucket, NOW)).status).toBe('unverified');
     await putVerifiedRecovery(bucket, NOW + 120000);
