@@ -48,6 +48,7 @@ export function completeReferralStatements(
       {
         profileId,
         sourceKey: `invite:${r.inviteeId}:${profileId}`,
+        topic: 'reward',
         now,
         content: { kind: 'social', title, body, target: { type: 'screen', screen: 'team' } },
       },

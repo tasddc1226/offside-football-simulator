@@ -24,6 +24,7 @@ import { useColors, useIsDark } from '../theme/useColors';
 import { useSnapshot } from 'valtio';
 import { prefs } from '../store';
 import { RevealEdgeHost } from '../components/RevealFx';
+import { PushPicker } from '../components/PushPicker';
 import { countTouch } from '../platform/playSignals';
 
 void SplashScreen.preventAutoHideAsync();
@@ -66,6 +67,7 @@ export default function RootLayout() {
         screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}
       />
       <RevealEdgeHost />
+      <PushPicker />
     </GestureHandlerRootView>
   );
 }

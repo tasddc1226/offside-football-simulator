@@ -4,6 +4,7 @@ import {
   NotificationReadSchema,
   NotificationReadAllSchema,
   type AppNotification,
+  type NotificationGroup,
 } from '@offside/contracts';
 import { apiFetch } from './api/client.js';
 import { inboxText as L } from './i18n/ko/inbox.js';
@@ -15,6 +16,8 @@ export const initialInboxState = () => ({
   nextCursor: null as string | null,
   unreadCount: 0,
   onlyUnread: false,
+  /** 묶음 보기. null이면 전체다. */
+  group: null as NotificationGroup | null,
   loaded: false,
   busy: false,
   error: '',
@@ -76,11 +79,17 @@ export function createNotificationInbox(
     return work;
   }
   function load(
-    options: { refresh?: boolean; more?: boolean; unread?: boolean } = {},
+    options: {
+      refresh?: boolean;
+      more?: boolean;
+      unread?: boolean;
+      group?: NotificationGroup | null;
+    } = {},
   ): Promise<void> {
     if (pending) return loading ? pending : pending.then(() => load(options));
     const unread = options.unread ?? state.onlyUnread;
-    const changed = unread !== state.onlyUnread;
+    const group = options.group === undefined ? state.group : options.group;
+    const changed = unread !== state.onlyUnread || group !== state.group;
     if (
       !options.refresh &&
       !options.more &&
@@ -92,6 +101,7 @@ export function createNotificationInbox(
     if (options.more && !state.nextCursor) return Promise.resolve();
     if (changed) {
       state.onlyUnread = unread;
+      state.group = group;
       state.items = [];
       state.loaded = false;
       state.nextCursor = null;
@@ -101,6 +111,7 @@ export function createNotificationInbox(
       const params = new URLSearchParams();
       if (cursor) params.set('cursor', cursor);
       if (unread) params.set('unread', '1');
+      if (group) params.set('group', group);
       const query = params.toString();
       const r = await apiFetch<unknown>(`/v1/notifications${query ? `?${query}` : ''}`);
       if (!current()) return;

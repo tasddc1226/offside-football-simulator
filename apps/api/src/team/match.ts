@@ -280,6 +280,7 @@ export const matchNotice = (
 ) => ({
   profileId: away.profileId,
   sourceKey: `team-match:${id}`,
+  topic: 'match' as const,
   now,
   content: {
     kind: 'team' as const,

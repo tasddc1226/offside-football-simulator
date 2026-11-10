@@ -1,8 +1,20 @@
-import { NotificationContentSchema, type NotificationContent } from '@offside/contracts';
+import {
+  NotificationContentSchema,
+  type NotificationContent,
+  type NotificationTopic,
+} from '@offside/contracts';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
+import { prefAllows } from './prefs.js';
 
-type Input = { profileId: string; sourceKey: string; content: NotificationContent; now: string };
+type Input = {
+  profileId: string;
+  sourceKey: string;
+  /** 알림 주제. 받기 설정과 알림함 묶음 보기에 쓴다. 주제가 없는 알림(운영자 전용)만 null이다. */
+  topic: NotificationTopic | null;
+  content: NotificationContent;
+  now: string;
+};
 /** 원본 쓰기와 같은 트랜잭션에 붙인다. guard는 서버가 정의한 SQL만 받는다. */
 export function eventNotificationStatements(
   db: D1Database,
@@ -16,13 +28,14 @@ export function eventNotificationStatements(
     db
       .prepare(
         `INSERT OR IGNORE INTO notifications
-      (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
-      SELECT ?, id, ?, ?, ?, ?, ?, ?, ? FROM profiles WHERE id = ? AND deleted_at IS NULL AND (${guard.sql})`,
+      (id, profile_id, source_key, kind, topic, title, body, target_json, created_at, expires_at)
+      SELECT ?, id, ?, ?, ?, ?, ?, ?, ?, ? FROM profiles WHERE id = ? AND deleted_at IS NULL AND (${guard.sql})`,
       )
       .bind(
         id,
         input.sourceKey,
         content.kind,
+        input.topic,
         content.title,
         content.body,
         JSON.stringify(content.target),
@@ -39,8 +52,7 @@ export function eventNotificationStatements(
       FROM push_devices d JOIN sessions s ON s.id = d.session_id LEFT JOIN push_preferences pref ON pref.profile_id = d.profile_id
       WHERE changes() = 1 AND d.profile_id = ? AND s.channel = 'app' AND s.profile_id = d.profile_id
       AND s.revoked_at IS NULL AND s.expires_at > ? AND d.updated_at >= ?
-      AND CASE ? WHEN 'team' THEN COALESCE(pref.team, 1) WHEN 'market' THEN COALESCE(pref.market, 1)
-        WHEN 'social' THEN COALESCE(pref.social, 1) ELSE 1 END = 1`,
+      AND ${prefAllows(content.kind, input.topic)}`,
       )
       .bind(
         id,
@@ -51,7 +63,6 @@ export function eventNotificationStatements(
         input.profileId,
         input.now,
         new Date(Date.parse(input.now) - 90 * 86400_000).toISOString(),
-        content.kind,
       ),
   ];
   // push: false면 알림함에만 남긴다(같은 순간 다른 푸시와 겹쳐 예산에 밀리는 알림).

@@ -3,8 +3,11 @@ import {
   NotificationCursorSchema,
   NotificationSchema,
   type NotificationContent,
+  type NotificationGroup,
+  type NotificationTopic,
   type AppNotification,
 } from '@offside/contracts';
+import { GROUP_WHERE, prefAllows } from '../../push/prefs.js';
 import { parseWithAppError } from '../../errors.js';
 import { newId } from '../ids.js';
 import { translatedPost } from './boards.js';
@@ -44,7 +47,11 @@ export async function listNotifications(
   db: D1Database,
   profileId: string,
   now: string,
-  query: { cursor?: string | undefined; unread?: '1' | undefined },
+  query: {
+    cursor?: string | undefined;
+    unread?: '1' | undefined;
+    group?: NotificationGroup | undefined;
+  },
   lang: Lang = 'ko',
 ) {
   let cursor: { createdAt: string; id: string } | undefined;
@@ -60,6 +67,8 @@ export async function listNotifications(
   const values: string[] = [profileId, now];
   let where = 'profile_id = ? AND expires_at > ?';
   if (query.unread) where += ' AND read_at IS NULL';
+  // 묶음 보기는 그 사람의 알림 안에서만 거른다(profile_id 인덱스 범위 안이라 새 인덱스가 필요 없다).
+  if (query.group) where += ` AND ${GROUP_WHERE[query.group]}`;
   if (cursor) {
     where += ' AND (created_at < ? OR (created_at = ? AND id < ?))';
     values.push(cursor.createdAt, cursor.createdAt, cursor.id);
@@ -133,6 +142,7 @@ export async function queueNotification(
     profileId: string;
     sourceKey: string;
     content: NotificationContent;
+    topic?: NotificationTopic | null;
     now: string;
     push?: boolean;
     dueAt?: string;
@@ -144,13 +154,14 @@ export async function queueNotification(
     db
       .prepare(
         `INSERT OR IGNORE INTO notifications
-    (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
-    SELECT ?, id, ?, ?, ?, ?, ?, ?, ? FROM profiles WHERE id = ? AND deleted_at IS NULL`,
+    (id, profile_id, source_key, kind, topic, title, body, target_json, created_at, expires_at)
+    SELECT ?, id, ?, ?, ?, ?, ?, ?, ?, ? FROM profiles WHERE id = ? AND deleted_at IS NULL`,
       )
       .bind(
         id,
         input.sourceKey,
         content.kind,
+        input.topic ?? null,
         content.title,
         content.body,
         JSON.stringify(content.target),
@@ -169,8 +180,7 @@ export async function queueNotification(
     FROM push_devices d JOIN sessions s ON s.id = d.session_id LEFT JOIN push_preferences pref ON pref.profile_id = d.profile_id
     WHERE changes() = 1 AND d.profile_id = ? AND s.channel = 'app' AND s.profile_id = d.profile_id
     AND s.revoked_at IS NULL AND s.expires_at > ? AND d.updated_at >= ?
-    AND CASE ? WHEN 'team' THEN COALESCE(pref.team, 1) WHEN 'market' THEN COALESCE(pref.market, 1)
-      WHEN 'social' THEN COALESCE(pref.social, 1) ELSE 1 END = 1`,
+    AND ${prefAllows(content.kind, input.topic ?? null)}`,
         )
         .bind(
           id,
@@ -181,7 +191,6 @@ export async function queueNotification(
           input.profileId,
           input.now,
           new Date(Date.parse(input.now) - RETENTION_MS).toISOString(),
-          content.kind,
         ),
     );
   statements.push(

@@ -625,6 +625,166 @@ describe('feature push preferences and atomic events', () => {
       data: { nudge: false, team: false },
     });
   });
+  it('주제 모양은 ?v=2로 묻는 앱에만 주고, 고르지 않은 주제는 옛 설정을 따른다', async () => {
+    const a = await identity();
+    const v2 = async () =>
+      (
+        (await (await call(a.token, '/v1/push/preferences?v=2')).json()) as {
+          data: Record<string, boolean>;
+        }
+      ).data;
+    expect(Object.keys(await v2()).sort()).toEqual(
+      [
+        'attendance',
+        'comeback',
+        'cup',
+        'friend',
+        'league',
+        'market',
+        'match',
+        'notice',
+        'release',
+        'reward',
+      ].sort(),
+    );
+    expect(Object.values(await v2()).every(Boolean)).toBe(true);
+    // 옛 앱에서 팀을 끄면 경기 · 컵 · 리그가 함께 꺼진다. 보상은 친구 설정이 켜져 있어 켬으로 보인다.
+    await preferences(a, { team: false });
+    expect(await v2()).toMatchObject({ match: false, cup: false, league: false, reward: true });
+    // 새 앱에서 컵만 켠다. 옛 설정(team)은 그대로다.
+    const put = await createApp().request(
+      '/v1/push/preferences?v=2',
+      {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${a.token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cup: true, attendance: false }),
+      },
+      ctx.env,
+    );
+    expect(await put.json()).toMatchObject({
+      data: { cup: true, match: false, league: false, attendance: false, comeback: true },
+    });
+    expect(await (await call(a.token, '/v1/push/preferences?nudge=1')).json()).toMatchObject({
+      data: { team: false, nudge: true },
+    });
+    // 옛 앱이 팀을 다시 바꾸면 그 아래 주제 선택은 지워지고 옛 설정을 따른다.
+    await preferences(a, { cup: false });
+    await preferences(a, { team: true });
+    expect(await v2()).toMatchObject({ match: true, cup: true, league: true, attendance: false });
+    expect((await preferences(a, { cup: 'yes' })).status).toBe(400);
+    expect((await preferences(a, { unknownTopic: true })).status).toBe(400);
+  });
+  it('주제 선택이 옛 설정보다 먼저다: 팀을 꺼도 켠 주제는 보내고, 팀이 켜져 있어도 끈 주제는 안 보낸다', async () => {
+    const a = await identity();
+    await device(a);
+    const event = (sourceKey: string, topic: 'match' | 'cup' | 'league' | null) =>
+      queueNotification(ctx.env.DB, {
+        profileId: a.profileId,
+        sourceKey,
+        topic,
+        content,
+        now: iso(),
+        push: true,
+      });
+    await preferences(a, { team: false });
+    await preferences(a, { cup: true });
+    await event('topic:match', 'match');
+    await event('topic:none', null);
+    expect(await deliveries()).toEqual([]);
+    await event('topic:cup', 'cup');
+    expect(await deliveries()).toHaveLength(1);
+    await preferences(a, { team: true });
+    await preferences(a, { league: false });
+    await event('topic:league', 'league');
+    expect(await deliveries()).toHaveLength(1);
+    await event('topic:match2', 'match');
+    expect(await deliveries()).toHaveLength(2);
+    // 알림함에는 설정과 상관없이 모두 남는다.
+    expect((await ctx.env.DB.prepare('SELECT id FROM notifications').all()).results).toHaveLength(
+      5,
+    );
+  });
+  it('대기 중인 알림도 보내기 직전에 주제 선택을 다시 본다', async () => {
+    const a = await identity();
+    await device(a);
+    await queueNotification(ctx.env.DB, {
+      profileId: a.profileId,
+      sourceKey: 'pending-topic',
+      topic: 'league',
+      content,
+      now: iso(),
+      push: true,
+    });
+    expect(await deliveries()).toHaveLength(1);
+    await preferences(a, { league: false });
+    enable();
+    const transport = send();
+    await runPersonalPush(ctx.env, NOW, transport);
+    expect(transport).not.toHaveBeenCalled();
+    expect(await deliveries()).toEqual([{ state: 'cancelled', token: '' }]);
+  });
+  it('알림함을 묶음으로 골라 본다. 주제를 적기 전 알림은 종류로 나눈다', async () => {
+    const a = await identity();
+    const add = (
+      sourceKey: string,
+      kind: 'team' | 'market' | 'social',
+      topic: 'cup' | 'reward' | 'friend' | 'market' | null,
+    ) =>
+      queueNotification(ctx.env.DB, {
+        profileId: a.profileId,
+        sourceKey,
+        topic,
+        content: { ...content, kind },
+        now: iso(),
+      });
+    const cup = await add('g:cup', 'team', 'cup');
+    const oldTeam = await add('g:old-team', 'team', null);
+    const grant = await add('g:grant', 'team', 'reward');
+    const friend = await add('g:friend', 'social', 'friend');
+    const sold = await add('g:sold', 'market', 'market');
+    const ids = async (group: string) =>
+      (
+        (await (await call(a.token, `/v1/notifications?group=${group}`)).json()) as {
+          data: { items: { id: string }[]; unreadCount: number };
+        }
+      ).data;
+    expect((await ids('game')).items.map((n) => n.id).sort()).toEqual([cup.id, oldTeam.id].sort());
+    expect((await ids('social')).items.map((n) => n.id).sort()).toEqual(
+      [grant.id, friend.id].sort(),
+    );
+    expect((await ids('market')).items.map((n) => n.id)).toEqual([sold.id]);
+    expect((await ids('news')).items).toEqual([]);
+    // 안 읽은 수는 묶음과 상관없이 전체다.
+    expect((await ids('market')).unreadCount).toBe(5);
+    expect((await call(a.token, '/v1/notifications?group=unknown')).status).toBe(400);
+  });
+  it('기기 등록에 실린 OS 권한 상태를 남기고, 보내지 않는 옛 앱은 비워 둔다', async () => {
+    const a = await identity();
+    const register = (permission?: string) =>
+      createApp().request(
+        '/v1/push/device',
+        {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${a.token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            installationId: '00000000-0000-4000-8000-000000000077',
+            token: 'ExpoPushToken[test_perm]',
+            platform: 'ios',
+            appVersion: '1.1.8',
+            ...(permission ? { permission } : {}),
+          }),
+        },
+        ctx.env,
+      );
+    const stored = () => ctx.env.DB.prepare('SELECT permission FROM push_devices').first();
+    expect((await register('provisional')).status).toBe(200);
+    expect(await stored()).toEqual({ permission: 'provisional' });
+    expect((await register('authorized')).status).toBe(200);
+    expect(await stored()).toEqual({ permission: 'authorized' });
+    expect((await register()).status).toBe(200);
+    expect(await stored()).toEqual({ permission: null });
+    expect((await register('denied')).status).toBe(400);
+  });
   it.each(['team', 'market', 'social'] as const)(
     'preserves %s inbox records without queueing opted-out device tokens or replaying them after opt-in',
     async (kind) => {
@@ -695,7 +855,7 @@ describe('feature push preferences and atomic events', () => {
       commitNotifiedEvent(
         ctx.db,
         [ctx.db.update(profiles).set({ nickname: 'changed' }).where(eq(profiles.id, a.profileId))],
-        { profileId: a.profileId, sourceKey: 'atomic-fail', content, now: iso() },
+        { profileId: a.profileId, sourceKey: 'atomic-fail', topic: 'match', content, now: iso() },
       ),
     ).rejects.toThrow();
     expect(
