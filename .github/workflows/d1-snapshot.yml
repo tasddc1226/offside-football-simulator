@@ -62,13 +62,19 @@ jobs:
               ;;
             *) exit 1 ;;
           esac
+      # capture는 DB 크기 x 4 + 1GiB의 빈 공간을 요구한다(5GB DB면 21GB 이상). 기본 러너에는 그만큼 없어 안 쓰는 도구를 지운다.
+      - name: Free runner disk space for capture
+        if: inputs.mode == 'capture'
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h "$RUNNER_TEMP" | tail -1
       - name: Capture and verify snapshot or perform read-only preflight
         run: |
           umask 077
           TASK_SNAPSHOT_DIR="$RUNNER_TEMP/offside-snapshot-$GITHUB_RUN_ID"
           node tooling/scripts/d1-snapshot.mjs --mode "$MODE" --database-id "$DB_ID" \
             --expected-name offside-production --output "$TASK_SNAPSHOT_DIR" \
-            --confirm "$CONFIRMATION" --timeout-ms 120000
+            --confirm "$CONFIRMATION" --timeout-ms 300000
       # SQL and restored DB contain production data: never upload them as Actions artifacts.
       - name: Remove private task files
         if: always()
