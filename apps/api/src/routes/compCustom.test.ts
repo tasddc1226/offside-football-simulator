@@ -1,7 +1,7 @@
 import { CompCustomResponseSchema, ErrorEnvelopeSchema, successEnvelope } from '@offside/contracts';
 import { COMP_ICON_IMG_MAX } from '@offside/contracts/comp-custom-limits';
 import { eq } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { compIconPrefix, deleteClubLogos } from '../db/repos/clubCustom.js';
 import { compCustoms } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -26,10 +26,12 @@ const AT = '2026-11-10T00:00:00.000Z';
 
 describe('/v1/comp-custom 대회 · 수상 이름과 리그 · 대회 로고 동기화 (T-11-684)', () => {
   let ctx: TestD1;
-  beforeEach(async () => {
+  // T-11-688 테스트마다 Miniflare를 새로 띄우고 닫으면 닫기가 가끔 끝나지 않아 CI가 15분 뒤 취소됐다.
+  // 테스트는 각자 새 프로필(쿠키)로 행 · 객체를 나눠 쓰므로 파일에 하나만 둔다.
+  beforeAll(async () => {
     ctx = await createTestD1();
   });
-  afterEach(async () => {
+  afterAll(async () => {
     await ctx.dispose();
   });
   const row = async (profileId: string) =>
@@ -106,6 +108,7 @@ describe('/v1/comp-custom 대회 · 수상 이름과 리그 · 대회 로고 동
     expect(saved.imgKey).toBeNull();
     expect(JSON.parse(saved.iconsJson)).toEqual(ICONS);
     expect(await data(await get(ctx, cookie))).toEqual(body);
+    delete ctx.env.CLUB_LOGO_R2_DISABLED; // 파일 안에서 같은 env를 쓴다(T-11-688).
   });
 
   it('한도를 넘거나 형식이 틀리면 400', async () => {

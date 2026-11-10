@@ -5,7 +5,7 @@ import { sha256Hex } from '../db/hash.js';
 import { queueNotification } from '../db/repos/notifications.js';
 import { runPersonalPush } from '../push/personal.js';
 import { queueReengagement } from '../push/reengagement.js';
-import { newsPushStatements } from '../push/enqueue.js';
+import { fanoutNewsEvent, newsPushStatements } from '../push/enqueue.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
 import { commitNotifiedEvent } from '../push/events.js';
 import { eq } from 'drizzle-orm';
@@ -195,6 +195,8 @@ describe('private notification inbox', () => {
       ).bind(a.profileId, iso(), iso()),
       ...newsPushStatements(ctx.env.DB, 'pst_inbox', 'notice', iso()),
     ]);
+    // 기기를 한 대씩 나눠 써도 알림함은 한 번만 들어간다(T-11-688).
+    await fanoutNewsEvent(ctx.env.DB, 'pst_inbox', 'notice', iso(), 1);
     expect(
       (await ctx.env.DB.prepare('SELECT profile_id, source_key FROM notifications').all()).results,
     ).toEqual([{ profile_id: a.profileId, source_key: 'news:notice:2026-10-05' }]);
@@ -837,6 +839,7 @@ describe('feature push preferences and atomic events', () => {
         ).bind(id, board, a.profileId, '새 소식', '내용', iso(), iso()),
         ...newsPushStatements(ctx.env.DB, id, board, iso()),
       ]);
+      await fanoutNewsEvent(ctx.env.DB, id, board, iso());
     }
     expect(
       (await ctx.env.DB.prepare('SELECT event_id FROM push_news_deliveries').all()).results,
