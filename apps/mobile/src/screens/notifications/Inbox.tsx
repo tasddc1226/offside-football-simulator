@@ -4,6 +4,7 @@ import {
   ActivityIndicator,
   FlatList,
   RefreshControl,
+  ScrollView,
   View,
   useWindowDimensions,
 } from 'react-native';
@@ -12,7 +13,9 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useSnapshot } from 'valtio';
 import {
   NotificationIdSchema,
+  NOTIFICATION_GROUPS,
   type AppNotification,
+  type NotificationGroup,
   type NotificationTarget,
 } from '@offside/contracts';
 import { inboxState, inbox, loadInbox, openInbox, openInboxTarget } from '../../platform/inbox';
@@ -42,6 +45,14 @@ const labels = (): Record<AppNotification['kind'], string> => ({
   market: L.kindMarket,
   social: L.kindSocial,
   community: L.kindCommunity,
+});
+// 묶음 보기(설정 화면 · 권한 요청 전 선택 창과 같은 구분). null은 모든 종류다.
+const groupLabels = (): Record<NotificationGroup, string> => ({
+  game: L.groupGame,
+  market: L.kindMarket,
+  social: L.groupSocial,
+  news: L.groupNews,
+  nudge: L.groupNudge,
 });
 const paths = {
   back: 'm15 18-6-6 6-6',
@@ -121,7 +132,7 @@ export default function Inbox() {
   }, [id, state.revision]);
   useEffect(() => {
     setNotice('');
-  }, [id, state.onlyUnread, state.revision]);
+  }, [id, state.onlyUnread, state.group, state.revision]);
   const detail = id && state.detail?.id === id ? state.detail : null;
   async function refresh() {
     if (state.busy || refreshing) return;
@@ -309,6 +320,44 @@ export default function Inbox() {
           </Press>
         ))}
       </View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 8 }}
+        accessibilityRole="tablist"
+      >
+        {[null, ...NOTIFICATION_GROUPS].map((group) => {
+          const selected = state.group === group;
+          const label = group ? groupLabels()[group] : L.groupAll;
+          return (
+            <Press
+              key={group ?? 'all'}
+              scale={1}
+              testID={`inbox-group-${group ?? 'all'}`}
+              accessibilityRole="tab"
+              accessibilityLabel={group ? L.groupAria({ title: label }) : label}
+              accessibilityState={{ selected, disabled: state.busy }}
+              disabled={state.busy}
+              onPress={() => void loadInbox({ group })}
+              style={{
+                minHeight: 40,
+                paddingHorizontal: 14,
+                borderRadius: RADIUS.pill,
+                borderWidth: 1,
+                borderColor: selected ? c.pitch : c.line,
+                backgroundColor: selected ? c.pitch : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: state.busy ? 0.6 : 1,
+              }}
+            >
+              <InboxText bold={selected} v="sm" style={{ color: selected ? c.onPitch : c.muted }}>
+                {label}
+              </InboxText>
+            </Press>
+          );
+        })}
+      </ScrollView>
     </View>
   );
 
@@ -316,7 +365,7 @@ export default function Inbox() {
     <Screen fixed gap={0} style={{ paddingHorizontal: 0 }}>
       {!scrollControls ? controls : null}
       <FlatList
-        key={String(state.onlyUnread)}
+        key={`${state.onlyUnread}:${state.group ?? 'all'}`}
         data={state.items}
         keyExtractor={(item) => item.id}
         contentContainerStyle={{
@@ -448,13 +497,17 @@ export default function Inbox() {
                 <Icon name={state.onlyUnread ? 'check' : 'bell'} size={32} />
               </View>
               <InboxText v="h2" center>
-                {state.onlyUnread ? L.emptyUnread : L.empty}
+                {state.onlyUnread ? L.emptyUnread : state.group ? L.emptyGroup : L.empty}
               </InboxText>
               <InboxText tone="muted" center>
-                {state.onlyUnread ? L.emptyUnreadBody : L.emptyBody}
+                {state.onlyUnread
+                  ? L.emptyUnreadBody
+                  : state.group
+                    ? L.emptyGroupBody
+                    : L.emptyBody}
               </InboxText>
-              {state.onlyUnread ? (
-                <Btn onPress={() => void loadInbox({ unread: false })}>{L.seeAll}</Btn>
+              {state.onlyUnread || state.group ? (
+                <Btn onPress={() => void loadInbox({ unread: false, group: null })}>{L.seeAll}</Btn>
               ) : null}
             </View>
           ) : null

@@ -279,6 +279,7 @@ export function retiredNumberRewardStatements(
       {
         profileId,
         sourceKey: `retired-number:${careerId}`,
+        topic: 'reward',
         now,
         content: {
           kind: 'team',

@@ -17,6 +17,7 @@ import { cupKo, cupTitle } from '../cupText.js';
 import type { Bindings } from '../env.js';
 import { notifyHook, postNotify } from '../notifyHook.js';
 import { cupSchedule } from './cupSchedule.js';
+import { prefAllows } from '../push/prefs.js';
 
 // T-11-251 오프사이드 컵 자동 운영. 5분 cron이 runCup 뒤에 부른다.
 // 1) 마지막 대회 결승이 끝나면 다음 회차를 만든다(접수는 결승 10분 뒤). app_meta `cup:autopilot` = 'off'면 만들지 않는다.
@@ -191,8 +192,8 @@ export async function announceCupOpen(db: Db, now: string, all?: CupDef[]) {
       d1
         .prepare(
           `INSERT OR IGNORE INTO notifications
-        (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
-        SELECT 'ntf_' || lower(hex(randomblob(16))), p.id, ?, 'team', ?, ?,
+        (id, profile_id, source_key, kind, topic, title, body, target_json, created_at, expires_at)
+        SELECT 'ntf_' || lower(hex(randomblob(16))), p.id, ?, 'team', 'cup', ?, ?,
           '{"type":"screen","screen":"home"}', ?, ?
         FROM owner_teams t JOIN profiles p ON p.id = t.profile_id
         WHERE changes() > 0 AND t.season = ? AND t.filled >= ? AND p.deleted_at IS NULL`,
@@ -214,7 +215,7 @@ export async function announceCupOpen(db: Db, now: string, all?: CupDef[]) {
         SELECT n.id || ':' || d.installation_hash, n.id, d.installation_hash, d.session_id, d.profile_id,
           d.token, ?, ?, ? FROM notifications n JOIN push_devices d ON d.profile_id=n.profile_id
         LEFT JOIN push_preferences pref ON pref.profile_id=n.profile_id
-        WHERE changes()>0 AND n.source_key=? AND n.created_at=? AND COALESCE(pref.team,1)=1
+        WHERE changes()>0 AND n.source_key=? AND n.created_at=? AND ${prefAllows('team', 'cup')}
           AND d.installation_hash=(SELECT latest.installation_hash FROM push_devices latest
             JOIN sessions s ON s.id=latest.session_id WHERE latest.profile_id=n.profile_id
               AND s.profile_id=latest.profile_id AND s.channel='app' AND s.revoked_at IS NULL

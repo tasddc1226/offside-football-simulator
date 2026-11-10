@@ -190,6 +190,7 @@ const notify = (
     {
       profileId,
       sourceKey,
+      topic: 'cup',
       now,
       content: { kind: 'team', title, body, target: { type: 'screen', screen: 'home' } },
     },

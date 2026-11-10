@@ -35,10 +35,15 @@ export const NotificationCursorSchema = z
     id: NotificationIdSchema,
   })
   .strict();
+/** 알림함에서 골라 보는 묶음(선택 창 · 설정 화면의 묶음과 같다). */
+export const NOTIFICATION_GROUPS = ['game', 'market', 'social', 'news', 'nudge'] as const;
+export type NotificationGroup = (typeof NOTIFICATION_GROUPS)[number];
 export const NotificationListQuerySchema = z
   .object({
     cursor: z.string().max(300).optional(),
     unread: z.enum(['1']).optional(),
+    // 알림함 묶음 보기. 없으면 전체다.
+    group: z.enum(NOTIFICATION_GROUPS).optional(),
   })
   .strict();
 export const NotificationListSchema = z.object({

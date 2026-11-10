@@ -5,6 +5,7 @@ import { kstDay } from '@offside/contracts/kst';
 import { latePushResult } from './result.js';
 import { communityOwnerEmail } from './community.js';
 import { badgeOf, unreadBadges } from './badge.js';
+import { prefAllowsRow } from './prefs.js';
 
 const BATCH = 100;
 const MINUTE = 60_000;
@@ -146,8 +147,7 @@ async function claim(
       AND d.updated_at >= ? AND s.channel = 'app' AND s.profile_id = q.profile_id
       AND s.revoked_at IS NULL AND s.expires_at > ? AND p.deleted_at IS NULL AND p.id IS NOT NULL
       AND n.read_at IS NULL AND n.expires_at > ? AND q.expires_at > ?
-      AND CASE n.kind WHEN 'team' THEN COALESCE(pref.team, 1) WHEN 'market' THEN COALESCE(pref.market, 1)
-        WHEN 'social' THEN COALESCE(pref.social, 1) WHEN 'return' THEN COALESCE(pref.nudge, 1) ELSE 1 END = 1
+      AND ${prefAllowsRow()}
       AND (n.kind <> 'social' OR ${SOCIAL_ELIGIBLE} = 1)
       AND (n.kind <> 'community' OR (n.source_key LIKE 'admin-community-%'
         AND p.google_sub IS NOT NULL AND lower(trim(p.email)) = ?

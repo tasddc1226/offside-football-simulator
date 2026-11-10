@@ -50,4 +50,12 @@ export const inbox: Translation<InboxMsgs> = {
   emptyUnreadBody: 'You can find past notifications under All.',
   emptyBody: 'App and test notifications you receive will show up here.',
   seeAll: 'See all notifications',
+  groupAll: 'All types',
+  groupGame: 'Matches & cups',
+  groupSocial: 'Friends & rewards',
+  groupNews: 'Game news',
+  groupNudge: 'Check-in & comeback',
+  emptyGroup: 'No notifications of this type yet',
+  emptyGroupBody: 'You can find other notifications under All types.',
+  groupAria: (p) => `Show only ${p.title} notifications`,
 };

@@ -261,6 +261,7 @@ const notify = (
     {
       profileId,
       sourceKey,
+      topic: 'league',
       now,
       content: { kind: 'team', title, body, target: { type: 'screen', screen: 'home' } },
     },

@@ -1,6 +1,7 @@
 import type { Bindings } from '../env.js';
 import { kstDay } from '@offside/contracts/kst';
 import { attendanceReminderText as text } from '../i18n/ko/attendanceReminder.js';
+import { prefAllowsProfile } from './prefs.js';
 
 // T-11-378 출석 독려 푸시. 오늘(KST) 아직 출석하지 않은 로그인한 구단주에게 저녁(19시대) 한 번 앱 푸시를 보낸다. 앱 기기 등록이
 // 최근 14일 안에 갱신된(앱을 쓰는) 사람만, 마지막 출석 뒤 독려를 3번 받고도 오지 않았으면 다음 출석 전까지 멈춘다. 알림 원본은
@@ -34,8 +35,8 @@ export async function queueAttendanceReminders(env: Bindings, time = Date.now())
   const active = iso(time - 14 * DAY);
   const results = await env.DB.batch([
     env.DB.prepare(
-      `INSERT OR IGNORE INTO notifications (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
-      SELECT 'ntf_' || lower(hex(randomblob(16))), p.id, ? || p.id, 'return', ?, ?,
+      `INSERT OR IGNORE INTO notifications (id, profile_id, source_key, kind, topic, title, body, target_json, created_at, expires_at)
+      SELECT 'ntf_' || lower(hex(randomblob(16))), p.id, ? || p.id, 'return', 'attendance', ?, ?,
         '{"type":"screen","screen":"home"}', ?, ?
       FROM (SELECT DISTINCT d.profile_id AS id FROM push_devices d JOIN sessions s ON s.id = d.session_id
           WHERE d.engagement_enabled IN (0, 1) AND d.updated_at >= ? AND s.profile_id = d.profile_id
@@ -44,7 +45,7 @@ export async function queueAttendanceReminders(env: Bindings, time = Date.now())
       WHERE p.deleted_at IS NULL AND (p.google_sub IS NOT NULL OR p.apple_sub IS NOT NULL)
         AND (o.last_day IS NULL OR o.last_day <> ?)
         AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.profile_id = p.id AND n.source_key = ? || p.id)
-        AND COALESCE((SELECT pref.nudge FROM push_preferences pref WHERE pref.profile_id = p.id), 1) = 1
+        AND ${prefAllowsProfile('return', 'attendance', 'p.id')}
         AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.profile_id = p.id AND n.kind = 'return' AND n.created_at >= ?)
         AND (SELECT COUNT(*) FROM notifications n WHERE n.profile_id = p.id
           AND n.source_key LIKE 'attendance-reminder:%' AND n.created_at > COALESCE(o.updated_at, '')) < ?

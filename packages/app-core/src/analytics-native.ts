@@ -224,16 +224,22 @@ export function createNativeAnalytics(io: IO) {
     },
     /** T-11-509 알림 권유 단계(보임 · 받기 · 나중에 · OS 결과). 보임은 실행마다 곳별로 한 번만 보낸다. */
     pushAsk(
-      action: 'view' | 'accept' | 'later' | 'result',
+      action: 'view' | 'accept' | 'pick' | 'later' | 'result',
       place: PushAskPlace,
       result?: PushAskResult,
+      /** pick(받고 싶은 알림을 고름)에 싣는 고른 묶음 목록(예: "game,market"). */
+      groups?: string,
     ) {
       if (!PUSH_ASK_PLACES.includes(place)) return;
       if (action === 'view') {
         if (!allowed() || askSeen.has(place)) return;
         askSeen.add(place);
       }
-      send('push_optin_' + action, { place, ...(action === 'result' && result ? { result } : {}) });
+      send('push_optin_' + action, {
+        place,
+        ...(action === 'result' && result ? { result } : {}),
+        ...(action === 'pick' && groups !== undefined ? { groups } : {}),
+      });
     },
     /** 강화권 · 스카우트권 구매 퍼널(commerceStage). 보내는 순간의 이용 분석 동의만 본다. 쌓아 두거나 다시 보내지 않는다. */
     commerce(o: CommerceObservation, alive?: () => boolean) {
