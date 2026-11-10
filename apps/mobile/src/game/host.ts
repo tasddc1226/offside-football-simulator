@@ -14,6 +14,7 @@ import { saveGame } from '@offside/app-core/career';
 import { createClubCustom } from '@offside/app-core/clubCustom';
 import { createCustomNames } from '@offside/app-core/customNames';
 import { createCompIcons } from '@offside/app-core/compIcons';
+import { createCompCustomSync } from '@offside/app-core/compCustomSync';
 import { createLegends } from '@offside/app-core/legend';
 import { createRetiredNumbers } from '@offside/app-core/retiredNumber';
 import { createNews } from '@offside/app-core/news';
@@ -30,6 +31,7 @@ import {
   accountCache,
   appState,
   clubCustom,
+  compCustomSync,
   compIcons,
   customNames,
   newsState,
@@ -129,16 +131,20 @@ export const {
   syncClubCustom,
 } = createClubCustom(clubCustom, { game: () => appState.G, save });
 
-/** T-11-647 대회·수상 이름 바꾸기(이 기기에만 저장, 동기화 없음). */
+/** T-11-684 이름 · 로고를 유저가 바꾸면 계정으로 보낸다(아래 createCompCustomSync). */
+const compCustomChanged = () => markCompCustomDirty();
+
+/** T-11-647 대회·수상 이름 바꾸기. */
 export const {
   loadCustomNames,
   setCustomName,
   resetCustomNames,
   exportCustomNames,
   importCustomNames,
-} = createCustomNames(customNames);
+  adoptCustomNames,
+} = createCustomNames(customNames, compCustomChanged);
 
-/** T-11-681 리그·대회 로고 바꾸기(이 기기에만 저장, 동기화 없음). */
+/** T-11-681 리그·대회 로고 바꾸기. */
 export const {
   loadCompIcons,
   setCompIcon,
@@ -146,7 +152,16 @@ export const {
   exportCompIcons,
   importCompIcons,
   dismissCompIconHint,
-} = createCompIcons(compIcons);
+  adoptCompIcons,
+} = createCompIcons(compIcons, compCustomChanged);
+
+/** T-11-684 대회 · 수상 이름과 리그 · 대회 로고의 계정 동기화. */
+export const { markCompCustomDirty, syncCompCustom } = createCompCustomSync(compCustomSync, {
+  names: () => ({ ...customNames.map }),
+  icons: () => ({ ...compIcons.map }),
+  adoptNames: adoptCustomNames,
+  adoptIcons: adoptCompIcons,
+});
 
 export const { recordRn, fillGranted, rnOf, rnMissOf, watchRetiredNumberAlerts } =
   createRetiredNumbers(

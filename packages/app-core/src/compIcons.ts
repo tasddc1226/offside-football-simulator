@@ -1,20 +1,22 @@
 // ───────── 리그 · 대회 로고 바꾸기 (웹·앱 공용, T-11-681) ─────────
-// 리그 · 대회마다 기본 로고(compEmblem.ts가 그리는 엠블럼)가 있고, 유저가 고른 이미지로 이 기기에서만 바꿀 수 있다.
-// 이름 바꾸기(customNames.ts)와 같이 서버에 보내지 않고(동기화 없음) 이 기기 저장소(ft_comp_icons)에만 둔다. 키는 저장된
-// 한국어 이름(tn 키)이다. 공유 이미지에는 넣지 않는다. 기기를 옮길 때는 이름 바꾸기와 같은 에디트 파일에 함께 실린다.
+// 리그 · 대회마다 기본 로고(compEmblem.ts가 그리는 엠블럼)가 있고, 유저가 고른 이미지로 내 화면에서만 바꿀 수 있다.
+// 정본은 이 기기 저장소(ft_comp_icons)이고, 프로필 세션이 있으면 이름 바꾸기(customNames.ts)와 함께 compCustomSync.ts가
+// 계정과 맞춘다(T-11-684). 키는 저장된 한국어 이름(tn 키)이다. 공유 이미지에는 넣지 않는다. 이름 바꾸기와 같은 에디트 파일에도 실린다.
 // 첫 화면(부팅)이 읽으므로 무거운 게임 모듈을 가져오지 않는다.
 import { loadKey, saveKey } from '@offside/game/storage';
+import {
+  COMP_CUSTOM_KEY_MAX as KEY_MAX,
+  COMP_ICON_IMG_MAX,
+  COMP_ICON_IMG_PATTERN as IMG,
+  COMP_ICONS_LIMIT,
+  COMP_ICONS_TOTAL_MAX,
+} from '@offside/contracts/comp-custom-limits';
+
+export { COMP_ICON_IMG_MAX, COMP_ICONS_LIMIT, COMP_ICONS_TOTAL_MAX };
 
 export const COMP_ICONS_KEY = 'ft_comp_icons';
 /** 처음 한 번 띄우는 "로고를 눌러 바꿀 수 있어요" 안내를 닫았는지. */
 export const COMP_ICON_HINT_KEY = 'ft_comp_icon_hint';
-/** 이미지 하나(data URL)의 최대 글자 수. 96px WebP면 대개 3~10KB다. */
-export const COMP_ICON_IMG_MAX = 16_000;
-/** 이미지 전체 합계 — 세이브와 같은 저장소를 쓰므로 넉넉히 잡지 않는다. */
-export const COMP_ICONS_TOTAL_MAX = 900_000;
-/** 바꿀 수 있는 로고 수(리그 17 + 대회 47보다 넉넉하게). */
-export const COMP_ICONS_LIMIT = 120;
-const KEY_MAX = 60;
 /** importCompIcons: 파일은 멀쩡한데 기기 저장 공간이 모자랐다. */
 export const COMP_ICONS_NO_SPACE = -2;
 
@@ -26,7 +28,6 @@ export interface CompIconsState {
 }
 export const initialCompIconsState = (): CompIconsState => ({ map: {}, hinted: false });
 
-const IMG = /^data:image\/(webp|png|jpeg);base64,[A-Za-z0-9+/=]+$/;
 // eslint-disable-next-line no-control-regex
 const CONTROL = /[\u0000-\u001f\u007f]/g;
 
@@ -48,11 +49,17 @@ export function sanitizeCompIcons(raw: unknown): CompIconMap {
 
 const totalOf = (map: CompIconMap) => Object.values(map).reduce((n, v) => n + v.length, 0);
 
-export function createCompIcons(state: CompIconsState) {
-  function commit(map: CompIconMap): boolean {
+/** onChange: 유저가 이 기기에서 바꿨을 때(계정 동기화가 보낼 것이 생겼다). 계정에서 받아 온 값(adoptCompIcons)에는 부르지 않는다. */
+export function createCompIcons(state: CompIconsState, onChange?: () => void) {
+  function adoptCompIcons(map: CompIconMap): boolean {
     const next = sanitizeCompIcons(map);
     if (!saveKey(COMP_ICONS_KEY, { v: 1, icons: next })) return false;
     state.map = next;
+    return true;
+  }
+  function commit(map: CompIconMap): boolean {
+    if (!adoptCompIcons(map)) return false;
+    onChange?.();
     return true;
   }
 
@@ -103,5 +110,6 @@ export function createCompIcons(state: CompIconsState) {
     exportCompIcons,
     importCompIcons,
     dismissCompIconHint,
+    adoptCompIcons,
   };
 }

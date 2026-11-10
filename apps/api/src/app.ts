@@ -31,6 +31,7 @@ import { registerAgentNameRoutes } from './routes/agentNames.js';
 import { registerCareerActivityRoutes } from './routes/careerActivity.js';
 import { registerCareerRoutes } from './routes/careers.js';
 import { registerClubCustomRoutes } from './routes/clubCustom.js';
+import { registerCompCustomRoutes } from './routes/compCustom.js';
 import { registerHofRoutes } from './routes/hof.js';
 import { registerBest11Routes } from './routes/best11.js';
 import { registerFirstsRoutes } from './routes/firsts.js';
@@ -94,6 +95,7 @@ export function createApp(options: { testRoutes?: boolean } = {}): Hono<AppEnv> 
   registerServerStatusRoutes(app);
   registerClientErrorRoutes(app);
   registerClubCustomRoutes(app);
+  registerCompCustomRoutes(app);
   registerOwnerTeamRoutes(app);
   registerSeasonRecapRoutes(app);
   registerOwnerSummaryRoutes(app);

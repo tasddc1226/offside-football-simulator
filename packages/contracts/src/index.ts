@@ -57,6 +57,7 @@ export {
   REQUEST_BODY_MAX_BYTES,
   CLUB_CUSTOM_BODY_MAX_BYTES,
   CLUB_CUSTOM_PATH,
+  COMP_CUSTOM_PATH,
 } from './headers.js';
 
 export { HealthDataSchema } from './health.js';
@@ -190,6 +191,17 @@ export {
   type PutClubCustomBody,
   type ClubCustomResponse,
 } from './clubs.js';
+
+export {
+  CompNameMapSchema,
+  CompIconMapSchema,
+  PutCompCustomBodySchema,
+  CompCustomResponseSchema,
+  type CompNameMap,
+  type CompIconMap,
+  type PutCompCustomBody,
+  type CompCustomResponse,
+} from './comp-custom.js';
 
 export { IsoUtcSchema } from './primitives.js';
 

@@ -25,6 +25,7 @@ import {
   loadCompIcons,
   loadCustomNames,
   syncClubCustom,
+  syncCompCustom,
   uploadLegacyRetirement,
   uploadRetirement,
   watchRetiredNumberAlerts,
@@ -52,7 +53,7 @@ export async function boot(): Promise<void> {
   loadClubCustom();
   // T-11-647 유저가 바꾼 대회·수상 이름을 첫 화면을 그리기 전에 tn()에 건다.
   loadCustomNames();
-  // T-11-681 유저가 고른 리그·대회 로고 이미지(이 기기에만).
+  // T-11-681 유저가 고른 리그·대회 로고 이미지.
   loadCompIcons();
   appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });
   // T-11-438 중계 도중 끊긴 구간 리포트가 있으면 시즌 탭 맨 위에 다시 보여 준다.
@@ -69,9 +70,12 @@ export async function boot(): Promise<void> {
     if (r.ok) setLatestBalance(r.data);
   });
   // 앱 세션이 없으면(첫 실행) 받고, 있으면 서버의 클럽 꾸미기와 맞춘다.
-  void ensureSession().then(
-    (ok) => ok && hasSessionHint() && void syncClubCustom().catch(() => {}),
-  );
+  void ensureSession().then((ok) => {
+    if (!ok || !hasSessionHint()) return;
+    void syncClubCustom().catch(() => {});
+    // T-11-684 대회 · 수상 이름과 리그 · 대회 로고도 같은 때 맞춘다.
+    void syncCompCustom().catch(() => {});
+  });
   watchRetiredNumberAlerts();
   // 새 소식: 열 때·앱으로 돌아올 때·10분마다. 못 보낸 업로드·새 앱 번들(OTA)·스토어 업데이트도 돌아올 때 다시 본다.
   void checkNews();
