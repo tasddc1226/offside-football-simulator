@@ -1,4 +1,6 @@
-const SNAPSHOT_STALE_MS = 30 * 60 * 60_000;
+// T-11-686 D1 export는 찍는 동안 운영 DB 요청을 막아 매일 돌릴 수 없다. 검증된 스냅샷은 달마다 한 번 정비 시간에 찍고
+// (docs/operations/d1-consistent-recovery.md), 35일을 넘기면 stale로 알린다. 그 사이 복구는 D1 Time Travel이 맡는다.
+const SNAPSHOT_STALE_MS = 35 * 24 * 60 * 60_000;
 
 export const RECOVERY_MARKER_KEY = 'd1-snapshots/production/last-verified.json';
 const PRODUCTION_DB = '2cfe462c-204e-4842-805c-5840fc9b1758';

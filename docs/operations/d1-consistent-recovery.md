@@ -23,10 +23,11 @@
    `maintenance_approved=true`에서만 실행한다. 일반 로컬 CLI는 운영 capture를 거절한다.
 3. capture는 export 전에 전용 R2 probe 객체의 쓰기·읽기·삭제 권한을 먼저 검증한다. 읽기 전용 preflight는 이 probe를 실행하지 않는다.
    토큰에는 D1 읽기/export 및 R2 객체 읽기·쓰기·삭제 권한이 필요하다.
-   한 번 시작한 export bookmark를 유지하고 변경되면 실패한다. 기본 120초, 허용 최대 300초 안에 poll한다.
+   한 번 시작한 export bookmark를 유지하고 변경되면 실패한다. 기본 120초, 허용 최대 300초 안에 poll한다. 운영 workflow는 상한인 300초까지 기다린다(T-11-686, 5GB export가 2분 안에 끝나지 않을 수 있다).
    제한에 걸리면 더 이상 poll하지 않는다. Cloudflare의 자동 취소가 즉시 완료된다는 보장은 없으므로 실제 DB 응답을 확인해야 한다.
 4. signed URL은 인증 헤더 없이 HTTPS로 다운로드하며 URL·SQL·인증 값은 로그에 넣지 않는다.
    작업 파일은 전용 비공개 디렉터리에만 두고 덮어쓰지 않는다. 사전 여유 공간은 DB 크기 × 4 + 1GiB 이상을 요구한다.
+   workflow의 capture는 그 공간을 내려고 러너에 미리 깔린 안 쓰는 도구를 먼저 지운다(T-11-686).
 5. SQL 문장 경계에서 32MiB 단위로 gzip 조각을 만든다. 단일 문장이 16MiB를 넘으면 실패한다.
    각 조각의 SHA-256·바이트 수, 원본 UUID·bookmark, snapshot 시작 시각을 manifest에 기록한다.
 6. 새 로컬 SQLite에 복원해 물리 무결성과 FK를 검사한다. 행을 삭제하거나 FK를 숨겨서 통과시키지 않는다.
@@ -44,8 +45,9 @@ SQL 원문·복원 DB는 Actions artifact에 올리지 않으며 workflow 종료
 
 - `cron:backup:last`의 새 생성 결과에는 `consistency: live-copy`, `restoreVerified: false`가 붙는다.
 - `cron:infra-health:last.backupRecovery`는 운영 포인터·manifest 해시·출처·시각을 확인한다.
-- 검증 자료 없음/오류는 `backup-recovery-unverified`, snapshot 시작 시각이 30시간 초과면 `backup-recovery-stale` 이슈다.
-- 여기서 30시간은 검증된 R2 사본의 신선도 기준이다. Time Travel 장애 판정이나 서비스 장애율을 의미하지 않는다.
+- 검증 자료 없음/오류는 `backup-recovery-unverified`, snapshot 시작 시각이 35일 초과면 `backup-recovery-stale` 이슈다.
+- 여기서 35일은 검증된 R2 사본의 신선도 기준이다(T-11-686, 이전 30시간). export가 운영 DB 요청을 막아 매일 찍을 수 없으므로
+  달마다 한 번 정비 시간에 찍는다. 그 사이의 복구는 D1 Time Travel(30일)이 맡는다. Time Travel 장애 판정이나 서비스 장애율을 의미하지 않는다.
 - 시간별 검사는 작은 포인터/manifest와 조각 목록의 존재·크기를 확인한다(최대 11페이지). 조각별 HEAD나 전체 payload 다운로드는 하지 않는다. 매 시간 전체 조각을 재복원했다는 뜻은 아니다.
   전체 재검증은 capture 시 수행했으며 이후 정기 훈련을 별도로 해야 한다.
 - 운영 snapshot 전까지 이 이슈가 남는 것이 의도된 동작이다. 기존 live-copy 완료만으로 지우지 않는다.
