@@ -1,18 +1,19 @@
 // ───────── 대회·수상 이름 바꾸기 (웹·앱 공용, T-11-647) ─────────
-// 유저가 대회·수상·리그 이름을 이 기기에서만 바꿔 부른다. 서버에 보내지 않고(동기화 없음) 이 기기 저장소(ft_custom_names)에만
-// 둔다. 화면은 tn()이 이 이름표를 거쳐 그리고, 저장값·판정·서버 기록은 그대로다. 남에게 나가는 공유 이미지는 원래 이름이다.
-// 기기를 옮길 때는 에디트 파일(JSON)로 내보내고 가져온다. 반응성은 클라이언트가 붙인다(웹 $state, 앱 valtio).
+// 유저가 대회·수상·리그 이름을 내 화면에서만 바꿔 부른다. 정본은 이 기기 저장소(ft_custom_names)이고, 프로필 세션이 있으면
+// compCustomSync.ts가 계정과 맞춘다(T-11-684). 화면은 tn()이 이 이름표를 거쳐 그리고, 저장값·판정·서버 기록은 그대로다.
+// 남에게 나가는 공유 이미지는 원래 이름이다. 에디트 파일(JSON)로도 옮길 수 있다. 반응성은 클라이언트가 붙인다(웹 $state, 앱 valtio).
 // 첫 화면(부팅)이 읽으므로 무거운 게임 모듈을 가져오지 않는다 — 고를 이름 목록은 customNamesCatalog.ts에 있다.
 import { loadKey, saveKey } from '@offside/game/storage';
 import { setCustomNames } from '@offside/game/i18n/names';
+import {
+  COMP_CUSTOM_KEY_MAX as KEY_MAX,
+  CUSTOM_NAME_MAX,
+  CUSTOM_NAMES_LIMIT,
+} from '@offside/contracts/comp-custom-limits';
+
+export { CUSTOM_NAME_MAX, CUSTOM_NAMES_LIMIT };
 
 export const CUSTOM_NAMES_KEY = 'ft_custom_names';
-/** 바꾼 이름 하나의 최대 글자 수. */
-export const CUSTOM_NAME_MAX = 30;
-/** 원래 이름(키)의 최대 글자 수 — 게임 이름보다 넉넉하게. */
-const KEY_MAX = 60;
-/** 이름표에 남기는 최대 수. */
-export const CUSTOM_NAMES_LIMIT = 500;
 /** importCustomNames: 파일은 멀쩡한데 기기 저장 공간이 모자랐다(형식 오류 -1과 구분한다). */
 export const CUSTOM_NAMES_NO_SPACE = -2;
 
@@ -49,12 +50,18 @@ function readStored(): CustomNameMap {
   );
 }
 
-export function createCustomNames(state: CustomNamesState) {
-  function commit(map: CustomNameMap): boolean {
+/** onChange: 유저가 이 기기에서 바꿨을 때(계정 동기화가 보낼 것이 생겼다). 계정에서 받아 온 값(adoptCustomNames)에는 부르지 않는다. */
+export function createCustomNames(state: CustomNamesState, onChange?: () => void) {
+  function adoptCustomNames(map: CustomNameMap): boolean {
     const next = sanitizeCustomNames(map);
     if (!saveKey(CUSTOM_NAMES_KEY, { v: 1, names: next })) return false;
     state.map = next;
     setCustomNames(next);
+    return true;
+  }
+  function commit(map: CustomNameMap): boolean {
+    if (!adoptCustomNames(map)) return false;
+    onChange?.();
     return true;
   }
 
@@ -101,5 +108,6 @@ export function createCustomNames(state: CustomNamesState) {
     resetCustomNames,
     exportCustomNames,
     importCustomNames,
+    adoptCustomNames,
   };
 }

@@ -23,10 +23,14 @@ export const clubLogoStoreOf = (env: Bindings): ClubLogoStore | undefined =>
     : undefined;
 
 /** 갓 올린 객체는 아직 D1에 적히기 전일 수 있어 정리에서 건드리지 않는다. */
-const ORPHAN_GRACE_MS = 60 * 60_000;
+export const ORPHAN_GRACE_MS = 60 * 60_000;
 
 export const clubLogoPrefix = (environment: string, profileId: string) =>
   `club-logos/${environment}/${profileId}/`;
+
+/** T-11-684 리그 · 대회 로고(comp_customs)의 객체 자리. */
+export const compIconPrefix = (environment: string, profileId: string) =>
+  `comp-icons/${environment}/${profileId}/`;
 
 /** 이미지를 떼어 낸 맵과 떼어 낸 이미지(구단 id → data URL). */
 export function splitClubImgs(clubs: ClubCustomMap): { slim: ClubCustomMap; imgs: ClubImgs } {
@@ -89,23 +93,25 @@ export async function getClubCustom(
   };
 }
 
-/** 이 프로필의 이미지 객체 중 keep이 아닌 것을 지운다. graceMs 안에 올린 것은 둔다(다른 쓰기가 막 올린 것일 수 있다). */
-async function sweepClubLogos(
+/** prefix 아래(한 프로필의 한 종류) 이미지 객체 중 keep이 아닌 것을 지운다. graceMs 안에 올린 것은 둔다(다른 쓰기가 막 올린 것일 수 있다). */
+export async function sweepLogoObjects(
   store: ClubLogoStore,
-  profileId: string,
+  prefix: string,
   keep: string | null,
   graceMs: number,
 ) {
-  const listed = await store.bucket.list({ prefix: clubLogoPrefix(store.environment, profileId) });
+  const listed = await store.bucket.list({ prefix });
   const stale = listed.objects
     .filter((o) => o.key !== keep && Date.now() - o.uploaded.getTime() >= graceMs)
     .map((o) => o.key);
   if (stale.length) await store.bucket.delete(stale);
 }
 
-/** 프로필을 지울 때 그 프로필의 이미지 객체를 모두 지운다(응답 뒤, 실패해도 삭제는 끝났다). */
+/** 프로필을 지울 때 그 프로필의 이미지 객체(구단 엠블럼 · 리그 · 대회 로고)를 모두 지운다(응답 뒤, 실패해도 삭제는 끝났다). */
 export async function deleteClubLogos(store: ClubLogoStore | undefined, profileId: string) {
-  if (store) await sweepClubLogos(store, profileId, null, 0);
+  if (!store) return;
+  await sweepLogoObjects(store, clubLogoPrefix(store.environment, profileId), null, 0);
+  await sweepLogoObjects(store, compIconPrefix(store.environment, profileId), null, 0);
 }
 
 /** 최신 쓰기 우선: 저장된 updated_at보다 오래된 쓰기(늦게 도착한 다른 기기의 옛 변경)는 무시한다.
@@ -146,7 +152,13 @@ export async function putClubCustom(
   const won = row?.imgKey === imgKey && row.updatedAt === updatedAt;
   // 정리는 최선 노력이다 — 실패해도 저장은 끝났고, 남은 객체는 다음 저장 때 다시 지운다.
   if (!won && imgKey) await active.bucket.delete(imgKey).catch(() => {});
-  if (won) await sweepClubLogos(active, profileId, imgKey || null, ORPHAN_GRACE_MS).catch(() => {});
+  if (won)
+    await sweepLogoObjects(
+      active,
+      clubLogoPrefix(active.environment, profileId),
+      imgKey || null,
+      ORPHAN_GRACE_MS,
+    ).catch(() => {});
   return won ? { clubs, updatedAt } : (await getClubCustom(db, profileId, undefined, store))!;
 }
 

@@ -5,7 +5,7 @@ import { plural } from './_util';
 export const compIcons: Translation<CompIconsMsgs> = {
   sheetTitle: (p) => `${p.name} logo`,
   intro:
-    'Swap this logo for an image you pick. It’s saved on this device only, and share images and other players still see the default logo.',
+    'Swap this logo for an image you pick. Once you sign in it follows you to your other devices, and share images and other players still see the default logo.',
   where:
     'See every league and competition logo in Settings → Rename competitions and awards, change logos.',
   pick: 'Choose image',

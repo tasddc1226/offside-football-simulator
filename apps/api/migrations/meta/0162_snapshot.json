@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9d96b299-ab7e-45bc-aa27-f7f6d381702b",
+  "id": "de8d618e-fdd3-4233-ab3b-56396514397c",
   "prevId": "0fa4b398-4d79-4cd1-abc8-3b5d25b4cd46",
   "tables": {
     "acquisition_consents": {
@@ -3073,6 +3073,65 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
+    "comp_customs": {
+      "name": "comp_customs",
+      "columns": {
+        "profile_id": {
+          "name": "profile_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "names_json": {
+          "name": "names_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "icons_json": {
+          "name": "icons_json",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "img_key": {
+          "name": "img_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "comp_customs_profile_id_profiles_id_fk": {
+          "name": "comp_customs_profile_id_profiles_id_fk",
+          "tableFrom": "comp_customs",
+          "tableTo": "profiles",
+          "columnsFrom": [
+            "profile_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "cup_entries": {
       "name": "cup_entries",
       "columns": {
@@ -5143,14 +5202,6 @@
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
-        },
-        "engine": {
-          "name": "engine",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 2
         },
         "origin_json": {
           "name": "origin_json",

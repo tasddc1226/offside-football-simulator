@@ -94,8 +94,11 @@ else
     .finally(render);
 
 // T-10-010: 클럽 커스텀을 계정과 맞춘다. 세션이 있었던 기기만 — 첫 방문자는 로컬 모드 그대로다(T-10-037).
-if (hasSessionHint())
+if (hasSessionHint()) {
   void import('./ui/clubCustom.svelte.js').then((m) => m.syncClubCustom()).catch(() => {});
+  // T-11-684: 대회 · 수상 이름과 리그 · 대회 로고도 같은 때 맞춘다.
+  void import('./ui/compCustomSync.svelte.js').then((m) => m.syncCompCustom()).catch(() => {});
+}
 // T-10-013: 다른 계정 소유 커리어 알림은 첫 flush 전에 듣기 시작한다.
 watchOwnerConflicts();
 // T-10-076: 은퇴 업로드 응답의 영구결번 심사 결과도 첫 flush 전에 듣는다.

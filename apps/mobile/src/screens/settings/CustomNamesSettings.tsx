@@ -28,7 +28,8 @@ import {
   setCustomName,
   toast,
 } from '../../game/host';
-import { appState, compIcons, customNames as customNamesState } from '../../store';
+import { appState, compCustomSync, compIcons, customNames as customNamesState } from '../../store';
+import { compSyncText } from '@offside/app-core/compCustomSync';
 import { hasCompEmblem } from '@offside/app-core/compEmblem';
 import { COMP_ICONS_NO_SPACE } from '@offside/app-core/compIcons';
 import { compIconsText as CI } from '@offside/app-core/i18n/ko/compIcons';
@@ -86,6 +87,7 @@ export function CustomNamesSettings() {
   const changed = Object.keys(map).length;
   // T-11-681 리그·대회 로고(이 기기에만). 에디트 파일에 이름과 함께 싣는다.
   const icons = useSnapshot(compIcons).map;
+  const { status } = useSnapshot(compCustomSync);
   const changedIcons = Object.keys(icons).length;
   const q = query.trim().toLowerCase();
   const items = (catalog?.[group] ?? []).filter(
@@ -166,8 +168,8 @@ export function CustomNamesSettings() {
           <Txt tone="muted" v="sm">
             {T.intro}
           </Txt>
-          <Txt tone="muted" v="xs">
-            {T.local}
+          <Txt tone="muted" v="xs" accessibilityLiveRegion="polite" testID={`comp-sync-${status}`}>
+            {compSyncText(status)}
           </Txt>
           <View
             accessibilityLabel={T.group}

@@ -14,7 +14,13 @@ import { googleFailText, loginDoneText, loginOfflineText } from '@offside/app-co
 import { loadHOF } from '@offside/game/hof-store';
 import { hofStart } from '@offside/app-core/state';
 import { appState } from '../store';
-import { openLocalLegend, refreshAccount, syncClubCustom, toast } from '../game/host';
+import {
+  openLocalLegend,
+  refreshAccount,
+  syncClubCustom,
+  syncCompCustom,
+  toast,
+} from '../game/host';
 import { openBoard } from '../game/nav';
 import { ensureSession, setSessionToken } from './session';
 import { accountText as L } from '@offside/app-core/i18n/ko/account';
@@ -143,6 +149,7 @@ async function finishLogin(r: AuthResult, back: LoginReturn | null, via: string)
   toast(loginDoneText(r.result, via));
   await refreshAccount();
   void syncClubCustom().catch(() => {});
+  void syncCompCustom().catch(() => {});
   void flushOutbox();
   if (back) {
     if ('board' in back) return openBoard(back.board, back.postId);

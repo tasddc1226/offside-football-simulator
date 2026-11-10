@@ -579,6 +579,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'upload_revision',
   ],
   club_customs: ['profile_id', 'clubs_json', 'updated_at', 'img_key'],
+  comp_customs: ['profile_id', 'names_json', 'icons_json', 'img_key', 'updated_at'],
   friend_matches: [
     'id',
     'profile_id',
