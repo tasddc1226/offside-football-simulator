@@ -34,7 +34,7 @@ const ko = {
   ending_comeback: '경질 뒤 재기',
   ending_steady: '묵묵한 지도자',
   endingDesc_legend: '우승 트로피를 여러 번 들어 올린 감독이었습니다.',
-  endingDesc_promoter: '맡는 팀마다 한 단계 위 리그로 올려놓았습니다.',
+  endingDesc_promoter: '맡은 팀을 한 단계 위 리그로 올려놓았습니다.',
   endingDesc_youth: '유스에서 올린 선수들이 팀의 뼈대가 됐습니다.',
   endingDesc_oneclub: '한 구단 벤치를 끝까지 지켰습니다.',
   endingDesc_journeyman: '여러 구단을 옮겨 다니며 팀을 맡았습니다.',

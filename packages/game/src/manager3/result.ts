@@ -44,24 +44,35 @@ function mainStyle(s: M3State): ManagerStyle {
   return MANAGER_STYLES.reduce((a, b) => (s.styleUse[b] > s.styleUse[a] ? b : a));
 }
 
-/** 특기: 능력치 · 쓴 전술 · 기록에서 점수를 매겨 위 둘(점수 66 이상). */
-export function specials3(s: M3State): ManagerSpecial[] {
+/** 특기 점수(특기 판정 · 기준 조정용). 전술은 그 계열을 쓴 비율로 보되, 절반(역습은 40%) 넘게 썼으면 만점이다. */
+export function specialScores3(s: M3State): Record<ManagerSpecial, number> {
   const blocks = Math.max(
     1,
     Object.values(s.styleUse).reduce((t, x) => t + x, 0),
   );
+  const share = (x: number, full = 0.5) => Math.min(1, x / blocks / full);
   const by = s.blocksBy;
-  const wingy = (by['4-3-3'] + by['4-2-3-1'] + by['4-4-2'] * 0.5) / blocks;
-  const mid = (by['3-5-2'] + by['4-2-3-1'] + by['5-3-2'] * 0.5) / blocks;
-  const score: Record<ManagerSpecial, number> = {
-    wing: s.attrs.atk * 0.6 + wingy * 40,
-    midfield: s.attrs.tac * 0.6 + mid * 40,
-    defense: s.attrs.def * 0.7 + (s.styleUse.defense / blocks) * 40,
-    counter: s.attrs.tac * 0.3 + (s.styleUse.counter / blocks) * 80,
+  const wingy = by['4-3-3'] + by['4-2-3-1'] + by['4-4-2'] * 0.5;
+  const mid = by['3-5-2'] + by['4-2-3-1'] + by['5-3-2'] * 0.5;
+  return {
+    wing: s.attrs.atk * 0.6 + share(wingy) * 40,
+    midfield: s.attrs.tac * 0.6 + share(mid) * 40,
+    defense: s.attrs.def * 0.7 + share(s.styleUse.defense) * 40,
+    counter: s.attrs.tac * 0.3 + share(s.styleUse.counter, 0.4) * 48,
     youth: s.attrs.youth * 0.6 + Math.min(s.youthStars, 8) * 5,
   };
-  return MANAGER_SPECIALS.filter((k) => score[k] >= 66)
+}
+
+/** 첫째 특기는 60점, 둘째 특기는 70점부터. */
+export const M3_SPECIAL_FIRST = 60;
+export const M3_SPECIAL_SECOND = 70;
+
+/** 특기: 능력치 · 쓴 전술 · 기록에서 점수를 매겨 가장 높은 것 하나(60점 이상)와, 70점 넘는 다음 것 하나. */
+export function specials3(s: M3State): ManagerSpecial[] {
+  const score = specialScores3(s);
+  return MANAGER_SPECIALS.filter((k) => score[k] >= M3_SPECIAL_FIRST)
     .sort((a, b) => score[b] - score[a])
+    .filter((k, i) => i === 0 || score[k] >= M3_SPECIAL_SECOND)
     .slice(0, MANAGER_SPECIALS_MAX);
 }
 
@@ -78,14 +89,27 @@ export function grade3(s: M3State): ManagerGrade {
   return score >= 72 && s.titles > 0 ? 'S' : score >= 50 ? 'A' : score >= 34 ? 'B' : 'C';
 }
 
+/** 은퇴할 때 맡고 있던(마지막) 구단을 연달아 맡은 시즌 수. */
+function lastStint(s: M3State): number {
+  const ids = s.history.map((h) => h.clubId).filter(Boolean);
+  const last = ids.at(-1);
+  let n = 0;
+  for (let i = ids.length - 1; i >= 0 && ids[i] === last; i--) n++;
+  return n;
+}
+
+/**
+ * 엔딩: 우승 여러 번 → 재기 → 승격 → 유스 → 원클럽 → 저니맨 → 묵묵한 지도자 순으로 먼저 맞는 것.
+ * 원클럽 · 저니맨은 감독을 맡은 시즌 수에 맞춰 기준이 늘어난다(10시즌이면 마지막 구단 7시즌 · 구단 5곳).
+ */
 export function ending3(s: M3State, grade = grade3(s)): ManagerEnding {
   const coached = s.history.filter((h) => h.clubId).length;
-  if (grade === 'S' && s.titles >= 3) return 'legend';
+  if (s.titles >= 2 && (grade === 'S' || grade === 'A')) return 'legend';
   if (s.comeback) return 'comeback';
-  if (s.promotions >= 2) return 'promoter';
-  if (specials3(s)[0] === 'youth' && s.youthStars >= 4) return 'youth';
-  if (s.clubs.length === 1 && coached >= 6) return 'oneclub';
-  if (s.clubs.length >= 5) return 'journeyman';
+  if (s.promotions >= 1) return 'promoter';
+  if (specials3(s).includes('youth') && s.youthStars >= 4) return 'youth';
+  if (coached >= 5 && lastStint(s) >= Math.ceil(coached * 0.7)) return 'oneclub';
+  if (s.clubs.length >= 4 + Math.floor(coached / 10)) return 'journeyman';
   return 'steady';
 }
 

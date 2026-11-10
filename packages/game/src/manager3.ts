@@ -61,6 +61,7 @@ export {
   mastery3,
   migrateManager3Save,
   previewManager3,
+  specialScores3,
   specials3,
   type Manager3Result,
 } from './manager3/result.js';

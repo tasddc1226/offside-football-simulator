@@ -1,8 +1,9 @@
 // T-11-648 감독 커리어 3 밸런스 시뮬레이션. 엔진(packages/game/src/manager3)을 그대로 돌려 등급 · 엔딩 · 경질 · 우승 ·
 // 숙련 · 특기 · 경기 결과 분포를 본다. 선택은 정책(무작위 · 성실)으로 고른다. 성실 정책은 목표를 이사회 최소로, 부족한 자리를
-// 영입하고, 이야기는 무난한 선택, 성장 점수는 약한 능력치에 준다.
+// 영입하고, 이야기는 무난한 선택, 성장 점수는 약한 능력치에 준다. 바꿔 쓰기(varied)는 성실 정책에 시즌마다 절반 확률로
+// 포메이션 · 성향을 바꾼다(실제 유저처럼 전술을 바꿔 가며 쓸 때의 숙련 · 성향 분포를 본다).
 //
-// 실행: tsx manager3.ts [커리어 수] [정책 random|diligent] [은퇴 시즌(기본 10)]  환경: SEED(기본 2026)
+// 실행: tsx manager3.ts [커리어 수] [정책 random|diligent|varied] [은퇴 시즌(기본 10)]  환경: SEED(기본 2026)
 import {
   M3_ATTRS,
   M3_FORMATIONS,
@@ -16,6 +17,7 @@ import {
   continueReview,
   eventChoices,
   managerResult3,
+  specialScores3,
   newManager3,
   playBlock,
   renewPlayer,
@@ -32,11 +34,15 @@ import {
 type ManagerOrigin = Parameters<typeof newManager3>[0]['origin'];
 type ManagerStyle = M3State['plan']['mentality'];
 import { createRng } from '@offside/game/rng';
+import { writeFileSync } from 'node:fs';
 
 const N = Number(process.argv[2] ?? 500);
-const POLICY = (process.argv[3] ?? 'diligent') as 'random' | 'diligent';
+const POLICY = (process.argv[3] ?? 'diligent') as 'random' | 'diligent' | 'varied';
 const RETIRE_AT = Number(process.argv[4] ?? 10);
 const SEED = Number(process.env.SEED ?? 2026);
+/** 커리어마다 엔딩 판정에 쓰는 값을 JSON 줄로 남길 파일(기준 조정용). */
+const DUMP = process.env.DUMP;
+const dump: string[] = [];
 const rng = createRng(SEED);
 const r = () => rng.next();
 const pick = <T>(a: readonly T[]): T => a[Math.floor(r() * a.length)]!;
@@ -84,7 +90,7 @@ function step(s: M3State): void {
       return;
     }
     case 'window': {
-      if (POLICY === 'diligent') {
+      if (POLICY !== 'random') {
         // 예산 안에서 가장 좋아 보이는 후보 둘까지.
         for (let k = 0; k < 2; k++) {
           const i = s.targets.findIndex((t) => t.fee <= (s.club?.budget ?? 0) && t.ovrHi >= 0);
@@ -105,6 +111,8 @@ function step(s: M3State): void {
           tempo: pick([0, 1, 2] as const),
           talk: pick(M3_TALKS),
         });
+      else if (POLICY === 'varied' && s.block === 0 && r() < 0.5)
+        setPlan(s, { formation: pick(M3_FORMATIONS), mentality: pick(MENTALITIES), talk: 'calm' });
       else setPlan(s, { talk: 'calm' });
       playBlock(s);
       return;
@@ -123,7 +131,7 @@ function step(s: M3State): void {
             : [...M3_ATTRS].sort((x, y) => s.attrs[x] - s.attrs[y])[0]!;
         if (!spendPoint(s, a)) break;
       }
-      if (POLICY === 'diligent')
+      if (POLICY !== 'random')
         for (const id of [...(s.review?.expiring ?? [])]) {
           const p = s.squad.find((x) => x.id === id);
           if (p && p.age <= 30) renewPlayer(s, id);
@@ -143,6 +151,23 @@ const count = <K extends string>(xs: K[]) => {
     .map(([k, v]) => `${k} ${((v / xs.length) * 100).toFixed(1)}%`)
     .join(' · ');
 };
+
+/** 같은 구단을 연달아 맡은 시즌 수들. */
+function runs(ids: (string | null | undefined)[]): number[] {
+  const out: number[] = [];
+  let prev: string | null | undefined;
+  let n = 0;
+  for (const id of ids) {
+    if (id && id === prev) n++;
+    else {
+      if (n) out.push(n);
+      n = id ? 1 : 0;
+    }
+    prev = id;
+  }
+  if (n) out.push(n);
+  return out;
+}
 
 const t0 = Date.now();
 const results: NonNullable<ReturnType<typeof managerResult3>>[] = [];
@@ -178,6 +203,27 @@ for (let i = 0; i < N; i++) {
   saveBytes = Math.max(saveBytes, JSON.stringify(s).length);
   for (const h of s.history) if (h.outcome === 'sacked') sackedSeasons.push(h.n);
   results.push(managerResult3(s)!);
+  if (DUMP)
+    dump.push(
+      JSON.stringify({
+        grade: results.at(-1)!.grade,
+        ending: results.at(-1)!.ending,
+        titles: s.titles,
+        promotions: s.promotions,
+        sacked: s.sacked,
+        comeback: s.comeback,
+        clubs: s.clubs.length,
+        coached: s.history.filter((h) => h.clubId).length,
+        longest: Math.max(0, ...runs(s.history.map((h) => h.clubId))),
+        youthStars: s.youthStars,
+        youth: results.at(-1)!.specials.includes('youth'),
+        topYouth: results.at(-1)!.specials[0] === 'youth',
+        score: specialScores3(s),
+        attrs: s.attrs,
+        by: s.blocksBy,
+        style: s.styleUse,
+      }),
+    );
 }
 const avg = (f: (x: (typeof results)[number]) => number) =>
   (results.reduce((t, x) => t + f(x), 0) / results.length).toFixed(2);
@@ -210,3 +256,4 @@ console.log(
 console.log(
   `세이브 최대 ${(saveBytes / 1024).toFixed(1)}KB · homeWin ${((homeWins / matches) * 100).toFixed(1)}%`,
 );
+if (DUMP) writeFileSync(DUMP, dump.join('\n') + '\n');

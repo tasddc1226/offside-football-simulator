@@ -34,7 +34,7 @@ export const gManager: Translation<GManagerMsgs> = {
   ending_comeback: 'Back from the Sack',
   ending_steady: 'Quiet Builder',
   endingDesc_legend: 'A manager who lifted the trophy many times.',
-  endingDesc_promoter: 'Took every club in charge up a division.',
+  endingDesc_promoter: 'Took a club in charge up a division.',
   endingDesc_youth: 'Players promoted from the academy became the backbone of the team.',
   endingDesc_oneclub: 'Stayed on the same bench to the very end.',
   endingDesc_journeyman: 'Moved from club to club, taking charge of one team after another.',
