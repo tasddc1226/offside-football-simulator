@@ -123,6 +123,10 @@ export function renewWage(s: M3State, p: M3Player): number {
   return Math.round((Math.max(p.wage, fair) * up) / 100) * 100;
 }
 
+/** 재계약 요구 이야기에서 받아들이면 받는 주급(지금 주급의 30% 인상, 100 단위). */
+export const renewalEventWage = (p: Pick<M3Player, 'wage'>): number =>
+  Math.round((p.wage * 1.3) / 100) * 100;
+
 /** 재계약(3시즌). 이적 · 리뷰 단계에서만. */
 export function renewPlayer(s: M3State, id: number): boolean {
   const p = s.squad.find((x) => x.id === id);

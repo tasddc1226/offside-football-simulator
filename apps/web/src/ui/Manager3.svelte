@@ -49,7 +49,17 @@
     loadManager3State,
     saveManager3State,
   } from '@offside/app-core/manager3';
-  import { blockRounds, eventView, playerLine, retireInfo, roleName, seasonSteps3 } from '@offside/app-core/manager3View';
+  import {
+    M3_SQUAD_SORTS,
+    blockRounds,
+    eventView,
+    playerLine,
+    retireInfo,
+    roleName,
+    seasonSteps3,
+    sortSquad,
+    type M3SquadSort,
+  } from '@offside/app-core/manager3View';
   import { abandonManager, finishManager } from '@offside/app-core/manager';
   import { fmtValue } from '@offside/app-core/format';
   import { manager3Text as T } from '@offside/app-core/i18n/ko/manager3';
@@ -67,6 +77,7 @@
   let error = $state<string | null>(null);
   let note = $state<string | null>(null);
   let tab = $state<'targets' | 'squad' | 'bids'>('targets');
+  let squadSort = $state<M3SquadSort>('pos');
   let confirmRetire = $state(false);
   let confirmAbandon = $state(false);
   let pickTarget = $state(untrack(() => boardMinimum(st)));
@@ -96,6 +107,7 @@
   const result = $derived(st.phase === 'done' ? managerResult3(st) : null);
   const best = $derived(st.phase === 'done' ? bestSeason3(st) : null);
   const cap = $derived(attrCap(st.license));
+  const squad = $derived(sortSquad(st.squad, squadSort));
 
   function bid(i: number) {
     const t = st.targets[i];
@@ -239,7 +251,12 @@
         </div>
       {/each}
     {:else if tab === 'squad'}
-      {#each st.squad as p (p.id)}
+      <div class="mg-chips" role="radiogroup" aria-label={T.sortLabel} data-manager3-sort={squadSort}>
+        {#each M3_SQUAD_SORTS as k (k)}
+          <button class="mg-chip" role="radio" aria-checked={squadSort === k} class:on={squadSort === k} data-act="m3-sort-{k}" onclick={() => (squadSort = k)}>{T[`sort_${k}`]}</button>
+        {/each}
+      </div>
+      {#each squad as p (p.id)}
         <div class="mg-row" data-manager3-player>
           <span class="mg-info">
             <b>{pname(p.name)}{#if p.academy}<small> · {T.academy}</small>{/if}</b>
@@ -341,6 +358,7 @@
       <div class="m3-event" data-manager3-event={ev.id}>
         <h3>{evText.title}</h3>
         <p>{evText.body}</p>
+        {#if evText.detail}<p class="fs-sm" data-manager3-event-detail><b>{evText.detail}</b></p>{/if}
         {#if evText.result === null}
           {#each evText.choices as c, i (i)}<button class="btn" data-act="m3-choice" onclick={() => act((s) => answerEvent(s, i))}>{c}</button>{/each}
         {:else}
@@ -392,7 +410,7 @@
         {@const p = st.squad.find((x) => x.id === id)}
         {#if p}
           <div class="mg-row">
-            <span class="mg-info"><b>{pname(p.name)}</b><small>{playerLine(p)} · {T.renewWage({ wage: fmtValue(renewWage(st, p)) })}</small></span>
+            <span class="mg-info"><b>{pname(p.name)}</b><small>{playerLine(p)} · {T.wage({ wage: fmtValue(p.wage) })} → {T.renewWage({ wage: fmtValue(renewWage(st, p)) })}</small></span>
             <button class="btn btn-sm" onclick={() => act((s) => renewPlayer(s, id))}>{T.renew}</button>
           </div>
         {/if}

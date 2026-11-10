@@ -57,7 +57,15 @@ import {
   tacticLines,
   addL,
 } from './match.js';
-import { bid, incomingBids, makeTargets, settleSales, starterAvg, wageBill } from './market.js';
+import {
+  bid,
+  incomingBids,
+  makeTargets,
+  renewalEventWage,
+  settleSales,
+  starterAvg,
+  wageBill,
+} from './market.js';
 import { M3_STORIES, storyOf, type StoryFx } from './stories.js';
 import type {
   M3BlockReport,
@@ -801,7 +809,7 @@ export function answerEvent(s: M3State, choice: number): boolean {
     }
   } else if (ev.kind === 'renewal') {
     if (choice === 0 && p && s.club) {
-      p.wage = Math.round((p.wage * 1.3) / 100) * 100;
+      p.wage = renewalEventWage(p);
       p.contract = 3;
       bump(p, 6);
     } else {

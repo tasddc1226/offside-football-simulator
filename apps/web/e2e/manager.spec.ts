@@ -470,3 +470,40 @@ test('T-11-648 이력서를 보고 감독 키우기를 시작해 5시즌 뒤 은
   // 처음 · 시작 뒤 · 새로 고침(새 페이지) · 확정 뒤 한 번씩. 구간을 치르는 동안에는 서버를 부르지 않는다.
   expect(s.gets).toBe(4);
 });
+
+test('T-11-689 감독 키우기 선수단을 포지션 · OVR · 주급 순으로 본다', async ({ page }) => {
+  await stubOwner(page);
+  const { install } = server();
+  await install(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="manager"]').click();
+  await page
+    .locator('[data-manager-candidate]')
+    .first()
+    .locator('[data-act="manager-pick"]')
+    .click();
+  await page.locator('[data-act="manager-start"]').click();
+  for (let i = 0; i < 6 && !(await page.locator('[data-manager3-window]').isVisible()); i++)
+    await step3(page);
+  const win = page.locator('[data-manager3-window]');
+  await win.getByRole('tab', { name: '선수단' }).click();
+  const sort = win.locator('[data-manager3-sort]');
+  await expect(sort).toHaveAttribute('data-manager3-sort', 'pos');
+  // 포지션 순이 기본이라 첫 선수는 GK다.
+  await expect(win.locator('[data-manager3-player]').first()).toContainText('GK ·');
+
+  const nums = async (re: RegExp) =>
+    (await win.locator('[data-manager3-player] small').allInnerTexts())
+      .map((t) => re.exec(t)?.[1])
+      .filter((v): v is string => !!v)
+      .map((v) => Number(v.replace(/[^\d.]/g, '')));
+  await win.locator('[data-act="m3-sort-ovr"]').click();
+  await expect(sort).toHaveAttribute('data-manager3-sort', 'ovr');
+  const ovr = await nums(/OVR (\d+)/);
+  expect(ovr.length).toBeGreaterThan(10);
+  expect(ovr).toEqual([...ovr].sort((a, b) => b - a));
+  await win.locator('[data-act="m3-sort-wage"]').click();
+  await expect(sort).toHaveAttribute('data-manager3-sort', 'wage');
+  await expect(win.locator('[data-act="m3-sort-wage"]')).toHaveAttribute('aria-checked', 'true');
+});

@@ -82,6 +82,10 @@ const ko = {
   tabTargets: '영입 후보',
   tabSquad: '선수단',
   tabBids: (p: { n: number }) => `받은 제안 ${p.n}`,
+  sortLabel: '정렬',
+  sort_pos: '포지션',
+  sort_ovr: 'OVR',
+  sort_wage: '주급',
   targetMeta: (p: { role: string; age: number; club: string }) =>
     `${p.role} · ${p.age}세 · ${p.club}`,
   freeAgent: '자유 계약',
@@ -189,6 +193,9 @@ const ko = {
     `계약이 얼마 남지 않은 ${p.name}의 에이전트가 주급 인상을 요구합니다.`,
   ev_renewal_c0: '30% 올려 3년 재계약한다',
   ev_renewal_c1: '지금 조건을 고수한다',
+  ev_renewal_wage: (p: { now: string; next: string; n: number }) =>
+    `지금 주급 ${p.now} · 재계약하면 ${p.next} · 계약 ${p.n}시즌 남음`,
+  ev_renewal_signed: (p: { wage: string }) => `새 주급 ${p.wage} · 계약 3시즌`,
   ev_renewal_r0: '사인을 마치고 악수를 나눴습니다.',
   ev_renewal_r1: '에이전트는 다른 구단과 이야기해 보겠다며 자리를 떴습니다.',
   ev_bigbid_t: '빅클럽의 제안',

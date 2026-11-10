@@ -1,0 +1,30 @@
+{
+  "id": "t-11-689-manager3-squad-sort",
+  "title": "감독 커리어 선수단 정렬 · 재계약 주급",
+  "items": [
+    "감독 커리어 이적시장의 선수단을 포지션 · OVR · 주급 순으로 골라 볼 수 있어요.",
+    "재계약 요구 이야기에서 지금 주급과 재계약하면 받을 주급, 남은 계약 시즌을 보여 줘요. 시즌 결산의 계약 만료 선수도 지금 주급과 새 주급을 함께 보여 줘요."
+  ],
+  "en": {
+    "title": "Manager career squad sorting and renewal wages",
+    "items": [
+      "In the manager career transfer window, you can now sort your squad by position, OVR, or wage.",
+      "The contract demand story now shows the current wage, the wage if you renew, and the seasons left on the deal. Expiring contracts in the season review also show the current and new wage."
+    ]
+  },
+  "ja": {
+    "title": "監督キャリアの選手団並べ替え・再契約の週給",
+    "items": [
+      "監督キャリアの移籍市場で、選手団をポジション・OVR・週給の順に並べ替えられます。",
+      "再契約要求のストーリーで、今の週給と再契約後の週給、残りの契約シーズンを表示します。シーズン総括の契約満了選手も今の週給と新しい週給を並べて表示します。"
+    ]
+  },
+  "zh": {
+    "title": "總教練生涯陣容排序 · 續約週薪",
+    "items": [
+      "總教練生涯的轉會市場中，可以依位置 · OVR · 週薪排序球員陣容。",
+      "續約要求故事會顯示目前週薪、續約後週薪與合約剩餘賽季。賽季總結中合約到期的球員也會同時顯示目前週薪與新週薪。"
+    ]
+  },
+  "availability": "web-app"
+}
