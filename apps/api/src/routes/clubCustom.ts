@@ -5,7 +5,7 @@ import {
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { ok, readBody } from './shared.js';
-import { getClubCustom, putClubCustom } from '../db/repos/clubCustom.js';
+import { clubLogoStoreOf, getClubCustom, putClubCustom } from '../db/repos/clubCustom.js';
 import { getDb, type AppEnv } from '../env.js';
 import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 
@@ -14,7 +14,12 @@ export function registerClubCustomRoutes(app: Hono<AppEnv>): void {
   app.get(CLUB_CUSTOM_PATH, requireProfile, async (c) => {
     // ?since=마지막으로 맞춘 updatedAt — 같으면 clubs는 비워 보낸다(클라이언트는 updatedAt이 같으면 받은 clubs를 쓰지 않는다).
     const since = c.req.query('since');
-    const saved = await getClubCustom(getDb(c), getSessionOrThrow(c).profileId, since);
+    const saved = await getClubCustom(
+      getDb(c),
+      getSessionOrThrow(c).profileId,
+      since,
+      clubLogoStoreOf(c.env),
+    );
     return ok(c, ClubCustomResponseSchema, saved ?? { clubs: {}, updatedAt: null });
   });
 
@@ -25,6 +30,7 @@ export function registerClubCustomRoutes(app: Hono<AppEnv>): void {
       getSessionOrThrow(c).profileId,
       input.clubs,
       input.updatedAt,
+      clubLogoStoreOf(c.env),
     );
     return ok(c, ClubCustomResponseSchema, saved);
   });

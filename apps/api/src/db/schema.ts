@@ -846,6 +846,8 @@ export const clubCustoms = sqliteTable('club_customs', {
     .references(() => profiles.id, { onDelete: 'cascade' }),
   clubsJson: text('clubs_json').notNull(),
   updatedAt: text('updated_at').notNull(),
+  /** T-11-683 올린 엠블럼 이미지를 둔 R2 객체. null = 옛 형식(이미지가 clubs_json 안), '' = 이미지 없음. */
+  imgKey: text('img_key'),
 });
 
 /** T-10-011. 게시판 글(공지·릴리즈 노트 …). 관리자만 쓴다. 지우면 deleted_at만 채운다(댓글과 함께 숨김). */
