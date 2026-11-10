@@ -4,8 +4,10 @@ import { managerEventResultText, managerEventText } from '@offside/game/manager'
 import {
   M3_BLOCKS,
   M3_MIN_SEASONS,
+  M3_ROLES,
   attrCap,
   storyOf,
+  renewalEventWage,
   squadDisplayName,
   type M3Event,
   type M3Player,
@@ -14,7 +16,14 @@ import {
 import { fmtValue } from './format.js';
 import { manager3Text as T } from './i18n/ko/manager3.js';
 
-export type EventView = { title: string; body: string; choices: string[]; result: string | null };
+/** detail: 본문 아래 숫자 한 줄(재계약 요구의 지금 · 제시 주급 등). 없으면 null. */
+export type EventView = {
+  title: string;
+  body: string;
+  detail: string | null;
+  choices: string[];
+  result: string | null;
+};
 
 const nameOf = (s: M3State, id: number | undefined) => {
   const n = s.squad.find((p) => p.id === id)?.name;
@@ -29,6 +38,7 @@ export function eventView(s: M3State, ev: M3Event): EventView {
       title: t.t,
       body: t.b,
       choices: t.choices,
+      detail: null,
       result: ev.choice === null ? null : managerEventResultText(ev.id, ev.choice, ev.ok !== false),
     };
   }
@@ -49,6 +59,7 @@ export function eventView(s: M3State, ev: M3Event): EventView {
     return {
       title: str('t'),
       body: str('b'),
+      detail: null,
       choices: Array.from({ length: n }, (_, k) => str(`c${k}`)),
       result:
         i === null
@@ -86,7 +97,21 @@ export function eventView(s: M3State, ev: M3Event): EventView {
       choices: [T.ev_fight_c0, T.ev_fight_c1],
     },
   }[ev.kind as 'playtime' | 'renewal' | 'bigbid' | 'fight'];
-  return { ...head, result: ev.choice === null ? null : r(ev.choice) };
+  const p = s.squad.find((x) => x.id === ev.player);
+  // 재계약 요구: 답하기 전에는 지금 주급과 받아들일 때 주급을, 받아들인 뒤에는 새 주급을 보여 준다.
+  const detail =
+    ev.kind !== 'renewal' || !p
+      ? null
+      : ev.choice === null
+        ? T.ev_renewal_wage({
+            now: fmtValue(p.wage),
+            next: fmtValue(renewalEventWage(p)),
+            n: p.contract,
+          })
+        : ev.choice === 0
+          ? T.ev_renewal_signed({ wage: fmtValue(p.wage) })
+          : null;
+  return { ...head, detail, result: ev.choice === null ? null : r(ev.choice) };
 }
 
 /** 시즌 진행 단계(제의 · 프리시즌 · 이적 · 시즌 · 결산)와 지금 위치. */
@@ -113,6 +138,22 @@ export function blockRounds(s: M3State) {
     from: Math.floor((s.block * n) / M3_BLOCKS) + 1,
     to: Math.floor(((s.block + 1) * n) / M3_BLOCKS),
   };
+}
+
+/** 선수단 탭 정렬 기준(T-11-689): 포지션 순 · OVR 높은 순 · 주급 높은 순. */
+export const M3_SQUAD_SORTS = ['pos', 'ovr', 'wage'] as const;
+export type M3SquadSort = (typeof M3_SQUAD_SORTS)[number];
+
+/** 정렬한 사본. 포지션은 GK부터 ST까지, 같은 포지션 · 같은 값이면 OVR 높은 순. 원래 배열은 건드리지 않는다. */
+export function sortSquad(squad: readonly M3Player[], by: M3SquadSort): M3Player[] {
+  const role = (p: M3Player) => M3_ROLES.indexOf(p.role);
+  return [...squad].sort((a, b) =>
+    by === 'pos'
+      ? role(a) - role(b) || b.ovr - a.ovr
+      : by === 'ovr'
+        ? b.ovr - a.ovr || role(a) - role(b)
+        : b.wage - a.wage || b.ovr - a.ovr,
+  );
 }
 
 export const roleName = (p: Pick<M3Player, 'role'>) => T[`role_${p.role}`];

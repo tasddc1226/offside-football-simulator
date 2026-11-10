@@ -61,12 +61,15 @@ import {
   saveManager3State,
 } from '@offside/app-core/manager3';
 import {
+  M3_SQUAD_SORTS,
   blockRounds,
   eventView,
   playerLine,
   retireInfo,
   roleName,
   seasonSteps3,
+  sortSquad,
+  type M3SquadSort,
 } from '@offside/app-core/manager3View';
 import { abandonManager, finishManager } from '@offside/app-core/manager';
 import { fmtValue } from '@offside/app-core/format';
@@ -235,6 +238,7 @@ export function Manager3({
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [tab, setTab] = useState<'targets' | 'squad' | 'bids'>('targets');
+  const [squadSort, setSquadSort] = useState<M3SquadSort>('pos');
   const [pickTarget, setPickTarget] = useState(() => boardMinimum(st));
 
   /** 엔진 함수로 상태를 바꾸고 저장한다. 엔진이 제자리에서 바꾸므로 사본에 적용해 새 상태로 넣는다. */
@@ -461,31 +465,46 @@ export function Manager3({
               />
             ))
           : tab === 'squad'
-            ? st.squad.map((p) => (
-                <Row
-                  key={p.id}
-                  title={`${pname(p.name)}${p.academy ? ` · ${T.academy}` : ''}`}
-                  lines={[
-                    playerLine(p),
-                    `${T.contract({ n: p.contract })} · ${T.wage({ wage: fmtValue(p.wage) })}`,
-                  ]}
-                  action={
-                    <>
-                      <Btn
-                        sm
-                        onPress={() =>
-                          act((s) => listPlayer(s, p.id, p.listed === null ? playerValue(p) : null))
-                        }
-                      >
-                        {p.listed === null ? T.list : T.unlist}
-                      </Btn>
-                      <Btn sm kind="danger" onPress={() => act((s) => releasePlayer(s, p.id))}>
-                        {T.release}
-                      </Btn>
-                    </>
-                  }
-                />
-              ))
+            ? [
+                <Chips key="sort">
+                  {M3_SQUAD_SORTS.map((k) => (
+                    <Chip
+                      key={k}
+                      testID={`m3-sort-${k}`}
+                      on={squadSort === k}
+                      label={T[`sort_${k}`]}
+                      onPress={() => setSquadSort(k)}
+                    />
+                  ))}
+                </Chips>,
+                ...sortSquad(st.squad, squadSort).map((p) => (
+                  <Row
+                    key={p.id}
+                    title={`${pname(p.name)}${p.academy ? ` · ${T.academy}` : ''}`}
+                    lines={[
+                      playerLine(p),
+                      `${T.contract({ n: p.contract })} · ${T.wage({ wage: fmtValue(p.wage) })}`,
+                    ]}
+                    action={
+                      <>
+                        <Btn
+                          sm
+                          onPress={() =>
+                            act((s) =>
+                              listPlayer(s, p.id, p.listed === null ? playerValue(p) : null),
+                            )
+                          }
+                        >
+                          {p.listed === null ? T.list : T.unlist}
+                        </Btn>
+                        <Btn sm kind="danger" onPress={() => act((s) => releasePlayer(s, p.id))}>
+                          {T.release}
+                        </Btn>
+                      </>
+                    }
+                  />
+                )),
+              ]
             : !st.bids.length
               ? [
                   <Txt key="empty" tone="muted" style={small}>
@@ -653,6 +672,11 @@ export function Manager3({
           >
             <Txt bold>{evText.title}</Txt>
             <Txt style={small}>{evText.body}</Txt>
+            {evText.detail ? (
+              <Txt bold style={small} testID="manager3-event-detail">
+                {evText.detail}
+              </Txt>
+            ) : null}
             {evText.result === null ? (
               evText.choices.map((ch, i) => (
                 <Btn key={i} testID="m3-choice" onPress={() => act((s) => answerEvent(s, i))}>
@@ -743,7 +767,7 @@ export function Manager3({
                   key={id}
                   title={pname(p.name)}
                   lines={[
-                    `${playerLine(p)} · ${T.renewWage({ wage: fmtValue(renewWage(st, p)) })}`,
+                    `${playerLine(p)} · ${T.wage({ wage: fmtValue(p.wage) })} → ${T.renewWage({ wage: fmtValue(renewWage(st, p)) })}`,
                   ]}
                   action={
                     <Btn sm onPress={() => act((s) => renewPlayer(s, id))}>
