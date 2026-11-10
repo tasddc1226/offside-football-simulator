@@ -138,5 +138,10 @@ describe('/v1/comp-custom 대회 · 수상 이름과 리그 · 대회 로고 동
     expect(await keys(b.profileId)).toHaveLength(1);
     expect((await deleteProfile(ctx.env, b.cookie, 'idem-comp-del')).status).toBe(204);
     expect(await row(b.profileId)).toBeUndefined();
+    // 로고 객체는 응답 뒤(waitUntil)에 지운다. 테스트에는 실행 컨텍스트가 없어 그 작업이 뒤에서 그냥 돌므로, 끝날 때까지
+    // 기다린다. 기다리지 않고 Miniflare를 닫으면 진행 중인 R2 요청 때문에 닫기가 끝나지 않아 CI가 멈췄다(T-11-688).
+    for (let i = 0; i < 50 && (await keys(b.profileId)).length; i++)
+      await new Promise((r) => setTimeout(r, 20));
+    expect(await keys(b.profileId)).toEqual([]);
   });
 });
