@@ -5,7 +5,6 @@ export const customNames: Translation<CustomNamesMsgs> = {
   title: '更改賽事・獎項名稱與標誌',
   intro:
     '可以只在自己的畫面上，把賽事、獎項與聯賽改成想要的名稱。點一下聯賽或賽事標誌，就能換成自己的圖片。遊戲紀錄不變，分享圖片與其他人的畫面仍顯示原本的名稱與預設標誌。',
-  local: '只儲存在這台裝置。要移到其他裝置時請使用編輯檔案。',
   group: '類別',
   groupComp: '賽事',
   groupAward: '獎項',

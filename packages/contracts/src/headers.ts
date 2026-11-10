@@ -22,3 +22,5 @@ export const REQUEST_BODY_MAX_BYTES = 1_048_576;
 /** T-11-599 클럽 커스텀 동기화(PUT /v1/club-custom)만 엠블럼 이미지 합계(1.4MB)와 이름·색이 들어가게 더 받는다. */
 export const CLUB_CUSTOM_BODY_MAX_BYTES = 1_600_000;
 export const CLUB_CUSTOM_PATH = '/v1/club-custom';
+/** T-11-684 대회 · 수상 이름과 리그 · 대회 로고 동기화. 로고 이미지가 실려 구단 꾸미기와 같은 본문 한도를 쓴다. */
+export const COMP_CUSTOM_PATH = '/v1/comp-custom';

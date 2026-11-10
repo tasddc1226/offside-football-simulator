@@ -9,6 +9,7 @@ import { initialSheetState, type SheetState } from '@offside/app-core/sheet-cont
 import { initialClubCustomState } from '@offside/app-core/clubCustom';
 import { initialCustomNamesState } from '@offside/app-core/customNames';
 import { initialCompIconsState } from '@offside/app-core/compIcons';
+import { initialCompCustomSyncState } from '@offside/app-core/compCustomSync';
 import { initialNewsState } from '@offside/app-core/news';
 import type { RnAlert, RnMisses, RnResults } from '@offside/app-core/retiredNumber';
 import type { Profile } from '@offside/app-core/api/client';
@@ -20,10 +21,12 @@ export const appState = proxy<AppState>(initialAppState());
 export const sheetState = proxy<SheetState>(initialSheetState());
 export const toastState = proxy({ text: '', visible: false });
 export const clubCustom = proxy(initialClubCustomState());
-/** T-11-647 유저가 바꾼 대회·수상 이름(이 기기에만 저장). */
+/** T-11-647 유저가 바꾼 대회·수상 이름. */
 export const customNames = proxy(initialCustomNamesState());
-/** T-11-681 유저가 고른 리그·대회 로고 이미지(이 기기에만 저장). */
+/** T-11-681 유저가 고른 리그·대회 로고 이미지. */
 export const compIcons = proxy(initialCompIconsState());
+/** T-11-684 이름 · 로고의 계정 동기화 상태. */
+export const compCustomSync = proxy(initialCompCustomSyncState());
 export const newsState = proxy(initialNewsState());
 /** T-11-464 스토어 업데이트 팝업이 떠 있다(그동안 다시 띄우지 않고, 리뷰 요청도 미룬다). */
 export const storeUpdate = proxy({ showing: false });

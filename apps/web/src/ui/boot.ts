@@ -39,7 +39,7 @@ export function loadGame() {
   loadClubCustom();
   // T-11-647 유저가 바꾼 대회·수상 이름을 첫 화면을 그리기 전에 tn()에 건다.
   loadCustomNames();
-  // T-11-681 유저가 고른 리그·대회 로고 이미지(이 기기에만).
+  // T-11-681 유저가 고른 리그·대회 로고 이미지.
   loadCompIcons();
   migrateLegacySave();
   appState.G = restoreGame({ uploadRetirement, uploadLegacyRetirement });

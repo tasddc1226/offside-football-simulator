@@ -34,6 +34,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'chat_mutes',
   'chat_reports',
   'club_customs',
+  'comp_customs',
   'cup_entries',
   'cup_matches',
   'cup_predictions',

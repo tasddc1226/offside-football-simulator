@@ -850,6 +850,20 @@ export const clubCustoms = sqliteTable('club_customs', {
   imgKey: text('img_key'),
 });
 
+/** T-11-684. 프로필별 대회 · 수상 이름과 리그 · 대회 로고(JSON 통째 저장, 최신 쓰기 우선). updated_at은 club_customs와
+ * 같이 클라이언트가 마지막으로 바꾼 시각이다. 로고 이미지는 R2(img_key)에 두고, 버킷이 없으면 icons_json에 그대로 둔다. */
+export const compCustoms = sqliteTable('comp_customs', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  namesJson: text('names_json').notNull(),
+  /** 로고(이름 → data URL). img_key가 있으면 '{}'다. */
+  iconsJson: text('icons_json').notNull(),
+  /** 로고를 둔 R2 객체. null = icons_json 안, '' = 로고 없음. */
+  imgKey: text('img_key'),
+  updatedAt: text('updated_at').notNull(),
+});
+
 /** T-10-011. 게시판 글(공지·릴리즈 노트 …). 관리자만 쓴다. 지우면 deleted_at만 채운다(댓글과 함께 숨김). */
 export const boardPosts = sqliteTable(
   'board_posts',
