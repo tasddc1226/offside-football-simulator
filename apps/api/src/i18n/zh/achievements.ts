@@ -141,6 +141,12 @@ export const LABEL_ZH: Record<string, string> = {
   'team-wall': '平均每場失球不到 1 球',
   'mgr-titles': '總教練聯賽冠軍累計',
   'mgr-double': '同時拿下冠軍與升級的總教練',
+  'mgr-cup': '盃賽冠軍總教練',
+  'mgr-award': '獲得年度最佳總教練的總教練',
+  'mgr-pro': '教練證照 P 的總教練',
+  'mgr-long': '執教 15 個賽季的總教練',
+  'mgr-legend': '結局「名帥」的總教練',
+  'mgr-endings': '不同的總教練結局',
 };
 
 /** 단계 업적의 단위(숫자 바로 뒤에 붙는다). */
@@ -172,6 +178,7 @@ export const UNIT_ZH: Record<string, string> = {
   'team-clean': '勝',
   'team-thrash': '勝',
   'mgr-titles': '次',
+  'mgr-endings': '種',
 };
 
 /** '○○세까지 현역'(시즌마다 나이가 다르다). */

@@ -351,6 +351,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'career_id',
     'status',
     'seed',
+    'engine',
     'origin_json',
     'result_json',
     'service_season',

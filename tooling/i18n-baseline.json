@@ -38,7 +38,7 @@
   "apps/api/src/routes/commentGuard.ts": 4,
   "apps/api/src/routes/friends.ts": 21,
   "apps/api/src/routes/hof.ts": 1,
-  "apps/api/src/routes/managers.ts": 7,
+  "apps/api/src/routes/managers.ts": 6,
   "apps/api/src/routes/market.ts": 15,
   "apps/api/src/routes/notifications.ts": 3,
   "apps/api/src/routes/ownerTeam.ts": 10,

@@ -11,6 +11,8 @@ export const manager: Translation<ManagerMsgs> = {
   resumeTitle: 'Continue manager career',
   resumeLine: (p) => `${p.club} · Season ${p.n}/${p.total}`,
   resumeOffers: (p) => `Choosing a club offer · Season ${p.n}/${p.total}`,
+  resumeLine3: (p) => `${p.club} · Season ${p.n}`,
+  resumeOffers3: (p) => `Choosing a club offer · Season ${p.n}`,
   resumeDone: 'Only the manager card confirmation is left',
   resumeAria: (p) => `Continue ${p.name} manager career`,
   resumeNoName: 'your current',

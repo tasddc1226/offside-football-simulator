@@ -660,6 +660,10 @@ function applyEffect(s: ManagerState, e: Effect) {
   for (const [k, v] of Object.entries(e.lean ?? {})) s.styleUse[k as ManagerStyle] += v;
 }
 
+/** 이벤트 결과 문장(지금 언어). 실패한 선택이면 실패 문장, 없으면 성공 문장. */
+export const managerEventResultText = (id: string, choice: number, ok: boolean): string =>
+  (ok ? evStr(id, `r${choice}`) : evStr(id, `f${choice}`)) || evStr(id, `r${choice}`);
+
 /** 지금 이벤트에 답한다. 결과 문장을 돌려준다(실패 가능성이 있는 선택은 시드로 정한다). */
 export function answerEvent(s: ManagerState, choice: number): string | null {
   const ev = currentEvent(s);
@@ -670,8 +674,7 @@ export function answerEvent(s: ManagerState, choice: number): string | null {
   applyEffect(s, ok ? c.ok : (c.fail ?? {}));
   ev.choice = choice;
   if (c.p !== undefined) ev.ok = ok;
-  ev.result =
-    (ok ? evStr(ev.id, `r${choice}`) : evStr(ev.id, `f${choice}`)) || evStr(ev.id, `r${choice}`);
+  ev.result = managerEventResultText(ev.id, choice, ok);
   return ev.result;
 }
 

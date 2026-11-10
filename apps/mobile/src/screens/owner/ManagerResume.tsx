@@ -15,11 +15,16 @@ export function ManagerResume() {
   const c = useColors();
   const r = useMemo(() => managerResume(), []);
   if (!r) return null;
+  // T-11-648 감독 키우기(엔진 3)는 총 시즌이 없어 몇 번째 시즌인지만 보여 준다.
   const line = r.done
     ? MG.resumeDone
-    : r.club
-      ? MG.resumeLine({ club: tn(r.club), n: r.n, total: r.total })
-      : MG.resumeOffers({ n: r.n, total: r.total });
+    : r.total === null
+      ? r.club
+        ? MG.resumeLine3({ club: tn(r.club), n: r.n })
+        : MG.resumeOffers3({ n: r.n })
+      : r.club
+        ? MG.resumeLine({ club: tn(r.club), n: r.n, total: r.total })
+        : MG.resumeOffers({ n: r.n, total: r.total });
   return (
     <Press
       testID="manager-resume"

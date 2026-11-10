@@ -5,10 +5,13 @@
   import Topbar from './Topbar.svelte';
   import LoginButtons from './LoginButtons.svelte';
   import ManagerLive from './ManagerLive.svelte';
+  import Manager3 from './Manager3.svelte';
   import PopSheet from './PopSheet.svelte';
   import Chips from './sheets/Chips.svelte';
   import CountUp from './CountUp.svelte';
   import { buzz } from './motion.js';
+  import PixelAvatar from './PixelAvatar.svelte';
+  import { managerAvatarSpec } from '@offside/game/avatar';
   import type { Chip } from './sheetState.svelte.js';
   import type { ManagerCandidate, ManagerCareer, ManagersResponse } from '@offside/contracts';
   import { FORMATION_IDS, type FormationId } from '@offside/contracts/owner-team';
@@ -71,9 +74,13 @@
     setTeamCoach,
     startConfirmLines,
     finishConfirmLines,
-    startManager,
     type ManagerStatKey,
   } from '@offside/app-core/manager';
+  import { clearManager3State, fetchManagerPreview, startManager3 } from '@offside/app-core/manager3';
+  import { manager3Text as T3 } from '@offside/app-core/i18n/ko/manager3';
+  import type { Manager3Preview } from '@offside/app-core/manager3';
+  import { leagueName as lgName } from '@offside/game/manager';
+  import { M3_ATTRS, M3_LEAGUE_TIERS } from '@offside/game/manager3';
   import { fundsText } from '@offside/app-core/funds';
   import { managerText as M } from '@offside/app-core/i18n/ko/manager';
 
@@ -115,9 +122,13 @@
       return;
     }
     data = r.data;
-    st = r.data.active ? loadManagerState(r.data.active, nameOf(r.data.active)) : null;
+    // T-11-648 감독 커리어 3은 Manager3가 세이브를 맡는다.
+    st = r.data.active && r.data.active.engine !== 3 ? loadManagerState(r.data.active, nameOf(r.data.active)) : null;
     // T-11-338 서버에 진행 중 감독이 없으면(다른 기기에서 끝냄 · 포기) 남은 세이브를 지워 이어 하기 카드가 뜨지 않게 한다.
-    if (!r.data.active) clearManagerState();
+    if (!r.data.active) {
+      clearManagerState();
+      clearManager3State();
+    } else if (r.data.active.engine === 3) clearManagerState();
     if (st) resetPick(st);
   }
   void load();
@@ -151,8 +162,23 @@
     if (!r.ok) error = r.error.message;
     return r.ok;
   }
+  // T-11-648 후보 이력서(확인 창을 열 때만 부른다).
+  let preview = $state<Manager3Preview | null>(null);
+  let previewFailed = $state(false);
+  function openConfirm(c: ManagerCandidate) {
+    confirm = c;
+    error = null;
+    preview = null;
+    previewFailed = false;
+    void fetchManagerPreview(c.careerId).then((r) => {
+      if (confirm?.careerId !== c.careerId) return;
+      if (r.ok) preview = r.preview;
+      else previewFailed = true;
+    });
+  }
   async function start(c: ManagerCandidate) {
-    if (await run(() => startManager(c.careerId))) {
+    // T-11-648 새 감독 커리어는 감독 키우기(엔진 3)로 시작한다. 옛 방식 진행 중 커리어는 그대로 끝까지 간다.
+    if (await run(() => startManager3(c.careerId))) {
       confirm = null;
       await load();
     }
@@ -269,6 +295,10 @@
     </section>
   {:else if !data}
     <Skeleton height={240} />
+  {:else if data.active && data.active.engine === 3}
+    {#key data.active.id}
+      <Manager3 career={data.active} name={nameOf(data.active)} onchange={() => void load()} />
+    {/key}
   {:else if st && data.active}
     <!-- 진행 중 감독 커리어 -->
     <section class="card mg-col" data-manager-play={st.phase}>
@@ -460,15 +490,15 @@
   {:else}
     <!-- 시작 · 내 감독 -->
     <section class="card mg-col" data-manager-start>
-      <h2>{M.startHeading}</h2>
-      <p class="muted fs-sm">{M.startLead}</p>
+      <h2>{T3.officeTitle}</h2>
+      <p class="muted fs-sm">{T3.officeLead}</p>
       {#each data.candidates as c (c.careerId)}
         <div class="mg-row" data-manager-candidate>
           <span class="mg-info">
             <b>{managerName(c, local)}</b>
             <small>{tn(POS_LABEL[c.pos])} · OVR {c.peak}{#if c.inLineup} · {M.inLineup}{/if}{#if c.listed} · {M.listed}{/if}</small>
           </span>
-          <button class="btn btn-sm" data-act="manager-pick" onclick={() => ((confirm = c), (error = null))}>{M.pick}</button>
+          <button class="btn btn-sm" data-act="manager-pick" onclick={() => openConfirm(c)}>{T3.resumeOpen}</button>
         </div>
       {:else}
         <p class="muted fs-sm" data-manager-empty>{M.noCandidates}</p>
@@ -486,6 +516,7 @@
         {@const seated = data.coachId === m.careerId}
         <div class="mg-card" data-manager-card={m.careerId}>
           <div class="mg-card-head">
+            <span class="mg-face" aria-hidden="true"><PixelAvatar spec={managerAvatarSpec(m.careerId, (m.origin.retireAge ?? 35) + r.seasons, m.look)} portrait /></span>
             <b>{nameOf(m)}</b>
             <span class="mg-grade">{M.grade({ grade: r.grade })}</span>
             {#if seated}<span class="mg-badge">{M.coachNow}</span>{/if}
@@ -531,13 +562,31 @@
 {#if confirm}
   <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirm = null)}></button>
   <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.confirmTitle({ name: managerName(confirm, local) })} data-manager-confirm>
-    <h2>{M.confirmTitle({ name: managerName(confirm, local) })}</h2>
+    <div class="mg-confirm-head">
+      <span class="mg-face mg-face-lg" aria-hidden="true"><PixelAvatar spec={managerAvatarSpec(confirm.careerId, preview?.age ?? 36, confirm.look)} portrait /></span>
+      <h2>{M.confirmTitle({ name: managerName(confirm, local) })}</h2>
+    </div>
+    <div class="mg-cv" data-manager-cv>
+      <h3>{T3.resumeHeading}</h3>
+      {#if preview}
+        <p class="fs-sm">{T3.resumeRep} {preview.rep} · {T3.resumeStyle} {styleName(preview.style)} · {T3.resumeFormation} {preview.formation} · {T3.resumeLicense} {preview.license}</p>
+        <p class="fs-sm">{T3.resumeFirstLeagues} · {M3_LEAGUE_TIERS.filter((l) => l.tier >= preview!.firstTiers[0] && l.tier <= preview!.firstTiers[1]).map((l) => lgName(l.id)).join(', ')}</p>
+        <div class="mg-attrs">
+          {#each M3_ATTRS as k (k)}<span class="fs-sm">{T3[`attr_${k}`]}</span><b>{preview.attrs[k]}</b>{/each}
+        </div>
+        <small class="muted">{T3.resumeAttrNote}</small>
+      {:else if previewFailed}
+        <p class="muted fs-sm">{T3.resumeLoadFail}</p>
+      {:else}
+        <Skeleton height={120} />
+      {/if}
+    </div>
     <ul class="mg-lines">{#each startConfirmLines(confirm) as line, i (i)}<li>{line}</li>{/each}</ul>
     {#if data?.active}<p class="muted fs-sm">{M.activeOther}</p>{/if}
     {#if error}<p class="mg-err" role="alert">{error}</p>{/if}
     <div class="mg-actions">
       <button class="btn" onclick={() => (confirm = null)}>{M.cancel}</button>
-      <button class="btn btn-primary" data-act="manager-start" disabled={busy} onclick={() => confirm && void start(confirm)}>{M.confirmOk}</button>
+      <button class="btn btn-primary" data-act="manager-start" disabled={busy} onclick={() => confirm && void start(confirm)}>{T3.resumeStart}</button>
     </div>
   </div>
 {/if}
@@ -590,21 +639,34 @@
 {/if}
 
 <style>
-  .mg-delta {
+  :global(.mg-cv) {
+    display: grid;
+    gap: 0.35rem;
+  }
+  :global(.mg-cv h3) {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+  :global(.mg-attrs) {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr auto;
+    gap: 0.2rem 0.6rem;
+  }
+  :global(.mg-delta) {
     font-size: var(--fs-caption);
     font-weight: 700;
     color: var(--good);
     animation: pop 0.32s cubic-bezier(0.3, 1.6, 0.5, 1) both;
   }
-  .mg-delta.neg {
+  :global(.mg-delta.neg) {
     color: var(--bad);
   }
-  .mg-progress {
+  :global(.mg-progress) {
     display: flex;
     flex-direction: column;
     gap: 6px;
   }
-  .mg-steps {
+  :global(.mg-steps) {
     display: flex;
     justify-content: space-between;
     gap: 4px;
@@ -614,24 +676,24 @@
     font-size: var(--fs-caption);
     color: var(--muted);
   }
-  .mg-steps li.on {
+  :global(.mg-steps li.on) {
     color: var(--ink);
     font-weight: 700;
   }
-  .mg-steps li.on::before {
+  :global(.mg-steps li.on::before) {
     content: '▸ ';
     color: var(--accent);
   }
-  .mg-steps li.done::before {
+  :global(.mg-steps li.done::before) {
     content: '✓ ';
     color: var(--good);
   }
   @media (prefers-reduced-motion: reduce) {
-    .mg-delta {
+    :global(.mg-delta) {
       animation: none;
     }
   }
-  .mg-abandon-link {
+  :global(.mg-abandon-link) {
     align-self: center;
     color: var(--muted);
     font-size: var(--fs-label);
@@ -641,47 +703,73 @@
     flex-direction: column;
     gap: 14px;
   }
-  .mg-col {
+  :global(.mg-col) {
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
-  .mg-col h2,
-  .mg-col h3,
-  .mg-col p {
+  :global(.mg-col h2),
+  :global(.mg-col h3),
+  :global(.mg-col p) {
     margin: 0;
   }
-  .mg-col h2 {
+  :global(.mg-col h2) {
     font-size: var(--fs-title3);
   }
-  .mg-col h3 {
+  :global(.mg-col h3) {
     font-size: var(--fs-label);
     color: var(--muted);
   }
-  .mg-head {
+  :global(.mg-face) {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  :global(.mg-face-lg) {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+  }
+  :global(.mg-face .avatar) {
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+  }
+  :global(.mg-confirm-head) {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  :global(.mg-head) {
     display: flex;
     flex-direction: column;
     gap: 2px;
   }
-  .mg-head b {
+  :global(.mg-head b) {
     font-size: var(--fs-title3);
   }
-  .mg-stats {
+  :global(.mg-stats) {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 6px;
     margin: 0;
   }
-  .mg-stats div {
+  :global(.mg-stats div) {
     padding: 8px 10px;
     border-radius: var(--radius-sm);
     background: var(--surface-2);
   }
-  .mg-stats dt {
+  :global(.mg-stats dt) {
     font-size: var(--fs-caption);
     color: var(--muted);
   }
-  .mg-stats dd {
+  :global(.mg-stats dd) {
     display: flex;
     align-items: baseline;
     gap: 4px;
@@ -689,11 +777,11 @@
     font-weight: 700;
     font-variant-numeric: tabular-nums;
   }
-  .mg-log {
+  :global(.mg-log) {
     font-size: var(--fs-body2);
     line-height: 1.5;
   }
-  .mg-row {
+  :global(.mg-row) {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -705,26 +793,26 @@
     text-align: left;
     font: inherit;
   }
-  .mg-pick {
+  :global(.mg-pick) {
     cursor: pointer;
     width: 100%;
   }
-  .mg-info {
+  :global(.mg-info) {
     display: flex;
     flex: 1;
     min-width: 0;
     flex-direction: column;
     gap: 2px;
   }
-  .mg-info small {
+  :global(.mg-info small) {
     font-size: var(--fs-caption);
   }
-  .mg-chips {
+  :global(.mg-chips) {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
   }
-  .mg-chip {
+  :global(.mg-chip) {
     display: inline-flex;
     flex-direction: column;
     align-items: center;
@@ -738,32 +826,33 @@
     font-weight: 600;
     cursor: pointer;
   }
-  .mg-chip small {
+  :global(.mg-chip small) {
     font-size: var(--fs-caption2);
     font-weight: 500;
     color: var(--muted);
   }
-  .mg-chip[aria-checked='true'] {
+  :global(.mg-chip[aria-checked='true']),
+  :global(.mg-chip.on) {
     border-color: var(--accent);
     background: var(--accent-soft, var(--surface-2));
   }
-  .mg-static {
+  :global(.mg-static) {
     cursor: default;
     min-width: 56px;
     padding: 6px 10px;
   }
-  .mg-result {
+  :global(.mg-result) {
     padding: 10px 12px;
     border-radius: var(--radius-sm);
     background: var(--surface-2);
     line-height: 1.5;
   }
-  .mg-badges {
+  :global(.mg-badges) {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
   }
-  .mg-trophy {
+  :global(.mg-trophy) {
     padding: 4px 12px;
     border-radius: var(--radius-pill);
     background: var(--pitch);
@@ -772,38 +861,38 @@
     font-size: var(--fs-body2);
     animation: mg-pop 0.42s cubic-bezier(0.2, 1.4, 0.4, 1) var(--d, 0ms) both;
   }
-  .mg-trophy.bad {
+  :global(.mg-trophy.bad) {
     background: var(--bad);
     color: #fff;
   }
-  .mg-change {
+  :global(.mg-change) {
     display: flex;
     flex-direction: column;
     gap: 6px;
     padding-top: 4px;
     border-top: 1px solid var(--line);
   }
-  .mg-up {
+  :global(.mg-up) {
     font-weight: 700;
     color: var(--accent-text, var(--accent));
   }
-  .mg-grade-pop {
+  :global(.mg-grade-pop) {
     display: inline-block;
     font-size: var(--fs-title2);
     animation: mg-pop 0.5s cubic-bezier(0.2, 1.4, 0.4, 1) 0.3s both;
   }
-  @keyframes mg-pop {
+  @keyframes -global-mg-pop {
     from {
       transform: scale(0.6);
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .mg-trophy,
-    .mg-grade-pop {
+    :global(.mg-trophy),
+    :global(.mg-grade-pop) {
       animation: none;
     }
   }
-  .mg-card {
+  :global(.mg-card) {
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -811,37 +900,37 @@
     border: 1px solid var(--line);
     border-radius: var(--radius-md);
   }
-  .mg-card-head {
+  :global(.mg-card-head) {
     display: flex;
     align-items: center;
     gap: 8px;
   }
-  .mg-grade {
+  :global(.mg-grade) {
     font-weight: 700;
     color: var(--accent-text, var(--accent));
   }
-  .mg-badge {
+  :global(.mg-badge) {
     padding: 2px 8px;
     border-radius: var(--radius-pill);
     background: var(--surface-2);
     font-size: var(--fs-caption);
     font-weight: 600;
   }
-  .mg-hist {
+  :global(.mg-hist) {
     margin: 8px 0 0;
     padding-left: 18px;
     font-size: var(--fs-body2);
     line-height: 1.6;
   }
-  .mg-abandon {
+  :global(.mg-abandon) {
     align-self: center;
     color: var(--bad);
   }
-  .mg-err {
+  :global(.mg-err) {
     color: var(--bad);
     font-weight: 600;
   }
-  .mg-scrim {
+  :global(.mg-scrim) {
     position: fixed;
     inset: 0;
     z-index: 60;
@@ -849,7 +938,7 @@
     padding: 0;
     background: rgb(0 0 0 / 0.45);
   }
-  .mg-sheet {
+  :global(.mg-sheet) {
     position: fixed;
     z-index: 61;
     left: 50%;
@@ -867,39 +956,39 @@
     color: var(--ink);
     box-shadow: var(--shadow);
   }
-  .mg-sheet h2,
-  .mg-sheet p {
+  :global(.mg-sheet h2),
+  :global(.mg-sheet p) {
     margin: 0;
   }
-  .mg-sheet h2 {
+  :global(.mg-sheet h2) {
     font-size: var(--fs-title3);
   }
-  .mg-lines {
+  :global(.mg-lines) {
     margin: 0;
     padding-left: 18px;
     font-size: var(--fs-body2);
     line-height: 1.6;
   }
-  .mg-actions {
+  :global(.mg-actions) {
     display: grid;
     grid-template-columns: 1fr 2fr;
     gap: 8px;
   }
-  .mg-actions .btn {
+  :global(.mg-actions .btn) {
     min-height: 50px;
   }
-  .mg-card-actions {
+  :global(.mg-card-actions) {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 8px;
     margin-top: 4px;
   }
-  .mg-release {
+  :global(.mg-release) {
     margin-left: auto;
     color: var(--bad);
   }
-  .mg-danger {
+  :global(.mg-danger) {
     border: 0;
     background: var(--bad);
     color: #fff;

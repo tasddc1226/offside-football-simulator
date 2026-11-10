@@ -29,6 +29,7 @@ import { gRecords } from './gRecords';
 import { gRival } from './gRival';
 import { gRoleName } from './gRoleName';
 import { gSeason } from './gSeason';
+import { gSquad } from './gSquad';
 import { gStats } from './gStats';
 import { gSubs } from './gSubs';
 import { gTitles } from './gTitles';
@@ -66,6 +67,7 @@ export const zh = {
   gRival,
   gRoleName,
   gSeason,
+  gSquad,
   gStats,
   gSubs,
   gTitles,
