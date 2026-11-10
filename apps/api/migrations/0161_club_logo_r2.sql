@@ -1,0 +1,1 @@
+ALTER TABLE `club_customs` ADD `img_key` text;

@@ -41,6 +41,7 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { resolveSession } from '../middleware/session.js';
 import { executeProfileDeletion, issueDeleteConfirmToken } from '../profile/delete-profile.js';
 import { deleteSnapshots } from '../careerSnapshots.js';
+import { clubLogoStoreOf, deleteClubLogos } from '../db/repos/clubCustom.js';
 import { edgeCached, purgeEdge, waitUntil } from '../edgeCache.js';
 import { revokeAppleAuthorization } from '../auth/apple-revoke.js';
 import { STALE } from '../edgeKeys.js';
@@ -302,6 +303,11 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
     }
     // T-11-311 지운 커리어의 R2 은퇴 상세도 지운다(응답 뒤).
     waitUntil(c, deleteSnapshots(c.env, careerIds));
+    // T-11-683 R2에 둔 엠블럼 이미지도 지운다(응답 뒤).
+    waitUntil(
+      c,
+      deleteClubLogos(clubLogoStoreOf(c.env), session.profileId).catch(() => {}),
+    );
     if (heldFirsts) purgeEdge(c, STALE.firstsChanged());
     purgeEdge(c, [
       ...STALE.profileDeleted(careerIds, hadComments),
