@@ -43,6 +43,8 @@ export type Bindings = {
   EXPO_PUSH_ACCESS_TOKEN?: string;
   /** Emergency stop for dormant career archival (restores remain enabled). */
   CAREER_RETENTION_DISABLED?: string;
+  /** T-11-683 '1'이면 엠블럼 이미지를 R2로 빼지 않고 옛 형식(D1 안)으로 쓴다. 이미 옮긴 값 읽기는 계속 된다. */
+  CLUB_LOGO_R2_DISABLED?: string;
   /** T-11-311 `'1'`이면 은퇴 상세를 R2에 쓰지 않고 D1(snapshot_json)에 둔다. 이미 R2에 있는 상세는 계속 읽는다. */
   SNAPSHOT_R2_DISABLED?: string;
   /** Emergency stops for telemetry offload and public HOF read sessions. */
