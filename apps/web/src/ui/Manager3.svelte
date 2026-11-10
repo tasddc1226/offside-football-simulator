@@ -77,6 +77,8 @@
     const out = fn(next);
     saveManager3State(next);
     if (next.phase === 'preseason' && st.phase !== 'preseason') pickTarget = boardMinimum(next);
+    // 이적시장이 새로 열리면 영입 후보 탭부터 보여 준다.
+    if (next.phase === 'window' && st.phase !== 'window') tab = 'targets';
     st = next;
     return out;
   }
@@ -224,6 +226,7 @@
       <button class="mg-chip" role="tab" aria-selected={tab === 'squad'} class:on={tab === 'squad'} onclick={() => (tab = 'squad')}>{T.tabSquad}</button>
       <button class="mg-chip" role="tab" aria-selected={tab === 'bids'} class:on={tab === 'bids'} onclick={() => (tab = 'bids')}>{T.tabBids({ n: st.bids.length })}</button>
     </div>
+    {#if note}<p class="fs-sm" role="status">{note}</p>{/if}
     {#if tab === 'targets'}
       {#each st.targets as t, i (t.player.id)}
         <div class="mg-row" data-manager3-target>
@@ -258,9 +261,10 @@
             <button class="btn btn-sm" onclick={() => act((s) => answerBid(s, i, false))}>{T.bidReject}</button>
           </span>
         </div>
+      {:else}
+        <p class="muted fs-sm">{T.bidsEmpty}</p>
       {/each}
     {/if}
-    {#if note}<p class="fs-sm" role="status">{note}</p>{/if}
     <button class="btn btn-primary" data-act="m3-close-window" onclick={closeWin}>{T.windowClose}</button>
   </section>
 {:else if st.phase === 'block'}

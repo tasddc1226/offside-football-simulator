@@ -58,6 +58,7 @@ export const manager3: Translation<Manager3Msgs> = {
   attrDesc_adapt: 'You keep more formation familiarity when you change clubs.',
   // Club offers
   offersHeading: 'Club offers',
+  bidsEmpty: 'No offers received yet.',
   offersEmpty: 'No offers this time.',
   offerMeta: (p) => `${p.league} · Strength ${p.str}`,
   offerVacancy: 'Open job',

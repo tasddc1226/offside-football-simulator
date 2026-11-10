@@ -57,6 +57,7 @@ export const manager3: Translation<Manager3Msgs> = {
   attrDesc_adapt: 'クラブを移っても、フォーメーションの習熟を多く引き継げます。',
   // クラブのオファー
   offersHeading: 'クラブのオファー',
+  bidsEmpty: 'まだ届いたオファーはありません。',
   offersEmpty: '今回はオファーがありません。',
   offerMeta: (p) => `${p.league} · 戦力 ${p.str}`,
   offerVacancy: '空席に応募',

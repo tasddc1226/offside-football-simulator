@@ -61,6 +61,7 @@ const ko = {
   attrDesc_adapt: '구단을 옮겨도 포메이션 익숙함을 많이 가져가요.',
   // 구단 제의
   offersHeading: '구단 제의',
+  bidsEmpty: '아직 받은 제안이 없어요.',
   offersEmpty: '이번에는 제의가 없어요.',
   offerMeta: (p: { league: string; str: number }) => `${p.league} · 전력 ${p.str}`,
   offerVacancy: '공석 지원',

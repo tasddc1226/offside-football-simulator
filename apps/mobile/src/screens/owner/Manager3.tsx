@@ -243,6 +243,8 @@ export function Manager3({
     const out = fn(next);
     saveManager3State(next);
     if (next.phase === 'preseason' && st.phase !== 'preseason') setPickTarget(boardMinimum(next));
+    // 이적시장이 새로 열리면 영입 후보 탭부터 보여 준다.
+    if (next.phase === 'window' && st.phase !== 'window') setTab('targets');
     setSt(next);
     return out;
   }
@@ -435,6 +437,8 @@ export function Manager3({
             onPress={() => setTab('bids')}
           />
         </Chips>
+        {/* 제안 결과는 탭 바로 아래에 둬서 목록 위쪽에서 눌러도 보인다. */}
+        {noteLine}
         {tab === 'targets'
           ? st.targets.map((t, i) => (
               <Row
@@ -482,25 +486,34 @@ export function Manager3({
                   }
                 />
               ))
-            : st.bids.map((b, i) => (
-                <Row
-                  key={b.player}
-                  lines={[
-                    T.bidFrom({ club: tn(b.club), name: nameOfId(b.player), fee: fmtValue(b.fee) }),
-                  ]}
-                  action={
-                    <>
-                      <Btn sm onPress={() => act((s) => answerBid(s, i, true))}>
-                        {T.bidAccept}
-                      </Btn>
-                      <Btn sm onPress={() => act((s) => answerBid(s, i, false))}>
-                        {T.bidReject}
-                      </Btn>
-                    </>
-                  }
-                />
-              ))}
-        {noteLine}
+            : !st.bids.length
+              ? [
+                  <Txt key="empty" tone="muted" style={small}>
+                    {T.bidsEmpty}
+                  </Txt>,
+                ]
+              : st.bids.map((b, i) => (
+                  <Row
+                    key={b.player}
+                    lines={[
+                      T.bidFrom({
+                        club: tn(b.club),
+                        name: nameOfId(b.player),
+                        fee: fmtValue(b.fee),
+                      }),
+                    ]}
+                    action={
+                      <>
+                        <Btn sm onPress={() => act((s) => answerBid(s, i, true))}>
+                          {T.bidAccept}
+                        </Btn>
+                        <Btn sm onPress={() => act((s) => answerBid(s, i, false))}>
+                          {T.bidReject}
+                        </Btn>
+                      </>
+                    }
+                  />
+                ))}
         <Btn kind="primary" testID="m3-close-window" onPress={closeWin}>
           {T.windowClose}
         </Btn>

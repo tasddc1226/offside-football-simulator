@@ -57,6 +57,7 @@ export const manager3: Translation<Manager3Msgs> = {
   attrDesc_adapt: '換球隊時，可以保留更多陣型熟悉度。',
   // 俱樂部邀約
   offersHeading: '俱樂部邀約',
+  bidsEmpty: '還沒有收到任何報價。',
   offersEmpty: '這次沒有邀約。',
   offerMeta: (p) => `${p.league} · 戰力 ${p.str}`,
   offerVacancy: '應徵空缺',

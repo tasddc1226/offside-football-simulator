@@ -979,7 +979,7 @@ export default function Manager() {
       ) : (
         <>
           {play ?? (
-            <Card gap={10} testID="manager-start">
+            <Card gap={10} testID="manager-candidates">
               <Txt v="h2">{M.startHeading}</Txt>
               <Txt tone="muted" style={small}>
                 {M.startLead}
