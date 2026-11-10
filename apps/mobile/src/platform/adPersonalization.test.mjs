@@ -60,17 +60,15 @@ describe('Android personalized ads test', () => {
 describe('Android personalized ads (T-11-687)', () => {
   const jpAndroid = { os: 'android', locales: ['ja-JP'], consentRequired: false };
   it('opens every Android device outside consent regions from the policy date', () => {
-    expect(PERSONALIZED_ALL_FROM).toBe(Date.parse('2026-11-16T15:00:00Z'));
+    expect(PERSONALIZED_ALL_FROM).toBe(Date.parse('2026-11-10T15:00:00Z'));
     expect(allowPersonalizedAds(jpAndroid, PERSONALIZED_ALL_FROM - 1, () => 0)).toBe(false);
     expect(allowPersonalizedAds(jpAndroid, PERSONALIZED_ALL_FROM, () => 0.99)).toBe(true);
     expect(allowPersonalizedAds(krAndroid, T.end + 1, () => 0.99)).toBe(true);
     expect(f.store.size).toBe(0);
   });
 
-  it('keeps the 10% test before the policy date', () => {
-    expect(allowPersonalizedAds(krAndroid, during, () => 0.05)).toBe(true);
-    f.store.clear();
-    expect(allowPersonalizedAds(krAndroid, during, () => 0.5)).toBe(false);
+  it('covers the whole old 10% test window (T-11-691)', () => {
+    expect(allowPersonalizedAds(krAndroid, during, () => 0.5)).toBe(true);
   });
 
   it.each([
