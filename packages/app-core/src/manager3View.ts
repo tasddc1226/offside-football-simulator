@@ -5,6 +5,7 @@ import {
   M3_BLOCKS,
   M3_MIN_SEASONS,
   attrCap,
+  storyOf,
   squadDisplayName,
   type M3Event,
   type M3Player,
@@ -32,6 +33,31 @@ export function eventView(s: M3State, ev: M3Event): EventView {
     };
   }
   const name = nameOf(s, ev.player);
+  if (ev.kind === 'story') {
+    // 이야기 표 문구: st_<id>_t · _b · _c<i> · _r<i>(성공 확률이 있는 선택은 _r<i>_ok · _r<i>_fail).
+    const tx = T as unknown as Record<
+      string,
+      string | ((p: { name: string; other: string }) => string)
+    >;
+    const str = (k: string) => {
+      const v = tx[`st_${ev.id}_${k}`];
+      return typeof v === 'function' ? v({ name, other: nameOf(s, ev.other) }) : (v ?? '');
+    };
+    const d = storyOf(ev.id);
+    const n = d?.choices.length ?? 0;
+    const i = ev.choice;
+    return {
+      title: str('t'),
+      body: str('b'),
+      choices: Array.from({ length: n }, (_, k) => str(`c${k}`)),
+      result:
+        i === null
+          ? null
+          : d?.choices[i]?.p !== undefined
+            ? str(`r${i}_${ev.ok ? 'ok' : 'fail'}`)
+            : str(`r${i}`),
+    };
+  }
   const r = (i: number) => {
     if (ev.kind === 'playtime') return [T.ev_playtime_r0, T.ev_playtime_r1, T.ev_playtime_r2][i]!;
     if (ev.kind === 'renewal') return i === 0 ? T.ev_renewal_r0 : T.ev_renewal_r1;
@@ -59,7 +85,7 @@ export function eventView(s: M3State, ev: M3Event): EventView {
       body: T.ev_fight_b({ name, other: nameOf(s, ev.other) }),
       choices: [T.ev_fight_c0, T.ev_fight_c1],
     },
-  }[ev.kind];
+  }[ev.kind as 'playtime' | 'renewal' | 'bigbid' | 'fight'];
   return { ...head, result: ev.choice === null ? null : r(ev.choice) };
 }
 

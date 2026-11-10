@@ -66,3 +66,4 @@ export {
   type Manager3Result,
 } from './manager3/result.js';
 export { squadDisplayName, squadName } from './manager3/names.js';
+export * from './manager3/stories.js';

@@ -58,6 +58,7 @@ import {
   addL,
 } from './match.js';
 import { bid, incomingBids, makeTargets, settleSales, starterAvg, wageBill } from './market.js';
+import { M3_STORIES, storyOf, type StoryFx } from './stories.js';
 import type {
   M3BlockReport,
   M3Club,
@@ -706,13 +707,21 @@ function drawEvent(s: M3State, r: R): M3Event | null {
   if (hot.length >= 2 && s.attrs.disc < 65 && !s.seenEvents.includes('fight'))
     cands.push({ kind: 'fight', id: 'fight', player: hot[0]!.id, other: hot[1]!.id, choice: null });
   const legacy = MANAGER_EVENTS.filter((e) => !s.seenEvents.includes(e.id) && legacyOk(s, e.id));
-  // 선수 이야기와 감독 이야기가 반씩 나오게 한다.
-  const ev =
-    cands.length && (r() < 0.5 || !legacy.length)
-      ? pickOf(r, cands)
-      : legacy.length
-        ? ({ kind: 'legacy', id: pickOf(r, legacy).id, choice: null } as M3Event)
-        : null;
+  const stories = M3_STORIES.filter((d) => !s.seenEvents.includes(d.id));
+  // 선수 이야기와 감독 이야기(감독 커리어 2 이야기 · 이야기 표)가 반씩 나오게 한다.
+  const pool = legacy.length + stories.length;
+  let ev: M3Event | null = null;
+  if (cands.length && (r() < 0.5 || !pool)) ev = pickOf(r, cands);
+  else if (pool) {
+    const i = Math.floor(r() * pool);
+    if (i < legacy.length) ev = { kind: 'legacy', id: legacy[i]!.id, choice: null };
+    else {
+      // 고른 이야기의 조건이 맞지 않으면(주인공이 없는 등) 이번 구간은 쉰다.
+      const d = stories[i - legacy.length]!;
+      const cast = d.cast(s, r);
+      if (cast) ev = { kind: 'story', id: d.id, ...cast, choice: null };
+    }
+  }
   if (ev) s.seenEvents.push(ev.id);
   return ev;
 }
@@ -720,6 +729,7 @@ function drawEvent(s: M3State, r: R): M3Event | null {
 /** 이야기 선택지 수. */
 export function eventChoices(ev: M3Event): number {
   if (ev.kind === 'legacy') return MANAGER_EVENTS.find((e) => e.id === ev.id)?.choices.length ?? 0;
+  if (ev.kind === 'story') return storyOf(ev.id)?.choices.length ?? 0;
   return ev.kind === 'playtime' ? 3 : 2;
 }
 
@@ -765,6 +775,19 @@ export function answerEvent(s: M3State, choice: number): boolean {
     for (const [k, v] of Object.entries(e.lean ?? {})) s.styleUse[k as ManagerStyle] += v;
     return true;
   }
+  if (ev.kind === 'story') {
+    const c = storyOf(ev.id)!.choices[choice]!;
+    const ok =
+      c.p === undefined || withRng(s, (r) => r() < c.p! + (c.skill ? s.attrs[c.skill] / 200 : 0));
+    if (c.p !== undefined) ev.ok = ok;
+    applyStory(
+      s,
+      ok ? c.ok : (c.fail ?? {}),
+      p,
+      s.squad.find((x) => x.id === ev.other),
+    );
+    return true;
+  }
   if (ev.kind === 'playtime') {
     if (choice === 0 && p) {
       p.promised = true;
@@ -803,6 +826,36 @@ export function answerEvent(s: M3State, choice: number): boolean {
     } else s.harmony = clamp(s.harmony - 6, 0, 100);
   }
   return true;
+}
+
+/** 이야기 표 선택의 효과를 적용한다. */
+function applyStory(s: M3State, e: StoryFx, p: M3Player | undefined, q: M3Player | undefined) {
+  const c100 = (x: number) => clamp(Math.round(x), 0, 100);
+  if (p) {
+    if (e.morale) p.morale = c100(p.morale + e.morale);
+    if (e.ovr) p.ovr = clamp(p.ovr + e.ovr, 1, p.pot);
+    if (e.pot) p.pot = clamp(p.pot + e.pot, p.ovr, 99);
+    if (e.fit) p.fit = c100(p.fit + e.fit);
+    if (e.inj) p.inj = Math.max(0, p.inj + e.inj);
+    if (e.wage) p.wage = Math.round((p.wage * e.wage) / 100) * 100;
+    if (e.contract) p.contract += e.contract;
+    if (e.list) p.listed = playerValue(p);
+  }
+  if (q) {
+    if (e.otherMorale) q.morale = c100(q.morale + e.otherMorale);
+    if (e.otherPot) q.pot = clamp(q.pot + e.otherPot, q.ovr, 99);
+  }
+  if (e.team) moraleAll(s, e.team);
+  if (e.harmony) s.harmony = c100(s.harmony + e.harmony);
+  if (e.board) s.board = c100(s.board + e.board);
+  if (e.fans) s.fans = c100(s.fans + e.fans);
+  if (e.rep) s.rep = c100(s.rep + e.rep);
+  if (e.form) s.form += e.form;
+  if (e.budget && s.club) s.club.budget += Math.round((s.club.wageBudget * e.budget) / 100) * 100;
+  const cap = attrCap(s.license);
+  for (const [k, v] of Object.entries(e.attr ?? {}))
+    s.attrs[k as M3Attr] = clamp(s.attrs[k as M3Attr] + v, 0, cap);
+  for (const [k, v] of Object.entries(e.lean ?? {})) s.styleUse[k as ManagerStyle] += v;
 }
 
 /** 구간 결과를 보고 넘어간다: 겨울 이적시장 · 다음 구간 · 시즌 리뷰(구간 3 뒤 이사회 신뢰가 15 아래면 경질). */

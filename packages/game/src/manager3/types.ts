@@ -124,9 +124,12 @@ export interface M3BlockReport {
   event: M3Event | null;
 }
 
-/** 이야기. kind가 legacy면 감독 커리어 2 이벤트(id로 문구), 아니면 선수 이야기(player가 주인공). */
+/**
+ * 이야기. kind가 legacy면 감독 커리어 2 이벤트(id로 문구), story면 이야기 표(stories.ts)의 id,
+ * 나머지는 선수 이야기(player가 주인공).
+ */
 export interface M3Event {
-  kind: 'legacy' | 'playtime' | 'renewal' | 'bigbid' | 'fight';
+  kind: 'legacy' | 'story' | 'playtime' | 'renewal' | 'bigbid' | 'fight';
   id: string;
   player?: number;
   other?: number;
