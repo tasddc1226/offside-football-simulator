@@ -17,7 +17,11 @@ const PLAYER = {
 };
 
 async function stub(page: Page) {
-  const hits = { state: 0, attempt: 0 };
+  const hits = {
+    state: 0,
+    attempt: 0,
+    auto: [] as { budget: number; level: number; fails: number }[],
+  };
   await page.route(`${API}/**`, async (r) => {
     const path = new URL(r.request().url()).pathname;
     if (path === '/v1/profile')
@@ -47,6 +51,33 @@ async function stub(page: Page) {
           enhanceOpen: true,
         }),
       );
+    // T-11-679 자동 강화: 첫 요청은 몫을 다 써서(more) 이어 보내게 하고, 두 번째에 목표에 닿는다.
+    if (path === `/v1/cards/${CAREER}/enhance/auto`) {
+      const body = r.request().postDataJSON() as { budget: number; level: number; fails: number };
+      hits.auto.push(body);
+      return r.fulfill(
+        ok(
+          hits.auto.length === 1
+            ? {
+                tries: [
+                  { success: false, from: 0, to: 0, cost: 100_000 },
+                  { success: true, from: 0, to: 1, cost: 100_000 },
+                ],
+                spent: 200_000,
+                balance: 99_800_000,
+                card: { level: 1, fails: 0, tier: 'normal' },
+                stop: 'more',
+              }
+            : {
+                tries: [{ success: true, from: 1, to: 2, cost: 200_000 }],
+                spent: 200_000,
+                balance: 99_600_000,
+                card: { level: 2, fails: 0, tier: 'normal' },
+                stop: 'target',
+              },
+        ),
+      );
+    }
     if (path === `/v1/cards/${CAREER}/enhance`) {
       if (r.request().method() === 'GET') {
         hits.state += 1;
@@ -111,4 +142,35 @@ test('그라운드 선수를 눌러 강화 창을 연다', async ({ page }) => {
   await page.locator('[data-player-peek] [data-act="player-enhance"]').click();
   await expect(page.locator('[data-player-peek]')).toHaveCount(0);
   await expect(page.locator('[data-enhance-sheet] [data-act="enhance-go"]')).toBeEnabled();
+});
+
+test('T-11-679 자동 강화: 목표 · 쓸 금액을 골라 시작하면 이어서 보내고, 목표에 닿으면 멈춘 이유와 결과를 보여 준다', async ({
+  page,
+}) => {
+  const hits = await stub(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-act="enhance"]').first().click();
+  const sheet = page.locator('[data-enhance-sheet]');
+  await sheet.locator('[data-enhance-auto] summary').click();
+  await sheet.locator('[data-enhance-auto-target]').selectOption('2');
+  const budget = Number(await sheet.locator('[data-enhance-auto-budget]').inputValue());
+  expect(budget).toBeGreaterThan(0);
+  await sheet.locator('[data-act="enhance-auto-go"]').click();
+  // 끝나도 자동 강화 칸이 접히지 않고 결과가 보인다.
+  await expect(sheet.locator('[data-enhance-auto-result="target"]')).toBeVisible();
+  await expect(sheet.locator('[data-enhance-auto-result="target"]')).toContainText(
+    '목표 +2에 닿아 멈췄어요.',
+  );
+  await expect(sheet.locator('[data-enhance-auto-result]')).toContainText(
+    '3번 시도했어요(성공 2 · 유지 1 · 하락 0).',
+  );
+  await expect(sheet.locator('[data-enhance-level]')).toHaveText('+2');
+  // 두 번째 요청은 첫 요청 뒤 상태 · 남은 금액으로 보낸다. 창 상태는 다시 읽지 않는다.
+  expect(hits.auto).toEqual([
+    expect.objectContaining({ level: 0, fails: 0, budget, target: 2 }),
+    expect.objectContaining({ level: 1, fails: 0, budget: budget - 200_000, target: 2 }),
+  ]);
+  expect(hits.state).toBe(1);
 });

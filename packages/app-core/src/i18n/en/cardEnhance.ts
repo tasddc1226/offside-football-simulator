@@ -1,5 +1,6 @@
 import type { Translation } from '../core';
 import type { CardEnhanceMsgs } from '../ko/cardEnhance';
+import { plural } from './_util';
 
 export const cardEnhance: Translation<CardEnhanceMsgs> = {
   title: 'Card enhance',
@@ -54,4 +55,26 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
     `The +${p.lv} enhance value of ${p.value} is added to the price. The maximum price multiplier does not apply to it.`,
   lossNote: (p) =>
     `Includes enhanced players: ${p.n}. Their levels are lost, and the funds spent on enhancing aren't returned.`,
+  autoTitle: 'Auto enhance',
+  autoTarget: 'Target level',
+  autoBudget: 'Spending limit',
+  autoBudgetMult: (p) => `${p.value} (expected cost ×${p.mult})`,
+  autoBudgetAll: (p) => `${p.value} (all your funds)`,
+  autoExpected: (p) =>
+    `Reaching the target costs about ${p.value} on average. Luck can make it more or less.`,
+  autoNote:
+    'Stops when the card reaches the target, your funds drop below the next attempt, or the spending limit runs out.',
+  autoStart: 'Start auto enhance',
+  autoRunning: (p) => `${plural(p.n, 'attempt')} · ${p.spent} spent`,
+  autoStop: 'Stop',
+  autoStopping: 'Stopping after this batch…',
+  autoDone: (p) =>
+    `${plural(p.n, 'attempt')} (${p.up} success · ${p.keep} kept · ${p.down} down). Spent ${p.spent}.`,
+  stopTarget: (p) => `Stopped at the +${p.lv} target.`,
+  stopFunds: 'Stopped because your club funds are below the next attempt.',
+  stopBudget: 'Stopped because the next attempt would go over your spending limit.',
+  stopCup: 'Stopped because another level would push your cup lineup OVR over the division cap.',
+  stopUser: 'Stopped partway.',
+  autoTargetLow: 'The target must be above the current level.',
+  autoBudgetLow: 'The spending limit is below the cost of one attempt.',
 };

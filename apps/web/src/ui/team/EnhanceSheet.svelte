@@ -3,8 +3,9 @@
   // 못한 시도는 같은 멱등 키로 다시 보내 두 번 판정되지 않는다. 결과는 열린 카드(careerId)에만 돌려준다.
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { holdAchCheck } from '@offside/app-core/achDirty';
-  import { enhanceCard, fetchEnhanceState, type EnhanceResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
-  import { ENHANCE_CHARGE_MS, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView } from '@offside/app-core/cardEnhance';
+  import { enhanceCard, enhanceCardAuto, fetchEnhanceState, type EnhanceResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
+  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoSummary, enhanceAutoTargets, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
+  import { fmtValue } from '@offside/app-core/format';
   import { fundsText } from '@offside/app-core/funds';
   import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
   import { buzz, dur } from '../motion.js';
@@ -40,6 +41,54 @@
 
   const view = $derived(info ? enhanceView(info.card, info.rules, info.balance, listed) : null);
 
+  // T-11-679 자동 강화 — 목표 단계 · 쓸 금액을 고르면 서버가 연달아 판정한다. 창을 닫으면 다음 묶음을 보내지 않는다.
+  let target = $state(0);
+  let budgetPick = $state(0);
+  let autoBusy = $state(false);
+  let autoStopAsked = $state(false);
+  let autoRun = $state<EnhanceAutoRun | null>(null);
+  let autoTarget = $state(0);
+  // 펼침은 사용자가 정한다(진행이 끝나도 결과가 접히지 않게).
+  let autoOpen = $state(false);
+  const targets = $derived(info ? enhanceAutoTargets(info.card.level) : []);
+  const targetNow = $derived(targets.includes(target) ? target : (targets[0] ?? 0));
+  const expected = $derived(info && targetNow ? enhanceAutoExpected(info.card, targetNow, info.rules) : 0);
+  const budgets = $derived(info && view?.cost ? enhanceAutoBudgets(expected, info.balance, view.cost) : { list: [], pick: 0 });
+  const budgetNow = $derived(budgets.list.some((b) => b.value === budgetPick) ? budgetPick : budgets.pick);
+  const autoText = $derived(autoRun && !autoBusy ? enhanceAutoSummary(autoRun, autoTarget) : null);
+
+  async function startAuto() {
+    if (!info || !view?.body || busy || autoBusy || !budgetNow || !targetNow) return;
+    autoBusy = true;
+    autoStopAsked = false;
+    error = null;
+    result = null;
+    autoRun = null;
+    autoTarget = targetNow;
+    const from = info.card.level;
+    const run = await runEnhanceAuto({
+      start: info.card,
+      target: targetNow,
+      budget: budgetNow,
+      balance: info.balance,
+      send: (body, key) => enhanceCardAuto(careerId, body, key),
+      newKey: () => crypto.randomUUID(),
+      cancelled: () => autoStopAsked,
+      onChunk: (r) => {
+        autoRun = { ...r };
+        if (info) info = { ...info, balance: r.balance, card: r.card };
+      },
+    });
+    autoRun = run;
+    autoBusy = false;
+    if (info) info = { ...info, balance: run.balance, card: run.card };
+    if (run.tries) {
+      buzz();
+      onresult(careerId, { success: run.card.level > from, from, to: run.card.level, cost: run.spent, balance: run.balance, card: run.card, ...(run.titles.length ? { titles: run.titles } : {}) });
+    }
+    if (run.stop === 'error') void load();
+  }
+
   async function load() {
     status = info ? 'ready' : 'loading';
     const r = await fetchEnhanceState(careerId);
@@ -55,7 +104,11 @@
     dialog.showModal();
     // load가 읽는 info를 이 effect의 의존성으로 삼으면 응답마다 다시 불러 요청이 끝없이 이어진다. 창을 열 때 한 번만 부른다.
     untrack(() => void load());
-    return lockScroll();
+    const unlock = lockScroll();
+    return () => {
+      autoStopAsked = true;
+      unlock();
+    };
   });
 
   async function go() {
@@ -115,7 +168,35 @@
     {#if result && enhanceTitleText(result.titles)}<p class="result good" role="status" data-enhance-title>{enhanceTitleText(result.titles)}</p>{/if}
     {#if error}<p class="note" role="alert" data-enhance-error>{error}</p>{/if}
     {#if view.block}<p class="note" data-enhance-block>{view.block}</p>{/if}
-    <button class="btn btn-primary btn-block" disabled={busy || !view.body} onclick={go} data-act="enhance-go">{busy ? L.going : L.go}</button>
+    <button class="btn btn-primary btn-block" disabled={busy || autoBusy || !view.body} onclick={go} data-act="enhance-go">{busy ? L.going : L.go}</button>
+    {#if view.next !== null}
+      <details class="auto" data-enhance-auto bind:open={autoOpen}>
+        <summary>{L.autoTitle}</summary>
+        <div class="auto-body">
+          <label>{L.autoTarget}
+            <select value={targetNow} disabled={autoBusy} onchange={(e) => (target = Number(e.currentTarget.value))} data-enhance-auto-target>
+              {#each targets as t (t)}<option value={t}>+{t}</option>{/each}
+            </select>
+          </label>
+          {#if budgets.list.length}
+            <label>{L.autoBudget}
+              <select value={budgetNow} disabled={autoBusy} onchange={(e) => (budgetPick = Number(e.currentTarget.value))} data-enhance-auto-budget>
+                {#each budgets.list as b (b.value)}<option value={b.value}>{b.label}</option>{/each}
+              </select>
+            </label>
+          {/if}
+          <p class="muted fs-xs">{L.autoExpected({ value: fmtValue(expected) })}<br />{L.autoNote}</p>
+          {#if autoBusy}
+            <p class="auto-status" role="status" data-enhance-auto-progress>{L.autoRunning({ n: autoRun?.tries ?? 0, spent: fmtValue(autoRun?.spent ?? 0) })}</p>
+            <button class="btn btn-block" disabled={autoStopAsked} onclick={() => (autoStopAsked = true)} data-act="enhance-auto-stop">{autoStopAsked ? L.autoStopping : L.autoStop}</button>
+          {:else}
+            <button class="btn btn-primary btn-block" disabled={busy || !view.body || !budgetNow} onclick={startAuto} data-act="enhance-auto-go">{L.autoStart}</button>
+          {/if}
+          {#if autoText}<p class="auto-status" role="status" data-enhance-auto-result={autoRun?.stop}>{#if autoText.done}{autoText.done}<br />{/if}{autoText.why}</p>{/if}
+          {#if !autoBusy && autoRun && enhanceTitleText(autoRun.titles)}<p class="result good" role="status">{enhanceTitleText(autoRun.titles)}</p>{/if}
+        </div>
+      </details>
+    {/if}
     <p class="muted fs-xs foot">
       {L.balance} {fundsText(info.balance)}<br />
       {L.effectNote}
@@ -159,4 +240,11 @@
   .result.good{color:var(--good);}
   .result.bad{color:var(--bad);}
   .foot{margin-top:10px;line-height:1.6;}
+  .auto{margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:0 12px;}
+  .auto summary{min-height:44px;display:flex;align-items:center;font-weight:700;cursor:pointer;}
+  .auto-body{display:flex;flex-direction:column;gap:10px;padding-bottom:12px;}
+  .auto-body label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted);}
+  .auto-body select{min-height:44px;color:var(--ink);}
+  .auto-body p{margin:0;line-height:1.6;}
+  .auto-status{font-weight:600;color:var(--ink);}
 </style>

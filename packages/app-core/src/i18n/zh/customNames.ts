@@ -2,9 +2,9 @@ import type { Translation } from '../core';
 import type { CustomNamesMsgs } from '../ko/customNames';
 
 export const customNames: Translation<CustomNamesMsgs> = {
-  title: '更改賽事・獎項名稱',
+  title: '更改賽事・獎項名稱與標誌',
   intro:
-    '可以只在自己的畫面上，把賽事、獎項與聯賽改成想要的名稱。遊戲紀錄不變，分享圖片與其他人的畫面仍顯示原本的名稱。',
+    '可以只在自己的畫面上，把賽事、獎項與聯賽改成想要的名稱。點一下聯賽或賽事標誌，就能換成自己的圖片。遊戲紀錄不變，分享圖片與其他人的畫面仍顯示原本的名稱與預設標誌。',
   local: '只儲存在這台裝置。要移到其他裝置時請使用編輯檔案。',
   group: '類別',
   groupComp: '賽事',
@@ -42,8 +42,8 @@ export const customNames: Translation<CustomNamesMsgs> = {
   limit: '最多可以更改 500 個名稱',
   badFile: '編輯檔案格式不正確',
   imported: (p) => `已匯入 ${p.n} 個名稱`,
-  resetAllConfirm: '要把所有更改過的名稱恢復原名嗎？',
-  allReset: '所有名稱都已恢復原名',
+  resetAllConfirm: '要把所有更改過的名稱與標誌恢復原狀嗎？',
+  allReset: '所有名稱與標誌都已恢復原狀',
   shareFail: '無法分享',
   clipEmpty: '剪貼簿是空的',
   clipFail: '無法讀取剪貼簿',

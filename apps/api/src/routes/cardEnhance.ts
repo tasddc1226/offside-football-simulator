@@ -1,17 +1,21 @@
 import {
   CareerIdParamSchema,
+  EnhanceAutoBodySchema,
+  EnhanceAutoResponseSchema,
   EnhanceBodySchema,
   EnhanceResponseSchema,
   EnhanceStateResponseSchema,
   IDEMPOTENCY_KEY_HEADER,
 } from '@offside/contracts';
 import {
+  ENHANCE_AUTO_CHUNK,
   ENHANCE_MAX,
   enhanceCost,
   enhanceDownBp,
   enhanceOutcome,
   enhanceRateBp,
   enhanceTierRules,
+  type EnhanceAutoStop,
   type EnhanceCardState,
 } from '@offside/contracts/card-enhance';
 import { type FormationId } from '@offside/contracts/owner-team';
@@ -19,9 +23,12 @@ import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import type { Context, Hono } from 'hono';
 import {
   attemptEnhance,
+  attemptEnhanceAuto,
+  enhanceAutoByRequestKey,
   enhanceByRequestKey,
   enhanceRules,
   enhanceSnapshot,
+  type EnhanceAutoRow,
   type EnhanceCardRow,
   type EnhanceTeamChange,
 } from '../db/repos/cardEnhance.js';
@@ -45,7 +52,7 @@ import { AppError, parseWithAppError } from '../errors.js';
 import { getDb, type AppEnv } from '../env.js';
 import { requireOwner } from '../middleware/requireOwner.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { checkCupEnhance } from './cup.js';
+import { checkCupEnhance, cupEnhanceGuard } from './cup.js';
 import {
   conflictError,
   fundsShort,
@@ -63,7 +70,21 @@ import {
 
 const stale = () => conflictError('강화 상태가 바뀌었어요. 다시 확인해 주세요.', 'ENHANCE_STALE');
 
+const cardMissing = () => notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
+
+/** 강화 한 번 · 자동 강화가 함께 쓰는 확인 — 감독 · 옛 기록 · 판매 중 · 최고 단계 · 쉬는 중이면 막는다. */
+function checkEnhanceable(card: EnhanceCardRow, rules: { open: boolean }) {
+  if (card.manager) throw conflictError('감독 카드는 강화할 수 없어요.', 'CARD_MANAGER');
+  if (card.cardValue === null)
+    throw conflictError('기준가가 없는 옛 기록은 강화할 수 없어요.', 'CARD_NOT_TRADABLE');
+  if (card.listed) throw conflictError('판매 등록 중인 선수는 강화할 수 없어요.', 'CARD_LISTED');
+  if (card.level >= ENHANCE_MAX) throw conflictError('이미 가장 높은 단계예요.', 'ENHANCE_MAX');
+  if (!rules.open) throw conflictError('지금은 카드 강화를 쉬고 있어요.', 'ENHANCE_CLOSED');
+}
+
 const REQUEST_KEY = /^[A-Za-z0-9_-]{8,128}$/;
+/** T-11-679 자동 강화는 기록 키에 `~차례`를 붙이므로 멱등 키를 조금 짧게 받는다. */
+const AUTO_REQUEST_KEY = /^[A-Za-z0-9_-]{8,120}$/;
 
 /** [0, 10000) 정수 난수(만분율 판정). */
 const roll = () => crypto.getRandomValues(new Uint32Array(1))[0]! % 10_000;
@@ -74,9 +95,9 @@ const stateOf = (card: EnhanceCardRow): EnhanceCardState => ({
   tier: card.tier,
 });
 
-function requestKeyOf(c: Context<AppEnv>): string {
+function requestKeyOf(c: Context<AppEnv>, pattern = REQUEST_KEY): string {
   const key = c.req.header(IDEMPOTENCY_KEY_HEADER);
-  if (!key || !REQUEST_KEY.test(key))
+  if (!key || !pattern.test(key))
     throw new AppError({
       code: 'VALIDATION_FAILED',
       message: '요청 식별 정보가 없어요. 다시 시도해 주세요.',
@@ -155,8 +176,7 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
       enhanceSnapshot(db, me.id, careerId),
       enhanceRules(db),
     ]);
-    if (!snap.card || snap.card.ownerId !== me.id)
-      throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
+    if (!snap.card || snap.card.ownerId !== me.id) throw cardMissing();
     return ok(
       c,
       EnhanceStateResponseSchema,
@@ -179,8 +199,7 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
       enhanceByRequestKey(db, me.id, requestKey),
     ]);
     const card = snap.card;
-    if (!card || card.ownerId !== me.id)
-      throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
+    if (!card || card.ownerId !== me.id) throw cardMissing();
     // 같은 시도를 다시 보냈다(응답을 받지 못한 재시도) — 이미 끝난 결과를 그대로 돌려준다.
     if (done) {
       if (done.careerId !== careerId) throw stale();
@@ -199,12 +218,7 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
         NO_STORE,
       );
     }
-    if (card.manager) throw conflictError('감독 카드는 강화할 수 없어요.', 'CARD_MANAGER');
-    if (card.cardValue === null)
-      throw conflictError('기준가가 없는 옛 기록은 강화할 수 없어요.', 'CARD_NOT_TRADABLE');
-    if (card.listed) throw conflictError('판매 등록 중인 선수는 강화할 수 없어요.', 'CARD_LISTED');
-    if (card.level >= ENHANCE_MAX) throw conflictError('이미 가장 높은 단계예요.', 'ENHANCE_MAX');
-    if (!rules.open) throw conflictError('지금은 카드 강화를 쉬고 있어요.', 'ENHANCE_CLOSED');
+    checkEnhanceable(card, rules);
     const cost = enhanceCost(card.level, rules)!;
     // 비용은 구간과 상관없고, 확률만 카드 구간(최고 OVR)의 배율을 받는다.
     const odds = enhanceTierRules(rules, card.tier);
@@ -296,6 +310,184 @@ export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
         cost,
         balance: res.balance,
         card: { level: out.to, fails: out.fails, tier: card.tier },
+        ...(titles.length ? { titles } : {}),
+      },
+      200,
+      NO_STORE,
+    );
+  });
+
+  /**
+   * T-11-679 자동 강화. 목표 단계 · 쓸 금액 상한(budget) 안에서 서버가 연달아 판정하고 D1 batch 하나로 쓴다(시도마다 요청을
+   * 보내지 않아 읽기 · 요청이 시도 수만큼 늘지 않는다). 한 요청은 ENHANCE_AUTO_CHUNK번까지 굴리고 'more'로 멈추면 화면이 남은
+   * 예산으로 이어서 보낸다. 판정 · 확인은 강화 한 번과 같고, 컵 구간 상한은 단계마다 잰다.
+   */
+  app.post('/v1/cards/:careerId/enhance/auto', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const careerId = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
+    const requestKey = requestKeyOf(c, AUTO_REQUEST_KEY);
+    const input = readBody(c, EnhanceAutoBodySchema);
+    const now = nowIso();
+    const [snap, rules, done] = await Promise.all([
+      enhanceSnapshot(db, me.id, careerId),
+      enhanceRules(db),
+      enhanceAutoByRequestKey(db, me.id, requestKey),
+    ]);
+    const card = snap.card;
+    if (!card || card.ownerId !== me.id) throw cardMissing();
+    /** 끝난 상태에서 왜 멈췄는가(재시도 응답도 같은 식으로 다시 센다). */
+    const stopAt = (level: number, spent: number, balance: number, n: number): EnhanceAutoStop => {
+      if (level >= input.target) return 'target';
+      const next = enhanceCost(level, rules) ?? Infinity;
+      if (spent + next > input.budget) return 'budget';
+      if (balance < next) return 'funds';
+      return n >= ENHANCE_AUTO_CHUNK ? 'more' : 'cup';
+    };
+    // 같은 요청을 다시 보냈다(응답을 받지 못한 재시도) — 이미 끝난 결과를 그대로 돌려준다.
+    if (done.length) {
+      if (done.some((d) => d.careerId !== careerId)) throw stale();
+      const spent = done.reduce((t, d) => t + d.cost, 0);
+      return ok(
+        c,
+        EnhanceAutoResponseSchema,
+        {
+          tries: done.map((d) => ({ success: !!d.success, from: d.from, to: d.to, cost: d.cost })),
+          spent,
+          balance: snap.balance,
+          card: stateOf(card),
+          stop: stopAt(card.level, spent, snap.balance, done.length),
+        },
+        200,
+        NO_STORE,
+      );
+    }
+    checkEnhanceable(card, rules);
+    if (input.level !== card.level || input.fails !== card.fails) throw stale();
+    if (input.target <= card.level)
+      throw conflictError('target must be above the current level', 'ENHANCE_AUTO_TARGET');
+    const firstCost = enhanceCost(card.level, rules)!;
+    if (snap.balance < firstCost) throw fundsShort();
+    if (input.budget < firstCost)
+      throw conflictError('budget is below one attempt', 'ENHANCE_AUTO_BUDGET');
+    const season = teamSeasonAt(now);
+    const [team] = season === null ? [] : await myTeamIn(db, me.id, season);
+    const lineups = season === null ? null : await lineupsWith(db, careerId, team);
+    const guard = await cupEnhanceGuard(db, me.id, careerId, season, now, team);
+    // 이 단계로 올라가면 컵 명단 OVR이 구간 상한을 넘는가(이번 시즌 컵 명단에 든 카드만 잰다, 단계마다 한 번만 계산).
+    const capMemo = new Map<number, boolean>();
+    const overCap = (level: number) => {
+      if (!guard.capped || !lineups || season === null) return false;
+      if (lineups.cup ? !lineups.inCup : !lineups.inTeam) return false;
+      if (!capMemo.has(level)) {
+        const after = teamOvrAfter(lineups, me.id, careerId, season, level);
+        const ovr = lineups.cup ? after.cupOvr : after.ovr;
+        capMemo.set(level, ovr !== null && ovr !== undefined && guard.exceeds(ovr));
+      }
+      return capMemo.get(level)!;
+    };
+    const odds = enhanceTierRules(rules, card.tier);
+    const rows: EnhanceAutoRow[] = [];
+    let level = card.level;
+    let fails = card.fails;
+    let spent = 0;
+    let stop: EnhanceAutoStop = 'more';
+    while (rows.length < ENHANCE_AUTO_CHUNK) {
+      const cost = enhanceCost(level, rules);
+      if (level >= input.target || cost === null) {
+        stop = 'target';
+        break;
+      }
+      if (spent + cost > input.budget) {
+        stop = 'budget';
+        break;
+      }
+      if (snap.balance - spent < cost) {
+        stop = 'funds';
+        break;
+      }
+      if (overCap(level + 1)) {
+        stop = 'cup';
+        break;
+      }
+      const r = roll();
+      const out = enhanceOutcome(level, fails, r, odds);
+      rows.push({
+        from: level,
+        to: out.to,
+        fails,
+        success: out.success,
+        rateBp: enhanceRateBp(level, odds),
+        downBp: enhanceDownBp(level, odds),
+        roll: r,
+        cost,
+      });
+      spent += cost;
+      level = out.to;
+      fails = out.fails;
+    }
+    if (rows.length === ENHANCE_AUTO_CHUNK)
+      stop = stopAt(level, spent, snap.balance - spent, rows.length);
+    // 첫 시도부터 컵 상한에 걸리면 강화 한 번과 같은 409로 알린다.
+    if (!rows.length) {
+      if (stop === 'cup' && lineups && season !== null) {
+        const after = teamOvrAfter(lineups, me.id, careerId, season, card.level + 1);
+        guard.check((lineups.cup ? after.cupOvr : after.ovr) ?? 0);
+      }
+      throw stale();
+    }
+    const teamChange =
+      lineups && season !== null && level !== card.level
+        ? teamOvrAfter(lineups, me.id, careerId, season, level)
+        : undefined;
+    let res: Awaited<ReturnType<typeof attemptEnhanceAuto>>;
+    try {
+      res = await attemptEnhanceAuto(db, {
+        ids: rows.map(() => newId('enh')),
+        profileId: me.id,
+        careerId,
+        requestKey,
+        rows,
+        nextFails: fails,
+        now,
+        ...(teamChange ? { team: teamChange } : {}),
+      });
+    } catch (e) {
+      if (isFundsCheck(e)) throw fundsShort();
+      throw e;
+    }
+    if (!res.won) {
+      // 같은 키의 요청이 동시에 먼저 끝났으면 그 결과를, 아니면(다른 기기에서 강화 · 판매 등록 · 자금 사용) 다시 확인을 돌려준다.
+      const raced = await enhanceAutoByRequestKey(db, me.id, requestKey);
+      if (!raced.length || raced.some((d) => d.careerId !== careerId)) throw stale();
+      const after = await enhanceSnapshot(db, me.id, careerId);
+      const s2 = raced.reduce((t, d) => t + d.cost, 0);
+      const st = after.card ? stateOf(after.card) : stateOf(card);
+      return ok(
+        c,
+        EnhanceAutoResponseSchema,
+        {
+          tries: raced.map((d) => ({ success: !!d.success, from: d.from, to: d.to, cost: d.cost })),
+          spent: s2,
+          balance: after.balance,
+          card: st,
+          stop: stopAt(st.level, s2, after.balance, raced.length),
+        },
+        200,
+        NO_STORE,
+      );
+    }
+    if (teamChange && season !== null) purgeEdge(c, STALE.teamSaved(season));
+    const titles = await enhanceTitlesAfter(db, me.id, now);
+    return ok(
+      c,
+      EnhanceAutoResponseSchema,
+      {
+        tries: rows.map((r) => ({ success: r.success, from: r.from, to: r.to, cost: r.cost })),
+        spent,
+        balance: res.balance,
+        card: { level, fails, tier: card.tier },
+        stop,
         ...(titles.length ? { titles } : {}),
       },
       200,

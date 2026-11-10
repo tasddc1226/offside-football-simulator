@@ -2,9 +2,9 @@ import type { Translation } from '../core';
 import type { CustomNamesMsgs } from '../ko/customNames';
 
 export const customNames: Translation<CustomNamesMsgs> = {
-  title: '大会・タイトル名の変更',
+  title: '大会・タイトル名とロゴの変更',
   intro:
-    '大会・タイトル・リーグの名前を、自分の画面でだけ好きな名前に変えられます。ゲームの記録はそのままで、シェア画像やほかの人の画面には元の名前が表示されます。',
+    '大会・タイトル・リーグの名前を、自分の画面でだけ好きな名前に変えられます。リーグ・大会のロゴはタップして自分の画像に変えられます。ゲームの記録はそのままで、シェア画像やほかの人の画面には元の名前と標準のロゴが表示されます。',
   local: 'この端末にだけ保存されます。ほかの端末に移すときはエディットファイルを使います。',
   group: '種類',
   groupComp: '大会',
@@ -42,8 +42,8 @@ export const customNames: Translation<CustomNamesMsgs> = {
   limit: '名前は500件まで変更できます',
   badFile: 'エディットファイルの形式が正しくありません',
   imported: (p) => `名前を${p.n}件読み込みました`,
-  resetAllConfirm: '変更した名前をすべて元に戻しますか？',
-  allReset: 'すべての名前を元に戻しました',
+  resetAllConfirm: '変更した名前とロゴをすべて元に戻しますか？',
+  allReset: 'すべての名前とロゴを元に戻しました',
   shareFail: '共有できませんでした',
   clipEmpty: 'クリップボードが空です',
   clipFail: 'クリップボードを読み取れませんでした',

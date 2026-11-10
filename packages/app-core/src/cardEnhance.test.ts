@@ -1,6 +1,11 @@
-import { DEFAULT_ENHANCE_RULES } from '@offside/contracts/card-enhance';
+import { DEFAULT_ENHANCE_RULES, enhanceExpectedCost } from '@offside/contracts/card-enhance';
+import type { EnhanceAutoBody, EnhanceAutoResponse } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
 import {
+  enhanceAutoBudgets,
+  enhanceAutoExpected,
+  enhanceAutoSummary,
+  enhanceAutoTargets,
   enhanceErrorText,
   enhanceFxBig,
   enhanceFxMs,
@@ -11,6 +16,7 @@ import {
   enhanceLossNote,
   showsPosOvr,
   enhanceView,
+  runEnhanceAuto,
 } from './cardEnhance.js';
 import { cardEnhanceText as L } from './i18n/ko/cardEnhance.js';
 
@@ -107,5 +113,142 @@ describe('T-11-639 강화 연출 값', () => {
       expect(x.dist).toBeLessThanOrEqual(1);
       expect(x.delay).toBeLessThan(1);
     }
+  });
+});
+
+describe('T-11-679 자동 강화', () => {
+  const rules = { ...DEFAULT_ENHANCE_RULES, open: true };
+  const card = { level: 2, fails: 0, tier: 'normal' as const };
+
+  it('목표는 다음 단계부터 +10까지, 기대 비용은 0에서 잰 값의 차이다', () => {
+    expect(enhanceAutoTargets(8)).toEqual([9, 10]);
+    expect(enhanceAutoTargets(10)).toEqual([]);
+    const want = Math.round(enhanceExpectedCost(5).cost - enhanceExpectedCost(2).cost);
+    expect(enhanceAutoExpected(card, 5, rules)).toBe(want);
+    // 높은 구간 카드는 확률이 낮아 더 든다.
+    expect(enhanceAutoExpected({ ...card, tier: 'top' }, 5, rules)).toBeGreaterThan(want);
+  });
+
+  it('쓸 금액 후보: 기대 비용 배수(1억 단위 올림)와 가진 자금 전부, 기본은 1.5배', () => {
+    const { list, pick } = enhanceAutoBudgets(1_234_567, 100_000_000, 400_000);
+    expect(list.map((b) => b.value)).toEqual([
+      1_240_000, 1_860_000, 2_470_000, 3_710_000, 100_000_000,
+    ]);
+    expect(pick).toBe(1_860_000);
+    expect(list.at(-1)!.label).toContain('가진 자금 전부');
+    // 가진 자금보다 큰 배수는 빠지고, 1.5배가 없으면 가진 자금 전부가 기본이다.
+    const poor = enhanceAutoBudgets(1_234_567, 1_500_000, 400_000);
+    expect(poor.list.map((b) => b.value)).toEqual([1_240_000, 1_500_000]);
+    expect(poor.pick).toBe(1_500_000);
+    // 한 번도 못 하면 후보가 없다.
+    expect(enhanceAutoBudgets(1_000_000, 100_000, 400_000).list).toEqual([]);
+  });
+
+  const reply = (d: Partial<EnhanceAutoResponse>): EnhanceAutoResponse => ({
+    tries: [],
+    spent: 0,
+    balance: 0,
+    card,
+    stop: 'target',
+    ...d,
+  });
+
+  it('more면 남은 금액 · 새 상태로 이어서 보내고, 결과를 모아 멈춘 이유를 남긴다', async () => {
+    const sent: { body: EnhanceAutoBody; key: string }[] = [];
+    const replies = [
+      reply({
+        tries: [
+          { success: false, from: 2, to: 1, cost: 400_000 },
+          { success: true, from: 1, to: 2, cost: 200_000 },
+        ],
+        spent: 600_000,
+        balance: 9_400_000,
+        card: { level: 2, fails: 0, tier: 'normal' },
+        stop: 'more',
+      }),
+      reply({
+        tries: [{ success: true, from: 2, to: 3, cost: 400_000 }],
+        spent: 400_000,
+        balance: 9_000_000,
+        card: { level: 3, fails: 0, tier: 'normal' },
+        stop: 'target',
+        titles: ['t1'],
+      }),
+    ];
+    let k = 0;
+    const run = await runEnhanceAuto({
+      start: card,
+      target: 3,
+      budget: 5_000_000,
+      balance: 10_000_000,
+      send: async (body, key) => {
+        sent.push({ body, key });
+        return { ok: true, data: replies.shift()! };
+      },
+      newKey: () => `key-${++k}`,
+      cancelled: () => false,
+    });
+    expect(sent.map((s) => s.body.budget)).toEqual([5_000_000, 4_400_000]);
+    expect(sent.map((s) => s.key)).toEqual(['key-1', 'key-2']);
+    expect(run).toMatchObject({
+      tries: 3,
+      up: 2,
+      keep: 0,
+      down: 1,
+      spent: 1_000_000,
+      stop: 'target',
+      titles: ['t1'],
+    });
+    expect(enhanceAutoSummary(run, 3)).toEqual({
+      done: L.autoDone({ n: 3, up: 2, keep: 0, down: 1, spent: '100억' }),
+      why: L.stopTarget({ lv: 3 }),
+    });
+  });
+
+  it('응답을 받지 못하면 같은 키로 두 번까지 다시 보내고, 거절이면 이유를 남기며, 멈추기를 누르면 다음 묶음을 보내지 않는다', async () => {
+    const keys: string[] = [];
+    const lost = { ok: false as const, error: { code: 'NETWORK', message: '', retryable: true } };
+    const answers = [
+      lost,
+      lost,
+      {
+        ok: true as const,
+        data: reply({
+          stop: 'more',
+          tries: [{ success: false, from: 2, to: 2, cost: 1 }],
+          spent: 1,
+        }),
+      },
+    ];
+    let stop = false;
+    const run = await runEnhanceAuto({
+      start: card,
+      target: 5,
+      budget: 10,
+      balance: 10,
+      send: async (_b, key) => {
+        keys.push(key);
+        stop = true;
+        return answers.shift()!;
+      },
+      newKey: () => 'same',
+      cancelled: () => stop,
+    });
+    expect(keys).toEqual(['same', 'same', 'same']);
+    expect(run.stop).toBe('user');
+    const refused = await runEnhanceAuto({
+      start: card,
+      target: 5,
+      budget: 10,
+      balance: 10,
+      send: async () => ({
+        ok: false,
+        error: { code: 'CONFLICT', reason: 'ENHANCE_AUTO_BUDGET', message: 'x', retryable: false },
+      }),
+      newKey: () => 'k',
+      cancelled: () => false,
+    });
+    expect(refused).toMatchObject({ stop: 'error', error: L.autoBudgetLow, tries: 0 });
+    expect(enhanceAutoSummary(refused, 5)).toEqual({ done: null, why: L.autoBudgetLow });
   });
 });

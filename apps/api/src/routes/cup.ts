@@ -1198,6 +1198,24 @@ export async function checkCupEnhance(
   team: OwnerTeamRow | undefined,
   cupOvrAfter: () => number | null = () => null,
 ) {
+  const cap = await cupEnhanceGuard(db, profileId, careerId, season, now, team);
+  const after = cap.capped ? cupOvrAfter() : null;
+  if (after !== null) cap.check(after);
+}
+
+/**
+ * T-11-679 checkCupEnhance의 본체. 잠금(컵 · 리그)은 바로 던지고, 추첨 뒤 컵 구간 상한은 OVR을 받아 재는 함수로 돌려준다 —
+ * 자동 강화가 단계마다 DB를 다시 읽지 않고 '성공하면 상한을 넘는가'를 잰다. capped가 false면 상한을 잴 컵이 없다.
+ */
+export async function cupEnhanceGuard(
+  db: Db,
+  profileId: string,
+  careerId: string,
+  season: number | null,
+  now: string,
+  team: OwnerTeamRow | undefined,
+) {
+  const capCups: NonNullable<ReturnType<typeof cupById>>[] = [];
   const entries = await activeEntriesOf(db, profileId);
   if (entries.length) {
     const all = await cupSchedule(db);
@@ -1227,15 +1245,26 @@ export async function checkCupEnhance(
         )
       )
         throw conflictError(cupKo('cardEnhance'), 'CUP_CARD_LOCKED');
-      const after = now >= cup.drawAt ? cupOvrAfter() : null;
-      if (after !== null && !fitsDivision(cup, after))
+      if (now >= cup.drawAt) capCups.push(cup);
+    }
+  }
+  if (season !== null && (await leagueLineupLocked(db, profileId, season, now))) {
+    if (team && slotIdsOf(team).includes(careerId))
+      throw conflictError(cupKo('leagueEnhance'), 'LEAGUE_LINEUP_LOCKED');
+  }
+  const over = (ovr: number) => capCups.find((cup) => !fitsDivision(cup, ovr));
+  return {
+    capped: capCups.length > 0,
+    /** 이 컵 명단 OVR이 어느 컵 구간 상한을 넘으면 true. */
+    exceeds: (ovr: number) => !!over(ovr),
+    /** 넘으면 강화 한 번과 같은 409를 던진다. */
+    check(ovr: number) {
+      const cup = over(ovr);
+      if (cup)
         throw conflictError(
           cupKo('enhanceCap', { division: cupKo(cup.division!), n: cup.ovrMax ?? 0 }),
           'CUP_OVR_CAP',
         );
-    }
-  }
-  if (season === null || !(await leagueLineupLocked(db, profileId, season, now))) return;
-  if (team && slotIdsOf(team).includes(careerId))
-    throw conflictError(cupKo('leagueEnhance'), 'LEAGUE_LINEUP_LOCKED');
+    },
+  };
 }

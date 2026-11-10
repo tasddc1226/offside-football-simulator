@@ -31,7 +31,7 @@
   "apps/api/src/routes/auth.ts": 2,
   "apps/api/src/routes/balance.ts": 3,
   "apps/api/src/routes/boards.ts": 8,
-  "apps/api/src/routes/cardEnhance.ts": 9,
+  "apps/api/src/routes/cardEnhance.ts": 8,
   "apps/api/src/routes/cardExchanges.ts": 7,
   "apps/api/src/routes/careers.ts": 4,
   "apps/api/src/routes/chat.ts": 6,
