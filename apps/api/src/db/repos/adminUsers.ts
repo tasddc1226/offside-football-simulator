@@ -199,6 +199,7 @@ export async function grantOwnerItem(
         profileId,
         // 같은 사람에게 여러 번 보내도 알림마다 따로 남는다.
         sourceKey: `admin-grant:${crypto.randomUUID()}`,
+        topic: 'reward',
         now,
         content: {
           kind: 'team',

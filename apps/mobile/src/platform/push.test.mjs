@@ -373,6 +373,7 @@ describe('notification inbox routing and unified push subscription', () => {
     const p = await app();
     expect(f.requests.at(-1).path).toBe('/v1/push/device');
     expect(f.requests.at(-1).body).not.toHaveProperty('engagementEnabled');
+    expect(f.requests.at(-1).body.permission).toBe('authorized');
     expect(p.pushState.enabled).toBe(true);
     await p.pushRegistration.setEnabled(false);
     expect(p.pushState.enabled).toBe(false);
@@ -391,6 +392,9 @@ describe('T-11-586 iOS quiet (provisional) notifications', () => {
       { ios: { allowAlert: true, allowBadge: true, allowSound: true, allowProvisional: true } },
     ]);
     expect(device()).toHaveLength(1);
+    // 서버가 조용한 알림과 정식 허용을 구분해 셀 수 있게 OS 권한 상태를 싣는다.
+    expect(device()[0].body.permission).toBe('provisional');
+    expect(p.quietPushOn()).toBe(true);
     expect(f.values.get('offside_push_quiet')).toBe(true);
     expect(p.pushState.enabled).toBe(false);
     f.permission = { granted: false, canAskAgain: true, ios: { status: 0 } };

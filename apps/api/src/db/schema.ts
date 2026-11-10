@@ -91,6 +91,17 @@ export const pushPreferences = sqliteTable('push_preferences', {
   social: integer('social', { mode: 'boolean' }).notNull().default(true),
   /** T-11-501 독려 알림(출석 · 복귀 · 첫 주 안내). 끄면 kind 'return' 푸시를 보내지 않는다(알림함에는 남는다). */
   nudge: integer('nudge', { mode: 'boolean' }).notNull().default(true),
+  /**
+   * 주제별 받기. null이면 그 알림 종류(kind)의 위 설정을 따른다 — 기존 계정을 옮겨 적지 않아도 지금 선택이 유지된다.
+   * 공지 · 업데이트 · 이적시장은 주제가 하나뿐이라 위 열을 그대로 쓴다.
+   */
+  topicMatch: integer('topic_match', { mode: 'boolean' }),
+  topicCup: integer('topic_cup', { mode: 'boolean' }),
+  topicLeague: integer('topic_league', { mode: 'boolean' }),
+  topicFriend: integer('topic_friend', { mode: 'boolean' }),
+  topicReward: integer('topic_reward', { mode: 'boolean' }),
+  topicAttendance: integer('topic_attendance', { mode: 'boolean' }),
+  topicComeback: integer('topic_comeback', { mode: 'boolean' }),
 });
 
 export const notifications = sqliteTable(
@@ -102,6 +113,8 @@ export const notifications = sqliteTable(
       .references(() => profiles.id, { onDelete: 'cascade' }),
     sourceKey: text('source_key').notNull(),
     kind: text('kind').notNull(),
+    /** 알림 주제(NotificationTopic). null은 주제를 적기 전 행 · 주제가 없는 알림(시험 · 운영자 전용)이다. */
+    topic: text('topic'),
     title: text('title').notNull(),
     body: text('body').notNull(),
     targetJson: text('target_json').notNull(),
@@ -290,6 +303,8 @@ export const pushDevices = sqliteTable(
     /** 마지막 본인 테스트 접수 번호. 토큰·세션이 바뀌면 지우고 전달 결과 조회에만 쓴다. */
     lastTestTicketId: text('last_test_ticket_id'),
     lastTestSentAt: text('last_test_sent_at'),
+    /** OS 권한 상태('authorized' · 'provisional'). 이 값을 보내지 않는 옛 앱은 null이다. */
+    permission: text('permission'),
   },
   (t) => [
     uniqueIndex('push_devices_token_unique').on(t.token),

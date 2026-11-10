@@ -64,6 +64,7 @@ export function communityStatements(env: Bindings, recipients: string[], event: 
         {
           profileId,
           sourceKey: `admin-community-${event.type}:${event.id}`,
+          topic: null,
           content,
           now: event.now,
         },

@@ -35,8 +35,8 @@ export function PushAskCard() {
           testID="retire-push-ask-on"
           disabled={push.busy}
           onPress={() =>
-            void acceptPushAsk('retire').then(() => {
-              if (!pushState.failed) setOpen(false);
+            void acceptPushAsk('retire').then((asked) => {
+              if (asked && !pushState.failed) setOpen(false);
             })
           }
         >

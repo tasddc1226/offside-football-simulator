@@ -48,6 +48,16 @@ async function installationId() {
 let expoToken: { token: string; until: number } | undefined;
 let tokenRevision = 0;
 let nativeToken: Notifications.NativeDevicePushToken | undefined;
+/** 서버에 남기는 OS 권한 상태. iOS 조용한 알림과 정식 허용을 구분해 센다. 읽지 못하면 싣지 않는다. */
+async function osPermission(): Promise<'authorized' | 'provisional' | undefined> {
+  try {
+    const p = await Notifications.getPermissionsAsync();
+    if (p.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) return 'provisional';
+    return p.granted ? 'authorized' : undefined;
+  } catch {
+    return undefined;
+  }
+}
 async function register() {
   const appVersion = Constants.expoConfig?.version;
   if (!appVersion || !/^\d+\.\d+\.\d+$/.test(appVersion)) throw new Error('No app version');
@@ -87,10 +97,11 @@ async function register() {
   }
   const deviceToken = expoToken.token;
   const revision = tokenRevision;
+  const permission = await osPermission();
   // 이전 별도 재방문 설정과 무관하게 통합 수신 정책으로 한 번 재등록한다.
   const fingerprint = await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
-    `${deviceToken}|${sessionToken()}|${appVersion}|push-subscription-v2`,
+    `${deviceToken}|${sessionToken()}|${appVersion}|push-subscription-v2${permission ? `|${permission}` : ''}`,
   );
   const saved = kv.getString(REGISTERED);
   if (saved === fingerprint && Date.now() - (kv.getNumber(`${REGISTERED}_at`) ?? 0) < 86400_000)
@@ -102,6 +113,7 @@ async function register() {
       token: deviceToken,
       platform: Platform.OS,
       appVersion,
+      ...(permission ? { permission } : {}),
     }),
   });
   if (!r.ok) throw new Error('Could not register device');
@@ -142,6 +154,8 @@ export const pushRegistration = createPushRegistration(pushState, {
 
 const QUIET = 'offside_push_quiet';
 const QUIET_TRIED = 'offside_push_quiet_tried';
+/** 지금 조용한 알림(알림 센터에만 쌓임)으로 받고 있는가. 설정 화면이 안내 한 줄에 쓴다. */
+export const quietPushOn = () => kv.getBoolean(QUIET) ?? false;
 /**
  * T-11-586 iOS 조용한 알림(provisional). 창 없이 알림 센터로만 조용히 받는 권한을 한 번 받아 기기를 등록한다.
  * OS 상태가 '아직 묻지 않음'으로 남아 홈 카드 · 순간 권유가 그대로 뜨고, 받기를 누르면 정식 허용 창으로 올린다.

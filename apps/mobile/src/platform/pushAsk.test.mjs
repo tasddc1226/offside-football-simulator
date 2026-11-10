@@ -5,12 +5,14 @@ const f = vi.hoisted(() => ({
   offer: { handled: false, snoozedUntil: 0, eligible: true },
   state: { enabled: false, busy: false, failed: false, blocked: false, message: '' },
   outcome: 'granted',
-  alert: vi.fn(),
+  toast: vi.fn(),
+  save: vi.fn(),
   check: vi.fn(),
   dismiss: vi.fn(),
   snooze: vi.fn(),
 }));
-vi.mock('react-native', () => ({ Alert: { alert: f.alert } }));
+vi.mock('../game/host', () => ({ toast: f.toast }));
+vi.mock('./pushPreferences', () => ({ savePushTopics: f.save }));
 vi.mock('@offside/app-core/i18n/ko/push', () => ({
   pushText: new Proxy({}, { get: (_t, key) => String(key) }),
 }));
@@ -40,7 +42,9 @@ vi.mock('./setup', () => ({
   kv: {
     getBoolean: (key) => f.values.get(key),
     getNumber: (key) => f.values.get(key),
+    getString: (key) => f.values.get(key),
     set: (key, value) => f.values.set(key, value),
+    remove: (key) => f.values.delete(key),
   },
 }));
 
@@ -54,6 +58,7 @@ beforeEach(() => {
   Object.assign(f.state, { enabled: false, busy: false, failed: false, blocked: false });
   f.outcome = 'granted';
   f.check.mockResolvedValue(undefined);
+  f.save.mockResolvedValue(true);
 });
 
 describe('moment push asks', () => {
@@ -88,38 +93,77 @@ describe('moment push asks', () => {
     expect(await p.pushAskOpen('sell')).toBe(false);
   });
 
-  it('records the OS result and stops asking unless registration failed', async () => {
+  const PICKS = { game: true, market: true, social: false, news: true, nudge: false };
+
+  it('asks what to receive before the OS prompt, then records the choice and the OS result', async () => {
     let p = await import('./pushAsk.ts');
     f.outcome = 'denied';
-    await p.acceptPushAsk('retire');
+    let done = p.acceptPushAsk('retire');
+    expect(p.pushPicker).toMatchObject({ open: true, place: 'retire', title: 'pickTitle' });
+    expect(f.events).toEqual([['accept', 'retire']]);
+    p.closePushPicker(PICKS);
+    expect(await done).toBe(true);
+    expect(p.pushPicker.open).toBe(false);
     expect(f.events).toEqual([
       ['accept', 'retire'],
+      ['pick', 'retire', undefined, 'game,market,news'],
       ['result', 'retire', 'denied'],
     ]);
     expect(f.offer.handled).toBe(true);
+    // OS에서 거절하면 고른 값은 기기에만 둔다. 나중에 알림이 켜지면 그때 계정에 저장한다.
+    expect(f.save).not.toHaveBeenCalled();
+    f.state.enabled = true;
+    await p.applyPushPicks();
+    expect(f.save).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ match: true, friend: false, reward: false, attendance: false }),
+    );
+    await p.applyPushPicks();
+    expect(f.save).toHaveBeenCalledOnce();
 
     vi.resetModules();
     f.events.length = 0;
     f.offer.handled = false;
+    f.state.enabled = false;
     f.outcome = 'failed';
     p = await import('./pushAsk.ts');
-    await p.acceptPushAsk('home');
+    done = p.acceptPushAsk('home');
+    p.closePushPicker(PICKS);
+    await done;
     expect(f.events.at(-1)).toEqual(['result', 'home', 'failed']);
     expect(f.offer.handled).toBe(false);
   });
 
-  it('shows a confirm after a moment and tracks the view', async () => {
+  it('saves the chosen topics in one request once notifications are on', async () => {
+    const p = await import('./pushAsk.ts');
+    const done = p.acceptPushAsk('home');
+    p.closePushPicker(PICKS);
+    await done;
+    expect(f.save).toHaveBeenCalledOnce();
+    expect(f.values.has('offside_push_picks')).toBe(false);
+  });
+
+  it('closing the picker from a card asks nothing and keeps the card', async () => {
+    const p = await import('./pushAsk.ts');
+    const done = p.acceptPushAsk('home');
+    p.closePushPicker(null);
+    expect(await done).toBe(false);
+    expect(f.events).toEqual([['accept', 'home']]);
+    expect(f.offer.handled).toBe(false);
+    expect(f.snooze).not.toHaveBeenCalled();
+  });
+
+  it('opens the picker after a moment, tracks the view, and treats closing as later', async () => {
     vi.useFakeTimers();
     const p = await import('./pushAsk.ts');
     await p.askPushAfter('club');
-    expect(f.alert).not.toHaveBeenCalled();
+    expect(p.pushPicker.open).toBe(false);
     vi.advanceTimersByTime(800);
-    expect(f.alert).toHaveBeenCalledOnce();
-    expect(f.alert.mock.calls[0][0]).toBe('askClubTitle');
+    expect(p.pushPicker).toMatchObject({ open: true, place: 'club', title: 'askClubTitle' });
     expect(f.events).toEqual([['view', 'club']]);
-    const later = f.alert.mock.calls[0][2].find((b) => b.style === 'cancel');
-    later.onPress();
+    p.closePushPicker(null);
+    await vi.advanceTimersByTimeAsync(0);
     expect(f.values.get('offside_push_ask_club')).toBe(true);
+    expect(f.events.at(-1)).toEqual(['later', 'club']);
   });
 
   it('T-11-586 asks after league entry with the club copy and after cup entry with the cup copy', async () => {
@@ -127,16 +171,22 @@ describe('moment push asks', () => {
     const p = await import('./pushAsk.ts');
     await p.askPushAfter('league');
     vi.advanceTimersByTime(800);
-    expect(f.alert.mock.calls[0][0]).toBe('askClubTitle');
-    f.alert.mock.calls[0][2].find((b) => b.style === 'cancel').onPress();
+    expect(p.pushPicker.title).toBe('askClubTitle');
+    p.closePushPicker(null);
+    await vi.advanceTimersByTimeAsync(0);
     f.values.set('offside_push_ask_last', Date.now() - p.PUSH_ASK_GAP_MS - 1);
     await p.askPushAfter('cup');
     vi.advanceTimersByTime(800);
-    expect(f.alert.mock.calls[1][0]).toBe('askCupTitle');
+    expect(p.pushPicker.title).toBe('askCupTitle');
+    p.closePushPicker(PICKS);
+    await vi.advanceTimersByTimeAsync(0);
     expect(f.events).toEqual([
       ['view', 'league'],
       ['later', 'league'],
       ['view', 'cup'],
+      ['accept', 'cup'],
+      ['pick', 'cup', undefined, 'game,market,news'],
+      ['result', 'cup', 'granted'],
     ]);
   });
 });

@@ -3,6 +3,7 @@ import { kstDay } from '@offside/contracts/kst';
 import { SERVICE_SEASONS } from '@offside/contracts/service-seasons';
 import type { RetentionStory } from '../i18n/ko/retentionPush.js';
 import { retentionContent, type RetentionParams } from './retentionText.js';
+import { prefAllowsProfile } from './prefs.js';
 
 // T-11-501 리텐션 푸시. 옛 커리어 독려(careerReminder.ts)와 재방문 안내(reengagement.ts)를 대신한다.
 // - 쉬는 사람(lapsed): 마지막 방문 뒤 3 · 7 · 14 · 30일에 한 번씩. 그 사이 생긴 일(판매 · 랭크 경기)이 있으면 그 이야기를,
@@ -72,7 +73,7 @@ const REACHABLE = `(SELECT DISTINCT d.profile_id AS id FROM push_devices d JOIN 
       AND s.channel = 'app' AND s.revoked_at IS NULL AND s.expires_at > ?1) dv
   JOIN profiles p ON p.id = dv.id`;
 const FRESH = `p.deleted_at IS NULL
-  AND COALESCE((SELECT nudge FROM push_preferences pref WHERE pref.profile_id = p.id), 1) = 1
+  AND ${prefAllowsProfile('return', 'comeback', 'p.id')}
   AND NOT EXISTS (SELECT 1 FROM notifications n WHERE n.profile_id = p.id AND n.kind = 'return' AND n.created_at >= ?2)
   AND NOT EXISTS (SELECT 1 FROM retention_pushes r WHERE r.profile_id = p.id AND r.created_at >= ?2)`;
 
@@ -242,8 +243,8 @@ export async function queueRetentionPushes(env: Bindings, time = Date.now()) {
     const sourceKey = `retention:${pick.campaign}:${pick.stage}:${pick.profileId}:${pick.lapseKey}`;
     statements.push(
       env.DB.prepare(
-        `INSERT OR IGNORE INTO notifications (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
-        SELECT ?, ?, ?, 'return', ?, ?, ?, ?, ? WHERE changes() > 0`,
+        `INSERT OR IGNORE INTO notifications (id, profile_id, source_key, kind, topic, title, body, target_json, created_at, expires_at)
+        SELECT ?, ?, ?, 'return', 'comeback', ?, ?, ?, ?, ? WHERE changes() > 0`,
       ).bind(
         notificationId,
         pick.profileId,

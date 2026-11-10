@@ -51,6 +51,14 @@ const ko = {
   emptyUnreadBody: '받은 알림은 전체에서 다시 볼 수 있어요.',
   emptyBody: '받은 앱 알림과 테스트 알림이 여기에 쌓여요.',
   seeAll: '전체 알림 보기',
+  groupAll: '모든 종류',
+  groupGame: '경기 · 대회',
+  groupSocial: '친구 · 보상',
+  groupNews: '게임 소식',
+  groupNudge: '출석 · 복귀',
+  emptyGroup: '이 종류로 받은 알림이 없어요',
+  emptyGroupBody: '다른 알림은 모든 종류에서 볼 수 있어요.',
+  groupAria: (p: { title: string }) => `${p.title} 알림만 보기`,
 };
 
 export type InboxMsgs = typeof ko;

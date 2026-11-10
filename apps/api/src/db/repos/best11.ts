@@ -430,6 +430,7 @@ export async function rewardBest11(db: Db, season: number, now: string): Promise
           profileId: r.profileId,
           // 한 구단주는 한 시즌에 한 자리만 차지한다.
           sourceKey: `best11:${season}:reward`,
+          topic: 'reward',
           now,
           content: {
             kind: 'team',
