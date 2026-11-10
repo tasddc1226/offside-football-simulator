@@ -244,8 +244,6 @@ export const manager3: Translation<Manager3Msgs> = {
   historyRest: 'Seasons off',
   historyRow: (p) => `Season ${p.n} · ${p.club} · ${p.rank} of ${p.teams}`,
   // Progress steps
-  appWebOnly:
-    'Continue this manager career in the web browser where you started it. The app screen is in the works.',
   stepOffers: 'Offers',
   stepPreseason: 'Preseason',
   stepWindow: 'Transfers',

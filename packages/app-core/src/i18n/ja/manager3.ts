@@ -236,7 +236,6 @@ export const manager3: Translation<Manager3Msgs> = {
   historyRest: '休んだシーズン',
   historyRow: (p) => `${p.n}シーズン · ${p.club} · ${p.teams}チーム中${p.rank}位`,
   // 進行ステップ
-  appWebOnly: 'この監督キャリアは始めたウェブブラウザで続けてください。アプリ画面は準備中です。',
   stepOffers: 'オファー',
   stepPreseason: 'プレシーズン',
   stepWindow: '移籍',

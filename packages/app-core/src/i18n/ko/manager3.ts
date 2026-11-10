@@ -254,8 +254,6 @@ const ko = {
   historyRest: '쉰 시즌',
   historyRow: (p: { n: number; club: string; rank: number; teams: number }) =>
     `${p.n}시즌 · ${p.club} · ${p.teams}팀 중 ${p.rank}위`,
-  /** 앱 화면이 생기기 전까지 앱에서 연 감독 키우기 커리어. */
-  appWebOnly: '감독 키우기 커리어는 시작한 웹 브라우저에서 이어 해요. 앱 화면은 준비 중이에요.',
   // 진행 단계
   stepOffers: '제의',
   stepPreseason: '프리시즌',

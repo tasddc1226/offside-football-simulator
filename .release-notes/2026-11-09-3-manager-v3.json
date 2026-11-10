@@ -34,6 +34,6 @@
       "新增6項總教練成就與9個總教練稱號。稱號可在榮譽館配戴。"
     ]
   },
-  "availability": "web",
+  "availability": "web-app",
   "balance": true
 }

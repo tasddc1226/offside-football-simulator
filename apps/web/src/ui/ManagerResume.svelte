@@ -8,7 +8,17 @@
 
   const r = managerResume();
   const line = $derived(
-    !r ? '' : r.done ? MG.resumeDone : r.club ? MG.resumeLine({ club: tn(r.club), n: r.n, total: r.total }) : MG.resumeOffers({ n: r.n, total: r.total }),
+    !r
+      ? ''
+      : r.done
+        ? MG.resumeDone
+        : r.total === null
+          ? r.club
+            ? MG.resumeLine3({ club: tn(r.club), n: r.n })
+            : MG.resumeOffers3({ n: r.n })
+          : r.club
+            ? MG.resumeLine({ club: tn(r.club), n: r.n, total: r.total })
+            : MG.resumeOffers({ n: r.n, total: r.total }),
   );
 </script>
 

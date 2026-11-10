@@ -235,7 +235,6 @@ export const manager3: Translation<Manager3Msgs> = {
   historyRest: '休息的賽季',
   historyRow: (p) => `第${p.n}賽季 · ${p.club} · ${p.teams}隊中第${p.rank}名`,
   // 進行步驟
-  appWebOnly: '這段總教練生涯請在開始時使用的網頁瀏覽器繼續。App 畫面準備中。',
   stepOffers: '邀約',
   stepPreseason: '季前',
   stepWindow: '轉會',
