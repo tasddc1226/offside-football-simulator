@@ -10,6 +10,8 @@
   import Chips from './sheets/Chips.svelte';
   import CountUp from './CountUp.svelte';
   import { buzz } from './motion.js';
+  import PixelAvatar from './PixelAvatar.svelte';
+  import { managerAvatarSpec } from '@offside/game/avatar';
   import type { Chip } from './sheetState.svelte.js';
   import type { ManagerCandidate, ManagerCareer, ManagersResponse } from '@offside/contracts';
   import { FORMATION_IDS, type FormationId } from '@offside/contracts/owner-team';
@@ -514,6 +516,7 @@
         {@const seated = data.coachId === m.careerId}
         <div class="mg-card" data-manager-card={m.careerId}>
           <div class="mg-card-head">
+            <span class="mg-face" aria-hidden="true"><PixelAvatar spec={managerAvatarSpec(m.careerId, (m.origin.retireAge ?? 35) + r.seasons, m.look)} portrait /></span>
             <b>{nameOf(m)}</b>
             <span class="mg-grade">{M.grade({ grade: r.grade })}</span>
             {#if seated}<span class="mg-badge">{M.coachNow}</span>{/if}
@@ -559,7 +562,10 @@
 {#if confirm}
   <button class="mg-scrim" aria-label={M.cancel} onclick={() => (confirm = null)}></button>
   <div class="mg-sheet" role="dialog" aria-modal="true" aria-label={M.confirmTitle({ name: managerName(confirm, local) })} data-manager-confirm>
-    <h2>{M.confirmTitle({ name: managerName(confirm, local) })}</h2>
+    <div class="mg-confirm-head">
+      <span class="mg-face mg-face-lg" aria-hidden="true"><PixelAvatar spec={managerAvatarSpec(confirm.careerId, preview?.age ?? 36, confirm.look)} portrait /></span>
+      <h2>{M.confirmTitle({ name: managerName(confirm, local) })}</h2>
+    </div>
     <div class="mg-cv" data-manager-cv>
       <h3>{T3.resumeHeading}</h3>
       {#if preview}
@@ -713,6 +719,32 @@
   :global(.mg-col h3) {
     font-size: var(--fs-label);
     color: var(--muted);
+  }
+  :global(.mg-face) {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+  }
+  :global(.mg-face-lg) {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+  }
+  :global(.mg-face .avatar) {
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+  }
+  :global(.mg-confirm-head) {
+    display: flex;
+    gap: 12px;
+    align-items: center;
   }
   :global(.mg-head) {
     display: flex;

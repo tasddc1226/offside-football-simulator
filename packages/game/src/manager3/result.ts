@@ -143,6 +143,8 @@ export function previewManager3(o: ManagerOrigin) {
     formation: (o.pos === 'FW' ? '4-3-3' : o.pos === 'MF' ? '3-5-2' : '4-4-2') as FormationId,
     license: 'C' as M3License,
     firstTiers: [Math.max(0, top - 2), Math.max(0, top - 1)] as const,
+    /** 감독으로 시작하는 나이(newManager3와 같은 규칙). 이력서 창의 감독 모습에 쓴다. */
+    age: (o.retireAge ?? 35) + 1,
   };
 }
 

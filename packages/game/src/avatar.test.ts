@@ -4,6 +4,7 @@ import {
   cardAvatarSpec,
   avatarSpec,
   lookOf,
+  managerAvatarSpec,
   primeAvatarSpec,
   retiredAvatarSpec,
 } from './avatar.js';
@@ -64,6 +65,16 @@ describe('선수 모습 (T-11-120)', () => {
     expect([prime.look, prime.kit, prime.gray]).toEqual([lookOf(s.cid), kitOf(CLUBS[0]!), 0]);
     const army = avatarSpec({ ...s, mil: { ...s.mil, serving: true, type: 'army' } });
     expect(army.hairStyle).toBe('buzz');
+  });
+  it('감독은 같은 얼굴에 꽃다발 없는 정장이고, 마흔부터 흰머리가 더 는다 (T-11-648)', () => {
+    const s = player();
+    const young = managerAvatarSpec(s.cid, 36);
+    const old = managerAvatarSpec(s.cid, 60);
+    expect([young.look, young.acc, young.expr]).toEqual([lookOf(s.cid), ['suit'], null]);
+    expect(young.gray).toBe(retiredAvatarSpec(s.cid, 36).gray);
+    expect(old.gray).toBeGreaterThan(young.gray);
+    expect(managerAvatarSpec(s.cid, 99).gray).toBeLessThanOrEqual(0.85);
+    expect(avatarImagePlan(old).layers.map((l) => l.layer)).toContain('suit');
   });
   it('은퇴 상세 화면은 꾸미기와 상관없이 정장이고, 다른 화면은 꾸민 모습이다', () => {
     const s = player();

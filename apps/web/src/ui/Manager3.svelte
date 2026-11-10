@@ -56,6 +56,8 @@
   import { managerText as M } from '@offside/app-core/i18n/ko/manager';
   import { untrack } from 'svelte';
   import { buzz } from './motion.js';
+  import { managerAvatarSpec } from '@offside/game/avatar';
+  import PixelAvatar from './PixelAvatar.svelte';
 
   let { career, name, onchange }: { career: ManagerCareer; name: string; onchange: () => void } = $props();
 
@@ -84,6 +86,8 @@
   const ev = $derived(st.phase === 'blockResult' ? (st.lastReport?.event ?? null) : null);
   const evText = $derived(ev ? eventView(st, ev) : null);
   const steps = $derived(seasonSteps3(st));
+  // 감독 모습: 은퇴한 그 선수(커리어 ID · 은퇴 때 꾸미기)가 지금 나이로 정장을 입은 모습.
+  const face = $derived(managerAvatarSpec(career.careerId, st.age, career.look));
   const table = $derived(st.table.length ? sortTable(st.table) : []);
   const myRank = $derived(st.club ? table.findIndex((t) => t.clubId === st.club!.id) + 1 : 0);
   const lineup = $derived(st.phase === 'block' ? autoLineup(st.squad, st.plan.formation, 55) : []);
@@ -148,12 +152,15 @@
 </script>
 
 <section class="card mg-col m3" data-manager3={st.phase}>
-  <div class="mg-head">
-    <b>{name}</b>
-    <span class="muted fs-sm"
-      >{T.seasonLabel({ n: st.season + (st.phase === 'done' ? 0 : 1) })} · {T.ageLabel({ age: st.age })} · {T.licenseLabel({ license: st.license })}</span
-    >
-    <span class="fs-sm">{st.club ? `${tn(st.club.name)} · ${leagueName(st.club.leagueId)}` : T.noClub}</span>
+  <div class="m3-who">
+    <span class="mg-face mg-face-lg" aria-hidden="true"><PixelAvatar spec={face} portrait /></span>
+    <div class="mg-head">
+      <b>{name}</b>
+      <span class="muted fs-sm"
+        >{T.seasonLabel({ n: st.season + (st.phase === 'done' ? 0 : 1) })} · {T.ageLabel({ age: st.age })} · {T.licenseLabel({ license: st.license })}</span
+      >
+      <span class="fs-sm">{st.club ? `${tn(st.club.name)} · ${leagueName(st.club.leagueId)}` : T.noClub}</span>
+    </div>
   </div>
   <dl class="mg-stats">
     <div><dt>{T.repLabel}</dt><dd>{st.rep}</dd></div>
@@ -408,6 +415,7 @@
   </section>
 {:else if st.phase === 'done' && result}
   <section class="card mg-col" data-manager3-card>
+    <span class="m3-card-face" aria-hidden="true"><PixelAvatar spec={face} /></span>
     <h2>{T.cardHeading}</h2>
     <p><b>{M.grade({ grade: result.grade })}</b> · {endingName(result.ending)} · {T.cardSeasons({ n: result.seasons })}</p>
     <p class="muted fs-sm">{endingDesc(result.ending)}</p>
@@ -466,6 +474,20 @@
 {/if}
 
 <style>
+  .m3-who {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .m3-card-face {
+    align-self: center;
+    width: 96px;
+  }
+  .m3-card-face :global(.avatar) {
+    width: 100%;
+    height: auto;
+    image-rendering: pixelated;
+  }
   h3 {
     margin: 0.5rem 0 0;
     font-size: 0.95rem;
