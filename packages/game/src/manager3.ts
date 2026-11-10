@@ -25,6 +25,7 @@ export {
   releasePlayer,
   renewPlayer,
   renewWage,
+  renewalEventWage,
   starterAvg,
   wageBill,
   type BidResult,
