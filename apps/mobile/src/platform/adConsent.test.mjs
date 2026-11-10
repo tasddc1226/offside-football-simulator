@@ -10,7 +10,7 @@ vi.mock('react-native-google-mobile-ads', () => ({
   AdsConsentStatus: { NOT_REQUIRED: 'NOT_REQUIRED', OBTAINED: 'OBTAINED' },
 }));
 vi.mock('@offside/app-core/i18n/core', () => ({ deviceLocales: () => ['ko-KR'] }));
-vi.mock('./adPersonalization', () => ({ inPersonalizedTest: f.inTest }));
+vi.mock('./adPersonalization', () => ({ allowPersonalizedAds: f.inTest }));
 
 beforeEach(() => {
   vi.resetModules();
