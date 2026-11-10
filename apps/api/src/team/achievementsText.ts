@@ -160,6 +160,12 @@ const LABEL: Record<string, string> = {
   'team-wall': 'Under 1 goal conceded per match',
   'mgr-titles': 'League titles as manager',
   'mgr-double': 'Manager with a title and a promotion',
+  'mgr-cup': 'Cup-winning manager',
+  'mgr-award': 'Manager of the Year winner',
+  'mgr-pro': 'Manager with a P licence',
+  'mgr-long': 'Manager with 15 seasons in charge',
+  'mgr-legend': "Manager with the 'Master Manager' ending",
+  'mgr-endings': 'Different manager endings',
 };
 
 /** 단계 업적의 단위(숫자 바로 뒤에 붙는다). */
@@ -191,6 +197,7 @@ const UNIT: Record<string, string> = {
   'team-clean': ' wins',
   'team-thrash': ' wins',
   'mgr-titles': ' titles',
+  'mgr-endings': ' endings',
 };
 
 type Tables = {

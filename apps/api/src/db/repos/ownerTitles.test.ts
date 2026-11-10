@@ -13,6 +13,7 @@ import {
   careers,
   cards,
   cupEntries,
+  managerCareers,
   ownerHonors,
   ownerSeasonRecords,
   ownerTitleAwards,
@@ -26,6 +27,7 @@ import {
   refreshOwnerTitles,
   titleMetricsOf,
   grantPioneerTitles,
+  managerTitlesAfter,
   TITLE_PROGRESS_TTL_MS,
 } from './ownerTitles.js';
 
@@ -156,6 +158,10 @@ describe('Permanent owner titles', () => {
       enhanceDowns: 0,
       enhanceNear: 0,
       enhanceSpent: 0,
+      mgrDone: 0,
+      mgrTitles: 0,
+      mgrPro: 0,
+      mgrLegends: 0,
     });
     expect((await titleMetricsOf(ctx.db, b.profileId)).retired).toBe(0);
     const preview = await refreshOwnerTitles(ctx.db, a.profileId, NOW, true);
@@ -238,7 +244,7 @@ describe('Permanent owner titles', () => {
     const later = '2026-10-11T00:00:00.000Z';
     hall = await permanentTitlesOf(ctx.db, who.profileId, later);
     expect(hall.find((t) => t.id === 'owner-goals')).toMatchObject({ value: 5, earnedAt: later });
-    expect((await ctx.db.select().from(ownerTitleProgress))[0]?.criteriaVersion).toBe(5);
+    expect((await ctx.db.select().from(ownerTitleProgress))[0]?.criteriaVersion).toBe(6);
     // Historic awards remain valid when their earlier criteria were easier.
     await ctx.db
       .update(ownerTitleAwards)
@@ -427,6 +433,48 @@ describe('Permanent owner titles', () => {
     });
   });
 
+  it('T-11-648 감독 칭호는 끝낸 내 감독 결과(리그 우승 합계 · P 자격 · 명장)로 세고, 끝낸 뒤 바로 준다', async () => {
+    const who = await issueGoogleCookie(ctx);
+    const other = await issueGoogleCookie(ctx);
+    const row = (profileId: string, i: number, result: object | null, status = 'done') => ({
+      id: `mgr-${profileId}-${i}`,
+      profileId,
+      careerId: `card-${profileId}-${i}`,
+      status: status as 'done' | 'active',
+      seed: i,
+      engine: 3,
+      originJson: '{}',
+      resultJson: result ? JSON.stringify(result) : null,
+      createdAt: NOW,
+      finishedAt: status === 'done' ? NOW : null,
+    });
+    await ctx.db.insert(managerCareers).values([
+      row(who.profileId, 1, { titles: 4, ending: 'legend', v3: { license: 'P' } }),
+      row(who.profileId, 2, { titles: 6, ending: 'steady', v3: { license: 'A' } }),
+      // 옛 결과(v3 없음)도 감독 수 · 우승은 센다.
+      row(who.profileId, 3, { titles: 1, ending: 'steady' }),
+      // 진행 중인 감독은 세지 않는다.
+      row(who.profileId, 4, null, 'active'),
+      row(other.profileId, 1, { titles: 30, ending: 'legend', v3: { license: 'P' } }),
+    ]);
+    expect(await titleMetricsOf(ctx.db, who.profileId)).toMatchObject({
+      mgrDone: 3,
+      mgrTitles: 11,
+      mgrPro: 1,
+      mgrLegends: 1,
+    });
+    const got = [...(await managerTitlesAfter(ctx.db, who.profileId, NOW))].sort();
+    expect(got).toEqual([
+      'owner-mgr-champion',
+      'owner-mgr-debut',
+      'owner-mgr-master',
+      'owner-mgr-pro',
+      'owner-mgr-silverware',
+    ]);
+    // 이미 받은 칭호뿐이면 다시 집계하지 않는다.
+    expect(await managerTitlesAfter(ctx.db, who.profileId, NOW)).toEqual([]);
+  });
+
   it('T-11-556 unlinked owners get no progress or awards', async () => {
     const anon = await issueCookie(ctx);
     await seed(anon.profileId, 60);
@@ -457,7 +505,7 @@ describe('Permanent owner titles', () => {
     const later = '2026-10-10T01:00:00.000Z';
     let hall = await permanentTitlesOf(ctx.db, who.profileId, later);
     let [progress] = await ctx.db.select().from(ownerTitleProgress);
-    expect(progress).toMatchObject({ criteriaVersion: 5, updatedAt: later });
+    expect(progress).toMatchObject({ criteriaVersion: 6, updatedAt: later });
     expect(metricsOf(progress?.metricsJson).forwards).toBe(3);
     expect(hall.find((t) => t.id === 'owner-exchange')).toMatchObject({
       earnedAt: NOW,

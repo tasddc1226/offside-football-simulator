@@ -129,6 +129,12 @@ export type AchievementManager = {
   promotions: number;
   grade: string;
   mastery: Readonly<Record<string, string>>;
+  /** T-11-648 컵 우승 · 맡은 시즌 · 엔딩(옛 결과에는 없을 수 있다). */
+  cups?: number;
+  seasons?: number;
+  ending?: string;
+  /** T-11-648 감독 커리어 3 결과(지도자 자격 · 올해의 감독상). */
+  v3?: { license: string; awards: number } | null | undefined;
 };
 
 export type AchievementInput = {
@@ -1214,6 +1220,46 @@ export function clubAchievements(input: AchievementInput): ClubAchievementGroup[
               achievementLabels['mgr-double']!,
               managers.some((m) => m.titles > 0 && m.promotions > 0),
               60,
+            ),
+            // T-11-648 감독 키우기(엔진 3) 결과로 보는 업적.
+            once(
+              'mgr-cup',
+              achievementLabels['mgr-cup']!,
+              managers.some((m) => (m.cups ?? 0) > 0),
+              40,
+            ),
+            once(
+              'mgr-award',
+              achievementLabels['mgr-award']!,
+              managers.some((m) => (m.v3?.awards ?? 0) > 0),
+              40,
+            ),
+            once(
+              'mgr-pro',
+              achievementLabels['mgr-pro']!,
+              managers.some((m) => m.v3?.license === 'P'),
+              30,
+            ),
+            once(
+              'mgr-long',
+              achievementLabels['mgr-long']!,
+              managers.some((m) => (m.seasons ?? 0) >= 15),
+              50,
+            ),
+            once(
+              'mgr-legend',
+              achievementLabels['mgr-legend']!,
+              managers.some((m) => m.ending === 'legend'),
+              80,
+            ),
+            tier(
+              'mgr-endings',
+              achievementLabels['mgr-endings']!,
+              achievementUnits['mgr-endings']!,
+              new Set(managers.flatMap((m) => (m.ending ? [m.ending] : []))).size,
+              [2, 3, 5],
+              TEAM_V2,
+              endless,
             ),
           ]
         : []),

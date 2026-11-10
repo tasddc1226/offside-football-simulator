@@ -115,6 +115,7 @@ export const TITLE_CATEGORIES = [
   'legacy',
   'team',
   'enhance',
+  'manager',
 ] as const;
 export type TitleCategory = (typeof TITLE_CATEGORIES)[number];
 /** T-11-556 구단주 팀 디비전 칭호의 기준(team-division TEAM_DIVISION_KEYS index — elite2 · master). */
@@ -476,12 +477,94 @@ export const PERMANENT_TITLES = def([
     category: 'enhance',
     related: 'enhance',
   },
+  // T-11-648 감독 커리어 — 끝낸 감독 결과(manager_careers.result_json)로 센다.
+  {
+    id: 'owner-mgr-debut',
+    metric: 'mgrDone',
+    target: 1,
+    symbol: 'flag',
+    grade: 'entry',
+    category: 'manager',
+    related: 'manager',
+  },
+  {
+    id: 'owner-mgr-school',
+    metric: 'mgrDone',
+    target: 5,
+    symbol: 'flag',
+    grade: 'skilled',
+    category: 'manager',
+    related: 'manager',
+  },
+  {
+    id: 'owner-mgr-academy',
+    metric: 'mgrDone',
+    target: 20,
+    symbol: 'flag',
+    grade: 'honor',
+    category: 'manager',
+    related: 'manager',
+  },
+  {
+    id: 'owner-mgr-champion',
+    metric: 'mgrTitles',
+    target: 1,
+    symbol: 'trophy',
+    grade: 'skilled',
+    category: 'manager',
+    related: 'manager',
+  },
+  {
+    id: 'owner-mgr-silverware',
+    metric: 'mgrTitles',
+    target: 10,
+    symbol: 'trophy',
+    grade: 'honor',
+    category: 'manager',
+    related: 'manager',
+  },
+  {
+    id: 'owner-mgr-dynasty',
+    metric: 'mgrTitles',
+    target: 30,
+    symbol: 'trophy',
+    grade: 'legend',
+    category: 'manager',
+    related: 'manager',
+  },
+  {
+    id: 'owner-mgr-pro',
+    metric: 'mgrPro',
+    target: 1,
+    symbol: 'star',
+    grade: 'skilled',
+    category: 'manager',
+    related: 'manager',
+  },
+  {
+    id: 'owner-mgr-master',
+    metric: 'mgrLegends',
+    target: 1,
+    symbol: 'star',
+    grade: 'honor',
+    category: 'manager',
+    related: 'manager',
+  },
+  {
+    id: 'owner-mgr-masters',
+    metric: 'mgrLegends',
+    target: 5,
+    symbol: 'star',
+    grade: 'legend',
+    category: 'manager',
+    related: 'manager',
+  },
 ]);
 export type PermanentTitle = (typeof PERMANENT_TITLES)[number];
 export type PermanentTitleId = PermanentTitle['id'];
 export type TitleMetric = PermanentTitle['metric'];
-/** T-11-373 5: 카드 강화 칭호. T-11-556 4: 단계 · 새 칭호. 명예관을 열면 이전 버전 진행도를 한 번 다시 센다(받은 칭호는 그대로). */
-export const TITLE_CRITERIA_VERSION = 5;
+/** T-11-648 6: 감독 칭호. T-11-373 5: 카드 강화 칭호. T-11-556 4: 단계 · 새 칭호. 명예관을 열면 이전 버전 진행도를 한 번 다시 센다(받은 칭호는 그대로). */
+export const TITLE_CRITERIA_VERSION = 6;
 export const permanentTitleOf = (id: string | null | undefined) =>
   PERMANENT_TITLES.find((t) => t.id === id);
 export const isOwnerTitle = (id: string): boolean =>

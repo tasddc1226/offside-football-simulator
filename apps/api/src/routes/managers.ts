@@ -53,6 +53,7 @@ import { requireProfile } from '../middleware/requireProfile.js';
 import { refreshAfterChange } from '../team/ownerAchievements.js';
 import { buildLineup, filledCount, lineupOvr } from '../team/sim.js';
 import type { Db } from '../db/client.js';
+import { managerTitlesAfter } from '../db/repos/ownerTitles.js';
 
 const managerGone = () => notFoundError('감독 커리어를 찾을 수 없어요.', 'MANAGER_NOT_FOUND');
 const cardGone = () => notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
@@ -273,6 +274,8 @@ export function registerManagerRoutes(app: Hono<AppEnv>): void {
       throw managerGone();
     }
     waitUntil(c, refreshAfterChange(db, me.id, season));
+    // T-11-648 감독 칭호(감독 수 · 리그 우승 · P 자격 · 명장)는 끝낸 뒤 바로 준다.
+    waitUntil(c, managerTitlesAfter(db, me.id, now));
     const career = await managerCareerOf(db, id, me.id);
     if (!career) throw managerGone();
     return ok(c, ManagerCareerResponseSchema, { career }, 200, NO_STORE);

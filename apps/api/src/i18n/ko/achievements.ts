@@ -57,6 +57,12 @@ export const achievementLabels: Record<string, string> = {
   // 감독
   'mgr-titles': '감독 리그 우승 합계',
   'mgr-double': '우승과 승격을 모두 해낸 감독',
+  'mgr-cup': '컵 우승 감독',
+  'mgr-award': '올해의 감독상을 받은 감독',
+  'mgr-pro': '지도자 자격 P 감독',
+  'mgr-long': '15시즌을 지휘한 감독',
+  'mgr-legend': "'명장' 엔딩 감독",
+  'mgr-endings': '서로 다른 감독 엔딩',
 };
 
 /** T-11-541 단계 업적 단위(업적 id → 단위). */
@@ -70,6 +76,7 @@ export const achievementUnits: Record<string, string> = {
   'team-clean': '승',
   'team-thrash': '승',
   'mgr-titles': '회',
+  'mgr-endings': '가지',
 };
 
 /** T-11-541 숨은 업적: 달성하기 전 이름과 업적마다 힌트. */
