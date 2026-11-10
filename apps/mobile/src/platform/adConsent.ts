@@ -5,11 +5,12 @@
 // ID는 기기 로그의 "<Google> To get test ads on this device" 줄에서 찾는다(해시값이라 비밀값 아님).
 // T-11-478 동의 뒤 SDK를 초기화하고 광고를 요청한다. 미디에이션 어댑터(Meta · Liftoff · Pangle)는 초기화 때 준비되므로,
 // 초기화 없이 바로 요청하면 첫 요청에 입찰 신호가 빠진다. 초기화가 늦어도 광고를 막지 않게 INIT_WAIT_MS까지만 기다린다.
-// T-11-632 요청 옵션은 여기서 정한다. 기본은 비개인화이고 Android 시험군만 동의 확인 뒤에 풀린다(adPersonalization.ts).
+// T-11-632 · T-11-687 요청 옵션은 여기서 정한다. 동의 확인 전과 iOS · 동의 메시지 지역은 비개인화이고, Android는 방침 9항의
+// 날짜부터 풀린다(adPersonalization.ts).
 import { Platform } from 'react-native';
 import mobileAds, { AdsConsent, AdsConsentStatus } from 'react-native-google-mobile-ads';
 import { deviceLocales } from '@offside/app-core/i18n/core';
-import { inPersonalizedTest } from './adPersonalization';
+import { allowPersonalizedAds } from './adPersonalization';
 
 // T-11-587 운영자 iPhone 재설치로 바뀐 ID(9401…)를 더한다. 옛 ID는 다른 설치본용으로 남긴다.
 const TEST_DEVICES = ['cf501bb8e326505e664bd41f504f4164', '9401ba83ecab139866f77381004260bc'];
@@ -26,7 +27,7 @@ export const askConsent = () =>
     .then(() => AdsConsent.gatherConsent())
     .then(async (info) => {
       if (!info.canRequestAds) return false;
-      nonPersonalizedOnly = !inPersonalizedTest({
+      nonPersonalizedOnly = !allowPersonalizedAds({
         os: Platform.OS,
         locales: deviceLocales(),
         consentRequired: info.status !== AdsConsentStatus.NOT_REQUIRED,
