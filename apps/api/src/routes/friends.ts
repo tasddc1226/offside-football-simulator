@@ -319,6 +319,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       await commitNotifiedEvent(db, [...acceptStatements(db, me.id, targetId, now)], {
         profileId: targetId,
         sourceKey: `friend-accepted:${me.id}:${crypto.randomUUID()}`,
+        topic: 'friend',
         now,
         content: {
           kind: 'social',
@@ -350,6 +351,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       await commitNotifiedEvent(db, [...requestStatements(db, me.id, targetId, now)], {
         profileId: targetId,
         sourceKey: `friend-request:${me.id}:${crypto.randomUUID()}`,
+        topic: 'friend',
         now,
         content: {
           kind: 'social',
@@ -392,6 +394,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       await commitNotifiedEvent(db, [...acceptStatements(db, me.id, target.id, now)], {
         profileId: target.id,
         sourceKey: `friend-accepted:${me.id}:${crypto.randomUUID()}`,
+        topic: 'friend',
         now,
         content: {
           kind: 'social',
@@ -488,6 +491,7 @@ export function registerFriendRoutes(app: Hono<AppEnv>): void {
       {
         profileId: target.id,
         sourceKey: `friendly:${id}`,
+        topic: 'friend',
         now,
         content: {
           kind: 'social',

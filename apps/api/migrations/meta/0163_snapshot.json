@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "cd088c81-d6d1-4d51-ad60-52fd5e5b599c",
+  "id": "f6c773b5-2824-48c4-a231-60505865b948",
   "prevId": "de8d618e-fdd3-4233-ab3b-56396514397c",
   "tables": {
     "acquisition_consents": {
@@ -5203,14 +5203,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "engine": {
-          "name": "engine",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 2
-        },
         "origin_json": {
           "name": "origin_json",
           "type": "text",
@@ -5744,6 +5736,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "topic": {
+          "name": "topic",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         },
         "title": {
@@ -7728,6 +7727,13 @@
           "primaryKey": false,
           "notNull": false,
           "autoincrement": false
+        },
+        "permission": {
+          "name": "permission",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {
@@ -8161,6 +8167,55 @@
           "notNull": true,
           "autoincrement": false,
           "default": true
+        },
+        "topic_match": {
+          "name": "topic_match",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "topic_cup": {
+          "name": "topic_cup",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "topic_league": {
+          "name": "topic_league",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "topic_friend": {
+          "name": "topic_friend",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "topic_reward": {
+          "name": "topic_reward",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "topic_attendance": {
+          "name": "topic_attendance",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "topic_comeback": {
+          "name": "topic_comeback",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
         }
       },
       "indexes": {},

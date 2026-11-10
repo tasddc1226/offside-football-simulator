@@ -1,32 +1,36 @@
 import { proxy } from 'valtio';
 import { apiFetch } from '@offside/app-core/api/client';
 import {
-  DEFAULT_PUSH_PREFERENCES,
-  PushPreferencesSchema,
-  type PushPreferences,
+  DEFAULT_PUSH_TOPIC_PREFERENCES,
+  PushTopicPreferencesSchema,
+  type PushTopic,
+  type PushTopicPreferences,
 } from '@offside/contracts';
+import { topicsFromLegacy } from '@offside/app-core/pushTopics';
 import { pushText as L } from '@offside/app-core/i18n/ko/push';
 import { ensureSession, onSessionChanged, sessionToken } from './session';
 
 export const pushPreferencesState = proxy({
-  values: { ...DEFAULT_PUSH_PREFERENCES },
+  values: { ...DEFAULT_PUSH_TOPIC_PREFERENCES },
   loaded: false,
   loading: false,
-  saving: null as keyof PushPreferences | null,
+  saving: null as PushTopic | null,
   error: '',
   sessionRevision: 0,
 });
 let revision = 0;
-// T-11-501 nudge(독려 알림)는 `?nudge=1`로 물어야 실린다. 배포 순서로 서버가 아직 옛 모양을 주면 켜짐으로 읽는다.
-const PATH = '/v1/push/preferences?nudge=1';
-const parse = (data: unknown) =>
-  PushPreferencesSchema.parse({ nudge: true, ...(data as Partial<PushPreferences>) });
+// 주제(10개) 모양은 `?v=2`로 물어야 온다. 배포 순서로 서버가 아직 옛 모양을 주면 옛 설정을 주제로 펴서 읽는다.
+const PATH = '/v1/push/preferences?v=2';
+const parse = (data: unknown): PushTopicPreferences => {
+  const topics = PushTopicPreferencesSchema.safeParse(data);
+  return topics.success ? topics.data : topicsFromLegacy((data ?? {}) as Record<string, boolean>);
+};
 let pending: Promise<void> | undefined;
 onSessionChanged(() => {
   revision++;
   pending = undefined;
   Object.assign(pushPreferencesState, {
-    values: { ...DEFAULT_PUSH_PREFERENCES },
+    values: { ...DEFAULT_PUSH_TOPIC_PREFERENCES },
     loaded: false,
     loading: false,
     saving: null,
@@ -49,7 +53,7 @@ export async function loadPushPreferences() {
   pushPreferencesState.error = '';
   pending = (async () => {
     try {
-      const result = await apiFetch<PushPreferences>(PATH);
+      const result = await apiFetch<unknown>(PATH);
       if (current !== revision || token !== sessionToken()) return;
       if (!result.ok) throw new Error(result.error.message);
       pushPreferencesState.values = parse(result.data);
@@ -67,7 +71,7 @@ export async function loadPushPreferences() {
   return pending;
 }
 
-export async function setPushPreference(key: keyof PushPreferences, enabled: boolean) {
+export async function setPushPreference(key: PushTopic, enabled: boolean) {
   if (!pushPreferencesState.loaded || pushPreferencesState.loading || pushPreferencesState.saving)
     return;
   const before = pushPreferencesState.values[key];
@@ -77,7 +81,7 @@ export async function setPushPreference(key: keyof PushPreferences, enabled: boo
   pushPreferencesState.saving = key;
   pushPreferencesState.error = '';
   try {
-    const result = await apiFetch<PushPreferences>(PATH, {
+    const result = await apiFetch<unknown>(PATH, {
       method: 'PUT',
       body: JSON.stringify({ [key]: enabled }),
     });
@@ -91,5 +95,23 @@ export async function setPushPreference(key: keyof PushPreferences, enabled: boo
     }
   } finally {
     if (current === revision) pushPreferencesState.saving = null;
+  }
+}
+
+/** 선택 창에서 고른 주제를 요청 하나로 저장한다. 성공하면 true. */
+export async function savePushTopics(topics: PushTopicPreferences): Promise<boolean> {
+  if (!(await ensureSession())) return false;
+  const current = revision;
+  const token = sessionToken();
+  try {
+    const result = await apiFetch<unknown>(PATH, { method: 'PUT', body: JSON.stringify(topics) });
+    if (!result.ok) return false;
+    if (current === revision && token === sessionToken()) {
+      pushPreferencesState.values = parse(result.data);
+      pushPreferencesState.loaded = true;
+    }
+    return true;
+  } catch {
+    return false;
   }
 }

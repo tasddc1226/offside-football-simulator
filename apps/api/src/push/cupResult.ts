@@ -3,6 +3,7 @@ import type { Bindings } from '../env.js';
 import { cupKo, cupTitle } from '../cupText.js';
 import { runPersonalPush } from './personal.js';
 import { publishPushWork } from './queuePublish.js';
+import { prefAllows } from './prefs.js';
 
 export const cupResultSource = (cupId: string) => `cup-complete:${cupId}`;
 const validCup = (id: unknown): id is string =>
@@ -15,8 +16,8 @@ export function cupResultStatements(db: D1Database, cup: CupDef, now: string) {
     db
       .prepare(
         `INSERT OR IGNORE INTO notifications
-      (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
-      SELECT 'ntf_' || lower(hex(randomblob(16))), p.id, ?, 'team', ?,
+      (id, profile_id, source_key, kind, topic, title, body, target_json, created_at, expires_at)
+      SELECT 'ntf_' || lower(hex(randomblob(16))), p.id, ?, 'team', 'cup', ?,
         CASE WHEN EXISTS (SELECT 1 FROM cup_entries e WHERE e.cup_id=? AND e.profile_id=p.id
           AND e.status IN ('active','out','champion')) THEN ?
         WHEN EXISTS (SELECT 1 FROM cup_predictions pr WHERE pr.cup_id=? AND pr.profile_id=p.id
@@ -48,7 +49,7 @@ export function cupResultStatements(db: D1Database, cup: CupDef, now: string) {
       SELECT n.id || ':' || d.installation_hash, n.id, d.installation_hash, d.session_id, d.profile_id,
         d.token, ?, ?, ? FROM notifications n JOIN push_devices d ON d.profile_id=n.profile_id
       LEFT JOIN push_preferences pref ON pref.profile_id=n.profile_id
-      WHERE changes()>0 AND n.source_key=? AND n.created_at=? AND COALESCE(pref.team,1)=1
+      WHERE changes()>0 AND n.source_key=? AND n.created_at=? AND ${prefAllows('team', 'cup')}
         AND d.installation_hash=(SELECT latest.installation_hash FROM push_devices latest
           JOIN sessions s ON s.id=latest.session_id WHERE latest.profile_id=n.profile_id
             AND s.profile_id=latest.profile_id AND s.channel='app' AND s.revoked_at IS NULL
