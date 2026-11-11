@@ -225,7 +225,7 @@ const ko = {
   loadFail: '구단주 프로필을 불러오지 못했어요.',
   noNickname: '이름 없는 구단주',
   mine: '내 프로필',
-  teamLine: (p: { season: string; manager: string }) => `${p.season} · 대표 ${p.manager}`,
+  teamLine: (p: { season: string; manager: string }) => `${p.season} · 팀 대표 ${p.manager}`,
   openTeam: '팀 보기',
   statRn: '영구결번',
   statRetired: '은퇴 선수',

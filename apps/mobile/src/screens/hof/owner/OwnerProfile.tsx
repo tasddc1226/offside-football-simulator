@@ -9,6 +9,7 @@ import {
   type OwnerProfile as Owner,
 } from '@offside/app-core/api/ownerProfile';
 import { ownerProfileText as L } from '@offside/app-core/i18n/ko/ownerProfile';
+import { gradeEmblem } from '@offside/app-core/gradeEmblem';
 import { tierTitle } from '@offside/app-core/ownerTier';
 import { seasonLabel } from '@offside/app-core/seasonName';
 import { num } from '@offside/app-core/teamText';
@@ -20,20 +21,19 @@ import { TeamLogo } from '../../../components/TeamLogo';
 import { TitleBadge } from '../../../components/TitleBadge';
 import { go, openOwnerHallVisit } from '../../../game/nav';
 import { appState } from '../../../store';
-import { rem } from '../../../theme/type';
-import { useColors } from '../../../theme/useColors';
-import { Btn } from '../../../ui/Btn';
+import { DISPLAY, rem } from '../../../theme/type';
+import { useColors, useIsDark } from '../../../theme/useColors';
 import { Card } from '../../../ui/Card';
 import { GradeEmblem } from '../../../ui/GradeEmblem';
 import { Press } from '../../../ui/Press';
 import { Txt } from '../../../ui/Txt';
 import { useOnPull } from '../../../ui/refresh';
-import { Stats } from '../../owner/TeamParts';
 
 const rank = (n: number | null) => (n ? L.rank({ n }) : L.none);
 
 export default function OwnerProfile({ teamId }: { teamId: string }) {
   const c = useColors();
+  const dark = useIsDark();
   const [status, setStatus] = useState<LoadStatus>('loading');
   const [owner, setOwner] = useState<Owner | null>(null);
   const [mine, setMine] = useState(false);
@@ -57,81 +57,184 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
 
   const name = owner?.nickname ?? L.noNickname;
   const team = owner?.team;
+  // T-11-694 최고 순위를 낸 가장 최근 시즌. 칸 이름에 붙여 아래 시즌 표와 겹치지 않게 한다.
+  const best = owner?.stats.bestTeamRank;
+  const bestLine = best
+    ? [...(owner?.seasons ?? [])].reverse().find((x) => x.teamRank === best)
+    : undefined;
+  const bestSeason = bestLine ? seasonLabel(bestLine.season, bestLine.name) : null;
+  const rowStyle = {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: 12,
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+  };
+  // T-11-694 등급 엠블럼 색을 카드 물들이기 · 아바타 테두리에 쓴다.
+  const tier = owner?.tier ? gradeEmblem(owner.tier.tier).palette : null;
+  // 밝은 테마에서는 연한 등급 색이 흰 바탕에 묻혀서 진한 색을 쓴다.
+  const tierText = tier ? (dark ? tier.light : tier.base) : null;
   return (
     <LoadState status={status} failText={L.loadFail} retry={() => void load()}>
       {owner ? (
         <>
-          <Card gap={12} testID="owner-profile">
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <OwnerAvatar avatarId={owner.avatarId} name={name} size={56} />
-              <View style={{ flex: 1, minWidth: 0, gap: 4, alignItems: 'flex-start' }}>
-                <Txt v="eyebrow">{`Owner profile${mine ? ` · ${L.mine}` : ''}`}</Txt>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                  {owner.tier ? (
-                    <View accessible accessibilityLabel={tierTitle(owner.tier)}>
-                      <GradeEmblem id={owner.tier.tier} size={26} />
-                    </View>
-                  ) : null}
-                  <Txt v="h1" accessibilityRole="header" style={{ flexShrink: 1 }}>
-                    {name}
-                  </Txt>
-                </View>
-                {owner.title ? <TitleBadge title={owner.title} /> : null}
-                {owner.tier ? (
-                  <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
-                    {tierTitle(owner.tier)}
-                  </Txt>
-                ) : null}
-              </View>
-            </View>
-            {team ? (
-              <Press
-                testID="owner-team"
-                accessibilityRole="button"
-                onPress={() => (appState.hof = { ...appState.hof, team: team.id, owner: false })}
+          {/* T-11-694 머리 카드: 등급 색으로 위쪽을 물들이고, 엠블럼은 아바타 배지로, 숫자는 한 줄 띠로, 팀 · 명예관은 한 묶음 목록으로. */}
+          <Card gap={16} testID="owner-profile">
+            {tier ? (
+              <View
+                pointerEvents="none"
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: 10,
-                  borderRadius: RADIUS.md,
-                  backgroundColor: c.surface2,
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  borderRadius: RADIUS.lg,
+                  overflow: 'hidden',
                 }}
               >
-                <TeamLogo name={team.name} logo={team.logo} size={32} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Txt bold numberOfLines={1}>
-                    {team.name}
+                <View
+                  style={{
+                    position: 'absolute',
+                    width: 280,
+                    height: 280,
+                    borderRadius: 140,
+                    left: -110,
+                    top: -150,
+                    backgroundColor: `${tier.base}38`,
+                  }}
+                />
+              </View>
+            ) : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              <View
+                style={
+                  tier
+                    ? { borderRadius: 999, borderWidth: 2, borderColor: tier.base, padding: 3 }
+                    : undefined
+                }
+              >
+                <OwnerAvatar avatarId={owner.avatarId} name={name} size={72} />
+                {owner.tier ? (
+                  <View
+                    importantForAccessibility="no-hide-descendants"
+                    accessibilityElementsHidden
+                    style={{ position: 'absolute', right: -8, bottom: -6 }}
+                  >
+                    <GradeEmblem id={owner.tier.tier} size={30} />
+                  </View>
+                ) : null}
+              </View>
+              <View style={{ flex: 1, minWidth: 0, gap: 6, alignItems: 'flex-start' }}>
+                <Txt v="eyebrow" style={tierText ? { color: tierText } : undefined}>
+                  {[
+                    'Owner profile',
+                    owner.tier ? tierTitle(owner.tier) : null,
+                    mine ? L.mine : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </Txt>
+                <Txt v="h1" accessibilityRole="header">
+                  {name}
+                </Txt>
+                {owner.title ? <TitleBadge title={owner.title} /> : null}
+              </View>
+            </View>
+            <View
+              style={{
+                flexDirection: 'row',
+                paddingVertical: 12,
+                borderRadius: RADIUS.md,
+                backgroundColor: c.surface2,
+              }}
+            >
+              {(
+                [
+                  [num(owner.stats.retiredNumbers), L.statRn, null],
+                  [num(owner.stats.retired), L.statRetired, null],
+                  [rank(owner.stats.bestTeamRank), L.statBestRank, bestSeason],
+                ] as const
+              ).map(([v, k, sub], i) => (
+                <View
+                  key={k}
+                  accessible
+                  accessibilityLabel={[k, v, sub].filter(Boolean).join(' ')}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    alignItems: 'center',
+                    gap: 2,
+                    paddingHorizontal: 6,
+                    ...(i ? { borderLeftWidth: 1, borderLeftColor: c.line } : null),
+                  }}
+                >
+                  <Txt
+                    style={{
+                      fontFamily: DISPLAY[700],
+                      fontSize: rem(1.5),
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {v}
                   </Txt>
                   <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(FONT.caption) }}>
-                    {L.teamLine({
-                      season: seasonLabel(team.season, team.seasonName),
-                      manager: team.manager,
-                    })}
+                    {k}
                   </Txt>
+                  {sub ? (
+                    <Txt
+                      numberOfLines={1}
+                      style={{ fontSize: rem(0.6875), color: tierText ?? c.muted }}
+                    >
+                      {sub}
+                    </Txt>
+                  ) : null}
                 </View>
-                <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
-                  {`${L.openTeam} ›`}
+              ))}
+            </View>
+            <View
+              style={{ borderRadius: RADIUS.md, backgroundColor: c.surface2, overflow: 'hidden' }}
+            >
+              {team ? (
+                <Press
+                  testID="owner-team"
+                  accessibilityRole="button"
+                  accessibilityLabel={`${team.name} · ${L.openTeam}`}
+                  onPress={() => (appState.hof = { ...appState.hof, team: team.id, owner: false })}
+                  style={rowStyle}
+                >
+                  <TeamLogo name={team.name} logo={team.logo} size={36} />
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Txt bold numberOfLines={1}>
+                      {team.name}
+                    </Txt>
+                    <Txt tone="muted" numberOfLines={1} style={{ fontSize: rem(FONT.caption) }}>
+                      {L.teamLine({
+                        season: seasonLabel(team.season, team.seasonName),
+                        manager: team.manager,
+                      })}
+                    </Txt>
+                  </View>
+                  <Txt tone="muted" style={{ fontSize: rem(1.25) }} importantForAccessibility="no">
+                    ›
+                  </Txt>
+                </Press>
+              ) : null}
+              <Press
+                testID={mine ? 'owner-hall' : 'owner-hall-visit'}
+                accessibilityRole="button"
+                onPress={() => (mine ? go('honors') : openOwnerHallVisit(teamId))}
+                style={[rowStyle, team ? { borderTopWidth: 1, borderTopColor: c.line } : null]}
+              >
+                <Txt bold numberOfLines={1} style={{ flex: 1, minWidth: 0 }}>
+                  {mine ? L.manage : L.openHall}
+                </Txt>
+                <Txt tone="muted" style={{ fontSize: rem(1.25) }} importantForAccessibility="no">
+                  ›
                 </Txt>
               </Press>
-            ) : null}
-            <Stats
-              small
-              items={[
-                [L.statRn, num(owner.stats.retiredNumbers)],
-                [L.statRetired, num(owner.stats.retired)],
-                [L.statBestRank, rank(owner.stats.bestTeamRank)],
-              ]}
-            />
-            {mine ? (
-              <Btn sm testID="owner-hall" onPress={() => go('honors')}>
-                {L.manage}
-              </Btn>
-            ) : (
-              <Btn sm testID="owner-hall-visit" onPress={() => openOwnerHallVisit(teamId)}>
-                {L.openHall}
-              </Btn>
-            )}
+            </View>
           </Card>
 
           <LeagueHonors honors={owner.leagueHonors ?? []} />
