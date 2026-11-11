@@ -26,6 +26,7 @@ export function TeamDialog({
   avoidKeyboard = false,
   footer,
   overlay,
+  pinned,
 }: {
   title: string;
   children: ReactNode;
@@ -34,6 +35,8 @@ export function TeamDialog({
   footer?: ReactNode;
   /** 창 전체를 덮는 층(연출용). 모달을 겹치지 않으려고 이 모달 안에 그린다. 눌림을 막지 않게 넘겨야 한다. */
   overlay?: ReactNode;
+  /** 스크롤과 상관없이 창 위쪽에 붙여 두는 칸(자동 강화 진행처럼 아래를 눌러 놓고 위를 봐야 할 때). */
+  pinned?: ReactNode;
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -71,6 +74,7 @@ export function TeamDialog({
             borderTopRightRadius: 20,
           }}
         >
+          {pinned ? <View style={{ paddingHorizontal: 18, paddingTop: 14 }}>{pinned}</View> : null}
           <ScrollView
             keyboardShouldPersistTaps="handled"
             contentContainerStyle={{

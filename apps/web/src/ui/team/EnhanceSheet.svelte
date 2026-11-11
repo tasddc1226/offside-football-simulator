@@ -4,7 +4,7 @@
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { holdAchCheck } from '@offside/app-core/achDirty';
   import { enhanceCard, enhanceCardAuto, fetchEnhanceState, type EnhanceResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
-  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoSummary, enhanceAutoTargets, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
+  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoFinal, enhanceAutoSummary, enhanceAutoTickMs, enhanceAutoTargets, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
   import { fmtValue } from '@offside/app-core/format';
   import { fundsText } from '@offside/app-core/funds';
   import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
@@ -57,6 +57,34 @@
   const budgetNow = $derived(budgets.list.some((b) => b.value === budgetPick) ? budgetPick : budgets.pick);
   const autoText = $derived(autoRun && !autoBusy ? enhanceAutoSummary(autoRun, autoTarget) : null);
 
+  // T-11-682 자동 강화 연출: 서버가 묶음으로 판정한 시도를 단계 숫자로 차례로 되감아 보여 주고(성공 · 유지 · 하락마다 숫자가 튄다),
+  // 다 끝나면 시작 단계 → 끝 단계를 강화 한 번 결과처럼 전체 화면 연출로 보여 준다. 동작 줄이기면 되감기 없이 결과 문구만 남는다.
+  type Kind = ReturnType<typeof enhanceResultKind>;
+  const TRAIL = 24;
+  let shown = $state<number | null>(null);
+  let tick = $state<{ kind: Kind; n: number } | null>(null);
+  let trail = $state<Kind[]>([]);
+  let rollFrom = 0;
+  let closed = false;
+  let replay: Promise<void> = Promise.resolve();
+  const rolling = $derived(autoBusy && animate);
+  const rollPct = $derived(shown === null || autoTarget <= rollFrom ? 0 : Math.max(0, Math.min(1, (shown - rollFrom) / (autoTarget - rollFrom))));
+  const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+  function queueReplay(tries: readonly { success: boolean; from: number; to: number }[]) {
+    if (!animate || !tries.length) return;
+    const ms = enhanceAutoTickMs(tries.length);
+    replay = replay.then(async () => {
+      for (const t of tries) {
+        if (closed) return;
+        const kind = enhanceResultKind(t);
+        shown = t.to;
+        tick = { kind, n: (tick?.n ?? 0) + 1 };
+        trail = [...trail.slice(1 - TRAIL), kind];
+        await sleep(ms);
+      }
+    });
+  }
+
   async function startAuto() {
     if (!info || !view?.body || busy || autoBusy || !budgetNow || !targetNow) return;
     autoBusy = true;
@@ -66,6 +94,12 @@
     autoRun = null;
     autoTarget = targetNow;
     const from = info.card.level;
+    const started = Date.now();
+    rollFrom = from;
+    shown = from;
+    tick = null;
+    trail = [];
+    replay = Promise.resolve();
     const run = await runEnhanceAuto({
       start: info.card,
       target: targetNow,
@@ -74,16 +108,25 @@
       send: (body, key) => enhanceCardAuto(careerId, body, key),
       newKey: () => crypto.randomUUID(),
       cancelled: () => autoStopAsked,
-      onChunk: (r) => {
+      onChunk: (r, tries) => {
         autoRun = { ...r };
+        queueReplay(tries);
         if (info) info = { ...info, balance: r.balance, card: r.card };
       },
     });
+    // 되감기를 다 보여 준 뒤(짧게 끝나도 게이지 한 번 길이는 채운 뒤) 결과를 연다.
+    await replay;
+    const wait = dur(ENHANCE_CHARGE_MS) - (Date.now() - started);
+    if (wait > 0 && run.tries) await sleep(wait);
     autoRun = run;
     autoBusy = false;
+    shown = null;
+    tick = null;
     if (info) info = { ...info, balance: run.balance, card: run.card };
     if (run.tries) {
-      buzz();
+      const final = enhanceAutoFinal(run, from);
+      result = final;
+      if (enhanceResultKind(final) !== 'keep') buzz();
       onresult(careerId, { success: run.card.level > from, from, to: run.card.level, cost: run.spent, balance: run.balance, card: run.card, ...(run.titles.length ? { titles: run.titles } : {}) });
     }
     if (run.stop === 'error') void load();
@@ -107,6 +150,7 @@
     const unlock = lockScroll();
     return () => {
       autoStopAsked = true;
+      closed = true;
       unlock();
     };
   });
@@ -142,10 +186,11 @@
 <dialog bind:this={dialog} aria-labelledby="enhance-title" onclose={onclose} data-enhance-sheet>
   <div class="body" data-shake={fx}>
   <header><h2 id="enhance-title">{L.title}</h2><button class="close" aria-label={L.close} onclick={() => dialog.close()}>×</button></header>
-  <div class="stage" class:charging={busy && animate} data-fx={fx} data-enhance-stage>
+  <div class="stage" class:charging={busy && animate} class:rolling data-fx={fx} data-enhance-stage>
     <strong class="who">{name}</strong>
-    <span class="lv" data-enhance-level>+{info?.card.level ?? player.enhance ?? 0}</span>
-    <span class="gauge" aria-hidden="true">{#if busy && animate}<i style:animation-duration="{ENHANCE_CHARGE_MS}ms"></i>{/if}</span>
+    {#key tick?.n}<span class="lv" data-tick={rolling ? tick?.kind : undefined} data-enhance-level>+{shown ?? info?.card.level ?? player.enhance ?? 0}</span>{/key}
+    <span class="gauge" aria-hidden="true">{#if busy && animate}<i style:animation-duration="{ENHANCE_CHARGE_MS}ms"></i>{:else if rolling}<i class="roll" style:transform="scaleX({rollPct})"></i>{/if}</span>
+    {#if rolling && trail.length}<span class="trail" aria-hidden="true" data-enhance-auto-trail>{#each trail as k, i (i)}<b data-k={k}></b>{/each}</span>{/if}
     <p class="result" class:good={result?.success} class:bad={result && enhanceResultKind(result) === 'down'} role="status" data-enhance-result={result ? enhanceResultKind(result) : undefined}>{result ? enhanceResultText(result) : ''}</p>
   </div>
   {#if status === 'loading'}
@@ -218,6 +263,21 @@
   .lv{font-family:var(--display);font-weight:700;font-size:2.8rem;line-height:1.1;color:var(--accent-text);font-variant-numeric:tabular-nums;}
   .gauge{width:82%;height:10px;border-radius:5px;background:var(--line);overflow:hidden;}
   .gauge i{display:block;height:100%;background:linear-gradient(90deg,#ff8a00,#ffd35c,#fff);box-shadow:0 0 12px #ffd35c;transform-origin:left;animation:enh-charge cubic-bezier(.4,0,.8,.6) forwards;}
+  /* 자동 강화는 창을 내려 놓고 누르므로 되감기 동안 단계 칸을 창 위에 붙인다. */
+  .stage.rolling{position:sticky;top:-20px;z-index:2;box-shadow:0 0 0 2px #ffd35c,0 0 22px #ffb80077;animation:enh-glow 800ms ease-in-out infinite alternate;}
+  .gauge i.roll{animation:none;transition:transform 220ms ease-out;}
+  .lv[data-tick='success']{color:#d99a12;animation:enh-tick 260ms ease-out;}
+  .lv[data-tick='down']{color:var(--bad);animation:enh-tick-down 260ms ease-out;}
+  .lv[data-tick='keep']{animation:enh-tick-keep 180ms linear;}
+  .trail{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;max-width:82%;min-height:8px;}
+  .trail b{width:8px;height:8px;border-radius:50%;background:var(--muted);opacity:.55;}
+  .trail b[data-k='success']{background:#e0a91b;opacity:1;}
+  .trail b[data-k='down']{background:var(--bad);opacity:1;}
+  .trail b:last-child{transform:scale(1.35);}
+  @keyframes enh-glow{from{box-shadow:0 0 0 2px #ffd35c,0 0 12px #ffb80055;}to{box-shadow:0 0 0 2px #ffe08a,0 0 30px #ffb800aa;}}
+  @keyframes enh-tick{from{transform:scale(1.28);}to{transform:none;}}
+  @keyframes enh-tick-down{from{transform:translateY(6px) scale(.88);}to{transform:none;}}
+  @keyframes enh-tick-keep{0%,100%{transform:none;}50%{transform:translateX(-3px);}}
   .charging .lv{animation:enh-tremble 900ms linear forwards;}
   .stage[data-fx='success'] .lv{color:#d99a12;animation:enh-pop 420ms cubic-bezier(.3,1.9,.5,1);}
   .stage[data-fx='down'] .lv{color:var(--bad);animation:enh-pop 300ms ease-out;}

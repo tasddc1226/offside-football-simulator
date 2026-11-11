@@ -250,7 +250,8 @@ export async function runEnhanceAuto(o: {
   send: (body: EnhanceAutoBody, key: string) => Promise<ApiResult<EnhanceAutoResponse>>;
   newKey: () => string;
   cancelled: () => boolean;
-  onChunk?: (run: EnhanceAutoRun) => void;
+  /** 요청 하나가 끝날 때마다. tries는 그 요청에서 판정된 시도(화면이 단계 숫자를 차례로 되감아 보여 준다). */
+  onChunk?: (run: EnhanceAutoRun, tries: EnhanceAutoResponse['tries']) => void;
 }): Promise<EnhanceAutoRun> {
   const run: EnhanceAutoRun = {
     tries: 0,
@@ -290,7 +291,7 @@ export async function runEnhanceAuto(o: {
     run.balance = d.balance;
     run.card = d.card;
     if (d.titles?.length) run.titles.push(...d.titles);
-    o.onChunk?.(run);
+    o.onChunk?.(run, d.tries);
     if (d.stop !== 'more') {
       run.stop = d.stop;
       break;
@@ -302,6 +303,23 @@ export async function runEnhanceAuto(o: {
   }
   return run;
 }
+
+/**
+ * T-11-682 자동 강화 되감기: 서버가 한꺼번에 판정한 시도를 단계 숫자로 차례로 보여 줄 때 한 칸 간격(ms). 한 칸이 눈으로 읽히도록
+ * 80ms보다 빨라지지 않고(100번 묶음이면 8초), 시도가 적으면 한 칸에 0.32초까지 머문다.
+ */
+export const enhanceAutoTickMs = (n: number) =>
+  Math.min(320, Math.max(80, Math.round(4000 / Math.max(1, n))));
+
+/** 자동 강화가 끝났을 때 결과 연출에 넘길 값: 시작 단계에서 끝 단계로 한 번 강화한 것처럼(올랐으면 성공, 그대로면 유지, 내려갔으면 하락). */
+export const enhanceAutoFinal = (run: EnhanceAutoRun, from: number) => ({
+  success: run.card.level > from,
+  from,
+  to: run.card.level,
+  cost: run.spent,
+  balance: run.balance,
+  card: run.card,
+});
 
 /** 자동 강화가 끝난 뒤 한 줄(시도 수 · 결과 · 쓴 금액)과 멈춘 이유. */
 export function enhanceAutoSummary(run: EnhanceAutoRun, target: number) {

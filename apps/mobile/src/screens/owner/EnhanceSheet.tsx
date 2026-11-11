@@ -14,7 +14,9 @@ import {
   ENHANCE_CHARGE_MS,
   enhanceAutoBudgets,
   enhanceAutoExpected,
+  enhanceAutoFinal,
   enhanceAutoSummary,
+  enhanceAutoTickMs,
   enhanceAutoTargets,
   enhanceErrorText,
   enhanceKeepKey,
@@ -29,7 +31,7 @@ import { fmtValue } from '@offside/app-core/format';
 import { fundsText } from '@offside/app-core/funds';
 import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
 import { EnhanceFx } from '../../components/EnhanceFx';
-import { EnhanceStage } from '../../components/EnhanceStage';
+import { EnhanceStage, type EnhanceRoll } from '../../components/EnhanceStage';
 import { TeamDialog } from '../../components/TeamDialog';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
@@ -67,6 +69,10 @@ export function EnhanceSheet({
   const [autoRun, setAutoRun] = useState<EnhanceAutoRun | null>(null);
   const [autoTarget, setAutoTarget] = useState(0);
   const stopRef = useRef(false);
+  // T-11-682 자동 강화 연출: 서버가 묶음으로 판정한 시도를 단계 숫자로 차례로 되감아 보여 주고, 끝나면 시작 → 끝 단계를 강화 한 번
+  // 결과처럼 전체 화면 연출로 보여 준다(웹 EnhanceSheet.svelte와 같다). 동작 줄이기면 되감기 없이 결과 문구만 남는다.
+  const [shown, setShown] = useState<number | null>(null);
+  const [roll, setRoll] = useState<EnhanceRoll | null>(null);
 
   async function load() {
     const r = await fetchEnhanceState(careerId);
@@ -107,6 +113,18 @@ export function EnhanceSheet({
     setAutoRun(null);
     setAutoTarget(targetNow);
     const from = info.card.level;
+    const target = targetNow;
+    const started = Date.now();
+    const motion = prefs.motionOK;
+    const span = Math.max(1, target - from);
+    let replay: Promise<void> = Promise.resolve();
+    let n = 0;
+    let trail: EnhanceRoll['trail'] = [];
+    const sleep = (ms: number) => new Promise((done) => setTimeout(done, ms));
+    if (motion) {
+      setShown(from);
+      setRoll({ pct: 0, kind: null, n: 0, trail: [] });
+    }
     const run = await runEnhanceAuto({
       start: info.card,
       target: targetNow,
@@ -115,12 +133,30 @@ export function EnhanceSheet({
       send: (body, key) => enhanceCardAuto(careerId, body, key),
       newKey: () => crypto.randomUUID(),
       cancelled: () => stopRef.current,
-      onChunk: (r) => {
+      onChunk: (r, tries) => {
         if (!alive.current) return;
         setAutoRun({ ...r });
+        if (motion && tries.length) {
+          const ms = enhanceAutoTickMs(tries.length);
+          replay = replay.then(async () => {
+            for (const t of tries) {
+              if (!alive.current) return;
+              const kind = enhanceResultKind(t);
+              trail = [...trail.slice(-23), kind];
+              n += 1;
+              setShown(t.to);
+              setRoll({ pct: Math.max(0, Math.min(1, (t.to - from) / span)), kind, n, trail });
+              await sleep(ms);
+            }
+          });
+        }
         setInfo((s) => (s ? { ...s, balance: r.balance, card: r.card } : s));
       },
     });
+    // 되감기를 다 보여 준 뒤(짧게 끝나도 게이지 한 번 길이는 채운 뒤) 결과를 연다.
+    await replay;
+    const wait = motion && run.tries ? ENHANCE_CHARGE_MS - (Date.now() - started) : 0;
+    if (wait > 0 && alive.current) await sleep(wait);
     // 창을 닫은 뒤에 끝나도 그 카드에는 반영한다.
     if (run.tries)
       onResult(careerId, {
@@ -135,7 +171,10 @@ export function EnhanceSheet({
     if (!alive.current) return;
     setAutoRun(run);
     setAutoBusy(false);
+    setShown(null);
+    setRoll(null);
     setInfo((s) => (s ? { ...s, balance: run.balance, card: run.card } : s));
+    if (run.tries) setResult(enhanceAutoFinal(run, from));
     if (run.stop === 'error') void load();
   }
 
@@ -187,19 +226,27 @@ export function EnhanceSheet({
     </View>
   );
 
+  // 자동 강화를 누를 때는 창이 아래로 내려가 있으므로, 되감기 동안 단계 칸을 창 위에 붙여 둔다.
+  const pinStage = autoBusy && !!roll;
+  const stage = (
+    <EnhanceStage
+      name={name}
+      level={shown ?? info?.card.level ?? player.enhance ?? 0}
+      charging={busy}
+      roll={autoBusy ? roll : null}
+      kind={result ? enhanceResultKind(result) : null}
+      text={result ? enhanceResultText(result) : ''}
+    />
+  );
+
   return (
     <TeamDialog
+      pinned={pinStage ? stage : null}
       title={L.title}
       close={close}
       overlay={<EnhanceFx charging={busy} result={result} />}
     >
-      <EnhanceStage
-        name={name}
-        level={info?.card.level ?? player.enhance ?? 0}
-        charging={busy}
-        kind={result ? enhanceResultKind(result) : null}
-        text={result ? enhanceResultText(result) : ''}
-      />
+      {pinStage ? null : stage}
       {status === 'loading' ? (
         <Skeleton height={180} />
       ) : status === 'error' || !view || !info ? (

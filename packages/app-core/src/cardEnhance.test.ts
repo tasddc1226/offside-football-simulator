@@ -17,6 +17,8 @@ import {
   showsPosOvr,
   enhanceView,
   runEnhanceAuto,
+  enhanceAutoFinal,
+  enhanceAutoTickMs,
 } from './cardEnhance.js';
 import { cardEnhanceText as L } from './i18n/ko/cardEnhance.js';
 
@@ -176,6 +178,7 @@ describe('T-11-679 자동 강화', () => {
       }),
     ];
     let k = 0;
+    const chunks: number[][] = [];
     const run = await runEnhanceAuto({
       start: card,
       target: 3,
@@ -187,7 +190,18 @@ describe('T-11-679 자동 강화', () => {
       },
       newKey: () => `key-${++k}`,
       cancelled: () => false,
+      onChunk: (_r, tries) => chunks.push(tries.map((t) => t.to)),
     });
+    expect(chunks).toEqual([[1, 2], [3]]);
+    expect(enhanceAutoFinal(run, 2)).toMatchObject({
+      success: true,
+      from: 2,
+      to: 3,
+      cost: 1_000_000,
+    });
+    expect(
+      enhanceResultKind(enhanceAutoFinal({ ...run, card: { ...run.card, level: 1 } }, 2)),
+    ).toBe('down');
     expect(sent.map((s) => s.body.budget)).toEqual([5_000_000, 4_400_000]);
     expect(sent.map((s) => s.key)).toEqual(['key-1', 'key-2']);
     expect(run).toMatchObject({
@@ -250,5 +264,14 @@ describe('T-11-679 자동 강화', () => {
     });
     expect(refused).toMatchObject({ stop: 'error', error: L.autoBudgetLow, tries: 0 });
     expect(enhanceAutoSummary(refused, 5)).toEqual({ done: null, why: L.autoBudgetLow });
+  });
+});
+
+describe('enhanceAutoTickMs', () => {
+  it('시도가 많을수록 빨라지되 80~320ms 안에 둔다', () => {
+    expect(enhanceAutoTickMs(1)).toBe(320);
+    expect(enhanceAutoTickMs(20)).toBe(200);
+    expect(enhanceAutoTickMs(100)).toBe(80);
+    expect(enhanceAutoTickMs(0)).toBe(320);
   });
 });
