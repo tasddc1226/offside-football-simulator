@@ -130,6 +130,8 @@ describe('리그·대회 기본 로고 (T-11-681)', () => {
     expect(compOfTrophy('프리미어리그 우승')).toBe('프리미어리그');
     expect(compOfTrophy('AFC 챔피언스리그 엘리트 우승')).toBe('AFC 챔피언스리그 엘리트');
     expect(compOfTrophy('FIFA 월드컵 우승')).toBe('FIFA 월드컵');
+    expect(compOfTrophy('아시안게임 금메달')).toBe('아시안게임');
+    expect(compOfTrophy('올림픽 금메달')).toBe('올림픽');
     expect(compOfTrophy('올림픽 은메달')).toBeNull();
     expect(compOfTrophy('없는 대회 우승')).toBeNull();
   });

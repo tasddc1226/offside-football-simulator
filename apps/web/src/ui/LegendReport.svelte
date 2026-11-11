@@ -25,6 +25,8 @@
   import { rnOf } from './retiredNumber.svelte.js';
   import { EVENT_ICON as ICON, yearsOf } from '@offside/app-core/legendReport';
   import { legendText as L } from '@offside/app-core/i18n/ko/legend';
+  import { gameTrophyText as GT } from '@offside/app-core/i18n/ko/gameTrophy';
+  import TrophyYears from './TrophyYears.svelte';
   import { tn } from '@offside/game/i18n/names';
   import { retiredAvatarSpec } from '@offside/game/avatar';
   import PixelAvatar from './PixelAvatar.svelte';
@@ -112,6 +114,8 @@
     return { destroy: () => io.unobserve(el) };
   }
   let more = $state(false);
+  // T-11-695 은퇴 뒤에도 연도별 우승 목록을 본다. 크레딧(이름 ×횟수)은 그대로 두고 아래에서 펼친다.
+  let byYear = $state(false);
   let moreEl = $state<HTMLDetailsElement>();
   async function openMore() {
     more = true;
@@ -271,6 +275,10 @@
         <div class="eyebrow film-kicker">Honours</div>
         <h2>{L.honoursTitle}</h2>
         {@render roll(honours, 0)}
+        {#if d}
+          <button class="btn btn-sm roll-years-btn" data-act="honours-by-year" aria-expanded={byYear} onclick={() => (byYear = !byYear)}>{byYear ? GT.byYearClose : GT.byYear}</button>
+          {#if byYear}<div class="roll-years" data-honours-by-year><TrophyYears items={d.trophies} still /></div>{/if}
+        {/if}
       {/if}
       {#if awards.length}
         <div class="eyebrow film-kicker roll-gap">Individual Awards</div>
@@ -336,6 +344,8 @@
 {/if}
 
 <style>
+  .roll-years-btn {align-self:center; margin-top:6px;}
+  .roll-years {text-align:left; padding:4px 14px; border-radius:var(--radius-md); background:rgba(255,255,255,0.04); border:1px solid var(--film-line); --muted:var(--film-muted); --line:var(--film-line); --accent:var(--film-gold);}
   /* T-11-371 공개 연출 결과 글자는 크레딧의 금색을 그대로 쓴다(어두운 배경). */
   .film-pot :global(.rv-text) {
     color: inherit;

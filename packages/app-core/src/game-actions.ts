@@ -1,6 +1,7 @@
 import { transferOutlook } from '@offside/game/comps';
 import { careerMomentText as CM } from './i18n/ko/careerMoment';
 import { careerTrophy } from './career-trophy';
+import { compOfTrophy } from './compEmblem';
 import { measureOperation } from './measurement.js';
 import { keyMomentsOn } from './keyMomentPref.js';
 import type { Progress } from './player-metrics.js';
@@ -519,7 +520,12 @@ export function createGameActions(host: GameHost) {
           rating: rec.rating ? rec.rating.toFixed(2) : '-',
         },
         honors: awards.map(tn),
-        trophyHonors: trophies.map((name) => ({ name: tn(name), art: careerTrophy(name) })),
+        // T-11-695 리그 · 대회 우승 · 금메달은 그 대회 로고(트로피 탭과 같게). comp가 없으면 트로피 그림.
+        trophyHonors: trophies.map((name) => ({
+          name: tn(name),
+          art: careerTrophy(name),
+          comp: compOfTrophy(name),
+        })),
         comps: (rec.comps || []).map((c) =>
           L.compLine({ name: tn(c.name), stage: tn(c.stage), apps: c.apps, g: c.g, a: c.a }),
         ),

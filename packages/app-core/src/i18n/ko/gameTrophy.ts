@@ -10,6 +10,8 @@ const ko = {
   ballonRank: (p: { n: number }) => `${p.n}위`,
   nominees: '30인 후보',
   stories: '완결된 스토리',
+  byYear: '연도별로 보기',
+  byYearClose: '접기',
 };
 
 export type GameTrophyMsgs = typeof ko;

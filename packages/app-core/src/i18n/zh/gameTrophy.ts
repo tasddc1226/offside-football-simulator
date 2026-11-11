@@ -10,4 +10,6 @@ export const gameTrophy: Translation<GameTrophyMsgs> = {
   ballonRank: (p) => `第${p.n}名`,
   nominees: '30人候選名單',
   stories: '已完結的劇情',
+  byYear: '依年份查看',
+  byYearClose: '收起',
 };
