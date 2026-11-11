@@ -1,5 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import { CLUBS } from '@offside/game/data';
+import { storedBig } from './helpers.js';
+
+const storedClubs = (page: Page) => storedBig(page, 'ft_clubs');
 
 // T-11-607 구단 엠블럼 투명 배경 · 에디트 파일 오류 안내.
 async function open(page: Page) {
@@ -46,12 +49,11 @@ async function uploadTo(page: Page, buffer: Buffer) {
 /** 저장된 엠블럼의 형식과 왼쪽 위 모서리 알파값. */
 async function saved(page: Page) {
   await expect
-    .poll(() =>
-      page.evaluate(() => localStorage.getItem('ft_clubs')?.includes('data:image') ?? false),
-    )
+    .poll(async () => (await storedClubs(page))?.includes('data:image') ?? false)
     .toBe(true);
-  return page.evaluate(async () => {
-    const stored = JSON.parse(localStorage.getItem('ft_clubs')!) as {
+  const raw = (await storedClubs(page))!;
+  return page.evaluate(async (raw) => {
+    const stored = JSON.parse(raw) as {
       clubs: Record<string, { logo: { img: string } }>;
     };
     const src = stored.clubs['pl-0']!.logo.img;
@@ -63,7 +65,7 @@ async function saved(page: Page) {
     const ctx = canvas.getContext('2d')!;
     ctx.drawImage(image, 0, 0, 64, 64);
     return { type: src.slice(0, src.indexOf(';')), alpha: ctx.getImageData(1, 1, 1, 1).data[3] };
-  });
+  }, raw);
 }
 
 test('WebP를 못 만드는 브라우저에서도 투명 배경을 지킨다', async ({ page }) => {
@@ -93,7 +95,8 @@ const importFile = (page: Page, text: string) =>
     buffer: Buffer.from(text),
   });
 
-test('저장 공간이 모자란 에디트 파일은 형식 오류가 아니라 공간 부족으로 안내한다', async ({
+// T-11-697 예전엔 localStorage(약 5MB)가 차면 '저장 공간이 부족해 저장하지 못했어요'로 막혔다. 이제 엠블럼은 IndexedDB에 둔다.
+test('localStorage가 거의 차 있어도 엠블럼 에디트 파일을 불러오고 새로고침 뒤에도 남는다', async ({
   page,
 }) => {
   await page.addInitScript(() => {
@@ -114,7 +117,11 @@ test('저장 공간이 모자란 에디트 파일은 형식 오류가 아니라 
     ]),
   );
   await importFile(page, JSON.stringify({ v: 1, clubs }));
-  await expect(page.getByText('저장 공간이 부족해 저장하지 못했어요')).toBeVisible();
+  await expect(page.getByText(`구단 ${CLUBS.length}개 설정을 불러왔어요`)).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('ft_clubs') == null)).toBe(true);
+  expect((await storedClubs(page))?.length ?? 0).toBeGreaterThan(CLUBS.length * 15_900);
+  await open(page);
+  await expect(page.locator('[data-club="pl-0"] img[src^="data:image"]').first()).toBeVisible();
 });
 
 test('JSON이 아닌 파일은 형식 오류로 안내한다', async ({ page }) => {
