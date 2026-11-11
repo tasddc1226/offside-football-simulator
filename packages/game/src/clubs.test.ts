@@ -64,6 +64,20 @@ describe('클럽 커스터마이즈 (T-10-009)', () => {
     expect(CLUBS.find((c) => c.id === 'pl-0')!.name).toBe('맨체스터 스카이블루');
   });
 
+  it('김천 상무도 이름 · 엠블럼을 바꾸고, 비우면 원래 이름으로 돌아간다 (T-11-696)', () => {
+    const base = SANGMU.name;
+    const map = sanitizeClubCustom({
+      sangmu: { name: '국군 FC', logo: { text: '군', bg: '#1f4d2b', fg: '#ffd400' } },
+    });
+    expect(Object.keys(map)).toEqual(['sangmu']);
+    applyClubNames(map);
+    expect(SANGMU.name).toBe('국군 FC');
+    expect(clubById('sangmu')!.name).toBe('국군 FC');
+    expect(clubByName('국군 FC')?.id).toBe('sangmu');
+    applyClubNames({});
+    expect(SANGMU.name).toBe(base);
+  });
+
   it('가져온 값을 검증한다 — 없는 id·잘못된 색·긴 이름·외부 이미지 URL은 버리거나 자른다', () => {
     const map = sanitizeClubCustom({
       'pl-0': { name: '  가'.padEnd(40, '나') },

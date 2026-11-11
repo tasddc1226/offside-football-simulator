@@ -1,0 +1,22 @@
+{
+  "id": "t-11-696-sangmu-custom",
+  "title": "김천 상무 구단명 · 엠블럼 바꾸기",
+  "items": [
+    "설정 → 구단 이름·엠블럼 변경의 K리그1 목록에서 김천 상무 이름과 엠블럼도 바꿀 수 있어요"
+  ],
+  "en": {
+    "title": "Customize Gimcheon Sangmu",
+    "items": [
+      "You can now rename Gimcheon Sangmu and change its emblem in the K League 1 club list in Settings."
+    ]
+  },
+  "ja": {
+    "title": "金泉尚武もカスタマイズ",
+    "items": ["設定のクラブ名変更で、Kリーグ1の一覧から金泉尚武の名前とエンブレムも変えられます。"]
+  },
+  "zh": {
+    "title": "金泉尚武也能自訂",
+    "items": ["在設定的球隊名稱自訂中，K聯賽1列表也能更改金泉尚武的名稱與隊徽。"]
+  },
+  "availability": "web-app"
+}

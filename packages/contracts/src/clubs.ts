@@ -32,7 +32,8 @@ export const ClubCustomSchema = z.strictObject({
 });
 
 export const ClubCustomMapSchema = z
-  .record(z.string().regex(/^[a-z0-9]{1,6}-\d{1,3}$/), ClubCustomSchema)
+  // T-11-696 김천 상무(병역 중에만 소속, id 'sangmu')도 이름 · 엠블럼을 바꿀 수 있다.
+  .record(z.string().regex(/^(?:[a-z0-9]{1,6}-\d{1,3}|sangmu)$/), ClubCustomSchema)
   .refine((m) => Object.keys(m).length <= CLUB_CUSTOM_MAX_CLUBS, {
     message: `클럽은 최대 ${CLUB_CUSTOM_MAX_CLUBS}개까지 등록할 수 있어요.`,
   })
