@@ -77,6 +77,21 @@ describe('/v1/club-custom (T-10-010)', () => {
     });
   });
 
+  it('T-11-696 김천 상무(id sangmu)도 저장하고, 비슷한 id는 거절한다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    const clubs = {
+      sangmu: { name: '국군 FC', logo: { text: '군', bg: '#1f4d2b', fg: '#ffd400' } },
+    };
+    const r = await put(ctx, cookie, { clubs, updatedAt: '2026-11-11T00:00:00.000Z' });
+    expect(r.status).toBe(200);
+    expect(Res.parse(await (await get(ctx, cookie)).json()).data.clubs).toEqual(clubs);
+    const bad = await put(ctx, cookie, {
+      clubs: { sangmuu: { name: 'x' } },
+      updatedAt: '2026-11-11T00:00:01.000Z',
+    });
+    expect(bad.status).toBe(400);
+  });
+
   it('형식이 틀린 값(색·id·외부 이미지 URL)은 VALIDATION_FAILED', async () => {
     const { cookie } = await issueCookie(ctx);
     for (const clubs of [

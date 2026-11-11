@@ -44,3 +44,32 @@ test('설정에서 고교 클럽 이름을 모두 바꾸면 새 커리어 소속
   await page.locator('[data-act="start"]').click();
   await expect(page.locator('.player .meta')).toContainText('우리고');
 });
+
+test('T-11-696 K리그1 목록 끝에 김천 상무가 있고 이름 · 엠블럼을 바꿀 수 있다', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-settings-open="clubs"]').click();
+  await page.locator('#club-league').selectOption('k1');
+  const rows = page.locator('.club-row');
+  await expect(rows).toHaveCount(12);
+  const sangmu = rows.last();
+  await expect(sangmu.locator('input[type="text"]')).toHaveAttribute('placeholder', /김천 상무/);
+  const input = sangmu.locator('input[type="text"]');
+  await input.fill('국군 FC');
+  await input.press('Enter');
+  await input.blur();
+  await sangmu.locator('[data-act="logo"]').click();
+  await sangmu.locator('.club-logo-edit input[type="text"]').fill('군');
+  await sangmu.locator('.club-logo-edit input[type="text"]').blur();
+  await expect(sangmu.locator('.club-badge')).toHaveText('군');
+  await page.reload();
+  await page.locator('[data-act="settings"]').click();
+  await page.locator('[data-settings-open="clubs"]').click();
+  await page.locator('#club-league').selectOption('k1');
+  await expect(page.locator('.club-row').last().locator('input[type="text"]')).toHaveValue(
+    '국군 FC',
+  );
+  await expect(page.locator('.club-row').last().locator('.club-badge')).toHaveText('군');
+});

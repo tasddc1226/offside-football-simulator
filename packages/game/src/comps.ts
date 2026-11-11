@@ -732,7 +732,10 @@ export function checkMilestones(
   return out;
 }
 export function retireMilestones(s: GameState): string[] {
-  const pro = s.career.filter((r) => r.pro && !r.mil && r.club !== SANGMU_NAME);
+  // 상무 시즌은 뺀다. 상무 이름을 바꿨을 수 있어(T-11-696) 구단 id로도 거른다.
+  const pro = s.career.filter(
+    (r) => r.pro && !r.mil && r.clubId !== 'sangmu' && r.club !== SANGMU_NAME,
+  );
   const out: (string | null)[] = [];
   // 구단 이름이 바뀌어도(데이터 갱신) 같은 구단이면 원클럽으로 센다 — clubId가 있으면 그것으로 비교한다.
   if (pro.length >= 8 && pro.every((r) => sameClub(r, pro[0]!)))

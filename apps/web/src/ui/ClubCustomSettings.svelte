@@ -4,8 +4,7 @@
   import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
   import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
   import { encodeClubEmblem } from './clubEmblemImage.js';
-  import { clubsIn } from '@offside/game/engine';
-  import { CLUB_IMPORT_NO_SPACE, CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
+  import { CLUB_IMPORT_NO_SPACE, CLUB_SYNC_TEXT, customClubsIn, customLeagues } from '@offside/app-core/clubCustom';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { toast } from './helpers.js';
   import { doneOnEnter } from './inputDone.js';
@@ -17,7 +16,7 @@
   let leagueId = $state(LEAGUES[LEAGUES.length - 1]!.id);
   let open = $state<string | null>(null);
   // 이름 편집 결과가 다시 CLUBS에서 읽히도록 clubCustom.map을 의존성에 건다.
-  const clubs = $derived((void clubCustom.map, clubsIn(leagueId).map((c) => ({ ...c }))));
+  const clubs = $derived((void clubCustom.map, customClubsIn(leagueId).map((c) => ({ ...c }))));
 
   const fail = () => toast(T.noSpace);
 
@@ -67,7 +66,7 @@
     toast(n === CLUB_IMPORT_NO_SPACE ? T.noSpace : n < 0 ? T.badFile : T.imported({ n }));
   }
   function resetLeague() {
-    resetClubCustom(clubsIn(leagueId).map((c) => c.id));
+    resetClubCustom(customClubsIn(leagueId).map((c) => c.id));
     toast(T.leagueReset);
   }
   function resetAll() {
@@ -93,7 +92,7 @@
         <label for="club-league">{T.league}</label>
         <select id="club-league" bind:value={leagueId} onchange={() => (open = null)}>
           {#each customLeagues() as L (L.id)}
-            <option value={L.id}>{T.leagueOption({ name: tn(L.name), n: clubsIn(L.id).length })}</option>
+            <option value={L.id}>{T.leagueOption({ name: tn(L.name), n: customClubsIn(L.id).length })}</option>
           {/each}
         </select>
       </div>

@@ -4,10 +4,13 @@
 // 로컬에만 남고(게임은 그대로), 다음 부팅·다음 변경 때 다시 맞춘다. 에디트 파일(JSON)로도 옮길 수 있다.
 // 반응성은 클라이언트가 붙인다 — 넘겨받은 state 객체를 그대로 고친다(웹 $state, 앱 valtio).
 import { loadKey, saveKey } from '@offside/game/storage';
-import { CLUBS, LEAGUES, type League } from '@offside/game/data';
+import { LEAGUES, type Club, type League } from '@offside/game/data';
+import { clubsIn } from '@offside/game/engine';
 import { latestBalance } from '@offside/game/balance';
 import {
   applyClubNames,
+  clubById,
+  sangmuClub,
   sanitizeClubCustom,
   type ClubCustom,
   type ClubCustomMap,
@@ -20,6 +23,15 @@ import { clubSyncText } from './i18n/ko/clubSync.js';
 const KEY = 'ft_clubs';
 
 /** T-11-457 구단명 설정에 보일 리그. 시즌 2 리그는 서버 최신 밸런스에서 newLeagues가 켜지면(시즌 2 개막) 함께 열린다. */
+/** T-11-696 구단명 설정의 리그별 구단 목록. K리그1에는 병역 중에만 소속되는 김천 상무를 끝에 더한다(게임의 clubsIn과 따로). */
+export function customClubsIn(
+  leagueId: string,
+): Pick<Club, 'id' | 'name' | 'leagueId' | 'baseName'>[] {
+  const list: Pick<Club, 'id' | 'name' | 'leagueId' | 'baseName'>[] = clubsIn(leagueId);
+  const sangmu = sangmuClub();
+  return leagueId === sangmu.leagueId ? [...list, sangmu] : list;
+}
+
 export function customLeagues(): League[] {
   const open = latestBalance().values.newLeagues >= 1;
   return LEAGUES.filter((l) => !l.added || open);
@@ -101,7 +113,8 @@ export function createClubCustom(
     applyClubNames(clean);
     // 진행 중인 커리어의 현재 소속은 복사본이라 따로 맞춘다(과거 기록 문구는 그대로 둔다).
     const G = host.game();
-    const c = G && CLUBS.find((x) => x.id === G.club.id);
+    // 상무(CLUBS 밖)도 clubById가 찾는다(T-11-696).
+    const c = G && clubById(G.club.id);
     if (G && c && G.club.name !== c.name) {
       G.club.name = c.name;
       host.save();

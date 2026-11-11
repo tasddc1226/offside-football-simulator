@@ -8,9 +8,13 @@ import * as Clipboard from 'expo-clipboard';
 import { useSnapshot } from 'valtio';
 import { LEAGUES } from '@offside/game/data';
 import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
-import { clubsIn } from '@offside/game/engine';
 import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
-import { CLUB_IMPORT_NO_SPACE, CLUB_SYNC_TEXT, customLeagues } from '@offside/app-core/clubCustom';
+import {
+  CLUB_IMPORT_NO_SPACE,
+  CLUB_SYNC_TEXT,
+  customClubsIn,
+  customLeagues,
+} from '@offside/app-core/clubCustom';
 import {
   exportClubCustom,
   importClubCustom,
@@ -268,7 +272,7 @@ export function ClubCustomSettings() {
   const [importOpen, setImportOpen] = useState(false);
   const [pasted, setPasted] = useState('');
   // 이름 편집 결과가 다시 CLUBS에서 읽히도록 map(구독)을 함께 본다.
-  const clubs = clubsIn(leagueId).map((cl) => ({ ...cl }));
+  const clubs = customClubsIn(leagueId).map((cl) => ({ ...cl }));
 
   async function exportFile() {
     try {
@@ -295,7 +299,7 @@ export function ClubCustomSettings() {
     }
   }
   function resetLeague() {
-    resetClubCustom(clubsIn(leagueId).map((cl) => cl.id));
+    resetClubCustom(customClubsIn(leagueId).map((cl) => cl.id));
     toast(T.leagueReset);
   }
   function resetAll() {
@@ -349,7 +353,7 @@ export function ClubCustomSettings() {
               value={leagueId}
               options={customLeagues().map((L) => ({
                 value: L.id,
-                label: T.leagueOption({ name: tn(L.name), n: clubsIn(L.id).length }),
+                label: T.leagueOption({ name: tn(L.name), n: customClubsIn(L.id).length }),
               }))}
               onChange={(v) => {
                 setLeagueId(v);
