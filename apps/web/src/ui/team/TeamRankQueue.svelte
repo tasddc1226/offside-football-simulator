@@ -2,10 +2,11 @@
   // T-11-603 랭크 매칭 큐: 첫 화면(내 팀 정보 + 매칭 찾기) → 찾는 중(반경 · 시간 · 취소) → 매칭 완료(두 팀 · 걸린 RP · 경기 시작).
   // 상대는 누른 뒤에야 받는다. 찾는 시간은 연출이고(rankQueue queueWaitMs) 서버 응답이 늦으면 그만큼 더 기다린다.
   import { onDestroy } from 'svelte';
-  import { RANK_MATCH_REPICKS } from '@offside/contracts/owner-team';
+  import { RANK_REPICKS_DAILY } from '@offside/contracts/owner-team';
   import { fetchOpponents, type OwnerTeam, type TeamMatch, type TeamOpponent } from '@offside/app-core/api/team';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
-  import { queueClock, queueStep, queueWaitMs, rankStakes } from '@offside/app-core/rankQueue';
+  import { queueClock, queueStep, queueWaitMs, rankStakes, repicksLeft as repicksLeftToday, spendRepick } from '@offside/app-core/rankQueue';
+  import { loadKey, saveKey } from '@offside/game/storage';
   import { num, ratingGap, recordText, signedNum } from '@offside/app-core/teamText';
   import { buzz, motionOK } from '../motion';
   import TitleBadge from '../cup/TitleBadge.svelte';
@@ -51,7 +52,9 @@
   };
   const stakes = $derived(found ? rankStakes(team, found.rating) : null);
   const gap = $derived(found ? ratingGap(team.rating, found.rating) : null);
-  const repicksLeft = $derived(RANK_MATCH_REPICKS - pick);
+  // T-11-701 다른 상대 찾기는 하루 5번(이 브라우저에서 센다).
+  const REPICK_KEY = 'ft_rank_repick';
+  let repicksLeft = $state(repicksLeftToday(loadKey<string>(REPICK_KEY)));
 
   async function search(repick = false) {
     const mine = ++run;
@@ -75,7 +78,12 @@
       phase = 'empty';
       return;
     }
-    if (repick) pick += 1;
+    if (repick) {
+      pick += 1;
+      const spent = spendRepick(loadKey<string>(REPICK_KEY));
+      saveKey(REPICK_KEY, spent);
+      repicksLeft = repicksLeftToday(spent);
+    }
     found = o;
     reveal = true;
     phase = 'idle';
@@ -153,7 +161,7 @@
     {/if}
     <div class="rq-actions">
       <button class="btn btn-primary rq-go" disabled={playing || matchesLeft === 0} onclick={() => onchallenge(found!)} aria-label={L.matchStartAria({ name: found.name })} data-act="team-challenge">{L.matchStart}</button>
-      <button class="btn rq-go" onclick={() => void search(true)} disabled={playing || repicksLeft <= 0} aria-label={L.matchRepick({ left: repicksLeft, max: RANK_MATCH_REPICKS })} data-act="team-repick">{L.matchRepickBtn({ left: repicksLeft, max: RANK_MATCH_REPICKS })}</button>
+      <button class="btn rq-go" onclick={() => void search(true)} disabled={playing || repicksLeft <= 0} aria-label={L.matchRepick({ left: repicksLeft, max: RANK_REPICKS_DAILY })} data-act="team-repick">{L.matchRepickBtn({ left: repicksLeft, max: RANK_REPICKS_DAILY })}</button>
     </div>
     {#if phase === 'error'}<p class="muted fs-sm" role="alert">{L.oppLoadFail}</p>{/if}
     {#if phase === 'empty'}<p class="muted fs-sm" role="status">{L.queueEmpty}</p>{/if}

@@ -4,13 +4,16 @@
 import { FONT } from '@offside/app-core/design-tokens';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import { useSnapshot } from 'valtio';
 import { TeamLogo } from '../../components/TeamLogo';
 import { TitleBadge } from '../../components/TitleBadge';
-import { RANK_MATCH_REPICKS, TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
+import { RANK_REPICKS_DAILY, TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
 import type { TeamOpponent } from '@offside/app-core/api/team';
 import { ratingGap, recordText } from '@offside/app-core/teamText';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
+import { adFree, adsOff } from '../../platform/adFree';
+import { rewardOffer } from '../../platform/rewarded';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Txt } from '../../ui';
@@ -53,6 +56,7 @@ export function TeamOpponents({
   info?: ReactNode;
 }) {
   const c = useColors();
+  const adOffer = rewardOffer('repick', adsOff(useSnapshot(adFree)));
   return (
     <Card gap={12}>
       <View style={{ gap: 4 }}>
@@ -67,7 +71,7 @@ export function TeamOpponents({
         )}
         <Txt tone="muted" v="xs">
           {ladder
-            ? L.matchRule({ n: RANK_MATCH_REPICKS })
+            ? (adOffer === 'ad' ? L.matchRuleApp : L.matchRule)({ n: RANK_REPICKS_DAILY })
             : L.oppRuleApp({ days: TEAM_REPEAT_WINDOW_DAYS })}
         </Txt>
         {!hint && !ladder && opponents.length ? (

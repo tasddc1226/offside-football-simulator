@@ -24,7 +24,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   noOpponents: '目前還沒有可以交手的球隊。其他老闆組建球隊後就會出現在這裡。',
   moreOpponents: '查看其他對手',
   matchTitle: '排位配對',
-  matchRule: (p) => `為你挑選 RP 與戰力相近的球隊。每場比賽最多可重新尋找對手 ${p.n} 次。`,
+  matchRule: (p) => `為你挑選 RP 與戰力相近的球隊。每天最多可重新尋找對手 ${p.n} 次。`,
   matchGapNote: 'RP 下方的數字是與我的球隊的差距。打贏 RP 較高的球隊升得更多，輸了也扣得較少。',
   oddsTitle: '預測 勝・和・負',
   oddsWin: '勝',
@@ -38,6 +38,11 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   matchRepick: (p) => `尋找其他對手（${p.left}/${p.max}）`,
   // T-11-603 랭크 매칭 큐
   matchRepickBtn: (p) => `換對手（${p.left}/${p.max}）`,
+  // T-11-701 앱은 보상형 광고를 보고 다른 상대를 찾는다(하루 횟수는 웹과 같다)
+  matchRuleApp: (p) => `為你挑選 RP 與戰力相近的球隊。看廣告即可重新尋找對手，每天最多 ${p.n} 次。`,
+  matchRepickAd: (p) => `看廣告尋找其他對手（${p.left}/${p.max}）`,
+  matchRepickAdBtn: (p) => `看廣告換對手（${p.left}/${p.max}）`,
+  matchRepickAdSkip: '看完廣告才能尋找其他對手。',
   squadSideAria: '要查看的球隊',
   squadOpponent: '對手球隊',
   squadLineup: '先發名單',

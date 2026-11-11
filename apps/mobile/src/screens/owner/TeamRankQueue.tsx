@@ -18,7 +18,7 @@ import Animated, {
   ZoomIn,
 } from 'react-native-reanimated';
 import { useSnapshot } from 'valtio';
-import { RANK_MATCH_REPICKS } from '@offside/contracts/owner-team';
+import { RANK_REPICKS_DAILY } from '@offside/contracts/owner-team';
 import {
   fetchOpponents,
   type OwnerTeam,
@@ -31,6 +31,9 @@ import { num, ratingGap, recordText, signedNum } from '@offside/app-core/teamTex
 import { TeamLogo } from '../../components/TeamLogo';
 import { TitleBadge } from '../../components/TitleBadge';
 import { buzz } from '../../game/host';
+import { adFree, adsOff } from '../../platform/adFree';
+import { rankRepicksLeft, spendRankRepick } from '../../platform/rankRepick';
+import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
 import { prefs } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
@@ -161,6 +164,16 @@ export function TeamRankQueue({
   const [sec, setSec] = useState(0);
   /** 방금 찾았을 때만 등장 효과를 준다(다른 탭을 다녀오면 바로 보인다). */
   const [reveal, setReveal] = useState(false);
+  // T-11-701 다른 상대 찾기는 하루 5번이고, 보상형 광고를 본 뒤 찾는다(광고 제거 구매자 · 광고를 못 쓰는 기기는 바로).
+  const owned = adsOff(useSnapshot(adFree));
+  const viaAd = rewardOffer('repick', owned) === 'ad';
+  const [repicksLeft, setRepicksLeft] = useState(rankRepicksLeft);
+  const [adBusy, setAdBusy] = useState(false);
+  const [adMessage, setAdMessage] = useState('');
+  const adReady = !!found && viaAd && repicksLeft > 0;
+  useEffect(() => {
+    if (adReady) prepareReward('repick');
+  }, [adReady]);
   const run = useRef(0);
   const timer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
   const stopTimer = () => {
@@ -191,11 +204,24 @@ export function TeamRankQueue({
     if (!r.ok) return setPhase('error');
     const o = r.data.items[0];
     if (!o) return setPhase('empty');
-    if (repick) addPick();
+    if (repick) {
+      addPick();
+      setRepicksLeft(spendRankRepick());
+    }
     setFound(o);
     setReveal(motionOK);
     setPhase('idle');
     buzz();
+  }
+  async function repickWithReward() {
+    if (adBusy) return;
+    setAdBusy(true);
+    setAdMessage('');
+    try {
+      setAdMessage(await claimReward('repick', () => void search(true), L.matchRepickAdSkip));
+    } finally {
+      setAdBusy(false);
+    }
   }
   function cancel() {
     run.current += 1;
@@ -236,7 +262,6 @@ export function TeamRankQueue({
   if (found) {
     const stakes = rankStakes(team, found.rating);
     const gap = ratingGap(team.rating, found.rating);
-    const repicksLeft = RANK_MATCH_REPICKS - pick;
     const side = {
       flex: 1,
       minWidth: 0,
@@ -426,14 +451,25 @@ export function TeamRankQueue({
           </Btn>
           <Btn
             style={{ flex: 1 }}
-            onPress={() => void search(true)}
-            disabled={playing || repicksLeft <= 0}
-            accessibilityLabel={L.matchRepick({ left: repicksLeft, max: RANK_MATCH_REPICKS })}
+            onPress={() => void (viaAd ? repickWithReward() : search(true))}
+            disabled={playing || adBusy || repicksLeft <= 0}
+            accessibilityLabel={(viaAd ? L.matchRepickAd : L.matchRepick)({
+              left: repicksLeft,
+              max: RANK_REPICKS_DAILY,
+            })}
             testID="team-repick"
           >
-            {L.matchRepickBtn({ left: repicksLeft, max: RANK_MATCH_REPICKS })}
+            {(viaAd ? L.matchRepickAdBtn : L.matchRepickBtn)({
+              left: repicksLeft,
+              max: RANK_REPICKS_DAILY,
+            })}
           </Btn>
         </View>
+        {adMessage ? (
+          <Txt tone="muted" v="xs" testID="team-repick-ad-message">
+            {adMessage}
+          </Txt>
+        ) : null}
         {phase === 'error' ? <Txt tone="muted">{L.oppLoadFail}</Txt> : null}
         {phase === 'empty' ? <Txt tone="muted">{L.queueEmpty}</Txt> : null}
         <Txt tone="muted" v="xs" testID="opponent-gap-note">

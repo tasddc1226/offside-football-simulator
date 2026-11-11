@@ -2304,14 +2304,14 @@ test('T-11-603 랭크 매칭 큐 — 내 팀 정보를 먼저 보고, 눌러야 
 
   // 취소한 다시 찾기는 횟수를 쓰지 않고, 끝낸 다시 찾기만 쓴다.
   const repick = page.locator('[data-act="team-repick"]');
-  await expect(repick).toContainText('3/3');
+  await expect(repick).toContainText('5/5');
   await repick.click();
   await page.locator('[data-act="team-queue-cancel"]').click();
   await expect(found.locator('[data-opponent]')).toContainText('라이벌 FC');
-  await expect(repick).toContainText('3/3');
+  await expect(repick).toContainText('5/5');
   await repick.click();
   await expect(found.locator('[data-opponent]')).toContainText('새 상대 FC', { timeout: 12_000 });
-  await expect(repick).toContainText('2/3');
+  await expect(repick).toContainText('4/5');
 
   // 경기 시작 · 다른 상대 찾기는 한 줄이다.
   const start = await page.locator('[data-act="team-challenge"]').boundingBox();

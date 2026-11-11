@@ -1,5 +1,5 @@
 import {
-  RANK_MATCH_REPICKS,
+  RANK_REPICKS_DAILY,
   rankPoints,
   ratingChange,
   usesRankLadder,
@@ -27,7 +27,7 @@ export function matchRatingChange(
 /** 자동 매칭 후보 수(가까운 순)와 경기 시작 때 다시 확인하는 여유 범위. 한 경기마다 다른 상대를 고를 수 있는 횟수. */
 export const MATCH_POOL = 8;
 export const MATCH_POOL_CHECK = 12;
-export const MATCH_REPICKS = RANK_MATCH_REPICKS;
+export const MATCH_REPICKS = RANK_REPICKS_DAILY;
 
 type Candidate = { id: string; rating: number; ovr: number };
 
