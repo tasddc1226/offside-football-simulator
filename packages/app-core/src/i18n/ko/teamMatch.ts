@@ -48,7 +48,7 @@ const ko = {
   matchRepick: (p: { left: number; max: number }) => `다른 상대 찾기 (${p.left}/${p.max})`,
   // T-11-603 랭크 매칭 큐
   matchRepickBtn: (p: { left: number; max: number }) => `다른 상대 (${p.left}/${p.max})`,
-  // T-11-701 앱은 보상형 광고를 보고 다른 상대를 찾는다(하루 횟수는 웹과 같다)
+  // T-11-702 앱은 보상형 광고를 보고 다른 상대를 찾는다(하루 횟수는 웹과 같다)
   matchRuleApp: (p: { n: number }) =>
     `RP와 전력이 비슷한 팀을 골라 드려요. 광고를 보면 다른 상대를 하루 ${p.n}번까지 다시 찾을 수 있어요.`,
   matchRepickAd: (p: { left: number; max: number }) =>

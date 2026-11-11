@@ -24,7 +24,7 @@ const match = (mine: 'home' | 'away', home: number, away: number, friendly?: boo
     ...(friendly ? { friendly } : {}),
   }) as TeamMatch;
 
-describe('T-11-701 다른 상대 찾기 하루 횟수', () => {
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
   const day1 = new Date('2026-11-11T03:00:00Z');
   it('기록이 없거나 깨졌으면 5번 남는다', () => {
     expect(repicksLeft(null, day1)).toBe(5);
@@ -60,7 +60,7 @@ describe('queueWaitMs', () => {
   });
 });
 
-describe('T-11-701 다른 상대 찾기 하루 횟수', () => {
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
   const day1 = new Date('2026-11-11T03:00:00Z');
   it('기록이 없거나 깨졌으면 5번 남는다', () => {
     expect(repicksLeft(null, day1)).toBe(5);
@@ -91,7 +91,7 @@ describe('queueClock · queueStep', () => {
   });
 });
 
-describe('T-11-701 다른 상대 찾기 하루 횟수', () => {
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
   const day1 = new Date('2026-11-11T03:00:00Z');
   it('기록이 없거나 깨졌으면 5번 남는다', () => {
     expect(repicksLeft(null, day1)).toBe(5);
@@ -137,7 +137,7 @@ describe('recentForm · formStreak', () => {
   });
 });
 
-describe('T-11-701 다른 상대 찾기 하루 횟수', () => {
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
   const day1 = new Date('2026-11-11T03:00:00Z');
   it('기록이 없거나 깨졌으면 5번 남는다', () => {
     expect(repicksLeft(null, day1)).toBe(5);
@@ -164,7 +164,7 @@ describe('winRate', () => {
   });
 });
 
-describe('T-11-701 다른 상대 찾기 하루 횟수', () => {
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
   const day1 = new Date('2026-11-11T03:00:00Z');
   it('기록이 없거나 깨졌으면 5번 남는다', () => {
     expect(repicksLeft(null, day1)).toBe(5);

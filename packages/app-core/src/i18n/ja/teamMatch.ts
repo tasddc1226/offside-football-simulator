@@ -43,7 +43,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   matchRepick: (p) => `別の相手を探す (${p.left}/${p.max})`,
   // T-11-603 랭크 매칭 큐
   matchRepickBtn: (p) => `別の相手 (${p.left}/${p.max})`,
-  // T-11-701 앱은 보상형 광고를 보고 다른 상대를 찾는다(하루 횟수는 웹과 같다)
+  // T-11-702 앱은 보상형 광고를 보고 다른 상대를 찾는다(하루 횟수는 웹과 같다)
   matchRuleApp: (p) =>
     `RPと戦力が近いチームを選びます。広告を見ると、別の相手を1日${p.n}回まで探し直せます。`,
   matchRepickAd: (p) => `広告を見て別の相手を探す (${p.left}/${p.max})`,

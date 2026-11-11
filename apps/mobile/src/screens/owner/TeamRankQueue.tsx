@@ -164,7 +164,7 @@ export function TeamRankQueue({
   const [sec, setSec] = useState(0);
   /** 방금 찾았을 때만 등장 효과를 준다(다른 탭을 다녀오면 바로 보인다). */
   const [reveal, setReveal] = useState(false);
-  // T-11-701 다른 상대 찾기는 하루 5번이고, 보상형 광고를 본 뒤 찾는다(광고 제거 구매자 · 광고를 못 쓰는 기기는 바로).
+  // T-11-702 다른 상대 찾기는 하루 5번이고, 보상형 광고를 본 뒤 찾는다(광고 제거 구매자 · 광고를 못 쓰는 기기는 바로).
   const owned = adsOff(useSnapshot(adFree));
   const viaAd = rewardOffer('repick', owned) === 'ad';
   const [repicksLeft, setRepicksLeft] = useState(rankRepicksLeft);

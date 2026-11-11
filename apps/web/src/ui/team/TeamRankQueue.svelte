@@ -52,7 +52,7 @@
   };
   const stakes = $derived(found ? rankStakes(team, found.rating) : null);
   const gap = $derived(found ? ratingGap(team.rating, found.rating) : null);
-  // T-11-701 다른 상대 찾기는 하루 5번(이 브라우저에서 센다).
+  // T-11-702 다른 상대 찾기는 하루 5번(이 브라우저에서 센다).
   const REPICK_KEY = 'ft_rank_repick';
   let repicksLeft = $state(repicksLeftToday(loadKey<string>(REPICK_KEY)));
 

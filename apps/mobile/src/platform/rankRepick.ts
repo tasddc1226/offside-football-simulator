@@ -1,4 +1,4 @@
-// T-11-701 랭크 다른 상대 찾기(규칙은 app-core rankQueue). 하루 횟수는 이 기기에만 남긴다.
+// T-11-702 랭크 다른 상대 찾기(규칙은 app-core rankQueue). 하루 횟수는 이 기기에만 남긴다.
 import { repicksLeft, spendRepick } from '@offside/app-core/rankQueue';
 import { kv } from './setup';
 

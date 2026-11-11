@@ -89,7 +89,7 @@ export function rankStakes(
   };
 }
 
-// T-11-701 다른 상대 찾기 하루 횟수. 서버는 광고 시청을 확인할 수 없어 이 기기에만 센다(ad-reroll과 같은 방식).
+// T-11-702 다른 상대 찾기 하루 횟수. 서버는 광고 시청을 확인할 수 없어 이 기기에만 센다(ad-reroll과 같은 방식).
 type RepickLog = { day: string; n: number };
 
 function parseRepicks(raw: string | null | undefined): RepickLog | null {

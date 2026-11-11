@@ -77,7 +77,7 @@ export const RANK_LADDER_FROM_SEASON = 2;
 export const usesRankLadder = (season: number): boolean => season >= RANK_LADDER_FROM_SEASON;
 /** T-11-510 자동 매칭에서 한 경기마다 다른 상대를 다시 찾을 수 있는 횟수. */
 /**
- * T-11-701 다른 상대 찾기는 하루(한국 시간) 5번이다. 앱은 보상형 광고를 보고(광고 제거 구매자는 광고 없이), 웹은 바로 찾는다.
+ * T-11-702 다른 상대 찾기는 하루(한국 시간) 5번이다. 앱은 보상형 광고를 보고(광고 제거 구매자는 광고 없이), 웹은 바로 찾는다.
  * 횟수는 기기에서 세고, 서버는 한 경기의 pick을 이 값까지만 받는다.
  */
 export const RANK_REPICKS_DAILY = 5;
