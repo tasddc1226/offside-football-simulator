@@ -1,0 +1,24 @@
+{
+  "id": "t-11-697-web-emblem-storage",
+  "title": "웹 엠블럼 · 대회 로고 저장 공간 늘림",
+  "items": [
+    "웹에서 구단 엠블럼과 대회 로고를 많이 넣으면 '저장 공간이 부족해 저장하지 못했어요'가 뜨던 문제를 고쳤어요"
+  ],
+  "en": {
+    "title": "More room for emblems and logos on the web",
+    "items": [
+      "Fixed the \"not enough storage\" error when adding many club emblems and competition logos on the web."
+    ]
+  },
+  "ja": {
+    "title": "Web版のエンブレム・大会ロゴの保存容量を拡大",
+    "items": [
+      "Web版でクラブのエンブレムや大会ロゴをたくさん入れると「保存容量が足りません」と出る問題を直しました。"
+    ]
+  },
+  "zh": {
+    "title": "網頁版隊徽與賽事標誌的儲存空間加大",
+    "items": ["修正網頁版放入許多球隊隊徽與賽事標誌時出現「儲存空間不足」的問題。"]
+  },
+  "availability": "web"
+}

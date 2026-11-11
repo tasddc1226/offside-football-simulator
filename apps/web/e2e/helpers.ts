@@ -96,3 +96,29 @@ export async function settleBlock(page: Page, timeout = 30_000): Promise<void> {
     await expect(ok).toHaveText('확인', { timeout: 1_000 });
   }).toPass({ timeout });
 }
+
+/** T-11-697 엠블럼 · 대회 로고 저장값. 옮기기 전이면 localStorage, 옮긴 뒤면 IndexedDB(offside/kv)에 있다. */
+export function storedBig(page: Page, key: 'ft_clubs' | 'ft_comp_icons'): Promise<string | null> {
+  return page.evaluate(
+    (key) =>
+      localStorage.getItem(key) ??
+      new Promise<string | null>((resolve) => {
+        const req = indexedDB.open('offside', 1);
+        req.onupgradeneeded = () => req.result.createObjectStore('kv');
+        req.onerror = () => resolve(null);
+        req.onsuccess = () => {
+          const db = req.result;
+          const get = db.transaction('kv', 'readonly').objectStore('kv').get(key);
+          get.onsuccess = () => {
+            db.close();
+            resolve(typeof get.result === 'string' ? get.result : null);
+          };
+          get.onerror = () => {
+            db.close();
+            resolve(null);
+          };
+        };
+      }),
+    key,
+  );
+}
