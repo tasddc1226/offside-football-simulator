@@ -12,6 +12,7 @@ import {
 import { webPayText as L } from '@offside/app-core/i18n/ko/webPay';
 import { commerceOffer, type CommerceEntry } from '@offside/app-core/commerceStage';
 import { commerceContext, trackCommerce } from '../../analytics/index.js';
+import { creatorTrackingId } from '../creatorTracking.js';
 import { toast } from '../helpers.js';
 import { go, goContinue } from '../nav.js';
 import { appState } from '../state.svelte.js';
@@ -121,7 +122,7 @@ export async function startWebPay(productId: string, back: WebPayBack = 'owner')
     trackCommerce({ ...offer, stage: 'checkout_request' }, alive);
   }
   toast(L.opening);
-  const r = await createWebPayOrder(productId);
+  const r = await createWebPayOrder(productId, creatorTrackingId());
   if (!r.ok) {
     webPay.busy = false;
     if (offer) trackCommerce({ ...offer, stage: 'checkout_error', reason: 'start_failed' }, alive);

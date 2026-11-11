@@ -67,7 +67,13 @@ export const WebPayConfigResponseSchema = z.strictObject({
 export type WebPayConfigResponse = z.infer<typeof WebPayConfigResponseSchema>;
 
 /** POST /v1/web-pay/orders — 주문을 만들고 엑솔라 결제창 주소를 돌려준다. */
-export const WebPayOrderBodySchema = z.strictObject({ productId: z.enum(WEB_PAY_PRODUCT_IDS) });
+/** 엑솔라 파트너 네트워크가 크리에이터 링크에 붙이는 추적값(32자). 결제 토큰에 실어야 그 크리에이터 실적으로 잡힌다. */
+export const WEB_PAY_TRACKING_ID = /^[A-Za-z0-9]{32}$/;
+export const WebPayOrderBodySchema = z.strictObject({
+  productId: z.enum(WEB_PAY_PRODUCT_IDS),
+  /** T-11-700 크리에이터 링크로 들어온 브라우저만 보낸다. */
+  trackingId: z.string().regex(WEB_PAY_TRACKING_ID).optional(),
+});
 export type WebPayOrderBody = z.infer<typeof WebPayOrderBodySchema>;
 
 export const WEB_PAY_ORDER_ID = /^wp_[a-f0-9]{32}$/;

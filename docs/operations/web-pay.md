@@ -19,6 +19,9 @@ T-11-454. 웹(offside-lab.com) 구단주 화면에서 앱과 같은 인앱 상�
   - `GET /v1/web-pay/config`: 로그인 구단주에게 켜져 있는지 · 상품 목록.
   - `POST /v1/web-pay/orders`: 엑솔라 결제 토큰을 만들고(`POST store.xsolla.com/api/v3/project/{id}/admin/payment/token`, 프로젝트 id:API 키
     Basic 인증) 결제창 주소를 돌려준다. 나라는 Cloudflare가 알려 준 나라, 언어는 화면 언어. 구단주당 시간당 30번.
+    T-11-700부터 본문에 `trackingId`(영숫자 32자)가 있으면 토큰의 `user.tracking_id.value`로 넘긴다. 엑솔라 파트너 네트워크(크리에이터 수익
+    공유)가 크리에이터 링크에 붙이는 `tracking_id`이고, 웹은 부팅 때 주소에서 읽어 이 브라우저에 남겨 둔다(`ui/creatorTracking.ts`).
+    이 값이 없는 결제는 크리에이터 실적 · 정산에 잡히지 않는다.
   - `GET /v1/web-pay/orders/:orderId`: 결제창에서 돌아온 웹이 상태를 묻는다(주문한 구단주만).
   - `POST /v1/web-pay/webhook`: 엑솔라 웹훅. `Authorization: Signature sha1(본문 + 웹훅 비밀 키)`로 확인한다.
     `user_validation`(프로필이 있으면 204), `order_paid`(아이템 지급), `order_canceled`(환불 · 차지백 회수, 결제보다 먼저 와도 나중 지급을 막는다).

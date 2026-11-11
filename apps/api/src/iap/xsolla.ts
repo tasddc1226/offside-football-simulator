@@ -30,6 +30,8 @@ export type XsollaTokenInput = {
   ip: string | null;
   language: 'ko' | 'en' | 'ja' | 'zh';
   returnUrl: string;
+  /** T-11-700 엑솔라 파트너 네트워크 추적값. 있으면 이 결제가 그 크리에이터 실적으로 잡힌다. */
+  trackingId?: string;
 };
 
 /** 주문과 결제 토큰을 만든다. 실패(엑솔라 오류 · 형식)는 던진다. */
@@ -52,6 +54,7 @@ export async function createXsollaToken(
       user: {
         id: { value: input.profileId },
         ...(input.country ? { country: { value: input.country, allow_modify: true } } : {}),
+        ...(input.trackingId ? { tracking_id: { value: input.trackingId } } : {}),
       },
       purchase: { items: [{ sku: input.sku, quantity: 1 }] },
       settings: {
