@@ -216,7 +216,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   loadFail: '無法載入球隊老闆檔案。',
   noNickname: '無名球隊老闆',
   mine: '我的檔案',
-  teamLine: (p) => `${p.season} · 代表 ${p.manager}`,
+  teamLine: (p) => `${p.season} · 球隊代表 ${p.manager}`,
   openTeam: '查看球隊',
   statRn: '退休背號',
   statRetired: '退役球員',
