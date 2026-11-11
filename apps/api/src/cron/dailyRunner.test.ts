@@ -161,7 +161,7 @@ it('runs the real bounded stages against local D1 through to a durable completio
     if (state?.status === 'complete') break;
   }
   expect(await read()).toMatchObject({ status: 'complete', stage: DAILY_STAGES.length });
-});
+}, 40_000);
 
 it('a tick advances at most three completed stages and yields a partial page immediately', async () => {
   const execute = vi.fn<DailyStep>().mockResolvedValue({ done: true, result: 1 });

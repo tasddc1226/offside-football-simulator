@@ -25,7 +25,7 @@ const secretOf = (env: Env, kind: SocialKind) => env[SECRET[kind]];
 const fromSecret = (env: Env, kind: SocialKind) => secretOf(env, kind)!.slice(-8);
 const current = (env: Env, kind: SocialKind, saved: SocialToken | undefined) =>
   saved && saved.from === fromSecret(env, kind) ? saved : undefined;
-const liveToken = async (env: Env, kind: SocialKind, store?: Store) => {
+export const liveToken = async (env: Env, kind: SocialKind, store?: Store) => {
   const saved = await (store ?? ledger(env)).socialToken(kind).catch(() => undefined);
   return current(env, kind, saved)?.token ?? secretOf(env, kind)!;
 };
@@ -36,7 +36,7 @@ const kst = (iso: string | undefined) =>
 const clamp = (v: unknown, lo: number, hi: number, d: number) =>
   Math.min(hi, Math.max(lo, Math.round(Number(v)) || d));
 
-async function getJson(fetcher: typeof fetch, url: URL, token: string) {
+export async function getJson(fetcher: typeof fetch, url: URL, token: string) {
   const r = await fetcher(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
   const data = (await r.json().catch(() => ({}))) as Record<string, unknown> & {
     error?: { message?: string };

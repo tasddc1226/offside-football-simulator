@@ -169,23 +169,6 @@ export async function reviewRows(
   return rows;
 }
 
-/** App Store 전체 평점(한국 스토어, 공개 조회 API). 지금 값이라 수집한 날(어제)에만 넣는다. */
-export async function appStoreRatingRows(env: Env, fetcher: Fetch = fetch): Promise<Row[]> {
-  // 사용자 에이전트가 없으면 Workers에서 403이 난다.
-  const r = await fetcher(`https://itunes.apple.com/lookup?id=${env.ASC_APP_ID}&country=kr`, {
-    headers: {
-      'User-Agent': 'offside-agents/1.0 (+https://offside-lab.com)',
-      Accept: 'application/json',
-    },
-  });
-  const data = (await r.json().catch(() => ({}))) as {
-    results?: { averageUserRating?: number; userRatingCount?: number }[];
-  };
-  const x = data.results?.[0];
-  if (!r.ok || !x?.averageUserRating) throw new Error(`iTunes lookup ${r.status}`);
-  return [{ metric: 'store_rating', dim: 'ios', value: x.averageUserRating }];
-}
-
 export const ascSalesReady = (env: Env) =>
   Boolean(
     env.ASC_SALES_KEY_ID && env.ASC_SALES_PRIVATE_KEY && env.ASC_ISSUER_ID && env.ASC_VENDOR_NUMBER,

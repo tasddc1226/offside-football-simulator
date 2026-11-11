@@ -85,12 +85,45 @@ ADMIN_EMAILS가 여러 개여도 Access 정책이 1명만 통과시킨다. 대�
 | `d1_retention` · `d7_retention` · `retention_cohort` · `d1/d7_retained` | GA4 코호트(firstSessionDate). 값은 코호트 날짜에, 화면은 사람 수로 가중 평균 | 있음                                                                                       |
 | `ad_spend_country_krw` · `ad_installs_country` · `ad_clicks_country`    | Meta 계정 전체 `breakdowns=country`(dim 국가 코드)                           | 있음                                                                                       |
 | `store_reviews_new` · `store_review_stars`                              | ASC · Play 리뷰 API에서 그날(KST) 새 리뷰 수 · 평균 별점                     | 있음                                                                                       |
-| `store_rating` (ios)                                                    | iTunes 공개 조회(한국 스토어) 전체 평점, 수집한 날(어제)에만                 | 필요 없음                                                                                  |
 | `store_installs` (ios)                                                  | App Store 판매 보고서 일간 요약의 첫 다운로드(1F 등)                         | `ASC_SALES_KEY_ID` · `ASC_SALES_PRIVATE_KEY` · `ASC_VENDOR_NUMBER`(판매 권한 키)           |
 | `store_installs` (android)                                              | Play 통계 보고서 버킷 `stats/installs/…_overview.csv` Daily User Installs    | `PLAY_REPORTS_BUCKET` + 서비스 계정에 보고서 보기 권한                                     |
 | `ad_revenue_krw` · `ad_impressions` · `ad_requests` · `ad_matched`      | AdMob 미디에이션 보고서(플랫폼별, 원화)                                      | `ADMOB_*` — `apps/agents/scripts/admob-auth.ts`로 운영자 동의(Google Cloud offside-agents) |
 
 화면: 사용자(재방문) · 수익(멤버십 흐름) · 그로스(국가별 · 스토어) · 개요 운영 상태(어제 오류) · 푸시(`/v1/admin/push-performance`) · 신고 · 이상(자동 플레이 의심 `/v1/admin/automation?hours=6`).
+
+### T-11-693 추가 수집 · 푸시 화면 경량화 (2026-11-11)
+
+배경: 11-11 10:13 KST에 푸시 화면이 여는 `/v1/admin/push-performance?days=7`이 8.6초 걸렸고, 그 뒤 10초 동안 운영 API가 503을
+약 34건 냈다(같은 집계를 한 batch 안에서 여섯 번 돌려 D1이 그동안 다른 요청을 받지 못했다). 그래서 **화면이 열릴 때 운영 표를
+훑는 집계를 두지 않는다.** 푸시 화면은 `kpi_daily`만 읽고, 최근 알림 목록 · 복귀 알림 효과는 버튼을 눌렀을 때만 부른다(같은
+집계는 세 번으로 줄이고 기본 조회는 엣지 1분 캐시).
+
+| 지표                                                                  | 원천 · 정의                                                                                                                 | 수집                                                                   |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `push_recipients` · `push_delivered` · `push_clicked` · `push_failed` | 알림을 만든 날(KST) 기준 받는 사람 · 기기 도달 · 클릭 · 발송 실패. 나눔은 주제(`topic`), 없으면 종류(게시판 새 글은 `news`) | api 일일 `kpi` 단계. 최근 3일 다시 쓰기 + 30일까지 3일씩 거꾸로 채우기 |
+| `push_devices`                                                        | 그날 끝의 알림 기기 수. 나눔 `플랫폼:권한`(`ios:authorized` · `ios:provisional` · `android:authorized`, 옛 앱은 `unknown`)  | api 일일(어제만, 거꾸로 채우지 않음)                                   |
+| `cup_entries`                                                         | 그날 컵 참가 신청 수(최근 60일 안에 만든 컵)                                                                                | api 일일                                                               |
+| `chat` · `chat_writers`                                               | 라운지 채팅 수 · 쓴 사람 수(방별). 채팅방 Durable Object에 남은 최근 7일 안에서만 셀 수 있다                                | api 일일(최근 3일). 채팅방이 답하지 못하면 건너뛰고 다음 날 다시 쓴다  |
+| `api_requests` · `api_errors` · `api_slow` · `api_avg_ms`             | 서버 상태 5분 칸(`api_status_buckets`)의 하루 합 · 평균                                                                     | api 일일                                                               |
+| `db_size_mb`                                                          | D1 응답의 `size_after`. 나눔 `game` · `ops`                                                                                 | api 일일(어제만)                                                       |
+| `push_optin_users`                                                    | GA4 `push_optin_*` 이벤트의 하루 사용자 수. 나눔 `플랫폼:단계`, OS 응답은 `플랫폼:result:결과`                              | 에이전트 08:50 (`ga4`)                                                 |
+| `followers`                                                           | 인스타그램 `followers_count` · Threads `threads_insights` 팔로워                                                            | 에이전트 (`social`, 어제 날짜에)                                       |
+| `search_clicks` · `search_impressions`                                | Search Console 날짜별 합. 2~3일 늦게 확정돼 최근 7일을 매일 다시 쓴다                                                       | 에이전트 (`search`)                                                    |
+| `voice_open` · `voice_new`                                            | 유저 반응 표에서 닫지 않은 주제(종류별) · 그날 처음 나온 주제                                                               | 에이전트 (`voice`)                                                     |
+| `support_mails`                                                       | 고객 문의 메일함의 그날 받은 메일 수. 목록만 세고 본문은 열지 않는다                                                        | 에이전트 (`support`)                                                   |
+| `ota_published`                                                       | EAS 운영 채널에 그날 게시한 OTA 수(플랫폼별, 없는 날은 0)                                                                   | 에이전트 (`eas`)                                                       |
+
+- **Play 설치 수**가 한 번도 들어오지 않던 문제: 보고서가 며칠 늦게 채워지는데 어제 · 그제만 받고 있었다. 어제 차례에 최근 7일을
+  날마다 다시 받는다(두 스토어를 한 묶음으로 보내고, 한쪽이 실패한 날은 최근 이틀만 넣는다).
+- **App Store 전체 평점은 수집하지 않는다.** iTunes 공개 조회가 Workers에서 403으로 막히고, 이를 돌아가는 방법은 쓰지 않기로
+  했다. 평점 칸을 지우고 그 자리에 스토어별 설치 수를 둔다. 새 리뷰 수 · 평균 별점(리뷰 API)은 그대로다.
+- **늦는 지표 경보**: 원천 단위(운영 DB · GA4 · Meta) 확인은 한 원천 안에서 지표 하나만 끊기면 놓친다. `EXPECTED_METRICS`
+  (`apps/admin/src/kpi-page.ts`)에 매일 들어와야 하는 지표와 기다리는 날 수(Play 설치 5일 · 검색 4일 · iOS 설치 2일)를 두고,
+  넘기면 개요 경보 줄과 데이터 화면 "늦는 지표" 표에 띄운다.
+- 화면: 푸시(도달 · 클릭 · 주제별 클릭 · 알림 기기 권한 · 권유 퍼널) · **서비스 상태**(새 화면: API 요청 · 오류 · 느린 요청 ·
+  DB 크기 · 앱 · 웹 오류 · OTA 게시) · 게임(라운지 채팅 · 컵 참가 · 문의 메일 · 유저 반응) · 그로스(팔로워 · 검색 성과).
+- 운영자 API를 직접 확인할 때는 `kpi` · `stats` · `revenue`만 부른다. `push-performance` · `anomalies` · `automation`은
+  사람이 몰리는 시간에 부르지 않고, 부른 뒤에는 `/v1/status`를 본다.
 
 ### 연결 가능한 외부 원천 전체 (2026-10-29 기준)
 

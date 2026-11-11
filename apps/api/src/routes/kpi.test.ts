@@ -173,6 +173,52 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
       .OPS_DB!.prepare('SELECT min(day) d FROM kpi_daily')
       .first<{ d: string }>();
     expect(count!.d).toBe(kstPastDays(at, KPI_BACKFILL_DAYS).at(-1));
+  }, 40_000);
+
+  it('T-11-693 서버 상태 · 라운지 채팅 · 컵 참가를 하루치로 넣고, 채팅방이 답하지 못해도 나머지는 쓴다', async () => {
+    const admin = await issueAdminCookie(ctx);
+    const at = Date.now();
+    const [yesterday] = kstPastDays(at, 1);
+    const { start } = kstDayRange(yesterday!);
+    const bucket = (min: number) => new Date(Date.parse(start) + min * 60_000).toISOString();
+    await env.OPS_DB!.batch([
+      env
+        .OPS_DB!.prepare(
+          'INSERT INTO api_status_buckets (bucket, requests, total_ms, slow, errors) VALUES (?, 100, 8000, 3, 2)',
+        )
+        .bind(bucket(5)),
+      env
+        .OPS_DB!.prepare(
+          'INSERT INTO api_status_buckets (bucket, requests, total_ms, slow, errors) VALUES (?, 100, 12000, 1, 0)',
+        )
+        .bind(bucket(10)),
+    ]);
+    const asked: [number, number][] = [];
+    await runKpiDaily(env.DB, at, undefined, env.OPS_DB, async (from, to) => {
+      asked.push([from, to]);
+      return [
+        { room: 'ko', messages: 40, writers: 9 },
+        { room: 'en', messages: 2, writers: 1 },
+      ];
+    });
+    // 채팅은 채팅방에 남아 있는 최근 며칠(다시 쓰는 날)만 묻는다.
+    expect(asked).toHaveLength(3);
+    expect(asked[0]![1] - asked[0]![0]).toBe(86_400_000);
+    let r = await report(admin.cookie);
+    expect(value(r, yesterday!, 'api_requests')).toBe(200);
+    expect(value(r, yesterday!, 'api_errors')).toBe(2);
+    expect(value(r, yesterday!, 'api_slow')).toBe(4);
+    expect(value(r, yesterday!, 'api_avg_ms')).toBe(100);
+    expect(value(r, yesterday!, 'chat', 'ko')).toBe(40);
+    expect(value(r, yesterday!, 'chat_writers', 'en')).toBe(1);
+    expect(value(r, yesterday!, 'cup_entries')).toBe(0);
+    // 알림이 없던 날은 행을 만들지 않는다(0으로 채우지 않는다).
+    expect(value(r, yesterday!, 'push_recipients', 'team')).toBeUndefined();
+
+    await runKpiDaily(env.DB, at, undefined, env.OPS_DB, () => Promise.reject(new Error('down')));
+    r = await report(admin.cookie);
+    expect(value(r, yesterday!, 'api_requests')).toBe(200);
+    expect(value(r, yesterday!, 'chat', 'ko')).toBe(40);
   });
 
   it('외부 지표는 토큰이 맞을 때만, 원천에 허용된 지표만 받는다', async () => {

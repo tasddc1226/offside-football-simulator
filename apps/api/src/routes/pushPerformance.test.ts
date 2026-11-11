@@ -6,6 +6,8 @@ import { sha256Hex } from '../db/hash.js';
 import { queueNotification } from '../db/repos/notifications.js';
 import { registerPushDevice, unregisterPushDevice } from '../db/repos/pushDevices.js';
 import { getPushPerformance, recordPushInteraction } from '../db/repos/pushPerformance.js';
+import { collectD1Day, collectPushDay } from '../db/repos/kpi.js';
+import { kstDay } from '@offside/contracts/kst';
 import { runPersonalPush } from '../push/personal.js';
 import { createPost } from '../db/repos/boards.js';
 import { capturePushQueue } from '../test/push.js';
@@ -412,5 +414,50 @@ describe('admin push operations filters', () => {
     expect(next.from).toBe(yesterday.from);
     expect(next.cohortThrough).toBe(yesterday.cohortThrough);
     expect(next.totals).toEqual(yesterday.totals);
+  });
+  it('T-11-693 daily KPI rows match the report: recipients, delivered, clicked by topic, and device permission', async () => {
+    const a = await identity();
+    const b = await identity();
+    await device(a);
+    await device(b, 2);
+    const clicked = await queue(a);
+    const quiet = await queue(b);
+    await ctx.env.DB.prepare(
+      "UPDATE push_results SET state = 'accepted', accepted_at = ? WHERE notification_id IN (?, ?)",
+    )
+      .bind(now(), clicked, quiet)
+      .run();
+    await ctx.env.DB.prepare("UPDATE notifications SET topic = 'match' WHERE id = ?")
+      .bind(clicked)
+      .run();
+    await recordPushInteraction(ctx.env.DB, a.session.profileId, clicked, 'click', now());
+    await ctx.env.DB.prepare(
+      "UPDATE push_devices SET permission = 'authorized' WHERE profile_id = ?",
+    )
+      .bind(a.session.profileId)
+      .run();
+
+    const day = kstDay(now());
+    const rows = await collectPushDay(ctx.env.DB, day);
+    const at = (metric: string, dim: string) =>
+      rows.find((r) => r.metric === metric && r.dim === dim)?.value;
+    // 주제가 붙은 알림은 주제로, 옛 알림은 종류로 나눈다.
+    expect(at('push_recipients', 'match')).toBe(1);
+    expect(at('push_delivered', 'match')).toBe(1);
+    expect(at('push_clicked', 'match')).toBe(1);
+    expect(at('push_recipients', 'team')).toBe(1);
+    expect(at('push_clicked', 'team')).toBe(0);
+    const sum = (metric: string) =>
+      rows.filter((r) => r.metric === metric).reduce((n, r) => n + r.value, 0);
+    const t = (await report()).totals;
+    expect(sum('push_recipients')).toBe(t.recipients);
+    expect(sum('push_delivered')).toBe(t.acceptedRecipients);
+    expect(sum('push_clicked')).toBe(t.clicked);
+
+    const snapshot = await collectD1Day(ctx.env.DB, day, true, ctx.env.OPS_DB);
+    const devices = Object.fromEntries(
+      snapshot.filter((r) => r.metric === 'push_devices').map((r) => [r.dim, r.value]),
+    );
+    expect(devices).toEqual({ 'ios:authorized': 1, 'ios:unknown': 1 });
   });
 });

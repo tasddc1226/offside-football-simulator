@@ -172,7 +172,7 @@ type Sheets = {
   write: (data: { range: string; values: (string | number)[][] }[]) => Promise<void>;
 };
 
-function sheets(env: Env, fetcher: typeof fetch): Sheets {
+export function sheets(env: Env, fetcher: typeof fetch): Sheets {
   const id = env.VOICE_SHEET_ID!;
   const call = async (path: string, init?: RequestInit) => {
     const token = await serviceAccountToken(

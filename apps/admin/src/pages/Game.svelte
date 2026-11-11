@@ -2,7 +2,8 @@
   // T-11-577 게임 · 커뮤니티: 커리어 · 게시판 실시간 현황 + 일일 수집 추세.
   import type { AdminStats, KpiReport } from '@offside/contracts';
   import { fmt, KPI_EMPTY, metricSeries, nonEmpty, ratio } from '../kpi.ts';
-  import { viewOf } from '../kpi-page.ts';
+  import { byDim, lastDims, periodTotal, trendOf, viewOf } from '../kpi-page.ts';
+  import HBars from '../ui/HBars.svelte';
   import { loader } from '../load.svelte.ts';
   import Load from '../ui/Load.svelte';
   import Stat from '../ui/Stat.svelte';
@@ -13,6 +14,9 @@
   const kpi = loader<KpiReport>(() => `/v1/admin/kpi?days=${days}`, () => tick);
   const one = (v: ReturnType<typeof viewOf>, metric: string, label: string) =>
     nonEmpty(metricSeries(v.idx, v.days, [{ metric, label }]));
+  const ROOM: Record<string, string> = { ko: '한국어 방', en: '영어 방', ja: '일본어 방', zh: '중국어 방' };
+  const VOICE: Record<string, string> = { bug: '버그 의심', idea: '개선 제안', request: '요구사항', etc: '기타' };
+  const AGENT_EMPTY = '매일 08:50(KST)에 전날 값을 받아요.';
 </script>
 
 <div class="page">
@@ -51,6 +55,54 @@
       {#snippet children(rep)}
         {@const v = viewOf(rep)}
         <StackedBars title={`게시판 댓글 (${days}일)`} days={v.days} series={one(v, 'comments', '댓글')} empty={KPI_EMPTY} />
+      {/snippet}
+    </Load>
+    <Load r={kpi.r} height={260}>
+      {#snippet children(rep)}
+        {@const v = viewOf(rep)}
+        <StackedBars
+          title={`라운지 채팅 (${days}일)`}
+          days={v.days}
+          series={byDim(v, 'chat').map((s) => ({ ...s, label: ROOM[s.key] ?? s.key }))}
+          empty="채팅방에 남은 최근 7일 안에서 매일 04:00(KST)에 세요."
+        />
+      {/snippet}
+    </Load>
+    <Load r={kpi.r} height={260}>
+      {#snippet children(rep)}
+        {@const v = viewOf(rep)}
+        <StackedBars title={`컵 참가 신청 (${days}일)`} days={v.days} series={one(v, 'cup_entries', '참가 신청')} empty={KPI_EMPTY} />
+      {/snippet}
+    </Load>
+    <Load r={kpi.r} height={260}>
+      {#snippet children(rep)}
+        {@const v = viewOf(rep)}
+        <StackedBars title={`고객 문의 메일 (${days}일)`} days={v.days} series={one(v, 'support_mails', '받은 문의')} empty={AGENT_EMPTY} />
+      {/snippet}
+    </Load>
+    <Load r={kpi.r} height={260}>
+      {#snippet children(rep)}
+        {@const v = viewOf(rep)}
+        {@const open = lastDims(v, 'voice_open')}
+        <section class="panel">
+          <header>
+            <h2>유저 반응 · 열린 주제</h2>
+            <span class="hint">{open.day ? `${open.day} 기준 · ${days}일 새 주제 ${fmt(periodTotal(v, 'voice_new'))}개` : ''}</span>
+          </header>
+          {#if open.day}
+            <HBars unit="n" items={open.items.map((x) => ({ key: x.dim, label: VOICE[x.dim] ?? x.dim, value: x.value }))} />
+          {:else}
+            <p class="note">{AGENT_EMPTY}</p>
+          {/if}
+        </section>
+      {/snippet}
+    </Load>
+    <Load r={kpi.r} height={128}>
+      {#snippet children(rep)}
+        {@const v = viewOf(rep)}
+        <div class="stats">
+          <Stat label={`${days}일 채팅 쓴 사람 (하루 합)`} value={periodTotal(v, 'chat_writers')} trend={trendOf(v, 'chat_writers')} />
+        </div>
       {/snippet}
     </Load>
   </div>

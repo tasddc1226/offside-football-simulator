@@ -1,27 +1,22 @@
 <script lang="ts">
-  // 개요 맨 위 경보 줄: 매일 들어와야 하는 원천(운영 DB · GA4 · Meta)이 어제 행까지 없으면 알린다. 문제가 없으면 아무것도 그리지 않는다.
+  // 개요 맨 위 경보 줄: 매일 들어와야 하는 지표가 늦으면 알린다(T-11-693 원천 단위 → 지표 단위. 한 원천 안에서 지표 하나만 끊겨도 잡는다).
+  // 문제가 없으면 아무것도 그리지 않는다.
   import type { KpiReport } from '@offside/contracts';
-  import { sourceLag } from '../kpi.ts';
+  import { laggingMetrics, viewOf } from '../kpi-page.ts';
 
   let { kpi }: { kpi: KpiReport } = $props();
-  const DAILY = [
-    { source: 'd1', label: '운영 DB(04:00)' },
-    { source: 'ga4', label: 'GA4(08:50)' },
-    { source: 'meta', label: 'Meta 광고(08:50)' },
-  ] as const;
   const issues = $derived(
-    DAILY.flatMap(({ source, label }) => {
-      const lag = sourceLag(kpi.sources.find((s) => s.source === source)?.lastDay, kpi.days.at(-1));
-      if (lag === null) return [`${label} 수집 기록 없음`];
-      return lag > 0 ? [`${label} ${lag}일 밀림`] : [];
-    }),
+    laggingMetrics(viewOf(kpi)).map((x) =>
+      x.lag === null ? `${x.label} 기록 없음` : `${x.label} ${x.lag}일 밀림`,
+    ),
   );
+  const SHOW = 4;
 </script>
 
 {#if issues.length}
   <a class="alert" href="#/data">
     <strong>데이터 확인</strong>
-    <span>{issues.join(' · ')}</span>
+    <span>{issues.slice(0, SHOW).join(' · ')}{issues.length > SHOW ? ` 외 ${issues.length - SHOW}개` : ''}</span>
     <span class="go">데이터 화면 →</span>
   </a>
 {/if}

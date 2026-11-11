@@ -122,6 +122,7 @@ body {
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
+  flex-wrap: wrap;
   margin-bottom: 12px;
 }
 .panel h2 {
