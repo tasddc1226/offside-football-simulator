@@ -1,6 +1,7 @@
 // T-11-603 랭크 매칭 큐(웹 team/TeamRankQueue · TeamRankInfo, 앱 screens/owner/TeamRankQueue · TeamRankInfo)가 함께 쓰는 규칙.
 // 상대는 서버가 바로 고른다. 찾는 시간은 연출이라 화면이 정하고, 경기 결과나 상대에는 영향을 주지 않는다.
-import { rankPoints } from '@offside/contracts/owner-team';
+import { kstDay } from '@offside/contracts/kst';
+import { RANK_REPICKS_DAILY, rankPoints } from '@offside/contracts/owner-team';
 import { clampDivision, nextDivision, type DivisionRules } from '@offside/contracts/team-division';
 import type { TeamMatch, TeamRecord } from './api/team.js';
 import { teamMatchText as L } from './i18n/ko/teamMatch.js';
@@ -86,4 +87,29 @@ export function rankStakes(
     promote: up > d ? L.stakesPromote({ name: divisionName(up) }) : null,
     relegate: down < d ? L.stakesRelegate({ name: divisionName(down) }) : null,
   };
+}
+
+// T-11-702 다른 상대 찾기 하루 횟수. 서버는 광고 시청을 확인할 수 없어 이 기기에만 센다(ad-reroll과 같은 방식).
+type RepickLog = { day: string; n: number };
+
+function parseRepicks(raw: string | null | undefined): RepickLog | null {
+  try {
+    const v = JSON.parse(raw ?? '') as Partial<RepickLog>;
+    return typeof v.day === 'string' && Number.isInteger(v.n) ? { day: v.day, n: v.n! } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** 오늘 남은 다른 상대 찾기 횟수. 기록이 없거나 다른 날이면 하루치 전부. */
+export function repicksLeft(raw: string | null | undefined, now = new Date()): number {
+  const log = parseRepicks(raw);
+  const used = log && log.day === kstDay(now.toISOString()) ? log.n : 0;
+  return Math.max(0, RANK_REPICKS_DAILY - used);
+}
+
+/** 한 번 찾은 뒤 저장할 값. */
+export function spendRepick(raw: string | null | undefined, now = new Date()): string {
+  const n = RANK_REPICKS_DAILY - repicksLeft(raw, now) + 1;
+  return JSON.stringify({ day: kstDay(now.toISOString()), n });
 }

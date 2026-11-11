@@ -1763,7 +1763,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(await liveXg((await play(true)).match.id)).toBeGreaterThan(liveBefore);
     });
 
-    it('상대는 서버가 한 팀만 골라 주고, 같은 pick이면 같은 상대 · pick은 3까지', async () => {
+    it('상대는 서버가 한 팀만 골라 주고, 같은 pick이면 같은 상대 · pick은 5까지', async () => {
       const me = await ownerWithTeam(3, 80, null, 2);
       const rivals = await Promise.all([1, 2, 3, 4, 5].map(() => ownerWithTeam(3, 80, null, 2)));
       const ids = new Set(rivals.map((t) => t.team.id));
@@ -1775,7 +1775,7 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(first).toHaveLength(1);
       expect(ids.has(first[0]!)).toBe(true);
       expect(await get('?pick=0')).toEqual(first);
-      const picks = await Promise.all(['?pick=1', '?pick=2', '?pick=3', '?pick=9'].map(get));
+      const picks = await Promise.all(['?pick=1', '?pick=2', '?pick=5', '?pick=9'].map(get));
       for (const p of picks) expect(p).toHaveLength(1);
       expect(picks[3]).toEqual(picks[2]);
     });

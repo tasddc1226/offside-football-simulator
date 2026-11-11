@@ -31,7 +31,7 @@ const ko = {
   // T-11-510 시즌 2 자동 매칭(서버가 비슷한 상대 한 팀을 골라 준다)
   matchTitle: '랭크 매칭',
   matchRule: (p: { n: number }) =>
-    `RP와 전력이 비슷한 팀을 골라 드려요. 경기마다 상대를 ${p.n}번까지 다시 찾을 수 있어요.`,
+    `RP와 전력이 비슷한 팀을 골라 드려요. 다른 상대는 하루 ${p.n}번까지 다시 찾을 수 있어요.`,
   matchGapNote:
     'RP 아래 숫자는 내 팀과의 차이예요. RP가 높은 팀을 이기면 더 오르고, 져도 덜 깎여요.',
   oddsTitle: '예상 승 · 무 · 패',
@@ -48,6 +48,14 @@ const ko = {
   matchRepick: (p: { left: number; max: number }) => `다른 상대 찾기 (${p.left}/${p.max})`,
   // T-11-603 랭크 매칭 큐
   matchRepickBtn: (p: { left: number; max: number }) => `다른 상대 (${p.left}/${p.max})`,
+  // T-11-702 앱은 보상형 광고를 보고 다른 상대를 찾는다(하루 횟수는 웹과 같다)
+  matchRuleApp: (p: { n: number }) =>
+    `RP와 전력이 비슷한 팀을 골라 드려요. 광고를 보면 다른 상대를 하루 ${p.n}번까지 다시 찾을 수 있어요.`,
+  matchRepickAd: (p: { left: number; max: number }) =>
+    `광고 보고 다른 상대 찾기 (${p.left}/${p.max})`,
+  matchRepickAdBtn: (p: { left: number; max: number }) =>
+    `광고 보고 다른 상대 (${p.left}/${p.max})`,
+  matchRepickAdSkip: '광고를 끝까지 봐야 다른 상대를 찾을 수 있어요.',
   squadSideAria: '볼 팀',
   squadOpponent: '상대 팀',
   squadLineup: '선발 명단',

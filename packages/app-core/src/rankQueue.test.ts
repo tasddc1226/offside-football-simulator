@@ -9,6 +9,8 @@ import {
   rankStakes,
   recentForm,
   recentRanked,
+  repicksLeft,
+  spendRepick,
   winRate,
 } from './rankQueue.js';
 
@@ -21,6 +23,26 @@ const match = (mine: 'home' | 'away', home: number, away: number, friendly?: boo
     away: { goals: away },
     ...(friendly ? { friendly } : {}),
   }) as TeamMatch;
+
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
+  const day1 = new Date('2026-11-11T03:00:00Z');
+  it('기록이 없거나 깨졌으면 5번 남는다', () => {
+    expect(repicksLeft(null, day1)).toBe(5);
+    expect(repicksLeft('x{', day1)).toBe(5);
+  });
+  it('찾을 때마다 줄고 0 아래로 가지 않는다', () => {
+    let raw: string | null = null;
+    for (const left of [4, 3, 2, 1, 0, 0]) {
+      raw = spendRepick(raw, day1);
+      expect(repicksLeft(raw, day1)).toBe(left);
+    }
+  });
+  it('한국 시간 자정이 지나면 다시 5번이다', () => {
+    const raw = spendRepick(spendRepick(null, day1), day1);
+    expect(repicksLeft(raw, new Date('2026-11-11T14:59:00Z'))).toBe(3);
+    expect(repicksLeft(raw, new Date('2026-11-11T15:00:00Z'))).toBe(5);
+  });
+});
 
 describe('queueWaitMs', () => {
   it('첫 찾기가 다시 찾기보다 길고, 움직임 줄이기면 짧다', () => {
@@ -38,6 +60,26 @@ describe('queueWaitMs', () => {
   });
 });
 
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
+  const day1 = new Date('2026-11-11T03:00:00Z');
+  it('기록이 없거나 깨졌으면 5번 남는다', () => {
+    expect(repicksLeft(null, day1)).toBe(5);
+    expect(repicksLeft('x{', day1)).toBe(5);
+  });
+  it('찾을 때마다 줄고 0 아래로 가지 않는다', () => {
+    let raw: string | null = null;
+    for (const left of [4, 3, 2, 1, 0, 0]) {
+      raw = spendRepick(raw, day1);
+      expect(repicksLeft(raw, day1)).toBe(left);
+    }
+  });
+  it('한국 시간 자정이 지나면 다시 5번이다', () => {
+    const raw = spendRepick(spendRepick(null, day1), day1);
+    expect(repicksLeft(raw, new Date('2026-11-11T14:59:00Z'))).toBe(3);
+    expect(repicksLeft(raw, new Date('2026-11-11T15:00:00Z'))).toBe(5);
+  });
+});
+
 describe('queueClock · queueStep', () => {
   it('분:초로 적는다', () => {
     expect(queueClock(0)).toBe('00:00');
@@ -46,6 +88,26 @@ describe('queueClock · queueStep', () => {
   it('시간이 지나면 다음 문구로 넘어가고 마지막에 머문다', () => {
     expect(queueStep(0)).not.toBe(queueStep(2));
     expect(queueStep(4)).toBe(queueStep(100));
+  });
+});
+
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
+  const day1 = new Date('2026-11-11T03:00:00Z');
+  it('기록이 없거나 깨졌으면 5번 남는다', () => {
+    expect(repicksLeft(null, day1)).toBe(5);
+    expect(repicksLeft('x{', day1)).toBe(5);
+  });
+  it('찾을 때마다 줄고 0 아래로 가지 않는다', () => {
+    let raw: string | null = null;
+    for (const left of [4, 3, 2, 1, 0, 0]) {
+      raw = spendRepick(raw, day1);
+      expect(repicksLeft(raw, day1)).toBe(left);
+    }
+  });
+  it('한국 시간 자정이 지나면 다시 5번이다', () => {
+    const raw = spendRepick(spendRepick(null, day1), day1);
+    expect(repicksLeft(raw, new Date('2026-11-11T14:59:00Z'))).toBe(3);
+    expect(repicksLeft(raw, new Date('2026-11-11T15:00:00Z'))).toBe(5);
   });
 });
 
@@ -75,10 +137,50 @@ describe('recentForm · formStreak', () => {
   });
 });
 
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
+  const day1 = new Date('2026-11-11T03:00:00Z');
+  it('기록이 없거나 깨졌으면 5번 남는다', () => {
+    expect(repicksLeft(null, day1)).toBe(5);
+    expect(repicksLeft('x{', day1)).toBe(5);
+  });
+  it('찾을 때마다 줄고 0 아래로 가지 않는다', () => {
+    let raw: string | null = null;
+    for (const left of [4, 3, 2, 1, 0, 0]) {
+      raw = spendRepick(raw, day1);
+      expect(repicksLeft(raw, day1)).toBe(left);
+    }
+  });
+  it('한국 시간 자정이 지나면 다시 5번이다', () => {
+    const raw = spendRepick(spendRepick(null, day1), day1);
+    expect(repicksLeft(raw, new Date('2026-11-11T14:59:00Z'))).toBe(3);
+    expect(repicksLeft(raw, new Date('2026-11-11T15:00:00Z'))).toBe(5);
+  });
+});
+
 describe('winRate', () => {
   it('치른 경기가 없으면 null', () => {
     expect(winRate({ w: 0, d: 0, l: 0 })).toBeNull();
     expect(winRate({ w: 2, d: 1, l: 1 })).toBe(50);
+  });
+});
+
+describe('T-11-702 다른 상대 찾기 하루 횟수', () => {
+  const day1 = new Date('2026-11-11T03:00:00Z');
+  it('기록이 없거나 깨졌으면 5번 남는다', () => {
+    expect(repicksLeft(null, day1)).toBe(5);
+    expect(repicksLeft('x{', day1)).toBe(5);
+  });
+  it('찾을 때마다 줄고 0 아래로 가지 않는다', () => {
+    let raw: string | null = null;
+    for (const left of [4, 3, 2, 1, 0, 0]) {
+      raw = spendRepick(raw, day1);
+      expect(repicksLeft(raw, day1)).toBe(left);
+    }
+  });
+  it('한국 시간 자정이 지나면 다시 5번이다', () => {
+    const raw = spendRepick(spendRepick(null, day1), day1);
+    expect(repicksLeft(raw, new Date('2026-11-11T14:59:00Z'))).toBe(3);
+    expect(repicksLeft(raw, new Date('2026-11-11T15:00:00Z'))).toBe(5);
   });
 });
 

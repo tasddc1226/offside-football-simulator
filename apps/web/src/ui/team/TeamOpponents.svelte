@@ -3,7 +3,7 @@
   import TitleBadge from '../cup/TitleBadge.svelte';
   // 상대 고르기 — 내 팀 레이팅에 가까운 다른 구단주의 팀에 도전한다(레이팅이 크게, OVR은 작게). 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다.
   // T-11-510 시즌 2(ladder)는 서버가 고른 상대 한 팀과 '다른 상대 찾기'(경기마다 3번)를 보여 준다. T-11-603 그 상대는 매칭 찾기를 눌러 큐를 거쳐 받는다.
-  import { RANK_MATCH_REPICKS, TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
+  import { RANK_REPICKS_DAILY, TEAM_REPEAT_WINDOW_DAYS } from '@offside/contracts/owner-team';
   import type { OwnerTeam, TeamMatch, TeamOpponent } from '@offside/app-core/api/team';
   import { ratingGap, recordText } from '@offside/app-core/teamText';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
@@ -65,7 +65,7 @@
     <div class="eyebrow">Match</div>
     <h1>{ladder ? L.matchTitle : L.oppTitle}</h1>
     {#if !hint && !ladder}<p class="muted fs-sm">{L.oppNear({ rating, left: matchesLeft, per: perDay })}</p>{/if}
-    <p class="muted fs-xs">{ladder ? L.matchRule({ n: RANK_MATCH_REPICKS }) : L.oppRuleWeb({ days: TEAM_REPEAT_WINDOW_DAYS })}</p>
+    <p class="muted fs-xs">{ladder ? L.matchRule({ n: RANK_REPICKS_DAILY }) : L.oppRuleWeb({ days: TEAM_REPEAT_WINDOW_DAYS })}</p>
     {#if !hint && !ladder && opponents.length}<p class="muted fs-xs" data-opponent-gap-note>{L.oppGapNote}</p>{/if}
   </div>
   {#if hint}
