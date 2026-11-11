@@ -2,7 +2,8 @@
   "ios": {
     "CFBundleDisplayName": "OFFSIDE",
     "CFBundleName": "OFFSIDE",
-    "NSPhotoLibraryUsageDescription": "請允許存取照片，以便選擇球隊標誌的圖片。"
+    "NSPhotoLibraryUsageDescription": "請允許存取照片，以便選擇球隊標誌的圖片。",
+    "NSUserTrackingUsageDescription": "為了顯示符合您興趣的廣告，需要您允許追蹤。不允許也不會影響遊戲與獎勵。"
   },
   "android": {
     "app_name": "OFFSIDE"

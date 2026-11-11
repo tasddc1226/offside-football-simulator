@@ -1,6 +1,16 @@
 /* global vi, beforeEach, describe, it, expect */
-const f = vi.hoisted(() => ({ gather: vi.fn(), inTest: vi.fn() }));
-vi.mock('react-native', () => ({ Platform: { OS: 'android' } }));
+const f = vi.hoisted(() => ({ gather: vi.fn(), inTest: vi.fn(), os: 'android', granted: false }));
+vi.mock('react-native', () => ({
+  Platform: {
+    get OS() {
+      return f.os;
+    },
+  },
+}));
+vi.mock('expo-tracking-transparency', () => ({
+  isAvailable: () => true,
+  getTrackingPermissionsAsync: () => Promise.resolve({ granted: f.granted }),
+}));
 vi.mock('react-native-google-mobile-ads', () => ({
   default: () => ({
     setRequestConfiguration: () => Promise.resolve(),
@@ -15,6 +25,8 @@ vi.mock('./adPersonalization', () => ({ allowPersonalizedAds: f.inTest }));
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
+  f.os = 'android';
+  f.granted = false;
 });
 
 describe('ad request options', () => {
@@ -46,5 +58,21 @@ describe('ad request options', () => {
     expect(await m.askConsent()).toBe(false);
     expect(f.inTest).not.toHaveBeenCalled();
     expect(m.adRequestOptions()).toEqual({ requestNonPersonalizedAdsOnly: true });
+  });
+
+  it('passes the iOS tracking permission (T-11-698)', async () => {
+    f.os = 'ios';
+    f.granted = true;
+    f.gather.mockResolvedValue({ canRequestAds: true, status: 'NOT_REQUIRED' });
+    f.inTest.mockReturnValue(true);
+    const m = await import('./adConsent');
+    await m.askConsent();
+    expect(f.inTest).toHaveBeenCalledWith({
+      os: 'ios',
+      locales: ['ko-KR'],
+      consentRequired: false,
+      tracking: true,
+    });
+    expect(m.adRequestOptions()).toEqual({ requestNonPersonalizedAdsOnly: false });
   });
 });

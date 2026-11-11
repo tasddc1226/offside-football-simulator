@@ -107,6 +107,12 @@
           "androidAppId": "ca-app-pub-3797087216173591~9704816739",
           "iosAppId": "ca-app-pub-3797087216173591~4994406373"
         }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Allow tracking so OFFSIDE can show ads that match your interests. Your game and rewards stay the same either way."
+        }
       ]
     ],
     "experiments": {

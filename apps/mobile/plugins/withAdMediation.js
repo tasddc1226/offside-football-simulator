@@ -5,7 +5,7 @@
 //   올리면 어댑터도 다시 고른다(docs/operations/ad-mediation.md).
 // - Pangle 안드로이드 SDK 저장소(Maven Central에 없다).
 // - iOS SKAdNetwork ID(Google · Meta · Pangle · Liftoff, skadnetwork-ids.json). 네트워크를 늘리면 다시 받는다.
-// 추적 동의(ATT) 창은 띄우지 않는다(지금처럼 비개인화 — platform/adConsent.ts).
+// 추적 동의(ATT) 창은 AdMob IDFA 설명 메시지(UMP)가 띄운다. 권한 문구는 expo-tracking-transparency 플러그인(T-11-698).
 const {
   withAppBuildGradle,
   withInfoPlist,

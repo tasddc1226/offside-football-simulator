@@ -5,6 +5,8 @@
 // 2026-11-11부터 동의 메시지 대상이 아닌 모든 Android 기기에서 맞춤 광고를 허용한다(방침 9항, T-11-691 운영자 결정으로
 // 11-17에서 앞당김). iOS는 Meta ATE
 // 플래그를 넣는 스토어 빌드 전까지 비개인화로 둔다.
+// T-11-698 iOS는 앱 추적 동의(ATT)를 허용한 기기만, 동의 메시지 대상이 아닐 때, 방침 9항의 iOS 날짜부터 맞춤 광고를 허용한다.
+// ATT 창은 AdMob 'IDFA 설명' 메시지(UMP)가 띄운다. Meta Audience Network 6.15부터는 ATE 플래그 대신 ATT 상태를 읽는다.
 import { loadKey, saveKey } from '@offside/game/storage';
 
 export const PERSONALIZED_TEST = {
@@ -16,6 +18,9 @@ export const PERSONALIZED_TEST = {
 
 /** 방침 9항의 Android 맞춤형 광고 시작(KST). 바꾸면 방침도 같이 고친다. */
 export const PERSONALIZED_ALL_FROM = Date.parse('2026-11-11T00:00:00+09:00');
+
+/** 방침 9항의 iOS 맞춤형 광고 시작(KST). ATT를 허용한 기기만. 바꾸면 방침도 같이 고친다. */
+export const PERSONALIZED_IOS_FROM = Date.parse('2026-11-19T00:00:00+09:00');
 
 export const PERSONALIZED_TEST_KEY = 'ft_personalized_ads_test_pick';
 
@@ -49,10 +54,12 @@ export function inPersonalizedTest(
 
 /** 이 기기의 광고 요청에서 비개인화 설정을 풀어도 되는지. */
 export function allowPersonalizedAds(
-  device: { os: string; locales: readonly string[]; consentRequired: boolean },
+  device: { os: string; locales: readonly string[]; consentRequired: boolean; tracking?: boolean },
   now = Date.now(),
   random: () => number = Math.random,
 ): boolean {
-  if (device.os !== 'android' || device.consentRequired) return false;
+  if (device.consentRequired) return false;
+  if (device.os === 'ios') return device.tracking === true && now >= PERSONALIZED_IOS_FROM;
+  if (device.os !== 'android') return false;
   return now >= PERSONALIZED_ALL_FROM || inPersonalizedTest(device, now, random);
 }

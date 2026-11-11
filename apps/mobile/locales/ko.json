@@ -2,7 +2,8 @@
   "ios": {
     "CFBundleDisplayName": "오프사이드",
     "CFBundleName": "오프사이드",
-    "NSPhotoLibraryUsageDescription": "팀 로고에 사용할 사진을 선택할 수 있도록 사진 접근을 허용해 주세요."
+    "NSPhotoLibraryUsageDescription": "팀 로고에 사용할 사진을 선택할 수 있도록 사진 접근을 허용해 주세요.",
+    "NSUserTrackingUsageDescription": "관심사에 맞는 광고를 보여 드리려고 추적 허용을 요청해요. 허용하지 않아도 게임과 보상은 똑같아요."
   },
   "android": {
     "app_name": "오프사이드"
