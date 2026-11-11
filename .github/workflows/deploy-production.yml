@@ -278,7 +278,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [current, '1.1.6', '1.1.5', '1.1.4']
+        target: [current, '1.1.7', '1.1.6', '1.1.5', '1.1.4']
         platform: [ios, android]
     needs: production-release
     # Preflight computes real production fingerprints without publishing any update.
@@ -318,6 +318,7 @@ jobs:
       # T-11-516 1.1.5는 앱 버전만 올렸다. 1.1.4 빌드에는 app.json만 1.1.4 모양으로 되돌려 같은 JS를 보낸다.
       # T-11-600 1.1.6은 Skia(네이티브)를 더했다. 1.1.5 · 1.1.4 빌드에는 Skia를 빼고 라운지 필드 입구를 비워 같은 JS를 보낸다.
       # T-11-563 1.1.7은 Meta 앱 이벤트(안드로이드 네이티브)를 더했다. 1.1.6 · 1.1.5 · 1.1.4 빌드에는 그 모듈 · 플러그인을 빼고 같은 JS를 보낸다.
+      # T-11-698 1.1.8은 expo-tracking-transparency(iOS ATT)를 더했다. 1.1.7 이하 빌드에는 그 의존성을 빼고 같은 JS를 보낸다.
       - name: Prepare reviewed legacy native compatibility
         if: env.EXPO_TOKEN != '' && matrix.target != 'current'
         run: node .github/scripts/prepare-ota-legacy.mjs prepare "$OTA_TARGET"
