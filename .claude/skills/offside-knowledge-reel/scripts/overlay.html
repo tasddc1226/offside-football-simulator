@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=IBM+Plex+Sans+KR:wght@600;700&display=block"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      html,
+      body {
+        width: 1080px;
+        height: 1920px;
+        overflow: hidden;
+        background: #07140e;
+      }
+      body {
+        font-family: 'IBM Plex Sans KR', sans-serif;
+        color: #fff;
+        position: relative;
+      }
+      #bg {
+        position: absolute;
+        inset: 0;
+        width: 1080px;
+        height: 1920px;
+      }
+      #vig {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          180deg,
+          rgba(7, 20, 14, 0.55) 0,
+          transparent 16%,
+          transparent 60%,
+          rgba(7, 20, 14, 0.3) 80%,
+          rgba(7, 20, 14, 0.6) 100%
+        );
+      }
+      #top {
+        position: absolute;
+        left: 64px;
+        right: 64px;
+        top: 150px;
+      }
+      #bars {
+        display: flex;
+        gap: 10px;
+      }
+      #bars i {
+        flex: 1;
+        height: 8px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.22);
+        overflow: hidden;
+      }
+      #bars i b {
+        display: block;
+        height: 100%;
+        width: 0;
+        background: #d6f24a;
+      }
+      #tag {
+        margin-top: 26px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      #tag .n {
+        font-family: 'Barlow Condensed';
+        font-weight: 700;
+        font-size: 40px;
+        letter-spacing: 0.14em;
+      }
+      #tag .k {
+        margin-left: auto;
+        font-size: 30px;
+        font-weight: 600;
+        color: #0d1511;
+        background: #f0b437;
+        padding: 6px 22px;
+        border-radius: 999px;
+      }
+      /* 자막은 화면 높이의 약 70% 지점. 인스타 캡션 영역(아래 20%)과 장면 속 인물을 피한다. */
+      #sub {
+        position: absolute;
+        left: 30px;
+        right: 30px;
+        top: 1240px;
+        height: 240px;
+        display: grid;
+        place-items: center;
+        text-align: center;
+      }
+      #sub div {
+        font-size: 88px;
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        -webkit-text-stroke: 16px #000;
+        paint-order: stroke fill;
+        text-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+      }
+      #sub b {
+        color: #d6f24a;
+      }
+      #cm {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 1500px;
+        text-align: center;
+        font-size: 54px;
+        font-weight: 700;
+        -webkit-text-stroke: 12px #000;
+        paint-order: stroke fill;
+        opacity: 0;
+      }
+      #cm b {
+        color: #d6f24a;
+      }
+    </style>
+  </head>
+  <body>
+    <img id="bg" />
+    <div id="vig"></div>
+    <div id="top">
+      <div id="bars"></div>
+      <div id="tag"><span class="n">OFFSIDE</span><span class="k"></span></div>
+    </div>
+    <div id="sub"><div></div></div>
+    <div id="cm"><b>댓글</b>로 알려 주세요</div>
+    <script>
+      const cl = (x) => Math.max(0, Math.min(1, x));
+      const back = (x) => {
+        x = cl(x);
+        const c = 1.9;
+        return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2);
+      };
+      let CFG;
+      // cfg: { speed, tag, end, bars: [문단 시작 초...], subs: [{ s, e, h }] } — 시간은 내레이션 원본(배속 전) 초.
+      window.init = async (cfg) => {
+        CFG = cfg;
+        document.querySelector('#tag .k').textContent = cfg.tag;
+        document.getElementById('bars').innerHTML = cfg.bars.map(() => '<i><b></b></i>').join('');
+        await document.fonts.ready;
+      };
+      window.seekFrame = async (i, dir) => {
+        const img = document.getElementById('bg');
+        img.src = dir + '/f_' + String(i).padStart(5, '0') + '.jpg';
+        await img.decode();
+        const t = (i / 30) * CFG.speed;
+        const edges = [...CFG.bars, CFG.end + 1.2];
+        document.querySelectorAll('#bars i b').forEach((b, j) => {
+          b.style.width = cl((t - edges[j]) / (edges[j + 1] - edges[j])) * 100 + '%';
+        });
+        const sub = document.querySelector('#sub div');
+        const s = CFG.subs.find((x) => t >= x.s - 0.04 && t < x.e);
+        if (s) {
+          sub.innerHTML = s.h;
+          const p = (t - s.s + 0.04) / 0.16;
+          sub.style.opacity = cl(p * 2);
+          sub.style.transform = 'scale(' + (0.9 + 0.1 * back(p)) + ')';
+        } else sub.style.opacity = 0;
+        document.getElementById('cm').style.opacity = cl((t - CFG.end - 0.1) / 0.25);
+      };
+    </script>
+  </body>
+</html>
