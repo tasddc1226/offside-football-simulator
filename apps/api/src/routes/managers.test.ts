@@ -1,6 +1,7 @@
 import {
   ErrorEnvelopeSchema,
   ManagerCareerResponseSchema,
+  ManagerPreviewResponseSchema,
   ManagersResponseSchema,
   OwnerTeamResponseSchema,
   successEnvelope,
@@ -17,6 +18,7 @@ import { managerOriginOf, startManagerCareer } from '../db/repos/managers.js';
 const ListRes = successEnvelope(ManagersResponseSchema);
 const CareerRes = successEnvelope(ManagerCareerResponseSchema);
 const TeamRes = successEnvelope(OwnerTeamResponseSchema);
+const PreviewRes = successEnvelope(ManagerPreviewResponseSchema);
 
 const RESULT: ManagerResult = {
   mastery: { '4-3-3': 'S', '4-4-2': 'B', '3-5-2': 'C' },
@@ -426,5 +428,76 @@ describe('감독 커리어 (T-11-310)', () => {
       body: { result: { ...RESULT, seasons: 30 } },
     });
     expect(res.status).toBe(400);
+  });
+
+  it('T-11-648 엔진 3으로 시작하면 3 결과(20시즌 · 능력치)를 받고, 2 커리어는 3 결과를 받지 않는다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const a = await addCard(owner.profileId);
+    const b = await addCard(owner.profileId);
+    const V3 = {
+      ...RESULT,
+      seasons: 18,
+      clubs: 5,
+      v3: {
+        attrs: {
+          atk: 70,
+          def: 60,
+          tac: 80,
+          mgmt: 55,
+          motiv: 66,
+          youth: 40,
+          eye: 50,
+          disc: 61,
+          adapt: 58,
+        },
+        license: 'P' as const,
+        rep: 77,
+        awards: 3,
+        youthStars: 2,
+      },
+    };
+    const finish = (id: string, result: ManagerResult) =>
+      call('POST', `/v1/managers/${id}/finish`, {
+        cookie: owner.cookie,
+        headers: idem(),
+        body: { result },
+      });
+
+    // 엔진을 보내지 않는 옛 클라이언트는 2.
+    const v2 = CareerRes.parse(await (await start(owner.cookie, a)).json()).data.career;
+    expect(v2.engine).toBe(2);
+    expect(await reason(await finish(v2.id, V3))).toBe('MANAGER_ENGINE');
+    expect(await reason(await finish(v2.id, { ...RESULT, seasons: 12 }))).toBe('MANAGER_ENGINE');
+    expect((await finish(v2.id, RESULT)).status).toBe(200);
+
+    const res = await call('POST', '/v1/managers', {
+      cookie: owner.cookie,
+      headers: idem(),
+      body: { careerId: b, engine: 3 },
+    });
+    expect(res.status).toBe(201);
+    const v3 = CareerRes.parse(await res.json()).data.career;
+    expect(v3.engine).toBe(3);
+    const done = await finish(v3.id, V3);
+    expect(done.status).toBe(200);
+    expect(CareerRes.parse(await done.json()).data.career.result).toEqual(V3);
+    const list = await managers(owner.cookie);
+    expect(list.managers.find((m) => m.careerId === b)).toMatchObject({ engine: 3, result: V3 });
+  });
+
+  it('T-11-648 후보 이력서는 내 카드의 시작값 재료만 보여 준다', async () => {
+    const owner = await issueGoogleCookie(ctx);
+    const other = await issueGoogleCookie(ctx);
+    const a = await addCard(owner.profileId, 4);
+    const b = await addCard(other.profileId);
+    const res = await call('GET', `/v1/managers/preview/${a}`, { cookie: owner.cookie });
+    expect(res.status).toBe(200);
+    const { origin } = PreviewRes.parse(await res.json()).data;
+    expect(origin).toEqual(await managerOriginOf(createDb(ctx.env.DB), a));
+    expect(origin.seasons).toBe(4);
+    expect(
+      await reason(await call('GET', `/v1/managers/preview/${b}`, { cookie: owner.cookie })),
+    ).toBe('CARD_NOT_FOUND');
+    expect((await call('GET', `/v1/managers/preview/${a}`)).status).toBe(401);
   });
 });

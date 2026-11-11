@@ -1,6 +1,7 @@
 import {
   CLUB_CUSTOM_BODY_MAX_BYTES,
   CLUB_CUSTOM_PATH,
+  COMP_CUSTOM_PATH,
   CONTENT_TYPE_HEADER,
   REQUEST_BODY_MAX_BYTES,
 } from '@offside/contracts';
@@ -62,7 +63,9 @@ export const bodyGuard = createMiddleware<AppEnv>(async (c, next) => {
     }
 
     const max =
-      c.req.path === CLUB_CUSTOM_PATH ? CLUB_CUSTOM_BODY_MAX_BYTES : REQUEST_BODY_MAX_BYTES;
+      c.req.path === CLUB_CUSTOM_PATH || c.req.path === COMP_CUSTOM_PATH
+        ? CLUB_CUSTOM_BODY_MAX_BYTES
+        : REQUEST_BODY_MAX_BYTES;
     const contentLength = c.req.header('Content-Length');
     if (contentLength && Number(contentLength) > max) {
       bodyTooLarge();

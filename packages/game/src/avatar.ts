@@ -246,6 +246,25 @@ export function retiredAvatarSpec(id: string, age: number, code?: string | null)
   );
 }
 
+/** T-11-648 감독(감독 키우기): 은퇴한 그 선수가 정장 차림으로 벤치에 선 모습. 꽃다발 없이 차분한 표정이고,
+ * 흰머리는 마흔부터 더 늘어 감독으로 나이 드는 게 보인다. 은퇴 때 고른 꾸미기(머리 · 안경 등)는 그대로 따른다. */
+export function managerAvatarSpec(id: string, age: number, code?: string | null): AvatarSpec {
+  const look = lookOf(id);
+  return withLook(
+    {
+      look,
+      club: { id: '', name: '' },
+      hairStyle: look.style,
+      gray: Math.min(0.85, grayAt(age) + Math.max(0, age - 40) * 0.02),
+      beard: 'stubble',
+      expr: null,
+      acc: ['suit'],
+      kit: SUIT_KIT,
+    },
+    parseLookCode(code),
+  );
+}
+
 /** 명예의 전당 시상대: 커리어 ID로 얼굴을, 마지막 소속 구단으로 홈 유니폼을 정한 전성기 모습.
  * 실제 전성기 나이는 목록 응답에 없어 27세(짧은 수염·흰머리 없음)로 그린다. 구단 id가 없는 옛 기록은 이름으로 유니폼을 찾는다. */
 export function primeAvatarSpec(e: {

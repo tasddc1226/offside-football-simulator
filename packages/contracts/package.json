@@ -14,6 +14,7 @@
     "./best11-rules": "./src/best11-rules.ts",
     "./content-filter": "./src/content-filter.ts",
     "./club-limits": "./src/club-limits.ts",
+    "./comp-custom-limits": "./src/comp-custom-limits.ts",
     "./polling": "./src/polling.ts",
     "./play-style": "./src/play-style.ts",
     "./club-names": "./src/club-names.ts",

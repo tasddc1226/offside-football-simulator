@@ -4,6 +4,8 @@ import { loadKey } from '@offside/game/storage';
 
 /** @offside/game/manager의 MANAGER_SAVE_KEY와 같다(테스트가 확인한다). */
 export const MANAGER_RESUME_KEY = 'ft_mgr_save';
+/** T-11-648 @offside/game/manager3의 M3_SAVE_KEY와 같다(테스트가 확인한다). */
+export const MANAGER3_RESUME_KEY = 'ft_mgr3_save';
 
 export interface ManagerResume {
   /** 선수 시절 이름(이 기기에만 있다). */
@@ -12,7 +14,8 @@ export interface ManagerResume {
   club: string | null;
   /** 지금 치르는 시즌(1부터, 총 시즌을 넘지 않는다). */
   n: number;
-  total: number;
+  /** 총 시즌. 감독 키우기(엔진 3)는 정해진 시즌 수가 없어 null. */
+  total: number | null;
   /** 끝까지 치르고 감독 카드로 확정만 남았다. */
   done: boolean;
 }
@@ -26,8 +29,23 @@ type Saved = {
   phase?: unknown;
 };
 
+/** 감독 키우기(엔진 3) 세이브. 끝낸 시즌 수만 있고 총 시즌은 없다. */
+function resume3(): ManagerResume | null {
+  const s = loadKey<Saved>(MANAGER3_RESUME_KEY);
+  if (!s || typeof s !== 'object' || typeof s.id !== 'string') return null;
+  return {
+    name: typeof s.name === 'string' && s.name ? s.name : null,
+    club: s.club && typeof s.club.name === 'string' ? s.club.name : null,
+    n: (typeof s.season === 'number' ? s.season : 0) + 1,
+    total: null,
+    done: s.phase === 'done',
+  };
+}
+
 /** 기기에 진행 중 감독 세이브가 있으면 이어 하기 카드 값, 없거나 읽을 수 없으면 null. */
 export function managerResume(): ManagerResume | null {
+  const v3 = resume3();
+  if (v3) return v3;
   const s = loadKey<Saved>(MANAGER_RESUME_KEY);
   if (!s || typeof s !== 'object' || typeof s.id !== 'string') return null;
   const total = typeof s.seasonsTotal === 'number' && s.seasonsTotal > 0 ? s.seasonsTotal : 0;

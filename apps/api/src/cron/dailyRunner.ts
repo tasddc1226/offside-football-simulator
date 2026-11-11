@@ -17,6 +17,7 @@ import { runKpiDaily, type KpiDailyResult } from '../db/repos/kpi.js';
 import { buildRetireCohort } from '../db/repos/retireCohort.js';
 import { purgeEdgeOrigin } from '../edgeCache.js';
 import { RETIRE_COHORT_PATH } from '@offside/contracts/retire-cohort';
+import { moveClubLogos } from './clubLogoMove.js';
 
 export const DAILY_STATE_KEY = 'cron:daily:state';
 const LEASE_MS = 4 * 60_000;
@@ -32,6 +33,7 @@ export const DAILY_STAGES = [
   'pruneAbandoned',
   'kpi',
   'retireCohort',
+  'clubLogos',
 ] as const;
 type Stage = (typeof DAILY_STAGES)[number];
 export type DailyState = {
@@ -134,6 +136,11 @@ function steps(env: Bindings): DailyStep {
           await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, [RETIRE_COHORT_PATH]).catch(() => {});
         const n = Object.fromEntries(Object.entries(cohort.pos).map(([p, v]) => [p, v?.n ?? 0]));
         return { done: true, result: { season: cohort.season, n } };
+      }
+      case 'clubLogos': {
+        // T-11-683 옛 형식 구단 엠블럼 이미지를 R2로 옮긴다(틱마다 25행, 끝나면 읽기 한 번).
+        const result = await moveClubLogos(env);
+        return { done: result === 'skipped' || result.done, result };
       }
     }
   };

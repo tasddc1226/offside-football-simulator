@@ -1,7 +1,7 @@
 // T-11-310 감독 커리어(웹 Manager.svelte) — 구단주 화면의 '감독 커리어' 카드로 연다. 지금 가진 선수 카드로 감독 커리어를
 // 시작하고(한 번에 하나), 기기에서 시즌을 돌린 뒤 감독 카드로 확정해 우리 팀 감독 칸에 앉힌다. 화면을 열 때 목록을 한 번 받는다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import type { ManagerCandidate, ManagerCareer, ManagersResponse } from '@offside/contracts';
 import { FORMATION_IDS, type FormationId } from '@offside/contracts/owner-team';
@@ -66,10 +66,20 @@ import {
   setTeamCoach,
   startConfirmLines,
   finishConfirmLines,
-  startManager,
 } from '@offside/app-core/manager';
 import { fundsText } from '@offside/app-core/funds';
 import { managerText as M } from '@offside/app-core/i18n/ko/manager';
+import { manager3Text as T3 } from '@offside/app-core/i18n/ko/manager3';
+import {
+  clearManager3State,
+  fetchManagerPreview,
+  startManager3,
+  type Manager3Preview,
+} from '@offside/app-core/manager3';
+import { M3_ATTRS, M3_LEAGUE_TIERS } from '@offside/game/manager3';
+import { managerAvatarSpec } from '@offside/game/avatar';
+import { PixelAvatar } from '../../ui/PixelAvatar';
+import { Manager3 } from './Manager3';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
 import { ActionBar, Btn, Card, Opt, Press, Screen, Topbar, Txt } from '../../ui';
@@ -237,9 +247,16 @@ export default function Manager() {
     }
     setLoginNeeded(false);
     setData(r.data);
-    const s = r.data.active ? loadManagerState(r.data.active, nameOf(r.data.active)) : null;
+    // T-11-648 감독 키우기(엔진 3) 커리어는 Manager3가 세이브를 맡는다.
+    const s =
+      r.data.active && r.data.active.engine !== 3
+        ? loadManagerState(r.data.active, nameOf(r.data.active))
+        : null;
     // T-11-338 서버에 진행 중 감독이 없으면(다른 기기에서 끝냄 · 포기) 남은 세이브를 지워 이어 하기 카드가 뜨지 않게 한다.
-    if (!r.data.active) clearManagerState();
+    if (!r.data.active) {
+      clearManagerState();
+      clearManager3State();
+    } else if (r.data.active.engine === 3) clearManagerState();
     setSt(s);
     if (s) resetPick(s);
   }
@@ -283,21 +300,29 @@ export default function Manager() {
     if (!r.ok) setError(r.error?.message ?? M.loadFail);
     return r.ok;
   }
-  const askStart = (cand: ManagerCandidate) =>
-    Alert.alert(
-      M.confirmTitle({ name: managerName(cand, local) }),
-      startConfirmLines(cand)
-        .map((l) => `· ${l}`)
-        .join('\n'),
-      [
-        { text: M.cancel, style: 'cancel' },
-        {
-          text: M.confirmOk,
-          onPress: () =>
-            void run(() => startManager(cand.careerId)).then((ok) => ok && void load()),
-        },
-      ],
-    );
+  // T-11-648 후보 이력서 창(열 때만 이력서를 부른다). 새 감독 커리어는 감독 키우기(엔진 3)로 시작한다.
+  const [confirm, setConfirm] = useState<ManagerCandidate | null>(null);
+  const [preview, setPreview] = useState<Manager3Preview | null>(null);
+  const [previewFailed, setPreviewFailed] = useState(false);
+  const confirmId = useRef<string | null>(null);
+  function askStart(cand: ManagerCandidate) {
+    setConfirm(cand);
+    setError(null);
+    setPreview(null);
+    setPreviewFailed(false);
+    confirmId.current = cand.careerId;
+    void fetchManagerPreview(cand.careerId).then((r) => {
+      if (confirmId.current !== cand.careerId) return;
+      if (r.ok) setPreview(r.preview);
+      else setPreviewFailed(true);
+    });
+  }
+  async function start(cand: ManagerCandidate) {
+    if (await run(() => startManager3(cand.careerId))) {
+      setConfirm(null);
+      await load();
+    }
+  }
   // T-11-451 시즌을 다 마친 뒤에도 확정 전에는 원래 선수로 돌아갈 수 있다(서버는 포기와 같다).
   const undo = st?.phase === 'done';
   const askAbandon = () =>
@@ -409,7 +434,14 @@ export default function Manager() {
   ) : null;
 
   const play =
-    st && data?.active ? (
+    data?.active?.engine === 3 ? (
+      <Manager3
+        key={data.active.id}
+        career={data.active}
+        name={nameOf(data.active)}
+        onChange={() => void load()}
+      />
+    ) : st && data?.active ? (
       <>
         <Card gap={10} testID={`manager-play-${st.phase}`}>
           <View style={{ gap: 2 }}>
@@ -947,7 +979,7 @@ export default function Manager() {
       ) : (
         <>
           {play ?? (
-            <Card gap={10} testID="manager-start">
+            <Card gap={10} testID="manager-candidates">
               <Txt v="h2">{M.startHeading}</Txt>
               <Txt tone="muted" style={small}>
                 {M.startLead}
@@ -1005,6 +1037,15 @@ export default function Manager() {
                     }}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                      <PixelAvatar
+                        spec={managerAvatarSpec(
+                          m.careerId,
+                          (m.origin.retireAge ?? 35) + r.seasons,
+                          m.look,
+                        )}
+                        width={36}
+                        portrait
+                      />
                       <Txt bold>{nameOf(m)}</Txt>
                       <Txt bold tone="accent">
                         {M.grade({ grade: r.grade })}
@@ -1072,6 +1113,96 @@ export default function Manager() {
           </Card>
         </>
       )}
+      {confirm ? (
+        <PopSheet
+          label={M.confirmTitle({ name: managerName(confirm, local) })}
+          testID="manager-confirm"
+          onClose={() => {
+            confirmId.current = null;
+            setConfirm(null);
+          }}
+        >
+          <View style={{ gap: 10 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <PixelAvatar
+                spec={managerAvatarSpec(confirm.careerId, preview?.age ?? 36, confirm.look)}
+                width={72}
+                portrait
+              />
+              <Txt v="h2" style={{ flex: 1 }}>
+                {M.confirmTitle({ name: managerName(confirm, local) })}
+              </Txt>
+            </View>
+            <View
+              testID="manager-cv"
+              style={{ gap: 6, padding: 12, borderRadius: RADIUS.md, backgroundColor: c.surface2 }}
+            >
+              <Txt bold>{T3.resumeHeading}</Txt>
+              {preview ? (
+                <>
+                  <Txt style={small}>
+                    {`${T3.resumeRep} ${preview.rep} · ${T3.resumeStyle} ${styleName(preview.style)} · ${T3.resumeFormation} ${preview.formation} · ${T3.resumeLicense} ${preview.license}`}
+                  </Txt>
+                  <Txt style={small}>
+                    {`${T3.resumeFirstLeagues} · ${M3_LEAGUE_TIERS.filter(
+                      (l) => l.tier >= preview.firstTiers[0] && l.tier <= preview.firstTiers[1],
+                    )
+                      .map((l) => leagueName(l.id))
+                      .join(', ')}`}
+                  </Txt>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 4 }}>
+                    {M3_ATTRS.map((k) => (
+                      <View
+                        key={k}
+                        style={{ width: '33.33%', flexDirection: 'row', gap: 4, paddingRight: 6 }}
+                      >
+                        <Txt style={[tiny, { flex: 1 }]} numberOfLines={1}>
+                          {T3[`attr_${k}`]}
+                        </Txt>
+                        <Txt bold style={tiny}>
+                          {preview.attrs[k]}
+                        </Txt>
+                      </View>
+                    ))}
+                  </View>
+                  <Txt tone="muted" style={tiny}>
+                    {T3.resumeAttrNote}
+                  </Txt>
+                </>
+              ) : previewFailed ? (
+                <Txt tone="muted" style={small}>
+                  {T3.resumeLoadFail}
+                </Txt>
+              ) : (
+                <Skeleton height={120} />
+              )}
+            </View>
+            {startConfirmLines(confirm).map((line, i) => (
+              <Txt key={i} style={small}>{`· ${line}`}</Txt>
+            ))}
+            {data?.active ? (
+              <Txt tone="muted" style={small}>
+                {M.activeOther}
+              </Txt>
+            ) : null}
+            {errLine}
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Btn style={{ flex: 1 }} onPress={() => setConfirm(null)}>
+                {M.cancel}
+              </Btn>
+              <Btn
+                style={{ flex: 1 }}
+                kind="primary"
+                testID="manager-start"
+                disabled={busy}
+                onPress={() => void start(confirm)}
+              >
+                {T3.resumeStart}
+              </Btn>
+            </View>
+          </View>
+        </PopSheet>
+      ) : null}
     </Screen>
   );
 }

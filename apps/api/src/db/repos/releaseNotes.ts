@@ -2,7 +2,7 @@ import type { PostTranslations, PublishReleaseNotes, ReleaseNote } from '@offsid
 import { POST_BODY_MAX, TRANSLATED_BODY_MAX } from '@offside/contracts/board-limits';
 import { conflictError } from '../../routes/shared.js';
 import { sha256Hex } from '../hash.js';
-import { newsPushStatements } from '../../push/enqueue.js';
+import { fanoutNewsEvent, newsPushStatements } from '../../push/enqueue.js';
 import type { Lang } from '../../lang.js';
 import { LOCALES, TRANSLATED_LOCALES } from '@offside/contracts/i18n';
 import { parseI18n } from './boards.js';
@@ -275,5 +275,7 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
       '릴리즈 노트가 다른 작업에서 수정됐어요. 다시 실행해 주세요.',
       'RELEASE_POST_CONFLICT',
     );
+  // T-11-688 받는 사람은 batch가 끝난 뒤 기기 묶음마다 따로 쓴다.
+  if (!post) await fanoutNewsEvent(db, postId, 'release', now);
   return { postId, publishedIds, updated: true, balancePatchIds };
 }

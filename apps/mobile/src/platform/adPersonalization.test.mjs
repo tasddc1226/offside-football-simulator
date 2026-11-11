@@ -8,7 +8,9 @@ vi.mock('@offside/game/storage', () => ({
   },
 }));
 import {
+  allowPersonalizedAds,
   inPersonalizedTest,
+  PERSONALIZED_ALL_FROM,
   PERSONALIZED_TEST as T,
   PERSONALIZED_TEST_KEY,
 } from './adPersonalization';
@@ -52,5 +54,27 @@ describe('Android personalized ads test', () => {
   it('stays non-personalized when the draw cannot be saved', () => {
     f.failSave = true;
     expect(inPersonalizedTest(krAndroid, during, () => 0)).toBe(false);
+  });
+});
+
+describe('Android personalized ads (T-11-687)', () => {
+  const jpAndroid = { os: 'android', locales: ['ja-JP'], consentRequired: false };
+  it('opens every Android device outside consent regions from the policy date', () => {
+    expect(PERSONALIZED_ALL_FROM).toBe(Date.parse('2026-11-10T15:00:00Z'));
+    expect(allowPersonalizedAds(jpAndroid, PERSONALIZED_ALL_FROM - 1, () => 0)).toBe(false);
+    expect(allowPersonalizedAds(jpAndroid, PERSONALIZED_ALL_FROM, () => 0.99)).toBe(true);
+    expect(allowPersonalizedAds(krAndroid, T.end + 1, () => 0.99)).toBe(true);
+    expect(f.store.size).toBe(0);
+  });
+
+  it('covers the whole old 10% test window (T-11-691)', () => {
+    expect(allowPersonalizedAds(krAndroid, during, () => 0.5)).toBe(true);
+  });
+
+  it.each([
+    ['iOS', { ...jpAndroid, os: 'ios' }],
+    ['consent message regions', { ...jpAndroid, consentRequired: true }],
+  ])('keeps %s non-personalized', (_, device) => {
+    expect(allowPersonalizedAds(device, PERSONALIZED_ALL_FROM + 1, () => 0)).toBe(false);
   });
 });

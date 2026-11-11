@@ -33,7 +33,7 @@ export const gManager: Translation<GManagerMsgs> = {
   ending_comeback: '解任からの復活',
   ending_steady: '黙々と導いた指導者',
   endingDesc_legend: '優勝トロフィーを何度も掲げた監督でした。',
-  endingDesc_promoter: '率いたチームを、どこも一つ上のリーグへ引き上げました。',
+  endingDesc_promoter: '率いたチームを一つ上のリーグへ引き上げました。',
   endingDesc_youth: 'ユースから引き上げた選手たちがチームの背骨になりました。',
   endingDesc_oneclub: '一つのクラブのベンチを最後まで守り抜きました。',
   endingDesc_journeyman: '複数のクラブを渡り歩き、チームを率いました。',

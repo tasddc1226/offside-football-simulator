@@ -28,7 +28,7 @@ import {
   profiles,
 } from '../schema.js';
 import { runBatch } from './batch.js';
-import { newsPushStatements } from '../../push/enqueue.js';
+import { fanoutNewsEvent, newsPushStatements } from '../../push/enqueue.js';
 import type { Lang } from '../../lang.js';
 
 const COMMENTS_MAX = 200;
@@ -231,6 +231,8 @@ export async function createPost(
       ),
     ...newsPushStatements(d1, id, board, now),
   ]);
+  // T-11-688 받는 사람은 글 batch가 끝난 뒤 기기 묶음마다 따로 쓴다(한 batch로 D1을 오래 붙잡지 않게).
+  await fanoutNewsEvent(d1, id, board, now);
   return id;
 }
 

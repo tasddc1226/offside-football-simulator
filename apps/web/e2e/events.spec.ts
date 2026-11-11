@@ -55,7 +55,10 @@ test('이벤트를 닫고 일정과 기록을 확인한 뒤 같은 선택지로 
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await resumeWithSave(page, { pending: { type: 'event', id: 'bench-talk' } });
   const sheet = page.locator('#sheet');
+  // 선택지가 다 그려진 뒤 읽는다(먼저 읽으면 빈 목록이 잡혀 뒤 비교가 흔들린다).
+  await expect(sheet.locator('[data-choice]').first()).toBeVisible();
   const choices = await sheet.locator('[data-choice]').allTextContents();
+  expect(choices.length).toBeGreaterThan(0);
   const saved = await page.evaluate(() => localStorage.getItem('ft_save'));
   await sheet.getByRole('button', { name: '잠시 닫기' }).click();
   await expect(sheet).toBeHidden();

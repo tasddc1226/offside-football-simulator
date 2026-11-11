@@ -56,8 +56,8 @@ export async function queueCareerReminders(env: Bindings, time = Date.now()) {
     ),
     env.DB.prepare(
       `INSERT OR IGNORE INTO notifications
-      (id,profile_id,source_key,kind,title,body,target_json,created_at,expires_at)
-      SELECT 'ntf_' || lower(hex(randomblob(16))),profile_id,'career-reminder:' || ? || ':' || profile_id,'return',
+      (id,profile_id,source_key,kind,topic,title,body,target_json,created_at,expires_at)
+      SELECT 'ntf_' || lower(hex(randomblob(16))),profile_id,'career-reminder:' || ? || ':' || profile_id,'return','comeback',
         CASE reminder_stage WHEN 1 THEN ? WHEN 2 THEN ? ELSE ? END,
         CASE reminder_stage WHEN 1 THEN ? WHEN 2 THEN ? ELSE ? END,
         '{"type":"screen","screen":"home"}',?,? FROM career_activity WHERE reminder_batch=?`,

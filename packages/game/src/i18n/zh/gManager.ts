@@ -33,7 +33,7 @@ export const gManager: Translation<GManagerMsgs> = {
   ending_comeback: '下課後東山再起',
   ending_steady: '默默耕耘的教頭',
   endingDesc_legend: '是一位多次高舉冠軍獎盃的總教練。',
-  endingDesc_promoter: '帶過的每支球隊，都被他拉上更高一級的聯賽。',
+  endingDesc_promoter: '曾把帶過的球隊拉上更高一級的聯賽。',
   endingDesc_youth: '從青訓提拔的球員成了球隊的骨幹。',
   endingDesc_oneclub: '始終堅守同一家俱樂部的教練席。',
   endingDesc_journeyman: '輾轉多家俱樂部執教球隊。',

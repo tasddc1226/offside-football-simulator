@@ -215,8 +215,7 @@ function PushNudge() {
   }, [visible]);
   if (!visible) return null;
   async function turnOn() {
-    await acceptPushAsk('friends');
-    if (pushState.message) toast(pushState.message);
+    if ((await acceptPushAsk('friends')) && pushState.message) toast(pushState.message);
   }
   return (
     <Card gap={6} testID="friend-push-nudge">

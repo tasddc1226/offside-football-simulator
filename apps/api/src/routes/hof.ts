@@ -14,10 +14,11 @@ import type { Hono } from 'hono';
 import { notFoundError, ok } from './shared.js';
 import { getPublicHof, listPublicHof } from '../db/repos/careers.js';
 import { ensureHofBackfilled } from '../db/repos/hofBackfill.js';
-import { edgeCached } from '../edgeCache.js';
+import { edgeCached, waitUntil } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, getPublicReadDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
+import { sharedCount } from '../hof/sharedCount.js';
 
 // T-10-005 공개 명예의 전당. 로그인 없이 누구나 읽는다 — 응답에는 유저가 공개를 고른 이름과 커리어
 // 기록만 있고 프로필·계정 정보는 없다. D1 읽기를 줄이려고 짧게 캐시한다.
@@ -66,7 +67,16 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
                   c,
                   EDGE.hofCount(sort, season?.id, pos, dpos),
                   COUNT_TTL,
-                  load,
+                  // T-11-688 엣지 캐시가 끝난 데이터센터마다 다시 세지 않고 D1에 한 벌만 둔 값을 읽는다.
+                  () =>
+                    filling
+                      ? load()
+                      : sharedCount(
+                          c.env.DB,
+                          EDGE.hofCount(sort, season?.id, pos, dpos),
+                          load,
+                          (p) => waitUntil(c, p),
+                        ),
                   () => !filling,
                 ),
         );

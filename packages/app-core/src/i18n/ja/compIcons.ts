@@ -4,7 +4,7 @@ import type { CompIconsMsgs } from '../ko/compIcons';
 export const compIcons: Translation<CompIconsMsgs> = {
   sheetTitle: (p) => `${p.name}のロゴ`,
   intro:
-    'ロゴを自分で選んだ画像に変えられます。この端末にだけ保存され、シェア画像やほかの人の画面には標準のロゴが表示されます。',
+    'ロゴを自分で選んだ画像に変えられます。ログインすると自分のほかの端末でも使われ、シェア画像やほかの人の画面には標準のロゴが表示されます。',
   where: '設定 → 大会・タイトル名とロゴの変更で、リーグ・大会のロゴをまとめて見られます。',
   pick: '画像を選ぶ',
   reset: '標準のロゴに戻す',

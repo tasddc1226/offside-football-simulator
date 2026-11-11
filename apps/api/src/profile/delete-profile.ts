@@ -10,6 +10,7 @@ import { deleteChatActivityStatements } from '../db/repos/chat.js';
 import { deleteNameReportsStatement } from '../db/repos/nameReports.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
+import { deleteCompCustomStatement } from '../db/repos/compCustom.js';
 import { resetFirstsBackfillStatement } from '../db/repos/firsts.js';
 import { deleteFriendsStatements } from '../db/repos/friends.js';
 import { deleteReferralsStatements } from '../db/repos/referrals.js';
@@ -152,6 +153,7 @@ export async function executeProfileDeletion(
     // T-11-080 내 열린 판매 등록을 내리고 구단 자금 행을 지운다.
     ...marketDeleteStatements(db, input.profileId, input.now),
     deleteClubCustomStatement(db, input.profileId),
+    deleteCompCustomStatement(db, input.profileId),
     // T-10-092 구단주 팀(팀 경기는 팀 FK CASCADE로 함께 지워진다).
     ...deleteOwnerTeamsStatements(db, input.profileId),
     // T-11-098 친구 줄(내 줄 + 나를 가리키는 줄). 친선전은 팀 FK CASCADE로 함께 지워진다.

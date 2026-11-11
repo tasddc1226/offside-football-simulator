@@ -6,7 +6,8 @@ const HOUR = 3600000;
 const issueNames = {
   'backup-recovery-unverified':
     'R2 사본의 일관된 복구 검증이 없거나 검증 자료를 확인할 수 없습니다. Time Travel 상태와 별개입니다.',
-  'backup-recovery-stale': '복원 검증된 R2 스냅샷이 30시간보다 오래됐습니다.',
+  'backup-recovery-stale':
+    '복원 검증된 R2 스냅샷이 35일보다 오래됐습니다. 정비 시간에 새 스냅샷을 찍어야 합니다.',
   'resource-workflow-missing-or-stale': 'GitHub 인프라 예약 점검이 3시간 넘게 시작되지 않았습니다.',
   'resource-workflow-completion-stale': 'GitHub 인프라 점검 완료 기록이 3시간 넘게 지연됐습니다.',
   'resource-workflow-failed':

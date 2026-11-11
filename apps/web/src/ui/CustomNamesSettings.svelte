@@ -1,5 +1,5 @@
 <script lang="ts">
-  // 설정 화면의 "대회·수상 이름 바꾸기" 카드(T-11-647) — 대회·수상·리그 이름을 이 기기에서만 바꾸고, 에디트 파일로 옮긴다.
+  // 설정 화면의 "대회·수상 이름 바꾸기" 카드(T-11-647) — 대회·수상·리그 이름을 내 화면에서만 바꾼다. 계정과 맞추고(T-11-684) 에디트 파일로도 옮긴다.
   // 저장은 app-core/customNames. 이름은 저장된 한국어(tn 키)로 고르고, 칸 옆에는 지금 언어의 원래 이름을 보여 준다.
   import { CUSTOM_NAME_MAX, CUSTOM_NAMES_LIMIT, CUSTOM_NAMES_NO_SPACE } from '@offside/app-core/customNames';
   import { customNameCatalog, customNameSectionKey, type CustomNameGroup } from '@offside/app-core/customNamesCatalog';
@@ -14,6 +14,8 @@
   import { compIconsText as CI } from '@offside/app-core/i18n/ko/compIcons';
   import CompIcon from './CompIcon.svelte';
   import { compIcons, exportCompIcons, importCompIcons, resetCompIcons } from './compIcons.svelte.js';
+  import { compSyncText } from '@offside/app-core/compCustomSync';
+  import { compCustomSync } from './compCustomSync.svelte.js';
 
   /** 한 번에 그리는 줄 수(더 보기로 늘린다). */
   const PAGE = 40;
@@ -32,7 +34,7 @@
   });
   const visible = $derived(items.slice(0, shown));
   const changed = $derived(Object.keys(customNames.map).length);
-  // T-11-681 리그·대회 로고(이 기기에만). 에디트 파일에 이름과 함께 싣는다.
+  // T-11-681 리그·대회 로고. 에디트 파일에 이름과 함께 싣는다.
   const changedIcons = $derived(Object.keys(compIcons.map).length);
 
   function rename(ko: string, value: string) {
@@ -85,7 +87,7 @@
   {#if open}
     <div class="stack settings-body" id="settings-names" style="gap:10px">
       <p class="muted fs-sm" style="margin:0">{T.intro}</p>
-      <p class="muted fs-xs" style="margin:0">{T.local}</p>
+      <p class="muted fs-xs" style="margin:0" data-comp-sync={compCustomSync.status} aria-live="polite">{compSyncText(compCustomSync.status)}</p>
       <div class="name-groups" role="group" aria-label={T.group}>
         {#each GROUPS as g (g.id)}
           <button class="name-tab" aria-pressed={group === g.id} data-name-group={g.id} onclick={() => pick(g.id)}>{g.label()}</button>

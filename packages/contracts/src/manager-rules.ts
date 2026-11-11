@@ -38,6 +38,25 @@ export type ManagerEnding = (typeof MANAGER_ENDINGS)[number];
 export const MANAGER_SEASONS_MIN = 8;
 export const MANAGER_SEASONS_MAX = 10;
 
+/** T-11-648 감독 커리어 3: 엔진 번호 · 최대 시즌 · 감독 능력치 · 지도자 자격. */
+export const MANAGER_ENGINES = [2, 3] as const;
+export type ManagerEngine = (typeof MANAGER_ENGINES)[number];
+export const MANAGER3_SEASONS_MAX = 20;
+export const MANAGER3_ATTRS = [
+  'atk',
+  'def',
+  'tac',
+  'mgmt',
+  'motiv',
+  'youth',
+  'eye',
+  'disc',
+  'adapt',
+] as const;
+export type Manager3Attr = (typeof MANAGER3_ATTRS)[number];
+export const MANAGER3_LICENSES = ['C', 'B', 'A', 'P'] as const;
+export type Manager3License = (typeof MANAGER3_LICENSES)[number];
+
 /** 특기와 짝지은 시너지 id(team-synergy DUOS · TEAM_RULES). */
 export const SPECIAL_SYNERGIES: Record<ManagerSpecial, readonly string[]> = {
   wing: ['cross', 'overlap'],

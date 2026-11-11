@@ -11,6 +11,8 @@ export const manager: Translation<ManagerMsgs> = {
   resumeTitle: '繼續總教練生涯',
   resumeLine: (p) => `${p.club} · ${p.n}/${p.total}賽季`,
   resumeOffers: (p) => `正在挑選俱樂部邀約 · ${p.n}/${p.total}賽季`,
+  resumeLine3: (p) => `${p.club} · 第${p.n}賽季`,
+  resumeOffers3: (p) => `正在挑選俱樂部邀約 · 第${p.n}賽季`,
   resumeDone: '只剩確定為總教練卡',
   resumeAria: (p) => `繼續${p.name}的總教練生涯`,
   resumeNoName: '進行中的',

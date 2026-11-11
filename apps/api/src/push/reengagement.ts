@@ -28,8 +28,8 @@ export async function queueReengagement(env: Bindings, time = Date.now()) {
       AND NOT EXISTS (
         SELECT 1 FROM notifications n WHERE n.profile_id = i.profile_id AND n.kind = 'return'
         AND (n.source_key = 'return:' || i.last_active OR n.created_at > ?)) LIMIT 100)
-      INSERT OR IGNORE INTO notifications (id, profile_id, source_key, kind, title, body, target_json, created_at, expires_at)
-      SELECT 'ntf_' || lower(hex(randomblob(16))), profile_id, 'return:' || last_active, 'return',
+      INSERT OR IGNORE INTO notifications (id, profile_id, source_key, kind, topic, title, body, target_json, created_at, expires_at)
+      SELECT 'ntf_' || lower(hex(randomblob(16))), profile_id, 'return:' || last_active, 'return', 'comeback',
         '다시 킥오프할까요?', '오프사이드에서 이어갈 커리어와 새 소식을 확인해요.',
         '{"type":"screen","screen":"home"}', ?, ? FROM candidates`,
     ).bind(cutoff, oldest, now, cutoff, cutoff, now, iso(time + 90 * 86400_000)),

@@ -3,7 +3,8 @@ import type { CompIconsMsgs } from '../ko/compIcons';
 
 export const compIcons: Translation<CompIconsMsgs> = {
   sheetTitle: (p) => `${p.name} 標誌`,
-  intro: '可以把標誌換成自己選的圖片。只儲存在這台裝置，分享圖片與其他人的畫面仍顯示預設標誌。',
+  intro:
+    '可以把標誌換成自己選的圖片。登入後在自己的其他裝置也會套用，分享圖片與其他人的畫面仍顯示預設標誌。',
   where: '在設定 → 更改賽事・獎項名稱與標誌，可以一次看到所有聯賽與賽事標誌。',
   pick: '選擇圖片',
   reset: '改回預設標誌',

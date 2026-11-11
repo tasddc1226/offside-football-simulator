@@ -376,6 +376,26 @@ describe('시즌 2 새 업적 — 달성', () => {
     expect(item(g, 'mgr-titles')).toMatchObject({ level: 2, cur: 5, next: 10 });
     expect(item(g, 'mgr-double').done).toBe(true);
   });
+
+  it('T-11-648 감독 키우기 결과 — 컵 · 감독상 · 자격 P · 15시즌 · 명장 · 서로 다른 엔딩', () => {
+    const base = { titles: 0, promotions: 0, grade: 'B', mastery: {} };
+    const none = groupsOf([], { ...S2, managers: [{ ...base, ending: 'steady' }] });
+    for (const id of ['mgr-cup', 'mgr-award', 'mgr-pro', 'mgr-long', 'mgr-legend'])
+      expect([id, item(none, id).done]).toEqual([id, false]);
+    expect(item(none, 'mgr-endings')).toMatchObject({ cur: 1, done: false });
+    const g = groupsOf([], {
+      ...S2,
+      managers: [
+        { ...base, cups: 1, seasons: 15, ending: 'legend', v3: { license: 'P', awards: 1 } },
+        { ...base, ending: 'oneclub' },
+        { ...base, ending: 'oneclub' },
+        { ...base, ending: 'youth' },
+      ],
+    });
+    for (const id of ['mgr-cup', 'mgr-award', 'mgr-pro', 'mgr-long', 'mgr-legend'])
+      expect([id, item(g, id).done]).toEqual([id, true]);
+    expect(item(g, 'mgr-endings')).toMatchObject({ cur: 3, done: true });
+  });
 });
 
 describe('시즌 2 단계 점수와 보상', () => {

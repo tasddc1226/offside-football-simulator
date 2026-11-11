@@ -50,4 +50,12 @@ export const inbox: Translation<InboxMsgs> = {
   emptyUnreadBody: '收到的通知可以在「全部」中再次查看。',
   emptyBody: '收到的 App 通知與測試通知會累積在這裡。',
   seeAll: '查看所有通知',
+  groupAll: '所有類型',
+  groupGame: '比賽 · 盃賽',
+  groupSocial: '好友 · 獎勵',
+  groupNews: '遊戲消息',
+  groupNudge: '簽到 · 回歸',
+  emptyGroup: '還沒有這類通知',
+  emptyGroupBody: '其他通知可以在「所有類型」查看。',
+  groupAria: (p) => `只看${p.title}通知`,
 };

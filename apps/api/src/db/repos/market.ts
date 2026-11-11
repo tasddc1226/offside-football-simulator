@@ -551,6 +551,7 @@ export async function buyListing(
       {
         profileId: b.sellerId,
         sourceKey: `market-sold:${b.id}`,
+        topic: 'market',
         now: b.now,
         content: {
           kind: 'market',

@@ -14,17 +14,50 @@ import { accountLinkedSql } from './profiles.js';
 type Metrics = Record<TitleMetric, number>;
 type EnhanceMetric =
   'enhanceTries' | 'enhanceKeeps' | 'enhanceDowns' | 'enhanceNear' | 'enhanceSpent';
+type ManagerMetric = 'mgrDone' | 'mgrTitles' | 'mgrPro' | 'mgrLegends';
 
 /** Scalar aggregates use careers.profile_id, never the transferable cards.owner_id.
  * Pin the owner index: the global HOF peak index can otherwise scan every owner's retirees.
  * T-11-556 subqueries read only owner-prefixed indexes (cup_entries_profile_idx, owner_season_records · owner_honors PK).
  * Korean players are stored with a NULL nation, so they count as DEFAULT_NATION. */
 export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics> {
-  const [row, enhance] = await Promise.all([
+  const [row, enhance, manager] = await Promise.all([
     careerTitleMetricsOf(db, profileId),
     enhanceTitleMetricsOf(db, profileId),
+    managerTitleMetricsOf(db, profileId),
   ]);
-  return { ...row, ...enhance };
+  return { ...row, ...enhance, ...manager };
+}
+
+/** T-11-648 감독 칭호의 재료: 끝낸 감독 결과(manager_careers_profile_idx). 옛 결과에는 v3가 없어 P 자격은 감독 키우기만 센다. */
+async function managerTitleMetricsOf(db: Db, profileId: string) {
+  const row = await db.get<Record<ManagerMetric, number>>(sql`
+    select count(*) as mgrDone,
+      coalesce(sum(json_extract(result_json, '$.titles')), 0) as mgrTitles,
+      coalesce(sum(json_extract(result_json, '$.v3.license') = 'P'), 0) as mgrPro,
+      coalesce(sum(json_extract(result_json, '$.ending') = 'legend'), 0) as mgrLegends
+    from manager_careers where profile_id = ${profileId} and status = 'done'
+      and result_json is not null`);
+  return row!;
+}
+
+const MANAGER_TITLES = PERMANENT_TITLES.filter((t) => t.category === 'manager');
+
+/** T-11-648 감독 커리어를 끝낸 뒤 새로 닿은 감독 칭호를 준다(강화 칭호와 같은 방식, 실패해도 감독 결과는 그대로). */
+export async function managerTitlesAfter(db: Db, profileId: string, now: string) {
+  try {
+    const m = await managerTitleMetricsOf(db, profileId);
+    const reached = MANAGER_TITLES.filter((t) => m[t.metric as ManagerMetric] >= t.target);
+    if (!reached.length) return [];
+    const held = await db
+      .select({ id: ownerTitleAwards.titleId })
+      .from(ownerTitleAwards)
+      .where(eq(ownerTitleAwards.profileId, profileId));
+    if (reached.every((t) => held.some((a) => a.id === t.id))) return [];
+    return await refreshOwnerTitles(db, profileId, now);
+  } catch {
+    return [];
+  }
 }
 
 /** T-11-373 카드 강화 칭호의 재료(card_enhance_log_profile_idx). 카드를 팔아도 내가 시도한 기록은 그대로 센다. */
@@ -62,7 +95,7 @@ export async function enhanceTitlesAfter(db: Db, profileId: string, now: string)
 }
 
 async function careerTitleMetricsOf(db: Db, profileId: string) {
-  const row = await db.get<Omit<Metrics, EnhanceMetric>>(sql`
+  const row = await db.get<Omit<Metrics, EnhanceMetric | ManagerMetric>>(sql`
     select
       (select count(*) from careers c where c.profile_id = ${profileId}
        and c.status = 'retired' and c.service_season = 0 and c.hidden = 0) as preseason,

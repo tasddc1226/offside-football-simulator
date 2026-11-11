@@ -17,6 +17,8 @@ const ko = {
     `${p.club} · ${p.n}/${p.total}시즌`,
   resumeOffers: (p: { n: number; total: number }) =>
     `구단 제의를 고르는 중이에요 · ${p.n}/${p.total}시즌`,
+  resumeLine3: (p: { club: string; n: number }) => `${p.club} · ${p.n}번째 시즌`,
+  resumeOffers3: (p: { n: number }) => `구단 제의를 고르는 중이에요 · ${p.n}번째 시즌`,
   resumeDone: '감독 카드로 확정만 남았어요',
   resumeAria: (p: { name: string }) => `${p.name} 감독 커리어 이어 하기`,
   resumeNoName: '진행 중인',

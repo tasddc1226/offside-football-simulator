@@ -50,4 +50,12 @@ export const inbox: Translation<InboxMsgs> = {
   emptyUnreadBody: '受け取った通知は「すべて」でもう一度見られます。',
   emptyBody: '受け取ったアプリ通知とテスト通知がここにたまります。',
   seeAll: 'すべての通知を見る',
+  groupAll: 'すべての種類',
+  groupGame: '試合 · 大会',
+  groupSocial: 'フレンド · 報酬',
+  groupNews: 'ゲームのお知らせ',
+  groupNudge: '出席 · 復帰',
+  emptyGroup: 'この種類の通知はまだありません',
+  emptyGroupBody: 'ほかの通知は「すべての種類」で見られます。',
+  groupAria: (p) => `${p.title}の通知だけを表示`,
 };

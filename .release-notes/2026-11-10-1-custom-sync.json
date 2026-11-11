@@ -1,0 +1,30 @@
+{
+  "id": "t-11-684-custom-sync",
+  "title": "대회·수상 이름과 리그·대회 로고 계정 동기화",
+  "items": [
+    "바꾼 대회·수상·리그 이름과 리그·대회 로고가 계정에 저장돼요. 같은 계정으로 로그인한 다른 기기에서도 그대로 보여요.",
+    "기기마다 따로 바꿔 둔 이름과 로고는 처음 맞출 때 하나로 합쳐져요."
+  ],
+  "en": {
+    "title": "Custom names and logos now sync to your account",
+    "items": [
+      "Your renamed competitions, awards and leagues and your league and competition logos are saved to your account, so they show up on every device signed in to it.",
+      "Names and logos you set separately on each device are merged the first time they sync."
+    ]
+  },
+  "ja": {
+    "title": "大会・タイトル名とリーグ・大会ロゴのアカウント同期",
+    "items": [
+      "変更した大会・タイトル・リーグの名前とリーグ・大会のロゴがアカウントに保存されます。同じアカウントでログインしたほかの端末でもそのまま表示されます。",
+      "端末ごとに別々に変えていた名前とロゴは、最初の同期で一つにまとまります。"
+    ]
+  },
+  "zh": {
+    "title": "賽事・獎項名稱與聯賽・賽事標誌帳號同步",
+    "items": [
+      "更改的賽事、獎項、聯賽名稱以及聯賽・賽事標誌會儲存到帳號。用同一個帳號登入的其他裝置也會照樣顯示。",
+      "在各裝置上分別更改的名稱與標誌，第一次同步時會合併在一起。"
+    ]
+  },
+  "availability": "web-app"
+}

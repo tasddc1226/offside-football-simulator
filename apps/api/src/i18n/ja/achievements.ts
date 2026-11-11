@@ -141,6 +141,12 @@ export const LABEL_JA: Record<string, string> = {
   'team-wall': '1試合あたり失点1未満',
   'mgr-titles': '監督としてのリーグ優勝合計',
   'mgr-double': '優勝と昇格をどちらも果たした監督',
+  'mgr-cup': 'カップ優勝監督',
+  'mgr-award': '年間最優秀監督賞を受けた監督',
+  'mgr-pro': '指導者ライセンスPの監督',
+  'mgr-long': '15シーズン指揮した監督',
+  'mgr-legend': 'エンディング「名将」の監督',
+  'mgr-endings': '異なる監督エンディング',
 };
 
 /** 단계 업적의 단위(숫자 바로 뒤에 붙는다). */
@@ -172,6 +178,7 @@ export const UNIT_JA: Record<string, string> = {
   'team-clean': '勝',
   'team-thrash': '勝',
   'mgr-titles': '回',
+  'mgr-endings': '種類',
 };
 
 /** '○○세까지 현역'(시즌마다 나이가 다르다). */

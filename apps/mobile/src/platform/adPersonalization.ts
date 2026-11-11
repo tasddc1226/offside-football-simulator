@@ -1,6 +1,10 @@
 // T-11-632 Meta 입찰 원인 시험. 비개인화 요청에서는 SDK가 모은 신호(Meta 입찰자 토큰)가 입찰자에게 가지 않아 Meta 입찰 요청이
 // 0건이라는 가설을 본다. 한국어 방침으로 안내한 한국 Android 기기 10%만, 동의 메시지 대상이 아닐 때, 정해진 기간에만 맞춤 광고를
-// 허용한다. 기간이 끝나면 앱 업데이트 없이 모두 비개인화로 돌아간다. 결과는 AdMob 보고서의 Meta 입찰 요청 수로 본다.
+// 허용한다. 결과는 AdMob 보고서의 Meta 입찰 요청 수로 본다.
+// T-11-687 Google 문서(admob/answer/10833943) "비개인화 요청에서는 서드파티 SDK 신호를 RTB 입찰자에게 보내지 않는다"에 따라
+// 2026-11-11부터 동의 메시지 대상이 아닌 모든 Android 기기에서 맞춤 광고를 허용한다(방침 9항, T-11-691 운영자 결정으로
+// 11-17에서 앞당김). iOS는 Meta ATE
+// 플래그를 넣는 스토어 빌드 전까지 비개인화로 둔다.
 import { loadKey, saveKey } from '@offside/game/storage';
 
 export const PERSONALIZED_TEST = {
@@ -9,6 +13,9 @@ export const PERSONALIZED_TEST = {
   end: Date.parse('2026-11-28T00:00:00+09:00'),
   share: 0.1,
 } as const;
+
+/** 방침 9항의 Android 맞춤형 광고 시작(KST). 바꾸면 방침도 같이 고친다. */
+export const PERSONALIZED_ALL_FROM = Date.parse('2026-11-11T00:00:00+09:00');
 
 export const PERSONALIZED_TEST_KEY = 'ft_personalized_ads_test_pick';
 
@@ -38,4 +45,14 @@ export function inPersonalizedTest(
     /[-_]KR$/i.test(device.locales[0] ?? '') &&
     picked(random)
   );
+}
+
+/** 이 기기의 광고 요청에서 비개인화 설정을 풀어도 되는지. */
+export function allowPersonalizedAds(
+  device: { os: string; locales: readonly string[]; consentRequired: boolean },
+  now = Date.now(),
+  random: () => number = Math.random,
+): boolean {
+  if (device.os !== 'android' || device.consentRequired) return false;
+  return now >= PERSONALIZED_ALL_FROM || inPersonalizedTest(device, now, random);
 }
