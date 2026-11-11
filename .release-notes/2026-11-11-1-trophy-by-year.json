@@ -1,0 +1,38 @@
+{
+  "id": "t-11-695-trophy-by-year",
+  "title": "우승 연혁 연도별로 묶기",
+  "items": [
+    "같은 해에 든 우승은 한 묶음으로 보여요",
+    "은퇴한 선수 화면에서도 연도별 우승 목록을 펼쳐 볼 수 있어요",
+    "아시안게임 · 올림픽 금메달에도 대회 로고가 보여요",
+    "시즌 결과 화면의 우승에도 대회 로고가 보여요"
+  ],
+  "en": {
+    "title": "Honors grouped by year",
+    "items": [
+      "Trophies won in the same year now appear together.",
+      "Retired players also have a by-year trophy list you can open.",
+      "Asian Games and Olympic gold medals now show the competition logo.",
+      "Trophies in the season result now show the competition logo."
+    ]
+  },
+  "ja": {
+    "title": "優勝歴を年ごとにまとめました",
+    "items": [
+      "同じ年に獲った優勝はひとまとめで表示されます。",
+      "引退した選手の画面でも年ごとの優勝リストを開けます。",
+      "アジア大会・オリンピックの金メダルにも大会ロゴが出ます。",
+      "シーズン結果の優勝にも大会ロゴが出ます。"
+    ]
+  },
+  "zh": {
+    "title": "冠軍紀錄依年份分組",
+    "items": [
+      "同一年拿下的冠軍會集中在一起顯示。",
+      "退役球員畫面也能展開依年份的冠軍列表。",
+      "亞運與奧運金牌也會顯示賽事標誌。",
+      "賽季結算的冠軍也會顯示賽事標誌。"
+    ]
+  },
+  "availability": "web-app"
+}

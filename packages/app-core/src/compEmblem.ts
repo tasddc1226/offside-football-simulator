@@ -158,11 +158,14 @@ export const hasCompEmblem = (ko: string): boolean => entries().has(ko);
 /** 로고를 붙이는 종류. 로고가 없는 이름이면 null. */
 export const compKindOf = (ko: string): CompKind | null => entries().get(ko)?.kind ?? null;
 
-const WIN_TAIL = ' 우승'; // i18n-ignore 저장값(트로피 이름 꼬리)
-/** 트로피 이름('프리미어리그 우승')에서 로고를 붙일 리그 · 대회 이름을 찾는다. 없으면 null. */
+// i18n-ignore 저장값(트로피 이름 꼬리). 아시안게임 · 올림픽은 우승 대신 금메달로 남는다(T-11-695).
+const WIN_TAILS = [' 우승', ' 금메달'] as const;
+/** 트로피 이름('프리미어리그 우승' · '올림픽 금메달')에서 로고를 붙일 리그 · 대회 이름을 찾는다. 없으면 null.
+ *  은메달 · 동메달은 메달 색이 뜻을 가지니 로고 대신 메달 그림을 그대로 둔다. */
 export function compOfTrophy(trophy: string): string | null {
-  if (!trophy.endsWith(WIN_TAIL)) return null;
-  const ko = trophy.slice(0, -WIN_TAIL.length);
+  const tail = WIN_TAILS.find((t) => trophy.endsWith(t));
+  if (!tail) return null;
+  const ko = trophy.slice(0, -tail.length);
   return hasCompEmblem(ko) ? ko : null;
 }
 

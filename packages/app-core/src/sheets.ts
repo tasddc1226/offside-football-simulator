@@ -215,7 +215,12 @@ export type SheetView =
       ch: string[];
       stats: { apps: number; goals: number; col: number; colLabel: string; rating: string };
       honors: string[];
-      trophyHonors?: { name: string; art: import('./career-trophy').CareerTrophy }[];
+      trophyHonors?: {
+        name: string;
+        art: import('./career-trophy').CareerTrophy;
+        /** T-11-695 로고를 붙일 대회(저장된 한국어 이름). 없으면 트로피 그림. */
+        comp?: string | null;
+      }[];
       comps: string[];
       /** T-11-261 대륙 대회 녹아웃 경로(대회 키·이름·한 줄). 녹아웃을 치른 대회만. */
       compPaths?: { key: string; name: string; line: string }[];

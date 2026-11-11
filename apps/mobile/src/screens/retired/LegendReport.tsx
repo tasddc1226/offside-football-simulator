@@ -34,6 +34,8 @@ import { POS_LABEL } from '@offside/game/pos-label';
 import { fmtValue, seasonLabelOf, totals } from '@offside/app-core/format';
 import { EVENT_ICON, yearsOf } from '@offside/app-core/legendReport';
 import { legendText as L } from '@offside/app-core/i18n/ko/legend';
+import { gameTrophyText as GT } from '@offside/app-core/i18n/ko/gameTrophy';
+import { TrophyYears } from '../game/TrophyTab';
 import { peakValue, retireValue } from '@offside/contracts/market-value';
 import { titleById } from '@offside/game/titles';
 import type { LegendView } from '@offside/app-core/state';
@@ -157,6 +159,8 @@ export function LegendReport({
   const [seen, setSeen] = useState({ highlights: false, national: false, journey: false });
   const see = (key: keyof typeof seen) => () => setSeen((s) => ({ ...s, [key]: true }));
   const [more, setMore] = useState(false);
+  // T-11-695 은퇴 뒤에도 연도별 우승 목록을 본다. 크레딧(이름 ×횟수)은 그대로 두고 아래에서 펼친다.
+  const [byYear, setByYear] = useState(false);
   // T-11-439 점수 아래 자세히: 맨 아래 접힌 점수 구성을 펼치고 그리로 내려간다.
   const moreRef = useRef<View>(null);
   function openMore() {
@@ -606,6 +610,49 @@ export function LegendReport({
                     <H2 style={{ marginBottom: 8 }}>{L.honoursTitle}</H2>
                   </View>
                   <RollLines list={honours} from={0} />
+                  {d ? (
+                    <>
+                      <Press
+                        testID="honours-by-year"
+                        accessibilityRole="button"
+                        accessibilityState={{ expanded: byYear }}
+                        onPress={() => setByYear((x) => !x)}
+                        style={{
+                          alignSelf: 'center',
+                          marginTop: 6,
+                          paddingVertical: 8,
+                          paddingHorizontal: 14,
+                          borderRadius: RADIUS.pill,
+                          borderWidth: 1,
+                          borderColor: f.line,
+                        }}
+                      >
+                        <FText bold size={0.875}>
+                          {byYear ? GT.byYearClose : GT.byYear}
+                        </FText>
+                      </Press>
+                      {byYear ? (
+                        <View
+                          testID="honours-by-year-list"
+                          style={{
+                            paddingHorizontal: 14,
+                            paddingVertical: 4,
+                            borderRadius: RADIUS.md,
+                            borderWidth: 1,
+                            borderColor: f.line,
+                            backgroundColor: 'rgba(255,255,255,0.04)',
+                          }}
+                        >
+                          <TrophyYears
+                            items={d.trophies}
+                            still
+                            bare
+                            film={{ ink: f.ink, muted: f.muted, line: f.line, accent: f.gold }}
+                          />
+                        </View>
+                      ) : null}
+                    </>
+                  ) : null}
                 </>
               ) : null}
               {awards.length ? (

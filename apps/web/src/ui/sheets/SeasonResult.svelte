@@ -3,6 +3,7 @@
   import { visibleSeasonNotes } from '@offside/app-core/potential-view';
   import type { SheetView } from '@offside/app-core/sheets';
   import CareerTrophy from '../CareerTrophy.svelte';
+  import CompIcon from '../CompIcon.svelte';
   import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
   import NewTitles from '../titles/NewTitles.svelte';
   import EraCard from '../era/EraCard.svelte';
@@ -28,7 +29,7 @@
 {#if v.trophyHonors?.length}
   <section class="season-trophies" aria-label={CM.trophies} data-season-trophies>
     {#each v.trophyHonors as trophy, i (i)}
-      <div class="season-trophy"><span class="trophy-reveal"><CareerTrophy art={trophy.art} /></span><b>{trophy.name}</b></div>
+      <div class="season-trophy"><span class="trophy-reveal">{#if trophy.comp}<CompIcon ko={trophy.comp} size={48} still />{:else}<CareerTrophy art={trophy.art} />{/if}</span><b>{trophy.name}</b></div>
     {/each}
   </section>
 {/if}

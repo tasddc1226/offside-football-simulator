@@ -11,4 +11,6 @@ export const gameTrophy: Translation<GameTrophyMsgs> = {
   ballonRank: (p) => ordinal(p.n),
   nominees: '30-player shortlist',
   stories: 'Completed storylines',
+  byYear: 'View by year',
+  byYearClose: 'Hide',
 };

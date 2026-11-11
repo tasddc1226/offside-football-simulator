@@ -10,4 +10,6 @@ export const gameTrophy: Translation<GameTrophyMsgs> = {
   ballonRank: (p) => `${p.n}位`,
   nominees: '候補30人',
   stories: '完結したストーリー',
+  byYear: '年ごとに見る',
+  byYearClose: '閉じる',
 };

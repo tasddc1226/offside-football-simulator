@@ -1,12 +1,8 @@
 <script lang="ts">
-  import CareerTrophy from '../CareerTrophy.svelte';
-  import { careerTrophy } from '@offside/app-core/career-trophy';
   import { tn } from '@offside/game/i18n/names';
-  import { compOfTrophy } from '@offside/app-core/compEmblem';
-  import CompIcon from '../CompIcon.svelte';
+  import TrophyYears from '../TrophyYears.svelte';
   // ui.ts trophyTab() 포트 (388~395줄)
   import type { LegendSource } from '@offside/game/types';
-  import ClubMark from '../ClubMark.svelte';
   import { gameTrophyText as L } from '@offside/app-core/i18n/ko/gameTrophy';
   import type { EraState } from '@offside/game/era';
   import { eraTab } from '@offside/app-core/era-view';
@@ -14,8 +10,6 @@
 
   const { s }: { s: LegendSource & { era?: EraState | undefined } } = $props();
   const era = $derived(eraTab(s));
-  const trophies = $derived(s.trophies.slice().reverse());
-  const awards = $derived(s.awards.slice().reverse());
   const ballon = $derived((s.ballon || []).slice().reverse());
   const stories = $derived((s.storyLog || []).slice().reverse());
 </script>
@@ -23,12 +17,9 @@
 <section class="card">
   <div class="eyebrow">Team Honours</div>
   <h2 style="margin-bottom:4px">{L.honours}</h2>
-  {#if trophies.length}
-    {#each trophies as x, i (i)}
-      {@const comp = compOfTrophy(x.t)}
-      <!-- T-11-681 리그·대회 우승은 그 대회 로고(누르면 바꾼다), 로고가 없는 트로피는 예전 트로피 그림 -->
-      <div class="trophy"><span class="y">{x.year}</span>{#if comp}<CompIcon ko={comp} size={30} />{:else}<CareerTrophy art={careerTrophy(x.t)} size={30} />{/if}<div><b>{tn(x.t)}</b><span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {tn(x.club)}</span></div></div>
-    {/each}
+  {#if s.trophies.length}
+    <!-- T-11-695 같은 해 우승은 한 묶음(연도 한 번). 리그·대회 우승 · 아시안게임 · 올림픽 금메달은 그 대회 로고 -->
+    <TrophyYears items={s.trophies} />
   {:else}
     <p class="empty">{L.empty}</p>
   {/if}
@@ -37,10 +28,8 @@
 <section class="card">
   <div class="eyebrow">Individual</div>
   <h2 style="margin-bottom:4px">{L.individual}</h2>
-  {#if awards.length}
-    {#each awards as x, i (i)}
-      <div class="trophy"><span class="y">{x.year}</span><div><b>{tn(x.t)}</b></div></div>
-    {/each}
+  {#if s.awards.length}
+    <TrophyYears items={s.awards} icons={false} />
   {:else}
     <p class="empty">{L.empty}</p>
   {/if}
