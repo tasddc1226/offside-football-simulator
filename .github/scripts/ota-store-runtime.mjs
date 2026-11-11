@@ -4,10 +4,9 @@
 // T-11-563 1.1.7 added the Meta app events module (Android native). 1.1.6, 1.1.5 and 1.1.4 builds keep receiving
 // updates through prepare-ota-legacy.mjs. 1.1.2 and 1.1.3 OTA ended (T-11-559).
 // T-11-698 1.1.8 added expo-tracking-transparency (iOS ATT). 1.1.7 moved to the legacy lanes.
-// The 1.1.8 runtimes are filled after the store builds finish (eas build:list).
 export const STORE_RUNTIMES = Object.freeze({
-  ios: 'TODO-1.1.8-ios', // 1.1.8
-  android: 'TODO-1.1.8-android', // 1.1.8
+  ios: '6b0fc3a98f174fbdb4e0a6182a0796d1daec4d47', // 1.1.8 iOS build 25
+  android: 'd6b29abc7828406cba1120a9f24a8de8d6dfe2b2', // 1.1.8 Android build 28
 });
 export function assertStoreRuntime(platform, fingerprint) {
   if (!STORE_RUNTIMES[platform] || STORE_RUNTIMES[platform] !== fingerprint)
