@@ -19,7 +19,9 @@ type ManagerMetric = 'mgrDone' | 'mgrTitles' | 'mgrPro' | 'mgrLegends';
 /** Scalar aggregates use careers.profile_id, never the transferable cards.owner_id.
  * Pin the owner index: the global HOF peak index can otherwise scan every owner's retirees.
  * T-11-556 subqueries read only owner-prefixed indexes (cup_entries_profile_idx, owner_season_records · owner_honors PK).
- * Korean players are stored with a NULL nation, so they count as DEFAULT_NATION. */
+ * Korean players are stored with a NULL nation, so they count as DEFAULT_NATION.
+ * T-11-692 The preseason subquery is pinned too: unpinned, production chose the all-owner careers_hof_count_idx
+ * (about 40k rows per call, D1 overload on 2026-11-09). */
 export async function titleMetricsOf(db: Db, profileId: string): Promise<Metrics> {
   const [row, enhance, manager] = await Promise.all([
     careerTitleMetricsOf(db, profileId),
@@ -97,7 +99,8 @@ export async function enhanceTitlesAfter(db: Db, profileId: string, now: string)
 async function careerTitleMetricsOf(db: Db, profileId: string) {
   const row = await db.get<Omit<Metrics, EnhanceMetric | ManagerMetric>>(sql`
     select
-      (select count(*) from careers c where c.profile_id = ${profileId}
+      (select count(*) from careers c INDEXED BY careers_profile_status_season_idx
+       where c.profile_id = ${profileId}
        and c.status = 'retired' and c.service_season = 0 and c.hidden = 0) as preseason,
       count(*) as retired, coalesce(sum(peak >= ${CAREER_FEATS.peak}), 0) as elite,
       coalesce(sum(ballon >= 1), 0) as ballon,

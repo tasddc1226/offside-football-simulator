@@ -117,7 +117,7 @@ describe('critical query result and read-cost regressions (local D1)', () => {
     const q = traced.queries[0]!;
     const baseline = {
       ...q,
-      sql: q.sql.replace(
+      sql: q.sql.replaceAll(
         'INDEXED BY careers_profile_status_season_idx',
         'INDEXED BY careers_hof_peak_idx',
       ),
@@ -125,9 +125,13 @@ describe('critical query result and read-cost regressions (local D1)', () => {
     const current = await run(q);
     const old = await run(baseline);
     expect(current.results).toEqual(old.results);
-    expect(await plan(q)).toContain(
-      'careers_profile_status_season_idx (profile_id=? AND status=?)',
+    const detail = await plan(q);
+    expect(detail).toContain('careers_profile_status_season_idx (profile_id=? AND status=?)');
+    // T-11-692 preseason 개수도 내 카드만 읽는다(전에는 운영에서 전체 은퇴 인덱스 careers_hof_count_idx를 탔다).
+    expect(detail).toContain(
+      'careers_profile_status_season_idx (profile_id=? AND status=? AND service_season=?)',
     );
+    expect(detail).not.toContain('careers_hof_');
     // T-11-663 비교 대상(전역 careers_hof_peak_idx)이 은퇴만 담는 부분 인덱스가 되어 그쪽도 읽는 행이 줄었다(5배 → 2배).
     expect(current.meta.rows_read).toBeLessThan(old.meta.rows_read / 2);
     console.info('owner-title rows read', {
