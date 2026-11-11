@@ -27,7 +27,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
     'まだ対戦できるチームがありません。他のオーナーがチームを組むと、ここに表示されます。',
   moreOpponents: '他の相手を見る',
   matchTitle: 'ランクマッチング',
-  matchRule: (p) => `RPと戦力が近いチームを選びます。1試合ごとに相手を${p.n}回まで探し直せます。`,
+  matchRule: (p) => `RPと戦力が近いチームを選びます。別の相手は1日${p.n}回まで探し直せます。`,
   matchGapNote:
     'RPの下の数字はあなたのチームとの差です。RPが高いチームに勝つと多く上がり、負けても減りが少なくなります。',
   oddsTitle: '予想 勝ち · 引き分け · 負け',
@@ -43,6 +43,12 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   matchRepick: (p) => `別の相手を探す (${p.left}/${p.max})`,
   // T-11-603 랭크 매칭 큐
   matchRepickBtn: (p) => `別の相手 (${p.left}/${p.max})`,
+  // T-11-702 앱은 보상형 광고를 보고 다른 상대를 찾는다(하루 횟수는 웹과 같다)
+  matchRuleApp: (p) =>
+    `RPと戦力が近いチームを選びます。広告を見ると、別の相手を1日${p.n}回まで探し直せます。`,
+  matchRepickAd: (p) => `広告を見て別の相手を探す (${p.left}/${p.max})`,
+  matchRepickAdBtn: (p) => `広告を見て別の相手 (${p.left}/${p.max})`,
+  matchRepickAdSkip: '広告を最後まで見ると別の相手を探せます。',
   squadSideAria: '見るチーム',
   squadOpponent: '相手チーム',
   squadLineup: '先発メンバー',

@@ -35,6 +35,11 @@ const UNITS = {
     ios: 'ca-app-pub-3797087216173591/9962450572',
     android: 'ca-app-pub-3797087216173591/7873589266',
   },
+  /** T-11-702 랭크 다른 상대 찾기. 따로 만든 단위가 생기기 전까지 후보 잠재력 단위를 같이 쓴다. */
+  repick: {
+    ios: 'ca-app-pub-3797087216173591/3708867561',
+    android: 'ca-app-pub-3797087216173591/3204550669',
+  },
 };
 type RewardPlacement = keyof typeof UNITS;
 const unitOf = (p: RewardPlacement) => (__DEV__ ? TestIds.REWARDED : Platform.select(UNITS[p]));
@@ -175,7 +180,8 @@ export async function claimReward(
     if (result === 'failed') return adText.rewardedUnavailable;
     if (result === 'closed') return skipped;
   }
-  countReward(p, free);
+  // 광고 이용 요약(시즌 업로드)은 커리어 화면의 세 자리만 센다.
+  if (p !== 'repick') countReward(p, free);
   onEarned();
   return '';
 }
