@@ -1,0 +1,26 @@
+{
+  "id": "t-11-701-rank-loss-edge",
+  "title": "랭크 경기에서 RP가 낮은 상대에게 질 때 감점 줄임",
+  "items": [
+    "RP가 낮은 상대에게 졌을 때 더 깎이는 점수를 최대 8점에서 최대 4점으로 줄였어요. 상위권 팀이 이겨도 거의 오르지 않던 문제를 덜었어요"
+  ],
+  "en": {
+    "title": "Smaller ranked losses against lower-RP teams",
+    "items": [
+      "Losing to a team with lower RP now costs at most 4 extra points instead of 8, so top teams are no longer stuck even when they win most of their matches."
+    ]
+  },
+  "ja": {
+    "title": "ランク戦でRPの低い相手に負けたときの減点を軽減",
+    "items": [
+      "RPの低い相手に負けたときに追加で減るRPを最大8から最大4にしました。上位チームが勝ってもほとんど上がらなかった問題を和らげました。"
+    ]
+  },
+  "zh": {
+    "title": "排位賽輸給低 RP 對手時扣分減少",
+    "items": [
+      "輸給 RP 較低的對手時額外扣的分數從最多 8 分降為最多 4 分，緩解上位球隊贏球也幾乎不升分的問題。"
+    ]
+  },
+  "availability": "web-app"
+}
