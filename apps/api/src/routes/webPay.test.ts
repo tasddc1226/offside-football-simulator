@@ -118,6 +118,42 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     ]);
   });
 
+  it('T-11-700 크리에이터 추적값은 형식이 맞을 때만 받고 결제 토큰의 user.tracking_id로 넘긴다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const calls = stubXsolla();
+    const trackingId = 'abcdefghijklmnopqrstuvwxyz123456';
+    const post = (body: Record<string, unknown>) =>
+      call('POST', '/v1/web-pay/orders', { cookie: me.cookie, body });
+    expect((await post({ productId: REROLL_15, trackingId })).status).toBe(201);
+    expect(JSON.parse(String(calls[0]?.init?.body)).user.tracking_id).toEqual({
+      value: trackingId,
+    });
+    // 추적값이 없으면 토큰 요청에도 넣지 않는다.
+    expect((await post({ productId: REROLL_15 })).status).toBe(201);
+    expect(JSON.parse(String(calls[1]?.init?.body)).user).not.toHaveProperty('tracking_id');
+    // 형식이 틀린 값은 엑솔라에 보내지 않고 거절한다.
+    expect((await post({ productId: REROLL_15, trackingId: 'short' })).status).toBe(400);
+    expect(calls).toHaveLength(2);
+  });
+
+  it('T-11-700 추적값 때문에 토큰이 거절되면 추적값 없이 다시 만들어 결제를 막지 않는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const bodies: { user: Record<string, unknown> }[] = [];
+    vi.stubGlobal('fetch', async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { user: Record<string, unknown> };
+      bodies.push(body);
+      return 'tracking_id' in body.user
+        ? new Response(JSON.stringify({ errorCode: 1 }), { status: 422 })
+        : new Response(JSON.stringify({ token: 'tok_1', order_id: 2001 }), { status: 201 });
+    });
+    const res = await call('POST', '/v1/web-pay/orders', {
+      cookie: me.cookie,
+      body: { productId: REROLL_15, trackingId: 'abcdefghijklmnopqrstuvwxyz123456' },
+    });
+    expect(res.status).toBe(201);
+    expect(bodies.map((b) => 'tracking_id' in b.user)).toEqual([true, false]);
+  });
+
   it('opens the 100-ticket pack only after catalog readiness and grants it once', async () => {
     const me = await issueGoogleCookie(ctx);
     const productId = 'com.offsidelab.app.boost_100';
