@@ -7,7 +7,6 @@ import { serviceAccountToken } from './google.ts';
 import {
   admobReady,
   admobRows,
-  appStoreRatingRows,
   ascInstallRows,
   ascSalesReady,
   ga4RetentionBatches,
@@ -18,6 +17,17 @@ import {
   type Batch,
   type Row,
 } from './kpiSources.ts';
+import {
+  easBatches,
+  ga4OptinRows,
+  searchBatches,
+  socialBatch,
+  socialReady,
+  supportReady,
+  supportRows,
+  voiceBatch,
+  voiceReady,
+} from './kpiExtra.ts';
 import { reviewsReady, storeApi } from './reviews.ts';
 
 type Fetch = typeof fetch;
@@ -25,6 +35,9 @@ type Fetch = typeof fetch;
 const KST_MS = 9 * 3_600_000;
 const DAY_MS = 86_400_000;
 const META_GRAPH = 'https://graph.facebook.com/v21.0';
+
+/** Play 설치 보고서가 늦게 채워지는 만큼 거슬러 다시 받는 날 수. */
+export const INSTALL_DAYS = 7;
 
 export const kpiReady = (env: Env) => !!(env.API_BASE && env.KPI_INGEST_TOKEN);
 
@@ -145,6 +158,9 @@ export async function runKpiIngest(env: Env, at: number, fetcher: Fetch = fetch)
   if (ga4Ready(env)) {
     tasks.push(['ga4', one((d) => ga4Rows(env, d, fetcher))]);
     tasks.push(['ga4', (d) => ga4RetentionBatches(env, d, fetcher)]);
+    tasks.push(['ga4', one((d) => ga4OptinRows(env, d, fetcher))]);
+    // T-11-693 검색 성과는 늦게 확정돼, 어제 차례에 최근 며칠을 한 번에 다시 쓴다.
+    tasks.push(['search', async (d) => (d === yesterday ? searchBatches(env, d, fetcher) : [])]);
   }
   if (env.META_ADS_ACCESS_TOKEN && env.META_AD_ACCOUNT_ID) {
     tasks.push(['meta', one((d) => metaRows(env, d, fetcher))]);
@@ -152,30 +168,44 @@ export async function runKpiIngest(env: Env, at: number, fetcher: Fetch = fetch)
   }
   if (reviewsReady(env))
     tasks.push(['store', one((d) => reviewRows(env, d, storeApi(env, fetcher)))]);
-  if (env.ASC_APP_ID)
-    tasks.push([
-      'store',
-      async (d) =>
-        d === yesterday ? [{ day: d, rows: await appStoreRatingRows(env, fetcher) }] : [],
-    ]);
+  // T-11-693 App Store 전체 평점(iTunes 공개 조회)은 Workers에서 403으로 막혀 한 번도 들어오지 않았다. 매일 실패만 남겨 수집을 뺐다.
   if (ascSalesReady(env) || playInstallsReady(env))
     tasks.push([
       'store',
-      // 한 스토어가 실패해도 다른 스토어 설치는 넣고, 실패는 결과에 남긴다.
+      // Play 설치 보고서는 며칠 늦게 채워진다. 그래서 어제 차례에 최근 INSTALL_DAYS일을 날마다 다시 받는다.
+      // 서버가 그날 설치 지표를 통째로 바꾸므로 두 스토어를 한 묶음으로 보낸다. 한쪽이 실패한 날은 최근 이틀만 넣고
+      // (다른 쪽 값이라도 빨리 보이게), 더 지난 날은 이미 넣은 값을 지우지 않게 건너뛴다.
       async (d) => {
-        const got = await Promise.allSettled([
-          ascSalesReady(env) ? ascInstallRows(env, d, fetcher) : null,
-          playInstallsReady(env) ? playInstallRows(env, d, fetcher) : null,
-        ]);
-        const rows = got.flatMap((x) => (x.status === 'fulfilled' ? (x.value ?? []) : []));
-        const error = got
-          .flatMap((x) => (x.status === 'rejected' ? [String(x.reason)] : []))
-          .join(' · ');
-        if (!rows.length && error) throw new Error(error);
-        return rows.length ? [{ day: d, rows, ...(error ? { error } : {}) }] : [];
+        if (d !== yesterday) return [];
+        const out: Batch[] = [];
+        const errors: string[] = [];
+        for (let n = 1; n <= INSTALL_DAYS; n += 1) {
+          const day = kstDayAgo(at, n);
+          const got = await Promise.allSettled([
+            ascSalesReady(env) ? ascInstallRows(env, day, fetcher) : null,
+            playInstallsReady(env) ? playInstallRows(env, day, fetcher) : null,
+          ]);
+          const rows = got.flatMap((x) => (x.status === 'fulfilled' ? (x.value ?? []) : []));
+          const error = got
+            .flatMap((x) => (x.status === 'rejected' ? [String(x.reason)] : []))
+            .join(' · ');
+          if (error) errors.push(`${day} ${error}`);
+          if (rows.length && (!error || n <= 2))
+            out.push({ day, rows, ...(error ? { error } : {}) });
+        }
+        if (!out.length && errors.length) throw new Error(errors[0]);
+        return out;
       },
     ]);
   if (admobReady(env)) tasks.push(['admob', one((d) => admobRows(env, d, fetcher))]);
+  if (socialReady(env))
+    tasks.push(['social', async (d) => (d === yesterday ? socialBatch(env, d, fetcher) : [])]);
+  if (voiceReady(env))
+    tasks.push(['voice', async (d) => (d === yesterday ? voiceBatch(env, d, fetcher) : [])]);
+  if (supportReady(env) && env.SUPPORT_QUERY)
+    tasks.push(['support', one((d) => supportRows(env, d, fetcher))]);
+  if (env.EXPO_TOKEN)
+    tasks.push(['eas', async (d) => (d === yesterday ? easBatches(env, [d], fetcher) : [])]);
   const out: { source: string; day: string; rows?: number; error?: string }[] = [];
   for (const day of [yesterday, kstDayAgo(at, 2)])
     for (const [source, collect] of tasks) {

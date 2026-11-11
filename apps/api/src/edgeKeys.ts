@@ -29,6 +29,8 @@ export const EDGE = {
   /** T-11-494 무거운 운영 도구 집계. 관리자 확인 뒤에만 읽고, 여러 번 누르거나 새로고침해도 1분 안에는 D1에 다시 가지 않는다. */
   adminFunds: '/v1/admin/funds',
   adminAutomation: (hours: number) => `/v1/admin/automation?hours=${hours}`,
+  /** T-11-693 기본 보기(첫 쪽 · 거르기 없음)만 기간별로 1분 동안 다시 쓴다. */
+  adminPushPerformance: (days: string) => `/v1/admin/push-performance?days=${days}`,
   /** T-11-029 서버 최초 기록·서버 기록은 시즌마다 따로다(시즌 id를 푼 경로). */
   firsts: (season: number) => `/v1/firsts?season=${season}`,
   /** T-11-029 영구결번은 시즌마다 따로다(시즌 id를 푼 경로). */

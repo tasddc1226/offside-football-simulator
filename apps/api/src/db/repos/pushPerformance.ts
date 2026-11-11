@@ -107,18 +107,16 @@ export async function getPushPerformance(
         query.category ?? null,
         query.category ?? null,
       );
-  const [totals, categories, daily, campaigns, start, retention, cups, nudges] = await db.batch([
-    statement(`SELECT ${COUNTS} FROM facts`),
-    statement(`SELECT category, ${COUNTS} FROM facts GROUP BY category ORDER BY category`),
+  // T-11-693 전체 · 종류별 · 날짜별 · 복귀 단계 합계는 같은 알림 묶음을 네 번 훑지 않고 가장 잘게 나눈 한 번의 결과를 더해 만든다.
+  const [cells, campaigns, start, cups, nudges] = await db.batch([
     statement(
-      `SELECT substr(datetime(created_at, '+9 hours'), 1, 10) AS day, ${COUNTS} FROM facts GROUP BY day ORDER BY day`,
+      `SELECT substr(datetime(created_at, '+9 hours'), 1, 10) AS day, category, stage, ${COUNTS},
+        COALESCE(SUM(returned), 0) AS returned, COALESCE(SUM(retired), 0) AS retired
+        FROM facts GROUP BY 1, 2, 3`,
     ),
     statement(`SELECT campaign AS id, category, MIN(title) AS title, MAX(created_at) AS createdAt, ${COUNTS}
       FROM facts GROUP BY campaign, category ${query.issues === '1' ? 'HAVING SUM(failed + unknown) > 0' : ''} ORDER BY createdAt DESC, id DESC LIMIT 21 OFFSET ${query.page * 20}`),
     db.prepare("SELECT value FROM app_meta WHERE key = 'push_tracking_started_at'"),
-    statement(
-      `SELECT stage, ${COUNTS}, SUM(returned) AS returned, SUM(retired) AS retired FROM facts WHERE stage IS NOT NULL GROUP BY stage ORDER BY stage`,
-    ),
     statement(`, cup_people AS (
       SELECT n.id, substr(n.source_key,14) AS cupId, n.title, n.created_at,
         c.season, c.edition,
@@ -160,16 +158,49 @@ export async function getPushPerformance(
       )
       .bind(from, through),
   ]);
+  type Cell = Record<(typeof KEYS)[number] | 'returned' | 'retired', number> & {
+    day: string;
+    category: string;
+    stage: number | null;
+  };
+  const sumBy = <K extends string | number>(rows: Cell[], keyOf: (c: Cell) => K | null) => {
+    const out = new Map<K, Record<string, number>>();
+    for (const c of rows) {
+      const k = keyOf(c);
+      if (k === null) continue;
+      let t = out.get(k);
+      if (!t) out.set(k, (t = Object.fromEntries(KEYS.map((x) => [x, 0]))));
+      for (const x of KEYS) t[x]! += Number(c[x] ?? 0);
+      t.returned = (t.returned ?? 0) + Number(c.returned ?? 0);
+      t.retired = (t.retired ?? 0) + Number(c.retired ?? 0);
+    }
+    return [...out].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  };
+  const all = cells!.results as Cell[];
+  const counts = (t: Record<string, number>) =>
+    Object.fromEntries(KEYS.map((x) => [x, t[x] ?? 0])) as Record<(typeof KEYS)[number], number>;
+  const zero = Object.fromEntries(KEYS.map((x) => [x, 0]));
   return {
     generatedAt: now,
     trackingStartedAt: String((start!.results[0] as { value?: string } | undefined)?.value ?? now),
     from,
     cohortThrough: through,
-    totals: totals!.results[0] as PushPerformance['totals'],
-    categories: categories!.results as PushPerformance['categories'],
-    daily: daily!.results as PushPerformance['daily'],
+    totals: counts(sumBy(all, () => 'all')[0]?.[1] ?? zero) as PushPerformance['totals'],
+    categories: sumBy(all, (c) => c.category).map(([category, t]) => ({
+      category,
+      ...counts(t),
+    })) as PushPerformance['categories'],
+    daily: sumBy(all, (c) => c.day).map(([day, t]) => ({
+      day,
+      ...counts(t),
+    })) as PushPerformance['daily'],
     campaigns: campaigns!.results.slice(0, 20) as PushPerformance['campaigns'],
-    retention: retention!.results as PushPerformance['retention'],
+    retention: sumBy(all, (c) => c.stage).map(([stage, t]) => ({
+      stage,
+      ...counts(t),
+      returned: t.returned ?? 0,
+      retired: t.retired ?? 0,
+    })) as PushPerformance['retention'],
     cups: cups!.results.slice(0, 20) as PushPerformance['cups'],
     nudges: nudges!.results as PushPerformance['nudges'],
     hasMore: campaigns!.results.length > 20 || (query.issues !== '1' && cups!.results.length > 20),

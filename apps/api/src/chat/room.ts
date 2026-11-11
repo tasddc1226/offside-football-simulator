@@ -384,6 +384,18 @@ export class ChatRoom extends DurableObject<Bindings> {
     sendAll(rest, { t: 'online', n: rest.length });
   }
 
+  /** T-11-693 운영 지표: 그 구간의 메시지 수와 쓴 사람 수(시각 인덱스 범위). 가린 메시지도 쓴 것으로 센다. */
+  countBetween(startMs: number, endMs: number): { messages: number; writers: number } {
+    const [row] = this.sql
+      .exec<Row>(
+        'SELECT count(*) messages, count(DISTINCT profile_id) writers FROM messages WHERE at >= ? AND at < ?',
+        startMs,
+        endMs,
+      )
+      .toArray();
+    return { messages: Number(row?.messages ?? 0), writers: Number(row?.writers ?? 0) };
+  }
+
   /** 가려지지 않은 메시지 한 줄(신고·차단 대상 확인). */
   message(id: string): StoredMessage | null {
     const [row] = this.sql

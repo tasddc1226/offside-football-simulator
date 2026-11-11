@@ -14,6 +14,8 @@ import { logErrorText } from '../logError.js';
 import { runBest11Daily, type Best11DailyCursor } from '../db/repos/best11.js';
 import { pruneAbandonedCareers, type PruneResult } from './pruneAbandoned.js';
 import { runKpiDaily, type KpiDailyResult } from '../db/repos/kpi.js';
+import { CHAT_ROOMS } from '@offside/contracts/chat';
+import { chatRoom } from '../chat/socket.js';
 import { buildRetireCohort } from '../db/repos/retireCohort.js';
 import { purgeEdgeOrigin } from '../edgeCache.js';
 import { RETIRE_COHORT_PATH } from '@offside/contracts/retire-cohort';
@@ -126,6 +128,14 @@ function steps(env: Bindings): DailyStep {
           at,
           prior as KpiDailyResult | undefined,
           opsD1(env),
+          env.CHAT &&
+            ((start, end) =>
+              Promise.all(
+                CHAT_ROOMS.map(async (room) => ({
+                  room,
+                  ...(await chatRoom(env.CHAT!, room).countBetween(start, end)),
+                })),
+              )),
         );
         return { done: result.done, result };
       }

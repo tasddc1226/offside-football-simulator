@@ -56,13 +56,19 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/admin/push-performance', async (c) => {
     await requireAdmin(c);
     const query = parseWithAppError(PushPerformanceQuerySchema, c.req.query());
-    return ok(
-      c,
-      PushPerformanceSchema,
-      await getPushPerformance(c.env.DB, query),
-      200,
-      'private, no-store',
-    );
+    // T-11-693 알림 표 며칠치를 훑는 무거운 집계다. 화면을 열 때마다 나가는 기본 보기는 1분 동안 같은 결과를 다시 쓴다.
+    const plain =
+      !query.previous &&
+      !query.category &&
+      !query.issues &&
+      !query.tests &&
+      !query.through &&
+      query.page === 0;
+    const load = () => getPushPerformance(c.env.DB, query);
+    const data = plain
+      ? await edgeCached(c, EDGE.adminPushPerformance(query.days), HEAVY_TTL, load)
+      : await load();
+    return ok(c, PushPerformanceSchema, data, 200, 'private, no-store');
   });
   // 관리자 확인을 먼저 하므로 엣지 캐시는 관리자에게만 나간다. 집계라 1분 늦어도 된다. 활성 밸런스는
   // 행 하나라 매번 읽는다 — 집계 캐시에 넣으면 밸런스 활성화가 대시보드 캐시까지 지워야 한다.

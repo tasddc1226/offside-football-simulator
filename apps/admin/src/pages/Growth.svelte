@@ -2,7 +2,7 @@
   // T-11-577 그로스: Meta 광고 지출 · 설치 · 클릭(에이전트가 매일 08:50 넣는다)과 설치당 비용, 국가별 성과, 스토어 리뷰 · 평점 · 설치.
   import type { KpiReport } from '@offside/contracts';
   import { dimLabel, fmt, periodSum, valueOn } from '../kpi.ts';
-  import { byDim, dimTotals, viewOf } from '../kpi-page.ts';
+  import { byDim, dimTotals, lastValue, trendOf, viewOf } from '../kpi-page.ts';
   import { loader } from '../load.svelte.ts';
   import Load from '../ui/Load.svelte';
   import Stat from '../ui/Stat.svelte';
@@ -85,13 +85,6 @@
       {/if}
 
       <h2 class="section-title">스토어</h2>
-      {@const lastOf = (m: string, dims?: string[]) => {
-        for (const d of [...v.days].reverse()) {
-          const x = valueOn(v.idx, d, m, dims);
-          if (x !== null) return x;
-        }
-        return null;
-      }}
       {@const reviews = sum('store_reviews_new')}
       {@const stars = (() => {
         let total = 0;
@@ -108,13 +101,24 @@
         return n ? total / n : null;
       })()}
       <div class="stats">
-        <Stat label="App Store 평점" value={lastOf('store_rating', ['ios'])} sub="한국 스토어 · 최근 수집" />
         <Stat label={`${days}일 새 리뷰`} value={reviews.sum} sub={join(stars === null ? '' : `평균 ${stars.toFixed(1)}점`, gap(reviews))} />
-        <Stat label="스토어 설치" value={sum('store_installs').sum} sub="App Store 첫 다운로드 + Play 설치" />
+        <Stat label="App Store 첫 다운로드" value={sum('store_installs', ['ios']).sum} sub="판매 보고서 · 하루 늦어요" />
+        <Stat label="Play 설치" value={sum('store_installs', ['android']).sum} sub="통계 보고서 · 며칠 늦어요" />
       </div>
       <div class="cols">
         <StackedBars title="새 리뷰 (스토어별)" days={v.days} series={byDim(v, 'store_reviews_new')} empty="스토어 리뷰 수집(매일 08:50) 뒤 보여요." />
         <StackedBars title="스토어 설치" days={v.days} series={byDim(v, 'store_installs')} empty="스토어 설치 보고서가 연결되면 보여요." />
+      </div>
+      {@const ig = lastValue(v, 'followers', ['instagram'])}
+      {@const th = lastValue(v, 'followers', ['threads'])}
+      <div class="stats">
+        <Stat label="인스타그램 팔로워" value={ig?.value ?? null} sub={ig ? `${ig.day} 기준` : '매일 08:50(KST) 수집 뒤 보여요'} trend={trendOf(v, 'followers', ['instagram'])} />
+        <Stat label="Threads 팔로워" value={th?.value ?? null} sub={th ? `${th.day} 기준` : '매일 08:50(KST) 수집 뒤 보여요'} trend={trendOf(v, 'followers', ['threads'])} />
+        <Stat label={`${days}일 검색 클릭`} value={sum('search_clicks').sum} sub={`노출 ${fmt(sum('search_impressions').sum)} · 최근 2~3일은 아직 덜 찼어요`} trend={trendOf(v, 'search_clicks')} />
+      </div>
+      <div class="cols">
+        <StackedBars title="Google 검색 클릭 (offside-lab.com)" days={v.days} series={byDim(v, 'search_clicks').map((s) => ({ ...s, label: '클릭' }))} empty="검색 성과 수집(매일 08:50) 뒤 보여요." />
+        <StackedBars title="Google 검색 노출" days={v.days} series={byDim(v, 'search_impressions').map((s) => ({ ...s, label: '노출' }))} empty="검색 성과 수집(매일 08:50) 뒤 보여요." />
       </div>
     {/snippet}
   </Load>

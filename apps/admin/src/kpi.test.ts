@@ -1,6 +1,16 @@
 import type { KpiReport } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
-import { dimTotals, retention, viewOf } from './kpi-page.ts';
+import {
+  dimTotals,
+  EXPECTED_METRICS,
+  laggingMetrics,
+  lastDims,
+  lastValue,
+  periodTotal,
+  retention,
+  trendOf,
+  viewOf,
+} from './kpi-page.ts';
 import {
   dimLabel,
   dimSeries,
@@ -126,5 +136,98 @@ describe('빠진 날 (T-11-577)', () => {
     // 날마다 비율 평균(20%)이 아니라 사람 수로 가중(60/400).
     expect(retention(v, 1)).toEqual({ rate: 0.15, cohorts: 2 });
     expect(retention(v, 7)).toEqual({ rate: null, cohorts: 0 });
+  });
+});
+
+describe('지금 상태 지표 · 늦는 지표 (T-11-693)', () => {
+  const span = [
+    '2026-11-04',
+    '2026-11-05',
+    '2026-11-06',
+    '2026-11-07',
+    '2026-11-08',
+    '2026-11-09',
+    '2026-11-10',
+  ];
+  const row = (day: string, metric: string, dim: string, value: number) => ({
+    day,
+    metric,
+    dim,
+    value,
+  });
+  const make = (rows: KpiReport['rows']): KpiReport => ({
+    generatedAt: '2026-11-11T00:00:00.000Z',
+    days: span,
+    rows,
+    sources: [],
+  });
+  /** 모든 지표가 어제까지 들어온 상태에서 일부만 빼거나 늦춘다. */
+  const fresh = (skip: (metric: string, dim: string) => string | null) =>
+    make(
+      EXPECTED_METRICS.flatMap((e) => {
+        const dim = e.dim ?? 'all';
+        const day = skip(e.metric, dim);
+        return day ? [row(day, e.metric, dim, 1)] : [];
+      }),
+    );
+
+  it('마지막으로 들어온 값과 그날의 나눔을 돌려준다', () => {
+    const v = viewOf(
+      make([
+        row('2026-11-08', 'push_devices', 'ios:authorized', 10),
+        row('2026-11-09', 'push_devices', 'ios:authorized', 12),
+        row('2026-11-09', 'push_devices', 'ios:provisional', 30),
+        row('2026-11-09', 'push_devices', 'android:authorized', 0),
+        row('2026-11-05', 'push_clicked', 'match', 3),
+        row('2026-11-06', 'push_clicked', 'cup', 4),
+      ]),
+    );
+    expect(lastValue(v, 'push_devices', ['ios:authorized'])).toEqual({
+      day: '2026-11-09',
+      value: 12,
+    });
+    expect(lastValue(v, 'followers')).toBeNull();
+    expect(lastDims(v, 'push_devices')).toEqual({
+      day: '2026-11-09',
+      items: [
+        { dim: 'ios:provisional', value: 30 },
+        { dim: 'ios:authorized', value: 12 },
+      ],
+    });
+    expect(periodTotal(v, 'push_clicked')).toBe(7);
+    expect(periodTotal(v, 'push_clicked', ['cup'])).toBe(4);
+    expect(periodTotal(v, 'chat')).toBeNull();
+    expect(trendOf(v, 'push_clicked')).toEqual([null, 3, 4, null, null, null, null]);
+  });
+
+  it('다 들어왔으면 비고, 원래 늦는 지표는 기다리는 날 수 안에서 넘어간다', () => {
+    expect(laggingMetrics(viewOf(fresh(() => '2026-11-10')))).toEqual([]);
+    // Play 설치는 5일까지 기다린다. 6일 밀리면 알린다.
+    const waiting = fresh((m, d) =>
+      m === 'store_installs' && d === 'android' ? '2026-11-05' : '2026-11-10',
+    );
+    expect(laggingMetrics(viewOf(waiting))).toEqual([]);
+    const late = fresh((m, d) =>
+      m === 'store_installs' && d === 'android' ? '2026-11-04' : '2026-11-10',
+    );
+    expect(laggingMetrics(viewOf(late))).toMatchObject([
+      { metric: 'store_installs', dim: 'android', lastDay: '2026-11-04', lag: 6 },
+    ]);
+  });
+
+  it('한 원천 안에서 지표 하나만 끊겨도, 기간 안에 한 번도 없어도 잡는다', () => {
+    const v = viewOf(
+      fresh((m, d) =>
+        m === 'store_installs' && d === 'android'
+          ? null
+          : m === 'dau'
+            ? '2026-11-09'
+            : '2026-11-10',
+      ),
+    );
+    expect(laggingMetrics(v).map((x) => [x.metric, x.dim ?? '', x.lag])).toEqual([
+      ['dau', '', 1],
+      ['store_installs', 'android', null],
+    ]);
   });
 });

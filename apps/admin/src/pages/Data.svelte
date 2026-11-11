@@ -3,6 +3,7 @@
   import type { KpiReport } from '@offside/contracts';
   import { KPI_SOURCES } from '@offside/contracts/kpi-rules';
   import { fmt, kstTime, sourceLag, tableOf, toCsv } from '../kpi.ts';
+  import { laggingMetrics, viewOf } from '../kpi-page.ts';
   import { loader } from '../load.svelte.ts';
   import Load from '../ui/Load.svelte';
 
@@ -15,6 +16,11 @@
     meta: { label: 'Meta 광고', when: '매일 08:50 에이전트' },
     admob: { label: 'AdMob', when: '매일 08:50 에이전트 (AdMob 키 연결 뒤)' },
     store: { label: '스토어', when: '매일 08:50 에이전트' },
+    social: { label: 'SNS 팔로워', when: '매일 08:50 에이전트' },
+    search: { label: '검색 성과', when: '매일 08:50 에이전트 (2~3일 늦게 확정)' },
+    voice: { label: '유저 반응 표', when: '매일 08:50 에이전트' },
+    support: { label: '고객 문의 메일', when: '매일 08:50 에이전트' },
+    eas: { label: 'OTA 게시', when: '매일 08:50 에이전트' },
   };
   /** 어제 날짜 행이 있는지만 본다(그날 지표가 모두 들어왔는지는 모른다). */
   function state(lastDay: string | undefined, yesterday: string | undefined) {
@@ -38,8 +44,30 @@
   <Load r={kpi.r} height={400}>
     {#snippet children(r)}
       {@const t = tableOf(r)}
+      {@const late = laggingMetrics(viewOf(r))}
       <section class="panel">
-        <header><h2>수집 원천</h2><span class="hint">어제({r.days.at(-1)}) 행이 있는지만 봐요. 지표별 누락은 아래 표에서 확인해요.</span></header>
+        <header><h2>늦는 지표</h2><span class="hint">매일 들어와야 하는 지표 가운데 기다리는 날 수를 넘긴 것</span></header>
+        {#if late.length}
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead><tr><th>지표</th><th>마지막 날</th><th>상태</th></tr></thead>
+              <tbody>
+                {#each late as x (`${x.metric}|${x.dim ?? ''}`)}
+                  <tr>
+                    <td>{x.label}</td>
+                    <td>{x.lastDay ?? '—'}</td>
+                    <td><span class="chip bad">{x.lag === null ? `${days}일 안 기록 없음` : `${x.lag}일 밀림`}</span></td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {:else}
+          <p class="note">늦는 지표가 없어요.</p>
+        {/if}
+      </section>
+      <section class="panel">
+        <header><h2>수집 원천</h2><span class="hint">어제({r.days.at(-1)}) 행이 있는지만 봐요. 지표별 누락은 위 '늦는 지표'에서 확인해요.</span></header>
         <div class="tbl-wrap">
           <table class="tbl">
             <thead><tr><th>원천</th><th>수집 시각</th><th>마지막 날</th><th>마지막 수집 (KST)</th><th>상태</th></tr></thead>
