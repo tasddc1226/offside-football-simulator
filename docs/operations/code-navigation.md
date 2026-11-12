@@ -35,6 +35,8 @@
 | 리그 알림 계획          | `apps/api/src/team/leagueNotifications.ts`                                                     | 순수 계획. 커서와 알림 쓰기는 league의 단일 batch                           |
 | 컵/리그 진행·시즌 마감  | `apps/api/src/team/cup.ts`, `league.ts`, `seasonClose.ts`                                      | 작업 상한·영속 커서·멱등성·재개 순서                                        |
 
+리그 뉴스는 `team/leagueNews.ts`가 조회, `leagueNewsSelection.ts`가 순수 후보 계획, `leagueNewsProjection.ts`가 표시 조립을 담당한다. 선택 전 전체 경기 상세를 읽지 않는다.
+
 ## 빠른 검증 경로
 
 루트에서 실행한다. 아래는 해당 변경의 개발 중 확인 명령이며 필수 CI나 플랫폼 검증을 대체하지 않는다. 파일 분리 뒤에는 먼저 타입·린트를 통과시키고 테스트를 돌린다. UI 편집 중/푸시 전/PR의 범위는 [CI 테스트 정책](ci-test-policy.md)을 따른다.
@@ -77,4 +79,4 @@ pnpm --filter @offside/web check:bundle
 - 파일 길이만 줄이는 분할보다 책임·역방향 의존·중복 정책을 줄인다. 새 framework/registry/generic store가 필요한지 먼저 확인한다.
 - 세이브 키·엔딩 라벨·기존 오류/응답·조건부 RNG는 호환 계약이다. 행동 변경이 필요하면 구조 변경과 분리한다.
 
-진행 및 실제 검증 결과는 [T-11-704](../tracking/code-quality-refactor.md)에 기록한다.
+진행 및 실제 검증 결과는 [T-11-705](../tracking/code-quality-refactor.md)에 기록한다.
