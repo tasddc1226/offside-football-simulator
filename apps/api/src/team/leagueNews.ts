@@ -19,7 +19,7 @@ import {
   leagueTable,
   type LeagueEntryRow,
   type LeagueMatchRow,
-} from './league.js';
+} from './leagueRead.js';
 
 // T-11-652 오프사이드 데일리(라운드 신문). 끝난 라운드 하나의 기사 재료를 고른다: 이변 · 골 잔치 · 더비 · 역전승 · 극장골 ·
 // 해트트릭 · 시즌 첫 승 · 이 라운드의 팀 · 1부 선두 · 연승, 그리고 이 라운드 빅매치 결과와 다음 라운드 빅매치. 끝난 라운드는 바뀌지 않아 라우트가 엣지에 오래 둔다.

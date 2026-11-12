@@ -50,3 +50,11 @@
 - 웹 계정 기존 4개, 공통 캐시 3개, 모바일 unit 20파일 170개 테스트 통과. app-core 전체 161파일 1,609개 통과(maxWorkers=4).
 - 기본 병렬도로 전체 검사를 돌릴 때 upload의 커리어 시뮬레이션 1개가 5초 timeout에 걸렸다. 타입 검사 등 동시 작업을 줄이고 worker 4개로 전체를 재실행해 모두 통과했다. timeout 설정·테스트 표본 수는 바꾸지 않았다.
 - app-core·mobile 타입 검사와 변경 파일 ESLint 통과.
+
+## 단계 5 검증
+
+- startRankedMatch가 경기 시작을 담당한다. 라우터는 인증·멱등 미들웨어·본문·HTTP 응답과 background/cache 어댑터를 소유한다.
+- 기존 guard/query/commit 순서를 유지하고, 즉시·라이브의 전적/점수/디비전은 rankedMatchProgress를 공유한다. 라이브 확정 트랜잭션은 유지한다.
+- leagueRead는 조회·순위표를, leagueNotifications는 순수 알림 계획을 소유한다. lifecycle과 news의 역방향 import를 제거했다. 알림 커서와 알림 쓰기는 기존 batch에 남는다.
+- API 타입 검사와 랭크·쿼리 효율·리그·알림·뉴스 관련 6파일 98개 테스트 통과. 변경 파일 lint 확인.
+- 기존 한국어 오류 원문 7덩어리를 ownerTeam에서 새 소유 모듈로 옮겼다. i18n 기준선 경로만 재배치했으며 총합 2,868로 동일하다. 새 문구는 없다.

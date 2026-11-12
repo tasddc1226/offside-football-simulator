@@ -26,3 +26,7 @@ export function kstWeekStart(now: string): string {
 
 /** 한국 시각 오늘 0시(UTC ISO). 하루 경기·영입 상한의 기준. */
 export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
+
+/** KST hour/minute for existing competition notices. */
+export const kstHm = (iso: string) =>
+  new Date(Date.parse(iso) + 9 * 3600_000).toISOString().slice(11, 16);

@@ -1,3 +1,17 @@
+import { planLeagueNotifications } from './leagueNotifications.js';
+import { kstHm } from '../time.js';
+export * from './leagueRead.js';
+import {
+  MATCH_COLS,
+  leagueStateOf,
+  leagueEntriesOf,
+  tiersOf,
+  inLeague,
+  leagueProgress,
+  leagueTable,
+  type LeagueEntryRow,
+  type LeagueStateRow,
+} from './leagueRead.js';
 import { CUP_LOCK_MIN } from '@offside/contracts/cup';
 import {
   LEAGUE_FILL_PROMOTE_SCOUTS,
@@ -8,7 +22,6 @@ import {
   LEAGUE_SIZE,
   leagueFixtures,
   leagueLateSlotAt,
-  leagueNextTier,
   leagueOutcome,
   leaguePyramid,
   leagueReward,
@@ -18,28 +31,20 @@ import {
   type LeagueOutcome,
   leagueKickoffAt,
 } from '@offside/contracts/league';
-import { leagueTitleOf } from '@offside/contracts/league-names';
+
 import { leagueTitleIdOf, TITLE_STAGES } from '@offside/contracts/owner-title';
-import { and, asc, eq, getTableColumns, inArray, isNull, lte, sql } from 'drizzle-orm';
+import { and, asc, eq, inArray, isNull, lte, sql } from 'drizzle-orm';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
-import {
-  cards,
-  careers,
-  leagueEntries,
-  leagueMatches,
-  leagueState,
-  ownerTeams,
-  profiles,
-} from '../db/schema.js';
-import { cardPublicName } from '../db/cardName.js';
+import { leagueEntries, leagueMatches, leagueState, ownerTeams, profiles } from '../db/schema.js';
+
 import { leagueMatchBalanceOf } from '../db/repos/balance.js';
 import { grantItemStatement } from '../db/repos/itemShop.js';
 import { eventNotificationStatements } from '../push/events.js';
-import { drawGroups, groupStandings, rngFrom } from './cupRules.js';
+import { drawGroups, rngFrom } from './cupRules.js';
 import { currentLeague } from './leagueSchedule.js';
-import { buildLeagueNews, pushHeadline } from './leagueNews.js';
+import { buildLeagueNews } from './leagueNews.js';
 import type { OwnerTeamRow } from '../db/repos/ownerTeams.js';
 import { FATIGUE_LOOKBACK, startStreaks, withFatigue, type PlayedLeagueMatch } from './fatigue.js';
 import { lineupsOf, matchDetailOf } from './match.js';
@@ -48,12 +53,6 @@ import { filledCount, simulateMatch } from './sim.js';
 // T-11-418b 오프사이드 리그 진행(5분 cron). 컵(team/cup.ts)처럼 한 번에 한 단계만 하고 끝낸다 — 실패하면 다음 cron이
 // 같은 단계를 다시 한다. 배치: league_state 기본키가 두 번 배치하지 않게 막는다. 경기: played_at IS NULL. 알림:
 // league_entries.notified_round(-2 배치 안내 보냄 · -1 배치 결과 보낼 차례 · 0 보냄 · n n라운드 결과 보냄)와 source_key.
-
-export type LeagueEntryRow = typeof leagueEntries.$inferSelect;
-/** 목록용 경기 행. 득점 기록(detail_json)은 경기 상세에서만 따로 읽는다. */
-export type LeagueMatchRow = Omit<typeof leagueMatches.$inferSelect, 'detailJson'>;
-export type LeagueStateRow = typeof leagueState.$inferSelect;
-export type LeagueTier = { tier: number; leagues: number; teams: number };
 
 /** 배치 안내(자격이 모자란 신청에 한 번)는 배치 하루 전부터. */
 export const LEAGUE_REMIND_MS = 24 * 3600_000;
@@ -70,182 +69,6 @@ const TEAM_SLOTS = 11;
 export const LEAGUE_NOTICES_PER_TICK = 100;
 /** json_each 한 문장에 넣는 행 수(바인드 값 하나의 크기를 작게). */
 const JSON_CHUNK = 300;
-
-const MATCH_COLS = Object.fromEntries(
-  Object.entries(getTableColumns(leagueMatches)).filter(([k]) => k !== 'detailJson'),
-) as Omit<ReturnType<typeof getTableColumns<typeof leagueMatches>>, 'detailJson'>;
-
-export const leagueStateOf = (db: Db, season: number) =>
-  db.select().from(leagueState).where(eq(leagueState.season, season)).limit(1);
-
-export const leagueEntriesOf = (db: Db, season: number) =>
-  db.select().from(leagueEntries).where(eq(leagueEntries.season, season));
-
-/** 리그 하나의 경기(순위표 · 일정). */
-export const leagueMatchesOf = (db: Db, season: number, tier: number, leagueNo: number) =>
-  db
-    .select(MATCH_COLS)
-    .from(leagueMatches)
-    .where(
-      and(
-        eq(leagueMatches.season, season),
-        eq(leagueMatches.tier, tier),
-        eq(leagueMatches.leagueNo, leagueNo),
-      ),
-    )
-    .orderBy(asc(leagueMatches.round), asc(leagueMatches.slot));
-
-export const tiersOf = (state: LeagueStateRow): LeagueTier[] =>
-  JSON.parse(state.tiersJson) as LeagueTier[];
-
-/** 리그에서 뛰는 신청(배치됨 · 기권 처리). */
-export const inLeague = (e: LeagueEntryRow) =>
-  (e.status === 'active' || e.status === 'forfeited') && e.tier !== null && e.teamId !== null;
-
-/** 끝난 라운드 수(모든 경기를 치른 앞쪽 라운드 수)와 일정에 남은 마지막 라운드. 경기가 없으면 둘 다 0. */
-export async function leagueProgress(db: Db, season: number) {
-  const row = await db.$client
-    .prepare(
-      `SELECT MIN(CASE WHEN played_at IS NULL THEN round END) AS open, MAX(round) AS last, COUNT(*) AS n
-       FROM league_matches WHERE season = ?`,
-    )
-    .bind(season)
-    .first<{ open: number | null; last: number | null; n: number }>();
-  if (!row?.n) return { played: 0, last: 0 };
-  const last = row.last ?? 0;
-  return { played: row.open === null ? last : row.open - 1, last };
-}
-
-/** 끝난 라운드 수. */
-export const playedRounds = async (db: Db, season: number) =>
-  (await leagueProgress(db, season)).played;
-
-/**
- * 리그 순위표. 컵 조 순위와 같은 규칙(승점 → 득실 → 다득점 → 두 팀만 같으면 승자승 → 추첨 시드). 기권 경기는 나오지 못한
- * 쪽이 0:3 패, 둘 다 못 나왔으면 둘 다 0:3 패다.
- */
-export function leagueTable(
-  entries: readonly LeagueEntryRow[],
-  matches: readonly LeagueMatchRow[],
-  seed: string,
-  tier: number,
-  leagueNo: number,
-) {
-  const members = entries.filter((e) => inLeague(e) && e.tier === tier && e.leagueNo === leagueNo);
-  const played = matches
-    .filter((m) => m.tier === tier && m.leagueNo === leagueNo && m.playedAt)
-    .map((m) =>
-      m.forfeit === 3
-        ? // 둘 다 기권: 서로 3골씩 내준 것으로(득점 없이 패).
-          {
-            home: m.homeTeamId,
-            away: m.awayTeamId,
-            homeGoals: LEAGUE_FORFEIT_GOALS,
-            awayGoals: LEAGUE_FORFEIT_GOALS,
-            bothLost: true,
-          }
-        : {
-            home: m.homeTeamId,
-            away: m.awayTeamId,
-            homeGoals: m.homeGoals ?? 0,
-            awayGoals: m.awayGoals ?? 0,
-          },
-    );
-  const forfeits = new Map(members.map((e) => [e.teamId!, e.forfeits]));
-  return groupStandings(
-    members.map((e) => e.teamId!),
-    played,
-    `${seed}:${tier}:${leagueNo}`,
-  ).map((s) => ({ ...s, forfeits: forfeits.get(s.teamId) ?? 0 }));
-}
-
-/** 득점 순위에 싣는 줄 수 상한(같은 골 수는 같이 싣되 이만큼까지). */
-export const LEAGUE_SCORERS_MAX = 5;
-/** 득점 순위에 싣는 순위(3위까지, 같은 골 수는 함께). */
-const LEAGUE_SCORERS_TOP = 3;
-
-/**
- * T-11-418d 리그 하나의 득점 순위(유스 선수 빼고). 경기 기록(detail_json)의 골을 SQL에서 세어 작은 결과만 읽는다. 3위와 골
- * 수가 같은 선수까지 싣고, LEAGUE_SCORERS_MAX줄에서 자른다. 이름은 공개 이름(비공개면 null) · 포지션 · 등번호.
- */
-export async function leagueScorers(db: Db, season: number, tier: number, leagueNo: number) {
-  const { results } = await db.$client
-    .prepare(
-      `SELECT json_extract(e.value, '$.scorer.careerId') AS careerId,
-         CASE json_extract(e.value, '$.side') WHEN 'home' THEN m.home_team_id ELSE m.away_team_id END AS teamId,
-         COUNT(*) AS goals
-       FROM league_matches m, json_each(m.detail_json, '$.events') e
-       WHERE m.season = ? AND m.tier = ? AND m.league_no = ? AND m.detail_json IS NOT NULL
-         AND json_extract(e.value, '$.scorer.careerId') IS NOT NULL
-       GROUP BY careerId, teamId ORDER BY goals DESC, careerId LIMIT ?`,
-    )
-    .bind(season, tier, leagueNo, LEAGUE_SCORERS_MAX + 1)
-    .all<{ careerId: string; teamId: string; goals: number }>();
-  const cut = results[LEAGUE_SCORERS_TOP - 1]?.goals ?? 0;
-  const top = results.filter((r) => r.goals >= cut).slice(0, LEAGUE_SCORERS_MAX);
-  if (!top.length) return [];
-  const who = new Map(
-    (
-      await db
-        .select({
-          id: cards.careerId,
-          publicName: cardPublicName,
-          pos: cards.pos,
-          number: sql<number | null>`coalesce(${careers.shirtNumber}, ${cards.number})`,
-        })
-        .from(cards)
-        .leftJoin(careers, eq(careers.id, cards.careerId))
-        .where(
-          inArray(
-            cards.careerId,
-            top.map((r) => r.careerId),
-          ),
-        )
-    ).map((c) => [c.id, c]),
-  );
-  return top.flatMap((r) => {
-    const c = who.get(r.careerId);
-    // 지워진 카드는 빼고 싣는다.
-    return c
-      ? [{ name: c.publicName, pos: c.pos, number: c.number, teamId: r.teamId, goals: r.goals }]
-      : [];
-  });
-}
-
-/** T-11-418d 마지막 라운드 동시 중계용 골 시각(경기 id별, 분 순). 기권 경기는 기록이 없어 빠진다. */
-export async function leagueFinalGoals(db: Db, season: number, tier: number, leagueNo: number) {
-  const { results } = await db.$client
-    .prepare(
-      `SELECT m.id AS id, json_extract(e.value, '$.minute') AS minute, json_extract(e.value, '$.side') AS side
-       FROM league_matches m, json_each(m.detail_json, '$.events') e
-       WHERE m.season = ?1 AND m.tier = ?2 AND m.league_no = ?3 AND m.detail_json IS NOT NULL
-         AND m.round = (SELECT MAX(round) FROM league_matches WHERE season = ?1 AND tier = ?2 AND league_no = ?3)`,
-    )
-    .bind(season, tier, leagueNo)
-    .all<{ id: string; minute: number; side: 'home' | 'away' }>();
-  const out = new Map<string, { minute: number; side: 'home' | 'away' }[]>();
-  for (const r of results)
-    out.set(r.id, [...(out.get(r.id) ?? []), { minute: r.minute, side: r.side }]);
-  for (const g of out.values()) g.sort((a, b) => a.minute - b.minute);
-  return out;
-}
-
-/** 명단이 잠겨 있는가: 아직 안 끝난 내 리그 경기 중 잠금 시각(경기 1시간 전)이 지난 것이 있다. */
-export async function leagueLineupLocked(db: Db, profileId: string, season: number, now: string) {
-  const row = await db.$client
-    .prepare(
-      `SELECT 1 AS hit FROM league_entries e JOIN league_matches m
-         ON m.season = e.season AND (m.home_team_id = e.team_id OR m.away_team_id = e.team_id)
-       WHERE e.season = ? AND e.profile_id = ? AND e.status = 'active' AND e.team_id IS NOT NULL
-         AND m.played_at IS NULL AND m.at <= ? LIMIT 1`,
-    )
-    // 컵과 같은 잠금(lockAt(at) <= now ⇔ at <= now + 잠금 시간).
-    .bind(season, profileId, new Date(Date.parse(now) + CUP_LOCK_MIN * 60_000).toISOString())
-    .first<{ hit: number }>();
-  return !!row;
-}
-
-const leagueTitleKo = (tier: number, no: number) => leagueTitleOf('ko', tier, no) ?? String(no);
 
 const notify = (
   d1: D1Database,
@@ -271,7 +94,6 @@ const notify = (
   );
 
 /** KST 'HH:MM'. */
-const kstHm = (iso: string) => new Date(Date.parse(iso) + 9 * 3600_000).toISOString().slice(11, 16);
 
 function chunks<T>(xs: readonly T[], n = JSON_CHUNK): T[][] {
   const out: T[][] = [];
@@ -947,22 +769,6 @@ export async function settleLeague(
   return pending.length;
 }
 
-/** 마지막 라운드 알림 본문: 최종 순위 · 받은 보상 · 다음 시즌 부. */
-function endBody(e: LeagueEntryRow, rank: number) {
-  const where = { tier: e.tier!, title: leagueTitleKo(e.tier!, e.leagueNo!), rank };
-  const outcome = e.outcome as LeagueOutcome | null;
-  if (!outcome) return cupKo('leagueEndBody', where);
-  if (outcome === 'forfeited') return cupKo('leagueEndBodyForfeited', where);
-  const { rerolls: n, scouts: s, boosts: b } = leagueReward(e.tier!, rank, e.forfeits, outcome);
-  if (outcome === 'champion') return cupKo('leagueEndBodyChampion', { season: e.season, n, s, b });
-  const next = leagueNextTier(e.tier!, outcome)!;
-  return s > 0
-    ? cupKo('leagueEndBodyAll', { ...where, n, s, b, next })
-    : n > 0
-      ? cupKo('leagueEndBodyReroll', { ...where, n, next })
-      : cupKo('leagueEndBodyNext', { ...where, next });
-}
-
 /**
  * 알림 차례인 신청에 알린다: 배치 결과(-1 → 0), 끝난 라운드 결과(→ 그 라운드). 늦었으면 가장 최근 라운드만 알린다.
  * 마지막 라운드는 최종 순위 알림. 기권 처리된 팀은 알림함에만 남긴다.
@@ -985,120 +791,28 @@ export async function notifyLeague(
     )
     .slice(0, LEAGUE_NOTICES_PER_TICK);
   if (!pending.length) return 0;
-  const cancelled = !tiersOf(state).length;
-  const roundOf = new Map<string, LeagueMatchRow[]>();
-  const tables = new Map<string, ReturnType<typeof leagueTable>>();
   const needRounds = played > 0 && pending.some((e) => inLeague(e) && e.notifiedRound >= 0);
   const all = needRounds
     ? await db.select(MATCH_COLS).from(leagueMatches).where(eq(leagueMatches.season, league.season))
     : [];
-  for (const m of all) {
-    const k = `${m.tier}:${m.leagueNo}`;
-    roundOf.set(k, [...(roundOf.get(k) ?? []), m]);
-  }
-  const tableOf = (tier: number, no: number) => {
-    const k = `${tier}:${no}`;
-    let t = tables.get(k);
-    if (!t) tables.set(k, (t = leagueTable(entries, roundOf.get(k) ?? [], state.seed, tier, no)));
-    return t;
-  };
-  const nameOf = new Map(entries.map((e) => [e.teamId, e.name]));
   // T-11-652 라운드 결과 알림에 그날 신문 1면을 붙인다(따로 푸시를 늘리지 않는다). 신문을 못 만들면 붙이지 않는다.
   const news =
     played > 0 && played < last && pending.some((e) => inLeague(e) && e.notifiedRound >= 0)
       ? await buildLeagueNews(db, league.season, played).catch(() => null)
       : null;
-  const withDaily = (line: string, teamId: string | null) => {
-    const h = news ? pushHeadline(news, teamId) : null;
-    return h
-      ? cupKo(h.mine ? 'leagueRoundMineBody' : 'leagueRoundDailyBody', { line, head: h.head })
-      : line;
-  };
-  const leftOver = entries.filter((x) => x.status === 'dropped' && x.teamId).length;
-  const season = league.season;
   const stmts: D1PreparedStatement[] = [];
-  for (const e of pending) {
-    let target = 0;
-    let title: string;
-    let body: string;
-    let key: string;
-    // T-11-564 첫 배치 뒤에 신청(다시 신청)한 늦은 참가.
-    const late = e.createdAt > state.drawnAt;
-    if (e.status === 'dropped' && late) {
-      key = `league:${season}:late-dropped`;
-      title = cupKo('leagueDroppedTitle', { season });
-      body = e.teamId
-        ? cupKo('leagueLateLeftBody')
-        : cupKo('leagueLateDroppedBody', { season, n: league.minFilled });
-    } else if (e.status === 'dropped') {
-      key = `league:${season}:dropped`;
-      title = cancelled
-        ? cupKo('leagueCancelledTitle', { season })
-        : cupKo('leagueDroppedTitle', { season });
-      body = cancelled
-        ? cupKo('cancelledBody')
-        : e.teamId
-          ? cupKo('leagueLeftBody', { n: leftOver })
-          : cupKo('leagueDroppedBody', { season, n: league.minFilled });
-    } else if (e.notifiedRound < 0 || played === 0) {
-      key = `league:${season}:placed`;
-      title = cupKo('leaguePlacedTitle', { season });
-      body = cupKo(late ? 'leagueLatePlacedBody' : 'leaguePlacedBody', {
-        team: e.name ?? '-',
-        tier: e.tier!,
-        title: leagueTitleKo(e.tier!, e.leagueNo!),
-        time: kstHm(league.rounds[0]!),
-      });
-      // 늦은 참가는 이미 끝난 라운드 결과를 보내지 않는다(그 리그는 다음 라운드부터 치른다).
-      if (late) target = played;
-    } else {
-      target = played;
-      const table = tableOf(e.tier!, e.leagueNo!);
-      const rank = table.find((s) => s.teamId === e.teamId)?.rank ?? table.length;
-      if (played === last) {
-        key = `league:${season}:end`;
-        // 결산(settleLeague)이 저장한 순위 · 결과를 쓴다. 결산 전 줄이면(옛 데이터) 순위표 순위만.
-        const final = e.finalRank ?? rank;
-        title =
-          final === 1
-            ? cupKo('leagueChampionTitle', {
-                season,
-                tier: e.tier!,
-                title: leagueTitleKo(e.tier!, e.leagueNo!),
-              })
-            : cupKo('leagueEndTitle', { season });
-        body = endBody(e, final);
-      } else {
-        key = `league:${season}:r${played}`;
-        const m = (roundOf.get(`${e.tier}:${e.leagueNo}`) ?? []).find(
-          (x) => x.round === played && (x.homeTeamId === e.teamId || x.awayTeamId === e.teamId),
-        );
-        if (!m) {
-          // 7팀 리그의 쉬는 라운드.
-          title = cupKo('leagueRoundTitle', { round: played, result: cupKo('leagueRest') });
-          body = withDaily(cupKo('leagueRestBody', { rank }), e.teamId);
-        } else {
-          const home = m.homeTeamId === e.teamId;
-          const mine = home ? m.homeGoals! : m.awayGoals!;
-          const theirs = home ? m.awayGoals! : m.homeGoals!;
-          const lost = m.forfeit === 3 || mine < theirs;
-          const result = cupKo(lost ? 'loss' : mine > theirs ? 'win' : 'draw');
-          title = cupKo('leagueRoundTitle', { round: played, result });
-          const score = `${nameOf.get(m.homeTeamId) ?? '-'} ${m.homeGoals ?? 0} : ${m.awayGoals ?? 0} ${nameOf.get(m.awayTeamId) ?? '-'}`;
-          // T-11-430 내가 기권한 경기면 쌓인 기권 수와 남은 횟수를 알린다(3번째는 기권 퇴출 알림이 따로 간다).
-          const forfeited = !!(m.forfeit & (home ? 1 : 2));
-          body =
-            forfeited && e.status === 'active' && e.forfeits < LEAGUE_FORFEIT_LIMIT
-              ? cupKo('leagueRoundForfeitBody', {
-                  score,
-                  n: e.forfeits,
-                  limit: LEAGUE_FORFEIT_LIMIT,
-                  left: LEAGUE_FORFEIT_LIMIT - e.forfeits,
-                })
-              : withDaily(cupKo('leagueRoundBody', { score, rank }), e.teamId);
-        }
-      }
-    }
+  const season = league.season;
+  const plans = planLeagueNotifications({
+    league,
+    state,
+    entries,
+    pending,
+    all,
+    news,
+    played,
+    last,
+  });
+  for (const { entry: e, target, key, title, body } of plans) {
     stmts.push(
       d1
         .prepare(

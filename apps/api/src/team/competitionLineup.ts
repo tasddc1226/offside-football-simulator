@@ -25,7 +25,7 @@ import {
   type CupEntryRow,
 } from './cup.js';
 import { cupSchedule } from './cupSchedule.js';
-import { leagueLineupLocked } from './league.js';
+import { leagueLineupLocked } from './leagueRead.js';
 
 /**
  * T-11-656 이번 시즌 선수 컵이면 명단 카드 중 컵 시즌보다 앞 시즌 카드 수(아니면 0, 조회하지 않는다). 카드 시즌은 cards 행으로
