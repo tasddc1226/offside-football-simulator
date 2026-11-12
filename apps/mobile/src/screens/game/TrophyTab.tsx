@@ -1,9 +1,10 @@
+import { TrophyRow } from './TrophyRow';
+export { TrophyRow } from './TrophyRow';
 // 트로피 탭(웹 tabs/TrophyTab.svelte): 우승 연혁 · 개인 수상 · 발롱도르 순위 · 시대의 라이벌 · 완결된 스토리.
 // 선수 상세(은퇴 화면)도 같은 카드를 쓸 수 있게 LegendSource를 받는다.
 import { FONT } from '@offside/app-core/design-tokens';
 import { CareerTrophy } from '../../ui/CareerTrophy';
-import { careerTrophy, type CareerTrophy as TrophyArt } from '@offside/app-core/career-trophy';
-import type { ReactNode } from 'react';
+import { careerTrophy } from '@offside/app-core/career-trophy';
 import { View } from 'react-native';
 import type { LegendSource } from '@offside/game/types';
 import { useColors } from '../../theme/useColors';
@@ -19,50 +20,6 @@ import { EraTabCard } from './EraRival';
 import { compOfTrophy } from '@offside/app-core/compEmblem';
 import { CompIcon } from '../../ui/CompIcon';
 import { groupByYear } from '@offside/app-core/trophyYears';
-
-/** 연도 + 내용 한 줄(웹 .trophy: 44px 연도 칸 + 본문, 위에 구분선). first면 구분선이 없다. */
-export function TrophyRow({
-  year,
-  first,
-  art,
-  icon,
-  children,
-}: {
-  year: ReactNode;
-  first?: boolean;
-  art?: TrophyArt;
-  /** T-11-681 트로피 그림 대신 그릴 대회 로고(누르면 바꾼다). */
-  icon?: ReactNode;
-  children: ReactNode;
-}) {
-  const c = useColors();
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        paddingVertical: 9,
-        borderTopWidth: first ? 0 : 1,
-        borderTopColor: c.line,
-      }}
-    >
-      <Txt
-        tone="muted"
-        style={{
-          width: 44,
-          fontFamily: DISPLAY[600],
-          fontSize: rem(FONT.title3),
-          fontVariant: ['tabular-nums'],
-        }}
-      >
-        {year}
-      </Txt>
-      {icon ?? (art ? <CareerTrophy art={art} size={30} color={c.accent} /> : null)}
-      <View style={{ flex: 1 }}>{children}</View>
-    </View>
-  );
-}
 
 type YearItem = { year: number; t: string; club?: string; clubId?: string | undefined };
 /** T-11-695 같은 해에 받은 우승 · 수상을 한 묶음으로(웹 TrophyYears.svelte). 연도는 왼쪽에 한 번(여럿이면 ×개수),

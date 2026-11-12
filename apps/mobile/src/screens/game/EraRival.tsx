@@ -12,7 +12,7 @@ import { rem } from '../../theme/type';
 import { Card } from '../../ui/Card';
 import { Press } from '../../ui/Press';
 import { Txt } from '../../ui/Txt';
-import { TrophyRow } from './TrophyTab';
+import { TrophyRow } from './TrophyRow';
 
 function EraRows({ rows }: { rows: readonly EraRow[] }) {
   const c = useColors();

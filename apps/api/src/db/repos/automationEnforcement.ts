@@ -9,7 +9,7 @@ import type { Db } from '../client.js';
 import { createDb } from '../client.js';
 import { appMeta, careers } from '../schema.js';
 import { runBatch } from './batch.js';
-import { hideCareerStatements, setMeta } from './firsts.js';
+import { hideCareerStatements, setMeta } from './firstsMutations.js';
 import { AUTOMATION_RULE_VERSION } from './automation.js';
 import { logErrorText } from '../../logError.js';
 

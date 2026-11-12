@@ -3,7 +3,7 @@
   import { compIconsText as T } from '@offside/app-core/i18n/ko/compIcons';
   import { tn } from '@offside/game/i18n/names';
   import PopSheet from './PopSheet.svelte';
-  import CompIcon from './CompIcon.svelte';
+  import CompIconView from './CompIconView.svelte';
   import { compIcons, setCompIcon } from './compIcons.svelte.js';
   import { encodeCompIcon } from './compIconImage.js';
   import { toast } from './helpers.js';
@@ -38,7 +38,7 @@
 <PopSheet label={T.sheetTitle({ name })} {onclose}>
   <div class="stack comp-sheet" data-comp-sheet={ko}>
     <div class="comp-sheet-head">
-      <CompIcon {ko} size={88} still />
+      <CompIconView {ko} size={88} />
       <h2>{T.sheetTitle({ name })}</h2>
     </div>
     <p class="muted fs-sm">{T.intro}</p>

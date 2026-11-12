@@ -11,6 +11,20 @@
 
 ## 책임 지도
 
+
+```mermaid
+flowchart LR
+  Web["웹 화면 · Svelte 상태"] --> Core["app-core 공통 정책 · API client"]
+  App["앱 화면 · React 훅"] --> Core
+  Core --> Game["game 진행 · RNG · 저장"]
+  Core -- HTTP --> Routes["API 라우터: 인증 · 본문 · 응답"]
+  Routes --> Cases["사용 사례: 처리 순서 · 정책"]
+  Cases --> Repos["repos: SQL · batch"]
+  Repos --> D1["D1"]
+```
+
+`contracts`는 양쪽이 공유하는 계약·순수 규칙이다. 그림의 HTTP 화살표는 네트워크 경계이며 클라이언트가 API 소스를 import한다는 뜻이 아니다. 개인 커리어의 진행·저장은 기기에 있고, 온라인 경기·소유권의 최종 판정은 서버에 있다.
+
 | 변경 목적               | 먼저 볼 진입점                                                                                 | 경계                                                                        |
 | ----------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
 | 선수 한 구간 진행       | `packages/game/src/turn.ts` playPhase                                                          | 명시적 RNG 순서. UI가 규칙을 재구현하지 않음                                |
@@ -42,6 +56,8 @@ Team의 `teamRecords.svelte.ts` / `useTeamRecords.ts`는 기록·통계·업적,
 Create의 입력 정책은 `app-core/create-controls.ts`, 재시도 키/시드 계획은 `scoutAttempts.ts`, 아이템 기본값/안내는 `scoutItemsView.ts`가 소유한다. 플랫폼 도구 상태는 `createScoutItems.svelte.ts` / `useScoutItems.ts`, 공개 연출은 `createCandidateReveal.svelte.ts` / `useCandidateReveal.ts`에 있다. 후보 생성·킵·저장은 기존 `scouting-actions.ts`에 남는다.
 
 Market의 `createMarketData.svelte.ts` / `useMarketData.ts`는 계정·목록·지수·팀 조회를 소유한다. 웹의 탭/필터 effect와 앱의 늦은 응답 무시·silent 갱신은 기존 플랫폼 동작을 유지한다. `marketMutation.ts`는 거래 UI의 잠금·실패·성공 처리 순서만 공유하며, 낡은 시트 조정은 화면이 소유한다. 앱 `MarketParts.tsx`는 기존 표시 컴포넌트 모음이다.
+
+순환을 피하는 표시/SQL leaf는 웹 `CompIconView.svelte`, 앱 `screens/game/TrophyRow.tsx`, API `db/repos/firstsMutations.ts`다. 표시를 재사용하려고 편집 시트/전체 탭을 import하거나, SQL 문장을 쓰려고 판정 실행 모듈을 import하지 않는다. 남겨 둔 지연 의존과 agents 경계는 [순환 후보 검토](../tracking/code-quality-refactor.md#t-11-710-남은-순환-후보-검토)에 근거를 기록했다.
 
 ## 빠른 검증 경로
 
