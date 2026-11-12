@@ -1,5 +1,7 @@
+import { META_KEY, CURSOR_KEY, setMeta } from './firstsMutations.js';
+export { resetFirstsBackfillStatement, hideCareerStatements, setMeta } from './firstsMutations.js';
 import type { FirstsResponse } from '@offside/contracts';
-import { and, eq, inArray, sql, type SQL } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { blockingReasons } from './automation.js';
 import { autoHideCareer } from './automationEnforcement.js';
@@ -24,9 +26,7 @@ import {
 // 가르는 마이그레이션(0045)이 기존 행에 시즌을 채웠다 — 개막 전 배포라 시즌 1 선수가 없어 다시 훑지 않는다(버전 그대로).
 // T-11-045 은퇴 나이 해금(retirecap)은 시즌 1부터라 개막 전 배포에선 해당 커리어가 없다 — 다시 훑지 않는다(버전 그대로).
 export const BACKFILL_VERSION = '2';
-const META_KEY = 'server_firsts_backfill';
-/** 다시 훑는 중이면 마지막으로 판정한 careers rowid. */
-const CURSOR_KEY = 'server_firsts_cursor';
+
 /** 한 조각의 판정이 Workers 무료 플랜 CPU 안에 들도록 작게 잡는다(150명이면 판정만 5–16ms였다). */
 const RESCAN_CHUNK = 40;
 /** cron은 CPU 한도가 넉넉해(wrangler limits.cpu_ms) 한 번에 더 많이 판정한다. */
@@ -223,37 +223,6 @@ export async function recordCareerFirsts(
   await runBatch(db, statements);
   return statements.length > 0;
 }
-
-/** 기록을 가진 커리어가 지워지면(프로필 삭제) 그 자리는 다음 업로더가 아니라 실제로 가장 이른 달성자(서버
- * 기록은 그다음 최고값)에게 가야 한다 — 재계산 표시를 지워 공개 목록 조회가 전체를 다시 훑게 한다. */
-export const resetFirstsBackfillStatement = (db: Db) =>
-  db.delete(appMeta).where(inArray(appMeta.key, [META_KEY, CURSOR_KEY]));
-
-/** 커리어를 공개 순위에서 뺀다(careers.hidden) — 쥐고 있던 서버 최초 기록·서버 기록을 비우고, 쥐고 있던 게 있으면 다시 훑게 해
- * 실제 달성자에게 넘긴다. 재계산 표시는 지우기 전에 확인해야 하므로 batch 맨 앞에 둔다. */
-export const hideCareerStatements = (db: Db, careerId: string, guard?: SQL) => [
-  db
-    .delete(appMeta)
-    .where(
-      and(
-        inArray(appMeta.key, [META_KEY, CURSOR_KEY]),
-        guard,
-        sql`(exists (select 1 from server_firsts where career_id = ${careerId}) or exists (select 1 from server_records where career_id = ${careerId}))`,
-      ),
-    ),
-  db
-    .update(careers)
-    .set({ hidden: 1 })
-    .where(and(eq(careers.id, careerId), guard)),
-  db.delete(serverFirsts).where(and(eq(serverFirsts.careerId, careerId), guard)),
-  db.delete(serverRecords).where(and(eq(serverRecords.careerId, careerId), guard)),
-];
-
-export const setMeta = (db: Db, key: string, value: string) =>
-  db
-    .insert(appMeta)
-    .values({ key, value })
-    .onConflictDoUpdate({ target: appMeta.key, set: { value } });
 
 /** 다시 훑는 중이면 다음 한 조각(chunk명)을 판정한다. 무언가 했으면 true. */
 export async function ensureFirstsBackfilled(db: Db, chunk = RESCAN_CHUNK): Promise<boolean> {
