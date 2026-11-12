@@ -1,7 +1,8 @@
+import { rankedMatchProgress } from './rankedMatchProgress.js';
 // T-11-387 장면 경기 시작 · 장면 판정 · 마감. 랭크 경기 라우트(routes/ownerTeam.ts)와 5분 cron(마감 안 된 경기 정리)이 같이 쓴다.
 import type { PlayTeamMatchResponse, TeamMatchEvent } from '@offside/contracts';
 import { MOMENT_RULES } from '@offside/contracts/team-moments';
-import { matchScore, usesRankLadder } from '@offside/contracts/owner-team';
+import { matchScore } from '@offside/contracts/owner-team';
 import { matchRatingChange } from './rank.js';
 import type { Db } from '../db/client.js';
 import {
@@ -21,7 +22,7 @@ import {
 } from '../db/repos/teamLive.js';
 import { commitNotifiedEvent } from '../push/events.js';
 import { resolveBalance } from '@offside/contracts/balance';
-import { clampDivision, divisionRules, nextDivision } from '@offside/contracts/team-division';
+import { divisionRules } from '@offside/contracts/team-division';
 import { balanceVersionOf } from '../db/repos/balance.js';
 import type { Lang } from '../lang.js';
 import { anonText } from './anon.js';
@@ -217,20 +218,7 @@ export async function finalizeLive(
       ]),
       lang,
     ),
-    record: {
-      w: home.wins + (score === 1 ? 1 : 0),
-      d: home.draws + (score === 0.5 ? 1 : 0),
-      l: home.losses + (score === 0 ? 1 : 0),
-    },
-    rating: home.rating + delta.home,
-    ...(usesRankLadder(p.season)
-      ? {
-          division: {
-            from: clampDivision(home.division),
-            to: nextDivision(home.rating + delta.home, home.division, divisions),
-          },
-        }
-      : {}),
+    ...rankedMatchProgress(p.season, home, score, delta.home, divisions),
     matchesLeft: p.left,
     matchesNextAt: p.nextAt ?? null,
   };
@@ -302,4 +290,13 @@ export function refreshBoth(db: Db, f: Finalized) {
     refreshAfterChange(db, f.homeProfileId, f.season),
     ...(f.awayProfileId ? [refreshAfterChange(db, f.awayProfileId, f.season)] : []),
   ]);
+}
+
+export async function finishOpenLive(db: Db, ids: string[], now: string, lang: Lang) {
+  for (const id of ids) {
+    const row = await liveById(db, id);
+    if (!row || row.doneAt) continue;
+    const f = await finalizeLive(db, row, now, lang);
+    if (f?.fresh) await refreshBoth(db, f);
+  }
 }

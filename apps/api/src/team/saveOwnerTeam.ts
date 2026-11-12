@@ -19,8 +19,7 @@ import { conflictError } from '../routes/shared.js';
 import { activeCupSeasonsQuery } from './cup.js';
 import { buildLineup, filledCount, lineupOvr } from './sim.js';
 
-// Existing seasonal/cup policy remains owned by the route modules. Explicit ports
-// keep the save use case independent of their router registration and cycles.
+// Injected seasonal/competition policy keeps this save use case independent of orchestration.
 type SaveRules = {
   currentSeasonOrThrow(now: string): number;
   checkCupLineup(
