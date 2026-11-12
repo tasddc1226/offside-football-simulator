@@ -1,6 +1,13 @@
 import type { PushPerformanceQuery, PushPerformance } from '@offside/contracts';
 import { kstDay } from '@offside/contracts/kst';
 
+/** 문장을 차례로 하나씩 실행한다(batch처럼 한 트랜잭션으로 묶지 않는다). */
+const runEach = async (statements: D1PreparedStatement[]) => {
+  const out: D1Result[] = [];
+  for (const st of statements) out.push(await st.all());
+  return out;
+};
+
 /** The app reports OS responses only. Inbox read/detail never records a push click. */
 export async function recordPushInteraction(
   db: D1Database,
@@ -86,7 +93,7 @@ const COUNTS = KEYS.map((key) => `COALESCE(SUM(${key}), 0) AS ${key}`).join(', '
  * Category/issues are post-range aggregate filters, no new full-table scan or N+1.
  * Issues filters campaign history only; summary/analysis retain the selected cohort for context. */
 export async function getPushPerformance(
-  db: D1Database,
+  db: Pick<D1Database, 'prepare'>,
   query: PushPerformanceQuery,
   at = new Date(),
 ): Promise<PushPerformance> {
@@ -108,7 +115,9 @@ export async function getPushPerformance(
         query.category ?? null,
       );
   // T-11-693 전체 · 종류별 · 날짜별 · 복귀 단계 합계는 같은 알림 묶음을 네 번 훑지 않고 가장 잘게 나눈 한 번의 결과를 더해 만든다.
-  const [cells, campaigns, start, cups, nudges] = await db.batch([
+  // T-11-715 batch는 한 트랜잭션이라 다섯 집계가 끝날 때까지(운영 8초) 다른 요청이 모두 줄을 서다 D1 과부하 503이 났다.
+  // 하나씩 보내 사이사이에 일반 요청이 끼어들게 한다(같은 순서 · 같은 결과).
+  const [cells, campaigns, start, cups, nudges] = await runEach([
     statement(
       `SELECT substr(datetime(created_at, '+9 hours'), 1, 10) AS day, category, stage, ${COUNTS},
         COALESCE(SUM(returned), 0) AS returned, COALESCE(SUM(retired), 0) AS retired

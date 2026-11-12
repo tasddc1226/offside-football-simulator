@@ -66,6 +66,14 @@ export default {
   async scheduled(controller: ScheduledController, env: Bindings) {
     const logged = (job: string) => (e: unknown) =>
       console.error(JSON.stringify({ level: 'error', job, error: logErrorText(e) }));
+    // T-11-715 단계마다 걸린 시간 — 1.5초가 넘으면 남긴다(D1을 오래 붙잡은 단계를 과부하 시각과 맞춰 찾는다).
+    let lastMark = Date.now();
+    const mark = (step: string) => {
+      const at = Date.now();
+      const ms = at - lastMark;
+      lastMark = at;
+      if (ms >= 1500) console.log(JSON.stringify({ level: 'info', job: 'cron-step', step, ms }));
+    };
     // 시즌 일정(게이지가 확정한 마감·다음 시즌)을 먼저 입힌다 — 아래 결산·보존·게이지가 같은 일정을 본다.
     await loadSeasonSchedule(env.DB, true).catch(logged('season-schedule'));
     if (controller.cron === '0 19 * * *') {
@@ -92,11 +100,14 @@ export default {
             await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, STALE.balanceActivated());
         })
         .catch(logged('balance-schedule'));
+      mark('runScheduledBalance');
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
       await recoverBillingAlerts(env, controller.scheduledTime).catch(logged('billing-recovery'));
+      mark('recoverBillingAlerts');
       await publishPushWork(env, 'news', controller.scheduledTime).catch(
         logged('news-push-publish'),
       );
+      mark('publishPushWork:news');
       // T-11-501 리텐션 푸시를 켜면 옛 커리어 독려 · 재방문 안내는 쌓지 않는다(같은 사람에게 겹쳐 가지 않게).
       if (retentionPushEnabled(env))
         await queueRetentionPushes(env, controller.scheduledTime).catch(logged('retention-push'));
@@ -107,17 +118,21 @@ export default {
           );
         await queueReengagement(env, controller.scheduledTime).catch(logged('reengagement'));
       }
+      mark('retention-or-reminders');
       await queueAttendanceReminders(env, controller.scheduledTime).catch(
         logged('attendance-reminder'),
       );
+      mark('queueAttendanceReminders');
       await publishPushWork(env, 'personal', controller.scheduledTime).catch(
         logged('personal-push-publish'),
       );
+      mark('publishPushWork:personal');
       // 시즌 진행 게이지: 30분마다 세어 굳히고, 90%에 닿으면 마감 시각을 확정해 시즌 일정에
       // 다음 시즌과 함께 적는다. 결산보다 먼저 돈다.
       await runSeasonGauge(env.DB, new Date(controller.scheduledTime).toISOString())
         .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'season-gauge', ...r })))
         .catch(logged('season-gauge'));
+      mark('runSeasonGauge');
       // T-11-128 끝난 시즌 결산을 한 단계씩 굳힌다. 시간이 급한 알림을 먼저 보내고,
       // 실패하면 다음 5분에 같은 단계를 다시 한다.
       await runSeasonClose(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
@@ -127,12 +142,14 @@ export default {
             JSON.stringify({ level: 'error', job: 'season-close', error: logErrorText(e) }),
           ),
         );
+      mark('runSeasonClose');
       // T-11-387 고르지 않고 떠난 장면 경기를 자동 선택으로 마감한다.
       await finishStaleLive(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then(
           (r) => r.done && console.log(JSON.stringify({ level: 'info', job: 'team-live', ...r })),
         )
         .catch(logged('team-live'));
+      mark('finishStaleLive');
       // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
       await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then(async (r) => {
@@ -146,10 +163,12 @@ export default {
         .catch((e: unknown) =>
           console.error(JSON.stringify({ level: 'error', job: 'cup', error: logErrorText(e) })),
         );
+      mark('runCup');
       // T-11-418b 오프사이드 리그: 배치 안내 → 배치 → 시각이 된 경기 → 알림. 공개 조회는 엣지 캐시가 짧아(30 · 60초) 지우지 않는다.
       await runLeague(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'league', ...r })))
         .catch(logged('league'));
+      mark('runLeague');
       // T-11-658 AI 기자: 끝난 라운드의 신문 1면을 네 언어로 다시 쓴다(라운드마다 최대 3번, 못 쓴 언어는 템플릿 그대로).
       await writeLeagueNewsAi(
         env,
@@ -158,6 +177,7 @@ export default {
       )
         .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'league-ai', ...r })))
         .catch(logged('league-ai'));
+      mark('writeLeagueNewsAi');
       // T-11-445 리그가 밀리면 운영 슬랙에 알린다(15분마다, 문제마다 한 번).
       if (new Date(controller.scheduledTime).getUTCMinutes() % 15 === 0)
         await alertLeagueStalls(
@@ -173,22 +193,27 @@ export default {
               ),
           )
           .catch(logged('league-alert'));
+      mark('alertLeagueStalls');
       // T-11-251 다음 회차 만들기 → 접수 시작 알림 → 밀린 단계 슬랙 경보(15분마다).
       await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
+      mark('runCupAutopilot');
       // T-11-616 새 신고(이름 · 채팅 · 댓글)를 5분 단위로 묶어 운영 알림 채널에 알린다. 실패해도 신고와 다음 단계는 그대로다.
       await alertNewReports(env, controller.scheduledTime)
         .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'report-alert', ...r })))
         .catch(logged('report-alert'));
+      mark('alertNewReports');
       // A cron round can commit before a later step fails; purge even on a partial run.
       if (env.PUBLIC_API_ORIGIN)
         await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, STALE.cupChanged()).catch((e) =>
           console.log(JSON.stringify({ level: 'error', job: 'cup-cache', error: logErrorText(e) })),
         );
+      mark('purgeEdgeOrigin');
       // Daily work has its own durable cursor and precedes bulk backup/archive work.
       const daily = await runDailyTick(env, controller.scheduledTime).catch((e: unknown) => {
         logged('daily-step')(e);
         return { status: 'retry' as const, error: logErrorText(e) };
       });
+      mark('runDailyTick');
       // Yield bulk work when the primary is already rejecting maintenance requests.
       if (daily?.status === 'retry' && /overloaded|Network connection lost/.test(daily.error ?? ''))
         return;
@@ -198,6 +223,7 @@ export default {
             r && console.log(JSON.stringify({ level: 'info', job: 'season-events-archive', ...r })),
         )
         .catch(logged('season-events-archive'));
+      mark('runSeasonEventsArchive');
       await runSeasonTelemetryArchive(env, controller.scheduledTime)
         .then(
           (r) =>
@@ -205,6 +231,7 @@ export default {
             console.log(JSON.stringify({ level: 'info', job: 'season-telemetry-archive', ...r })),
         )
         .catch(logged('season-telemetry-archive'));
+      mark('runSeasonTelemetryArchive');
       // T-11-274 D1 → R2 백업을 5분마다 한 조각씩. UTC 19:00(KST 04:00) 뒤 첫 틱에 시작해 끝까지 이어받는다.
       // 15분 상한 안에 들게 한 조각은 45초만 읽고, 실패하면 다음 틱이 같은 조각을 다시 만든다.
       // Keep backup reads away from the hourly archive/reminder burst.
@@ -216,23 +243,29 @@ export default {
             if (r) console.log(JSON.stringify({ level: 'info', job: 'backup', ...r }));
           })
           .catch(logged('backup'));
+      mark('runBackupStep');
       // T-11-467 이 기능 전에 은퇴한 선수의 주 리그 · 클럽을 조금씩 채운다(다 채우면 멈춘다).
       await runMainClubBackfill(env.DB)
         .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'main-club', ...r })))
         .catch(logged('main-club'));
+      mark('runMainClubBackfill');
       // T-11-311 이 기능 전에 은퇴한 기록의 상세 스냅샷을 D1에서 R2로 조금씩 옮긴다(다 옮기면 멈춘다).
       await runSnapshotOffload(env)
         .then(
           (r) => r && console.log(JSON.stringify({ level: 'info', job: 'snapshot-offload', ...r })),
         )
         .catch(logged('snapshot-offload'));
+      mark('runSnapshotOffload');
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
+      mark('sweepAutomation');
       await updateClubStrength(env, controller.scheduledTime).catch(logged('club-strength'));
+      mark('updateClubStrength');
       // Health samples describe the database now, after the preceding cron work has finished.
       await runInfraHealth(env, Date.now(), daily?.status === 'complete').catch(
         logged('infra-health'),
       );
+      mark('runInfraHealth');
       // T-11-156 서버 최초 기록 전체 재계산을 몰아서 훑는다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
       // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다. 피크와 백업 조각을 읽은 틱에는 쉰다(T-11-643).
       await runFirstsRescan(
@@ -244,6 +277,7 @@ export default {
             n && console.log(JSON.stringify({ level: 'info', job: 'firsts-rescan', chunks: n })),
         )
         .catch(logged('firsts-rescan'));
+      mark('runFirstsRescan');
     }
   },
 };

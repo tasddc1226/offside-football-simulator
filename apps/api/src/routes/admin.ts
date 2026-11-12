@@ -64,7 +64,8 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
       !query.tests &&
       !query.through &&
       query.page === 0;
-    const load = () => getPushPerformance(c.env.DB, query);
+    // T-11-715 읽기 복제본이 받을 수 있으면 그쪽으로 보낸다(주 DB를 덜 붙잡게). 집계라 몇 초 늦은 복제본도 된다.
+    const load = () => getPushPerformance(c.env.DB.withSession('first-unconstrained'), query);
     const data = plain
       ? await edgeCached(c, EDGE.adminPushPerformance(query.days), HEAVY_TTL, load)
       : await load();
