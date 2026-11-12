@@ -119,7 +119,7 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
   app.post('/v1/web-pay/orders', requireProfile, async (c) => {
     const me = await requireOwner(c);
     if (!webPayEnabled(c.env, me.id)) throw unavailable();
-    const { productId } = readBody(c, WebPayOrderBodySchema);
+    const { productId, trackingId } = readBody(c, WebPayOrderBodySchema);
     const db = getDb(c);
     const now = nowIso();
     if (
@@ -137,14 +137,25 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
       typeof cf?.country === 'string' && /^[A-Z]{2}$/.test(cf.country) && cf.country !== 'XX'
         ? cf.country
         : null;
-    const token = await createXsollaToken(c.env, {
+    const tokenInput = {
       profileId: me.id,
       sku: productId,
       country,
       ip: c.req.header('CF-Connecting-IP') ?? null,
       language: reqLang(c),
       returnUrl: `${origin}/?webpay=${orderId}`,
-    }).catch((e: unknown) => {
+    };
+    const token = await (
+      trackingId
+        ? // T-11-700 추적값 때문에 토큰이 거절되면 추적값 없이 한 번 더 만든다. 크리에이터 실적은 빠져도 결제는 막지 않는다.
+          createXsollaToken(c.env, { ...tokenInput, trackingId }).catch((e: unknown) => {
+            console.error(
+              JSON.stringify({ job: 'web-pay-token-tracking', error: String(e).slice(0, 200) }),
+            );
+            return createXsollaToken(c.env, tokenInput);
+          })
+        : createXsollaToken(c.env, tokenInput)
+    ).catch((e: unknown) => {
       console.error(JSON.stringify({ job: 'web-pay-token', error: String(e).slice(0, 200) }));
       throw unavailable();
     });

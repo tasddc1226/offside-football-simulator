@@ -12,11 +12,11 @@ export type { WebPayConfigResponse, WebPayOrderResponse } from '@offside/contrac
 export const fetchWebPayConfig = () =>
   ownerCachedGet<WebPayConfigResponse>('/v1/web-pay/config', 10 * 60_000);
 
-/** 주문을 만들고 엑솔라 결제창 주소를 받는다(결제창 언어는 지금 화면 언어). */
-export const createWebPayOrder = (productId: string) =>
+/** 주문을 만들고 엑솔라 결제창 주소를 받는다(결제창 언어는 지금 화면 언어). trackingId는 크리에이터 링크로 들어온 경우만 있다. */
+export const createWebPayOrder = (productId: string, trackingId?: string | null) =>
   apiFetch<WebPayOrderResponse>(withLang('/v1/web-pay/orders'), {
     method: 'POST',
-    body: JSON.stringify({ productId }),
+    body: JSON.stringify(trackingId ? { productId, trackingId } : { productId }),
   });
 
 /** 결제창에서 돌아온 뒤 주문 상태(메모하지 않는다 — 웹훅이 오면 바뀐다). */

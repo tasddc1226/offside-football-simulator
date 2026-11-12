@@ -76,7 +76,11 @@ export function ratingChange(
 export const RANK_LADDER_FROM_SEASON = 2;
 export const usesRankLadder = (season: number): boolean => season >= RANK_LADDER_FROM_SEASON;
 /** T-11-510 자동 매칭에서 한 경기마다 다른 상대를 다시 찾을 수 있는 횟수. */
-export const RANK_MATCH_REPICKS = 3;
+/**
+ * T-11-702 다른 상대 찾기는 하루(한국 시간) 5번이다. 앱은 보상형 광고를 보고(광고 제거 구매자는 광고 없이), 웹은 바로 찾는다.
+ * 횟수는 기기에서 세고, 서버는 한 경기의 pick을 이 값까지만 받는다.
+ */
+export const RANK_REPICKS_DAILY = 5;
 export const RANK_WIN = 20;
 export const RANK_DRAW = 3;
 /** 디비전마다(아마추어 → 마스터) 질 때 기본 감점. */
@@ -84,6 +88,11 @@ export const RANK_LOSS_BY_DIVISION = [14, 14, 15, 16, 18, 19, 20, 22] as const;
 /** 상대 보정: (상대 RP − 내 RP) ÷ RANK_EDGE_DIV를 ±RANK_EDGE_MAX로 자른 값. */
 export const RANK_EDGE_DIV = 25;
 export const RANK_EDGE_MAX = 8;
+/**
+ * T-11-701 RP가 낮은 상대에게 질 때 더 깎는 몫의 상한. 1위 근처 팀은 상대가 모두 RP가 낮아 이기면 +12 · 지면 −30이 되어
+ * 승률 71%가 넘어야 제자리였다(11-11 문의). 높은 상대에게 졌을 때 덜 깎는 몫은 RANK_EDGE_MAX 그대로다.
+ */
+export const RANK_LOSS_EDGE_MAX = 4;
 
 /**
  * 한 팀 쪽 RP 변화. division = 경기 전 내 디비전, defender = 도전을 받은 쪽(깎일 때만 절반). 0 아래로는 내려가지 않는다.
@@ -99,7 +108,12 @@ export function rankPoints(
   const c = Math.max(-RANK_EDGE_MAX, Math.min(RANK_EDGE_MAX, (opp - me) / RANK_EDGE_DIV));
   const loss =
     RANK_LOSS_BY_DIVISION[Math.min(RANK_LOSS_BY_DIVISION.length - 1, Math.max(0, division))]!;
-  const raw = score === 1 ? RANK_WIN + c : score === 0.5 ? RANK_DRAW + c / 2 : -(loss - c);
+  const raw =
+    score === 1
+      ? RANK_WIN + c
+      : score === 0.5
+        ? RANK_DRAW + c / 2
+        : -(loss - Math.max(-RANK_LOSS_EDGE_MAX, c));
   return Math.max(-me, Math.round(defender && raw < 0 ? raw / 2 : raw)) || 0;
 }
 

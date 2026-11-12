@@ -26,7 +26,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   moreOpponents: 'Show other opponents',
   matchTitle: 'Ranked matchmaking',
   matchRule: (p) =>
-    `We pick a team with similar RP and strength. You can look for a different opponent up to ${p.n} times per match.`,
+    `We pick a team with similar RP and strength. You can look for a different opponent up to ${p.n} times a day.`,
   matchGapNote:
     'The number under RP is the gap to your team. Beat a higher-RP team to gain more, and lose less if you fall short.',
   oddsTitle: 'Expected win · draw · loss',
@@ -42,6 +42,12 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   matchRepick: (p) => `Find another opponent (${p.left}/${p.max})`,
   // T-11-603 랭크 매칭 큐
   matchRepickBtn: (p) => `New opponent (${p.left}/${p.max})`,
+  // T-11-702 앱은 보상형 광고를 보고 다른 상대를 찾는다(하루 횟수는 웹과 같다)
+  matchRuleApp: (p) =>
+    `We pick a team with similar RP and strength. Watch an ad to look for a different opponent, up to ${p.n} times a day.`,
+  matchRepickAd: (p) => `Watch an ad to find another opponent (${p.left}/${p.max})`,
+  matchRepickAdBtn: (p) => `Watch ad: new opponent (${p.left}/${p.max})`,
+  matchRepickAdSkip: 'Watch the ad to the end to find another opponent.',
   squadSideAria: 'Team to view',
   squadOpponent: 'Opponent',
   squadLineup: 'Starting lineup',

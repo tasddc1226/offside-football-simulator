@@ -392,6 +392,12 @@ describe('T-11-510 RP 사다리', () => {
     // 보정은 ±8까지.
     expect(rankPoints(1000, 2000, 1, 0)).toBe(28);
     expect(rankPoints(2000, 1000, 1, 7)).toBe(12);
+    // T-11-701 RP가 낮은 상대에게 지면 더 깎는 몫은 4점까지(높은 상대에게 지면 덜 깎는 몫은 8점 그대로).
+    expect(rankPoints(2275, 2000, 0, 7)).toBe(-26);
+    expect(rankPoints(2275, 2000, 0, 7, true)).toBe(-13);
+    expect(rankPoints(2000, 2050, 0, 7)).toBe(-20);
+    expect(rankPoints(1500, 1475, 0, 4)).toBe(-19);
+    expect(rankPoints(2275, 2000, 0.5, 7)).toBe(-1);
   });
   it('받은 쪽은 깎일 때만 절반이고, 0 아래로는 내려가지 않는다', () => {
     expect(rankPoints(1000, 1000, 0, 0, true)).toBe(-7);
