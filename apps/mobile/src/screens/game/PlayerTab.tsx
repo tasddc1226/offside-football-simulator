@@ -443,6 +443,11 @@ export function PlayerTab({ s }: { s: GameState }) {
           {L.profile}
         </Txt>
         <Kv rows={info} />
+        {pot.kind === 'shown' ? (
+          <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 8 }} testID="pot-note">
+            {pot.note}
+          </Txt>
+        ) : null}
         {showPeek ? (
           <View
             style={{

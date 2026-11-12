@@ -99,7 +99,8 @@ export function eventView(s: M3State, ev: M3Event): EventView {
   }[ev.kind as 'playtime' | 'renewal' | 'bigbid' | 'fight'];
   const p = s.squad.find((x) => x.id === ev.player);
   // 재계약 요구: 답하기 전에는 지금 주급과 받아들일 때 주급을, 받아들인 뒤에는 새 주급을 보여 준다.
-  const detail =
+  // T-11-711 줄 만한 선수인지 판단하게 앞에 포지션 · 나이 · OVR을 붙인다.
+  const wage =
     ev.kind !== 'renewal' || !p
       ? null
       : ev.choice === null
@@ -111,6 +112,7 @@ export function eventView(s: M3State, ev: M3Event): EventView {
         : ev.choice === 0
           ? T.ev_renewal_signed({ wage: fmtValue(p.wage) })
           : null;
+  const detail = wage && p ? `${playerLine(p)} · ${wage}` : null;
   return { ...head, detail, result: ev.choice === null ? null : r(ev.choice) };
 }
 

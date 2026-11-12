@@ -51,6 +51,7 @@ describe('T-11-079 잠재력 엿보기', () => {
       kind: 'shown',
       grade: 'B~S',
       text: 'B~S등급 · 2027 시즌 스카우트 평가',
+      note: expect.stringContaining('오차가 있는 추정'),
     });
     expect(peekView(st({ pot: 86, rescout: 2 }), peekOf(s), 'ad')).toMatchObject({ grade: 'A' });
   });

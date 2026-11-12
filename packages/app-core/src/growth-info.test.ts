@@ -36,6 +36,24 @@ describe('attrData OVR 반영 비율', () => {
     }
   });
 
+  it('T-11-711 OVR 90부터 반영 비중 × 남은 값이 가장 큰 세부 능력치를 OVR을 막는 능력치로 보여 준다', () => {
+    setActiveRng(createRng(7));
+    const s = newGame(
+      { name: '테스트', number: 4, pos: 'DF', foot: '오른발', type: 'stopper', trait: 'normal' },
+      3,
+    );
+    expect(attrData(s).ovrBlock).toBeNull(); // 갓 만든 선수(OVR 90 아래)는 보이지 않는다.
+    for (const k of Object.keys(s.sub)) s.sub[k] = 99;
+    expect(attrData(s).ovrBlock).toBeNull(); // 99면 막는 능력치가 없다.
+    s.sub.hea = 85;
+    const before = JSON.stringify(s);
+    const b = attrData(s).ovrBlock!;
+    expect(JSON.stringify(s)).toBe(before);
+    expect(b).toMatchObject({ key: 'hea', name: '헤딩 정확도', value: 85 });
+    expect(b.pct).toBeGreaterThanOrEqual(5);
+    expect(b.gain).toBeCloseTo((b.pct / 100) * 14, 0);
+  });
+
   it('스트라이커로 잡힌 타깃맨도 포지션별 OVR에 타깃맨이 보인다(T-11-399)', () => {
     setActiveRng(createRng(7));
     const s = newGame(

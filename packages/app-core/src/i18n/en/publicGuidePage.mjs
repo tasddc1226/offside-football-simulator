@@ -263,6 +263,14 @@ export default (guideCopy) => {
       'Potential is not a cap on OVR but a measure of growth speed. The closer OVR gets to potential, the slower it grows (it keeps growing a little even after reaching potential), and growth shrinks as you age. Usually from age 31 (32 for late bloomers, 3 years later for goalkeepers), pace and physical start to fall first. Players created before October 21, 2026 keep following the old rule (early developer 30, late bloomer 33). A successful Potential Boost increases the room left, so you grow quickly again. From the season your attributes start to decline, you can reduce that season’s end-of-season decline with career funds in Body care on the Player tab (basic care 30% · intensive care 55% · dedicated medical team 75%, once per season). The cost scales with salary and rises the further you are from your peak age.',
     ],
     [
+      'How are the candidate card range, the scouting report and real potential different?',
+      'They are three different values. The grade range on a candidate card (such as B–A) is the 10-point band your starting potential falls in, so B–A means 80–89. The scouting report on the Player tab is an estimate that appears after your first season. Before the age-21 and age-24 reassessments it has some error and shows as a range such as C~B, and each reassessment narrows it. Real potential drifts a little at random every season until age 25, rises through boosts and events, and is first revealed in the retirement report. So a player who was B–A as a candidate can show S in the scouting report and still end with a different real potential. The starting real potential is shown under “How potential changed” in the retirement report.',
+    ],
+    [
+      'Almost all my detailed attributes are 99, so why is my OVR not 99?',
+      'OVR adds up each detailed attribute multiplied by its weight in your current position, so one low attribute with a large weight keeps it below 99. The % next to each detailed attribute on the Attributes card in the Player tab is that weight. For example, heading accuracy is about 10% for a center back, so with heading accuracy at 85 the OVR stays about 1.4 lower and shows 98 even if every other detailed attribute is 99. For a fullback heading accuracy is 4%, so the same gap costs only about 0.6. From OVR 90, the Attributes card shows the attribute holding your OVR back most and how much OVR raising it to 99 would add.',
+    ],
+    [
       'What are the main attributes for each position?',
       'The “Main OVR attributes” on the player creation screen show the attributes that carry the most weight for the detailed position you chose. For example, an attacking midfielder weighs dribbling, passing and shooting heavily, a central midfielder passing and dribbling, and a defensive midfielder defending and passing.',
     ],

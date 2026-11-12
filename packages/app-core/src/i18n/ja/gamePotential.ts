@@ -5,6 +5,8 @@ export const gamePotential: Translation<GamePotentialMsgs> = {
   peekLocked: '最初のシーズンを終えるとスカウト評価を見られます。',
   peekAvailable:
     '本当のポテンシャルは引退時に公開されます。評価を見るだけではポテンシャルは変わりません。',
+  peekNote:
+    'スカウト評価は誤差のある推定で、21歳・24歳の再評価で範囲が狭まります。隠れたポテンシャルが25歳まで上下するため、引退時に公開される本当のポテンシャルと違うことがあります。',
   peekShown: (p) => `${p.grade}ランク · ${p.year}シーズンのスカウト評価`,
   peekBtnFree: '今シーズンの評価を見る',
   peekBtnAd: '広告を見て今シーズンの評価を見る',
