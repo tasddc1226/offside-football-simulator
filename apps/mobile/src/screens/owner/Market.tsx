@@ -149,7 +149,6 @@ export default function Market() {
     team,
     setTeamSeason,
     teamFailed,
-    loadTeam,
   } = useMarketData(view, destination.market, setView);
   const [finding, setFinding] = useState(false);
   const myListingIds = useMemo(() => new Set(me?.listings.map((l) => l.id) ?? []), [me]);

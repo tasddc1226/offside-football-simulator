@@ -149,6 +149,5 @@ export function useMarketData(
     team,
     setTeamSeason,
     teamFailed,
-    loadTeam,
   };
 }
