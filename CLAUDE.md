@@ -54,8 +54,9 @@ pnpm --filter @offside/fulltime-sim analyze
   engine → events-data → events → stories → military → realevents →
   positional → national → comps → season 순서로 로드된다. 시드 RNG
   (`RngSaveState`)는 세이브 상태 안에 저장돼 저장/재개 후에도 이어진다.
-- **`apps/web/src/api`**: `apps/api`와 통신하는 클라이언트. GET은 `cachedGet`으로 부른다.
-  시즌·은퇴 요약 업로드 큐는 `apps/web/src/sync/outbox.ts`.
+- **`packages/app-core/src/api`**: 웹·앱 공통 API. `client.ts`는 호환 export, `transport.ts`는 요청·캐시·세션,
+  `profile.ts`·`public.ts`는 도메인 조회/쓰기다. GET은 `cachedGet`으로 부른다. 시즌·은퇴 업로드 큐는
+  `packages/app-core/src/outbox.ts`이며 웹 `sync/outbox.ts`는 어댑터다.
 - **`apps/api`**: 세션 지연 조회(`middleware/session.ts`의 `resolveSession`), 익명 프로필 1급 +
   Google 로그인은 복구·기기 이동 수단(`profile/`, `auth/`). D1 스키마는
   `db/schema.ts`, 마이그레이션은 `migrations/`(`0015`가 원작 게임 테이블을 드롭한 뒤
@@ -69,6 +70,8 @@ pnpm --filter @offside/fulltime-sim analyze
   (`@offside/contracts/balance`, zod 없는 서브패스).
 - **`tooling/fulltime-sim`**: 헤드리스 밸런스 시뮬레이터. `packages/game/src/*`
   ES 모듈을 DOM 없이 그대로 import해 대량 커리어를 시뮬레이션한다.
+
+탐색 진입점·책임 경계·빠른 검증 명령은 [코드 탐색과 리팩터링](docs/operations/code-navigation.md)을 본다.
 
 ## 백엔드 보호 · 요청 최소화 규칙 (2026-09-25, T-10-015)
 
