@@ -6,7 +6,7 @@
 // - 로고: 게임 로직과 무관한 표시 전용 값이라 CLUBS에 넣지 않고 id → 로고 맵으로만 둔다.
 import { CLUBS, type Club } from './data.js';
 import { clubInitial, crestOf } from './crests.js';
-import { SANGMU } from './military.js';
+import { SANGMU } from './sangmu-data.js';
 import { CLUB_CUSTOM_IMG_MAX } from '@offside/contracts/club-limits';
 
 export const CLUB_NAME_MAX = 20;
@@ -44,16 +44,14 @@ function cleanLogo(v: unknown): ClubLogo | undefined {
   return img ? { text, bg, fg, img } : { text, bg, fg };
 }
 
-/** 김천 상무의 원래 이름. military.ts와 서로 불러 모듈을 읽는 시점엔 SANGMU가 없을 수 있어 처음 쓸 때 읽는다
- *  (applyClubNames가 SANGMU.name을 바꾸기 전 값). */
-let sangmuBase: string | null = null;
-const sangmuBaseName = (): string => (sangmuBase ??= SANGMU.name);
+/** Customization mutates the shared club; keep its original name before the first edit. */
+const SANGMU_BASE_NAME = SANGMU.name;
 /** T-11-696 구단명 설정에 보일 김천 상무(지금 이름 · 원래 이름). 게임 진행은 SANGMU를 그대로 쓴다. */
 export const sangmuClub = (): Pick<Club, 'id' | 'name' | 'leagueId' | 'baseName'> => ({
   id: SANGMU.id,
   name: SANGMU.name,
   leagueId: SANGMU.leagueId,
-  baseName: sangmuBaseName(),
+  baseName: SANGMU_BASE_NAME,
 });
 
 /** 저장소·가져오기 파일에서 읽은 값을 검증한다 — 없는 클럽 id, 형식이 틀린 값은 버린다. */
@@ -75,7 +73,7 @@ export function sanitizeClubCustom(raw: unknown): ClubCustomMap {
 export function applyClubNames(map: ClubCustomMap): void {
   for (const c of CLUBS) c.name = map[c.id]?.name || c.baseName || c.name;
   // T-11-696 김천 상무는 CLUBS 밖에 있다. 입대할 때 SANGMU를 복사하므로 여기서 바꾼 이름이 새 기록에 남는다.
-  SANGMU.name = map[SANGMU.id]?.name || sangmuBaseName();
+  SANGMU.name = map[SANGMU.id]?.name || SANGMU_BASE_NAME;
   byName = null;
 }
 

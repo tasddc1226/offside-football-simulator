@@ -1,3 +1,4 @@
+import { projectTeamDraft } from '@offside/app-core/teamDraftView';
 // T-10-092 구단주 팀(웹 team/Team.svelte) — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가
 // 채운다) 같은 시즌 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 경기 결과는 서버가 정한다(앱은 보여 주기만).
 // 편성·후보·업적 표기 같은 순수 계산은 웹과 같은 @offside/app-core/teamOwner.
@@ -8,8 +9,6 @@ import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import {
   FORMATION_IDS,
-  presetLayout,
-  positionedLayout,
   type TeamPosition,
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
@@ -19,9 +18,7 @@ import {
   TEAM_RATING_START,
   YOUTH_NAME,
   YOUTH_OVR,
-  slotRating,
   synergyApplies,
-  teamOvr,
   SHAPE_IDS,
   shapeBase,
   shapeLayout,
@@ -56,16 +53,13 @@ import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-cor
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import {
   autoFillSlots,
-  draftLines,
   cupTeamLink,
   cupTeamNote,
   isPreseasonLegacy,
   matchHintOf,
   preseasonTeamNote,
-  slotsSynergy,
   synergyFocus,
   teamEditableIn,
-  pastInSlots,
   seasonCupSlots,
 } from '@offside/app-core/teamOwner';
 import { cupText as CT } from '@offside/app-core/i18n/ko/cup';
@@ -315,22 +309,11 @@ export default function Team() {
       { text: HO.anonCardsBtn, onPress: () => void publishNames() },
     ]);
 
-  const positions =
-    editable && season > 0
-      ? positionedLayout(layout ?? presetLayout(formation))
-      : (layout ?? presetLayout(formation));
-  const slotCodes = positions.map((p) => p.slot);
-  const ratings: (number | null)[] = slotCodes.map((slot, i) => {
-    const id = slots[i];
-    const p = id ? byId.get(id) : undefined;
-    return p ? slotRating(slot, p) : null;
-  });
-  const ovr = teamOvr(ratings);
-  // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
-  const synergy = slotsSynergy(positions, slots, byId, season);
+  const cupPreset = cupPresetOf(team?.presets);
+  const { positions, slotCodes, ratings, ovr, synergy, lines, filled, cupDraft } = projectTeamDraft(
+    { formation, layout, slots, byId, season, editable, cupPreset },
+  );
   const syn = synergyFocus(synergy, synFocus);
-  // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
-  const lines = draftLines(slotCodes, ratings, synergy, season);
   // T-11-379 리포트 '고칠 곳' — 지금 편성에서 약한 줄을 가장 많이 올릴 자리를 골라 둔 채 편성 화면으로.
   const [focusSlot, setFocusSlot] = useState<number | null>(null);
   const reportFix = (line: ReportLine) => {
@@ -351,25 +334,10 @@ export default function Team() {
   const coachBonus = team?.coach ? coachLineBonus(team.coach, formation, synergy, season) : null;
   // T-11-382 줄 칸의 감독 보정이 어디서 왔는지(갈래별 값 · 상한에 잘린 몫 · 꺼진 특기).
   const coachDetail = team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null;
-  const filled = slots.filter((s) => s !== null).length;
-  // T-11-570 컵 명단 프리셋이 있으면 컵은 그 편성으로 뛴다 — 줄은 프리셋 값을 보이고 팀 저장은 막지 않는다.
-  const cupPreset = cupPresetOf(team?.presets);
   // T-11-436 컵 규칙 줄 — 서버 저장 검사와 같은 판정. block이 있으면 저장을 막고 이유를 보인다.
   const cupBar =
     editable && !legacy && cupState.cup?.cup.season === season
-      ? cupLineupBar(
-          cupState.cup,
-          cupState.me,
-          // T-11-657 past: 이번 시즌 선수 컵이면 컵 명단에 든 지난 시즌 카드 수.
-          cupPreset
-            ? {
-                ovr: cupPreset.ovr ?? 0,
-                filled: cupPreset.filled ?? cupPreset.slots.filter(Boolean).length,
-                past: pastInSlots(cupPreset.slots, byId, season),
-              }
-            : { ovr, filled, past: pastInSlots(slots, byId, season) },
-          new Date().toISOString(),
-        )
+      ? cupLineupBar(cupState.cup, cupState.me, cupDraft, new Date().toISOString())
       : null;
   const cupBlock = cupPreset ? null : (cupBar?.block ?? null);
   const dirty =
@@ -1518,7 +1486,7 @@ export default function Team() {
               : null
           }
           seasonOnly={!!cupState.cup?.cup.seasonCardsOnly && cupState.cup?.cup.season === season}
-          cupPast={cupPreset ? pastInSlots(cupPreset.slots, byId, season) : 0}
+          cupPast={cupPreset ? cupDraft.past : 0}
           onSeason={() => void makeSeasonCup()}
           draft={(presetName) =>
             presetOf(presetName, formation, slots, season > 0 ? positions : null)

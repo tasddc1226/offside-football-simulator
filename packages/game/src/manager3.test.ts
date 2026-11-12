@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import type { ManagerOrigin } from '@offside/contracts/manager-rules';
 import {
@@ -270,4 +271,17 @@ describe('감독 커리어 3 선수 이름', () => {
       }
     }
   });
+});
+
+// Capture the pre-extraction behavior, including RNG, squad, reviews and persisted history.
+it('preserves seeded manager state across structural refactoring', () => {
+  const hashes = [1, 7, 42, 99, 704, 2026, 17111, 135].map((seed) => {
+    const s = run(fresh(seed), 10);
+    expect(s.phase).toBe('done');
+    const normalized = JSON.stringify(s, (_, v: unknown) =>
+      typeof v === 'number' && !Number.isInteger(v) ? Number(v.toPrecision(10)) : v,
+    );
+    return `${seed} ${createHash('sha256').update(normalized).digest('hex')}`;
+  });
+  expect(hashes).toMatchSnapshot();
 });

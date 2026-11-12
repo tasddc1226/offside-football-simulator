@@ -7,7 +7,7 @@ import type {
   LeagueNewsTeam,
 } from '@offside/contracts';
 import type { MatchDetail } from '../db/repos/ownerTeams.js';
-import type { LeagueMatchRow } from './league.js';
+import type { LeagueMatchRow } from './leagueRead.js';
 import type { LeagueNewsPlan } from './leagueNewsSelection.js';
 
 type Person = { name: string | null; pos: string; number: number | null };

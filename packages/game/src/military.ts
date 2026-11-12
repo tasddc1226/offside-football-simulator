@@ -19,7 +19,8 @@ import { gMilitaryText as M } from './i18n/ko/gMilitary.js';
 // 진행 중에 만드는 문장은 세이브에 남으므로 유저가 바꾼 이름 없이 원래 이름으로(T-11-647).
 import { tnBase as tn } from './i18n/names.js';
 
-export const SANGMU = { id: 'sangmu', name: '김천 상무 (국군체육부대)', leagueId: 'k1', str: 63 };
+import { SANGMU } from './sangmu-data.js';
+export { SANGMU } from './sangmu-data.js';
 const MIL_AGE = 28;
 const SANGMU_MIN_AGE = 22;
 const SPORTS_MONTHS = 34;

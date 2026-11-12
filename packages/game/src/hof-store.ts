@@ -1,5 +1,5 @@
 // ───────── 로컬 명예의 전당 (T-11-126) ─────────
-// 첫 화면이 쓰는 은퇴 기록 읽기만 둔 가벼운 모듈. season.ts에 두면 홈이 시즌 엔진 전체를 첫 번들로 끌어온다.
+// 첫 화면이 쓰는 은퇴 기록 읽기와 로컬 보관을 맡는 가벼운 모듈. season.ts에 두면 홈이 시즌 엔진 전체를 첫 번들로 끌어온다.
 import { SAVE_VERSION } from './data.js';
 import { controlPoints } from '@offside/contracts/hof-rules';
 import { legendRawScore } from './legend.js';
@@ -72,3 +72,16 @@ export const localCareerNames = (): Map<string, string> =>
     ...Object.entries(loadNames()),
     ...loadHOF().flatMap((h) => (h.id ? [[h.id, h.name] as const] : [])),
   ]);
+
+/** Append/dedupe a retirement, retaining the newest entry even below the local score cutoff. */
+export function appendLocalHof(entry: HofEntry): void {
+  // T-10-107 같은 커리어가 다시 은퇴하면(탭 두 개로 같은 저장 등) 이전 기록을 바꾼다 — 겹치면 '내 선수' 목록이 깨진다.
+  const hof = loadHOF().filter((h) => !entry.id || h.id !== entry.id);
+  hof.push(entry);
+  hof.sort((a, b) => b.score - a.score);
+  // 30명이 찼어도 방금 은퇴한 선수는 남긴다 — 잘리면 은퇴 화면의 공유·이름 공개 카드가 사라진다.
+  const kept = hof.slice(0, HOF_LOCAL_MAX);
+  if (!kept.includes(entry)) kept[HOF_LOCAL_MAX - 1] = entry;
+  saveKey('ft_hof', kept);
+  if (entry.id !== undefined) rememberCareerName(entry.id, entry.name);
+}

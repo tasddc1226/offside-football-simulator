@@ -1,4 +1,4 @@
-import { leagueTable, type LeagueEntryRow, type LeagueMatchRow } from './league.js';
+import { leagueTable, type LeagueEntryRow, type LeagueMatchRow } from './leagueRead.js';
 
 /** 이변으로 싣는 최소 OVR 차. */
 export const NEWS_UPSET_GAP = 3;

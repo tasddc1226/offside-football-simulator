@@ -52,7 +52,7 @@ import { AppError, parseWithAppError } from '../errors.js';
 import { getDb, type AppEnv } from '../env.js';
 import { requireOwner } from '../middleware/requireOwner.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { checkCupEnhance, cupEnhanceGuard } from './cup.js';
+import { checkCupEnhance, cupEnhanceGuard } from '../team/competitionLineup.js';
 import {
   conflictError,
   fundsShort,

@@ -6,7 +6,7 @@ import { cups, cupEntries, cupMatches, cupState, ownerTeams } from '../db/schema
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, callJson, issueAdminCookie, issueGoogleCookie } from '../test/http.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
-import { checkCupLineup, checkCupListing, checkCupManager } from './cup.js';
+import { checkCupLineup, checkCupListing, checkCupManager } from '../team/competitionLineup.js';
 
 const NOW = '2026-10-10T03:00:00.000Z';
 const defs = Array.from({ length: 8 }, (_, i) =>

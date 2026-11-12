@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { LeagueEntryRow, LeagueMatchRow } from './league.js';
+import type { LeagueEntryRow, LeagueMatchRow } from './leagueRead.js';
 import { planLeagueNews, type LeagueNewsGoal } from './leagueNewsSelection.js';
 import { projectLeagueNews } from './leagueNewsProjection.js';
 import type { MatchDetail } from '../db/repos/ownerTeams.js';
