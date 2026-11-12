@@ -41,6 +41,21 @@ test('입력 단계와 후보 고르기가 360×780에서 스크롤 없이 들�
   await noScroll(page);
   await page.locator('[data-cand="0"]').click();
   await expect(page.locator('[data-cand-edge="0"]')).toBeVisible();
+  // Svelte starts a delay animation before the growing card/detail animations. Wait through both.
+  await page.locator('[data-cand="0"]').evaluate(async (card) => {
+    for (;;) {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      const running = card
+        .getAnimations({ subtree: true })
+        .filter(
+          (animation) =>
+            animation.playState !== 'finished' &&
+            animation.effect?.getComputedTiming().endTime !== Infinity,
+        );
+      if (!running.length) break;
+      await Promise.all(running.map((animation) => animation.finished.catch(() => undefined)));
+    }
+  });
   await noScroll(page);
 });
 

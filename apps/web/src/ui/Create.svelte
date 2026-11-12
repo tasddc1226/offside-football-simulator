@@ -241,7 +241,7 @@
 {/snippet}
 
 
-<div class="wrap has-cta create-wizard" class:extra={appState.createStep === 'extra' && !appState.candidates}>
+<div class="wrap has-cta create-wizard" class:compact-candidates={!!appState.candidates && quiet} class:extra={appState.createStep === 'extra' && !appState.candidates}>
   <div class="cw-head">
     <h1 bind:this={heading} tabindex="-1">{title}</h1>
     <nav class="cw-steps" aria-label={L.stepNav}>
@@ -659,6 +659,14 @@
 .create-wizard .cc-bars { gap: 2px; }
 .create-wizard .cc-bar { line-height: 1.15; }
 .create-wizard .cc-bar b { font-size: var(--fs-label); line-height: 1.15; }
+/* 도구가 적은 후보 화면은 공개 연출이 끝난 높이도 360×780 안에 둔다.
+   설명·버튼 크기·진행 바의 안전 여백은 유지하고 카드/도구 사이 공간만 줄인다. */
+@media (max-height: 780px) {
+  .create-wizard.compact-candidates { gap: 4px; }
+  .compact-candidates .cand-list { gap: 8px; }
+  .compact-candidates .cand-card { padding-block: 6px; }
+  .compact-candidates .cand-tools { padding: 0; }
+}
 /* 주소창까지 있는 브라우저의 작은 화면: 보조 설명을 접어 고르는 칸을 먼저 보인다. */
 @media (max-height: 700px) {
   .create-wizard { gap: 8px; }
