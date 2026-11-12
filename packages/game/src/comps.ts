@@ -584,17 +584,15 @@ const BALLON_POS_PRESEASON: BallonPos = {
   DF: { atk: 1, bonus: 2, fifpro: 12 },
   GK: { atk: 1, bonus: 3, fifpro: 12 },
 };
-export function seasonAwards(
-  s: GameState,
-  ctx: { rank: number; avg: number; trophies: string[]; tours: NatTourResult[] },
-) {
+type SeasonAwardInput = { rank: number; avg: number; trophies: string[]; tours: NatTourResult[] };
+
+function domesticSeasonAwards(s: GameState, ctx: SeasonAwardInput) {
   const L = leagueOf(s.leagueId),
     S = s.season,
     m = L.matches,
     o = ovr(s);
-  const { rank, avg, trophies, tours } = ctx,
-    awards: string[] = [],
-    gala: string[] = [];
+  const { rank, avg } = ctx;
+  const awards: string[] = [];
   const cg = compGoals(S),
     allG = S.goals + cg.g,
     allA = S.assists + cg.a;
@@ -615,8 +613,15 @@ export function seasonAwards(
   // 영플레이어는 23세 이하면 어느 프로 시즌에서든 받을 수 있고 커리어에 한 번이다(옛 rookieDone은 첫 프로 시즌만 봤다).
   if (!L.amateur && s.age <= 23 && !wonYoung(s) && S.apps >= m * 0.45 && avg >= 7.25)
     awards.push(youngOf(L));
-  if (L.amateur) return { awards, gala };
+  return { L, S, o, enough, awards, allG, allA };
+}
 
+function worldSeasonAwards(
+  s: GameState,
+  { rank, avg, trophies, tours }: SeasonAwardInput,
+  { L, S, o, enough, awards, allG }: ReturnType<typeof domesticSeasonAwards>,
+  gala: string[],
+) {
   const big = (t: string) => (trophies.includes(t) ? 1 : 0);
   const ntBonus = (tours ?? [])
     .filter((t) => t.inSquad)
@@ -655,6 +660,15 @@ export function seasonAwards(
   if (L.tier >= 4 && allG >= MULLER_BAR + gauss() * 3) awards.push('게르트 뮐러 트로피');
   const shoe = S.goals * (L.tier >= 5 ? 2 : 1.5);
   if (L.tier >= 4 && shoe >= SHOE_BAR + gauss() * 4) awards.push('유러피언 골든슈');
+  return ballonRank;
+}
+
+function positionAndFederationAwards(
+  s: GameState,
+  { rank, avg }: SeasonAwardInput,
+  { L, o, enough, awards }: ReturnType<typeof domesticSeasonAwards>,
+  ballonRank: number,
+) {
   if (s.pos === 'DF' && L.tier >= 5 && enough && avg >= 7.15 && rank <= 3 && chance(0.45))
     awards.push(posAwardOf(L, '수비수')); // i18n-ignore 저장값
   // T-11-021 미드필더(세부 포지션 선수)도 골키퍼와 같은 조건으로 포지션 상을 받는다.
@@ -670,7 +684,15 @@ export function seasonAwards(
     awards.push(confPoty(s, true));
   if (!outsideAsia && o >= 72 && enough && avg >= 7.3 && chance(0.25))
     awards.push(confPoty(s, false));
-  return { awards, gala, allG, allA };
+}
+
+export function seasonAwards(s: GameState, ctx: SeasonAwardInput) {
+  const domestic = domesticSeasonAwards(s, ctx);
+  const gala: string[] = [];
+  if (domestic.L.amateur) return { awards: domestic.awards, gala };
+  const ballonRank = worldSeasonAwards(s, ctx, domestic, gala);
+  positionAndFederationAwards(s, ctx, domestic, ballonRank);
+  return { awards: domestic.awards, gala, allG: domestic.allG, allA: domestic.allA };
 }
 
 // ───────── 커리어 여정 (마일스톤) ─────────

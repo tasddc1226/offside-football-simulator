@@ -3,7 +3,7 @@
 // 제의(offers) → 프리시즌(preseason: 이사회 목표 · 예산) → 여름 이적(window) → 구간 1~3(block → blockResult)
 // → 겨울 이적(window) → 구간 4~6 → 리뷰(review: 성장 · 은퇴 · 계약 · 유스 · 이사회 · 감독 성장) → 다음 시즌 · 은퇴(done).
 import type { ManagerOrigin, ManagerStyle } from '@offside/contracts/manager-rules';
-import { BOARD_TARGETS, MANAGER_EVENTS, type BoardTarget } from '../manager.js';
+import { BOARD_TARGETS, MANAGER_EVENTS, type BoardTarget } from '../manager-content.js';
 import { createRng, type Rng } from '../rng.js';
 import {
   M3_ATTRS,
@@ -883,7 +883,7 @@ export function continueBlock(s: M3State): boolean {
 
 // ───────── 시즌 리뷰 ─────────
 
-function finishSeason(s: M3State, sackedMid: boolean) {
+function assessManagerSeason(s: M3State, sackedMid: boolean) {
   const club = s.club!;
   const L = leagueOf(club.leagueId);
   const sorted = sortTable(s.table);
@@ -960,6 +960,10 @@ function finishSeason(s: M3State, sackedMid: boolean) {
     topScorer: top && top.goals > 0 ? { name: top.name, goals: top.goals } : null,
     award,
   };
+  return { club, L, title, promoted, relegated, cup, met, award, sacked, rec };
+}
+
+function settleReviewSquad(s: M3State, { club, L }: ReturnType<typeof assessManagerSeason>) {
   // 선수: 성장 · 은퇴 · 계약 · 유스.
   const played = Math.max(1, ...s.squad.map((p) => p.apps));
   const growth: { id: number; d: number }[] = [];
@@ -989,6 +993,14 @@ function finishSeason(s: M3State, sackedMid: boolean) {
   const intake = withRng(s, (r) => (s.squad.length < M3_SQUAD_MAX ? youthIntake(s, r) : []));
   s.squad.push(...intake);
   const expiring = s.squad.filter((p) => p.contract === 0).map((p) => p.id);
+  return { growth, retired, intake, expiring, academyApps, allApps };
+}
+
+function developReviewManager(
+  s: M3State,
+  { met, title, cup, award, sacked }: ReturnType<typeof assessManagerSeason>,
+  { academyApps, allApps }: ReturnType<typeof settleReviewSquad>,
+) {
   // 감독 성장.
   let points = 3 + (met ? 2 : 0) + (title ? 2 : 0) + (cup ? 1 : 0) + (award ? 1 : 0);
   points = sacked ? 3 : Math.min(points, 8);
@@ -1009,12 +1021,22 @@ function finishSeason(s: M3State, sackedMid: boolean) {
     s.license = M3_LICENSES[M3_LICENSES.indexOf(s.license) + 1]!;
     licenseUp = s.license;
   }
+  return { points, licenseUp };
+}
+
+function moveReviewLeague({ club, promoted, relegated }: ReturnType<typeof assessManagerSeason>) {
   // 승강: 리그만 바꾼다(선수단은 그대로라 새 리그에서 상대 전력이 달라진다).
   const nextLeague = promoted ? UP[club.leagueId] : relegated ? DOWN[club.leagueId] : undefined;
   if (nextLeague) {
     club.leagueId = nextLeague;
     club.base = leagueOf(nextLeague).avg + (promoted ? -3 : 3);
   }
+}
+
+function drawReviewOffers(
+  s: M3State,
+  { sacked, title, met }: ReturnType<typeof assessManagerSeason>,
+) {
   withRng(s, (r) => {
     if (sacked) {
       s.sacked++;
@@ -1029,6 +1051,17 @@ function finishSeason(s: M3State, sackedMid: boolean) {
     s.clubSeasons = 0;
     s.squad = [];
   }
+}
+
+function finishSeason(s: M3State, sackedMid: boolean) {
+  // Keep these calls explicit: squad development and offers consume RNG in this order.
+  const assessment = assessManagerSeason(s, sackedMid);
+  const squad = settleReviewSquad(s, assessment);
+  const { points, licenseUp } = developReviewManager(s, assessment, squad);
+  moveReviewLeague(assessment);
+  drawReviewOffers(s, assessment);
+  const { rec, sacked } = assessment;
+  const { growth, retired, intake, expiring } = squad;
   s.history.push(rec);
   s.review = {
     record: rec,
