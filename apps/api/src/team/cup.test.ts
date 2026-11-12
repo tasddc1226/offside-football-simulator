@@ -24,8 +24,8 @@ import {
 import { addAppPushDevice } from '../test/push.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueGoogleCookie } from '../test/http.js';
-import { checkCupLineup } from '../routes/cup.js';
-import { kstTodayStart } from '../routes/ownerTeam.js';
+import { checkCupLineup } from './competitionLineup.js';
+import { kstTodayStart } from '../time.js';
 import { cupText } from '../cupText.js';
 import {
   cupEntriesOf,

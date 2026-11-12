@@ -52,7 +52,7 @@ import {
 } from '../db/repos/market.js';
 import { myFundsSpends } from '../db/repos/itemShop.js';
 import { lockedIdsOf, myTeamIn } from '../db/repos/ownerTeams.js';
-import { checkCupListing, checkCupRelease } from './cup.js';
+import { checkCupListing, checkCupRelease } from '../team/competitionLineup.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -60,7 +60,7 @@ import { parseWithAppError } from '../errors.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { kstDay, kstDays } from '../time.js';
 import { requireProfile } from '../middleware/requireProfile.js';
-import { kstTodayStart } from './ownerTeam.js';
+import { kstTodayStart } from '../time.js';
 import { requireOwner } from '../middleware/requireOwner.js';
 import {
   conflictError,

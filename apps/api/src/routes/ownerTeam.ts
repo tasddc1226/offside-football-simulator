@@ -6,7 +6,7 @@ import {
 } from '../team/saveOwnerTeam.js';
 import { requireOwner } from '../middleware/requireOwner.js';
 import { activeCupSeasonsQuery } from '../team/cup.js';
-import { checkCupLineup } from './cup.js';
+import { checkCupLineup } from '../team/competitionLineup.js';
 import {
   ClubAchievementsResponseSchema,
   ClubAchievementNotificationsSchema,
@@ -58,7 +58,7 @@ import {
   rateLimited,
 } from './shared.js';
 import { newId } from '../db/ids.js';
-import { kstDays } from '../time.js';
+import { kstDays, kstTodayStart } from '../time.js';
 import { commitNotifiedEvent } from '../push/events.js';
 import {
   careersByIds,
@@ -201,9 +201,6 @@ export function currentSeasonOrThrow(now: string): number {
 const seasonQuery = (c: Context<AppEnv>, now: string) =>
   teamSeasonParam(c.req.query('season'), now);
 
-/** 오늘(한국 시각 자정부터)의 시작 UTC ISO. */
-/** 한국 시각 오늘 0시(UTC ISO). 하루 경기·영입 상한의 기준. */
-export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
 /** 재대결 감쇠를 세는 기간의 시작(오늘 포함 TEAM_REPEAT_WINDOW_DAYS일, 한국 시각 자정 기준). */
 const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WINDOW_DAYS).startIso;
 

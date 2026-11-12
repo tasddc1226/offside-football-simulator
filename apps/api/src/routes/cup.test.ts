@@ -26,13 +26,8 @@ import { installFakeEdgeCache, flushEdge } from '../test/edgeCache.js';
 import { drawCup, runCup } from '../team/cup.js';
 import { cupTeamsOf } from '../team/cupOdds.js';
 import { myTeamIn } from '../db/repos/ownerTeams.js';
-import {
-  checkCupEnhance,
-  checkCupListing,
-  cupChampionView,
-  cupHomeView,
-  recentCupFor,
-} from './cup.js';
+import { cupChampionView, cupHomeView, recentCupFor } from './cup.js';
+import { checkCupEnhance, checkCupListing } from '../team/competitionLineup.js';
 
 const MeRes = successEnvelope(CupMeResponseSchema);
 const CupRes = successEnvelope(CupResponseSchema);

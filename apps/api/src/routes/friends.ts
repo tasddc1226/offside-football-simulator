@@ -27,7 +27,8 @@ import {
   readBody,
   teamNotFound,
 } from './shared.js';
-import { currentSeasonOrThrow, kstTodayStart } from './ownerTeam.js';
+import { currentSeasonOrThrow } from './ownerTeam.js';
+import { kstTodayStart } from '../time.js';
 import { requireOwner } from '../middleware/requireOwner.js';
 import { newId } from '../db/ids.js';
 import { runBatch } from '../db/repos/batch.js';

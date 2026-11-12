@@ -14,7 +14,7 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cupText } from '../cupText.js';
 import { cupEntries, cups, notifications, ownerTeams, profiles } from '../db/schema.js';
-import { checkCupLineup } from '../routes/cup.js';
+import { checkCupLineup } from './competitionLineup.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { cupEntriesOf, cupStateOf, runCup, settleDivisions } from './cup.js';
 import { fillDivisionCaps, nextCupsFor } from './cupAutopilot.js';

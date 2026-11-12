@@ -23,3 +23,6 @@ export function kstWeekStart(now: string): string {
   const back = (k.getUTCDay() + 6) % 7;
   return new Date(k.getTime() - back * DAY_MS - KST_MS).toISOString();
 }
+
+/** 한국 시각 오늘 0시(UTC ISO). 하루 경기·영입 상한의 기준. */
+export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
