@@ -3,8 +3,22 @@ import type { Translation } from '../core';
 import type { LeagueMsgs } from '../ko/league';
 
 export const league: Translation<LeagueMsgs> = {
+  cyclePitch:
+    '8チームで毎日1ラウンド、同じ相手と4回ずつ全28ラウンドを戦います。終了後に報酬と昇降格を確定し、次のリーグを開きます。',
+  cycleEntry:
+    '初回はサービスシーズン開幕の5日後、次回からは1日の受付後に組み分けします。その時点で先発に自分の引退選手が8人必要です。',
+  cycleLate:
+    '組み分けの14日後に1回だけ途中参加を受け付けます。新しい組でホーム・アウェイ全14ラウンドを戦い、同じ順位報酬を受け取ります。',
+  cycleMove: '各リーグ1位は次回に1部昇格し、7・8位は1部降格します。',
+  cycleReward:
+    '最終試合後に順位と報酬を確定します。毎回同じ報酬表を使い、完走報酬は棄権がない場合に受け取れます。',
+  cycleForfeit:
+    '先発の実カードが8人未満なら0:3の棄権負けです。3回棄権すると残りも棄権負けとなり、次回は最下部から始めます。',
+  cycleTeam: (p: { season: number }) =>
+    `シーズン${p.season}のチームで戦います。サービスシーズンが変わっても、このリーグ終了まで同じチームの先発を編集できます。`,
   title: 'オフサイドリーグ',
-  seasonTitle: (p) => `シーズン${p.season} オフサイドリーグ`,
+  seasonTitle: (p) =>
+    p.season >= 3 ? `第${p.season}期オフサイドリーグ` : `シーズン${p.season} オフサイドリーグ`,
   open: 'リーグを見る',
   loadFail: 'リーグ情報を読み込めませんでした。',
   pitch:
@@ -21,7 +35,7 @@ export const league: Translation<LeagueMsgs> = {
   doneLine: '今シーズンのリーグは終了しました。',
   scheduleTitle: '日程',
   scheduleEntry: '申込',
-  scheduleSeason: (p) => `シーズン${p.season}開幕`,
+  scheduleSeason: (p) => (p.season >= 3 ? `第${p.season}期受付開始` : `シーズン${p.season}開幕`),
   scheduleDraw: '組分け・対戦発表',
   scheduleRounds: (p) => `第1〜${p.n}節`,
   date: (p) => `${p.month}月${p.day}日`,
@@ -117,7 +131,10 @@ export const league: Translation<LeagueMsgs> = {
   outcomeStayed: '残留',
   outcomeRelegated: '降格',
   outcomeForfeited: '棄権で除外',
-  finalChampionTitle: (p) => `称号「シーズン${p.season} リーグ王者」を獲得しました。`,
+  finalChampionTitle: (p) =>
+    p.season >= 3
+      ? `称号「第${p.season}期リーグチャンピオン」を獲得しました。`
+      : `称号「シーズン${p.season} リーグ王者」を獲得しました。`,
   rewardReroll: (p) => `リロール券${p.n}枚`,
   rewardScout: (p) => `プレミアムスカウト券${p.n}枚`,
   rewardBoost: (p) => `ポテンシャル強化券${p.n}枚`,
@@ -167,7 +184,8 @@ export const league: Translation<LeagueMsgs> = {
   meFail: '申し込み情報を読み込めませんでした。',
   kstNote: '時刻はすべて韓国時間(KST、日本時間と同じ)です。',
   roundAt: (p) => `${p.when}(韓国時間)`,
-  lastFinalTitle: (p) => `シーズン${p.season}の結果`,
+  lastFinalTitle: (p) =>
+    p.season >= 3 ? `第${p.season}期リーグ結果` : `シーズン${p.season}の結果`,
   lastFinalNext: (p) => `今シーズンに申し込むと${p.tier}部から始まります。`,
   lastFinalNextBottom: '棄権が重なったため、今シーズンは一番下の部から始まります。',
   termTier: '部:実力の段階です。1部がいちばん上です。',

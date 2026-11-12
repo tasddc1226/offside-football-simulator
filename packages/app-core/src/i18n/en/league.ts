@@ -5,8 +5,22 @@ import type { LeagueMsgs } from '../ko/league';
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 export const league: Translation<LeagueMsgs> = {
+  cyclePitch:
+    'Eight teams play one round a day, meeting each opponent four times over 28 rounds. Rewards and promotion or relegation are settled before the next league season opens.',
+  cycleEntry:
+    'The first league season draws five days after the service season opens; later ones draw after one day of entry. Start at least eight of your retired players at the draw.',
+  cycleLate:
+    'Late entry opens once, 14 days after the draw. New groups play 14 home-and-away rounds and use the same placement rewards.',
+  cycleMove: 'In each league, 1st place moves up a tier next league season; 7th and 8th move down.',
+  cycleReward:
+    'Standings and rewards are settled after the final match. Each league season uses the same reward table; the completion bonus requires no forfeits.',
+  cycleForfeit:
+    'With fewer than eight real cards in your starting XI, you forfeit 0:3. After three forfeits, all remaining matches are forfeited and you enter the bottom tier next league season.',
+  cycleTeam: (p: { season: number }) =>
+    `You play with your Season ${p.season} team. You can edit its lineup until this league ends, even if the service season changes.`,
   title: 'OFFSIDE League',
-  seasonTitle: (p) => `Season ${p.season} OFFSIDE League`,
+  seasonTitle: (p) =>
+    p.season >= 3 ? `OFFSIDE League Season ${p.season}` : `Season ${p.season} OFFSIDE League`,
   open: 'View league',
   loadFail: "We couldn't load the league.",
   pitch:
@@ -23,7 +37,8 @@ export const league: Translation<LeagueMsgs> = {
   doneLine: "This season's league has finished.",
   scheduleTitle: 'Schedule',
   scheduleEntry: 'Entries',
-  scheduleSeason: (p) => `Season ${p.season} opens`,
+  scheduleSeason: (p) =>
+    p.season >= 3 ? `League Season ${p.season} entry opens` : `Season ${p.season} opens`,
   scheduleDraw: 'Draw and fixtures',
   scheduleRounds: (p) => `Rounds 1–${p.n}`,
   date: (p) => `${MONTHS[p.month - 1]} ${p.day}`,
@@ -121,7 +136,10 @@ export const league: Translation<LeagueMsgs> = {
   outcomeStayed: 'Stayed up',
   outcomeRelegated: 'Relegated',
   outcomeForfeited: 'Removed for forfeits',
-  finalChampionTitle: (p) => `You earned the title 'Season ${p.season} League Champion'.`,
+  finalChampionTitle: (p) =>
+    p.season >= 3
+      ? `You earned the title 'League Season ${p.season} Champion'.`
+      : `You earned the title 'Season ${p.season} League Champion'.`,
   rewardReroll: (p) => `${p.n} reroll ticket(s)`,
   rewardScout: (p) => `${p.n} premium scout ticket(s)`,
   rewardBoost: (p) => `${p.n} potential boost ticket(s)`,
@@ -171,7 +189,8 @@ export const league: Translation<LeagueMsgs> = {
   meFail: "We couldn't load your entry.",
   kstNote: 'All times are Korea Standard Time (KST).',
   roundAt: (p) => `${p.when} KST`,
-  lastFinalTitle: (p) => `Season ${p.season} result`,
+  lastFinalTitle: (p) =>
+    p.season >= 3 ? `League Season ${p.season} results` : `Season ${p.season} result`,
   lastFinalNext: (p) => `Enter this season to start in Tier ${p.tier}.`,
   lastFinalNextBottom: 'Too many forfeits, so this season starts in the bottom tier.',
   termTier: 'Tier: the skill level. Tier 1 is the top.',

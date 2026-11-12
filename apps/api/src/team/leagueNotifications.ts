@@ -1,8 +1,10 @@
+import { leagueKo } from './leagueCopy.js';
 // Pure notification planning. Persistence keeps cursor advancement and notification writes in one batch.
 import type { LeagueNewsResponse } from '@offside/contracts';
 import {
   LEAGUE_FORFEIT_LIMIT,
   leagueNextTier,
+  leagueTeamSeason,
   leagueReward,
   type LeagueDef,
   type LeagueOutcome,
@@ -21,13 +23,14 @@ import { pushHeadline } from './leagueNews.js';
 
 const leagueTitleKo = (tier: number, no: number) => leagueTitleOf('ko', tier, no) ?? String(no);
 /** 마지막 라운드 알림 본문: 최종 순위 · 받은 보상 · 다음 시즌 부. */
-function endBody(e: LeagueEntryRow, rank: number) {
+function endBody(e: LeagueEntryRow, rank: number, league: LeagueDef) {
   const where = { tier: e.tier!, title: leagueTitleKo(e.tier!, e.leagueNo!), rank };
   const outcome = e.outcome as LeagueOutcome | null;
   if (!outcome) return cupKo('leagueEndBody', where);
   if (outcome === 'forfeited') return cupKo('leagueEndBodyForfeited', where);
   const { rerolls: n, scouts: s, boosts: b } = leagueReward(e.tier!, rank, e.forfeits, outcome);
-  if (outcome === 'champion') return cupKo('leagueEndBodyChampion', { season: e.season, n, s, b });
+  if (outcome === 'champion')
+    return leagueKo(league, 'leagueEndBodyChampion', { season: e.season, n, s, b });
   const next = leagueNextTier(e.tier!, outcome)!;
   return s > 0
     ? cupKo('leagueEndBodyAll', { ...where, n, s, b, next })
@@ -88,23 +91,23 @@ export function planLeagueNotifications({
     const late = e.createdAt > state.drawnAt;
     if (e.status === 'dropped' && late) {
       key = `league:${season}:late-dropped`;
-      title = cupKo('leagueDroppedTitle', { season });
+      title = leagueKo(league, 'leagueDroppedTitle', { season });
       body = e.teamId
         ? cupKo('leagueLateLeftBody')
-        : cupKo('leagueLateDroppedBody', { season, n: league.minFilled });
+        : cupKo('leagueLateDroppedBody', { season: leagueTeamSeason(league), n: league.minFilled });
     } else if (e.status === 'dropped') {
       key = `league:${season}:dropped`;
       title = cancelled
-        ? cupKo('leagueCancelledTitle', { season })
-        : cupKo('leagueDroppedTitle', { season });
+        ? leagueKo(league, 'leagueCancelledTitle', { season })
+        : leagueKo(league, 'leagueDroppedTitle', { season });
       body = cancelled
         ? cupKo('cancelledBody')
         : e.teamId
           ? cupKo('leagueLeftBody', { n: leftOver })
-          : cupKo('leagueDroppedBody', { season, n: league.minFilled });
+          : cupKo('leagueDroppedBody', { season: leagueTeamSeason(league), n: league.minFilled });
     } else if (e.notifiedRound < 0 || played === 0) {
       key = `league:${season}:placed`;
-      title = cupKo('leaguePlacedTitle', { season });
+      title = leagueKo(league, 'leaguePlacedTitle', { season });
       body = cupKo(late ? 'leagueLatePlacedBody' : 'leaguePlacedBody', {
         team: e.name ?? '-',
         tier: e.tier!,
@@ -123,13 +126,13 @@ export function planLeagueNotifications({
         const final = e.finalRank ?? rank;
         title =
           final === 1
-            ? cupKo('leagueChampionTitle', {
+            ? leagueKo(league, 'leagueChampionTitle', {
                 season,
                 tier: e.tier!,
                 title: leagueTitleKo(e.tier!, e.leagueNo!),
               })
-            : cupKo('leagueEndTitle', { season });
-        body = endBody(e, final);
+            : leagueKo(league, 'leagueEndTitle', { season });
+        body = endBody(e, final, league);
       } else {
         key = `league:${season}:r${played}`;
         const m = (roundOf.get(`${e.tier}:${e.leagueNo}`) ?? []).find(

@@ -336,6 +336,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   league_predictions: ['season', 'match_id', 'profile_id', 'pick', 'created_at', 'updated_at'],
   league_seasons: [
     'season',
+    'team_season',
     'starts_at',
     'opens_at',
     'closes_at',

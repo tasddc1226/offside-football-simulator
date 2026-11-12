@@ -178,7 +178,8 @@ export async function leagueLineupLocked(db: Db, profileId: string, season: numb
     .prepare(
       `SELECT 1 AS hit FROM league_entries e JOIN league_matches m
          ON m.season = e.season AND (m.home_team_id = e.team_id OR m.away_team_id = e.team_id)
-       WHERE e.season = ? AND e.profile_id = ? AND e.status = 'active' AND e.team_id IS NOT NULL
+       JOIN owner_teams t ON t.id = e.team_id
+       WHERE t.season = ? AND e.profile_id = ? AND e.status = 'active' AND e.team_id IS NOT NULL
          AND m.played_at IS NULL AND m.at <= ? LIMIT 1`,
     )
     // 컵과 같은 잠금(lockAt(at) <= now ⇔ at <= now + 잠금 시간).

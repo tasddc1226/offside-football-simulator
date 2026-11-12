@@ -211,7 +211,8 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   newTitle: '新しい称号',
   progress: (p: { value: number; target: number }) => `${p.value}/${p.target}`,
   titleChampion: (p) => `第${p.n}回${p.d ? ` ${p.d}` : ''} 王者`,
-  titleLeagueChampion: (p) => `シーズン${p.n} リーグ王者`,
+  titleLeagueChampion: (p) =>
+    p.n >= 3 ? `第${p.n}期リーグチャンピオン` : `シーズン${p.n} リーグ王者`,
   titleRunnerup: (p) => `第${p.n}回${p.d ? ` ${p.d}` : ''} 準優勝`,
   titleSf: (p) => `第${p.n}回${p.d ? ` ${p.d}` : ''} ベスト4`,
   titleAria: (p) => `称号 ${p.title}`,

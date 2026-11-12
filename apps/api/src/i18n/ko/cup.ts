@@ -1,5 +1,14 @@
 // T-11-145 오프사이드 컵 서버 문구(한국어 원문). `{이름}` 자리는 cupText.ts의 fill로 채운다. 키는 en/ja와 같다.
 export const CUP_KO = {
+  leaguePlacedTitleCycle: '제{season}기 오프사이드 리그 배치 결과',
+  leagueDroppedTitleCycle: '제{season}기 오프사이드 리그 참가가 취소됐어요',
+  leagueCancelledTitleCycle: '제{season}기 오프사이드 리그가 열리지 않아요',
+  leagueEndTitleCycle: '제{season}기 오프사이드 리그를 마쳤어요',
+  leagueChampionTitleCycle: '제{season}기 오프사이드 리그 {tier}부 {title} 우승!',
+  leagueEndBodyChampionCycle:
+    '1부 우승! 제{season}기 리그 챔피언 칭호와 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
+  leagueFillBodyCycle:
+    '위 부에 빈자리가 생겨 제{season}기에는 {tier}부에서 뛰어요. 프리미엄 스카우트권 {s}장을 받았어요.',
   completeTitle: '{cup} 결과가 나왔어요',
   completeBody: '컵 결과와 보상으로 받은 리롤권을 확인해 주세요.',
   predictionRewardBody: '컵 결과와 승부예측으로 받은 리롤권을 확인해 주세요.',
