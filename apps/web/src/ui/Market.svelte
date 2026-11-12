@@ -105,7 +105,7 @@
   let sort = $state<MarketSort>('new');
   let filter = $state<MarketFilter>({});
   const data = createMarketData({ view: () => view, sort: () => sort, filter: () => filter, teamSeason: () => teamSeason });
-  const { loadMe, loadList, loadTeam } = data;
+  const { loadMe, loadList, loadTeam, refresh } = data;
   const me = $derived(data.state.me);
   const meFailed = $derived(data.state.meFailed);
   const guest = $derived(data.state.guest);
@@ -215,9 +215,6 @@
     buying = null;
     confirmRelease = false;
     error = null;
-  }
-  async function refresh() {
-    await Promise.all([loadMe(), view === 'market' ? loadList(0) : view === 'sell' || view === 'release' ? loadTeam() : null]);
   }
   function run<T>(send: () => Promise<MarketMutationResult<T>>, done: string) {
     return runMarketMutation(send, done, {

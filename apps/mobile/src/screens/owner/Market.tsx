@@ -145,8 +145,7 @@ export default function Market() {
     recent,
     loadList,
     indexPoints,
-    indexAsked,
-    loadIndex,
+    refresh,
     team,
     setTeamSeason,
     teamFailed,
@@ -223,17 +222,6 @@ export default function Market() {
     setBuying(null);
     setConfirmRelease(false);
     setError(null);
-  };
-  /** silent: T-11-111 당겨서 새로고침 — 목록을 비우지 않고, 시장 지수도 한 번 불러왔으면 다시 받는다. */
-  const refresh = async (silent = false) => {
-    await Promise.all([
-      loadMe(),
-      view === 'market'
-        ? Promise.all([loadList(0, silent), silent && indexAsked.current ? loadIndex() : null])
-        : view === 'sell' || view === 'release'
-          ? loadTeam()
-          : null,
-    ]);
   };
   // T-11-111 당겨서 새로고침 — 보이는 탭의 데이터만 조용히 다시 받는다(목록을 비우지 않는다). 사고파는 중에는 건너뛴다.
   useOnPull(() => (busy ? undefined : refresh(true)));

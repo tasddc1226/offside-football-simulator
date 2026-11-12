@@ -116,6 +116,18 @@ export function useMarketData(
     if ((view === 'sell' || view === 'release') && !guest) void loadTeam();
   }, [view, loadTeam, guest]);
 
+  /** silent: T-11-111 당겨서 새로고침 — 목록을 비우지 않고, 시장 지수도 한 번 불러왔으면 다시 받는다. */
+  const refresh = async (silent = false) => {
+    await Promise.all([
+      loadMe(),
+      view === 'market'
+        ? Promise.all([loadList(0, silent), silent && indexAsked.current ? loadIndex() : null])
+        : view === 'sell' || view === 'release'
+          ? loadTeam()
+          : null,
+    ]);
+  };
+
   return {
     me,
     meFailed,
@@ -133,10 +145,8 @@ export function useMarketData(
     recent,
     loadList,
     indexPoints,
-    indexAsked,
-    loadIndex,
+    refresh,
     team,
-    teamSeason,
     setTeamSeason,
     teamFailed,
     loadTeam,

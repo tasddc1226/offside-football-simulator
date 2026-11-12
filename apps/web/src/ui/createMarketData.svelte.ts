@@ -67,5 +67,12 @@ export function createMarketData(inputs: {
     fetchMarketChart('week').then((r) => {
       if (r.ok) state.indexPoints = r.data.points;
     });
-  return { state, loadMe, loadList, loadTeam, loadIndex };
+  async function refresh() {
+    const view = inputs.view();
+    await Promise.all([
+      loadMe(),
+      view === 'market' ? loadList(0) : view === 'sell' || view === 'release' ? loadTeam() : null,
+    ]);
+  }
+  return { state, loadMe, loadList, loadTeam, loadIndex, refresh };
 }
