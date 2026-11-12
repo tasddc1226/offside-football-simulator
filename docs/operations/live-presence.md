@@ -25,3 +25,25 @@ attachment에 두고, 자동 pong 시각을 읽어 hibernation 뒤에도 복원�
 `api/liveSocket.test.ts`·`homeLive.test.ts`, 웹 `e2e/home-live.spec.ts`다.
 실기기 확인은 Expo export와 별개다. 운영 확인은 DB 쓰기 없이 제한된 WebSocket 연결로
 증감을 확인한 뒤 반드시 연결을 닫는다.
+
+## 배포 직후의 버전 전환
+
+Cloudflare는 활성 Durable Object의 코드 교체를 기본 최대 300초까지 미룬다. 새 API가 먼저
+나가도 허브는 잠시 이전 버전일 수 있다. 새 `presence()` RPC가 없는 이 구간은 `online: null`로
+처리하고, 옛 시즌 활동 수나 0명으로 대체하지 않는다. 기존 소켓도 새 `presence` 메시지를
+바로 받지 못할 수 있으므로 버전 전환 후 새 연결과 다음 캐시 갱신을 확인한다.
+[공식 코드 업데이트 문서](https://developers.cloudflare.com/durable-objects/deployments/durable-objects-code-updates/).
+
+`v2026.11.12.12`의 운영 배포에서도 API는 18:16 KST에 반영됐고, 당시 허브는 16:38에
+만든 이전 Worker 버전이었다. 18:21 이후 정상 집계로 전환됐다. 배포 실패로 판단해 허브를
+강제 재시작하거나 설정을 바꾸기 전에, API와 Durable Object의 실제 실행 버전부터 비교한다.
+
+운영 접속 검사(18:21:55 KST)는 같은 식별자 연결 추가 `53 → 53`, 다른 식별자 추가
+`53 → 54`, 다른 접속 해제 `54 → 53`, 중복 탭 해제 `53 → 53`을 확인했다. 자동 pong도
+확인했고 검사 연결을 모두 닫았다. 운영 웹 화면의 숫자도 실제 소켓 응답과 일치했다.
+앱 OTA 10개 경로의 게시 ID와 공개 manifest ID가 모두 일치했다. 이 검사는 네이티브
+실기기 화면·복귀 동작을 증명하지 않는다(당시 iOS/Android 테스트 기기 없음).
+
+- [구현 PR #1154](https://github.com/tasddc1226/offside-football-simulator/pull/1154)
+- [운영 배포 실행](https://github.com/tasddc1226/offside-football-simulator/actions/runs/43189699271)
+- [배포 커밋 d93a9cdf](https://github.com/tasddc1226/offside-football-simulator/commit/d93a9cdfb4d1e8a0b4b5a25c8513a997a87b8fe0)
