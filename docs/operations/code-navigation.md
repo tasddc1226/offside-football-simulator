@@ -39,6 +39,8 @@
 
 Team의 `teamRecords.svelte.ts` / `useTeamRecords.ts`는 기록·통계·업적, `teamMatches.svelte.ts` / `useTeamMatches.ts`는 랭크/친선 결과 상태를 소유한다. `Team.svelte` / `Team.tsx`는 초안·저장·탭 진입과 새로고침 시점을 소유한다. 앱의 `TeamFormationToolbar` / `TeamCoachCard`는 표시 전용이며 편집·펼침 상태를 소유하지 않는다.
 
+Create의 입력 정책은 `app-core/create-controls.ts`, 재시도 키/시드 계획은 `scoutAttempts.ts`, 아이템 기본값/안내는 `scoutItemsView.ts`가 소유한다. 플랫폼 도구 상태는 `createScoutItems.svelte.ts` / `useScoutItems.ts`, 공개 연출은 `createCandidateReveal.svelte.ts` / `useCandidateReveal.ts`에 있다. 후보 생성·킵·저장은 기존 `scouting-actions.ts`에 남는다.
+
 ## 빠른 검증 경로
 
 루트에서 실행한다. 아래는 해당 변경의 개발 중 확인 명령이며 필수 CI나 플랫폼 검증을 대체하지 않는다. 파일 분리 뒤에는 먼저 타입·린트를 통과시키고 테스트를 돌린다. UI 편집 중/푸시 전/PR의 범위는 [CI 테스트 정책](ci-test-policy.md)을 따른다.
@@ -82,3 +84,5 @@ pnpm --filter @offside/web check:bundle
 - 세이브 키·엔딩 라벨·기존 오류/응답·조건부 RNG는 호환 계약이다. 행동 변경이 필요하면 구조 변경과 분리한다.
 
 진행 및 실제 검증 결과는 [T-11-705](../tracking/code-quality-refactor.md)에 기록한다.
+
+개발 중 새 파일을 분리한 뒤 Vite가 이미 해결한 모듈 오류나 SSR 오류를 계속 보이면 먼저 실제 경로·타입·빌드를 확인한다. 그 뒤 개발 서버를 재시작하고 필요하면 Vite `--force`로 이 worktree의 의존성 최적화를 다시 만든다. 없는 import나 실패한 빌드를 캐시 탓으로 넘기지 않는다.

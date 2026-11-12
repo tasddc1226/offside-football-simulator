@@ -1,16 +1,16 @@
+import { useCandidateReveal } from './useCandidateReveal';
+import { SmoothHeight, ToolGroup, FlipIn, FlyIn } from './CreateParts';
+import { useScoutItems } from './useScoutItems';
+import {
+  pickCreateDetail,
+  setCreatePosition,
+  toggleCreateFocus,
+} from '@offside/app-core/create-controls';
 // 선수 생성(웹 Create.svelte): 위쪽 라이브 카드가 고를 때마다 바로 바뀌고, 아래 고정 버튼이 남은 할 일을 알려 준다.
 // 1단계(프로필 입력) → 2단계(후보 카드 비교·선택). appState.candidates가 있으면 2단계.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { useCallback, useEffect, useState, useRef, type ReactNode } from 'react';
-import {
-  Alert,
-  Animated,
-  Easing,
-  type LayoutChangeEvent,
-  ScrollView,
-  TextInput,
-  View,
-} from 'react-native';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { Alert, ScrollView, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import {
@@ -21,7 +21,6 @@ import {
   ATTR_KEYS,
   FOCUS_PICK,
   attrLabels,
-  defaultFocus,
   focusMod,
   posLabel,
 } from '@offside/game/data';
@@ -45,28 +44,15 @@ import { adText } from '@offside/app-core/i18n/ko/ad';
 import { createText as L } from '@offside/app-core/i18n/ko/create';
 import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
 import { cupAppText as CA } from '@offside/app-core/i18n/ko/cupApp';
-import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
 import { scoutWhatText } from '@offside/app-core/scoutOdds';
-import {
-  REROLL_MILEAGE,
-  rerollMileageLeft,
-  scoutPityAt,
-  type ScoutPity,
-} from '@offside/contracts/cup';
+import { REROLL_MILEAGE, rerollMileageLeft } from '@offside/contracts/cup';
 import { ScoutOdds } from '../owner/ScoutOdds';
 import { ScoutPityGauge } from './ScoutPityGauge';
-import {
-  candidateTiers,
-  gradeTier,
-  revealTiming,
-  revealTotal,
-  type RevealTier,
-  type RevealTiming,
-} from '@offside/app-core/reveal';
+import { gradeTier, revealTotal } from '@offside/app-core/reveal';
 import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
 import { CountUp } from '../../components/CountUp';
-import { flashEdge, revealBuzz, RevealGrade } from '../../components/RevealFx';
+import { RevealGrade } from '../../components/RevealFx';
 import { fundsText } from '@offside/app-core/funds';
 import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
 import { useClubReward } from '../../platform/clubShop';
@@ -88,8 +74,6 @@ import {
   keepCandidate,
   keptDraft,
   restoreKeptDraft,
-  premiumScoutCandidates,
-  planPremiumScout,
   rollCandidates,
   startCareer,
   toast,
@@ -98,7 +82,7 @@ import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded
 import { adFree, adsOff } from '../../platform/adFree';
 import { adRerollLeft, claimAdReroll } from '../../platform/adReroll';
 import { goHome, goRerollShop, goScoutShop } from '../../game/nav';
-import { appState, prefs } from '../../store';
+import { appState } from '../../store';
 import { alpha } from '../../theme/colors';
 import { DISPLAY, num, rem } from '../../theme/type';
 import { useColors, useIsDark } from '../../theme/useColors';
@@ -126,8 +110,6 @@ import { ItemsHint } from '../../components/ItemsHint';
 import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
 import { tn } from '@offside/game/i18n/names';
 
-// T-11-244 천장 카운트가 없는 구단주(아직 스카우트권을 쓴 적 없음).
-const NO_PITY: ScoutPity = { used: 0, streak: 0, elites: 0 };
 // 비활성 버튼이 다음 할 일을 문장으로 알려 줄 때는 흐리지 않고 옅은 면에 진한 글자로 둔다.
 const hintBtn = (blocked: boolean) =>
   blocked ? ({ kind: 'default', style: { opacity: 1 } } as const) : ({ kind: 'primary' } as const);
@@ -138,18 +120,13 @@ const feet = ['오른발', '왼발', '양발'] as const; // 저장값(화면에�
 // ── 입력을 원본 상태(appState.C)에 쓰는 동작들 ──
 // 세부 포지션을 바꾸면 주력 능력치도 그 포지션의 기본값으로 다시 켠다.
 function pickDetail(d: DetailPos) {
-  appState.C.dpos = d;
-  appState.C.focus = [...DPOS[d].focus];
+  pickCreateDetail(appState.C, d);
 }
 function setPos(v: Pos, detailOpen: boolean) {
-  appState.C.pos = v;
-  if (detailOpen) pickDetail(DETAILS_OF[v][0]!);
-  else appState.C.focus = defaultFocus(v);
+  setCreatePosition(appState.C, v, detailOpen);
 }
-// 이미 두 개를 골랐으면 먼저 고른 쪽을 밀어낸다 — 한 번의 탭으로 바꿔 끼울 수 있게.
 function toggleFocus(k: AttrKey) {
-  const cur = appState.C.focus;
-  appState.C.focus = cur.includes(k) ? cur.filter((f) => f !== k) : [...cur, k].slice(-FOCUS_PICK);
+  toggleCreateFocus(appState.C, k);
 }
 // T-11-605 후보에서 입력으로 돌아온 사람에게 같은 후보가 나오는 이유를 알린다.
 let returned = false;
@@ -173,133 +150,6 @@ function confirmPick() {
   startCareer(appState.C.name, appState.C.number, { ...cand.attrs }, { ...cand.potential });
 }
 
-/** 카드가 열리고 접힐 때 바깥 높이를 이어, 아래 내용이 한 번에 밀리지 않게 한다. 동작 줄이기면 바로 맞춘다. */
-function SmoothHeight({ children }: { children: ReactNode }) {
-  const [height] = useState(() => new Animated.Value(0));
-  const [measured, setMeasured] = useState(false);
-  const last = useRef(0);
-  const onLayout = (e: LayoutChangeEvent) => {
-    const h = e.nativeEvent.layout.height;
-    if (h === last.current) return;
-    const first = last.current === 0;
-    last.current = h;
-    if (first || !prefs.motionOK) {
-      height.setValue(h);
-      setMeasured(true);
-      return;
-    }
-    Animated.timing(height, {
-      toValue: h,
-      duration: 360,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  };
-  return (
-    <Animated.View style={measured ? { height } : null}>
-      <View onLayout={onLayout}>{children}</View>
-    </Animated.View>
-  );
-}
-
-/** 카드 아래 도구 한 묶음. */
-function ToolGroup({
-  title,
-  first,
-  testID,
-  action,
-  children,
-}: {
-  title: string;
-  first: boolean;
-  testID: string;
-  /** 제목 줄 오른쪽에 두는 버튼. */
-  action?: ReactNode;
-  children?: ReactNode;
-}) {
-  const { line } = useColors();
-  return (
-    <View
-      testID={testID}
-      style={[
-        { gap: 6 },
-        first ? null : { paddingTop: 12, borderTopWidth: 1, borderTopColor: line },
-      ]}
-    >
-      <View
-        style={{
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 6,
-        }}
-      >
-        <Txt bold v="sm" tone="muted" accessibilityRole="header">
-          {title}
-        </Txt>
-        {action}
-      </View>
-      {children}
-    </View>
-  );
-}
-
-/** 카드가 세로축으로 뒤집히며 열린다. 동작 줄이기면 바로 표시. */
-function FlipIn({ children, delay = 0 }: { children: ReactNode; delay?: number }) {
-  const [v] = useState(() => new Animated.Value(prefs.motionOK ? 0 : 1));
-  useEffect(() => {
-    if (prefs.motionOK)
-      Animated.timing(v, {
-        toValue: 1,
-        // T-11-371 대박은 뒷면에서 한 박자 쉬고 뒤집힌다.
-        delay,
-        duration: 360,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-    // 마운트 때 한 번만 뒤집는다.
-  }, [v]);
-  return (
-    <Animated.View
-      style={{
-        opacity: v.interpolate({ inputRange: [0, 0.5, 1], outputRange: [0, 1, 1] }),
-        transform: [
-          { perspective: 800 },
-          { rotateY: v.interpolate({ inputRange: [0, 1], outputRange: ['90deg', '0deg'] }) },
-        ],
-      }}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
-/** 닫힌 카드가 아래에서 차례로 떠오른다. */
-function FlyIn({ index, children }: { index: number; children: ReactNode }) {
-  const [v] = useState(() => new Animated.Value(prefs.motionOK ? 0 : 1));
-  useEffect(() => {
-    if (prefs.motionOK)
-      Animated.timing(v, {
-        toValue: 1,
-        duration: 280,
-        delay: 90 * index,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start();
-  }, [v, index]);
-  return (
-    <Animated.View
-      style={{
-        opacity: v,
-        transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [14, 0] }) }],
-      }}
-    >
-      {children}
-    </Animated.View>
-  );
-}
-
 export default function Create() {
   const s = useSnapshot(appState, { sync: true });
   const C = s.C;
@@ -313,46 +163,11 @@ export default function Create() {
   const [rewardMessage, setRewardMessage] = useState('');
   // T-11-371 팩 오픈식 공개: 열 때 보이는 값(OVR · 보장 · 천장)으로만 강도를 정한다. 이 화면에서 연 카드만 연출하고,
   // 두 번째 카드부터는 짧게. 동작 줄이기 · "연출 짧게"면 결과만.
-  const tiers: RevealTier[] = s.candidates
-    ? candidateTiers(
-        s.candidates.map((c) => ({
-          ovr: startOvr(C.pos, c.attrs),
-          guaranteed: c.guaranteed,
-          pity: c.pity,
-        })),
-      )
-    : [];
-  const [fx, setFx] = useState<Record<number, RevealTiming & { done: boolean }>>({});
-  const opened = useRef(0);
-  const fxTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
-  useEffect(() => {
-    // 다시 뽑기 · 프리미엄 스카우트로 후보가 바뀌면 새 카드로 다시 센다.
-    setFx({});
-    opened.current = 0;
-  }, [s.candidates]);
-  useEffect(() => () => fxTimers.current.forEach(clearTimeout), []);
-  const land = (i: number) =>
-    setFx((m) => {
-      const f = m[i];
-      if (!f || f.done) return m;
-      const tier = tiers[i] ?? 'normal';
-      revealBuzz(tier);
-      if (tier === 'jackpot') flashEdge();
-      return { ...m, [i]: { ...f, done: true } };
-    });
-  const stage = (i: number) => {
-    if (appState.candidatesOpen[i] || fx[i]) return;
-    const tier = tiers[i] ?? 'normal';
-    const t = revealTiming(tier, {
-      off: !prefs.motionOK,
-      short: prefs.revealShort,
-      repeat: opened.current++ > 0,
-    });
-    const total = revealTotal(t);
-    if (total === 0) revealBuzz(tier);
-    else fxTimers.current.push(setTimeout(() => land(i), total));
-    setFx((m) => ({ ...m, [i]: { ...t, done: total === 0 } }));
-  };
+  const { tiers, fx, land, stage, potFresh } = useCandidateReveal(
+    s.candidates,
+    C.pos,
+    s.candidatePotentialOpen,
+  );
   const pickCard = (i: number) => {
     // 연출 중인 카드를 다시 누르면 바로 결과로 간다.
     if (fx[i] && !fx[i].done) land(i);
@@ -363,13 +178,6 @@ export default function Create() {
     appState.candidatesOpen.forEach((_, i) => stage(i));
     openAll();
   };
-  // 잠재력 범위를 이 화면에서 새로 열었을 때만 등급 연출.
-  const potWas = useRef(s.candidatePotentialOpen);
-  const [potFresh, setPotFresh] = useState(false);
-  useEffect(() => {
-    if (s.candidatePotentialOpen && !potWas.current) setPotFresh(true);
-    potWas.current = s.candidatePotentialOpen;
-  }, [s.candidatePotentialOpen]);
   const reveal = async () => {
     if (rewardLock.current || appState.candidatePotentialOpen) return;
     rewardLock.current = true;
@@ -394,40 +202,21 @@ export default function Create() {
     }
   };
   // T-11-145 오프사이드 컵 보상 리롤권 — 로그인한 구단주가 한 장 이상 갖고 있을 때만 '후보 다시 뽑기'를 보여 준다.
-  const [rerolls, setRerolls] = useState(0);
-  // T-11-152 장수를 받았으면(로그인한 구단주) 0장일 때 구단 자금으로 사는 리롤권 상점으로 가는 안내를 보인다.
-  const [owner, setOwner] = useState(false);
-  const [rerolling, setRerolling] = useState(false);
-  const rerollLock = useRef(false);
-  // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
-  const rerollKey = useRef<string | null>(null);
-  // T-11-248 리롤권 마일리지 — 마지막 스카우트권 지급 뒤 쓴 장수. 차면 서버가 같은 응답에서 스카우트권을 준다.
-  const [mileage, setMileage] = useState(0);
   const hasCandidates = !!s.candidates;
-  // T-11-196 프리미엄 스카우트권 — 가진 장수가 있으면 버튼, 없으면 구단주에게 상점(구단주 화면)으로 가는 안내. 잠금 · 멱등 키는 리롤과 함께 쓴다.
-  const [scouts, setScouts] = useState(0);
-  const scoutKey = useRef<string | null>(null);
-  // T-11-244 천장 카운트. 다시 보낼 때는 같은 시드 계획을 같은 멱등 키와 함께 쓴다.
-  const [pity, setPity] = useState<ScoutPity>(NO_PITY);
-  const scoutPlan = useRef<{ seed: number; hit: boolean } | null>(null);
+  const {
+    rerolls,
+    owner,
+    rerolling,
+    setRerolling,
+    rerollLock,
+    mileage,
+    scouts,
+    pity,
+    reroll,
+    premiumScout,
+  } = useScoutItems(hasCandidates, () => setRewardMessage(''));
   const premium = !!s.candidates?.some((x) => x.guaranteed);
-  // T-11-437 쓸 도구(리롤권 · 스카우트권 · 천장 기록)가 없으면 상점 안내 · 능력치 설명을 '더 보기'로 접는다.
   const quiet = rerolls < 1 && scouts < 1 && pity.used < 1;
-  useEffect(() => {
-    if (!hasCandidates) return;
-    let live = true;
-    void fetchItems().then((r) => {
-      if (!live) return;
-      setOwner(r.ok);
-      setRerolls(r.ok ? r.data.reroll : 0);
-      setScouts(r.ok ? (r.data.scout ?? 0) : 0);
-      setPity(r.ok ? (r.data.pity ?? NO_PITY) : NO_PITY);
-      setMileage(r.ok ? (r.data.mileage ?? 0) : 0);
-    });
-    return () => {
-      live = false;
-    };
-  }, [hasCandidates]);
   // T-11-153 광고 대신 구단 자금으로 후보 잠재력 보기(로그인한 구단주). 광고 제거 구매자는 이미 광고 없이 보므로 묻지 않는다.
   const club = useClubReward(
     'candidates',
@@ -481,79 +270,11 @@ export default function Create() {
       { text: CA.cancel, style: 'cancel' },
       { text: CA.rerollAction, onPress: () => void reroll() },
     ]);
-  async function reroll() {
-    if (rerollLock.current || rerolls < 1) return;
-    rerollLock.current = true;
-    setRerolling(true);
-    try {
-      rerollKey.current ??= crypto.randomUUID();
-      const r = await spendReroll(rerollKey.current);
-      if (r.ok || !r.error.retryable) rerollKey.current = null;
-      if (!r.ok) {
-        if (r.error.reason === 'NO_REROLL') setRerolls(0);
-        toast(r.error.message || CL.rerollFail);
-        return;
-      }
-      setRerolls(r.data.reroll);
-      setScouts(r.data.scout);
-      setMileage(r.data.mileage ?? 0);
-      rerollCandidates();
-      setRewardMessage('');
-      toast(
-        r.data.mileageScout
-          ? CL.rerollMileageDone({ n: r.data.reroll, need: REROLL_MILEAGE })
-          : CL.rerollDone({ n: r.data.reroll }),
-      );
-    } finally {
-      rerollLock.current = false;
-      setRerolling(false);
-    }
-  }
   const askScout = () =>
     Alert.alert(SL.askTitle, SL.confirm({ n: Math.max(0, scouts - 1) }), [
       { text: CA.cancel, style: 'cancel' },
       { text: SL.action, onPress: () => void premiumScout() },
     ]);
-  async function premiumScout() {
-    if (rerollLock.current || scouts < 1) return;
-    rerollLock.current = true;
-    setRerolling(true);
-    try {
-      scoutKey.current ??= crypto.randomUUID();
-      scoutPlan.current ??= planPremiumScout();
-      const plan = scoutPlan.current;
-      const r = await spendScout(scoutKey.current, plan.hit);
-      if (r.ok || !r.error.retryable) {
-        scoutKey.current = null;
-        scoutPlan.current = null;
-      }
-      if (!r.ok) {
-        if (r.error.reason === 'NO_SCOUT') setScouts(0);
-        toast(r.error.message || SL.fail);
-        return;
-      }
-      setScouts(r.data.scout);
-      if (r.data.pity) setPity(r.data.pity);
-      const mode = r.data.scoutMode ?? 'normal';
-      premiumScoutCandidates(plan.seed, mode);
-      setRewardMessage('');
-      const n = r.data.scout;
-      // T-11-415 S가 그냥 나와 S 확정 칸이 0으로 돌아가면 그렇다고 알린다.
-      const reset = mode === 'normal' && r.data.pity?.streak === 0;
-      toast(
-        mode === 'elite'
-          ? SL.doneElite({ n, elite: scoutPityAt().elite })
-          : mode === 'sure'
-            ? SL.doneSure({ n })
-            : reset
-              ? SL.doneReset({ n })
-              : SL.done({ n }),
-      );
-    } finally {
-      rerollLock.current = false;
-      setRerolling(false);
-    }
-  }
   const c = useColors();
   // 금색은 후보의 강점 · 공개 연출에만 쓴다. 다크 모드 초록은 배경에 묻혀 선택지(Opt)와 같은 금색을 쓴다.
   const dark = useIsDark();
