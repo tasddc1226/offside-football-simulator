@@ -223,8 +223,12 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
       ]);
     const current = teamSeasonAt(now);
     // T-11-552 끝나지 않은 컵·리그에 참가 중인 지난 시즌(시즌 1 제3회 컵). 그 시즌 팀은 컵 명단으로 고친다.
-    const cupSeason =
-      cupSeasons.map((r) => r.season).find((s) => current !== null && s > 0 && s < current) ?? null;
+    const pastCompetitionSeasons = cupSeasons
+      .map((r) => r.season)
+      .filter((s) => current !== null && s > 0 && s < current);
+    const cupSeason = pastCompetitionSeasons.includes(season)
+      ? season
+      : (pastCompetitionSeasons[0] ?? null);
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
     const editableSeason = season === current || season === 0 || season === cupSeason;
     const found = teams.find((t) => t.season === season);

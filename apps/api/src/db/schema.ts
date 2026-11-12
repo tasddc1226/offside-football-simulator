@@ -1596,8 +1596,8 @@ export const cupEntries = sqliteTable(
 );
 
 /**
- * T-11-418 오프사이드 리그 일정(시즌마다 한 행). 행이 없으면 서버가 시즌 개막으로 기본 일정(contracts planLeague)을
- * 쓴다 — 이 행은 운영 도구로 배치 · 첫 라운드를 미룰 때만 생긴다. rounds_json은 1라운드부터의 경기 시각(UTC ISO) 배열.
+ * 리그 회차별 일정. 종전 서비스 시즌 2는 운영 지연 일정만 저장한다. 제3기부터 배치 때 전체 일정과 팀 시즌을 고정한다.
+ * rounds_json은 1라운드부터의 경기 시각(UTC ISO) 배열.
  */
 export const leagueSeasons = sqliteTable('league_seasons', {
   season: integer('season').primaryKey(),

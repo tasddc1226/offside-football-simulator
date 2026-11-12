@@ -4,6 +4,9 @@ import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/ser
 import { planLeagueCycle, leagueKickoffAt } from '@offside/contracts/league';
 import {
   cards,
+  cups,
+  cupEntries,
+  ownerTeams,
   careers,
   leagueEntries,
   leagueMatches,
@@ -110,6 +113,47 @@ describe('independent league cycles (T-11-708)', () => {
     const view = await callJson(ctx.env, 'GET', '/v1/leagues/current');
     expect(view.status).toBe(200);
     expect(await ctx.db.select().from(leagueSeasons)).toEqual([]);
+  });
+  it('keeps the requested league team editable when another past-season cup is active', async () => {
+    const who = await entrant(0);
+    const [team] = await ctx.db
+      .select()
+      .from(ownerTeams)
+      .where(eq(ownerTeams.profileId, who.profileId));
+    await saveLeagueCycle(ctx.db, L, L.drawAt);
+    await ctx.db
+      .insert(leagueState)
+      .values({ season: 3, seed: 'cycle', tiersJson: '[]', drawnAt: L.drawAt });
+    await ctx.db
+      .update(leagueEntries)
+      .set({ teamId: team!.id })
+      .where(eq(leagueEntries.profileId, who.profileId));
+    await ctx.db.insert(cups).values({
+      id: 'overlapping-old-cup',
+      season: 2,
+      edition: 99,
+      opensAt: S2,
+      closesAt: S3,
+      drawAt: S3,
+      roundsJson: '[]',
+      capacity: 8,
+      minFilled: 8,
+      createdAt: S2,
+    });
+    await ctx.db.insert(cupEntries).values({
+      cupId: 'overlapping-old-cup',
+      teamId: 'old-team',
+      profileId: who.profileId,
+      name: 'Old team',
+      manager: 'Manager',
+      ovr: 80,
+      createdAt: S2,
+      updatedAt: S2,
+    });
+    vi.setSystemTime(new Date(plus(S4, DAY)));
+    const view = await callJson(ctx.env, 'GET', '/v1/owner-team?season=3', { cookie: who.cookie });
+    expect(view.status).toBe(200);
+    expect(await view.json()).toMatchObject({ data: { season: 3, current: 4, cupSeason: 3 } });
   });
   it('waits for delayed settlement instead of skipping a league season', async () => {
     await saveLeagueCycle(ctx.db, L, L.drawAt);
