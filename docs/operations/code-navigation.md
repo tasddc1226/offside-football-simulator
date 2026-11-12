@@ -41,6 +41,8 @@ Team의 `teamRecords.svelte.ts` / `useTeamRecords.ts`는 기록·통계·업적,
 
 Create의 입력 정책은 `app-core/create-controls.ts`, 재시도 키/시드 계획은 `scoutAttempts.ts`, 아이템 기본값/안내는 `scoutItemsView.ts`가 소유한다. 플랫폼 도구 상태는 `createScoutItems.svelte.ts` / `useScoutItems.ts`, 공개 연출은 `createCandidateReveal.svelte.ts` / `useCandidateReveal.ts`에 있다. 후보 생성·킵·저장은 기존 `scouting-actions.ts`에 남는다.
 
+순환을 피하는 표시/SQL leaf는 웹 `CompIconView.svelte`, 앱 `screens/game/TrophyRow.tsx`, API `db/repos/firstsMutations.ts`다. 표시를 재사용하려고 편집 시트/전체 탭을 import하거나, SQL 문장을 쓰려고 판정 실행 모듈을 import하지 않는다. 남겨 둔 지연 의존과 agents 경계는 [순환 후보 검토](../tracking/code-quality-refactor.md#t-11-710-남은-순환-후보-검토)에 근거를 기록했다.
+
 ## 빠른 검증 경로
 
 루트에서 실행한다. 아래는 해당 변경의 개발 중 확인 명령이며 필수 CI나 플랫폼 검증을 대체하지 않는다. 파일 분리 뒤에는 먼저 타입·린트를 통과시키고 테스트를 돌린다. UI 편집 중/푸시 전/PR의 범위는 [CI 테스트 정책](ci-test-policy.md)을 따른다.
