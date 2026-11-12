@@ -585,3 +585,59 @@ test('T-11-444 다음 시즌 접수 중엔 지난 시즌 결산을 보이고, �
   await expect(page.locator('[data-league-login]')).toHaveCount(0);
   await expect(page.locator('[data-act="league-login-google"]')).toHaveCount(0);
 });
+
+test('독립 리그는 28라운드와 참가 팀 시즌을 구분하고 편성 화면도 그 시즌으로 연다', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 780 });
+  await page.clock.setFixedTime(new Date('2026-11-13T03:00:00.000Z'));
+  const independent = {
+    season: 5,
+    teamSeason: 3,
+    startsAt: '2026-11-12T15:00:00.000Z',
+    opensAt: '2026-11-12T15:00:00.000Z',
+    closesAt: '2026-11-13T15:00:00.000Z',
+    drawAt: '2026-11-14T00:00:00.000Z',
+    rounds: Array.from({ length: 28 }, (_, i) =>
+      new Date(Date.parse('2026-11-14T04:00:00.000Z') + i * 86_400_000).toISOString(),
+    ),
+    minFilled: 8,
+  };
+  let requestedTeamSeason: string | null = null;
+  await page.route(`${API}/**`, async (r) => {
+    const url = new URL(r.request().url());
+    if (url.pathname === '/v1/profile')
+      return r.fulfill(
+        ok({
+          id: 'u1',
+          linked: { google: true },
+          googleEmailMasked: 'u***@example.com',
+          recoveryCodeIssuedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        }),
+      );
+    if (url.pathname === '/v1/leagues/current')
+      return r.fulfill(ok({ league: independent, phase: 'open', entries: 8 }));
+    if (url.pathname === '/v1/leagues/current/me')
+      return r.fulfill(
+        ok({
+          entry: { createdAt: independent.opensAt },
+          canEnter: false,
+          team: { teamId: 'tem_1', filled: 9, ovr: 84 },
+        }),
+      );
+    if (url.pathname === '/v1/owner-team') requestedTeamSeason = url.searchParams.get('season');
+    return r.fulfill({ status: 503, body: '' });
+  });
+  await page.goto('/');
+  await page.locator('[data-league-banner]').click();
+  await expect(page.getByRole('heading', { name: '제5기 오프사이드 리그' })).toBeVisible();
+  await expect(page.locator('[data-league-hero]')).toContainText('시즌 3 팀으로 경기해요.');
+  await expect(page.locator('[data-league-schedule]')).toContainText('1 ~ 28라운드');
+  await expect(page.locator('[data-league-entry-rules]')).toContainText('시즌 3 팀');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  );
+  await page.locator('[data-act="league-team"]').click();
+  await expect.poll(() => requestedTeamSeason).toBe('3');
+});

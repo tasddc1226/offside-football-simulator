@@ -1,5 +1,5 @@
 import { AdminLeagueDelaySchema, AdminLeagueSchema } from '@offside/contracts';
-import { leaguePhase, type LeagueDef } from '@offside/contracts/league';
+import { leaguePhase, planLeagueCycle, type LeagueDef } from '@offside/contracts/league';
 import { eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
@@ -45,6 +45,7 @@ async function adminView(db: Db, league: LeagueDef, now: string) {
   return {
     league: {
       season: league.season,
+      ...(league.teamSeason === undefined ? {} : { teamSeason: league.teamSeason }),
       startsAt: league.startsAt,
       opensAt: league.opensAt,
       closesAt: league.closesAt,
@@ -53,7 +54,12 @@ async function adminView(db: Db, league: LeagueDef, now: string) {
       minFilled: league.minFilled,
     },
     phase: leaguePhase(league, now),
-    delayed: !!row,
+    delayed:
+      !!row &&
+      (league.teamSeason === undefined ||
+        league.drawAt !==
+          planLeagueCycle(league.season, league.startsAt, league.teamSeason, league.season === 3)
+            .drawAt),
     counts: {
       entries: counts?.entries ?? 0,
       placed: counts?.placed ?? 0,
@@ -90,6 +96,7 @@ export function registerAdminLeagueRoutes(app: Hono<AppEnv>): void {
       throw conflictError(cupKo('leagueDrawn'), 'LEAGUE_ALREADY_DRAWN');
     const values = {
       startsAt: league.startsAt,
+      teamSeason: league.teamSeason ?? null,
       opensAt: league.opensAt,
       closesAt: shift(league.closesAt, days),
       drawAt: shift(league.drawAt, days),

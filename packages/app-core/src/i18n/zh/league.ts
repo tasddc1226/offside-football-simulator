@@ -3,8 +3,18 @@ import type { Translation } from '../core';
 import type { LeagueMsgs } from '../ko/league';
 
 export const league: Translation<LeagueMsgs> = {
+  cyclePitch:
+    '8支球隊每天進行1輪，與同一對手交手4次，共28輪。結束後確定獎勵與升降級，再開放下一期聯賽。',
+  cycleEntry:
+    '首期在服務賽季開幕5天後分組，之後每期報名1天後分組。分組時先發陣容須有8名自己的退役球員。',
+  cycleLate: '首次分組14天後開放一次中途參加。新組別進行主客場共14輪，採用相同的排名獎勵。',
+  cycleMove: '各聯賽第1名於下期升一級，第7、8名降一級。',
+  cycleReward: '最後一場比賽後確定排名與獎勵。每期採用相同獎勵表，沒有棄權才能獲得完賽獎勵。',
+  cycleForfeit: '先發實卡少於8人時以0:3棄權落敗。棄權3次後其餘比賽也算棄權，下期從最底層級開始。',
+  cycleTeam: (p: { season: number }) =>
+    `使用第${p.season}賽季球隊參賽。即使服務賽季改變，在本期聯賽結束前仍可調整同一支球隊的先發陣容。`,
   title: 'OFFSIDE 聯賽',
-  seasonTitle: (p) => `賽季 ${p.season} OFFSIDE 聯賽`,
+  seasonTitle: (p) => (p.season >= 3 ? `第${p.season}期越位聯賽` : `賽季 ${p.season} OFFSIDE 聯賽`),
   open: '查看聯賽',
   loadFail: '無法載入聯賽資訊。',
   pitch:
@@ -21,7 +31,7 @@ export const league: Translation<LeagueMsgs> = {
   doneLine: '本賽季聯賽已結束。',
   scheduleTitle: '賽程',
   scheduleEntry: '報名',
-  scheduleSeason: (p) => `賽季 ${p.season} 開幕`,
+  scheduleSeason: (p) => (p.season >= 3 ? `第${p.season}期報名開始` : `賽季 ${p.season} 開幕`),
   scheduleDraw: '分組・對戰公布',
   scheduleRounds: (p) => `第1～${p.n}輪`,
   date: (p) => `${p.month}月${p.day}日`,
@@ -113,7 +123,10 @@ export const league: Translation<LeagueMsgs> = {
   outcomeStayed: '保級',
   outcomeRelegated: '降級',
   outcomeForfeited: '因棄權除名',
-  finalChampionTitle: (p) => `獲得稱號「賽季 ${p.season} 聯賽冠軍」。`,
+  finalChampionTitle: (p) =>
+    p.season >= 3
+      ? `獲得「第${p.season}期聯賽冠軍」稱號。`
+      : `獲得稱號「賽季 ${p.season} 聯賽冠軍」。`,
   rewardReroll: (p) => `重抽券${p.n}張`,
   rewardScout: (p) => `高級球探券${p.n}張`,
   rewardBoost: (p) => `潛力強化券${p.n}張`,
@@ -162,7 +175,7 @@ export const league: Translation<LeagueMsgs> = {
   meFail: '無法載入報名資訊。',
   kstNote: '時間皆為韓國時間（KST，比台灣時間快 1 小時）。',
   roundAt: (p) => `${p.when}（韓國時間）`,
-  lastFinalTitle: (p) => `賽季 ${p.season} 結果`,
+  lastFinalTitle: (p) => (p.season >= 3 ? `第${p.season}期聯賽結算` : `賽季 ${p.season} 結果`),
   lastFinalNext: (p) => `報名本賽季將從第${p.tier}級開始。`,
   lastFinalNextBottom: '因多次棄權，本賽季將從最低級別開始。',
   termTier: '級別：實力的階層。第 1 級是最高級別。',

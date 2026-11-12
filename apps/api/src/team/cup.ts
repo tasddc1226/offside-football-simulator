@@ -24,7 +24,16 @@ import {
 import { and, asc, eq, getTableColumns, inArray, isNotNull, sql } from 'drizzle-orm';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
-import { cupEntries, cupMatches, cupState, cups, ownerTeams, profiles } from '../db/schema.js';
+import {
+  cupEntries,
+  cupMatches,
+  cupState,
+  cups,
+  ownerTeams,
+  profiles,
+  leagueEntries,
+  leagueState,
+} from '../db/schema.js';
 import { cupTeamOf } from '../db/repos/ownerTeams.js';
 import { cupKo, cupTitle } from '../cupText.js';
 import { predictionSettlementStatements } from './cupPredictions.js';
@@ -745,6 +754,23 @@ export const activeCupSeasonsQuery = (db: Db, profileId: string) =>
     .from(cupEntries)
     .innerJoin(cups, eq(cups.id, cupEntries.cupId))
     .where(and(eq(cupEntries.profileId, profileId), eq(cupEntries.status, 'active')));
+
+/** Competition-bound teams remain editable; cup-only transfer restrictions stay separate. */
+export const activeCompetitionSeasonsQuery = (db: Db, profileId: string) =>
+  activeCupSeasonsQuery(db, profileId).union(
+    db
+      .selectDistinct({ season: ownerTeams.season })
+      .from(leagueEntries)
+      .innerJoin(ownerTeams, eq(ownerTeams.id, leagueEntries.teamId))
+      .innerJoin(leagueState, eq(leagueState.season, leagueEntries.season))
+      .where(
+        and(
+          eq(leagueEntries.profileId, profileId),
+          eq(leagueEntries.status, 'active'),
+          sql`${leagueState.doneAt} IS NULL`,
+        ),
+      ),
+  );
 
 /** T-11-145 구단주의 컵 성적(보상까지 끝난 것, 최근 대회부터). 팀 프로필 트로피·칭호, 받침대에 새길 닉네임. */
 /** T-11-237 그 팀의 오프사이드 컵 최고 성적(보상까지 끝난 컵만, 업적 판정용). 없으면 null. */

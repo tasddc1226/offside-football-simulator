@@ -1,3 +1,4 @@
+import { leagueKo } from './leagueCopy.js';
 import { planLeagueNotifications } from './leagueNotifications.js';
 import { kstHm } from '../time.js';
 export * from './leagueRead.js';
@@ -30,6 +31,7 @@ import {
   type LeagueDef,
   type LeagueOutcome,
   leagueKickoffAt,
+  leagueTeamSeason,
 } from '@offside/contracts/league';
 
 import { leagueTitleIdOf, TITLE_STAGES } from '@offside/contracts/owner-title';
@@ -43,7 +45,7 @@ import { leagueMatchBalanceOf } from '../db/repos/balance.js';
 import { grantItemStatement } from '../db/repos/itemShop.js';
 import { eventNotificationStatements } from '../push/events.js';
 import { drawGroups, rngFrom } from './cupRules.js';
-import { currentLeague } from './leagueSchedule.js';
+import { currentLeague, saveLeagueCycle } from './leagueSchedule.js';
 import { buildLeagueNews } from './leagueNews.js';
 import type { OwnerTeamRow } from '../db/repos/ownerTeams.js';
 import { FATIGUE_LOOKBACK, startStreaks, withFatigue, type PlayedLeagueMatch } from './fatigue.js';
@@ -112,11 +114,11 @@ export async function remindLeague(db: Db, league: LeagueDef, now: string) {
   const { results } = await d1
     .prepare(
       `SELECT e.profile_id AS profileId, COALESCE(t.filled, 0) AS filled
-       FROM league_entries e LEFT JOIN owner_teams t ON t.profile_id = e.profile_id AND t.season = e.season
+       FROM league_entries e LEFT JOIN owner_teams t ON t.profile_id = e.profile_id AND t.season = ?
        WHERE e.season = ? AND e.status = 'active' AND e.notified_round = 0 AND COALESCE(t.filled, 0) < ?
        LIMIT ?`,
     )
-    .bind(league.season, league.minFilled, LEAGUE_NOTICES_PER_TICK)
+    .bind(leagueTeamSeason(league), league.season, league.minFilled, LEAGUE_NOTICES_PER_TICK)
     .all<{ profileId: string; filled: number }>();
   if (!results.length) return 0;
   const stmts: D1PreparedStatement[] = [];
@@ -132,7 +134,11 @@ export async function remindLeague(db: Db, league: LeagueDef, now: string) {
         r.profileId,
         `league:${league.season}:remind`,
         cupKo('leagueRemindTitle'),
-        cupKo('leagueRemindBody', { season: league.season, n: league.minFilled, filled: r.filled }),
+        cupKo('leagueRemindBody', {
+          season: leagueTeamSeason(league),
+          n: league.minFilled,
+          filled: r.filled,
+        }),
         now,
       ),
     );
@@ -242,7 +248,10 @@ export async function drawLeague(db: Db, league: LeagueDef, now: string) {
     .innerJoin(profiles, eq(profiles.id, leagueEntries.profileId))
     .leftJoin(
       ownerTeams,
-      and(eq(ownerTeams.profileId, leagueEntries.profileId), eq(ownerTeams.season, league.season)),
+      and(
+        eq(ownerTeams.profileId, leagueEntries.profileId),
+        eq(ownerTeams.season, leagueTeamSeason(league)),
+      ),
     )
     .where(and(eq(leagueEntries.season, league.season), eq(leagueEntries.status, 'active')));
   const seed = crypto.randomUUID();
@@ -354,7 +363,7 @@ export async function drawLeague(db: Db, league: LeagueDef, now: string) {
         r.entry.profileId,
         `league:${league.season}:fill`,
         cupKo('leagueFillTitle'),
-        cupKo('leagueFillBody', {
+        leagueKo(league, 'leagueFillBody', {
           season: league.season,
           tier: p.tier,
           s: LEAGUE_FILL_PROMOTE_SCOUTS,
@@ -401,7 +410,10 @@ export async function lateDrawLeague(
     .innerJoin(profiles, eq(profiles.id, leagueEntries.profileId))
     .leftJoin(
       ownerTeams,
-      and(eq(ownerTeams.profileId, leagueEntries.profileId), eq(ownerTeams.season, league.season)),
+      and(
+        eq(ownerTeams.profileId, leagueEntries.profileId),
+        eq(ownerTeams.season, leagueTeamSeason(league)),
+      ),
     )
     .where(
       and(
@@ -601,7 +613,7 @@ export async function playLeagueMatches(
         e?.status === 'active' &&
         (forfeits.get(id) ?? e.forfeits) < LEAGUE_FORFEIT_LIMIT &&
         t &&
-        t.season === league.season &&
+        t.season === leagueTeamSeason(league) &&
         t.profileId === e.profileId;
       return fine ? t : undefined;
     };
@@ -609,9 +621,11 @@ export async function playLeagueMatches(
     const awayTeam = side(m.awayTeamId);
     // 자격은 경기 때 실제 선발로 다시 본다(저장해 둔 filled는 카드가 팔려도 바로 줄지 않는다). 팔린 자리는 유스가 채운다.
     const both =
-      homeTeam && awayTeam ? await lineupsOf(db, league.season, homeTeam, awayTeam) : null;
+      homeTeam && awayTeam
+        ? await lineupsOf(db, leagueTeamSeason(league), homeTeam, awayTeam)
+        : null;
     const alone = async (t: OwnerTeamRow | undefined) =>
-      t && !both ? (await lineupsOf(db, league.season, t, t)).home : null;
+      t && !both ? (await lineupsOf(db, leagueTeamSeason(league), t, t)).home : null;
     const homeLineup = both?.home ?? (await alone(homeTeam));
     const awayLineup = both?.away ?? (await alone(awayTeam));
     const ready = (l: typeof homeLineup) => !!l && filledCount(l) >= league.minFilled;
@@ -627,7 +641,7 @@ export async function playLeagueMatches(
         home: withFatigue(both.home, startStreaks(played, home.id, m.round), fatigue),
         away: withFatigue(both.away, startStreaks(played, away.id, m.round), fatigue),
       };
-      const result = simulateMatch(m.id, tired.home, tired.away, league.season, {
+      const result = simulateMatch(m.id, tired.home, tired.away, leagueTeamSeason(league), {
         neutral: false,
         coaches: tired.coaches,
         homeAdv,
@@ -836,8 +850,10 @@ export async function runLeague(db: Db, now: string, given?: LeagueDef) {
     return n ? { season: league.season, step: 'remind', n } : null;
   }
   const [state] = await leagueStateOf(db, league.season);
-  if (!state)
+  if (!state) {
+    await saveLeagueCycle(db, league, now);
     return { season: league.season, step: 'draw', ...(await drawLeague(db, league, now)) };
+  }
   if (state.doneAt) return null;
   // T-11-564 늦은 배치 시간이면 늦은 참가부터 묶는다(시간 밖이면 DB를 읽지 않는다).
   if (leagueLateSlotAt(league, now)) {

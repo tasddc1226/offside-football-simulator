@@ -243,7 +243,7 @@ export const OwnerTeamResponseSchema = z.strictObject({
   season: TeamSeasonSchema,
   current: TeamSeasonSchema.nullable(),
   /**
-   * T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(시즌 1 제3회 컵). 그 시즌 팀은 컵이 끝날 때까지 고친다. 옛 응답에는 없다.
+   * T-11-552·705 끝나지 않은 컵·리그에 참가 중인 지난 서비스 시즌. 그 대회가 끝날 때까지 팀 선발을 고친다. 필드 이름은 이전 클라이언트 호환을 위해 유지한다.
    */
   cupSeason: TeamSeasonSchema.nullable().optional(),
   seasons: z.array(TeamSeasonOptionSchema),

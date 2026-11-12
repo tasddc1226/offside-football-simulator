@@ -59,12 +59,12 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   gradeDiamond: 'Diamond',
   gradeLegend: 'Legend',
   cupTeamNote: (p: { season: string }) =>
-    `Your ${p.season} team is playing in the OFFSIDE Cup. You can change its lineup until the cup ends.`,
-  cupTeamLink: (p: { season: string }) => `Edit your ${p.season} cup team`,
+    `Your ${p.season} team is in an ongoing competition. You can edit its lineup until its cup or league ends.`,
+  cupTeamLink: (p: { season: string }) => `Edit your ${p.season} competition team`,
   preseasonTeamNote:
     'Built from the preseason players you still own. This team only plays friendlies with friends, and your preseason ranking and achievements stay as they are.',
   hintCupTeam:
-    'This team only plays in the OFFSIDE Cup. Ranked matches use your current-season team.',
+    'This team plays in its ongoing cup or league. Ranked matches use your current-season team.',
   hintPreseason:
     'Your preseason team only plays friendlies with friends. Use your current season team for ranked matches.',
   // T-11-571 리그 체력

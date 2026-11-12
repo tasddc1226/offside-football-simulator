@@ -4,8 +4,22 @@ import { leagueTitles } from '@offside/contracts/league-names';
 import { ns } from '../core';
 
 const ko = {
+  cyclePitch:
+    '8팀이 매일 한 라운드씩, 같은 상대와 네 번 만나 28라운드를 치러요. 리그가 끝나면 보상과 승강을 정하고 다음 회차를 열어요.',
+  cycleEntry:
+    '첫 회차는 서비스 시즌 개막 뒤 5일, 그다음은 접수 하루 뒤에 배치해요. 배치 때 선발에 내 은퇴 선수가 8명 있어야 해요.',
+  cycleLate:
+    '첫 배치 14일 뒤 한 번 늦은 참가를 받아요. 새 조에서 홈 · 원정 14라운드를 치르고 같은 순위 보상을 받아요.',
+  cycleMove: '각 리그 1위는 다음 회차에 한 부 위로, 7 · 8위는 한 부 아래로 가요.',
+  cycleReward:
+    '마지막 경기 뒤 순위와 보상을 확정해요. 회차마다 같은 보상표를 쓰고, 완주 보상은 기권이 없어야 받아요.',
+  cycleForfeit:
+    '선발 실카드가 8명보다 적으면 0:3 패예요. 3번 기권하면 남은 경기도 기권패가 되고 다음 회차는 맨 아래 부에서 시작해요.',
+  cycleTeam: (p: { season: number }) =>
+    `시즌 ${p.season} 팀으로 경기해요. 서비스 시즌이 바뀌어도 이 리그가 끝날 때까지 같은 팀의 선발을 고칠 수 있어요.`,
   title: '오프사이드 리그',
-  seasonTitle: (p: { season: number }) => `시즌 ${p.season} 오프사이드 리그`,
+  seasonTitle: (p: { season: number }) =>
+    p.season >= 3 ? `제${p.season}기 오프사이드 리그` : `시즌 ${p.season} 오프사이드 리그`,
   open: '리그 보기',
   loadFail: '리그 정보를 불러오지 못했어요.',
   pitch:
@@ -25,7 +39,8 @@ const ko = {
   // 일정
   scheduleTitle: '일정',
   scheduleEntry: '신청',
-  scheduleSeason: (p: { season: number }) => `시즌 ${p.season} 개막`,
+  scheduleSeason: (p: { season: number }) =>
+    p.season >= 3 ? `제${p.season}기 접수 시작` : `시즌 ${p.season} 개막`,
   scheduleDraw: '배치 · 대진 발표',
   scheduleRounds: (p: { n: number }) => `1 ~ ${p.n}라운드`,
   date: (p: { month: number; day: number }) => `${p.month}월 ${p.day}일`,
@@ -134,7 +149,9 @@ const ko = {
   outcomeRelegated: '강등',
   outcomeForfeited: '기권 퇴출',
   finalChampionTitle: (p: { season: number }) =>
-    `대표 칭호 '시즌 ${p.season} 리그 챔피언'을 받았어요.`,
+    p.season >= 3
+      ? `대표 칭호 '제${p.season}기 리그 챔피언'을 받았어요.`
+      : `대표 칭호 '시즌 ${p.season} 리그 챔피언'을 받았어요.`,
   rewardReroll: (p: { n: number }) => `리롤권 ${p.n}장`,
   rewardScout: (p: { n: number }) => `프리미엄 스카우트권 ${p.n}장`,
   rewardBoost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,
@@ -188,7 +205,8 @@ const ko = {
   meFail: '내 신청 정보를 불러오지 못했어요.',
   kstNote: '시간은 모두 한국 시간(KST)이에요.',
   roundAt: (p: { when: string }) => `${p.when} 한국 시간`,
-  lastFinalTitle: (p: { season: number }) => `시즌 ${p.season} 결산`,
+  lastFinalTitle: (p: { season: number }) =>
+    p.season >= 3 ? `제${p.season}기 리그 결산` : `시즌 ${p.season} 결산`,
   lastFinalNext: (p: { tier: number }) => `이번 시즌에 신청하면 ${p.tier}부에서 시작해요.`,
   lastFinalNextBottom: '기권이 쌓여 이번 시즌은 맨 아래 부에서 시작해요.',
   termTier: '부: 실력 단계예요. 1부가 가장 높아요.',

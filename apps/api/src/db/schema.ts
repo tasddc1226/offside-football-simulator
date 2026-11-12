@@ -1601,6 +1601,8 @@ export const cupEntries = sqliteTable(
  */
 export const leagueSeasons = sqliteTable('league_seasons', {
   season: integer('season').primaryKey(),
+  /** T-11-708: null preserves old service-bound leagues; new editions pin their card season. */
+  teamSeason: integer('team_season'),
   startsAt: text('starts_at').notNull(),
   opensAt: text('opens_at').notNull(),
   closesAt: text('closes_at').notNull(),

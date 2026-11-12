@@ -16,7 +16,7 @@ import {
 import { teamCoachOf } from '../db/repos/managers.js';
 import { AppError } from '../errors.js';
 import { conflictError } from '../routes/shared.js';
-import { activeCupSeasonsQuery } from './cup.js';
+import { activeCompetitionSeasonsQuery } from './cup.js';
 import { buildLineup, filledCount, lineupOvr } from './sim.js';
 
 // Injected seasonal/competition policy keeps this save use case independent of orchestration.
@@ -40,7 +40,7 @@ export const coachNotEligible = () =>
 const PAST_SEASON_TEXT = '지난 시즌 팀은 고칠 수 없어요.';
 
 /**
- * 지금 시즌 팀만 고친다(프리시즌 팀은 친선전용으로). T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌 팀은 컵 명단으로
+ * 지금 시즌 팀만 고친다(프리시즌 팀은 친선전용으로). T-11-552 끝나지 않은 컵·리그에 참가 중인 지난 시즌 팀은 컵 명단으로
  * 고친다(시즌 1 제3회 컵은 시즌 2 개막 뒤에도 시즌 1 팀으로 치른다). 컵 팀이면 true.
  */
 export async function checkEditableSeason(
@@ -53,7 +53,7 @@ export async function checkEditableSeason(
   if (
     current !== null &&
     season < current &&
-    (await activeCupSeasonsQuery(db, profileId)).some((r) => r.season === season)
+    (await activeCompetitionSeasonsQuery(db, profileId)).some((r) => r.season === season)
   )
     return true;
   throw conflictError(PAST_SEASON_TEXT, 'SEASON_CLOSED');

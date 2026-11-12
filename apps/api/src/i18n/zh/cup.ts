@@ -2,6 +2,15 @@ import type { CupTextKey } from '../ko/cup.js';
 
 // T-11-553 OFFSIDE 盃 서버 문구(번체 중국어).
 export const CUP_ZH: Record<CupTextKey, string> = {
+  leaguePlacedTitleCycle: '第 {season} 期聯賽 OFFSIDE 聯賽分級結果',
+  leagueDroppedTitleCycle: '第 {season} 期聯賽 OFFSIDE 聯賽參賽已取消',
+  leagueCancelledTitleCycle: '第 {season} 期聯賽 OFFSIDE 聯賽停辦',
+  leagueEndTitleCycle: '第 {season} 期聯賽 OFFSIDE 聯賽結束了',
+  leagueChampionTitleCycle: '第 {season} 期聯賽 OFFSIDE 聯賽 {tier} 級 {title}奪冠！',
+  leagueEndBodyChampionCycle:
+    '1 級冠軍！獲得第 {season} 期聯賽聯賽冠軍稱號、{n} 張球員候選重抽券、{s} 張高級球探券和 {b} 張潛力強化券。',
+  leagueFillBodyCycle:
+    '上一級有空位，第 {season} 期聯賽將在 {tier} 級出賽。獲得 {s} 張高級球探券。',
   completeTitle: '{cup}已結束',
   completeBody: '請查看盃賽結果與獎勵的重抽券。',
   predictionRewardBody: '請查看盃賽結果與勝負預測獲得的重抽券。',
