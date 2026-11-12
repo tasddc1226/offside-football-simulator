@@ -54,7 +54,16 @@ export async function leagueStalls(db: Db, league: LeagueDef, now: string) {
     return out;
   }
   // 마지막 라운드 전: 배치 결과(-1)나 끝난 라운드 결과 알림이 1시간 넘게 남은 구단주.
-  const since = played > 0 ? league.rounds[played - 1]! : state.drawnAt;
+  // T-11-714 한 라운드 경기는 하루에 나눠 치른다(운영 13:00 ~ 21:00 KST). 결과 알림은 마지막 경기 뒤에 나가므로
+  // 라운드 시작 시각이 아니라 그 라운드 마지막 경기를 치른 시각부터 1시간을 잰다(아니면 매일 21:00에 헛경보).
+  const lastPlayed =
+    played > 0
+      ? await d1
+          .prepare(`SELECT MAX(played_at) AS t FROM league_matches WHERE season = ? AND round = ?`)
+          .bind(s, played)
+          .first<{ t: string | null }>()
+      : null;
+  const since = played > 0 ? (lastPlayed?.t ?? league.rounds[played - 1]!) : state.drawnAt;
   if (since <= before(now, NOTIFY_MS)) {
     const row = await d1
       .prepare(

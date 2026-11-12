@@ -76,6 +76,31 @@ describe('리그 자동 진행 경보 (T-11-445)', () => {
     expect(s!.text).toContain('3라운드');
   });
 
+  it('T-11-714: 라운드 경기를 하루에 나눠 치르면 마지막 경기를 치른 뒤 1시간부터 알린다', async () => {
+    await draw();
+    const r1 = L.rounds[0]!;
+    const late = at(r1, 8 * 60); // 같은 라운드의 마지막 경기는 8시간 뒤에 치른다.
+    await d1().batch(
+      [
+        ['m1', 1, 1, r1, r1],
+        ['m2', 1, 2, late, late],
+        ['m3', 2, 1, L.rounds[1]!, null],
+      ].map(([id, round, slot, kick, played]) =>
+        d1()
+          .prepare(
+            `INSERT INTO league_matches (id, season, tier, league_no, round, slot, home_team_id, away_team_id, at, played_at)
+             VALUES (?, 2, 1, 1, ?, ?, 'ta', 'tb', ?, ?)`,
+          )
+          .bind(id, round, slot, kick, played),
+      ),
+    );
+    await entry('p1', 0);
+    // 라운드 시작 뒤 8시간이 지났어도 마지막 경기 직후라 아직 알림을 기다린다.
+    expect(await keys(at(late, 1))).toEqual([]);
+    expect(await keys(at(late, 59))).toEqual([]);
+    expect(await keys(at(late, 61))).toEqual(['notify:2:1']);
+  });
+
   it('마지막 라운드 뒤 2시간이 지나도 끝나지 않으면 알리고, 끝나면 조용하다', async () => {
     await draw();
     await matches(LEAGUE_CYCLE);
