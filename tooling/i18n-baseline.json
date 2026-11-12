@@ -113,7 +113,7 @@
   "packages/game/src/events.ts": 171,
   "packages/game/src/legend-bands.ts": 5,
   "packages/game/src/match.ts": 2,
-  "packages/game/src/military.ts": 34,
+  "packages/game/src/military.ts": 33,
   "packages/game/src/nation.ts": 28,
   "packages/game/src/national.ts": 131,
   "packages/game/src/player.ts": 12,
