@@ -282,3 +282,40 @@ describe('오늘 과제를 모두 채울 수 있나', () => {
     expect(canFinishAll([], [])).toBe(true);
   });
 });
+
+describe('같은 시즌 동기들 (T-11-712)', () => {
+  it('어떤 과제도 지금 새로 만들 수 없는 지난 시즌 카드를 요구하지 않는다', () => {
+    for (const tier of ['easy', 'normal', 'hard'] as const)
+      for (const spec of EXCHANGE_POOL[tier]) expect(spec.rule.seasons).toBeUndefined();
+    // 시즌 1 동기들이 열리던 칸(보통)이 같은 날 같은 시즌 동기들로 열린다.
+    expect(exchangesAt('2026-11-12T03:00:00.000Z')[1]!.key).toBe('seasonMates');
+  });
+
+  it('모두 같은 시즌이면 어느 시즌이든 맞고, 시즌이 섞이면 맞지 않는다', () => {
+    const rule = { count: 3, sameSeason: true };
+    expect(exchangeMet(rule, [card({ season: 2 }), card({ season: 2 }), card({ season: 2 })])).toBe(
+      true,
+    );
+    expect(exchangeMet(rule, [card({ season: 0 }), card({ season: 0 }), card({ season: 0 })])).toBe(
+      true,
+    );
+    expect(
+      exchangeChecks(rule, [card({ season: 1 }), card({ season: 2 }), card({ season: 2 })]),
+    ).toContainEqual({ condition: 'sameSeason', met: false });
+  });
+
+  it('채우기는 카드가 가장 많은 시즌에서 고르고, 시즌 2 카드만 가진 구단주도 채운다', () => {
+    const cards = [
+      card({ season: 1 }),
+      card({ season: 2 }),
+      card({ season: 2 }),
+      card({ season: 2 }),
+    ];
+    expect(autoFill({ count: 3, sameSeason: true }, cards)?.every((c) => c.season === 2)).toBe(
+      true,
+    );
+    const fresh = [card({ season: 2 }), card({ season: 2 }), card({ season: 2 })];
+    expect(autoFill({ count: 3, sameSeason: true }, fresh)).toHaveLength(3);
+    expect(autoFill({ count: 4, sameSeason: true }, fresh)).toBeNull();
+  });
+});

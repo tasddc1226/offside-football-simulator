@@ -32,7 +32,7 @@ const ko = {
   nameBestEleven: '포지션 대표',
   nameLegendGift: '레전드의 선물',
   nameOneNation: '한 나라 대표단',
-  nameSeasonOne: '시즌 1 동기들',
+  nameSeasonMates: '같은 시즌 동기들',
   nameElite: '정상급 모임',
   nameCenterBacks: '센터백 듀오',
   nameWingers: '측면의 날개',
@@ -64,6 +64,7 @@ const ko = {
   condDpos: (p: { list: string }) => `${p.list}만`,
   condSameLeague: '모두 가장 오래 뛴 리그가 같은 선수',
   condDistinctNations: '모두 다른 국적',
+  condSameSeason: '모두 같은 시즌 선수',
   // 보상
   rewardReroll: (p: { n: number }) => `리롤권 ${p.n}장`,
   rewardBoost: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,

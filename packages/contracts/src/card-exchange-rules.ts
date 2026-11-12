@@ -36,6 +36,8 @@ export type ExchangeRule = {
   sameLeague?: boolean;
   /** T-11-374d 모두 국적이 다르다. */
   distinctNations?: boolean;
+  /** T-11-712 모두 출신 서비스 시즌이 같다(어느 시즌이든). */
+  sameSeason?: boolean;
 };
 
 export type ExchangeReward = { item: OwnerItem; qty: number };
@@ -99,7 +101,9 @@ export const EXCHANGE_POOL: Record<ExchangeTier, readonly ExchangeSpec[]> = {
     { key: 'spine', rule: { count: 3, shape: { DF: 1, MF: 2 }, avgPeakMin: 75 } },
     { key: 'frontLine', rule: { count: 3, shape: { MF: 1, FW: 2 }, avgPeakMin: 77 } },
     { key: 'veterans', rule: { count: 3, peakMin: 80 } },
-    { key: 'seasonOne', rule: { count: 3, seasons: [1] } },
+    // T-11-712 시즌 1 카드 3장(seasonOne)은 시즌 2부터 시작한 구단주가 만들 수 없어 그날 보상을 받지 못했다(T-11-374c와 같은 문제).
+    // 같은 칸을 어느 시즌이든 같은 시즌 카드로 바꿔 회전은 그대로 둔다.
+    { key: 'seasonMates', rule: { count: 3, sameSeason: true } },
     { key: 'worldTour', rule: { count: 3, distinctNations: true } },
     { key: 'leagueMates', rule: { count: 3, sameLeague: true } },
     { key: 'engineRoom', rule: { count: 3, dpos: ['DM', 'CM'], avgPeakMin: 75 } },
@@ -151,7 +155,7 @@ export const POOL_GROWN: readonly PoolGrowth[] = [
       spine: { count: 4, shape: { DF: 2, MF: 2 }, avgPeakMin: 75 },
       frontLine: { count: 4, shape: { MF: 2, FW: 2 }, avgPeakMin: 77 },
       veterans: { count: 4, peakMin: 80 },
-      seasonOne: { count: 4, seasons: [1] },
+      seasonMates: { count: 4, seasons: [1] },
       worldTour: { count: 4, distinctNations: true },
       leagueMates: { count: 4, sameLeague: true },
       engineRoom: { count: 4, dpos: ['DM', 'CM'], avgPeakMin: 75 },
@@ -246,6 +250,7 @@ export const EXCHANGE_CONDITIONS = [
   'dpos',
   'sameLeague',
   'distinctNations',
+  'sameSeason',
 ] as const;
 export type ExchangeCondition = (typeof EXCHANGE_CONDITIONS)[number];
 
@@ -314,6 +319,11 @@ export function exchangeChecks(
       condition: 'distinctNations',
       met: each((c) => !!c.nation) && new Set(picked.map((c) => c.nation)).size === picked.length,
     });
+  if (rule.sameSeason)
+    out.push({
+      condition: 'sameSeason',
+      met: each((c) => (c.season ?? 0) === (picked[0]!.season ?? 0)),
+    });
   return out;
 }
 
@@ -330,7 +340,7 @@ export function exchangeMet(rule: ExchangeRule, picked: readonly ExchangeCard[])
 
 /**
  * "맞는 카드로 채우기": 낼 수 있는 카드 중 혼자 맞는 카드를 가치가 낮은 순으로 골라 조건을 채운다. 포지션 구성은 자리마다,
- * 같은 국적 · 같은 리그는 가장 많은 국적 · 리그에서, 다른 국적은 국적마다 한 장씩, 레전드 점수 한 장은 그 조건을 채우는 가장 싼 카드부터 넣는다. 평균 OVR이 모자라면
+ * 같은 국적 · 같은 리그 · 같은 시즌은 가장 많은 국적 · 리그 · 시즌에서, 다른 국적은 국적마다 한 장씩, 레전드 점수 한 장은 그 조건을 채우는 가장 싼 카드부터 넣는다. 평균 OVR이 모자라면
  * 고른 카드 중 가장 낮은 카드를 남은 카드 중 더 높은 카드로 바꾼다. 못 채우면 null.
  */
 export function autoFill<T extends ExchangeCard & { cardValue?: number | null }>(
@@ -340,7 +350,13 @@ export function autoFill<T extends ExchangeCard & { cardValue?: number | null }>
   const value = (c: T) => c.cardValue ?? 0;
   const fit = cards.filter((c) => cardFits(rule, c)).sort((a, b) => value(a) - value(b));
   const groups: T[][] = [];
-  const key = rule.sameNation ? (c: T) => c.nation : rule.sameLeague ? (c: T) => c.league : null;
+  const key = rule.sameNation
+    ? (c: T) => c.nation
+    : rule.sameLeague
+      ? (c: T) => c.league
+      : rule.sameSeason
+        ? (c: T) => String(c.season ?? 0)
+        : null;
   if (key) {
     const by = new Map<string, T[]>();
     for (const c of fit) {

@@ -1,0 +1,30 @@
+{
+  "id": "t-11-712-season-mates-exchange",
+  "title": "카드 과제 「같은 시즌 동기들」",
+  "items": [
+    "보통 과제 「시즌 1 동기들」을 「같은 시즌 동기들」로 바꿨어요. 이제 시즌 2에 시작한 구단주도 이 과제를 낼 수 있어요",
+    "프리시즌 · 시즌 1 · 시즌 2 중 어느 시즌이든 같은 시즌에 직접 키운 선수 3명을 내면 돼요"
+  ],
+  "en": {
+    "title": "Card task: Same-season class",
+    "items": [
+      "The normal task \"Season 1 class\" is now \"Same-season class\", so owners who started in Season 2 can complete it too.",
+      "Submit 3 players you raised from the same season, whether that's preseason, Season 1 or Season 2."
+    ]
+  },
+  "ja": {
+    "title": "カード課題「同じシーズンの同期」",
+    "items": [
+      "ふつう課題「シーズン1の同期」を「同じシーズンの同期」に変えました。シーズン2から始めたオーナーも達成できます。",
+      "プレシーズン・シーズン1・シーズン2のどれでも、同じシーズンに自分で育てた選手を3人出せばOKです。"
+    ]
+  },
+  "zh": {
+    "title": "卡片任務「同賽季同期生」",
+    "items": [
+      "普通任務「賽季 1 同期生」改為「同賽季同期生」，賽季 2 才開始的老闆也能完成。",
+      "季前 · 賽季 1 · 賽季 2 都可以，只要交出同一賽季親自培養的 3 名球員。"
+    ]
+  },
+  "availability": "web-app"
+}
