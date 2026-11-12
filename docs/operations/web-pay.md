@@ -22,6 +22,10 @@ T-11-454. 웹(offside-lab.com) 구단주 화면에서 앱과 같은 인앱 상�
     T-11-700부터 본문에 `trackingId`(영숫자 32자)가 있으면 토큰의 `user.tracking_id.value`로 넘긴다. 엑솔라 파트너 네트워크(크리에이터 수익
     공유)가 크리에이터 링크에 붙이는 `tracking_id`이고, 웹은 부팅 때 주소에서 읽어 이 브라우저에 남겨 둔다(`ui/creatorTracking.ts`).
     이 값이 없는 결제는 크리에이터 실적 · 정산에 잡히지 않는다.
+    T-11-703부터 무료 게임 가입 추적을 위해 링크로 들어온 프로필을 서버에도 묶는다(`creator_attributions`). 웹은 링크로 들어온
+    방문에서만 계정을 확인한 뒤 `POST /v1/creator-attribution`을 부르고(로그인 전 익명 프로필에도, 로그인하면 그 프로필로 한 번 더),
+    주문 본문에 값이 없으면 서버가 프로필에 묶인 값을 `CREATOR_ATTRIBUTION_DAYS`(90일) 동안 싣는다. 새 링크로 다시 오면 그
+    크리에이터로 바뀌고 기간이 새로 시작한다(마지막 링크 기준). 앱 인앱 결제는 엑솔라를 거치지 않아 대상이 아니다.
   - `GET /v1/web-pay/orders/:orderId`: 결제창에서 돌아온 웹이 상태를 묻는다(주문한 구단주만).
   - `POST /v1/web-pay/webhook`: 엑솔라 웹훅. `Authorization: Signature sha1(본문 + 웹훅 비밀 키)`로 확인한다.
     `user_validation`(프로필이 있으면 204), `order_paid`(아이템 지급), `order_canceled`(환불 · 차지백 회수, 결제보다 먼저 와도 나중 지급을 막는다).

@@ -8,6 +8,7 @@ import { pathToFileURL } from 'node:url';
 // (사람이 직접 스키마를 검토해야 하는 신호).
 export const EXPECTED_TABLES = Object.freeze([
   'acquisition_consents',
+  'creator_attributions',
   'acquisition_sessions',
   'app_auth_tickets',
   'app_meta',

@@ -128,9 +128,11 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     expect(JSON.parse(String(calls[0]?.init?.body)).user.tracking_id).toEqual({
       value: trackingId,
     });
-    // 추적값이 없으면 토큰 요청에도 넣지 않는다.
+    // T-11-703 주문에 실린 값은 프로필에 묶여, 브라우저 값이 없는 다음 주문에도 실린다.
     expect((await post({ productId: REROLL_15 })).status).toBe(201);
-    expect(JSON.parse(String(calls[1]?.init?.body)).user).not.toHaveProperty('tracking_id');
+    expect(JSON.parse(String(calls[1]?.init?.body)).user.tracking_id).toEqual({
+      value: trackingId,
+    });
     // 형식이 틀린 값은 엑솔라에 보내지 않고 거절한다.
     expect((await post({ productId: REROLL_15, trackingId: 'short' })).status).toBe(400);
     expect(calls).toHaveLength(2);
@@ -152,6 +154,73 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     });
     expect(res.status).toBe(201);
     expect(bodies.map((b) => 'tracking_id' in b.user)).toEqual([true, false]);
+  });
+
+  it('T-11-703 크리에이터 링크로 들어온 프로필은 브라우저 값이 없어도 90일 동안 결제 토큰에 추적값을 싣는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const calls = stubXsolla();
+    const trackingId = 'abcdefghijklmnopqrstuvwxyz123456';
+    const attribute = (body: Record<string, unknown>, cookie = me.cookie) =>
+      call('POST', '/v1/creator-attribution', { cookie, body });
+    const order = async () =>
+      (
+        await call('POST', '/v1/web-pay/orders', {
+          cookie: me.cookie,
+          body: { productId: REROLL_15 },
+        })
+      ).status;
+    expect((await attribute({ trackingId: 'short' })).status).toBe(400);
+    expect((await attribute({ trackingId })).status).toBe(204);
+    expect(await order()).toBe(201);
+    expect(JSON.parse(String(calls.at(-1)?.init?.body)).user.tracking_id).toEqual({
+      value: trackingId,
+    });
+    // 다른 링크로 다시 들어오면 그 크리에이터로 바뀐다.
+    const next = trackingId.toUpperCase();
+    expect((await attribute({ trackingId: next })).status).toBe(204);
+    expect(await order()).toBe(201);
+    expect(JSON.parse(String(calls.at(-1)?.init?.body)).user.tracking_id).toEqual({ value: next });
+    // 90일이 지나면 싣지 않는다.
+    const old = new Date(Date.now() - 91 * 86_400_000).toISOString();
+    await ctx.env.DB.prepare(
+      'UPDATE creator_attributions SET attributed_at = ? WHERE profile_id = ?',
+    )
+      .bind(old, me.profileId)
+      .run();
+    expect(await order()).toBe(201);
+    expect(JSON.parse(String(calls.at(-1)?.init?.body)).user).not.toHaveProperty('tracking_id');
+    // 주문에 실린 브라우저 값은 프로필에도 묶여 기간이 새로 시작한다.
+    expect(
+      (
+        await call('POST', '/v1/web-pay/orders', {
+          cookie: me.cookie,
+          body: { productId: REROLL_15, trackingId },
+        })
+      ).status,
+    ).toBe(201);
+    expect(await order()).toBe(201);
+    expect(JSON.parse(String(calls.at(-1)?.init?.body)).user.tracking_id).toEqual({
+      value: trackingId,
+    });
+  });
+
+  it('T-11-703 로그인 전 익명 프로필도 링크를 기록하고, 링크가 없는 프로필은 지금처럼 싣지 않는다', async () => {
+    const anon = await issueCookie(ctx);
+    const res = await call('POST', '/v1/creator-attribution', {
+      cookie: anon.cookie,
+      body: { trackingId: 'abcdefghijklmnopqrstuvwxyz123456' },
+    });
+    expect(res.status).toBe(204);
+    const row = await ctx.env.DB.prepare(
+      'SELECT tracking_id FROM creator_attributions WHERE profile_id = ?',
+    )
+      .bind(anon.profileId)
+      .first<{ tracking_id: string }>();
+    expect(row?.tracking_id).toBe('abcdefghijklmnopqrstuvwxyz123456');
+    const me = await issueGoogleCookie(ctx);
+    const calls = stubXsolla();
+    await call('POST', '/v1/web-pay/orders', { cookie: me.cookie, body: { productId: REROLL_15 } });
+    expect(JSON.parse(String(calls[0]?.init?.body)).user).not.toHaveProperty('tracking_id');
   });
 
   it('opens the 100-ticket pack only after catalog readiness and grants it once', async () => {

@@ -1,4 +1,5 @@
 import {
+  CreatorAttributionBodySchema,
   IAP_PRODUCTS,
   WEB_PAY_MEMBERSHIP,
   WEB_PAY_ORDER_ID,
@@ -16,6 +17,7 @@ import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import { passSaleOpen, SEASON_PASS_PRODUCT_ID } from '@offside/contracts/season-pass';
 import type { Context, Hono } from 'hono';
 import { cupKo } from '../cupText.js';
+import { attributeCreator, creatorTrackingOf } from '../db/repos/creatorAttribution.js';
 import { grantIapPurchase, revokeIapPurchase } from '../db/repos/iap.js';
 import { grantWebMembership, revokeWebMembership } from '../db/repos/memberships.js';
 import { openSeasonPass, revokeSeasonPass } from '../db/repos/seasonPass.js';
@@ -39,7 +41,7 @@ import {
 } from '../iap/xsolla.js';
 import { reqLang } from '../lang.js';
 import { WEB_PAY_WEBHOOK_PATH } from '../middleware/originGuard.js';
-import { requireProfile } from '../middleware/requireProfile.js';
+import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.js';
 import { requireOwner } from '../middleware/requireOwner.js';
 import { enforceLimit, NO_STORE, notFoundError, nowIso, ok, readBody } from './shared.js';
 
@@ -119,7 +121,7 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
   app.post('/v1/web-pay/orders', requireProfile, async (c) => {
     const me = await requireOwner(c);
     if (!webPayEnabled(c.env, me.id)) throw unavailable();
-    const { productId, trackingId } = readBody(c, WebPayOrderBodySchema);
+    const { productId, trackingId: linkTracking } = readBody(c, WebPayOrderBodySchema);
     const db = getDb(c);
     const now = nowIso();
     if (
@@ -129,6 +131,9 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
     )
       throw unavailable();
     await enforceLimit(db, 'WEB_PAY', me.id, 30, now, 'RATE_LIMITED');
+    // T-11-703 이 브라우저에 링크 값이 있으면 그것(가장 최근 링크)을 쓰고 프로필에도 묶는다. 없으면 프로필에 묶인 값을 쓴다.
+    if (linkTracking) await attributeCreator(db, me.id, linkTracking, now);
+    const trackingId = linkTracking ?? (await creatorTrackingOf(db, me.id, now));
     const orderId = `wp_${crypto.randomUUID().replaceAll('-', '')}`;
     // Origin은 originGuard가 허용한 웹 주소다. 결제창이 끝나면 이 주소의 `/?webpay=<주문>`으로 돌아온다.
     const origin = c.req.header('Origin') ?? new URL(c.req.url).origin;
@@ -174,6 +179,19 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
       201,
       NO_STORE,
     );
+  });
+
+  // T-11-703 크리에이터 링크로 들어온 웹이 프로필을 받은 뒤 한 번 부른다(링크로 들어온 방문만 — 평소에는 부르지 않는다).
+  // 무료 게임이라 엑솔라는 "가입이 어느 크리에이터 링크로 왔는지"를 추적하길 요구한다. 웹 결제가 꺼져 있어도, 로그인 전
+  // 익명 프로필이어도 기록한다(로그인하면 웹이 로그인한 프로필로 한 번 더 보낸다).
+  app.post('/v1/creator-attribution', requireProfile, async (c) => {
+    const me = { id: getSessionOrThrow(c).profileId };
+    const { trackingId } = readBody(c, CreatorAttributionBodySchema);
+    const db = getDb(c);
+    const now = nowIso();
+    await enforceLimit(db, 'CREATOR_ATTRIBUTION', me.id, 10, now, 'RATE_LIMITED');
+    await attributeCreator(db, me.id, trackingId, now);
+    return c.body(null, 204);
   });
 
   app.get('/v1/web-pay/orders/:orderId', requireProfile, async (c) => {

@@ -76,6 +76,16 @@ export const WebPayOrderBodySchema = z.strictObject({
 });
 export type WebPayOrderBody = z.infer<typeof WebPayOrderBodySchema>;
 
+/**
+ * T-11-703 크리에이터 링크로 들어온 구단주(프로필)를 그 크리에이터에 묶어 두는 기간. 무료 게임이라 가입(첫 방문) 뒤
+ * 이 기간 안의 웹 결제는 다른 기기에서 하거나 브라우저 저장값이 지워져도 크리에이터 실적으로 넘긴다. 새 링크로 다시
+ * 들어오면 그 크리에이터로 바뀌고 기간도 새로 시작한다(엑솔라 스크립트와 같은 마지막 링크 기준).
+ */
+export const CREATOR_ATTRIBUTION_DAYS = 90;
+export const CreatorAttributionBodySchema = z.strictObject({
+  trackingId: z.string().regex(WEB_PAY_TRACKING_ID),
+});
+
 export const WEB_PAY_ORDER_ID = /^wp_[a-f0-9]{32}$/;
 export const WebPayOrderResponseSchema = z.strictObject({
   orderId: z.string().regex(WEB_PAY_ORDER_ID),
