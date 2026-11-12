@@ -43,7 +43,7 @@ describe('T-11-700 크리에이터 추적값', () => {
   });
 });
 
-describe('T-11-703 크리에이터 링크를 프로필에 묶기', () => {
+describe('T-11-704 크리에이터 링크를 프로필에 묶기', () => {
   let mem: Map<string, string>;
   beforeEach(() => {
     mem = new Map();

@@ -1,7 +1,7 @@
 import { CREATOR_ATTRIBUTION_DAYS } from '@offside/contracts';
 import type { Db } from '../client.js';
 
-// T-11-703 크리에이터 링크로 들어온 프로필 기록(creator_attributions). 문서: docs/operations/web-pay.md.
+// T-11-704 크리에이터 링크로 들어온 프로필 기록(creator_attributions). 문서: docs/operations/web-pay.md.
 
 const DAY_MS = 86_400_000;
 

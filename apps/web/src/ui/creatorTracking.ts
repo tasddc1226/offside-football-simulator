@@ -4,7 +4,7 @@
 import { loadKey, saveKey } from '@offside/game/storage';
 
 const KEY = 'ft_creator_tracking';
-/** T-11-703 링크로 들어왔는데 아직 서버(프로필)에 묶지 못한 값. 묶으면 지운다. */
+/** T-11-704 링크로 들어왔는데 아직 서버(프로필)에 묶지 못한 값. 묶으면 지운다. */
 const PENDING_KEY = 'ft_creator_tracking_pending';
 const FORMAT = /^[A-Za-z0-9]{32}$/;
 
@@ -26,7 +26,7 @@ type Sent = { ok: boolean; error?: { retryable?: boolean } };
 const sentTo = new Set<string>();
 
 /**
- * T-11-703 묶지 못한 값이 있으면 지금 프로필로 서버에 보낸다. 계정을 확인할 때마다 부른다. 로그인 전 익명 프로필에도 보내 두고,
+ * T-11-704 묶지 못한 값이 있으면 지금 프로필로 서버에 보낸다. 계정을 확인할 때마다 부른다. 로그인 전 익명 프로필에도 보내 두고,
  * 로그인한(구단주) 프로필에 묶이면 다시 보내지 않는다 — 웹 결제는 로그인한 구단주만 하므로 거기에 묶여야 한다.
  */
 export async function syncCreatorTracking(

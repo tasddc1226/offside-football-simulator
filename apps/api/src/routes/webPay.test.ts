@@ -128,7 +128,7 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     expect(JSON.parse(String(calls[0]?.init?.body)).user.tracking_id).toEqual({
       value: trackingId,
     });
-    // T-11-703 주문에 실린 값은 프로필에 묶여, 브라우저 값이 없는 다음 주문에도 실린다.
+    // T-11-704 주문에 실린 값은 프로필에 묶여, 브라우저 값이 없는 다음 주문에도 실린다.
     expect((await post({ productId: REROLL_15 })).status).toBe(201);
     expect(JSON.parse(String(calls[1]?.init?.body)).user.tracking_id).toEqual({
       value: trackingId,
@@ -156,7 +156,7 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     expect(bodies.map((b) => 'tracking_id' in b.user)).toEqual([true, false]);
   });
 
-  it('T-11-703 크리에이터 링크로 들어온 프로필은 브라우저 값이 없어도 90일 동안 결제 토큰에 추적값을 싣는다', async () => {
+  it('T-11-704 크리에이터 링크로 들어온 프로필은 브라우저 값이 없어도 90일 동안 결제 토큰에 추적값을 싣는다', async () => {
     const me = await issueGoogleCookie(ctx);
     const calls = stubXsolla();
     const trackingId = 'abcdefghijklmnopqrstuvwxyz123456';
@@ -204,7 +204,7 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     });
   });
 
-  it('T-11-703 로그인 전 익명 프로필도 링크를 기록하고, 링크가 없는 프로필은 지금처럼 싣지 않는다', async () => {
+  it('T-11-704 로그인 전 익명 프로필도 링크를 기록하고, 링크가 없는 프로필은 지금처럼 싣지 않는다', async () => {
     const anon = await issueCookie(ctx);
     const res = await call('POST', '/v1/creator-attribution', {
       cookie: anon.cookie,

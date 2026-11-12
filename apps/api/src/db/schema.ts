@@ -2304,7 +2304,7 @@ export const iapRefundMarkers = sqliteTable(
  * status: READY(주문만) · PAID(결제 · 지급) · CANCELED(환불 · 차지백 회수).
  */
 /**
- * T-11-703 크리에이터(엑솔라 파트너 네트워크) 링크로 들어온 프로필. tracking_id는 링크 식별자이고, attributed_at부터
+ * T-11-704 크리에이터(엑솔라 파트너 네트워크) 링크로 들어온 프로필. tracking_id는 링크 식별자이고, attributed_at부터
  * CREATOR_ATTRIBUTION_DAYS 동안 웹 결제 토큰에 실린다. 새 링크로 다시 오면 덮어쓴다. created_at은 처음 묶인 때.
  */
 export const creatorAttributions = sqliteTable('creator_attributions', {

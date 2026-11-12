@@ -131,7 +131,7 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
     )
       throw unavailable();
     await enforceLimit(db, 'WEB_PAY', me.id, 30, now, 'RATE_LIMITED');
-    // T-11-703 이 브라우저에 링크 값이 있으면 그것(가장 최근 링크)을 쓰고 프로필에도 묶는다. 없으면 프로필에 묶인 값을 쓴다.
+    // T-11-704 이 브라우저에 링크 값이 있으면 그것(가장 최근 링크)을 쓰고 프로필에도 묶는다. 없으면 프로필에 묶인 값을 쓴다.
     if (linkTracking) await attributeCreator(db, me.id, linkTracking, now);
     const trackingId = linkTracking ?? (await creatorTrackingOf(db, me.id, now));
     const orderId = `wp_${crypto.randomUUID().replaceAll('-', '')}`;
@@ -181,7 +181,7 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
     );
   });
 
-  // T-11-703 크리에이터 링크로 들어온 웹이 프로필을 받은 뒤 한 번 부른다(링크로 들어온 방문만 — 평소에는 부르지 않는다).
+  // T-11-704 크리에이터 링크로 들어온 웹이 프로필을 받은 뒤 한 번 부른다(링크로 들어온 방문만 — 평소에는 부르지 않는다).
   // 무료 게임이라 엑솔라는 "가입이 어느 크리에이터 링크로 왔는지"를 추적하길 요구한다. 웹 결제가 꺼져 있어도, 로그인 전
   // 익명 프로필이어도 기록한다(로그인하면 웹이 로그인한 프로필로 한 번 더 보낸다).
   app.post('/v1/creator-attribution', requireProfile, async (c) => {
