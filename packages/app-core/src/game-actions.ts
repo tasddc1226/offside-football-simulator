@@ -1,3 +1,4 @@
+import { appendLocalHof } from '@offside/game/hof-store';
 import { createScoutingActions, releaseScoutSeed } from './scouting-actions.js';
 import { transferDestination } from './transferDestination.js';
 import { careerMomentText as CM } from './i18n/ko/careerMoment';
@@ -44,7 +45,7 @@ import {
   market,
   acceptOption,
   canAcceptRenewal,
-  retire,
+  retirementEntry,
   MIN_RETIRE_AGE,
   type SeasonEndResult,
 } from '@offside/game/season';
@@ -792,7 +793,9 @@ export function createGameActions(host: GameHost) {
 
   function doRetire() {
     if (!appState.G || appState.G.retired || appState.G.age < MIN_RETIRE_AGE) return;
-    appState.lastRetired = retire(appState.G!, publicNameOf(appState.G!.name) !== null);
+    const entry = retirementEntry(appState.G!, publicNameOf(appState.G!.name) !== null);
+    appendLocalHof(entry);
+    appState.lastRetired = entry;
     host.uploadRetirement(appState.G!.cid, appState.lastRetired);
     appState.G!.pending = null;
     host.save();
