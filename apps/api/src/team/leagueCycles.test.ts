@@ -195,14 +195,9 @@ describe('independent league cycles (T-11-708)', () => {
     }
     await drain(next!.drawAt);
     const promoted = final.find((e) => e.outcome === 'promoted')!;
-    const [promotedNext] = await ctx.db
-      .select()
-      .from(leagueEntries)
-      .where(eq(leagueEntries.profileId, promoted.profileId));
     const fourth = (
       await ctx.db.select().from(leagueEntries).where(eq(leagueEntries.season, 4))
     ).find((e) => e.profileId === promoted.profileId);
-    expect(promotedNext).toBeDefined();
     expect(fourth?.tier).toBe(1);
     await drain(plus(leagueKickoffAt(next!.rounds.at(-1)!, 28, 0, 1, true), 1000));
     const fifth = await currentLeague(ctx.db, plus(next!.rounds.at(-1)!, 2 * DAY));
@@ -214,5 +209,28 @@ describe('independent league cycles (T-11-708)', () => {
       .from(leagueSeasons)
       .where(eq(leagueSeasons.season, 5));
     expect(persisted?.teamSeason).toBe(4);
+    vi.setSystemTime(new Date(fifth!.opensAt));
+    for (const [n, who] of people.entries()) {
+      const enter = await callJson(ctx.env, 'POST', '/v1/leagues/current/entries', {
+        cookie: who.cookie,
+        headers: { 'Idempotency-Key': `cycle5-${n}` },
+      });
+      expect(enter.status).toBe(204);
+    }
+    await drain(fifth!.drawAt);
+    const fifthMatches = await ctx.db
+      .select()
+      .from(leagueMatches)
+      .where(eq(leagueMatches.season, 5));
+    expect(fifthMatches).toHaveLength(28 * 7);
+    const firstKickoffs = fifthMatches
+      .filter((m) => m.round === 1)
+      .map((m) => m.at)
+      .sort();
+    await drain(plus(firstKickoffs.at(-1)!, 1000));
+    const firstRound = (
+      await ctx.db.select().from(leagueMatches).where(eq(leagueMatches.season, 5))
+    ).filter((m) => m.round === 1);
+    expect(firstRound.every((m) => m.playedAt && m.forfeit === 0)).toBe(true);
   }, 60_000);
 });
