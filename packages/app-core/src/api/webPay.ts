@@ -19,6 +19,13 @@ export const createWebPayOrder = (productId: string, trackingId?: string | null)
     body: JSON.stringify(trackingId ? { productId, trackingId } : { productId }),
   });
 
+/** T-11-704 크리에이터 링크로 들어온 프로필을 서버에 묶는다(다른 기기 · 저장값이 지워진 뒤의 웹 결제도 실적으로 넘기려고). */
+export const recordCreatorAttribution = (trackingId: string) =>
+  apiFetch<null>('/v1/creator-attribution', {
+    method: 'POST',
+    body: JSON.stringify({ trackingId }),
+  });
+
 /** 결제창에서 돌아온 뒤 주문 상태(메모하지 않는다 — 웹훅이 오면 바뀐다). */
 export const fetchWebPayOrder = (orderId: string) =>
   apiFetch<WebPayOrderStatusResponse>(`/v1/web-pay/orders/${encodeURIComponent(orderId)}`);

@@ -40,6 +40,7 @@ export const authAttempts = sqliteTable(
         'ACQUISITION',
         'CAREER_ACTIVITY',
         'WEB_PAY',
+        'CREATOR_ATTRIBUTION',
       ],
     }).notNull(),
     subject: text('subject').notNull(),

@@ -2303,6 +2303,19 @@ export const iapRefundMarkers = sqliteTable(
  * 엑솔라 웹훅(order_paid)이 오면 iap_purchases(store 'xsolla', transaction_id = 엑솔라 주문 번호)에 아이템 지급을 남긴다.
  * status: READY(주문만) · PAID(결제 · 지급) · CANCELED(환불 · 차지백 회수).
  */
+/**
+ * T-11-704 크리에이터(엑솔라 파트너 네트워크) 링크로 들어온 프로필. tracking_id는 링크 식별자이고, attributed_at부터
+ * CREATOR_ATTRIBUTION_DAYS 동안 웹 결제 토큰에 실린다. 새 링크로 다시 오면 덮어쓴다. created_at은 처음 묶인 때.
+ */
+export const creatorAttributions = sqliteTable('creator_attributions', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  trackingId: text('tracking_id').notNull(),
+  attributedAt: text('attributed_at').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
 export const webPayOrders = sqliteTable(
   'web_pay_orders',
   {
