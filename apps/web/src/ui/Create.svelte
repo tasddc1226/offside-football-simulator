@@ -4,6 +4,9 @@
 </script>
 
 <script lang="ts">
+  import { createScoutItems } from './createScoutItems.svelte.js';
+  import { pickCreateDetail, setCreatePosition, toggleCreateFocus } from '@offside/app-core/create-controls';
+  import { createCandidateReveal } from './createCandidateReveal.svelte.js';
   import PositionGuide from './PositionGuide.svelte';
   import ItemsHint from './ItemsHint.svelte';
   import { tn } from '@offside/game/i18n/names';
@@ -18,7 +21,7 @@
   import { watchDetailOpening } from '@offside/app-core/season-opening';
   import { cubicOut } from 'svelte/easing';
   import { fly, slide } from 'svelte/transition';
-  import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, attrLabels, defaultFocus, focusMod, posLabel } from '@offside/game/data';
+  import { POS, DPOS, DETAILS_OF, TRAITS, ATTR_KEYS, FOCUS_PICK, attrLabels, focusMod, posLabel } from '@offside/game/data';
   import type { AttrKey, DetailPos, Pos } from '@offside/game/data';
   import { baseline, candidatePotentialGrades } from '@offside/game/candidates';
   // T-11-196 프리미엄 후보 식을 등록한다(첫 화면 번들에서 떼어 둠).
@@ -27,19 +30,17 @@
   import { CONFEDS, flagOf } from '@offside/contracts/nations';
   import { BODY_LIMITS, BODY_DEFAULT, bmiOf, bodyError } from '@offside/contracts/body';
   import { isKorean, nationOf } from '@offside/game/nation';
-  import { startCareer, rollCandidates, rerollCandidates, premiumScoutCandidates, planPremiumScout, revealCandidatePotential, keepCandidate, keptDraft, restoreKeptDraft } from './actions.js';
+  import { startCareer, rollCandidates, revealCandidatePotential, keepCandidate, keptDraft, restoreKeptDraft } from './actions.js';
   import { clubBlock, clubOffer, loadClubShop, payWithClub } from '@offside/app-core/club-reward';
   import { fundsText } from '@offside/app-core/funds';
   import { gameBoostText as B } from '@offside/app-core/i18n/ko/gameBoost';
   import type { RewardShopResponse } from '@offside/contracts';
-  import { REROLL_MILEAGE, rerollMileageLeft, scoutPityAt, type ScoutPity } from '@offside/contracts/cup';
-  import { fetchItems, spendReroll, spendScout } from '@offside/app-core/api/cup';
+  import { REROLL_MILEAGE, rerollMileageLeft } from '@offside/contracts/cup';
   import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
   import { scoutWhatText } from '@offside/app-core/scoutOdds';
   import ScoutOdds from './cup/ScoutOdds.svelte';
   import ScoutPityGauge from './ScoutPityGauge.svelte';
   import { hasSessionHint } from '@offside/app-core/api/client';
-  import { toast } from './helpers.js';
   import { cupText as CL } from '@offside/app-core/i18n/ko/cup';
   import { go, goHome, goRerollShop } from './nav.js';
   import { bodyNote, focusNote, hiddenStrength, scoutLine, startOvr, ovrFocusView, seasonStartNote } from '@offside/app-core/create-view';
@@ -52,11 +53,8 @@
   import ScoutScan from './ScoutScan.svelte';
   import RevealFx from './RevealFx.svelte';
   import CountUp from './CountUp.svelte';
-  import { candidateTiers, gradeTier, revealTiming, revealTotal, REVEAL_BUZZ, type RevealTier } from '@offside/app-core/reveal';
+  import { gradeTier, revealTotal } from '@offside/app-core/reveal';
   import { revealText as R } from '@offside/app-core/i18n/ko/reveal';
-  import { buzz, motionOK } from './motion.js';
-  import { sheetOn } from './skin.svelte.js';
-  import { flashEdge, revealShort, revealTone } from './revealPrefs.js';
 
   const C = appState.C;
   // T-11-654 지금 만들면 어느 시즌 선수인지 — 기록실 · 시즌 업적으로 이어진다(휴식기면 없음).
@@ -136,21 +134,9 @@
     returned = false;
   });
 
-  function setPos(v: Pos) {
-    C.pos = v;
-    if (detailOpen) pickDetail(DETAILS_OF[v][0]!);
-    else C.focus = defaultFocus(v);
-  }
-  // 세부 포지션을 바꾸면 주력 능력치도 그 포지션의 기본값으로 다시 켠다.
-  function pickDetail(d: DetailPos) {
-    C.dpos = d;
-    C.focus = [...DPOS[d].focus];
-  }
-  // 이미 두 개를 골랐으면 먼저 고른 쪽을 밀어낸다 — 한 번의 탭으로 바꿔 끼울 수 있게.
-  function toggleFocus(k: AttrKey) {
-    if (C.focus.includes(k)) C.focus = C.focus.filter((f) => f !== k);
-    else C.focus = [...C.focus, k].slice(-FOCUS_PICK);
-  }
+  function setPos(v: Pos) { setCreatePosition(C, v, detailOpen); }
+  function pickDetail(d: DetailPos) { pickCreateDetail(C, d); }
+  function toggleFocus(k: AttrKey) { toggleCreateFocus(C, k); }
   // T-10-111 후보를 바로 보여 주지 않고 스카우트가 추리는 연출(약 3초)이 끝난 뒤에 뽑는다.
   let scouting = $state(false);
   const scoutSteps = $derived([
@@ -166,85 +152,17 @@
   }
   // T-11-145 선수 후보 리롤권(오프사이드 컵 보상) — 로그인한 구단주가 1장 이상 가졌을 때만 '후보 다시 뽑기'를 보인다.
   // 후보 단계에 들어올 때 한 번 장수를 묻고(로그인 흔적이 없으면 묻지 않는다), 쓸 때마다 서버가 돌려준 장수로 바꾼다.
-  let rerolls = $state(0);
-  // T-11-152 장수를 받았으면(로그인한 구단주) 0장일 때 구단 자금으로 사는 리롤권 상점으로 가는 안내를 보인다.
-  let owner = $state(false);
-  let rerolling = $state(false);
-  // 한 번의 '다시 뽑기' 시도에 멱등 키 하나 — 응답을 못 받아(네트워크) 다시 누르면 같은 키로 보내 두 번 차감되지 않는다.
-  let rerollKey: string | null = null;
-  // T-11-248 리롤권 마일리지 — 마지막 스카우트권 지급 뒤 쓴 장수. 차면 서버가 같은 응답에서 스카우트권을 준다.
-  let mileage = $state(0);
-  $effect(() => {
-    if (step !== 'candidates' || !hasSessionHint()) return;
-    void fetchItems().then((r) => {
-      owner = r.ok;
-      rerolls = r.ok ? r.data.reroll : 0;
-      scouts = r.ok ? (r.data.scout ?? 0) : 0;
-      pity = r.ok ? (r.data.pity ?? NO_PITY) : NO_PITY;
-      mileage = r.ok ? (r.data.mileage ?? 0) : 0;
-    });
-  });
-  // T-11-196 프리미엄 스카우트권 — 가진 장수가 있을 때만 버튼을 보인다(웹은 스토어 결제가 없다). 멱등 키는 리롤권과 같다.
-  let scouts = $state(0);
-  let scoutBusy = $state(false);
-  let scoutKey: string | null = null;
-  // T-11-244 천장 카운트. 다시 보낼 때는 같은 시드 계획(scoutPlan)을 같은 멱등 키와 함께 쓴다.
-  const NO_PITY: ScoutPity = { used: 0, streak: 0, elites: 0 };
-  let pity = $state<ScoutPity>(NO_PITY);
-  let scoutPlan: { seed: number; hit: boolean } | null = null;
+  const scoutItems = createScoutItems(() => step === 'candidates');
   const premium = $derived(!!appState.candidates?.some((c) => c.guaranteed));
-  // T-11-437 로그인 흔적이 없으면 아이템을 묻지 않아 도구가 통째로 숨는다. 무엇을 쓸 수 있는지 한 줄로 알린다.
   const guest = !hasSessionHint();
-  // T-11-437 쓸 도구(리롤권 · 스카우트권 · 천장 기록)가 없으면 상점 안내 · 능력치 설명을 '더 보기'로 접어 후보 고르기에 집중하게 한다.
-  const quiet = $derived(rerolls < 1 && scouts < 1 && pity.used < 1);
-  async function premiumScout() {
-    if (scoutBusy || scouts < 1 || !confirm(SL.confirm({ n: scouts - 1 }))) return;
-    scoutBusy = true;
-    scoutKey ??= crypto.randomUUID();
-    scoutPlan ??= planPremiumScout();
-    const plan = scoutPlan;
-    const r = await spendScout(scoutKey, plan.hit);
-    scoutBusy = false;
-    if (r.ok || !r.error.retryable) {
-      scoutKey = null;
-      scoutPlan = null;
-    }
-    if (!r.ok) {
-      if (r.error.reason === 'NO_SCOUT') scouts = 0;
-      return toast(r.error.message || SL.fail);
-    }
-    scouts = r.data.scout;
-    if (r.data.pity) pity = r.data.pity;
-    const mode = r.data.scoutMode ?? 'normal';
-    premiumScoutCandidates(plan.seed, mode);
-    // T-11-415 S가 그냥 나와 S 확정 칸이 0으로 돌아가면 그렇다고 알린다.
-    const reset = mode === 'normal' && r.data.pity?.streak === 0;
-    toast(mode === 'elite' ? SL.doneElite({ n: scouts, elite: scoutPityAt().elite }) : mode === 'sure' ? SL.doneSure({ n: scouts }) : reset ? SL.doneReset({ n: scouts }) : SL.done({ n: scouts }));
-  }
-  async function reroll() {
-    if (rerolling || rerolls < 1 || !confirm(CL.rerollConfirm({ n: rerolls - 1 }))) return;
-    rerolling = true;
-    rerollKey ??= crypto.randomUUID();
-    const r = await spendReroll(rerollKey);
-    rerolling = false;
-    if (r.ok || !r.error.retryable) rerollKey = null;
-    if (!r.ok) {
-      if (r.error.reason === 'NO_REROLL') rerolls = 0;
-      return toast(r.error.message || CL.rerollFail);
-    }
-    rerolls = r.data.reroll;
-    scouts = r.data.scout;
-    mileage = r.data.mileage ?? 0;
-    rerollCandidates();
-    toast(r.data.mileageScout ? CL.rerollMileageDone({ n: rerolls, need: REROLL_MILEAGE }) : CL.rerollDone({ n: rerolls }));
-  }
+  const quiet = $derived(scoutItems.state.rerolls < 1 && scoutItems.state.scouts < 1 && scoutItems.state.pity.used < 1);
   // T-11-153 웹은 보상형 광고가 없어 로그인한 구단주가 구단 자금으로 후보 잠재력을 본다. 구단주(장수를 받음)이고 아직 안 봤을 때만 묻는다.
   let club = $state<RewardShopResponse | null>(null);
   let clubLoaded = $state(false);
   let clubBusy = $state(false);
   let clubMsg = $state('');
   $effect(() => {
-    if (step !== 'candidates' || !owner || appState.candidatePotentialOpen) return;
+    if (step !== 'candidates' || !scoutItems.state.owner || appState.candidatePotentialOpen) return;
     void loadClubShop().then((r) => {
       club = r;
       clubLoaded = true;
@@ -254,9 +172,9 @@
   const clubLock = $derived(appState.candidatePotentialOpen ? null : clubBlock(club, 'candidates'));
   // T-11-628 웹에서도 볼 수 있는데 앱 안내가 떠서 웹에는 없는 기능으로 읽혔다. 비로그인은 맨 위 소개, 자금 버튼 · 못 보는 이유가 있으면 그 안내로
   // 충분하다. 구단 자금 값을 받지 못했거나 팔지 않을 때만 앱 안내를 둔다.
-  const appPotentialHint = $derived(!appState.candidatePotentialOpen && owner && clubLoaded && !clubCand && !clubLock);
+  const appPotentialHint = $derived(!appState.candidatePotentialOpen && scoutItems.state.owner && clubLoaded && !clubCand && !clubLock);
   // 카드 아래 도구 묶음: 쓸 수 있는 도구가 있는 묶음만 보인다.
-  const hasChangeTools = $derived(scouts > 0 || pity.used > 0 || rerolls > 0 || owner);
+  const hasChangeTools = $derived(scoutItems.state.scouts > 0 || scoutItems.state.pity.used > 0 || scoutItems.state.rerolls > 0 || scoutItems.state.owner);
   const hasPotentialTools = $derived(appState.candidatePotentialOpen || (!quiet && appPotentialHint) || !!clubLock || !!clubCand || !!clubMsg);
   async function revealWithClub() {
     const o = clubCand;
@@ -276,15 +194,15 @@
     appState.candidates = null;
   }
   function openAll() {
-    appState.candidatesOpen.forEach((_, i) => stage(i));
+    appState.candidatesOpen.forEach((_, i) => reveal.stage(i));
     appState.candidatesOpen = appState.candidatesOpen.map(() => true);
   }
   // 카드를 누르면(닫혀 있든 열려 있든) 바로 열리면서 그 후보가 선택된다 — 한 번의 탭으로
   // "오픈 + 선택"이 끝나는 모바일 우선 상호작용. "모두 오픈"은 선택 없이 전부 펼쳐만 준다.
   function pick(i: number) {
     // 연출 중인 카드를 다시 누르면 바로 결과로 간다.
-    if (fx[i] && !fx[i].done) land(i);
-    stage(i);
+    if (reveal.state.fx[i] && !reveal.state.fx[i].done) reveal.land(i);
+    reveal.stage(i);
     appState.candidatesOpen[i] = true;
     appState.candidatePick = i;
   }
@@ -295,41 +213,7 @@
   }
   // T-11-371 팩 오픈식 공개: 열 때 보이는 값(OVR · 보장 · 천장)으로만 강도를 정한다. 이 화면에서 연 카드만 연출하고,
   // 같은 화면의 두 번째 카드부터는 짧게. 감속 모션 · 업무 모드 · "연출 짧게"면 결과만.
-  const tiers = $derived<RevealTier[]>(appState.candidates ? candidateTiers(appState.candidates.map((c) => ({ ovr: startOvr(C.pos, c.attrs), guaranteed: c.guaranteed, pity: c.pity }))) : []);
-  const fxOff = !motionOK || sheetOn() || revealShort();
-  // 카드 번호 → 이번에 열며 볼 연출(뒷면 · 단서 · 멈춤 시간). 화면에 처음 들어올 때 이미 열린 카드는 연출하지 않는다.
-  let fx = $state<Record<number, { back: number; hint: number; hold: number; done: boolean }>>({});
-  let opened = 0;
-  // 다시 뽑기 · 프리미엄 스카우트로 후보가 바뀌면 새 카드로 다시 센다.
-  $effect(() => {
-    void appState.candidates;
-    fx = {};
-    opened = 0;
-  });
-  function stage(i: number) {
-    if (appState.candidatesOpen[i] || fx[i]) return;
-    const t = revealTiming(tiers[i] ?? 'normal', { off: fxOff, repeat: opened++ > 0 });
-    fx[i] = { ...t, done: revealTotal(t) === 0 };
-    if (fx[i].done) return land(i);
-    setTimeout(() => land(i), revealTotal(t));
-  }
-  function land(i: number) {
-    const f = fx[i];
-    if (!f || (f.done && revealTotal(f) > 0)) return;
-    f.done = true;
-    const tier = tiers[i] ?? 'normal';
-    buzz(REVEAL_BUZZ[tier]);
-    revealTone(tier);
-    if (tier === 'jackpot' && revealTotal(f) > 0) flashEdge();
-  }
-  // 잠재력 범위를 이 화면에서 새로 열었을 때만 등급 연출(다시 들어온 화면 · 킵하며 이미 본 후보는 그대로).
-  let potFresh = $state(false);
-  let potWas = appState.candidatePotentialOpen;
-  $effect(() => {
-    const open = appState.candidatePotentialOpen;
-    if (open && !potWas) potFresh = true;
-    potWas = open;
-  });
+  const reveal = createCandidateReveal(C);
   // 카드가 세로축으로 뒤집히며 열린다. 감속 모션이면 duration 0(즉시 표시). 대박은 뒷면에서 한 박자 쉬고 뒤집힌다.
   // 닫힌 카드 높이에서 열린 높이로 함께 자라, 아래 카드가 한 프레임에 밀리지 않는다.
   function flipIn(node: Element, delay = 0) {
@@ -563,8 +447,8 @@
     <div class="cand-list" data-coach="cands">
       {#each appState.candidates as cand, i (i)}
         {#if appState.candidatesOpen[i]}
-          {@const f = fx[i]}
-          {@const tier = tiers[i] ?? 'normal'}
+          {@const f = reveal.state.fx[i]}
+          {@const tier = reveal.tiers[i] ?? 'normal'}
           <button class="cand-card open rv-card rv-{tier}" class:compact={appState.candidatePick !== i} class:rv-run={f && !f.done} class:rv-land={f?.done && revealTotal(f) > 0} class:picked={appState.candidatePick === i} data-cand={i} data-cand-open="true" data-reveal={f ? (f.done ? 'done' : 'hint') : 'static'} data-reveal-tier={tier} style:--rv-hint="{f && !f.done ? f.hint : 0}ms" style:--rv-delay="{f && !f.done ? f.back : 0}ms" aria-pressed={appState.candidatePick === i} onclick={() => pick(i)} in:flipIn={f?.back ?? 0}>
             {#if f?.done && revealTotal(f) > 0}<span class="sr-only" aria-live="polite">{R.candLive({ n: i + 1, ovr: startOvr(C.pos, cand.attrs), tier: tier === 'jackpot' ? R.jackpot : tier === 'good' ? R.good : '' })}</span>{/if}
             <span class="cc-head">
@@ -578,7 +462,7 @@
               <!-- T-11-605 고르지 않은 카드는 잠재력 비공개를 되풀이하지 않고 비교할 내용만 보인다. -->
             {:else if appState.candidatePotentialOpen || cand.kept?.revealed}
               {@const g = candidatePotentialGrades(cand.potential)}
-              {#if potFresh && !cand.kept?.revealed}
+              {#if reveal.state.potFresh && !cand.kept?.revealed}
                 <span class="muted" data-cand-potential={i}><RevealFx grade={`${g.min}~${g.max}`} text={L.potentialRange(g)} tier={gradeTier(g.max)} /></span>
               {:else}
                 <span class="muted" data-cand-potential={i}>{L.potentialRange(g)}</span>
@@ -637,18 +521,18 @@
         {#if hasChangeTools}
           <div class="tool-group" data-tools="change">
             <h2 class="tool-h">{L.toolsChange}</h2>
-            {#if scouts > 0}
-              <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutBusy || rerolling} onclick={premiumScout}>{scoutBusy ? SL.busy : SL.btn({ n: scouts })}</button>
+            {#if scoutItems.state.scouts > 0}
+              <button class="btn btn-sm btn-primary self-start" data-act="premium-scout" disabled={scoutItems.state.scoutBusy || scoutItems.state.rerolling} onclick={scoutItems.premiumScout}>{scoutItems.state.scoutBusy ? SL.busy : SL.btn({ n: scoutItems.state.scouts })}</button>
               <p class="muted fs-sm">{scoutWhatText()}</p>
-              <ScoutPityGauge {pity} />
+              <ScoutPityGauge pity={scoutItems.state.pity} />
               <ScoutOdds />
-            {:else if pity.used > 0}
-              <ScoutPityGauge {pity} empty />
+            {:else if scoutItems.state.pity.used > 0}
+              <ScoutPityGauge pity={scoutItems.state.pity} empty />
             {/if}
-            {#if rerolls > 0}
-              <button class="btn btn-sm self-start" data-act="reroll-candidates" disabled={rerolling} onclick={reroll}>{rerolling ? CL.rerollBusy : CL.rerollBtn({ n: rerolls })}</button>
-              <p class="muted fs-sm" data-reroll-mileage>{CL.rerollMileage({ n: rerollMileageLeft(mileage), need: REROLL_MILEAGE })}</p>
-            {:else if owner}
+            {#if scoutItems.state.rerolls > 0}
+              <button class="btn btn-sm self-start" data-act="reroll-candidates" disabled={scoutItems.state.rerolling} onclick={scoutItems.reroll}>{scoutItems.state.rerolling ? CL.rerollBusy : CL.rerollBtn({ n: scoutItems.state.rerolls })}</button>
+              <p class="muted fs-sm" data-reroll-mileage>{CL.rerollMileage({ n: rerollMileageLeft(scoutItems.state.mileage), need: REROLL_MILEAGE })}</p>
+            {:else if scoutItems.state.owner}
               <p class="muted fs-sm" data-reroll-hint>
                 {CL.createShopHint} <button class="link-btn" data-act="reroll-shop-go" onclick={goRerollShop}>{CL.createShopGo}</button>
               </p>
