@@ -64,7 +64,7 @@ pnpm --filter @offside/fulltime-sim analyze
   마이그레이션은 drizzle-kit generate 산출물을 커밋한다(`db:check`로 검증).
 - **`apps/mobile`**: Expo · React Native 앱. 화면은 `src/screens`, 상태는 valtio(`src/store`).
   JS만 바뀐 변경은 운영 배포 때 EAS OTA로 나가고, 네이티브 변경은 스토어 빌드가 필요하다.
-- **`packages/app-core`**: 웹 · 앱 공통 화면 로직과 다국어 사전(`src/i18n/{ko,en,ja}`).
+- **`packages/app-core`**: 웹 · 앱 공통 화면 로직과 다국어 사전(`src/i18n/{ko,en,ja,zh}`).
 - **`packages/contracts`**: API 요청·응답 Zod 스키마와 밸런스 스펙
   (`@offside/contracts/balance`, zod 없는 서브패스).
 - **`tooling/fulltime-sim`**: 헤드리스 밸런스 시뮬레이터. `packages/game/src/*`
@@ -161,18 +161,18 @@ D1은 마이그레이션이 도는 동안 운영 DB가 다른 요청을 받지 �
 
 ## 다국어 규칙 (2026-10-05, T-11-102·T-11-106)
 
-화면·게임·서버 문구는 한국어·영어·일본어 세 벌이다(일본어는 T-11-140). 정본은 [`docs/operations/i18n.md`](docs/operations/i18n.md). 문구를 새로 쓰거나 고치면:
+화면·게임·서버 문구는 한국어·영어·일본어·번체 중국어 네 벌이다(일본어는 T-11-140, 번체 중국어는 T-11-553). 정본은 [`docs/operations/i18n.md`](docs/operations/i18n.md). 문구를 새로 쓰거나 고치면:
 
-- 코드에 한국어를 박지 않고 `i18n/ko/<ns>.ts`에 넣은 뒤 같은 PR에서 `i18n/en/<ns>.ts`·`i18n/ja/<ns>.ts`도 쓴다(화면은 `packages/app-core/src/i18n`,
-  게임 엔진은 `packages/game/src/i18n`). 한국어 문구를 고치면 영어·일본어도 같이 고친다.
+- 코드에 한국어를 박지 않고 `i18n/ko/<ns>.ts`에 넣은 뒤 같은 PR에서 `i18n/en/<ns>.ts`·`i18n/ja/<ns>.ts`·`i18n/zh/<ns>.ts`도 쓴다(화면은 `packages/app-core/src/i18n`,
+  게임 엔진은 `packages/game/src/i18n`). 한국어 문구를 고치면 영어·일본어·번체 중국어도 같이 고친다.
 - **게이트:** `pnpm lint:i18n`이 사전 밖 소스의 한글 덩어리 수를 기준선(`tooling/i18n-baseline.json`)과 비교해 늘면 실패한다.
   줄었으면 `pnpm lint:i18n --update`로 기준선을 낮춰 같이 커밋한다. 저장값·식별자처럼 일부러 한국어로 두는 줄만 `i18n-ignore` 주석을 단다.
   기준선을 올리는 커밋은 리뷰에서 이유를 적는다.
-- 사전 키·종류가 두 언어에서 같은지, 영어에 한글이 없는지는 `i18n.test.ts`(app-core·game)가 본다. 새 네임스페이스 뒤에는
-  `node tooling/scripts/i18n-index.mjs`로 영어 묶음을 다시 만든다.
+- 사전 키·종류가 네 언어에서 같은지, 번역 사전에 한글이 없는지는 `i18n.test.ts`(app-core·game)가 본다. 새 네임스페이스 뒤에는
+  `node tooling/scripts/i18n-index.mjs`로 en·ja·zh 묶음을 다시 만든다.
 - 세이브·서버에 남는 이름(트로피·수상·구단·리그·대회·엔딩 등)은 한국어로 저장하고 그릴 때 `tn()`으로 옮긴다. 새 이름을 만들면
-  `packages/game/src/i18n/en/_names.ts`·`ja/_names.ts`에 영어·일본어를 더한다. 언어가 게임 결과를 바꾸면 안 된다(같은 시드 한·영 비교 테스트).
-- 서버가 만드는 문장은 요청의 `lang=en`·`lang=ja`로 영어·일본어를 돌려준다(`apps/api/src/lang.ts`). 운영 도구는 한국어로 둔다.
+  `packages/game/src/i18n/en/_names.ts`·`ja/_names.ts`·`zh/_names.ts`에 영어·일본어·번체 중국어를 더한다. 언어가 게임 결과를 바꾸면 안 된다(같은 시드 ko·en·ja·zh 비교 테스트).
+- 서버가 만드는 문장은 요청의 `lang=en`·`lang=ja`·`lang=zh`로 영어·일본어·번체 중국어를 돌려준다(`apps/api/src/lang.ts`). 운영 도구는 한국어로 둔다.
 
 ## 웹·앱 병행 규칙 (2026-10-04, T-11-084)
 
@@ -198,10 +198,10 @@ D1은 마이그레이션이 도는 동안 운영 DB가 다른 요청을 받지 �
 - PR 직전 `git fetch origin && git merge origin/main`. `pnpm-lock.yaml` 충돌은
   손으로 고치지 말고 `git checkout origin/main -- pnpm-lock.yaml && pnpm install --no-frozen-lockfile`로
   재생성 후 전체 체인 재실행.
-- **구현은 Claude 메인 세션이 직접 한다(2026-09-24 변경).** 서브에이전트는 서로 독립적이라
+- **구현은 메인 에이전트 세션(Codex 또는 Claude Code)이 직접 한다(2026-09-24 변경).** 서브에이전트는 서로 독립적이라
   병렬로 돌릴 수 있는 작업(문구 작성, 테스트 보강, 무관한 기능)에만 쓰고, 재위임 없이 직접
   구현하게 한다. 이 규칙이 `AGENTS.md`의 작업 방식을 정의한다.
-- 리뷰 체크리스트 요점: 새 문구의 영어 사전·`lint:i18n` 통과, 세이브 마이그레이션 보존, 밸런스 변경 시
+- 리뷰 체크리스트 요점: 새 문구의 ko·en·ja·zh 사전·`lint:i18n` 통과, 세이브 마이그레이션 보존, 밸런스 변경 시
   `tooling/fulltime-sim` 실행, 정상·빈 상태·오류 테스트, UI 문자열에 폐기
   어휘 없음, 로그에 쿠키·복구 코드·선수명 원문 금지, 불필요한 API 호출·세션 조회·
   캐시 무효화 누락 없음(위 "백엔드 보호 · 요청 최소화 규칙").
