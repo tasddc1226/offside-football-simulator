@@ -17,7 +17,8 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write apps packages tooling \"*.{js,mjs,json,yaml,yml}\"",
     "format:check": "prettier --check apps packages tooling \"*.{js,mjs,json,yaml,yml}\"",
-    "db:migrate": "turbo run db:migrate"
+    "db:migrate": "turbo run db:migrate",
+    "test:mobile-unit": "pnpm --filter @offside/api exec vitest run --config ../mobile/vitest.push.config.mjs"
   },
   "devDependencies": {
     "@offside/eslint-config": "workspace:*",

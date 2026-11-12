@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { projectTeamDraft } from '@offside/app-core/teamDraftView';
   import LoginButtons from '../LoginButtons.svelte';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import { needsOwnerLogin } from '@offside/app-core/market';
@@ -15,10 +16,6 @@
     TEAM_RATING_START,
     YOUTH_NAME,
     YOUTH_OVR,
-    presetLayout,
-    positionedLayout,
-    slotRating,
-    teamOvr,
     usesRankLadder,
     type AchCategory,
     type FormationId,
@@ -74,7 +71,7 @@
   import type { ReportLine } from '@offside/contracts/owner-team';
   import { cupText as CT } from '@offside/app-core/i18n/ko/cup';
   import { cardSeasonBadge } from '@offside/app-core/format';
-  import { assignSlot, autoFillSlots, draftLines, matchHintOf, pastInSlots, seasonCupSlots, slotsSynergy, teamEditableIn } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, matchHintOf, seasonCupSlots, teamEditableIn } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
@@ -203,26 +200,18 @@
     toast(HO.anonCardsDone({ n }));
   }
 
-  const previewLayout = $derived(editable && season > 0 ? positionedLayout(layout ?? presetLayout(formation)) : layout ?? presetLayout(formation));
-  const slotCodes = $derived(previewLayout.map(p => p.slot));
-  const ratings: (number | null)[] = $derived(
-    slotCodes.map((slot, i) => {
-      const id = slots[i];
-      const p = id ? byId.get(id) : undefined;
-      return p ? slotRating(slot, p) : null;
-    }),
-  );
-  const ovr = $derived(teamOvr(ratings));
-  // T-11-105 선발 시너지 — 늘 보여 주고, 반영 시즌부터 줄 힘에도 더한다.
-  const synergy = $derived(slotsSynergy(previewLayout, slots, byId, season));
-  const coachDetail = $derived(team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null);
-  // 공격·중원·수비·골키퍼 힘 — 자리별 실력에 포메이션의 줄 무게를 더한 값(서버 경기 계산과 같은 규칙).
-  const lines = $derived(draftLines(slotCodes, ratings, synergy, season));
-  const filled = $derived(slots.filter((s) => s !== null).length);
-  // T-11-570 컵 명단 프리셋이 있으면 컵은 그 편성으로 뛴다 — 줄은 프리셋 값을 보이고 팀 저장은 막지 않는다.
+  // Keep web's local preset selection; the shared projection does not select presets.
   const cupPreset = $derived(cupPresetOf(presets));
-  // T-11-657 past: 이번 시즌 선수 컵이면 컵 명단(프리셋 · 없으면 팀 명단)에 든 지난 시즌 카드 수.
-  const cupDraft = $derived(cupPreset ? { ovr: cupPreset.ovr ?? 0, filled: cupPreset.filled ?? cupPreset.slots.filter(Boolean).length, past: pastInSlots(cupPreset.slots, byId, season) } : { ovr, filled, past: pastInSlots(slots, byId, season) });
+  const projectedDraft = $derived(projectTeamDraft({ formation, layout, slots, byId, season, editable, cupPreset }));
+  const previewLayout = $derived(projectedDraft.positions);
+  const slotCodes = $derived(projectedDraft.slotCodes);
+  const ratings = $derived(projectedDraft.ratings);
+  const ovr = $derived(projectedDraft.ovr);
+  const synergy = $derived(projectedDraft.synergy);
+  const lines = $derived(projectedDraft.lines);
+  const filled = $derived(projectedDraft.filled);
+  const cupDraft = $derived(projectedDraft.cupDraft);
+  const coachDetail = $derived(team?.coach ? coachBreakdown(team.coach, formation, synergy, season) : null);
   // T-11-436 서버 저장 검사와 같은 판정. block이 있으면 저장을 막고 이유를 보인다.
   const cupBar = $derived(editable && cupRule ? cupLineupBar(cupRule.cup, cupRule.me, cupDraft, new Date().toISOString()) : null);
   const cupBlock = $derived(cupPreset ? null : (cupBar?.block ?? null));

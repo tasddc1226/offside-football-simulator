@@ -22,7 +22,7 @@ import {
 } from '../db/repos/cardExchanges.js';
 import { refreshOwnerTitles } from '../db/repos/ownerTitles.js';
 import { lockedIdsOf, myTeamIn } from '../db/repos/ownerTeams.js';
-import { checkCupRelease } from './cup.js';
+import { checkCupRelease } from '../team/competitionLineup.js';
 import { getDb, type AppEnv } from '../env.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';

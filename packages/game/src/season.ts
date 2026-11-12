@@ -57,8 +57,7 @@ import type {
   OfferOption,
   RenewOption,
 } from './types.js';
-import { HOF_LOCAL_MAX, loadHOF, rememberCareerName } from './hof-store.js';
-import { saveKey } from './storage.js';
+import { appendLocalHof } from './hof-store.js';
 import { ballonWinsOf, legendScore, legendSnapshot, legendTermsOf } from './legend.js';
 import { gSeasonText as T } from './i18n/ko/gSeason.js';
 // 진행 중에 만드는 문장은 세이브에 남으므로 유저가 바꾼 이름 없이 원래 이름으로(T-11-647).
@@ -835,14 +834,24 @@ export function legendScoreBreakdown(s: LegendSource): {
 }
 /** Earliest retirement, shared by the engine and both clients. */
 export const MIN_RETIRE_AGE = 25;
-/** isPublic: 명예의 전당에 이름을 공개한 채로 시작할지(환경설정 '선수 이름 공개', T-10-065). */
-export function retire(s: GameState, isPublic = false): HofEntry {
+/** Apply the retirement transition before projecting or persisting its result. */
+function applyRetirement(s: GameState): number {
   if (s.age < MIN_RETIRE_AGE) throw new Error('RETIREMENT_AGE_LOCKED');
   s.retired = true;
   retireMilestones(s);
   const score = legendScore(s);
   checkTitles(s, { score });
   log(s, T.retireLog({ age: s.age }), 'big');
+  return score;
+}
+
+/** Entry projection has no storage effects. An explicit date supports deterministic callers. */
+export function buildHofEntry(
+  s: GameState,
+  score: number,
+  isPublic = false,
+  date?: string,
+): HofEntry {
   const t = s.career.reduce((a, r) => ({ g: a.g + r.goals, a: a.a + r.assists, p: a.p + r.apps }), {
     g: 0,
     a: 0,
@@ -868,7 +877,7 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     ...(s.look ? { look: lookCode(s.look) } : {}),
     score,
     title: mainTitle(s)?.id,
-    date: new Date().toISOString().slice(0, 10),
+    date: date ?? new Date().toISOString().slice(0, 10),
     id: s.cid,
     detail: legendSnapshot(s),
     profile: s.peakProfile ?? peakProfileOf(s, s.peak - ovr(s)),
@@ -882,15 +891,19 @@ export function retire(s: GameState, isPublic = false): HofEntry {
     },
     public: isPublic,
   };
-  // T-10-107 같은 커리어가 다시 은퇴하면(탭 두 개로 같은 저장 등) 이전 기록을 바꾼다 — 겹치면 '내 선수' 목록이 깨진다.
-  const hof = loadHOF().filter((h) => !entry.id || h.id !== entry.id);
-  hof.push(entry);
-  hof.sort((a, b) => b.score - a.score);
-  // 30명이 찼어도 방금 은퇴한 선수는 남긴다 — 잘리면 은퇴 화면의 공유·이름 공개 카드가 사라진다.
-  const kept = hof.slice(0, HOF_LOCAL_MAX);
-  if (!kept.includes(entry)) kept[HOF_LOCAL_MAX - 1] = entry;
-  saveKey('ft_hof', kept);
-  rememberCareerName(s.cid, s.name);
+  return entry;
+}
+
+/** State transition + entry creation; application adapters decide when to persist the entry. */
+export function retirementEntry(s: GameState, isPublic = false, date?: string): HofEntry {
+  const score = applyRetirement(s);
+  return buildHofEntry(s, score, isPublic, date);
+}
+
+/** Compatibility entry point for existing engine/simulator callers. */
+export function retire(s: GameState, isPublic = false): HofEntry {
+  const entry = retirementEntry(s, isPublic);
+  appendLocalHof(entry);
   return entry;
 }
 export function legendTitle(score: number, dpos: string | null | undefined): string {

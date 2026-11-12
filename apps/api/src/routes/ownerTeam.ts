@@ -1,3 +1,5 @@
+import { startRankedMatch } from '../team/startRankedMatch.js';
+import { currentSeasonOrThrow, matchAllowance, teamRequired } from '../team/matchPolicy.js';
 import {
   saveOwnerTeam,
   coachNotEligible,
@@ -6,7 +8,7 @@ import {
 } from '../team/saveOwnerTeam.js';
 import { requireOwner } from '../middleware/requireOwner.js';
 import { activeCupSeasonsQuery } from '../team/cup.js';
-import { checkCupLineup } from './cup.js';
+import { checkCupLineup } from '../team/competitionLineup.js';
 import {
   ClubAchievementsResponseSchema,
   ClubAchievementNotificationsSchema,
@@ -33,10 +35,7 @@ import {
 } from '@offside/contracts';
 import {
   TEAM_MATCHES_PER_DAY,
-  teamMatchAllowance,
-  TEAM_REPEAT_WINDOW_DAYS,
   achTierByRank,
-  matchScore,
   usesRankLadder,
   shapeOf,
   LEGACY_NO_SALARY_BUDGET,
@@ -44,7 +43,7 @@ import {
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import { resolveBalance } from '@offside/contracts/balance';
-import { clampDivision, divisionRules, nextDivision } from '@offside/contracts/team-division';
+
 import type { Context, Hono } from 'hono';
 import {
   NO_STORE,
@@ -55,11 +54,10 @@ import {
   teamNotFound,
   teamSeasonParam,
   conflictError,
-  rateLimited,
 } from './shared.js';
-import { newId } from '../db/ids.js';
-import { kstDays } from '../time.js';
-import { commitNotifiedEvent } from '../push/events.js';
+
+import { kstTodayStart } from '../time.js';
+
 import {
   careersByIds,
   challengedAtSince,
@@ -74,11 +72,8 @@ import {
   listStatsMatches,
   NO_KIND_TOTALS,
   otherKindTotals,
-  liveTeam,
-  meetingsSince,
   myTeamIn,
   peakOf,
-  recordMatchStatements,
   slotIdsOf,
   layoutOf,
   logoOf,
@@ -116,34 +111,30 @@ import {
   matchOdds,
   oddsPercent,
   rankedAtkK,
-  simulateMatch,
 } from '../team/sim.js';
-import { lineupsOf, matchDetailOf, matchNotice, matchViews, playedMatch } from '../team/match.js';
+import { lineupsOf, matchViews } from '../team/match.js';
 import { teamStatsView } from '../team/stats.js';
 import {
   MATCH_POOL,
   MATCH_POOL_CHECK,
   MATCH_REPICKS,
-  matchRatingChange,
   nearestCandidates,
   pickCandidate,
 } from '../team/rank.js';
-import { liveDone, liveResult, resolveMoment, startLiveMatch } from '../team/moments.js';
+import { liveDone, resolveMoment } from '../team/moments.js';
 import {
   finalizeLive,
   liveMomentView,
-  livePayload,
-  liveStartResponse,
   momentGoals,
   refreshBoth,
   type Finalized,
   type LivePayload,
 } from '../team/liveMatch.js';
-import { insertLive, liveById, openLiveSince, saveLiveState } from '../db/repos/teamLive.js';
+import { liveById, openLiveSince, saveLiveState } from '../db/repos/teamLive.js';
 import type { Db } from '../db/client.js';
 import { toOwnerTeam, recordOf, seasonOptions } from '../team/view.js';
 import { localizeAchievements } from '../team/achievementsText.js';
-import { reqLang, type Lang } from '../lang.js';
+import { reqLang } from '../lang.js';
 
 // T-10-092 구단주 팀(시즌마다 한 팀). 구글 로그인한 구단주만 쓴다 — 사람마다 다른 응답이라 엣지 캐시하지 않는다.
 /** 상대 목록에 보여 줄 팀 수. */
@@ -160,15 +151,6 @@ function afterLiveFinal(c: Context<AppEnv>, f: Finalized) {
 }
 
 /** 떠난 장면 경기를 자동 선택으로 마감한다. */
-async function finishOpenLive(db: Db, ids: string[], now: string, lang: Lang) {
-  for (const id of ids) {
-    const row = await liveById(db, id);
-    if (!row || row.doneAt) continue;
-    const f = await finalizeLive(db, row, now, lang);
-    if (f?.fresh) await refreshBoth(db, f);
-  }
-}
-
 /** T-11-627 경기 전 예상(내 팀이 홈). 경기 한 판과 같은 명단 · 공격 계수 · 감독으로 계산한다. */
 async function opponentOdds(db: Db, season: number, mine: OwnerTeamRow, opp: OwnerTeamRow) {
   const [[active], lineups] = await Promise.all([
@@ -185,42 +167,8 @@ async function opponentOdds(db: Db, season: number, mine: OwnerTeamRow, opp: Own
   );
 }
 
-const teamRequired = () => conflictError('먼저 이번 시즌 팀을 만들어 주세요.', 'TEAM_REQUIRED');
-/** 지금 고치고 겨루는 팀 시즌. 시즌 사이 휴식기면 409 SEASON_CLOSED. */
-export function currentSeasonOrThrow(now: string): number {
-  const season = teamSeasonAt(now);
-  if (season === null) {
-    throw conflictError(
-      '지금은 시즌 사이 휴식기예요. 다음 시즌이 열리면 새 팀을 꾸릴 수 있어요.',
-      'SEASON_CLOSED',
-    );
-  }
-  return season;
-}
-
 const seasonQuery = (c: Context<AppEnv>, now: string) =>
   teamSeasonParam(c.req.query('season'), now);
-
-/** 오늘(한국 시각 자정부터)의 시작 UTC ISO. */
-/** 한국 시각 오늘 0시(UTC ISO). 하루 경기·영입 상한의 기준. */
-export const kstTodayStart = (now: string) => kstDays(new Date(now), 1).startIso;
-/** 재대결 감쇠를 세는 기간의 시작(오늘 포함 TEAM_REPEAT_WINDOW_DAYS일, 한국 시각 자정 기준). */
-const repeatWindowStart = (now: string) => kstDays(new Date(now), TEAM_REPEAT_WINDOW_DAYS).startIso;
-
-/** 오늘 건 경기로 센 남은 경기 수와 다음 충전 시각(응답에 그대로 펼친다). */
-const matchAllowance = (
-  played: readonly { createdAt: string }[],
-  now: string,
-  rechargeMin: number,
-) => {
-  const { left, nextAt } = teamMatchAllowance(
-    played.map((m) => m.createdAt),
-    now,
-    kstTodayStart(now),
-    rechargeMin,
-  );
-  return { matchesLeft: left, matchesNextAt: nextAt };
-};
 
 /** T-11-310 감독 칸에 든 내 감독(끝낸 감독만, 없으면 null). */
 const coachOf = teamCoachOf;
@@ -522,203 +470,11 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const input = readBody(c, PlayTeamMatchBodySchema);
     const now = nowIso();
-    const season = currentSeasonOrThrow(now);
-    // T-11-375 디비전 경계 · 강등 보호는 활성 밸런스에서 — 같은 batch로 읽어 왕복을 늘리지 않는다.
-    const [[mine], recorded, open, [opp], [active]] = await db.batch([
-      myTeamIn(db, me.id, season),
-      challengedAtSince(db, me.id, kstTodayStart(now)),
-      openLiveSince(db, me.id, kstTodayStart(now)),
-      liveTeam(db, input.opponentTeamId),
-      activeBalanceQuery(db),
-    ]);
-    const activeBalance = resolveBalance(active ? balanceVersionOf(active).values : undefined);
-    const divisions = divisionRules(activeBalance);
-    if (!mine) throw teamRequired();
-    // T-11-387 아직 끝나지 않은 장면 경기도 오늘 경기로 센다. 떠난 경기는 여기서 자동 선택으로 마감한다(cron보다 먼저).
-    if (open.length)
-      waitUntil(
-        c,
-        finishOpenLive(
-          db,
-          open.map((o) => o.id),
-          now,
-          reqLang(c),
-        ),
-      );
-    const challenged = [...recorded, ...open];
-    const rechargeMin = activeBalance.teamMatchRechargeMin;
-    if (matchAllowance(challenged, now, rechargeMin).matchesLeft === 0) {
-      throw rateLimited(
-        `오늘 경기는 모두 치렀어요(하루 ${TEAM_MATCHES_PER_DAY}경기). 시간이 지나면 1경기씩 더 열려요.`,
-        'TEAM_MATCH_DAILY_LIMIT',
-      );
-    }
-    if (!opp || opp.team.profileId === me.id || opp.team.season !== season) throw teamNotFound();
-    // T-11-510 자동 매칭 시즌에는 고른 상대가 지금도 가까운 후보 안에 있어야 한다(그 사이 점수가 크게 바뀌면 새 상대를 받는다).
-    if (usesRankLadder(season)) {
-      const near = nearestCandidates(
-        await listOpponentCandidates(
-          db,
-          me.id,
-          season,
-          { rating: mine.rating, ovr: mine.ovr },
-          kstTodayStart(now),
-          MATCH_POOL_CHECK,
-        ),
-        mine,
-        MATCH_POOL_CHECK,
-      );
-      if (!near.some((t) => t.id === opp.team.id))
-        throw conflictError(
-          '상대 팀 점수가 바뀌어 새 상대를 찾았어요. 다시 경기를 시작해 주세요.',
-          'TEAM_OPPONENT_STALE',
-        );
-    }
-    // T-10-095 같은 상대에게는 하루 한 번만 건다(받은 경기는 세지 않는다 — 받은 쪽은 되갚을 수 있다).
-    if (challenged.some((m) => m.teamId === opp.team.id)) {
-      throw rateLimited(
-        '이 팀과는 오늘 이미 겨뤘어요. 한국 시각 자정에 다시 도전할 수 있어요.',
-        'TEAM_OPPONENT_DAILY_LIMIT',
-      );
-    }
-
-    const [lineups, [met]] = await Promise.all([
-      lineupsOf(db, season, mine, opp.team),
-      meetingsSince(db, mine.id, opp.team.id, repeatWindowStart(now)),
-    ]);
-    if (filledCount(lineups.home) === 0) {
-      throw conflictError('은퇴 선수를 한 명 이상 넣어야 경기할 수 있어요.', 'TEAM_EMPTY');
-    }
-    if (filledCount(lineups.away) === 0) throw teamNotFound();
-
-    const id = newId('mat');
-    // 이 경기까지 친 뒤의 남은 경기와 다음 충전 시각.
-    const after = matchAllowance([...challenged, { createdAt: now }], now, rechargeMin);
-    if (input.live) {
-      // T-11-387 장면 경기: 일반 골과 장면을 굴려 두고, 마지막 장면을 고르거나 마감할 때 경기를 남긴다.
-      const state = startLiveMatch(id, lineups.home, lineups.away, season, {
-        atkK: rankedAtkK(season, activeBalance.rankAtkK),
-        coaches: lineups.coaches,
-      });
-      const snap = matchDetailOf(mine, opp.team, lineups, liveResult(state), undefined, {
-        xi: true,
-      });
-      const payload = livePayload(
-        season,
-        state,
-        { home: snap.home, away: snap.away },
-        { home: filledCount(lineups.home), away: filledCount(lineups.away) },
-        lineups,
-        Number(met?.n ?? 0),
-        after.matchesLeft,
-        after.matchesNextAt,
-      );
-      const row = {
-        id,
-        profileId: me.id,
-        homeTeamId: mine.id,
-        awayTeamId: opp.team.id,
-        stateJson: JSON.stringify(payload),
-        createdAt: now,
-      };
-      if (liveDone(state)) {
-        // 고를 장면이 하나도 없으면 바로 마감한다.
-        await insertLive(db, row);
-        const f = await finalizeLive(
-          db,
-          { ...row, rev: 0, doneAt: null, resultJson: null },
-          now,
-          reqLang(c),
-        );
-        if (!f) throw teamNotFound();
-        afterLiveFinal(c, f);
-        return ok(c, PlayTeamMatchResponseSchema, f.response, 201);
-      }
-      await insertLive(db, row);
-      return ok(
-        c,
-        PlayTeamMatchResponseSchema,
-        liveStartResponse(row, payload, mine, opp.team, reqLang(c)),
-        201,
-      );
-    }
-    const result = simulateMatch(id, lineups.home, lineups.away, season, {
-      atkK: rankedAtkK(season, activeBalance.rankAtkK),
-      coaches: lineups.coaches,
+    const response = await startRankedMatch(db, me.id, input, now, reqLang(c), {
+      background: (work) => waitUntil(c, work),
+      invalidate: (paths) => purgeEdge(c, paths),
     });
-    const score = matchScore(result.homeGoals, result.awayGoals);
-    // 시즌 1(엘로)은 홈 이점과 최근 재대결 감쇠를 넣고, 시즌 2부터는 RP 사다리(T-11-510)다.
-    const delta = matchRatingChange(season, mine, opp.team, score, Number(met?.n ?? 0));
-    const detail = matchDetailOf(mine, opp.team, lineups, result, delta, { xi: true });
-    const homeSide = {
-      teamId: mine.id,
-      filled: filledCount(lineups.home),
-      ovr: detail.home.ovr,
-      goals: result.homeGoals,
-      rating: delta.home,
-    };
-    const awaySide = {
-      teamId: opp.team.id,
-      filled: filledCount(lineups.away),
-      ovr: detail.away.ovr,
-      goals: result.awayGoals,
-      rating: delta.away,
-    };
-    await commitNotifiedEvent(
-      db,
-      [
-        ...recordMatchStatements(db, {
-          id,
-          profileId: me.id,
-          home: homeSide,
-          away: awaySide,
-          detail,
-          now,
-          divisions,
-        }),
-      ],
-      matchNotice(id, mine, opp.team, result.homeGoals, result.awayGoals, now),
-    );
-    purgeEdge(c, STALE.teamMatchPlayed(mine.id, opp.team.id));
-    // 상대 팀 기록(승패·레이팅)도 바뀌어 두 구단주 점수를 함께 센다.
-    waitUntil(
-      c,
-      Promise.all([
-        refreshAfterChange(db, me.id, season),
-        refreshAfterChange(db, opp.team.profileId, season),
-      ]),
-    );
-    const head = {
-      id,
-      homeTeamId: mine.id,
-      homeGoals: result.homeGoals,
-      awayGoals: result.awayGoals,
-      createdAt: now,
-    };
-    return ok(
-      c,
-      PlayTeamMatchResponseSchema,
-      {
-        match: playedMatch(head, detail, lineups, mine, opp.team, reqLang(c)),
-        record: {
-          w: mine.wins + (score === 1 ? 1 : 0),
-          d: mine.draws + (score === 0.5 ? 1 : 0),
-          l: mine.losses + (score === 0 ? 1 : 0),
-        },
-        rating: mine.rating + delta.home,
-        // 읽은 레이팅으로 셈한 값이다(같은 순간 받은 경기가 있으면 저장값과 한 칸 다를 수 있고, 다음 팀 응답이 바로잡는다).
-        ...(usesRankLadder(season)
-          ? {
-              division: {
-                from: clampDivision(mine.division),
-                to: nextDivision(mine.rating + delta.home, mine.division, divisions),
-              },
-            }
-          : {}),
-        ...after,
-      },
-      201,
-    );
+    return ok(c, PlayTeamMatchResponseSchema, response, 201);
   });
 
   // T-11-387 장면 하나를 고른다. 서버가 미리 굴린 판정값으로 결과를 정하고, 마지막 장면이면 경기를 마감해 결과를 함께 준다.
