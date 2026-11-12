@@ -16,6 +16,7 @@ import {
 } from '@offside/contracts/market-value';
 import { firstUploadSeasonAt, type ServiceSeason } from '@offside/contracts/service-seasons';
 import {
+  DETAIL_GROUP,
   dposFor,
   FACE_ATTRS,
   type DetailPos,
@@ -754,6 +755,30 @@ export async function listPublicHof(
           .offset((page - 1) * limit);
   });
   const total = await cachedTotal(async () => {
+    // T-11-713 전체 시즌의 포지션 순위 인원은 careers_hof_count_idx에서 pos 앞의 service_season에 막혀 은퇴 선수 전체
+    // (약 21만 행)를 훑었다. 세부 포지션이 있는 선수는 dpos 목록으로, 없는 옛 선수는 dpos IS NULL로 나눠
+    // careers_hof_dpos_idx에서 그 포지션 행만 찾아 더한다(운영 FW 기준 21만 → 13만 행, 325ms → 48ms).
+    // 저장된 dpos는 늘 같은 포지션 그룹의 값이다(dposFor로 걸러 저장, 2026-11-12 운영 확인).
+    if (pos && !dpos && !season && !q) {
+      const dposOfPos = (Object.keys(DETAIL_GROUP) as DetailPos[]).filter(
+        (d) => DETAIL_GROUP[d] === pos,
+      );
+      const byDpos = sql`${careers} INDEXED BY careers_hof_dpos_idx`;
+      const countWhere = async (extra: SQL) => {
+        const [count] = await retryTransientRead(async () =>
+          db
+            .select({ n: sql<number>`count(*)` })
+            .from(byDpos)
+            .where(and(where, extra)),
+        );
+        return Number(count?.n ?? 0);
+      };
+      const [withDpos, legacy] = await Promise.all([
+        countWhere(inArray(careers.dpos, dposOfPos)),
+        countWhere(isNull(careers.dpos)),
+      ]);
+      return withDpos + legacy;
+    }
     const [count] = await retryTransientRead(async () =>
       db
         .select({ n: sql<number>`count(*)` })

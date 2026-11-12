@@ -432,6 +432,9 @@ describe('공개 명예의 전당 /v1/hof', () => {
       .update(careers)
       .set({ dpos: 'CB', serviceSeason: 1 })
       .where(eq(careers.id, rows[1].id));
+    // T-11-713 전체 시즌 포지션 인원은 세부 포지션이 있는 선수와 없는 옛 선수를 나눠 세어 더한다.
+    expect((await read('pos=DF')).total).toBe(2);
+    expect((await read('pos=DF&sort=goals')).total).toBe(2);
     await ctx.db
       .update(careers)
       .set({ dpos: 'FB', serviceSeason: 1 })
