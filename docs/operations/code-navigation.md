@@ -55,6 +55,8 @@ Team의 `teamRecords.svelte.ts` / `useTeamRecords.ts`는 기록·통계·업적,
 
 Create의 입력 정책은 `app-core/create-controls.ts`, 재시도 키/시드 계획은 `scoutAttempts.ts`, 아이템 기본값/안내는 `scoutItemsView.ts`가 소유한다. 플랫폼 도구 상태는 `createScoutItems.svelte.ts` / `useScoutItems.ts`, 공개 연출은 `createCandidateReveal.svelte.ts` / `useCandidateReveal.ts`에 있다. 후보 생성·킵·저장은 기존 `scouting-actions.ts`에 남는다.
 
+Market의 `createMarketData.svelte.ts` / `useMarketData.ts`는 계정·목록·지수·팀 조회를 소유한다. 웹의 탭/필터 effect와 앱의 늦은 응답 무시·silent 갱신은 기존 플랫폼 동작을 유지한다. `marketMutation.ts`는 거래 UI의 잠금·실패·성공 처리 순서만 공유하며, 낡은 시트 조정은 화면이 소유한다. 앱 `MarketParts.tsx`는 기존 표시 컴포넌트 모음이다.
+
 순환을 피하는 표시/SQL leaf는 웹 `CompIconView.svelte`, 앱 `screens/game/TrophyRow.tsx`, API `db/repos/firstsMutations.ts`다. 표시를 재사용하려고 편집 시트/전체 탭을 import하거나, SQL 문장을 쓰려고 판정 실행 모듈을 import하지 않는다. 남겨 둔 지연 의존과 agents 경계는 [순환 후보 검토](../tracking/code-quality-refactor.md#t-11-710-남은-순환-후보-검토)에 근거를 기록했다.
 
 ## 빠른 검증 경로
