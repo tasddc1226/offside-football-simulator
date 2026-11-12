@@ -12,117 +12,71 @@ import { achNudge } from '../achNudge.js';
 
 /** Lazy records data only. Team retains the tab-entry and refresh triggers. */
 export function createTeamRecords(season: () => number) {
-  let history = $state<TeamMatch[]>([]);
-  let histStatus = $state<LoadStatus>('loading');
-  /** T-11-269 경기 기록 다음 쪽 커서('더 보기'), 시즌 통계와 경기 결과에서 누른 선수. */
-  let histNext = $state<string | null>(null);
-  let moreStatus = $state<'idle' | 'loading' | 'error'>('idle');
-  let stats = $state<TeamStatsResponse | null>(null);
-  let statsStatus = $state<LoadStatus>('loading');
-  let statsFocus = $state<string | null>(null);
-  let ach = $state<ClubAchievementsResponse | null>(null);
-  let achStatus = $state<LoadStatus>('loading');
-  /** T-11-028 업적 화면에서 보고 있는 분류(선수·팀·구단주·감독). */
-  let achCat = $state<AchCategory>('player');
-  /** T-11-034 지난번 업적 탭을 본 뒤 새로 오른 업적(NEW). */
-  let achNewIds = $state<ReadonlySet<string>>(new Set());
-
+  const state = $state({
+    history: [] as TeamMatch[],
+    histStatus: 'loading' as LoadStatus,
+    histNext: null as string | null,
+    moreStatus: 'idle' as 'idle' | 'loading' | 'error',
+    stats: null as TeamStatsResponse | null,
+    statsStatus: 'loading' as LoadStatus,
+    statsFocus: null as string | null,
+    ach: null as ClubAchievementsResponse | null,
+    achStatus: 'loading' as LoadStatus,
+    achCat: 'player' as AchCategory,
+    achNewIds: new Set<string>() as ReadonlySet<string>,
+  });
   async function loadAchievements(want = season()) {
-    achStatus = 'loading';
+    state.achStatus = 'loading';
     const r = await fetchClubAchievements(want);
     if (!r.ok) {
-      achStatus = 'error';
+      state.achStatus = 'error';
       return;
     }
-    ach = r.data;
+    state.ach = r.data;
     // T-11-034 가장 최근 시즌을 열면 본 것으로 적고, 지난번 뒤로 새로 오른 업적에 NEW를 붙여 그 분류·단계를 펼친다.
     const latest = Math.max(r.data.season, ...r.data.seasons.map((o) => o.id));
-    achNewIds = r.data.season === latest ? achNudge.viewed(r.data) : new Set();
-    const first = r.data.groups.find((g) => g.items.some((i) => achNewIds.has(i.id)));
-    if (first) achCat = first.category;
-    achStatus = 'ready';
+    state.achNewIds = r.data.season === latest ? achNudge.viewed(r.data) : new Set();
+    const first = r.data.groups.find((g) => g.items.some((i) => state.achNewIds.has(i.id)));
+    if (first) state.achCat = first.category;
+    state.achStatus = 'ready';
   }
 
   async function loadHistory() {
-    histStatus = 'loading';
+    state.histStatus = 'loading';
     const r = await fetchTeamMatches(season());
     if (!r.ok) {
-      histStatus = 'error';
+      state.histStatus = 'error';
       return;
     }
-    history = r.data.items;
-    histNext = r.data.next ?? null;
-    moreStatus = 'idle';
-    histStatus = 'ready';
+    state.history = r.data.items;
+    state.histNext = r.data.next ?? null;
+    state.moreStatus = 'idle';
+    state.histStatus = 'ready';
   }
   async function loadMore() {
-    if (!histNext || moreStatus === 'loading') return;
-    moreStatus = 'loading';
-    const cursor = histNext;
+    if (!state.histNext || state.moreStatus === 'loading') return;
+    state.moreStatus = 'loading';
+    const cursor = state.histNext;
     const r = await fetchTeamMatches(season(), cursor);
-    if (histNext !== cursor) return;
+    if (state.histNext !== cursor) return;
     if (!r.ok) {
-      moreStatus = 'error';
+      state.moreStatus = 'error';
       return;
     }
-    const seen = new Set(history.map((m) => m.id));
-    history = [...history, ...r.data.items.filter((m) => !seen.has(m.id))];
-    histNext = r.data.next ?? null;
-    moreStatus = 'idle';
+    const seen = new Set(state.history.map((m) => m.id));
+    state.history = [...state.history, ...r.data.items.filter((m) => !seen.has(m.id))];
+    state.histNext = r.data.next ?? null;
+    state.moreStatus = 'idle';
   }
   async function loadStats() {
-    statsStatus = 'loading';
+    state.statsStatus = 'loading';
     const r = await fetchTeamStats(season());
     if (!r.ok) {
-      statsStatus = 'error';
+      state.statsStatus = 'error';
       return;
     }
-    stats = r.data;
-    statsStatus = 'ready';
+    state.stats = r.data;
+    state.statsStatus = 'ready';
   }
-  return {
-    get history() {
-      return history;
-    },
-    get histStatus() {
-      return histStatus;
-    },
-    get histNext() {
-      return histNext;
-    },
-    get moreStatus() {
-      return moreStatus;
-    },
-    get stats() {
-      return stats;
-    },
-    get statsStatus() {
-      return statsStatus;
-    },
-    get statsFocus() {
-      return statsFocus;
-    },
-    set statsFocus(value: typeof statsFocus) {
-      statsFocus = value;
-    },
-    get ach() {
-      return ach;
-    },
-    get achStatus() {
-      return achStatus;
-    },
-    get achCat() {
-      return achCat;
-    },
-    set achCat(value: typeof achCat) {
-      achCat = value;
-    },
-    get achNewIds() {
-      return achNewIds;
-    },
-    loadAchievements,
-    loadHistory,
-    loadMore,
-    loadStats,
-  };
+  return { state, loadAchievements, loadHistory, loadMore, loadStats };
 }

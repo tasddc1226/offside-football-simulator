@@ -132,7 +132,7 @@
   const matches = createTeamMatches({ team: () => team, season: () => season, setMatchesLeft: (n) => (matchesLeft = n), setMatchesNextAt: (at) => (matchesNextAt = at), clearDivisionNotice: () => (divisionNotice = null), show: (v) => show(v), openHistoryResult: () => switchView('result') });
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로 가기)
   // 없으면 팀을 보여 준다.
-  const view = $derived(appState.teamView === 'result' && !matches.result ? 'team' : appState.teamView);
+  const view = $derived(appState.teamView === 'result' && !matches.state.result ? 'team' : appState.teamView);
   const show = (v: TeamView) => (appState.teamView = v);
   const records = createTeamRecords(() => season);
 
@@ -432,7 +432,7 @@
   // ───────── 시즌 업적 ─────────
   /** 지난 경기 결과를 연다(기록 탭 · T-11-603 랭크 매칭의 최근 전적). */
   function openStats(focus: string | null = null) {
-    records.statsFocus = focus;
+    records.state.statsFocus = focus;
     switchView('stats');
   }
 
@@ -453,7 +453,7 @@
     if (status !== 'ready' || needLogin) return;
     if (v in LOAD) untrack(() => void LOAD[v as keyof typeof LOAD]());
   });
-  const navOn = $derived(view === 'result' ? matches.resultOrigin : view === 'stats' ? 'history' : view);
+  const navOn = $derived(view === 'result' ? matches.state.resultOrigin : view === 'stats' ? 'history' : view);
   /** T-11-379 리포트 '고칠 곳'으로 고른 자리 — 편성 화면이 그 자리를 골라 둔 채 열린다. */
   let focusSlot = $state<number | null>(null);
   function reportFix(line: ReportLine): { pos: string; go: () => void } | null {
@@ -491,7 +491,7 @@
         <LoginButtons back={null} />
       </section>
     {:else if view === 'achievements'}
-      <TeamAchievements ach={records.ach} status={records.achStatus} newIds={records.achNewIds} bind:cat={records.achCat} load={(s) => void records.loadAchievements(s)} onrank={openAchRanking} />
+      <TeamAchievements ach={records.state.ach} status={records.state.achStatus} newIds={records.state.achNewIds} bind:cat={records.state.achCat} load={(s) => void records.loadAchievements(s)} onrank={openAchRanking} />
     {:else if view === 'team'}
       {#if pendingDraft}
         <section class="card draft-notice" role="status">
@@ -599,7 +599,7 @@
       <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked && !cupPreset} cupLocked={!!cupBand?.locked} cup={season > 0} league={leagueSummary} seasonOnly={!!cupRule?.cup.cup.seasonCardsOnly} cupPast={cupPreset ? cupDraft.past : 0} onseason={() => void makeSeasonCup()} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
-        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && !ladder && matches.oppStatus !== 'ready') void matches.loadOpponents(); }}>{L.modeRanked}</button>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && !ladder && matches.state.oppStatus !== 'ready') void matches.loadOpponents(); }}>{L.modeRanked}</button>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}{#if appState.friendReq}<span class="btn-dot" data-friend-dot><span class="sr-only">{S.friendReq({ n: appState.friendReq })}</span></span>{/if}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
@@ -609,9 +609,9 @@
         rating={team?.rating ?? TEAM_RATING_START}
         {matchesLeft}
         {perDay}
-        opponents={matches.opponents}
-        status={matches.oppStatus}
-        playing={matches.playing}
+        opponents={matches.state.opponents}
+        status={matches.state.oppStatus}
+        playing={matches.state.playing}
         hint={matchHint}
         onreload={() => void matches.loadOpponents()}
         onchallenge={(o) => void matches.challenge(o)}
@@ -619,8 +619,8 @@
         {ladder}
         {team}
         teamLogo={logo}
-        bind:found={matches.rankFound}
-        bind:pick={matches.oppPick}
+        bind:found={matches.state.rankFound}
+        bind:pick={matches.state.oppPick}
         onopenmatch={matches.openHistoryMatch}
         ontoTeam={editable ? () => switchView('team') : undefined}
         onsave={season === current && dirty && filled > 0 && matchesLeft > 0 ? () => void saveAndFindOpponents() : undefined}
@@ -628,40 +628,40 @@
         saveDisabled={!nameOk || !!pendingDraft}
       />
       {/if}
-    {:else if view === 'result' && matches.result}
-      {#if matches.live}
-        {#key matches.result.id}
+    {:else if view === 'result' && matches.state.result}
+      {#if matches.state.live}
+        {#key matches.state.result.id}
           <TeamLive
-            match={matches.result}
+            match={matches.state.result}
             name={eventName}
-            live={matches.liveMoments}
+            live={matches.state.liveMoments}
             onfinal={matches.liveFinal}
-            onend={() => ((matches.live = false), (matches.liveMoments = undefined), window.scrollTo(0, 0))}
+            onend={() => ((matches.state.live = false), (matches.state.liveMoments = undefined), window.scrollTo(0, 0))}
           />
         {/key}
       {:else}
         <TeamResult
-          m={matches.result}
+          m={matches.state.result}
           {team}
-          shift={matches.divisionShift}
+          shift={matches.state.divisionShift}
           {eventName}
-          matchesLeft={matches.result.friendly ? matches.friendlyLeft : matchesLeft}
+          matchesLeft={matches.state.result.friendly ? matches.state.friendlyLeft : matchesLeft}
           ontoTeam={() => switchView('team')}
-          onreplay={() => (matches.live = true)}
+          onreplay={() => (matches.state.live = true)}
           onagain={() => open('opponents')}
-          onhistory={matches.resultOrigin === 'history' ? () => switchView('history') : undefined}
+          onhistory={matches.state.resultOrigin === 'history' ? () => switchView('history') : undefined}
           onplayer={(id) => openStats(id)}
           fix={reportFix}
         />
       {/if}
     {:else if view === 'history'}
       <TeamHistory
-        history={records.history}
-        status={records.histStatus}
+        history={records.state.history}
+        status={records.state.histStatus}
         record={team?.record ?? null}
         {seasonName}
-        more={!!records.histNext}
-        moreStatus={records.moreStatus}
+        more={!!records.state.histNext}
+        moreStatus={records.state.moreStatus}
         onreload={() => void records.loadHistory()}
         onopen={matches.openHistoryMatch}
         onmore={() => void records.loadMore()}
@@ -669,10 +669,10 @@
       />
     {:else if view === 'stats'}
       <TeamStats
-        stats={records.stats}
-        status={records.statsStatus}
+        stats={records.state.stats}
+        status={records.state.statsStatus}
         {seasonName}
-        focus={records.statsFocus}
+        focus={records.state.statsFocus}
         name={eventName}
         onreload={() => void records.loadStats()}
         onback={() => switchView('history')}
