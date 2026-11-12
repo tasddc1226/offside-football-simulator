@@ -1,5 +1,11 @@
 import { AdminLeagueDelaySchema, AdminLeagueSchema } from '@offside/contracts';
-import { leaguePhase, planLeagueCycle, type LeagueDef } from '@offside/contracts/league';
+import {
+  leaguePhase,
+  planLeagueCycle,
+  LEAGUE_INDEPENDENT_FROM,
+  type LeagueDef,
+} from '@offside/contracts/league';
+import { displaySeasonAt } from '@offside/contracts/service-seasons';
 import { eq } from 'drizzle-orm';
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
@@ -58,8 +64,12 @@ async function adminView(db: Db, league: LeagueDef, now: string) {
       !!row &&
       (league.teamSeason === undefined ||
         league.drawAt !==
-          planLeagueCycle(league.season, league.startsAt, league.teamSeason, league.season === 3)
-            .drawAt),
+          planLeagueCycle(
+            league.season,
+            league.startsAt,
+            league.teamSeason,
+            league.season === LEAGUE_INDEPENDENT_FROM,
+          ).drawAt),
     counts: {
       entries: counts?.entries ?? 0,
       placed: counts?.placed ?? 0,
@@ -94,12 +104,14 @@ export function registerAdminLeagueRoutes(app: Hono<AppEnv>): void {
     const [state] = await leagueStateOf(db, league.season);
     if (state || now >= league.drawAt)
       throw conflictError(cupKo('leagueDrawn'), 'LEAGUE_ALREADY_DRAWN');
+    const drawAt = shift(league.drawAt, days);
     const values = {
       startsAt: league.startsAt,
-      teamSeason: league.teamSeason ?? null,
+      // A delay across a service-season boundary moves the edition to the card season open at its new draw.
+      teamSeason: league.teamSeason === undefined ? null : displaySeasonAt(drawAt),
       opensAt: league.opensAt,
       closesAt: shift(league.closesAt, days),
-      drawAt: shift(league.drawAt, days),
+      drawAt,
       roundsJson: JSON.stringify(league.rounds.map((r) => shift(r, days))),
       minFilled: league.minFilled,
       updatedAt: now,

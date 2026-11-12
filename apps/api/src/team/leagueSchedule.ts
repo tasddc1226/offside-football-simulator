@@ -2,7 +2,8 @@ import {
   leagueSeasonAt,
   planLeague,
   planLeagueCycle,
-  leaguePhase,
+  leagueFinalAt,
+  LEAGUE_AFTERGLOW_MS,
   LEAGUE_INDEPENDENT_FROM,
   type LeagueDef,
 } from '@offside/contracts/league';
@@ -38,8 +39,12 @@ export async function currentLeague(db: Db, now: string): Promise<LeagueDef | un
       .where(eq(leagueState.season, latest.season))
       .limit(1);
     // Never hide a delayed settlement or skip its notifications when cron catches up.
-    if (!state?.doneAt || leaguePhase(current, now) !== 'done') return current;
-    const startsAt = new Date(Date.parse(current.rounds.at(-1)!) + 2 * 86_400_000).toISOString();
+    if (!state?.doneAt) return current;
+    // A draw with no tiers settles at once; count its result day from that settlement, not the planned final.
+    const endedAt = Math.min(Date.parse(leagueFinalAt(current)), Date.parse(state.doneAt));
+    if (Date.parse(now) < endedAt + LEAGUE_AFTERGLOW_MS) return current;
+    const lastDay = Math.min(Date.parse(current.rounds.at(-1)!), Date.parse(state.doneAt));
+    const startsAt = new Date(lastDay + 2 * 86_400_000).toISOString();
     const next = planLeagueCycle(current.season + 1, startsAt, current.teamSeason!);
     next.teamSeason = displaySeasonAt(next.drawAt);
     return next;

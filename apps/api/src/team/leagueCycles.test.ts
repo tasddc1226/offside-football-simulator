@@ -14,7 +14,7 @@ import {
   leagueState,
 } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { callJson, issueGoogleCookie } from '../test/http.js';
+import { ADMIN_EMAIL, callJson, issueAdminCookie, issueGoogleCookie } from '../test/http.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { currentLeague, saveLeagueCycle } from './leagueSchedule.js';
 import { runLeague, leagueLineupLocked } from './league.js';
@@ -154,6 +154,39 @@ describe('independent league cycles (T-11-708)', () => {
     const view = await callJson(ctx.env, 'GET', '/v1/owner-team?season=3', { cookie: who.cookie });
     expect(view.status).toBe(200);
     expect(await view.json()).toMatchObject({ data: { season: 3, current: 4, cupSeason: 3 } });
+  });
+  it('opens the next edition one result day after a draw with no tiers', async () => {
+    await saveLeagueCycle(ctx.db, L, L.drawAt);
+    // Nobody entered: the draw settles at once with no tiers.
+    await drain(L.drawAt);
+    const [state] = await ctx.db.select().from(leagueState).where(eq(leagueState.season, 3));
+    expect(state?.doneAt).toBeTruthy();
+    expect((await currentLeague(ctx.db, plus(state!.doneAt!, DAY - 1000)))?.season).toBe(3);
+    const next = await currentLeague(ctx.db, plus(state!.doneAt!, DAY));
+    expect(next).toMatchObject({ season: 4 });
+    // Not the planned 28-round final: entry opens within days of the cancelled draw.
+    expect(Date.parse(next!.drawAt) - Date.parse(L.drawAt)).toBeLessThanOrEqual(3 * DAY);
+    expect(next!.drawAt > plus(state!.doneAt!, DAY)).toBe(true);
+  });
+  it('moves the pinned team season when an operator delays a draw past a service season', async () => {
+    const edition = planLeagueCycle(4, plus(S4, -2 * DAY), 3);
+    expect(edition.drawAt < S4).toBe(true);
+    await saveLeagueCycle(ctx.db, edition, plus(S4, -2 * DAY));
+    vi.setSystemTime(new Date(plus(edition.closesAt, -60_000)));
+    const admin = await issueAdminCookie(ctx);
+    const res = await callJson(
+      { ...ctx.env, ADMIN_EMAILS: ADMIN_EMAIL },
+      'POST',
+      '/v1/admin/leagues/current/delay',
+      {
+        cookie: admin.cookie,
+        body: { days: 2 },
+      },
+    );
+    expect(res.status).toBe(200);
+    const [row] = await ctx.db.select().from(leagueSeasons).where(eq(leagueSeasons.season, 4));
+    expect(row!.drawAt > S4).toBe(true);
+    expect(row?.teamSeason).toBe(4);
   });
   it('waits for delayed settlement instead of skipping a league season', async () => {
     await saveLeagueCycle(ctx.db, L, L.drawAt);
