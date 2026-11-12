@@ -1,5 +1,7 @@
 # T-11-705 코드 품질 단계별 개선
 
+2026-11-12: 이번 개선 6개 묶음의 코드·필수 CI·머지·운영 배포·배포 후 관찰을 완료했다. 최종 운영 코드는 `ad1ff661a0ab4f627c24fedec159dd7dca2f6d34`, 릴리스는 `v2026.11.12.9`다. 네이티브 실기기 검증과 보존한 순환4개는 아래에 별도 경계를 명시한다.
+
 기존 게임 결과·저장·HTTP 계약·쿼리 수를 보존하면서 중복 정책과 역방향 의존을 줄인다. 각 단계는 독립적인 로컬 커밋으로 검토한다. 검증 후 PR·머지·운영 배포까지 진행한다. 원래 T-11-704로 시작했으나 최신 main의 결제 추적 작업과 ID가 겹쳐 T-11-705로 구분한다.
 
 | 순서 | 범위                                                        | 상태                             |
@@ -92,7 +94,7 @@
 - buildLeagueNews의 후보 계획과 선택된 참조의 표시 조립을 나누되, 필요한 경기 상세만 읽는 최적화를 보존하기로 했다.
 - 남은 순환 후보는 개별 호출 경로를 확인해 표시/SQL leaf와 의도된 지연 의존을 구분하기로 했다.
 
-## 최종 로컬 검증
+## 1차 통합 로컬 검증
 
 - api/game/app-core/mobile/web 타입·린트 통과. Svelte 진단은 오류 0개이며 수정하지 않은 화면 파일의 경고 8개가 남아 있다.
 - lint:deps, lint:i18n, format:check, git diff --check 통과.
@@ -101,7 +103,7 @@
 - 웹 빌드·번들 검사 통과: 초기 묶음 138.28KB gzip / 예산 147KB. 최신 main 통합 후 138.61KB로 재확인했다.
 - iOS와 Android 각각 Expo export로 Hermes 바이트코드 생성 통과. 스토어 빌드·실기기·OTA 실행 증거는 아니다.
 - 최종 개발 서버를 새로 시작해 HTTP 200과 팀 화면·공통 편성 계산을 다시 확인했다. 웹 320/390px 가로 넘침·초안 복구·요청 재사용·모의 API 저장을 확인했다. 자동 편성은 최종 코드에서 키보드 활성화로도 확인했다.
-- 실행 중인 iOS/Android 테스트 기기가 없어 네이티브 화면/터치·저장 복구는 미확인이다. 웹 E2E는 저장소 정책상 푸시 뒤 PR 검사에서 실행할 대상이며 이번에 실행하지 않았다.
+- 실행 중인 iOS/Android 테스트 기기가 없어 네이티브 화면/터치·저장 복구는 미확인이다. 웹 E2E는 저장소 정책상 로컬에서 실행하지 않았고, 푸시 뒤 PR #1144 검사에서 통과했다.
 - `.nvmrc`는 기존 `.node-version`을 가리켜 버전 정의를 복제하지 않는다. `pnpm test:mobile-unit`은 기존 CI 목록을 실행한다. 새 의존성·테스트 시간 제한·네이티브 설정·저장 형식·밸런스 변경은 없다.
 - PR #1144의 필수 검사(API 3개·웹 E2E 3개 shard 포함)가 모두 통과하고 머지됐다. `bce608f5ab9b11adee33e615a80299378c48c5ca`를 고정한 Production Release 43143034493의 웹/API 배포·read-back과 `v2026.11.12.3` 태그가 확인됐다. 지원 앱 런타임별 OTA 10개가 모두 게시됐고 production manifest의 업데이트 ID도 10개 모두 일치한다. 운영 로그인 팀 화면 390px 표시·가로 넘침 없음도 확인했다. 네이티브 화면 검증은 미확인이다.
 
@@ -122,13 +124,13 @@
 - 웹/앱 타입·린트, deps/i18n/format 검사 통과. 웹 단위 30파일204개 + SEO17개, 모바일 unit20파일170개 통과. iOS/Android Hermes export 통과.
 - 로컬 모의 API에서 팀 저장, 기록 목록 더 보기 중복 제외, 경기 결과/기록 복귀, 통계 조회, 화면 이탈 뒤 미저장 4-4-2 편성 복구를 확인했다. 320/390px 가로 넘침 없고 저장 버튼이 하단 메뉴 위에 보인다. 실제 서버 쓰기를 검증한 것은 아니다.
 - 모바일 Team 파일은 1,573→1,321줄, 웹 Team은 935→758줄이다. 모바일 화면 함수의 AST 분기 대리지표는 143→131로 줄었지만 큰 편집 화면의 JSX 구성은 남는다. 화면의 모든 복잡도를 제거했다는 뜻은 아니다.
-- 웹 PR E2E는 푸시 뒤 CI에서 실행한다. 이 환경에는 iOS 시뮬레이터·Android 기기가 없어 네이티브 화면/터치 검증은 미확인이다.
+- PR #1147의 웹 E2E3개 shard와 quick 검사가 통과했다. 이 환경에는 iOS 시뮬레이터·Android 기기가 없어 네이티브 화면/터치 검증은 미확인이다.
 
 ## T-11-708 Create 입력·스카우트·공개 연출
 
 - create-controls가 웹/앱의 포지션·세부 포지션·주력 교체 규칙을 소유한다. scoutItemsView가 아이템 기본값과 기존 성공 안내를 공유하고, scoutAttempts가 멱등 키와 후보 시드 계획을 함께 보존한다. 생성 시 RNG를 쓰지 않고 성공·재시도 불가 응답에서만 해당 시도의 키/계획을 비운다.
 - 웹 createScoutItems와 앱 useScoutItems는 기존 조회 시점·잠금·확인을 유지한다. 앱 광고 리롤은 같은 rerollLock을 공유하며 서버 아이템 사용과 섞지 않는다. 웹/앱 createCandidateReveal/useCandidateReveal는 공개 순서·타이머·진동을, 앱 CreateParts는 기존 표시/모션 primitive를 소유한다.
-- app-core 기존 전체 162파일1,614개와 새 시도 identity 4개 테스트 통과. 타입·lint/deps/i18n/format, 웹 build·bundle 138.59/147KB, 모바일 unit170개 및 iOS/Android Hermes export 통과. 웹 E2E는 PR CI에서 실행한다.
+- app-core 기존 전체 162파일1,614개와 새 시도 identity 4개 테스트 통과. 타입·lint/deps/i18n/format, 웹 build·bundle 138.59/147KB, 모바일 unit170개 및 iOS/Android Hermes export 통과. PR #1148의 웹 E2E3개 shard와 quick 검사가 통과했다.
 - 로컬 모의 API에서 프리미엄 첫 응답을 재시도 가능한 503으로 만들고 다시 눌렀다. 두 요청의 멱등 키와 본문이 같고, 아이템 조회는 1회였으며 성공 뒤 장수가 2→1로 표시됐다. 확인창은 이 모의 재시도 검사에서 자동 승인했다. 후보 3명 열기·선택과 320/390px 가로 넘침 없음도 확인했다. 실제 서버 권리 차감이나 네이티브 터치 검증은 아니다.
 - native Create 파일 1,737→1,458줄, web Create 813→697줄. native 화면 함수의 AST 지표는 120→119로 거의 같으며 긴 선언형 화면 구성은 남는다. 핵심 성과는 중복 입력/재시도/표시 정책의 단일 소유와 작은 처리 경계다.
 - 앞 단계 Team은 PR #1147, `238658667089d9fba08f5dfa19a341ab337986f5`, Production Release 43147534469 / `v2026.11.12.5`로 웹/API·지원 앱 OTA 10개 게시 및 manifest ID 일치를 확인했다. 네이티브 실기기는 미확인이다.
@@ -141,7 +143,7 @@
 - 앱 `MarketParts.tsx`는 기존 파일 최상위에 있던 표시 컴포넌트를 같은 props·스타일·터치·시트 동작으로 옮긴다. 기존 화면 상태의 수명은 바꾸지 않는다. 앱 Market은 2,129→1,321줄, 웹은 1,718→1,674줄이다. 긴 JSX/template 구성은 남으며 총 소스 줄 수를 줄였다는 의미는 아니다.
 - 거래 순서 신규 4개와 기존 stale/release/attrs를 합쳐 4파일19개 통과. 웹 단위30파일204개+SEO17개, 모바일 unit20파일170개 통과. 웹/앱/app-core 타입·린트, deps/i18n/format, 웹 빌드·번들138.60/147KB, iOS·Android Hermes export 통과.
 - 로컬 모의 API로 390px 목록/영입 시트, 가격 변경(120000→125000) 후 재확인/성공, 자금·목록 갱신, 320px 판매 카드 선택·가격 슬라이더·방출 선택을 확인했다. 영입 POST 본문이 각 확인 가격과 같았고 최초/낡은 목록/성공 갱신의 목록 GET은3회, 계정 GET은2회였다. 가로 넘침 없고 판매 버튼은 하단 메뉴 위에 보인다. 운영 거래를 실행한 검증은 아니다.
-- 웹 E2E는 푸시 후 PR CI에서 실행한다. 네이티브 화면·터치·실기기 복구는 테스트 환경 부재로 미확인이다. 게임/세이브/RNG/서버 스키마/문구/네이티브 설정은 바꾸지 않았다.
+- PR #1149의 웹 E2E3개 shard와 quick 검사가 통과했다. 네이티브 화면·터치·실기기 복구는 테스트 환경 부재로 미확인이다. 게임/세이브/RNG/서버 스키마/문구/네이티브 설정은 바꾸지 않았다.
 
 ## T-11-710 남은 순환 후보 검토
 
@@ -168,12 +170,12 @@
 
 | 단계 | PR / 운영 코드 | 운영 릴리스·검증 상태 |
 | --- | --- | --- |
-| 공통 정책·실행 경계 | #1144 / `bce608f5a` | `v2026.11.12.3`, run43143034493 성공. 웹/API·OTA10개 read-back. 관찰 완료. |
-| 리그 뉴스 계획·표시 | #1145 / `885533a53` | `v2026.11.12.4`, run43144535457 성공. 뉴스 응답 확인. OTA10개 unchanged skip, 관찰 완료. |
-| Team 상태 책임 | #1147 / `238658667` | `v2026.11.12.5`, run43147534469 성공. 웹 기록·통계 및 OTA10개 read-back, 관찰 완료. |
-| Create 입력·스카우트·연출 | #1148 / `76c2bec8c` | `v2026.11.12.7`, run43151511441 성공. 웹/API·OTA10개 read-back, 관찰 중. |
-| Market 조회·거래·표시 | #1149 / `d943d4309` | 필수 quick/E2E3 통과, run43153623694 운영 배포 중. |
-| 순환 leaf·탐색 문서 | T-11-710 | 로컬 검증 완료, Market 포함 최신 main 통합. PR 예정. |
+| 공통 정책·실행 경계 | [#1144](https://github.com/tasddc1226/offside-football-simulator/pull/1144) / `bce608f5a` | [v2026.11.12.3](https://github.com/tasddc1226/offside-football-simulator/releases/tag/v2026.11.12.3), [run43143034493](https://github.com/tasddc1226/offside-football-simulator/actions/runs/43143034493) 성공. 웹/API·OTA10개 read-back. 관찰 완료. |
+| 리그 뉴스 계획·표시 | [#1145](https://github.com/tasddc1226/offside-football-simulator/pull/1145) / `885533a53` | [v2026.11.12.4](https://github.com/tasddc1226/offside-football-simulator/releases/tag/v2026.11.12.4), [run43144535457](https://github.com/tasddc1226/offside-football-simulator/actions/runs/43144535457) 성공. 뉴스 응답 확인. OTA10개 unchanged skip, 관찰 완료. |
+| Team 상태 책임 | [#1147](https://github.com/tasddc1226/offside-football-simulator/pull/1147) / `238658667` | [v2026.11.12.5](https://github.com/tasddc1226/offside-football-simulator/releases/tag/v2026.11.12.5), [run43147534469](https://github.com/tasddc1226/offside-football-simulator/actions/runs/43147534469) 성공. 웹 기록·통계 및 OTA10개 read-back, 관찰 완료. |
+| Create 입력·스카우트·연출 | [#1148](https://github.com/tasddc1226/offside-football-simulator/pull/1148) / `76c2bec8c` | [v2026.11.12.7](https://github.com/tasddc1226/offside-football-simulator/releases/tag/v2026.11.12.7), [run43151511441](https://github.com/tasddc1226/offside-football-simulator/actions/runs/43151511441) 성공. 웹/API·OTA10개 read-back, 관찰 완료. |
+| Market 조회·거래·표시 | [#1149](https://github.com/tasddc1226/offside-football-simulator/pull/1149) / `d943d4309` | [v2026.11.12.8](https://github.com/tasddc1226/offside-football-simulator/releases/tag/v2026.11.12.8), [run43153623694](https://github.com/tasddc1226/offside-football-simulator/actions/runs/43153623694) 성공. 웹/API·공개 목록·OTA10개 read-back, 관찰 완료. |
+| 순환 leaf·탐색 문서·높이 회귀 | [#1150](https://github.com/tasddc1226/offside-football-simulator/pull/1150) / `ad1ff661a` | [v2026.11.12.9](https://github.com/tasddc1226/offside-football-simulator/releases/tag/v2026.11.12.9), [run43156768968](https://github.com/tasddc1226/offside-football-simulator/actions/runs/43156768968) 성공. 필수 quick/API3/E2E3·웹/API·공개 기록·OTA10개 read-back, 관찰 완료. |
 
 릴리스·manifest 확인은 설치된 앱의 채택/실기기 동작이나 백업 복구를 증명하지 않는다. 공개 `/v1/status` 집계 관찰은 해당 완료 bin의 표본이며 전체 Cloudflare 트래픽 또는24시간 무오류를 뜻하지 않는다. 중간의 별도 리그 회차 변경 #1146은 이 리팩터링 작업에 포함해 성과를 계산하지 않는다.
 
@@ -183,3 +185,21 @@
 초기 #1150 E2E1은360×780에서 후보 선택 직후782px를 기록했다. 실패 trace와 모의 후보를 재현해 보니 기존 검사가360ms 카드/상세 펼침 도중에 끝나곤 했고, 펼침 완료 후에는 실제로 더 스크롤됐다. 테스트 허용 높이·텍스트·버튼 크기·고정 바의 안전 여백을 유지하고, 도구가 적은 후보 화면에만 짧은 높이에서 간격/카드·도구 padding을 압축했다. 로컬 재현의 완성된 내용 높이는855.5→767.5px이며 문서 높이는780px 안이다. 후보 통계/시즌 설명은 그대로 보이고, 킵44px·시작48px, 320px의 가로 넘침 없음·하단 여백96px도 확인했다.
 
 검사는 Svelte의 지연 애니메이션과 후속 카드/상세 애니메이션이 모두 완료된 후 같은780px 한계를 확인하도록 강화했다. 고정 sleep이나 허용치 상향은 없다. 구조 리팩터링 외 추가 변경은 이 웹 여백 조정과 회귀 검사 안정화이며 게임/세이브/RNG/스카우트 재시도 계약은 바꾸지 않는다.
+
+
+## 완료 검증 기록 정리
+
+파일 길이/분기 지표의 전후 비교는 각 해당 PR 시점이다. 중간의 별도 기능 변경까지 이 리팩터링 성과로 계산하지 않는다. 구조 분리를 통해 소유 경계와 중복 정책을 정리했으며, 긴 JSX/template와 검토 후 보존한 순환4개를 모두 제거했다는 뜻은 아니다.
+
+- Create 관찰: 13:05–13:35 KST 완료6bin9,521요청/errors0. 후속 Market 배포를 포함한 공개 집계다. 새 PR 피드백/이슈 없음. 이후 발견한 웹 후보 최종 높이 보강은 #1150에 포함했다.
+- 로컬 main 동기화 후 기존 CodeGraph `sync`는 최신 상태였고, 새 `runMarketMutation` 함수와 웹/앱 import가 검색됐다. 인덱스가 없는 작업 worktree에는 인덱스를 새로 만들지 않았다.
+- 사용자의 미추적 `app.json`, `docs/tracking/club-membership-design.md`와 초기 분석 폴더 `PATHFINDER-2026-11-12/`는 보존했다.
+
+- Market 관찰: 13:25–13:55 KST 완료6bin9,273요청/errors0. 후속 최종 배포를 포함한 공개 집계이며 새 PR 피드백/이슈가 없었다.
+
+- 최종 코드 `ad1ff661a`의 main CI/staging run43156740002와 Production Release run43156768968이 모두 성공했다. PR #1150 최종 커밋의 quick/API3/E2E3 통과와 별도 증거다.
+
+- 14:12 KST 재확인에서도 사용 가능한 iOS 시뮬레이터와 연결된 Android 기기가 없었다. 네이티브 실제 화면/터치·복구는 미확인이다. 환경이 준비되면 Team 초안·저장/경기 복귀, Create 공개/재시도, Market 가격 재확인/거래, 트로피 행 표시를 iOS/Android에서 확인한다.
+
+- 최종 관찰: 14:25:13 KST 조회 시점의13:55–14:25 완료6bin8,948요청/errors0. 최종 OTA10개 다운로드 ID를 다시 대조해 모두 일치했고, 웹 `ad1ff66`·API health200·늦은 main CI 성공과 개선 PR6개 새 피드백/이슈 없음을 확인했다. 공개 집계의 표본이며 네이티브 설치/실행·24시간 전체 오류나 백업 복구의 증거는 아니다.
+- 검증 기록 정리는 Markdown3개만 바꾸며 런타임 코드는 그대로다. 소스 배포 SHA와 이후의 문서 머지를 구분한다.
