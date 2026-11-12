@@ -11,6 +11,7 @@ import {
   allowPersonalizedAds,
   inPersonalizedTest,
   PERSONALIZED_ALL_FROM,
+  PERSONALIZED_IOS_FROM,
   PERSONALIZED_TEST as T,
   PERSONALIZED_TEST_KEY,
 } from './adPersonalization';
@@ -72,9 +73,23 @@ describe('Android personalized ads (T-11-687)', () => {
   });
 
   it.each([
-    ['iOS', { ...jpAndroid, os: 'ios' }],
+    ['iOS without tracking', { ...jpAndroid, os: 'ios' }],
     ['consent message regions', { ...jpAndroid, consentRequired: true }],
   ])('keeps %s non-personalized', (_, device) => {
     expect(allowPersonalizedAds(device, PERSONALIZED_ALL_FROM + 1, () => 0)).toBe(false);
+  });
+});
+
+describe('iOS personalized ads (T-11-698)', () => {
+  const ios = { os: 'ios', locales: ['ko-KR'], consentRequired: false, tracking: true };
+  it('opens only when tracking is allowed, from the iOS policy date', () => {
+    expect(allowPersonalizedAds(ios, PERSONALIZED_IOS_FROM - 1)).toBe(false);
+    expect(allowPersonalizedAds(ios, PERSONALIZED_IOS_FROM)).toBe(true);
+    expect(allowPersonalizedAds({ ...ios, tracking: false }, PERSONALIZED_IOS_FROM + 1)).toBe(
+      false,
+    );
+    expect(allowPersonalizedAds({ ...ios, consentRequired: true }, PERSONALIZED_IOS_FROM + 1)).toBe(
+      false,
+    );
   });
 });

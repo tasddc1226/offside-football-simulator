@@ -1,0 +1,26 @@
+{
+  "id": "t-11-698-ios-att",
+  "title": "iOS 광고 추적 허용 선택",
+  "items": [
+    "iOS 앱에서 광고 추적 허용 여부를 한 번 물어요. 허용하면 관심사에 맞는 광고가 보이고, 허용하지 않아도 게임과 보상은 똑같아요"
+  ],
+  "en": {
+    "title": "Ad tracking choice on iOS",
+    "items": [
+      "The iOS app now asks once whether to allow ad tracking. Allowing it shows ads that match your interests; your game and rewards stay the same either way."
+    ]
+  },
+  "ja": {
+    "title": "iOSで広告トラッキングを選べるように",
+    "items": [
+      "iOSアプリで広告トラッキングを許可するか一度だけ確認します。許可すると興味に合った広告が表示され、許可しなくてもゲームと報酬は変わりません。"
+    ]
+  },
+  "zh": {
+    "title": "iOS 可選擇是否允許廣告追蹤",
+    "items": [
+      "iOS 應用程式會詢問一次是否允許廣告追蹤。允許後會顯示符合興趣的廣告，不允許也不影響遊戲與獎勵。"
+    ]
+  },
+  "availability": "app"
+}
