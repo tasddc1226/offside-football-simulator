@@ -64,6 +64,8 @@ export function createMarketData(inputs: {
     if (r.ok) state.team = r.data;
   }
   const loadIndex = () =>
-    fetchMarketChart('week').then((r) => r.ok && (state.indexPoints = r.data.points));
+    fetchMarketChart('week').then((r) => {
+      if (r.ok) state.indexPoints = r.data.points;
+    });
   return { state, loadMe, loadList, loadTeam, loadIndex };
 }
