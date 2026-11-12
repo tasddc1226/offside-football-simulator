@@ -1,14 +1,17 @@
+import { TeamCoachCard } from './TeamCoachCard';
+import { TeamFormationToolbar } from './TeamFormationToolbar';
+import { useTeamMatches } from './useTeamMatches';
+import { useTeamRecords } from './useTeamRecords';
 import { projectTeamDraft } from '@offside/app-core/teamDraftView';
 // T-10-092 구단주 팀(웹 team/Team.svelte) — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가
 // 채운다) 같은 시즌 다른 구단주의 팀과 겨룬다. 지난 시즌 팀은 보기만 한다. 경기 결과는 서버가 정한다(앱은 보여 주기만).
 // 편성·후보·업적 표기 같은 순수 계산은 웹과 같은 @offside/app-core/teamOwner.
-import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { RADIUS } from '@offside/app-core/design-tokens';
 import { teamNameIssues } from '@offside/app-core/careerGuide';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import {
-  FORMATION_IDS,
   type TeamPosition,
   LINEUP_SIZE,
   MANAGER_NAME_MAX,
@@ -19,30 +22,15 @@ import {
   YOUTH_NAME,
   YOUTH_OVR,
   synergyApplies,
-  SHAPE_IDS,
-  shapeBase,
-  shapeLayout,
-  matchShape,
   usesRankLadder,
   type FormationId,
 } from '@offside/contracts/owner-team';
 import {
-  fetchClubAchievements,
-  fetchOpponents,
   fetchOwnerTeam,
-  fetchTeamMatches,
-  fetchTeamStats,
-  playLiveMatch,
   saveOwnerTeam,
   saveTeamPresets,
-  type ClubAchievementsResponse,
   type OwnerTeam,
   type OwnerTeamResponse,
-  type PlayTeamMatchResponse,
-  type TeamLive as TeamLiveData,
-  type TeamMatch,
-  type TeamStatsResponse,
-  type TeamOpponent,
   type TeamPlayer,
 } from '@offside/app-core/api/team';
 import { type TeamView } from '@offside/app-core/state';
@@ -72,16 +60,12 @@ import { TeamSynergy } from '../../components/TeamSynergy';
 import { toast } from '../../game/host';
 import { setCardLock } from '@offside/app-core/api/market';
 import { go } from '../../game/nav';
-import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
-import { DisclosureRow } from '../../ui/Disclosure';
-import { coachBreakdown, coachLineBonus, coachSummary } from '@offside/app-core/managerCard';
-import { rem } from '../../theme/type';
-import { achNudge } from '../../game/achNudge';
+import { coachBreakdown, coachLineBonus } from '@offside/app-core/managerCard';
 import { accountCache, appState, prefs } from '../../store';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { askPushAfter } from '../../platform/pushAsk';
 import { useColors } from '../../theme/useColors';
-import { BackBar, Btn, Card, Press, Screen, Topbar, Txt, scrollTo } from '../../ui';
+import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
 import { SkeletonFrame, useSkeletonBlock } from '../../ui/Skeleton';
 import { useOnPull } from '../../ui/refresh';
@@ -103,18 +87,13 @@ import { TeamLogo } from '../../components/TeamLogo';
 import { TeamLogoEditor } from './TeamLogoEditor';
 import { TeamShare, type TeamShareData } from './TeamShare';
 import { shareToLounge } from '../../components/loungeShare';
-import { ShareIcon } from '../../components/ShareIcon';
 import { TeamDialog } from '../../components/TeamDialog';
 import type { TeamLogo as Logo } from '@offside/contracts/team-logo';
 import type { PutOwnerTeamBody } from '@offside/contracts';
 import { readTeamDraft, writeTeamDraft, teamDraftBase, type TeamDraft } from './teamDraft';
 import { TeamResult } from './TeamResult';
 import { TeamDivision } from './TeamDivision';
-import {
-  markDivisionSeen,
-  takeDivisionChange,
-  type DivisionShift,
-} from '@offside/app-core/teamDivision';
+import { takeDivisionChange } from '@offside/app-core/teamDivision';
 import { CupLockNotice, useCup } from './TeamCup';
 import { cupLineupBar } from '@offside/app-core/cupLineupBar';
 import { TeamPresets } from './TeamPresets';
@@ -234,45 +213,64 @@ export default function Team() {
       void loadHistory();
     }
   }, [destination.friends, destination.invite, destination.history, status, needLogin]);
-  const oppLoaded = useRef(false);
-  /** T-11-510 시즌 2 자동 매칭에서 이번 경기의 '다른 상대 찾기' 횟수(경기를 치르면 0으로). */
-  const [oppPick, setOppPick] = useState(0);
-  const oppPickRef = useRef(0);
-  /** T-11-603 큐에서 찾은 상대(경기를 치르거나 상대가 무효가 되면 비운다). 탭을 다녀와도 남는다. */
-  const [rankFound, setRankFound] = useState<TeamOpponent | null>(null);
-  const [opponents, setOpponents] = useState<TeamOpponent[]>([]);
-  const [oppStatus, setOppStatus] = useState<LoadStatus>('loading');
-  const [playing, setPlaying] = useState(false);
-  const [result, setResult] = useState<TeamMatch | null>(null);
-  /** T-11-375 방금 치른 경기의 디비전 전후(결과 화면 승격 · 강등), 받은 경기로 바뀐 디비전 알림. */
-  const [divisionShift, setDivisionShift] = useState<DivisionShift | null>(null);
   const [divisionNotice, setDivisionNotice] = useState<string | null>(null);
-  /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
-  const [live, setLive] = useState(false);
-  /** T-11-387 방금 시작한 장면 경기의 고를 장면(중계가 끝나면 비운다). */
-  const [liveMoments, setLiveMoments] = useState<TeamLiveData | undefined>();
-  const [resultOrigin, setResultOrigin] = useState<'opponents' | 'history'>('opponents');
-  const [history, setHistory] = useState<TeamMatch[]>([]);
-  const [histStatus, setHistStatus] = useState<LoadStatus>('loading');
-  // T-11-269 경기 기록 다음 쪽 커서('더 보기'), 시즌 통계와 경기 결과에서 누른 선수.
-  const [histNext, setHistNext] = useState<string | null>(null);
-  const [moreStatus, setMoreStatus] = useState<'idle' | 'loading' | 'error'>('idle');
-  const [stats, setStats] = useState<TeamStatsResponse | null>(null);
-  const [statsStatus, setStatsStatus] = useState<LoadStatus>('loading');
-  const [statsFocus, setStatsFocus] = useState<string | null>(null);
-  const [ach, setAch] = useState<ClubAchievementsResponse | null>(null);
-  const [achStatus, setAchStatus] = useState<LoadStatus>('loading');
-  /** T-11-034 지난번 업적 탭을 본 뒤 새로 오른 업적(NEW). */
-  const [achNewIds, setAchNewIds] = useState<ReadonlySet<string>>(new Set());
+  const {
+    oppLoaded,
+    oppPick,
+    oppPickRef,
+    rankFound,
+    setRankFound,
+    opponents,
+    oppStatus,
+    playing,
+    result,
+    divisionShift,
+    live,
+    setLive,
+    liveMoments,
+    setLiveMoments,
+    resultOrigin,
+    setOppPick,
+    loadOpponents,
+    challenge,
+    liveFinal,
+    showFriendly,
+    openHistoryMatch,
+  } = useTeamMatches({
+    team,
+    season,
+    setTeam,
+    setMatchesLeft,
+    setMatchesNextAt,
+    setDivisionNotice,
+    show,
+  });
+  const {
+    history,
+    histStatus,
+    histNext,
+    moreStatus,
+    stats,
+    statsStatus,
+    statsFocus,
+    ach,
+    achStatus,
+    achNewIds,
+    setStatsFocus,
+    loadAchievements,
+    loadHistory,
+    loadMore,
+    loadStats,
+  } = useTeamRecords(season);
   // T-11-145 오프사이드 컵 — 지금 시즌 팀을 볼 때만 명단 마감 안내를 위해 불러온다.
   const cupState = useCup(status === 'ready' && !needLogin && editable && !legacy);
 
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로
   // 가기) 없으면 팀을 보여 준다.
   const view: TeamView = teamView === 'result' && !result ? 'team' : teamView;
-  const show = (v: TeamView) => {
+  function show(v: TeamView) {
     appState.teamView = v;
-  };
+  }
 
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = useMemo(() => localCareerNames(), []);
@@ -610,93 +608,6 @@ export default function Team() {
 
   // ───────── 경기 ─────────
   /** 지난 경기 결과를 연다(기록 탭 · T-11-603 랭크 매칭의 최근 전적). */
-  function openHistoryMatch(m: TeamMatch) {
-    setResultOrigin('history');
-    setDivisionShift(null);
-    setResult(m);
-    setLiveMoments(undefined);
-    setLive(false);
-    show('result');
-  }
-  async function loadOpponents(silent = false) {
-    oppLoaded.current = true;
-    if (!silent) setOppStatus('loading');
-    const r = await fetchOpponents(oppPickRef.current);
-    if (!r.ok) return silent ? undefined : setOppStatus('error');
-    setOpponents(r.data.items);
-    setOppStatus('ready');
-  }
-
-  async function challenge(o: TeamOpponent) {
-    if (playing) return;
-    setPlaying(true);
-    // T-11-387 랭크 경기는 문자중계 도중 장면을 고르는 경기로 시작한다(결과는 중계가 끝날 때 onfinal로 온다).
-    const r = await playLiveMatch(o.teamId);
-    setPlaying(false);
-    if (!r.ok) {
-      if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') setMatchesLeft(0);
-      if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT')
-        setOpponents((list) => list.filter((x) => x.teamId !== o.teamId));
-      if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT') setRankFound(null);
-      // T-11-510 상대 RP가 그새 멀어졌다 — 같은 횟수로 새 상대를 받는다.
-      if (r.error.reason === 'TEAM_OPPONENT_STALE') {
-        if (usesRankLadder(team?.season ?? 0)) setRankFound(null);
-        else void loadOpponents();
-      }
-      return toast(r.error.message);
-    }
-    oppPickRef.current = 0;
-    setRankFound(null);
-    setOppPick(0);
-    setResultOrigin('opponents');
-    setResult(r.data.match);
-    setLiveMoments(r.data.live);
-    setLive(true);
-    setMatchesLeft(r.data.matchesLeft);
-    setMatchesNextAt(r.data.matchesNextAt ?? null);
-    setDivisionNotice(null);
-    applyPlayed(r.data);
-    show('result');
-    scrollTo(0);
-  }
-
-  /** 경기 결과의 기록 · 레이팅을 내 팀에 반영한다(장면 경기는 시작 때 경기 전 값, 끝날 때 결과 값이 온다). */
-  function applyPlayed(r: PlayTeamMatchResponse) {
-    // T-11-375 승격 · 강등 띠는 마감한 결과에만 온다(장면 경기 시작 응답에는 없다).
-    const shift = r.division ?? null;
-    setDivisionShift(shift);
-    if (shift) markDivisionSeen(season, shift.to);
-    setTeam((t) =>
-      t
-        ? {
-            ...t,
-            record: r.record,
-            rating: r.rating,
-            ...(shift ? { division: shift.to } : {}),
-          }
-        : t,
-    );
-  }
-
-  /** 장면 경기가 끝났어요. 결과 화면을 마감한 경기로 바꾼다. */
-  function liveFinal(r: PlayTeamMatchResponse) {
-    setResult(r.match);
-    setLiveMoments(undefined);
-    setMatchesLeft(r.matchesLeft);
-    setMatchesNextAt(r.matchesNextAt ?? null);
-    applyPlayed(r);
-  }
-
-  /** 친구 칸에서 친선전을 치렀거나(중계부터) 최근 친선전을 열 때(결과부터). 친선전은 레이팅·전적을 건드리지 않는다. */
-  function showFriendly(m: TeamMatch, withLive: boolean) {
-    setDivisionShift(null);
-    setResultOrigin('opponents');
-    setResult(m);
-    setLiveMoments(undefined);
-    setLive(withLive);
-    show('result');
-    scrollTo(0);
-  }
   function pickOppTab(t: OppTab) {
     setOppTab(t);
     if (t === 'friends') friends.ensure();
@@ -705,45 +616,6 @@ export default function Team() {
   }
 
   // ───────── 시즌 업적 ─────────
-  async function loadAchievements(want = season, silent = false) {
-    if (!silent) setAchStatus('loading');
-    const r = await fetchClubAchievements(want);
-    if (!r.ok) return silent ? undefined : setAchStatus('error');
-    setAch(r.data);
-    // T-11-034 가장 최근 시즌을 열면 본 것으로 적고, 지난번 뒤로 새로 오른 업적에 NEW를 붙인다(웹 Team.svelte).
-    const latest = Math.max(r.data.season, ...r.data.seasons.map((o) => o.id));
-    setAchNewIds(r.data.season === latest ? achNudge.viewed(r.data) : new Set());
-    setAchStatus('ready');
-  }
-
-  async function loadHistory(silent = false) {
-    if (!silent) setHistStatus('loading');
-    const r = await fetchTeamMatches(season);
-    if (!r.ok) return silent ? undefined : setHistStatus('error');
-    setHistory(r.data.items);
-    setHistNext(r.data.next ?? null);
-    setMoreStatus('idle');
-    setHistStatus('ready');
-  }
-  async function loadMore() {
-    if (!histNext || moreStatus === 'loading') return;
-    setMoreStatus('loading');
-    const r = await fetchTeamMatches(season, histNext);
-    if (!r.ok) return setMoreStatus('error');
-    setHistory((prev) => {
-      const seen = new Set(prev.map((m) => m.id));
-      return [...prev, ...r.data.items.filter((m) => !seen.has(m.id))];
-    });
-    setHistNext(r.data.next ?? null);
-    setMoreStatus('idle');
-  }
-  async function loadStats(silent = false) {
-    if (!silent) setStatsStatus('loading');
-    const r = await fetchTeamStats(season);
-    if (!r.ok) return silent ? undefined : setStatsStatus('error');
-    setStats(r.data);
-    setStatsStatus('ready');
-  }
   function openStats(focus: string | null = null) {
     setStatsFocus(focus);
     switchView('stats');
@@ -1013,120 +885,38 @@ export default function Team() {
                 }
               />
             ) : null}
-            <Card gap={8}>
-              <View
-                style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}
-              >
-                <View style={{ flexGrow: 1, flexShrink: 1, minWidth: 0 }}>
-                  <Txt v="h2">{L.groundTitle}</Txt>
-                  <Txt v="xs" tone="muted">
-                    {L.startersYouthApp({ n: filled, y: LINEUP_SIZE - filled })}
-                  </Txt>
-                </View>
-                <View
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 'auto' }}
-                >
-                  {editable ? (
-                    <Btn
-                      sm
-                      testID="team-auto"
-                      disabled={!players.length}
-                      onPress={() => setSlots(autoFillSlots(slotCodes, players))}
-                    >
-                      {L.autoPlace}
-                    </Btn>
-                  ) : null}
-                  {editable ? (
-                    <Btn sm onPress={() => setPresetsOpen(true)} testID="team-presets">
-                      {L.tpButton}
-                    </Btn>
-                  ) : null}
-                  <Press
-                    testID="team-share"
-                    accessibilityRole="button"
-                    accessibilityLabel={L.shareImageApp}
-                    onPress={() =>
-                      setShare({
-                        name: name || team?.name || L.shareDefaultNameApp,
-                        manager,
-                        logo,
-                        formation,
-                        layout: positions,
-                        cells,
-                        ovr,
-                        lines,
-                        draft: dirty,
-                        season: seasonName,
-                        lounge: !!team && !dirty,
-                      })
-                    }
-                    style={{
-                      width: 36,
-                      height: 36,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: RADIUS.sm,
-                      backgroundColor: c.surface2,
-                    }}
-                  >
-                    <ShareIcon color={c.ink} />
-                  </Press>
-                </View>
-              </View>
-              {editable ? (
-                <View
-                  style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}
-                  accessibilityLabel={L.formationLabelApp}
-                >
-                  {/* T-11-216 시즌 1 배치 프리셋(세부 포지션 자리). 프리시즌 팀은 옛 세 가지만. */}
-                  {[...FORMATION_IDS, ...(season > 0 ? SHAPE_IDS : [])].map((key) => {
-                    const on = (layout ? (matchShape(layout) ?? '') : formation) === key;
-                    return (
-                      <Press
-                        key={key}
-                        testID={`formation-${key}`}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: on }}
-                        onPress={() => {
-                          const id = SHAPE_IDS.find((s) => s === key);
-                          setFormation(id ? shapeBase(id) : (key as FormationId));
-                          setLayout(id ? shapeLayout(id) : null);
-                        }}
-                        style={{
-                          flexBasis: season > 0 ? '18%' : '30%',
-                          flexGrow: 1,
-                          minHeight: 36,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: RADIUS.sm,
-                          borderWidth: on ? 2 : 1,
-                          borderColor: on ? c.accent : c.line,
-                        }}
-                      >
-                        <Txt num bold={on} style={{ fontSize: 12 }}>
-                          {key}
-                        </Txt>
-                      </Press>
-                    );
-                  })}
-                </View>
-              ) : null}
-              {editable && retireSyncing ? (
-                <View style={{ gap: 6 }}>
-                  <Txt v="xs" tone="muted" testID="team-retire-syncing">
-                    {retireRetry === 'failed' ? L.retireSyncFailed : L.retireSyncing}
-                  </Txt>
-                  <Btn
-                    sm
-                    testID="team-retire-retry"
-                    disabled={retireRetry === 'busy'}
-                    onPress={() => void retryRetireSync()}
-                  >
-                    {retireRetry === 'busy' ? L.retireSyncRetrying : L.retireSyncRetry}
-                  </Btn>
-                </View>
-              ) : null}
-            </Card>
+            <TeamFormationToolbar
+              filled={filled}
+              editable={editable}
+              canAutoFill={!!players.length}
+              season={season}
+              formation={formation}
+              layout={layout}
+              onAutoFill={() => setSlots(autoFillSlots(slotCodes, players))}
+              onPresets={() => setPresetsOpen(true)}
+              onShare={() =>
+                setShare({
+                  name: name || team?.name || L.shareDefaultNameApp,
+                  manager,
+                  logo,
+                  formation,
+                  layout: positions,
+                  cells,
+                  ovr,
+                  lines,
+                  draft: dirty,
+                  season: seasonName,
+                  lounge: !!team && !dirty,
+                })
+              }
+              onFormation={(f, l) => {
+                setFormation(f);
+                setLayout(l);
+              }}
+              retireSyncing={retireSyncing}
+              retireRetry={retireRetry}
+              onRetireRetry={() => void retryRetireSync()}
+            />
             {editable && anonNames.length ? (
               <Card testID="team-anon-names">
                 <Txt v="sm">{HO.anonCardsNote({ n: anonNames.length })}</Txt>
@@ -1137,56 +927,14 @@ export default function Team() {
             ) : null}
             {team && season === current ? (
               // T-11-310 감독 칸: 감독은 감독 커리어 화면에서 고른다.
-              <Card gap={8} testID="team-coach">
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
-                    <Txt bold>{MG.teamCoach}</Txt>
-                    <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
-                      {team.coach
-                        ? coachSummary(team.coach, formation, localNames)
-                        : MG.teamCoachEmpty}
-                    </Txt>
-                  </View>
-                  <Btn sm testID="team-coach-manage" onPress={() => go('manager')}>
-                    {MG.teamCoachManage}
-                  </Btn>
-                </View>
-                {coachDetail ? (
-                  <>
-                    <DisclosureRow
-                      open={coachOpen}
-                      onToggle={() => setCoachOpen((v) => !v)}
-                      label={MG.breakdown}
-                      testID="team-coach-breakdown"
-                    />
-                    {coachOpen ? (
-                      <View style={{ gap: 8 }}>
-                        {coachDetail.rows.map((r) => (
-                          <View key={r.line} style={{ gap: 2 }} testID={`coach-line-${r.line}`}>
-                            <Txt bold>
-                              {r.label} {r.total}
-                            </Txt>
-                            <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
-                              {r.parts}
-                            </Txt>
-                            {r.capped ? (
-                              <Txt style={{ fontSize: rem(FONT.label) }}>{r.capped}</Txt>
-                            ) : null}
-                          </View>
-                        ))}
-                        {coachDetail.off.length ? (
-                          <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
-                            {MG.breakdownOff({ names: coachDetail.off.join(' · ') })}
-                          </Txt>
-                        ) : null}
-                        <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
-                          {MG.breakdownNote}
-                        </Txt>
-                      </View>
-                    ) : null}
-                  </>
-                ) : null}
-              </Card>
+              <TeamCoachCard
+                team={team}
+                formation={formation}
+                localNames={localNames}
+                coachDetail={coachDetail}
+                coachOpen={coachOpen}
+                onToggle={() => setCoachOpen((v) => !v)}
+              />
             ) : null}
             <TeamLineup
               onShare={
