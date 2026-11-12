@@ -37,7 +37,7 @@ const NAMES: Record<string, () => string> = {
   bestEleven: () => L.nameBestEleven,
   legendGift: () => L.nameLegendGift,
   oneNation: () => L.nameOneNation,
-  seasonOne: () => L.nameSeasonOne,
+  seasonMates: () => L.nameSeasonMates,
   elite: () => L.nameElite,
   centerBacks: () => L.nameCenterBacks,
   wingers: () => L.nameWingers,
@@ -97,6 +97,8 @@ export function conditionText(rule: ExchangeRule, c: ExchangeCondition): string 
       return L.condSameLeague;
     case 'distinctNations':
       return L.condDistinctNations;
+    case 'sameSeason':
+      return L.condSameSeason;
   }
 }
 
