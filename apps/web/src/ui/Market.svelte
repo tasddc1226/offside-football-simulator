@@ -9,6 +9,8 @@
 </script>
 
 <script lang="ts">
+  import { createMarketData } from './createMarketData.svelte.js';
+  import { runMarketMutation, type MarketMutationResult } from '@offside/app-core/marketMutation';
   import SeasonSelect from './SeasonSelect.svelte';
   import { tick as flush } from 'svelte';
   import Skeleton from './Skeleton.svelte';
@@ -23,20 +25,13 @@
     cancelListing,
     fetchListing,
     createListing,
-    fetchMarket,
-    fetchMarketChart,
-    fetchMarketMe,
     releaseCards,
     setCardLock,
     type MarketCard,
-    type MarketChartPoint,
     type MarketListing,
-    type MarketSale,
-    type MarketMeResponse,
     type MarketSort,
-    isStaleListing,
   } from '@offside/app-core/api/market';
-  import { fetchOwnerTeam, type OwnerTeamResponse, type TeamPlayer } from '@offside/app-core/api/team';
+  import { type TeamPlayer } from '@offside/app-core/api/team';
   import {
     MARKET_POS_FILTERS,
     marketDetailFilters,
@@ -74,7 +69,6 @@
     sellable,
     sellQuote,
     type MarketView,
-    needsOwnerLogin,
     allReleasePicked,
     marketGuestText,
     pickAllIds,
@@ -107,37 +101,32 @@
   let error = $state<string | null>(null);
   let busy = $state(false);
 
-  // 자금 · 구단 가치 · 내 등록 · 최근 거래(1분 메모). 쓰기가 성공하면 apiFetch가 메모를 비우니 다시 받는다.
-  let me = $state<MarketMeResponse | null>(null);
-  let meFailed = $state<string | null>(null);
-  // 로그인 전(세션 없음 · 구글 연결 전) — 매물을 누르면 영입 대신 로그인을 권한다.
-  let guest = $state(false);
-  async function loadMe() {
-    const r = await fetchMarketMe();
-    meFailed = r.ok ? null : r.error.message;
-    guest = !r.ok && needsOwnerLogin(r.error);
-    if (r.ok) me = r.data;
-  }
-  void loadMe();
-
   // 선수 사기 — 정렬·필터(포지션군 → 세부 포지션 · 유형, T-11-474)가 바뀌면 첫 페이지부터.
   let sort = $state<MarketSort>('new');
   let filter = $state<MarketFilter>({});
+  const data = createMarketData({ view: () => view, sort: () => sort, filter: () => filter, teamSeason: () => teamSeason });
+  const { loadMe, loadList, loadTeam } = data;
+  const me = $derived(data.state.me);
+  const meFailed = $derived(data.state.meFailed);
+  const guest = $derived(data.state.guest);
+  const items = $derived(data.state.items);
+  const page = $derived(data.state.page);
+  const hasMore = $derived(data.state.hasMore);
+  const season = $derived(data.state.season);
+  const listStatus = $derived(data.state.listStatus);
+  const recent = $derived(data.state.recent);
+  const indexPoints = $derived(data.state.indexPoints);
+  const team = $derived(data.state.team);
+  const teamFailed = $derived(data.state.teamFailed);
+  void loadMe();
   const pickFilter = (next: MarketFilter) => (filter = pickMarketFilter(filter, next));
   // T-11-500 국적 · 팀으로 찾기 시트(열 때만 고를 거리를 받는다).
   let finding = $state(false);
   const findChips = $derived(marketFindChips(filter));
   const details = $derived(marketDetailFilters(filter.pos));
   const types = $derived(marketTypeFilters(filter.pos));
-  let items = $state<MarketListing[]>([]);
-  let page = $state(0);
-  let hasMore = $state(false);
-  let season = $state<number | null>(null);
-  // T-11-596 카드 시즌 필터에 고를 시즌(목록 응답의 지금 시즌까지).
   const seasonChoices = $derived(marketSeasonChoices(season));
-  let listStatus = $state<'loading' | 'ok' | 'error'>('loading');
   // '방금 이적' — 첫 페이지 응답에 함께 온 최근 거래. 화면 안에서 한 줄씩 넘기기만 하고 서버는 다시 부르지 않는다.
-  let recent = $state<MarketSale[]>([]);
   let tick = $state(0);
   let liveOpen = $state(false);
   const live = $derived(recent.length ? recent[tick % recent.length] : undefined);
@@ -147,47 +136,22 @@
     const t = setInterval(() => !document.hidden && tick++, MARKET_TICKER_MS);
     return () => clearInterval(t);
   });
-  /** 받은 목록(첫 페이지면 그 페이지)을 돌려준다. 못 받으면 null. */
-  async function loadList(next = 0): Promise<MarketListing[] | null> {
-    if (next === 0) listStatus = 'loading';
-    const r = await fetchMarket(sort, filter, next);
-    if (!r.ok) {
-      listStatus = 'error';
-      return null;
-    }
-    items = next === 0 ? r.data.items : [...items, ...r.data.items];
-    // 정렬·포지션을 바꿔도 띠는 이어서 넘긴다(tick을 되돌리지 않는다). 배포 직후 옛 엣지 응답에는 recent가 없다.
-    if (next === 0) recent = r.data.recent ?? [];
-    page = next;
-    hasMore = r.data.hasMore;
-    season = r.data.season;
-    listStatus = 'ok';
-    return r.data.items;
-  }
   // 정렬·포지션을 바꾸면 첫 페이지부터 다시 받는다(loadList가 둘을 읽어 의존한다).
   $effect(() => {
     if (view === 'market') void loadList(0);
   });
   // 시장 지수(최근 7일 · 시장 전체). 선수 사기 탭을 처음 볼 때 한 번(1분 메모).
-  let indexPoints = $state<MarketChartPoint[]>([]);
   let indexAsked = false;
   $effect(() => {
     if (view !== 'market' || indexAsked) return;
     indexAsked = true;
-    void fetchMarketChart('week').then((r) => r.ok && (indexPoints = r.data.points));
+    void data.loadIndex();
   });
   const index = $derived(marketIndex(indexPoints));
   const myListingIds = $derived(new Set(me?.listings.map((l) => l.id) ?? []));
 
   // 팔기는 지금 가진 모든 시즌 선수(T-11-425), 방출은 시즌을 골라 본다(기본은 지금 시즌).
-  let team = $state<OwnerTeamResponse | null>(null);
   let teamSeason = $state<number | undefined>(undefined);
-  let teamFailed = $state(false);
-  async function loadTeam() {
-    const r = await fetchOwnerTeam(view === 'sell' ? undefined : teamSeason);
-    teamFailed = !r.ok;
-    if (r.ok) team = r.data;
-  }
   $effect(() => {
     // 로그인 전이면 내 선수를 묻지 않고 로그인 안내만 보인다(T-11-442).
     if ((view === 'sell' || view === 'release') && !guest) void loadTeam();
@@ -255,25 +219,20 @@
   async function refresh() {
     await Promise.all([loadMe(), view === 'market' ? loadList(0) : view === 'sell' || view === 'release' ? loadTeam() : null]);
   }
-  async function run<T>(send: () => Promise<{ ok: true; data: T } | { ok: false; error: { message: string; reason?: string } }>, done: string) {
-    busy = true;
-    error = null;
-    const sent = buying;
-    const r = await send();
-    if (!r.ok) {
-      // 이미 팔렸거나 가격이 바뀌었으면 목록을 새로 받고, 영입 시트는 새 가격으로 바꾸거나 닫는다(T-11-434).
-      // 새 목록을 받는 동안에도 버튼을 막아 낡은 가격으로 다시 보내지 않는다.
-      if (isStaleListing(r.error)) await settleStale(sent, r.error);
-      else error = r.error.message;
-      busy = false;
-      return;
-    }
-    busy = false;
-    closeSheets();
-    picked = new Set();
-    selling = null;
-    toast(done);
-    await refresh();
+  function run<T>(send: () => Promise<MarketMutationResult<T>>, done: string) {
+    return runMarketMutation(send, done, {
+      sent: buying,
+      setBusy: (next) => (busy = next),
+      setError: (next) => (error = next),
+      settleStale,
+      clearAfterSuccess: () => {
+        closeSheets();
+        picked = new Set();
+        selling = null;
+      },
+      notify: toast,
+      refresh,
+    });
   }
 
   async function settleStale(sent: MarketListing | null, e: { message: string; reason?: string | undefined }) {
