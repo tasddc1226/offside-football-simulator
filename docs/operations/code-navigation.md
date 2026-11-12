@@ -6,7 +6,7 @@
 
 1. `git status --short`로 기존 작업을 확인하고 보존한다. 변경은 작업 ID 브랜치/별도 worktree에서 진행한다.
 2. `node --version`을 확인한다. CI 버전은 `.node-version`이며 `.nvmrc`는 이를 가리킨다. Node 16으로 Corepack을 실행하면 설치 전에 실패할 수 있다. 전역 설정을 바꾸지 말고 해당 셸에서 프로젝트 Node 버전을 선택한다.
-3. 저장소 루트에 `.codegraph/`가 있으면 CodeGraph MCP 또는 `codegraph explore "심볼 또는 파일"`로 먼저 탐색한다. 없으면 `rg --files`, `rg`와 소스를 사용한다. 인덱스 생성 여부는 사용자가 결정한다.
+3. 저장소 루트에 `.codegraph/`가 있으면 CodeGraph MCP 또는 `codegraph explore "심볼 또는 파일"`로 먼저 탐색한다. 없으면 `rg --files`, `rg`와 소스를 사용한다. 기존 인덱스 상태는 `codegraph status`, 변경분 동기화는 `codegraph sync`로 확인한다. 없는 인덱스를 새로 만드는 것은 사용자가 결정한다.
 4. 증상에서 아래 진입점으로 좁힌다. 먼저 호출자와 저장/DB/네트워크 효과를 확인한 뒤 소유 모듈 하나를 바꾼다.
 
 ## 책임 지도
