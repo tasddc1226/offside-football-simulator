@@ -2,6 +2,16 @@ import type { CupTextKey } from '../ko/cup.js';
 
 // T-11-145 오프사이드 컵 서버 문구(영어).
 export const CUP_EN: Record<CupTextKey, string> = {
+  leaguePlacedTitleCycle: 'League Season {season} OFFSIDE League placement',
+  leagueDroppedTitleCycle: 'Your League Season {season} OFFSIDE League entry was cancelled',
+  leagueCancelledTitleCycle: "The League Season {season} OFFSIDE League won't take place",
+  leagueEndTitleCycle: 'Your League Season {season} OFFSIDE League is over',
+  leagueChampionTitleCycle:
+    'League Season {season} OFFSIDE League Tier {tier}, {title}: Champions!',
+  leagueEndBodyChampionCycle:
+    'Tier 1 champions! You earned the League Season {season} League Champion title, {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
+  leagueFillBodyCycle:
+    'A spot opened up above, so you play in Tier {tier} in League Season {season}. You received {s} premium scout ticket(s).',
   completeTitle: '{cup} has ended',
   completeBody: 'Check the cup results and your reward rerolls.',
   predictionRewardBody: 'Check the cup results and the rerolls earned from your predictions.',

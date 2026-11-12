@@ -57,11 +57,11 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   gradeDiamond: '鑽石',
   gradeLegend: '傳奇',
   cupTeamNote: (p: { season: string }) =>
-    `正以 ${p.season} 球隊參加 OFFSIDE 盃。盃賽結束前都可以調整這支球隊的先發。`,
-  cupTeamLink: (p: { season: string }) => `調整參加盃賽的 ${p.season} 球隊`,
+    `${p.season}球隊正在參加賽事。參加中的盃賽或聯賽結束前，可調整這支球隊的先發陣容。`,
+  cupTeamLink: (p: { season: string }) => `調整參賽的${p.season}球隊`,
   preseasonTeamNote:
     '從季前賽培養的球員中，用目前擁有的球員組隊。這支球隊只參加與好友的友誼賽，季前賽排行榜與成就維持不變。',
-  hintCupTeam: '這支球隊只參加 OFFSIDE 盃。排位賽請用目前賽季的球隊進行。',
+  hintCupTeam: '這支球隊參加進行中的盃賽或聯賽。排名賽使用目前賽季的球隊。',
   hintPreseason: '季前賽球隊只參加與好友的友誼賽。排位賽請用目前賽季的球隊進行。',
   // T-11-571 리그 체력
   staminaLabel: '體力',

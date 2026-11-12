@@ -208,7 +208,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   newTitle: '新稱號',
   progress: (p: { value: number; target: number }) => `${p.value}/${p.target}`,
   titleChampion: (p) => `第${p.n}屆${p.d ? ` ${p.d}` : ''} 冠軍`,
-  titleLeagueChampion: (p) => `賽季 ${p.n} 聯賽冠軍`,
+  titleLeagueChampion: (p) => (p.n >= 3 ? `第${p.n}期聯賽冠軍` : `賽季 ${p.n} 聯賽冠軍`),
   titleRunnerup: (p) => `第${p.n}屆${p.d ? ` ${p.d}` : ''} 亞軍`,
   titleSf: (p) => `第${p.n}屆${p.d ? ` ${p.d}` : ''} 四強`,
   titleAria: (p) => `代表稱號 ${p.title}`,

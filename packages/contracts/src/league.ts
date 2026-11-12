@@ -25,6 +25,9 @@ export const LEAGUE_FROM_SEASON = 2;
 export const LEAGUE_SIZE = 8;
 /** 한 바퀴 일정의 라운드 수(같은 리그 7팀과 홈 · 원정 한 번씩). T-11-540부터 시즌 마감까지 이 일정을 되풀이한다. */
 export const LEAGUE_CYCLE = (LEAGUE_SIZE - 1) * 2;
+/** T-11-708: existing season 2 remains unchanged. New league seasons run independently. */
+export const LEAGUE_INDEPENDENT_FROM = 3;
+export const LEAGUE_ROUNDS = LEAGUE_CYCLE * 2;
 
 /**
  * 시즌 일정의 기본값: 개막 7일 전(앞 시즌 막바지)부터 사전 신청을 받고, 개막 뒤 5일은 새 시즌 팀을 꾸리며 계속 받는다.
@@ -62,9 +65,11 @@ export function leagueKickoffAt(
 }
 
 export interface LeagueDef {
-  /** 서비스 시즌(이 시즌 팀만 참가). 시즌마다 리그 일정 하나. */
+  /** League edition ID. Before edition 3 this also identifies the service season. */
   season: number;
-  /** 그 시즌 개막. 이보다 앞선 신청은 사전 신청이다. */
+  /** Card/service season, pinned at the draw. Absent on legacy service-bound leagues. */
+  teamSeason?: number;
+  /** League opening. Earlier entries are preregistrations. */
   startsAt: string;
   opensAt: string;
   closesAt: string;
@@ -73,6 +78,34 @@ export interface LeagueDef {
   /** 라운드별 경기 시각(1라운드부터). */
   rounds: readonly string[];
   minFilled: number;
+}
+
+export const leagueTeamSeason = (league: { season: number; teamSeason?: number | undefined }) =>
+  league.teamSeason ?? league.season;
+
+/** A full 28-round competition. Later editions need one day to enter, not a new team-building period. */
+export function planLeagueCycle(
+  season: number,
+  startsAt: string,
+  teamSeason: number,
+  first = false,
+): LeagueDef {
+  const base = Date.parse(`${kstDay(startsAt)}T00:00:00.000Z`) - KST_MS;
+  const at = (days: number, hour = 0) =>
+    new Date(base + days * DAY_MS + hour * 3_600_000).toISOString();
+  const entryDays = first ? LEAGUE_PLAN_DEFAULTS.entryDays : 1;
+  return {
+    season,
+    teamSeason,
+    startsAt: at(0),
+    opensAt: at(first ? -LEAGUE_PLAN_DEFAULTS.presignDays : 0),
+    closesAt: at(entryDays),
+    drawAt: at(entryDays, LEAGUE_PLAN_DEFAULTS.drawHour),
+    rounds: Array.from({ length: LEAGUE_ROUNDS }, (_, i) =>
+      at(entryDays + i, LEAGUE_PLAN_DEFAULTS.matchHour),
+    ),
+    minFilled: LEAGUE_PLAN_DEFAULTS.minFilled,
+  };
 }
 
 /**
@@ -163,10 +196,13 @@ export interface LeagueLateSlot {
  */
 export function leagueLateSlots(l: LeagueDef): LeagueLateSlot[] {
   const out: LeagueLateSlot[] = [];
+  // A new late league gets a complete home/away cycle (14 rounds), never a partial cycle.
+  const every = l.teamSeason === undefined ? LEAGUE_LATE_EVERY_DAYS : LEAGUE_CYCLE;
+  const min = l.teamSeason === undefined ? LEAGUE_LATE_MIN_ROUNDS : LEAGUE_CYCLE;
   for (let n = 1; ; n++) {
-    const at = new Date(Date.parse(l.drawAt) + n * LEAGUE_LATE_EVERY_DAYS * DAY_MS).toISOString();
+    const at = new Date(Date.parse(l.drawAt) + n * every * DAY_MS).toISOString();
     const i = l.rounds.findIndex((r) => r >= at);
-    if (i < 0 || l.rounds.length - i < LEAGUE_LATE_MIN_ROUNDS) break;
+    if (i < 0 || l.rounds.length - i < min) break;
     out.push({ at, firstRound: i + 1, last: false });
   }
   if (out.length) out[out.length - 1]!.last = true;

@@ -215,7 +215,8 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   newTitle: 'New title',
   progress: (p: { value: number; target: number }) => `${p.value}/${p.target}`,
   titleChampion: (p) => `Cup #${p.n}${p.d ? ` ${p.d}` : ''} Champion`,
-  titleLeagueChampion: (p) => `Season ${p.n} League Champion`,
+  titleLeagueChampion: (p) =>
+    p.n >= 3 ? `League Season ${p.n} Champion` : `Season ${p.n} League Champion`,
   titleRunnerup: (p) => `Cup #${p.n}${p.d ? ` ${p.d}` : ''} Runner-up`,
   titleSf: (p) => `Cup #${p.n}${p.d ? ` ${p.d}` : ''} Semifinalist`,
   titleAria: (p) => `Title: ${p.title}`,

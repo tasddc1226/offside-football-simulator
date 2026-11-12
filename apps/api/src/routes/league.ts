@@ -19,6 +19,7 @@ import {
   leagueNextTier,
   leaguePhase,
   leagueReward,
+  leagueTeamSeason,
   type LeagueOutcome,
 } from '@offside/contracts/league';
 import { displaySeasonAt } from '@offside/contracts/service-seasons';
@@ -149,6 +150,7 @@ const leagueOf = async (c: Context<AppEnv>, now: string) => {
 
 const toInfo = (l: LeagueDef): LeagueResponse['league'] => ({
   season: l.season,
+  ...(l.teamSeason === undefined ? {} : { teamSeason: l.teamSeason }),
   startsAt: l.startsAt,
   opensAt: l.opensAt,
   closesAt: l.closesAt,
@@ -159,10 +161,10 @@ const toInfo = (l: LeagueDef): LeagueResponse['league'] => ({
 
 /** 지금 그 시즌 내 팀과 선발 실카드 수(팀이 없으면 null). 배치 때 같은 기준으로 자격을 본다(2차). */
 async function teamNow(db: Db, league: LeagueDef, profileId: string) {
-  const [team] = await myTeamIn(db, profileId, league.season);
+  const [team] = await myTeamIn(db, profileId, leagueTeamSeason(league));
   if (!team) return null;
   const filled = filledCount(
-    (await lineupsOf(db, league.season, team, team, { coaches: false })).home,
+    (await lineupsOf(db, leagueTeamSeason(league), team, team, { coaches: false })).home,
   );
   return { teamId: team.id, filled, ovr: team.ovr };
 }
@@ -173,7 +175,7 @@ async function teamNow(db: Db, league: LeagueDef, profileId: string) {
  */
 async function lastTeamOf(db: Db, league: LeagueDef, profileId: string, now: string) {
   const season = displaySeasonAt(now);
-  if (season >= league.season) return null;
+  if (season >= leagueTeamSeason(league)) return null;
   const [team] = await myTeamIn(db, profileId, season);
   if (!team) return null;
   const filled = filledCount((await lineupsOf(db, season, team, team, { coaches: false })).home);

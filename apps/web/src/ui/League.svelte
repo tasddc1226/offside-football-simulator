@@ -1,6 +1,7 @@
 <script lang="ts">
   // T-11-418 오프사이드 리그 화면 — 홈의 리그 배너로 연다. 단계 한 줄, 내 신청(사전 신청 · 신청 · 취소 · 배치 준비 상태), 일정,
   // 규칙. T-11-418b 배치 뒤에는 내 배치 · 리그 고르기 · 순위표 · 라운드 경기 · 경기 상세. 처음 열 때 불러오는 지연 청크다.
+  import { requestTeamSeason } from '@offside/app-core/teamOwner';
   import { onMount } from 'svelte';
   import { enterLeague, fetchLeague, fetchLeagueMe, withdrawLeague, type LeagueMeResponse, type LeagueResponse } from '@offside/app-core/api/league';
   import { isMember } from '@offside/app-core/account';
@@ -99,7 +100,7 @@
   function openProfile(teamId: string) {
     if (!data || !pick) return;
     rememberLeagueReturn({ season: data.league.season, pick: { ...pick }, round });
-    appState.hof = { ...hofStart(), tab: 'teams', team: teamId, season: data.league.season };
+    appState.hof = { ...hofStart(), tab: 'teams', team: teamId, season: data.league.teamSeason ?? data.league.season };
     go('hof');
   }
   function openMatch(m: LeagueMatch, table: LeagueTableResponse) {
@@ -127,6 +128,7 @@
   const entryRules = $derived(data ? leagueEntryRules(data, me) : []);
   const teamAction = $derived(data ? leagueTeamAction(data, me) : null);
   function openTeam() {
+    requestTeamSeason(data!.league.teamSeason ?? data!.league.season);
     appState.teamView = 'team';
     go('team');
   }
@@ -173,7 +175,7 @@
           <span class="muted fs-sm" data-league-line>{leagueLine(data)}</span>
           <span class="pill" class:good={leaguePhaseActive(data.phase)}>{leaguePhaseLabel(data.phase)}</span>
         </div>
-        <p class="fs-sm">{L.pitch}</p>
+        <p class="fs-sm">{(data?.league.teamSeason === undefined ? L.pitch : L.cyclePitch)}{#if data?.league.teamSeason} {L.cycleTeam({ season: data.league.teamSeason })}{/if}</p>
         {#if card?.kind === 'login'}
           <p class="muted fs-sm" data-league-login>{card.text}</p>
           <LoginButtons act="league-login-google" back={{ league: true }} />
@@ -199,7 +201,7 @@
             <button class="btn btn-primary btn-block" data-act="league-enter" disabled={busy} onclick={() => (ask = 'enter')}>{busy ? L.entering : L.enter}</button>
           {/if}
           {#if card.note}<p class="muted fs-sm" data-league-note>{card.note}</p>{/if}
-          {#if presign}<p class="muted fs-sm" data-league-presign>{L.presignNote({ season: data.league.season, at: leagueWhen(data.league.startsAt) })}</p>{/if}
+          {#if presign}<p class="muted fs-sm" data-league-presign>{L.presignNote({ season: data.league.teamSeason ?? data.league.season, at: leagueWhen(data.league.startsAt) })}</p>{/if}
           {#if ready}<p class="fs-sm" class:muted={ready.ok} class:league-warn={!ready.ok} data-league-ready={ready.ok ? 'ok' : 'short'}>{ready.text}</p>{/if}
           {#if teamAction}<button class="btn btn-sm league-team-btn" data-act="league-team" onclick={openTeam}>{teamAction}</button>{/if}
           {#if entryRules.length}
@@ -246,7 +248,7 @@
       <section class="card league-sec" data-league-rules>
         <h2>{L.rulesTitle}</h2>
         <ul class="league-rules">
-          {#each leagueRules() as rule (rule)}<li>{rule}</li>{/each}
+          {#each leagueRules(data?.league) as rule (rule)}<li>{rule}</li>{/each}
         </ul>
       </section>
     {/if}

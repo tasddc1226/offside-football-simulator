@@ -1,0 +1,35 @@
+{
+  "id": "t-11-708-league-cycles",
+  "title": "리그를 28라운드씩 진행해요",
+  "items": [
+    "진행 중인 시즌 2 리그는 그대로 마치고, 제3기부터 서비스 시즌과 별개로 28라운드씩 치러요.",
+    "마지막 경기 뒤 보상과 승강을 정하고, 결과를 하루 동안 보여 준 뒤 하루 접수 후 다음 리그를 열어요.",
+    "배치 때 선택한 시즌 팀으로 끝까지 뛰며, 늦은 참가는 중간에 한 번 받아 별도 조에서 14라운드를 치러요."
+  ],
+  "en": {
+    "title": "28-round league seasons",
+    "items": [
+      "The ongoing Season 2 league keeps its schedule. From League Season 3, each league runs for 28 rounds independently of the service season.",
+      "Rewards and promotion or relegation are settled after the final match. Results stay visible for a day, then entries open for a day before the next draw.",
+      "Play with the team season selected at the draw. One late-entry draw creates separate 14-round groups."
+    ]
+  },
+  "ja": {
+    "title": "リーグは全28ラウンドに",
+    "items": [
+      "進行中のシーズン2リーグは従来の日程を維持し、第3期からサービスシーズンと別に全28ラウンドで開催します。",
+      "最終試合後に報酬と昇降格を確定し、結果を1日表示してから1日受付を行い、次のリーグを開きます。",
+      "組み分け時のシーズンのチームで最後まで戦います。途中参加は中間に1回、別の組で14ラウンドを戦います。"
+    ]
+  },
+  "zh": {
+    "title": "聯賽改為每期28輪",
+    "items": [
+      "進行中的第2賽季聯賽維持既有賽程，第3期起獨立於服務賽季進行28輪。",
+      "最後一場後確定獎勵與升降級，展示結果1天，再開放報名1天後進行下一期聯賽。",
+      "使用分組時選定賽季的球隊踢完。中途參加於中間開放一次，另組聯賽進行14輪。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

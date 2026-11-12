@@ -1,5 +1,6 @@
 // T-11-418 오프사이드 리그 화면(홈의 리그 배너로 연다, 웹 League.svelte) — 일정 · 규칙 · 내 신청. T-11-418b 배치 뒤에는
 // 내 배치 · 리그 고르기 · 순위표 · 라운드 경기 · 경기 상세. 리그 한눈에는 누구나, 내 신청은 로그인한 구단주만 묻는다.
+import { requestTeamSeason } from '@offside/app-core/teamOwner';
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -224,6 +225,7 @@ function EntryCard({
   const rules = leagueEntryRules(data, me);
   const teamAction = leagueTeamAction(data, me);
   const openTeam = () => {
+    requestTeamSeason(data!.league.teamSeason ?? data!.league.season);
     appState.teamView = 'team';
     go('team');
   };
@@ -273,7 +275,10 @@ function EntryCard({
       ) : null}
       {leaguePresign(data) ? (
         <Txt v="sm" tone="muted" testID="league-presign">
-          {L.presignNote({ season: league.season, at: leagueWhen(league.startsAt) })}
+          {L.presignNote({
+            season: league.teamSeason ?? league.season,
+            at: leagueWhen(league.startsAt),
+          })}
         </Txt>
       ) : null}
       {ready ? (
@@ -427,7 +432,10 @@ export default function League() {
               </Pill>
             </View>
             <Txt v="sm" tone="muted">
-              {L.pitch}
+              {data?.league.teamSeason === undefined ? L.pitch : L.cyclePitch}
+              {data?.league.teamSeason
+                ? ` ${L.cycleTeam({ season: data.league.teamSeason })}`
+                : null}
             </Txt>
             {/* 접수 중에는 위 한 줄에 신청 수가 있다. */}
             {data.phase !== 'soon' && data.phase !== 'open' ? (
@@ -500,8 +508,8 @@ export default function League() {
                   scrollTo(0);
                 }}
                 onteam={(teamId) => {
-                  const season = data.league.season;
-                  rememberLeagueReturn({ season, pick: { ...pick }, round });
+                  const season = data.league.teamSeason ?? data.league.season;
+                  rememberLeagueReturn({ season: data.league.season, pick: { ...pick }, round });
                   appState.hof = { ...hofStart(), tab: 'teams', team: teamId, season };
                   go('hof');
                 }}
@@ -523,7 +531,7 @@ export default function League() {
             <Txt v="h3" bold accessibilityRole="header">
               {L.rulesTitle}
             </Txt>
-            {leagueRules().map((r) => (
+            {leagueRules(data?.league).map((r) => (
               <Bullet key={r}>{r}</Bullet>
             ))}
           </Card>

@@ -58,12 +58,12 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   gradeDiamond: 'ダイヤ',
   gradeLegend: 'レジェンド',
   cupTeamNote: (p: { season: string }) =>
-    `${p.season}のチームでオフサイドカップに参加しています。カップが終わるまでこのチームのスタメンを変更できます。`,
-  cupTeamLink: (p: { season: string }) => `カップに出る${p.season}のチームを編集`,
+    `${p.season}のチームで大会に参加中です。参加中のカップ・リーグ終了まで先発を編集できます。`,
+  cupTeamLink: (p: { season: string }) => `大会に出る${p.season}のチームを編集`,
   preseasonTeamNote:
     'プレシーズンに育てた選手のうち、今持っている選手で組みます。このチームはフレンドとの親善試合にだけ出場し、プレシーズンのランキングと実績はそのまま残ります。',
   hintCupTeam:
-    'このチームはオフサイドカップにだけ出場します。ランク戦は今のシーズンのチームで行います。',
+    'このチームは参加中のカップ・リーグに出場します。ランク戦は今シーズンのチームで行います。',
   hintPreseason:
     'プレシーズンのチームはフレンドとの親善試合にだけ出場します。ランクマッチは今のシーズンのチームで行います。',
   // T-11-571 리그 체력

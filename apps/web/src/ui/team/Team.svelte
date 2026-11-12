@@ -3,6 +3,7 @@
   import { createTeamMatches } from './teamMatches.svelte.js';
   import { projectTeamDraft } from '@offside/app-core/teamDraftView';
   import LoginButtons from '../LoginButtons.svelte';
+  import { takeTeamSeason } from '@offside/app-core/teamOwner';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import { needsOwnerLogin } from '@offside/app-core/market';
   // T-10-092 구단주 팀 — 시즌마다 그 시즌에 뛰고 은퇴한 내 선수로 11명을 꾸려(빈 자리는 유스 선수가 채운다) 같은 시즌
@@ -348,7 +349,7 @@
     if (sequence === loadSequence && r.ok) players = r.data.players;
   }
   onMount(() => {
-    void load();
+    void load(takeTeamSeason());
     let off: (() => void) | undefined;
     let gone = false;
     void import('../../sync/outbox.js').then((outbox) => {

@@ -2,6 +2,15 @@ import type { CupTextKey } from '../ko/cup.js';
 
 // T-11-145 オフサイドカップのサーバー文言(日本語)。
 export const CUP_JA: Record<CupTextKey, string> = {
+  leaguePlacedTitleCycle: '第{season}期 オフサイドリーグ組分け結果',
+  leagueDroppedTitleCycle: '第{season}期 オフサイドリーグの参加が取り消されました',
+  leagueCancelledTitleCycle: '第{season}期 オフサイドリーグは開催されません',
+  leagueEndTitleCycle: '第{season}期 オフサイドリーグが終わりました',
+  leagueChampionTitleCycle: '第{season}期 オフサイドリーグ{tier}部 {title}優勝！',
+  leagueEndBodyChampionCycle:
+    '1部優勝！第{season}期 リーグ王者の称号と選手候補リロール券{n}枚、プレミアムスカウト券{s}枚、ポテンシャル強化券{b}枚を受け取りました。',
+  leagueFillBodyCycle:
+    '上の部に空きができたので、第{season}期は{tier}部でプレーします。プレミアムスカウト券{s}枚を受け取りました。',
   completeTitle: '{cup}が終了しました',
   completeBody: 'カップの結果と報酬のリロール券を確認してください。',
   predictionRewardBody: 'カップの結果と勝敗予想で獲得したリロール券を確認してください。',

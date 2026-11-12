@@ -532,8 +532,8 @@ export const isPreseasonLegacy = (season: number, current: number | null) =>
   season === 0 && current !== 0;
 
 /**
- * 그 시즌 팀을 고칠 수 있는가: 지금 시즌 팀과 개막 뒤의 프리시즌 팀(친선전용). T-11-552 끝나지 않은 컵에 참가 중인 지난
- * 시즌 팀(cupSeason, 서버가 알려 준다)은 컵이 끝날 때까지 컵 명단으로 고친다.
+ * 그 시즌 팀을 고칠 수 있는가: 지금 시즌 팀과 개막 뒤의 프리시즌 팀(친선전용). T-11-552 끝나지 않은 컵·리그에 참가 중인 지난
+ * 시즌 팀(cupSeason, 서버가 알려 준다)은 컵이 끝날 때까지 대회 명단으로 고친다.
  */
 export const teamEditableIn = (season: number, current: number | null, cupSeason?: number | null) =>
   season === current || isPreseasonLegacy(season, current) || (season > 0 && season === cupSeason);
@@ -594,3 +594,14 @@ export const achCatShort = (id: AchCategory): string =>
     owner: L.achCatShortOwner,
     manager: L.achCatShortManager,
   })[id];
+
+/** T-11-708: open the team bound to a league edition, even across service-season changes. */
+let requestedTeamSeason: number | undefined;
+export const requestTeamSeason = (season: number) => {
+  requestedTeamSeason = season;
+};
+export const takeTeamSeason = () => {
+  const season = requestedTeamSeason;
+  requestedTeamSeason = undefined;
+  return season;
+};

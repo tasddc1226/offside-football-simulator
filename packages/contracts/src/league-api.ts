@@ -16,6 +16,7 @@ export const LeaguePhaseSchema = z.enum(['soon', 'open', 'closed', 'running', 'd
 
 export const LeagueInfoSchema = z.strictObject({
   season: z.number().int().min(1),
+  teamSeason: z.number().int().min(1).optional(),
   /** 그 시즌 개막. 이보다 앞선 신청은 사전 신청이다. */
   startsAt: IsoUtcSchema,
   opensAt: IsoUtcSchema,

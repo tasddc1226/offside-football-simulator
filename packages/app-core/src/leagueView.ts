@@ -1,6 +1,11 @@
 // T-11-418 오프사이드 리그 화면 규칙(웹 · 앱 공통): 단계 이름, 배너 한 줄, 일정 줄, 신청 불가 이유. 날짜는 한국 시간이다.
 import { KST_MS } from '@offside/contracts/kst';
-import { LEAGUE_FORFEIT_GOALS, LEAGUE_FORFEIT_LIMIT, LEAGUE_SIZE } from '@offside/contracts/league';
+import {
+  leagueTeamSeason,
+  LEAGUE_FORFEIT_GOALS,
+  LEAGUE_FORFEIT_LIMIT,
+  LEAGUE_SIZE,
+} from '@offside/contracts/league';
 import type {
   LeagueMatch,
   LeagueMeResponse,
@@ -126,18 +131,18 @@ export function leagueSchedule(l: LeagueResponse['league']) {
 }
 
 /** 규칙 목록(화면 순서). T-11-444 맨 앞에 부 · 리그 용어 두 줄. */
-export const leagueRules = () => [
+export const leagueRules = (league?: LeagueResponse['league']) => [
   L.termTier,
   L.termLeague,
-  L.ruleEntry,
-  L.ruleLate,
+  league?.teamSeason === undefined ? L.ruleEntry : L.cycleEntry,
+  league?.teamSeason === undefined ? L.ruleLate : L.cycleLate,
   L.ruleTiers,
   L.rulePoints,
-  L.ruleMove,
+  league?.teamSeason === undefined ? L.ruleMove : L.cycleMove,
   L.ruleKickoff,
   L.ruleLock,
-  L.ruleForfeit,
-  L.ruleReward,
+  league?.teamSeason === undefined ? L.ruleForfeit : L.cycleForfeit,
+  league?.teamSeason === undefined ? L.ruleReward : L.cycleReward,
 ];
 
 /** 홈 배너를 보일지: 리그가 끝나면 숨긴다. */
@@ -174,7 +179,7 @@ export function leagueReadiness(
   if (data.phase !== 'open' && !(data.phase === 'closed' && me.entry) && !leagueLate(data, me))
     return null;
   const min = data.league.minFilled;
-  const season = data.league.season;
+  const season = leagueTeamSeason(data.league);
   if (leaguePresign(data, now)) {
     const last = me.lastTeam;
     return last
@@ -207,7 +212,7 @@ export function leagueEntryRules(
     return [];
   const min = data.league.minFilled;
   return [
-    L.entryRuleEligible({ season: data.league.season, min }),
+    L.entryRuleEligible({ season: leagueTeamSeason(data.league), min }),
     L.entryRuleForfeit({ min, limit: LEAGUE_FORFEIT_LIMIT }),
   ];
 }
@@ -222,6 +227,12 @@ export function leagueTeamAction(
   now = Date.now(),
 ): string | null {
   if (!me?.entry) return null;
+  if (
+    data.league.teamSeason !== undefined &&
+    me.placement?.status === 'placed' &&
+    !me.placement.final
+  )
+    return L.fixLineup;
   const waiting = leagueLate(data, me) === 'waiting';
   if (!waiting && (data.phase === 'open' ? leaguePresign(data, now) : data.phase !== 'closed'))
     return null;

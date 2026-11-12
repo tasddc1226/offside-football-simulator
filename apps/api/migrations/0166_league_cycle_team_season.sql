@@ -1,0 +1,1 @@
+ALTER TABLE `league_seasons` ADD `team_season` integer;

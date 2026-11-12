@@ -7,7 +7,7 @@ import {
   checkLineupPlayers,
 } from '../team/saveOwnerTeam.js';
 import { requireOwner } from '../middleware/requireOwner.js';
-import { activeCupSeasonsQuery } from '../team/cup.js';
+import { activeCompetitionSeasonsQuery } from '../team/cup.js';
 import { checkCupLineup } from '../team/competitionLineup.js';
 import {
   ClubAchievementsResponseSchema,
@@ -94,9 +94,9 @@ import {
   enhanceOpenFrom,
   leagueFatigueFrom,
 } from '../db/repos/balance.js';
-import { leagueMatches, ownerTeams } from '../db/schema.js';
+import { leagueMatches, leagueState, ownerTeams } from '../db/schema.js';
 import { FATIGUE_LOOKBACK, startStreaks } from '../team/fatigue.js';
-import { and, desc, eq, isNotNull, or } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm';
 import { edgeCached, purgeEdge, waitUntil } from '../edgeCache.js';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -177,12 +177,7 @@ const coachOf = teamCoachOf;
  * T-11-571 내 팀의 리그 체력(켜져 있을 때만). 이 팀의 최근 리그 경기 몇 판의 선발로 다음 라운드 기준 연속 선발 수를 센다.
  * 꺼져 있으면 쿼리하지 않는다.
  */
-async function fatigueOf(
-  db: Db,
-  teamId: string,
-  season: number,
-  balance: Parameters<typeof leagueFatigueFrom>[0],
-) {
+async function fatigueOf(db: Db, teamId: string, balance: Parameters<typeof leagueFatigueFrom>[0]) {
   const rate = leagueFatigueFrom(balance);
   if (rate <= 0) return null;
   const played = await db
@@ -193,9 +188,10 @@ async function fatigueOf(
       detailJson: leagueMatches.detailJson,
     })
     .from(leagueMatches)
+    .innerJoin(leagueState, eq(leagueState.season, leagueMatches.season))
     .where(
       and(
-        eq(leagueMatches.season, season),
+        sql`${leagueState.doneAt} IS NULL`,
         isNotNull(leagueMatches.playedAt),
         or(eq(leagueMatches.homeTeamId, teamId), eq(leagueMatches.awayTeamId, teamId)),
       ),
@@ -223,12 +219,16 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         foundersOf(db, [me.id]),
         activeBalanceQuery(db),
         membersOf(db, [me.id], now),
-        activeCupSeasonsQuery(db, me.id),
+        activeCompetitionSeasonsQuery(db, me.id),
       ]);
     const current = teamSeasonAt(now);
-    // T-11-552 끝나지 않은 컵에 참가 중인 지난 시즌(시즌 1 제3회 컵). 그 시즌 팀은 컵 명단으로 고친다.
-    const cupSeason =
-      cupSeasons.map((r) => r.season).find((s) => current !== null && s > 0 && s < current) ?? null;
+    // T-11-552 끝나지 않은 컵·리그에 참가 중인 지난 시즌(시즌 1 제3회 컵). 그 시즌 팀은 컵 명단으로 고친다.
+    const pastCompetitionSeasons = cupSeasons
+      .map((r) => r.season)
+      .filter((s) => current !== null && s > 0 && s < current);
+    const cupSeason = pastCompetitionSeasons.includes(season)
+      ? season
+      : (pastCompetitionSeasons[0] ?? null);
     // T-11-113 개막 뒤의 프리시즌 팀은 친선전용 편성을 보이고 고친다(지금 가진 선수만).
     const editableSeason = season === current || season === 0 || season === cupSeason;
     const found = teams.find((t) => t.season === season);
@@ -253,8 +253,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         eligible.set(id, career);
     }
     const coach = team ? await coachOf(db, team) : null;
-    const fatigue =
-      team && season === current ? await fatigueOf(db, team.id, season, balance) : null;
+    const fatigue = team && editableSeason ? await fatigueOf(db, team.id, balance) : null;
     return ok(
       c,
       OwnerTeamResponseSchema,
