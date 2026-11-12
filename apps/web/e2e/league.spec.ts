@@ -591,6 +591,7 @@ test('독립 리그는 28라운드와 참가 팀 시즌을 구분하고 편성 �
 }) => {
   await page.setViewportSize({ width: 320, height: 780 });
   await page.clock.setFixedTime(new Date('2026-11-13T03:00:00.000Z'));
+  await page.addInitScript(() => localStorage.setItem('ft_partner_amachuggu_hide', '2026-11-13'));
   const independent = {
     season: 5,
     teamSeason: 3,
