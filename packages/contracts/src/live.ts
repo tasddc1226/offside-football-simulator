@@ -40,9 +40,12 @@ export const LiveEventSchema = z.discriminatedUnion('kind', [
 ]);
 export type LiveEvent = z.infer<typeof LiveEventSchema>;
 
-/** 오늘(한국 시각 자정부터) 숫자와 지금 뛰는 중(최근 시즌을 올린 진행 중 커리어) 수. */
+/** 오늘(한국 시각 자정부터) 숫자와 활성 WebSocket 접속 수. */
 export const LiveStatsSchema = z.strictObject({
+  /** 구버전 호환용. online을 숫자로만 받던 클라이언트에 전달한다. */
   playing: z.number().int().nonnegative(),
+  /** 로그인·비로그인 포함, 브라우저/앱 단위. null은 조회 불가, 누락은 구버전 응답이다. */
+  online: z.number().int().nonnegative().nullable().optional(),
   seasonsToday: z.number().int().nonnegative(),
   newToday: z.number().int().nonnegative(),
   retiredToday: z.number().int().nonnegative(),
@@ -74,4 +77,6 @@ export type LiveRetiredNumber = {
 /** T-10-072 실시간 소켓(`LIVE_SOCKET_PATH`)으로 오는 메시지. event는 피드 한 줄과 같은 모양이다. 모르는 type은
  * 웹이 버린다(옛 탭은 retiredNumber를 무시한다). */
 export type LivePush =
-  { type: 'event'; event: LiveEvent } | { type: 'retiredNumber'; item: LiveRetiredNumber };
+  | { type: 'event'; event: LiveEvent }
+  | { type: 'retiredNumber'; item: LiveRetiredNumber }
+  | { type: 'presence'; online: number; at: string };

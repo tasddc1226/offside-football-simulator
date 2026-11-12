@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { LiveResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
+import { fakeHub } from '../test/liveHub.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
   issueCookie,
@@ -28,16 +29,38 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
 
   beforeEach(async () => {
     ctx = await createTestD1();
+    ctx.env.LIVE = fakeHub(7).ns;
     cookie = (await issueCookie(ctx)).cookie;
   });
   afterEach(async () => {
     await ctx.dispose();
   });
 
-  it('로그인 없이 읽고, 아무 기록도 없으면 0과 빈 피드다', async () => {
+  it('로그인 없이 읽고, 시즌 기록이 없어도 접속 수를 보여 준다', async () => {
     const data = await read(ctx);
-    expect(data.stats).toEqual({ playing: 0, seasonsToday: 0, newToday: 0, retiredToday: 0 });
+    expect(data.stats).toEqual({
+      playing: 7,
+      online: 7,
+      seasonsToday: 0,
+      newToday: 0,
+      retiredToday: 0,
+    });
     expect(data.feed).toEqual([]);
+  });
+
+  it('허브 조회가 불가능하면 접속 수는 null이고 피드는 계속 제공한다', async () => {
+    delete ctx.env.LIVE;
+    const data = await read(ctx);
+    expect(data.stats.online).toBeNull();
+    expect(data.feed).toEqual([]);
+    const hub = fakeHub();
+    hub.ns.get = (() => ({
+      presence: async () => {
+        throw new Error('unavailable');
+      },
+    })) as never;
+    ctx.env.LIVE = hub.ns;
+    expect((await read(ctx)).stats.online).toBeNull();
   });
 
   it('시즌·은퇴 업로드가 최신순 피드와 오늘 숫자로 보인다 — 선수당 한 줄', async () => {
@@ -58,7 +81,13 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
     await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, { ...summary, lastClubId: 'pl-15' });
 
     const data = await read(ctx);
-    expect(data.stats).toEqual({ playing: 2, seasonsToday: 19, newToday: 3, retiredToday: 1 });
+    expect(data.stats).toEqual({
+      playing: 7,
+      online: 7,
+      seasonsToday: 19,
+      newToday: 3,
+      retiredToday: 1,
+    });
     // A는 은퇴 소식만, B는 최신 시즌(2027)만 남는다.
     expect(data.feed.map((e) => e.kind)).toEqual(['retire', 'season', 'season']);
     expect(data.feed[0]).toMatchObject({
@@ -199,6 +228,6 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
     // 1시간 안엔 없어 24시간·7일로 넓혔다 — 3시간 전 A(최신 시즌 하나)만 남고 8일 전 B는 빠진다.
     expect(data.feed).toHaveLength(1);
     expect(data.feed[0]).toMatchObject({ kind: 'season', goals: 0 });
-    expect(data.stats.playing).toBe(0);
+    expect(data.stats.online).toBe(7); // 시즌 업로드 시각과 무관한 실제 접속 수
   });
 });

@@ -24,7 +24,7 @@ const season = (min: number, over: Record<string, unknown> = {}) => ({
 });
 const live = {
   now: new Date(NOW).toISOString(),
-  stats: { playing: 3, seasonsToday: 17, newToday: 0, retiredToday: 2 },
+  stats: { online: 3, playing: 3, seasonsToday: 17, newToday: 0, retiredToday: 2 },
   feed: [
     {
       kind: 'retire',
@@ -61,7 +61,7 @@ test('숫자와 소식 티커를 보여 주고, 한 줄씩 올라가다 일시�
   await expect(card.getByRole('heading', { name: '지금 오프사이드에서는' })).toBeVisible();
   // 0인 숫자(오늘 새 선수)는 숨긴다.
   await expect(card.locator('[data-live-stat]')).toHaveCount(3);
-  await expect(card.locator('[data-live-stat="playing"]')).toContainText('3지금 뛰는 중');
+  await expect(card.locator('[data-live-stat="playing"]')).toContainText('3현재 접속 중');
   await expect(card.locator('[data-live-stat="new"]')).toHaveCount(0);
 
   const first = await rowsText(page);
@@ -97,7 +97,7 @@ test('실시간 소켓으로 온 새 소식이 바로 맨 위에 보이고 숫�
   await stub(page);
   let sendEvent: (e: unknown) => void = () => {};
   let connected = false;
-  await page.routeWebSocket(`${API.replace('http', 'ws')}/v1/live/ws`, (ws) => {
+  await page.routeWebSocket(`${API.replace('http', 'ws')}/v1/live/ws*`, (ws) => {
     sendEvent = (event) => ws.send(JSON.stringify({ type: 'event', event }));
     connected = true;
   });
@@ -117,6 +117,25 @@ test('실시간 소켓으로 온 새 소식이 바로 맨 위에 보이고 숫�
   await expect(card).not.toContainText('옛 소식 FC');
   await expect(card.locator('[data-live-stat="seasons"]')).toContainText('18');
   await expect(card.locator('[data-live-stat="new"]')).toContainText('1오늘 새 선수');
+});
+
+test('로그인 없이 접속 수를 받고, 소켓 증감은 오늘 시즌 수와 별개로 표시한다', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await stub(page);
+  let presence: (online: number) => void = () => {};
+  await page.routeWebSocket(`${API.replace('http', 'ws')}/v1/live/ws*`, (ws) => {
+    presence = (online) =>
+      ws.send(
+        JSON.stringify({ type: 'presence', online, at: new Date(NOW + 60_000).toISOString() }),
+      );
+    presence(4); // 첫 GET 응답보다 먼저 도착해도 유지한다.
+  });
+  await page.goto('/');
+  const card = page.locator('[data-home-live]');
+  await expect(card.locator('[data-live-stat="playing"]')).toContainText('4현재 접속 중');
+  presence(0);
+  await expect(card.locator('[data-live-stat="playing"]')).toContainText('0현재 접속 중');
+  await expect(card.locator('[data-live-stat="seasons"]')).toContainText('17');
 });
 
 test('은퇴 소식을 누르면 그 선수 상세가 열린다', async ({ page }) => {
@@ -169,7 +188,7 @@ test('서버에 연결하지 못하면 같은 자리에 안내를 띄우고, 아
   await page.unroute(`${API}/v1/live`);
   await stub(page, {
     now: new Date().toISOString(),
-    stats: { playing: 0, seasonsToday: 0, newToday: 0, retiredToday: 0 },
+    stats: { online: null, playing: 0, seasonsToday: 0, newToday: 0, retiredToday: 0 },
     feed: [],
   });
   await page.reload();

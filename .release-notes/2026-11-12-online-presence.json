@@ -1,0 +1,26 @@
+{
+  "id": "2026-11-12-online-presence",
+  "title": "현재 접속 현황",
+  "items": [
+    "홈에서 로그인 여부와 관계없이 현재 접속 중인 웹·앱 수를 볼 수 있어요. 같은 브라우저의 여러 탭은 한 번만 세요."
+  ],
+  "en": {
+    "title": "Online now",
+    "items": [
+      "The home screen now shows active web and app connections, including guests. Multiple tabs in the same browser count once."
+    ]
+  },
+  "ja": {
+    "title": "現在の接続状況",
+    "items": [
+      "ホームでログインの有無にかかわらず、現在接続中のウェブ・アプリ数を確認できます。同じブラウザーの複数タブは1つとして数えます。"
+    ]
+  },
+  "zh": {
+    "title": "目前在線狀況",
+    "items": [
+      "首頁現在會顯示目前連線中的網頁與 App 數量，包含未登入的訪客。同一瀏覽器的多個分頁只計算一次。"
+    ]
+  },
+  "availability": "web-app"
+}

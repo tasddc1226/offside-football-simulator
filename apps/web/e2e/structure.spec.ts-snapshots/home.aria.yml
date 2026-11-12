@@ -12,7 +12,7 @@
     - region "지금 오프사이드에서는":
         - text: Live
         - heading "지금 오프사이드에서는" [level=2]
-        - text: /3 지금 뛰는 중 \d+ 오늘 치른 시즌 5 오늘 새 선수 2 오늘 은퇴/
+        - text: /3 현재 접속 중 \d+ 오늘 치른 시즌 5 오늘 새 선수 2 오늘 은퇴/
         - list:
             - listitem:
                 - button /김오프 은퇴 · 레전드 점수 \d+/

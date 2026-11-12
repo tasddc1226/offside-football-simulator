@@ -227,7 +227,7 @@ test('다른 유저의 영구결번이 확정되면 플레이 중인 화면 위�
   const OTHER = '0d000000-0000-4000-8000-00000000000b';
   let push: (item: unknown) => void = () => {};
   let connected = false;
-  await page.routeWebSocket(`${API.replace('http', 'ws')}/v1/live/ws`, (ws) => {
+  await page.routeWebSocket(`${API.replace('http', 'ws')}/v1/live/ws*`, (ws) => {
     push = (item) => ws.send(JSON.stringify({ type: 'retiredNumber', item }));
     connected = true;
   });

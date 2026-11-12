@@ -18,6 +18,7 @@ import {
   advanceCursor,
   applyLoad,
   applyPush,
+  applyPresence,
   emptyHomeLive,
   feedOf,
   isRolling,
@@ -102,6 +103,10 @@ export function HomeLive() {
     }, POLL_MS);
     const sub = AppState.addEventListener('change', (s) => s === 'active' && void load());
     const disconnect = onLive((p) => {
+      if (p.type === 'presence') {
+        setLive((prev) => applyPresence(prev, p));
+        return;
+      }
       if (p.type !== 'event') return;
       interrupt();
       setLive((prev) => applyPush(prev, p.event));

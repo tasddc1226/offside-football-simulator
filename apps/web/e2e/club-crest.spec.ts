@@ -65,7 +65,7 @@ const snapshot = {
 };
 const live = {
   now: new Date().toISOString(),
-  stats: { playing: 1, seasonsToday: 2, newToday: 0, retiredToday: 1 },
+  stats: { online: 1, playing: 1, seasonsToday: 2, newToday: 0, retiredToday: 1 },
   feed: [
     {
       kind: 'retire',

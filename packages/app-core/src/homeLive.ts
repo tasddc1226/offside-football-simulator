@@ -1,6 +1,6 @@
 // 홈 라이브 현황(웹 HomeLive.svelte · 모바일 HomeLive.tsx 공용). 서버에 실제로 올라온 시즌·은퇴 기록과 실시간 소켓 소식을
 // 합쳐 티커 줄·숫자 칸·문구를 정하는 순수 로직만 둔다. 타이머·모션·상태 반응성은 각 앱이 맡는다.
-import type { LiveEvent, LiveResponse, LiveStats } from '@offside/contracts';
+import type { LiveEvent, LivePush, LiveResponse, LiveStats } from '@offside/contracts';
 import { LIVE_FEED_MAX } from '@offside/contracts/polling';
 import { tn } from '@offside/game/i18n/names';
 import { playerName } from './format.js';
@@ -13,6 +13,7 @@ export const LIVE_VISIBLE = 3;
 
 export interface HomeLiveState {
   data: LiveResponse | null;
+  presence: Extract<LivePush, { type: 'presence' }> | null;
   /** 소켓으로 받은 소식(최신순). 마지막 조회(data.now) 뒤에 올라온 것만 둔다 — 조회 결과 위에 얹는다. */
   pushed: LiveEvent[];
   /** 방금 받은 새 소식(점이 한 번 튄다). */
@@ -22,6 +23,7 @@ export interface HomeLiveState {
 
 export const emptyHomeLive = (): HomeLiveState => ({
   data: null,
+  presence: null,
   pushed: [],
   fresh: new Set(),
   cursor: 0,
@@ -34,7 +36,7 @@ export const STATS = [
     get label() {
       return L.statPlaying;
     },
-    of: (s: LiveStats) => s.playing,
+    of: (s: LiveStats) => s.online ?? null,
   },
   {
     key: 'seasons',
@@ -81,10 +83,11 @@ export const tone = (e: LiveEvent) =>
 export const feedOf = (l: HomeLiveState): LiveEvent[] =>
   l.data ? [...l.pushed, ...l.data.feed].slice(0, LIVE_FEED_MAX) : [];
 
-/** 조회 숫자에 아직 담기지 않은 소식만큼 더한다('지금 뛰는 중'은 조회로만 바뀐다). */
+/** 오늘 숫자에는 새 소식만 더하고, 접속 수는 최신 서버 시각의 조회/소켓 응답을 쓴다. */
 export function statsOf(l: HomeLiveState): LiveStats | null {
   if (!l.data) return null;
   const s = { ...l.data.stats };
+  if (l.presence && l.presence.at >= l.data.now) s.online = l.presence.online;
   for (const e of l.pushed) {
     if (e.kind === 'retire') s.retiredToday++;
     else {
@@ -95,9 +98,13 @@ export function statsOf(l: HomeLiveState): LiveStats | null {
   return s;
 }
 
-/** 값이 0보다 큰 숫자 칸만. */
+/** 확인된 접속 0명도 표시한다. 조회 불가는 빼고, 오늘 숫자는 양수만 표시한다. */
 export const statTiles = (s: LiveStats | null) =>
-  s ? STATS.map((t) => ({ ...t, n: t.of(s) })).filter((t) => t.n > 0) : [];
+  s
+    ? STATS.map((t) => ({ ...t, n: t.of(s) })).filter(
+        (t): t is typeof t & { n: number } => t.n != null && (t.key === 'playing' || t.n > 0),
+      )
+    : [];
 
 /** 조회 결과를 받았다: 새로 생긴 소식이 있으면 맨 위(가장 최근)부터 다시 보여 준다. */
 export function applyLoad(prev: HomeLiveState, r: LiveResponse): HomeLiveState {
@@ -105,6 +112,7 @@ export function applyLoad(prev: HomeLiveState, r: LiveResponse): HomeLiveState {
   const added = prev.data ? r.feed.map(keyOf).filter((k) => !before.has(k)) : [];
   return {
     data: r,
+    presence: prev.presence,
     pushed: prev.pushed.filter((e) => e.at > r.now),
     fresh: new Set(added),
     cursor: added.length ? 0 : prev.cursor,
@@ -122,6 +130,17 @@ export function applyPush(prev: HomeLiveState, e: LiveEvent): HomeLiveState {
     fresh: new Set([key]),
     cursor: 0,
   };
+}
+
+/** 접속 수는 피드 조회보다 먼저 올 수 있다. 캐시된 GET이 늦게 도착해도 새 값을 덮지 않는다. */
+export function applyPresence(
+  prev: HomeLiveState,
+  p: Extract<LivePush, { type: 'presence' }>,
+): HomeLiveState {
+  if (!Number.isInteger(p.online) || p.online < 0 || !Number.isFinite(Date.parse(p.at)))
+    return prev;
+  if (prev.presence && prev.presence.at > p.at) return prev;
+  return { ...prev, presence: p };
 }
 
 /** 티커가 한 줄 올라갔다: 커서를 다음 줄로. */
