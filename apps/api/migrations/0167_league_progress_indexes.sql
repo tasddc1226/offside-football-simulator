@@ -1,0 +1,2 @@
+CREATE INDEX `league_matches_season_round_idx` ON `league_matches` (`season`,`round`);--> statement-breakpoint
+CREATE INDEX `league_matches_open_round_idx` ON `league_matches` (`season`,`round`) WHERE "league_matches"."played_at" is null;

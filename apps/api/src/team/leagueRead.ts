@@ -45,16 +45,21 @@ export const inLeague = (e: LeagueEntryRow) =>
   (e.status === 'active' || e.status === 'forfeited') && e.tier !== null && e.teamId !== null;
 
 /** 끝난 라운드 수(모든 경기를 치른 앞쪽 라운드 수)와 일정에 남은 마지막 라운드. 경기가 없으면 둘 다 0. */
+// T-11-716 예전에는 시즌 경기 행을 전부(운영 약 7,500행, 넓은 detail_json 포함) 읽어 MIN · MAX · COUNT를 셌다. 이제
+// 마지막 라운드는 league_matches_season_round_idx의 끝 한 행, 안 치른 첫 라운드는 부분 인덱스
+// league_matches_open_round_idx(played_at IS NULL)의 첫 한 행으로 찾는다. 결과는 같다(경기가 없으면 last가 NULL).
 export async function leagueProgress(db: Db, season: number) {
   const row = await db.$client
     .prepare(
-      `SELECT MIN(CASE WHEN played_at IS NULL THEN round END) AS open, MAX(round) AS last, COUNT(*) AS n
-       FROM league_matches WHERE season = ?`,
+      `SELECT
+         (SELECT MAX(round) FROM league_matches INDEXED BY league_matches_season_round_idx WHERE season = ?1) AS last,
+         (SELECT round FROM league_matches INDEXED BY league_matches_open_round_idx
+           WHERE season = ?1 AND played_at IS NULL ORDER BY round LIMIT 1) AS open`,
     )
     .bind(season)
-    .first<{ open: number | null; last: number | null; n: number }>();
-  if (!row?.n) return { played: 0, last: 0 };
-  const last = row.last ?? 0;
+    .first<{ open: number | null; last: number | null }>();
+  if (row?.last == null) return { played: 0, last: 0 };
+  const last = row.last;
   return { played: row.open === null ? last : row.open - 1, last };
 }
 
