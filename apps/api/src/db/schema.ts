@@ -1693,6 +1693,11 @@ export const leagueMatches = sqliteTable(
     ),
     // 시각이 된 경기(cron).
     index('league_matches_season_at_idx').on(table.season, table.at),
+    // T-11-716 리그 진행도: 마지막 라운드(MAX)와 아직 안 치른 첫 라운드를 행 하나로 찾는다(넓은 경기 행을 다 읽지 않게).
+    index('league_matches_season_round_idx').on(table.season, table.round),
+    index('league_matches_open_round_idx')
+      .on(table.season, table.round)
+      .where(sql`${table.playedAt} is null`),
     // 명단 잠금 · 팀 통계.
     index('league_matches_home_team_idx').on(table.homeTeamId),
     index('league_matches_away_team_idx').on(table.awayTeamId),
