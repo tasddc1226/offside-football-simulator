@@ -34,6 +34,7 @@
     {/each}
   </div>
   <p class="muted stat-note"><b>{L.noteBold}</b>{L.noteRest({ role: d.roleName ?? '' })} {L.shareNote}</p>
+  {#if d.ovrBlock}<p class="stat-note" data-ovr-block><b>{L.blockTitle}</b> · {L.blockLine(d.ovrBlock)}</p>{/if}
   {#if d.growthNote}<p class="stat-note growth-slow" data-growth-slow><b>{L.growthTitle}</b> · {d.growthNote}</p>{/if}
   {#await import('./GrowthDir.svelte') then M}<M.default info={d.growthDir} />{/await}
 </section>

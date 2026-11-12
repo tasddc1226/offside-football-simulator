@@ -223,6 +223,12 @@ export function AttrCard({ s }: { s: GameState }) {
         <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700' }}>{L.noteBold}</Txt>
         {`${L.noteRest({ role: d.roleName })} ${L.shareNote}`}
       </Txt>
+      {d.ovrBlock ? (
+        <Txt style={{ fontSize: rem(FONT.caption), marginTop: 6 }} testID="ovr-block">
+          <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700' }}>{L.blockTitle}</Txt>
+          {` · ${L.blockLine(d.ovrBlock)}`}
+        </Txt>
+      ) : null}
       {d.growthNote ? (
         <Txt style={{ fontSize: rem(FONT.caption), marginTop: 6, color: c.warn }}>
           <Txt style={{ fontSize: rem(FONT.caption), fontWeight: '700', color: c.warn }}>

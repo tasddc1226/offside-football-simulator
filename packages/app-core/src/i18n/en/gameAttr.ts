@@ -11,4 +11,7 @@ export const gameAttr: Translation<GameAttrMsgs> = {
   shareLabel: (p) => `${p.pct}% of OVR`,
   shareNote: 'The % shows how much each attribute counts toward OVR in your current position.',
   growthTitle: 'Why growth is slow',
+  blockTitle: 'Holding your OVR back most',
+  blockLine: (p) =>
+    `${p.name} ${p.value} (${p.pct}% of OVR) · Raising it to 99 adds about ${p.gain} OVR`,
 };

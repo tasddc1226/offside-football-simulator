@@ -4,6 +4,8 @@ import type { GamePotentialMsgs } from '../ko/gamePotential';
 export const gamePotential: Translation<GamePotentialMsgs> = {
   peekLocked: '完成第一個賽季後就能查看球探評價。',
   peekAvailable: '真正的潛力會在退役時公開。只查看評價不會改變潛力。',
+  peekNote:
+    '球探評價是有誤差的估計，21 歲 · 24 歲重新評價時範圍會縮小。隱藏潛力在 25 歲前會起伏，因此可能與退役時公開的真正潛力不同。',
   peekShown: (p) => `${p.grade}級 · ${p.year}賽季球探評價`,
   peekBtnFree: '查看本賽季評價',
   peekBtnAd: '觀看廣告查看本賽季評價',

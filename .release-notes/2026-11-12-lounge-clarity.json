@@ -1,0 +1,38 @@
+{
+  "id": "t-11-711-potential-ovr-clarity",
+  "title": "잠재력 · OVR 안내 보강",
+  "items": [
+    "감독 커리어의 재계약 요구에 그 선수의 포지션 · 나이 · OVR이 함께 보여요",
+    "후보 카드의 잠재력 범위와 선수 탭의 스카우트 평가가 무엇을 뜻하는지 설명을 붙였어요",
+    "OVR 90부터 능력치 카드에 OVR을 가장 많이 막는 능력치가 보여요",
+    "게임 가이드에 잠재력 숫자 세 가지의 차이와 OVR이 99에 닿지 않는 이유를 더했어요"
+  ],
+  "en": {
+    "title": "Clearer potential and OVR info",
+    "items": [
+      "Manager renewal requests now show the player's position, age and OVR.",
+      "Added explanations of the candidate potential range and the scouting report on the Player tab.",
+      "From OVR 90, the Attributes card shows which attribute holds your OVR back most.",
+      "The game guide now explains the three potential values and why OVR can stop short of 99."
+    ]
+  },
+  "ja": {
+    "title": "ポテンシャル・OVRの案内を強化",
+    "items": [
+      "監督キャリアの再契約要求に、その選手のポジション・年齢・OVRが表示されます。",
+      "候補カードのポテンシャル範囲と選手タブのスカウト評価の意味を説明しました。",
+      "OVR90からは能力値カードに、OVRを一番抑えている能力値が表示されます。",
+      "ゲームガイドに、ポテンシャルの3つの数値の違いとOVRが99に届かない理由を追加しました。"
+    ]
+  },
+  "zh": {
+    "title": "潛力 · OVR 說明強化",
+    "items": [
+      "總教練生涯的續約要求會一起顯示該球員的位置 · 年齡 · OVR。",
+      "補充了候選卡潛力範圍與球員分頁球探評價的說明。",
+      "OVR 90 起，能力值卡會顯示最拖累 OVR 的能力值。",
+      "遊戲指南新增了三種潛力數值的差異，以及 OVR 到不了 99 的原因。"
+    ]
+  },
+  "availability": "web-app"
+}

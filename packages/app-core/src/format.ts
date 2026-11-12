@@ -3,6 +3,7 @@ import { growthDirection, growthSlowNote, labelOf } from '@offside/game/engine';
 import { LEAGUES } from '@offside/game/data';
 import type { AttrKey } from '@offside/game/data';
 import {
+  ovr,
   ovrRole,
   mainRole,
   roleChoices,
@@ -230,11 +231,32 @@ export function attrData(s: GameState) {
     roleName: ROLE_NAME[role],
     roles,
     groups,
+    ovrBlock: ovrBlockOf(s, W),
     growthNote: growthSlowNote(s),
     // T-11-379 골 · 도움(또는 수비 평점)에 가장 크게 쓰이는 능력치(문장은 ratingReport growthDirectionText).
     growthDir: growthDirFor(s),
   };
 }
+
+/** T-11-711 OVR 90부터 이 OVR을 가장 많이 막는 세부 능력치(반영 비중 × 99까지 남은 값이 가장 큰 것).
+ * "다 99인데 왜 98이에요" 같은 질문에 답한다. 99까지 올렸을 때 오를 OVR(소수 첫째 자리)을 함께 준다. 없으면 null. */
+function ovrBlockOf(s: GameState, W: Record<string, number>) {
+  if (ovr(s) < OVR_BLOCK_FROM || ovr(s) >= 99) return null;
+  let best: { key: string; gain: number } | null = null;
+  for (const [k, w] of Object.entries(W)) {
+    const gain = w * (99 - (s.sub[k] ?? 0));
+    if (gain > (best?.gain ?? 0)) best = { key: k, gain };
+  }
+  if (!best || best.gain < 0.1) return null;
+  return {
+    key: best.key,
+    name: SUBS[best.key]!,
+    value: Math.round(s.sub[best.key]!),
+    pct: Math.round(W[best.key]! * 100),
+    gain: Math.round(best.gain * 10) / 10,
+  };
+}
+const OVR_BLOCK_FROM = 90;
 
 /** T-11-379 성장 방향 원자료(ratingReport의 GrowthDirInfo와 같은 모양). */
 export function growthDirFor(s: GameState) {

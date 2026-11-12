@@ -16,6 +16,8 @@ test('T-11-133 웹은 자금을 내고 이번 시즌 스카우트 평가를 연�
   const before = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).money);
   await page.locator('[data-act="pot-peek"]').click();
   await expect(page.locator('[data-pot]')).toHaveText(/등급 · 2034 시즌 스카우트 평가/);
+  // T-11-711 연 평가 아래에 스카우트 평가가 추정이라는 설명이 붙는다.
+  await expect(page.locator('[data-pot-note]')).toContainText('오차가 있는 추정');
   await expect(page.locator('[data-pot-peek]')).toHaveCount(0);
   const after = await page.evaluate(() => JSON.parse(localStorage.getItem('ft_save')!).money);
   expect(before - after).toBe(57150);

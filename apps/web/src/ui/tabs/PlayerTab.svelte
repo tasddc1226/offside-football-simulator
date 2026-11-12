@@ -204,6 +204,7 @@
       <dt>{L.value}</dt><dd data-value>{fmtValue(value)}</dd>
     {/if}
   </dl>
+  {#if pot.kind === 'shown'}<p class="muted fs-sm" data-pot-note>{pot.note}</p>{/if}
   {#if pot.kind === 'available' || pot.kind === 'short'}
     <div class="pot-peek" data-pot-peek={pot.kind}>
       <p class="muted fs-sm">{pot.text}</p>

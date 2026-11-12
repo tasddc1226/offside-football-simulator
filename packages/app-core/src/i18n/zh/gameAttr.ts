@@ -11,4 +11,6 @@ export const gameAttr: Translation<GameAttrMsgs> = {
   shareLabel: (p) => `OVR 反映 ${p.pct}%`,
   shareNote: '% 是反映到目前位置 OVR 的比例。',
   growthTitle: '成長緩慢的原因',
+  blockTitle: '最拖累 OVR 的能力值',
+  blockLine: (p) => `${p.name} ${p.value}（OVR 反映 ${p.pct}%）· 練到 99 時 OVR 約提升 ${p.gain}`,
 };

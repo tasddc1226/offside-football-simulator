@@ -21,7 +21,7 @@ export type PeekView =
   | { kind: 'available'; text: string; button: string; label: string; badge?: string }
   /** 웹 — 자금이 모자라다. */
   | { kind: 'short'; text: string }
-  | { kind: 'shown'; grade: string; text: string };
+  | { kind: 'shown'; grade: string; text: string; note: string };
 
 /** 첫 시즌 전 안내 — 언어가 정해진 뒤에 읽도록 함수로 둔다. */
 export const peekLocked = (): string => L.peekLocked;
@@ -52,7 +52,7 @@ export function peekView(s: GameState, peek: PotentialPeek | null, offer: PeekOf
   if (!potScouted(s)) return { kind: 'locked', text: L.peekLocked };
   if (peekOpen(s, peek)) {
     const grade = potLabel(s);
-    return { kind: 'shown', grade, text: L.peekShown({ grade, year: s.year }) };
+    return { kind: 'shown', grade, text: L.peekShown({ grade, year: s.year }), note: L.peekNote };
   }
   if (offer !== 'pay')
     return {

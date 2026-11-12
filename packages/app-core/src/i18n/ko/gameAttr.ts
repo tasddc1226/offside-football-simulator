@@ -15,6 +15,10 @@ const ko = {
   shareNote: '% 숫자는 지금 포지션 OVR에 반영되는 비율이에요.',
   /** T-11-353 성장을 가장 크게 줄이는 이유 한 줄의 머리말. */
   growthTitle: '성장이 느린 이유',
+  /** T-11-711 OVR 90부터 OVR을 가장 많이 막는 세부 능력치 한 줄. gain은 99까지 올렸을 때 오를 OVR(소수). */
+  blockTitle: 'OVR을 가장 많이 막는 능력치',
+  blockLine: (p: { name: string; value: number; pct: number; gain: number }) =>
+    `${p.name} ${p.value} (OVR 반영 ${p.pct}%) · 99까지 올리면 OVR이 ${p.gain}쯤 올라요`,
 };
 
 export type GameAttrMsgs = typeof ko;

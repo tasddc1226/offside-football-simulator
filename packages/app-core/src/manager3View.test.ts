@@ -5,7 +5,7 @@ import { M3_ROLES, acceptOffer, renewalEventWage, type M3Event } from '@offside/
 import { setStorage } from '@offside/game/storage';
 import { fmtValue } from './format.js';
 import { loadManager3State } from './manager3.js';
-import { eventView, sortSquad } from './manager3View.js';
+import { eventView, playerLine, sortSquad } from './manager3View.js';
 
 const career: ManagerCareer = {
   id: 'mgr_00000000-0000-4000-8000-000000000689',
@@ -68,7 +68,7 @@ describe('감독 커리어 3 화면 (T-11-689)', () => {
     expect(sortSquad(s.squad, 'wage')).toHaveLength(before.length);
   });
 
-  it('재계약 요구는 답하기 전 지금 주급과 받아들일 때 주급을, 받아들인 뒤 새 주급을 보여 준다', () => {
+  it('재계약 요구는 선수 포지션 · 나이 · OVR과 함께 답하기 전 지금 주급과 받아들일 때 주급을, 받아들인 뒤 새 주급을 보여 준다', () => {
     const s = clubState();
     const p = s.squad[0]!;
     p.wage = 12_300;
@@ -79,13 +79,13 @@ describe('감독 커리어 3 화면 (T-11-689)', () => {
 
     const open = eventView(s, ev);
     expect(open.detail).toBe(
-      `지금 주급 ${fmtValue(12_300)} · 재계약하면 ${fmtValue(16_000)} · 계약 1시즌 남음`,
+      `${playerLine(p)} · 지금 주급 ${fmtValue(12_300)} · 재계약하면 ${fmtValue(16_000)} · 계약 1시즌 남음`,
     );
 
     p.wage = next;
     p.contract = 3;
     expect(eventView(s, { ...ev, choice: 0 }).detail).toBe(
-      `새 주급 ${fmtValue(16_000)} · 계약 3시즌`,
+      `${playerLine(p)} · 새 주급 ${fmtValue(16_000)} · 계약 3시즌`,
     );
     expect(eventView(s, { ...ev, choice: 1 }).detail).toBeNull();
     // 다른 이야기는 숫자 줄이 없다.

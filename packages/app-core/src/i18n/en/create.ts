@@ -102,7 +102,7 @@ export const create: Translation<CreateMsgs> = {
   potentialWatch:
     'Finish the ad to reveal the potential grade ranges of all 3 candidates. The ad only shows the range and never changes the potential.',
   potentialHelp:
-    'Starting potential grade range. Training and boosts can change it. Potential is drawn with the same odds for every player, and grade S is very rare.',
+    'The 10-point band your starting potential falls in. B–A means 80–89. Potential drifts at random until age 25 and can rise through boosts and events. It is drawn with the same odds for every player, and grade S is very rare.',
   potentialWeb: 'Watch a rewarded ad in the app to reveal all 3 starting potential grade ranges.',
   potentialLogin:
     'All three candidates have the same attribute total but a different spread. Reveal the starting potential grade range with club funds or an app ad.',
