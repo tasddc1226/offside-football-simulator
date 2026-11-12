@@ -25,8 +25,9 @@ Run lint and typecheck before declaring any task done.
 
 ## Navigation & Routing
 
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
+- Expo Router owns the app entry and deep-link routes in `src/app/`; `_layout.tsx` initializes the native shell. Keep route-specific navigation there.
+- Game screens live in `src/screens/` and are selected by `appState.screen` in `src/app/index.tsx`. Use the existing navigation helpers and `navStack` in `src/game/host.ts` for screen transitions and Android back behavior; do not replace these transitions with Expo Router routes.
+- Use `expo-router` APIs only when changing the existing route or deep-link layer.
 - Docs: https://docs.expo.dev/router/introduction.md
 
 ## Building with EAS
