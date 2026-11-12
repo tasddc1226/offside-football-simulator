@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { createTeamRecords } from './teamRecords.svelte.js';
+  import { createTeamMatches } from './teamMatches.svelte.js';
   import { projectTeamDraft } from '@offside/app-core/teamDraftView';
   import LoginButtons from '../LoginButtons.svelte';
   import { seasonLabel } from '@offside/app-core/seasonName';
@@ -17,27 +19,15 @@
     YOUTH_NAME,
     YOUTH_OVR,
     usesRankLadder,
-    type AchCategory,
     type FormationId,
     type TeamPosition,
   } from '@offside/contracts/owner-team';
   import {
-    fetchClubAchievements,
-    fetchOpponents,
     fetchOwnerTeam,
-    fetchTeamMatches,
-    fetchTeamStats,
-    playLiveMatch,
     saveOwnerTeam,
     saveTeamPresets,
-    type ClubAchievementsResponse,
-    type TeamStatsResponse,
     type OwnerTeam,
     type OwnerTeamResponse,
-    type PlayTeamMatchResponse,
-    type TeamLive as TeamLiveData,
-    type TeamMatch,
-    type TeamOpponent,
     type TeamPlayer,
   } from '@offside/app-core/api/team';
   import { localCareerNames } from '@offside/game/hof-store';
@@ -66,7 +56,6 @@
   import { cupPresetOf, loadPreset, presetOf, presetSummary, withSeasonCupPreset, type TeamPreset } from '@offside/app-core/teamPresets';
   import { friendsUi } from '../friendInvite.svelte.js';
   import { shellText as S } from '@offside/app-core/i18n/ko/shell';
-  import { achNudge } from '../achNudge.js';
   import { fixSlot, slotName } from '@offside/app-core/matchReport';
   import type { ReportLine } from '@offside/contracts/owner-team';
   import { cupText as CT } from '@offside/app-core/i18n/ko/cup';
@@ -83,7 +72,7 @@
   import CupLineupBand from '../cup/CupLineupBand.svelte';
   import { involves, lockAtOf, lockWhen } from '../cup/cupView.js';
   import { readTeamDraft, teamDraftBase, writeTeamDraft, type TeamDraft } from './teamDraft.js';
-  import { markDivisionSeen, takeDivisionChange, type DivisionShift } from '@offside/app-core/teamDivision';
+  import { takeDivisionChange } from '@offside/app-core/teamDivision';
 
   let status = $state<LoadStatus>('loading');
   let needLogin = $state(false);
@@ -138,43 +127,14 @@
   let enhancing = $state<TeamPlayer | null>(null);
   let enhanceOpen = $state(false);
 
-  let opponents = $state<TeamOpponent[]>([]);
-  let oppStatus = $state<LoadStatus>('loading');
-  /** T-11-510 시즌 2 자동 매칭에서 이번 경기의 '다른 상대 찾기' 횟수(경기를 치르면 0으로). */
-  let oppPick = $state(0);
-  /** T-11-603 큐에서 찾은 상대(경기를 치르거나 상대가 무효가 되면 비운다). 탭을 다녀와도 남는다. */
-  let rankFound = $state<TeamOpponent | null>(null);
-  const ladder = $derived(usesRankLadder(team?.season ?? 0));
-  let playing = $state(false);
-  let result = $state<TeamMatch | null>(null);
-  /** T-11-375 방금 치른 경기의 내 디비전 전후(결과 창 승격 · 강등), 받은 경기로 바뀐 디비전 알림. */
-  let divisionShift = $state<DivisionShift | null>(null);
   let divisionNotice = $state<string | null>(null);
-  let resultOrigin = $state<'opponents' | 'history'>('opponents');
-  /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
-  let live = $state(false);
-  /** T-11-387 방금 시작한 장면 경기의 고를 장면(중계가 끝나면 비운다). */
-  let liveMoments = $state<TeamLiveData | undefined>();
-  /** T-11-098 오늘 남은 친선전(친선전 결과 화면의 '다시 경기하기'). */
-  let friendlyLeft = $state(0);
+  const ladder = $derived(usesRankLadder(team?.season ?? 0));
+  const matches = createTeamMatches({ team: () => team, season: () => season, setMatchesLeft: (n) => (matchesLeft = n), setMatchesNextAt: (at) => (matchesNextAt = at), clearDivisionNotice: () => (divisionNotice = null), show: (v) => show(v), openHistoryResult: () => switchView('result') });
   // T-10-130 팀 안의 화면은 appState.teamView — 뒤로 가기로 오간다. 결과는 이 화면에만 있어 다시 들어왔을 때(앞으로 가기)
   // 없으면 팀을 보여 준다.
-  const view = $derived(appState.teamView === 'result' && !result ? 'team' : appState.teamView);
+  const view = $derived(appState.teamView === 'result' && !matches.state.result ? 'team' : appState.teamView);
   const show = (v: TeamView) => (appState.teamView = v);
-  let history = $state<TeamMatch[]>([]);
-  let histStatus = $state<LoadStatus>('loading');
-  /** T-11-269 경기 기록 다음 쪽 커서('더 보기'), 시즌 통계와 경기 결과에서 누른 선수. */
-  let histNext = $state<string | null>(null);
-  let moreStatus = $state<'idle' | 'loading' | 'error'>('idle');
-  let stats = $state<TeamStatsResponse | null>(null);
-  let statsStatus = $state<LoadStatus>('loading');
-  let statsFocus = $state<string | null>(null);
-  let ach = $state<ClubAchievementsResponse | null>(null);
-  let achStatus = $state<LoadStatus>('loading');
-  /** T-11-028 업적 화면에서 보고 있는 분류(선수·팀·구단주·감독). */
-  let achCat = $state<AchCategory>('player');
-  /** T-11-034 지난번 업적 탭을 본 뒤 새로 오른 업적(NEW). */
-  let achNewIds = $state<ReadonlySet<string>>(new Set());
+  const records = createTeamRecords(() => season);
 
   // 서버에는 비공개 이름이 없다 — 이 기기에서 은퇴한 선수는 이 기기에 남은 이름을 쓴다.
   const localNames = localCareerNames();
@@ -457,7 +417,7 @@
 
   async function saveAndFindOpponents() {
     if (!await save()) return;
-    if (appState.screen === 'team' && view === 'opponents' && !matchHint && !ladder) await loadOpponents();
+    if (appState.screen === 'team' && view === 'opponents' && !matchHint && !ladder) await matches.loadOpponents();
   }
 
   // ───────── 경기 ─────────
@@ -469,157 +429,20 @@
     toast(r.data.locked ? MARKET_TOAST.locked : MARKET_TOAST.unlocked);
   }
 
-  async function loadOpponents() {
-    oppStatus = 'loading';
-    const r = await fetchOpponents(oppPick);
-    if (!r.ok) {
-      oppStatus = 'error';
-      return;
-    }
-    opponents = r.data.items;
-    oppStatus = 'ready';
-  }
-
-  async function challenge(o: TeamOpponent) {
-    if (playing) return;
-    playing = true;
-    // T-11-387 랭크 경기는 문자중계 도중 장면을 고르는 경기로 시작한다(결과는 중계가 끝날 때 onfinal로 온다).
-    const r = await playLiveMatch(o.teamId);
-    playing = false;
-    if (!r.ok) {
-      if (r.error.reason === 'TEAM_MATCH_DAILY_LIMIT') matchesLeft = 0;
-      if (r.error.reason === 'TEAM_OPPONENT_DAILY_LIMIT') {
-        opponents = opponents.filter((x) => x.teamId !== o.teamId);
-        rankFound = null;
-      }
-      // T-11-510 상대 RP가 그새 멀어졌다 — 같은 횟수로 새 상대를 받는다(T-11-603 시즌 2는 큐로 돌아가 다시 찾는다).
-      if (r.error.reason === 'TEAM_OPPONENT_STALE') {
-        if (ladder) rankFound = null;
-        else void loadOpponents();
-      }
-      return toast(r.error.message);
-    }
-    oppPick = 0;
-    rankFound = null;
-    result = r.data.match;
-    liveMoments = r.data.live;
-    resultOrigin = 'opponents';
-    live = true;
-    matchesLeft = r.data.matchesLeft;
-    matchesNextAt = r.data.matchesNextAt ?? null;
-    divisionNotice = null;
-    applyPlayed(r.data);
-    show('result');
-    window.scrollTo(0, 0);
-  }
-
-  /** 경기 결과의 기록 · 레이팅을 내 팀에 반영한다(장면 경기는 시작 때 경기 전 값, 끝날 때 결과 값이 온다). */
-  function applyPlayed(r: PlayTeamMatchResponse) {
-    // T-11-375 승격 · 강등 띠는 마감한 결과에만 온다(장면 경기 시작 응답에는 없다).
-    divisionShift = r.division ?? null;
-    if (!team) return;
-    team.record = r.record;
-    team.rating = r.rating;
-    if (r.division) {
-      team.division = r.division.to;
-      markDivisionSeen(season, r.division.to);
-    }
-  }
-
-  /** 장면 경기가 끝났다 — 결과 화면을 마감한 경기로 바꾼다. */
-  function liveFinal(r: PlayTeamMatchResponse) {
-    result = r.match;
-    liveMoments = undefined;
-    matchesLeft = r.matchesLeft;
-    matchesNextAt = r.matchesNextAt ?? null;
-    applyPlayed(r);
-  }
-
-  // T-11-098 친선전 결과(방금 치른 경기는 중계부터, 최근 친선전은 결과부터). 결과에서 돌아가면 '경기' 탭의 친구 쪽이다.
-  function openFriendly(m: TeamMatch, left: number, fresh: boolean) {
-    result = m;
-    divisionShift = null;
-    resultOrigin = 'opponents';
-    live = fresh;
-    friendlyLeft = left;
-    show('result');
-    window.scrollTo(0, 0);
-  }
-
   // ───────── 시즌 업적 ─────────
-  async function loadAchievements(want = season) {
-    achStatus = 'loading';
-    const r = await fetchClubAchievements(want);
-    if (!r.ok) {
-      achStatus = 'error';
-      return;
-    }
-    ach = r.data;
-    // T-11-034 가장 최근 시즌을 열면 본 것으로 적고, 지난번 뒤로 새로 오른 업적에 NEW를 붙여 그 분류·단계를 펼친다.
-    const latest = Math.max(r.data.season, ...r.data.seasons.map((o) => o.id));
-    achNewIds = r.data.season === latest ? achNudge.viewed(r.data) : new Set();
-    const first = r.data.groups.find((g) => g.items.some((i) => achNewIds.has(i.id)));
-    if (first) achCat = first.category;
-    achStatus = 'ready';
-  }
-
-  async function loadHistory() {
-    histStatus = 'loading';
-    const r = await fetchTeamMatches(season);
-    if (!r.ok) {
-      histStatus = 'error';
-      return;
-    }
-    history = r.data.items;
-    histNext = r.data.next ?? null;
-    moreStatus = 'idle';
-    histStatus = 'ready';
-  }
-  async function loadMore() {
-    if (!histNext || moreStatus === 'loading') return;
-    moreStatus = 'loading';
-    const cursor = histNext;
-    const r = await fetchTeamMatches(season, cursor);
-    if (histNext !== cursor) return;
-    if (!r.ok) {
-      moreStatus = 'error';
-      return;
-    }
-    const seen = new Set(history.map((m) => m.id));
-    history = [...history, ...r.data.items.filter((m) => !seen.has(m.id))];
-    histNext = r.data.next ?? null;
-    moreStatus = 'idle';
-  }
-  async function loadStats() {
-    statsStatus = 'loading';
-    const r = await fetchTeamStats(season);
-    if (!r.ok) {
-      statsStatus = 'error';
-      return;
-    }
-    stats = r.data;
-    statsStatus = 'ready';
-  }
   /** 지난 경기 결과를 연다(기록 탭 · T-11-603 랭크 매칭의 최근 전적). */
-  function openHistoryMatch(m: TeamMatch) {
-    result = m;
-    divisionShift = null;
-    resultOrigin = 'history';
-    live = false;
-    switchView('result');
-  }
   function openStats(focus: string | null = null) {
-    statsFocus = focus;
+    records.state.statsFocus = focus;
     switchView('stats');
   }
 
   // 화면마다 불러올 내용. 다른 화면에서 들어오면(뒤로·앞으로 가기 포함) 아래 $effect가, 이미 그 화면이면 open이 다시 불러온다.
   const LOAD = {
     // T-11-603 시즌 2는 매칭 찾기를 누를 때 상대를 받는다.
-    opponents: () => (matchHint || ladder || friendsUi.mode === 'friends' ? undefined : loadOpponents()),
-    achievements: () => loadAchievements(),
-    history: loadHistory,
-    stats: loadStats,
+    opponents: () => (matchHint || ladder || friendsUi.mode === 'friends' ? undefined : matches.loadOpponents()),
+    achievements: () => records.loadAchievements(),
+    history: records.loadHistory,
+    stats: records.loadStats,
   };
   function open(v: keyof typeof LOAD) {
     if (appState.teamView === v) void LOAD[v]();
@@ -630,7 +453,7 @@
     if (status !== 'ready' || needLogin) return;
     if (v in LOAD) untrack(() => void LOAD[v as keyof typeof LOAD]());
   });
-  const navOn = $derived(view === 'result' ? resultOrigin : view === 'stats' ? 'history' : view);
+  const navOn = $derived(view === 'result' ? matches.state.resultOrigin : view === 'stats' ? 'history' : view);
   /** T-11-379 리포트 '고칠 곳'으로 고른 자리 — 편성 화면이 그 자리를 골라 둔 채 열린다. */
   let focusSlot = $state<number | null>(null);
   function reportFix(line: ReportLine): { pos: string; go: () => void } | null {
@@ -668,7 +491,7 @@
         <LoginButtons back={null} />
       </section>
     {:else if view === 'achievements'}
-      <TeamAchievements {ach} status={achStatus} newIds={achNewIds} bind:cat={achCat} load={(s) => void loadAchievements(s)} onrank={openAchRanking} />
+      <TeamAchievements ach={records.state.ach} status={records.state.achStatus} newIds={records.state.achNewIds} bind:cat={records.state.achCat} load={(s) => void records.loadAchievements(s)} onrank={openAchRanking} />
     {:else if view === 'team'}
       {#if pendingDraft}
         <section class="card draft-notice" role="status">
@@ -776,82 +599,82 @@
       <TeamPresets bind:open={presetsOpen} {presets} hasTeam={!!team} locked={!!cupBand?.locked && !cupPreset} cupLocked={!!cupBand?.locked} cup={season > 0} league={leagueSummary} seasonOnly={!!cupRule?.cup.cup.seasonCardsOnly} cupPast={cupPreset ? cupDraft.past : 0} onseason={() => void makeSeasonCup()} draft={presetDraft} persist={persistPresets} onload={applyPreset} />
     {:else if view === 'opponents'}
       <div class="seg two tm-mode" role="group" aria-label={L.matchKindLabel}>
-        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && !ladder && oppStatus !== 'ready') void loadOpponents(); }}>{L.modeRanked}</button>
+        <button class="hof-sort" aria-pressed={friendsUi.mode === 'ranked'} data-match-mode="ranked" onclick={() => { if (friendsUi.mode === 'ranked') return; friendsUi.mode = 'ranked'; if (!matchHint && !ladder && matches.state.oppStatus !== 'ready') void matches.loadOpponents(); }}>{L.modeRanked}</button>
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}{#if appState.friendReq}<span class="btn-dot" data-friend-dot><span class="sr-only">{S.friendReq({ n: appState.friendReq })}</span></span>{/if}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
-        <TeamFriends onplayed={(m, left) => openFriendly(m, left, true)} onopen={(m, left) => openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
+        <TeamFriends onplayed={(m, left) => matches.openFriendly(m, left, true)} onopen={(m, left) => matches.openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
       {:else}
       <TeamOpponents
         rating={team?.rating ?? TEAM_RATING_START}
         {matchesLeft}
         {perDay}
-        {opponents}
-        status={oppStatus}
-        {playing}
+        opponents={matches.state.opponents}
+        status={matches.state.oppStatus}
+        playing={matches.state.playing}
         hint={matchHint}
-        onreload={() => void loadOpponents()}
-        onchallenge={(o) => void challenge(o)}
+        onreload={() => void matches.loadOpponents()}
+        onchallenge={(o) => void matches.challenge(o)}
         onmore={() => open('opponents')}
         {ladder}
         {team}
         teamLogo={logo}
-        bind:found={rankFound}
-        bind:pick={oppPick}
-        onopenmatch={openHistoryMatch}
+        bind:found={matches.state.rankFound}
+        bind:pick={matches.state.oppPick}
+        onopenmatch={matches.openHistoryMatch}
         ontoTeam={editable ? () => switchView('team') : undefined}
         onsave={season === current && dirty && filled > 0 && matchesLeft > 0 ? () => void saveAndFindOpponents() : undefined}
         {saving}
         saveDisabled={!nameOk || !!pendingDraft}
       />
       {/if}
-    {:else if view === 'result' && result}
-      {#if live}
-        {#key result.id}
+    {:else if view === 'result' && matches.state.result}
+      {#if matches.state.live}
+        {#key matches.state.result.id}
           <TeamLive
-            match={result}
+            match={matches.state.result}
             name={eventName}
-            live={liveMoments}
-            onfinal={liveFinal}
-            onend={() => ((live = false), (liveMoments = undefined), window.scrollTo(0, 0))}
+            live={matches.state.liveMoments}
+            onfinal={matches.liveFinal}
+            onend={() => ((matches.state.live = false), (matches.state.liveMoments = undefined), window.scrollTo(0, 0))}
           />
         {/key}
       {:else}
         <TeamResult
-          m={result}
+          m={matches.state.result}
           {team}
-          shift={divisionShift}
+          shift={matches.state.divisionShift}
           {eventName}
-          matchesLeft={result.friendly ? friendlyLeft : matchesLeft}
+          matchesLeft={matches.state.result.friendly ? matches.state.friendlyLeft : matchesLeft}
           ontoTeam={() => switchView('team')}
-          onreplay={() => (live = true)}
+          onreplay={() => (matches.state.live = true)}
           onagain={() => open('opponents')}
-          onhistory={resultOrigin === 'history' ? () => switchView('history') : undefined}
+          onhistory={matches.state.resultOrigin === 'history' ? () => switchView('history') : undefined}
           onplayer={(id) => openStats(id)}
           fix={reportFix}
         />
       {/if}
     {:else if view === 'history'}
       <TeamHistory
-        {history}
-        status={histStatus}
+        history={records.state.history}
+        status={records.state.histStatus}
         record={team?.record ?? null}
         {seasonName}
-        more={!!histNext}
-        {moreStatus}
-        onreload={() => void loadHistory()}
-        onopen={openHistoryMatch}
-        onmore={() => void loadMore()}
+        more={!!records.state.histNext}
+        moreStatus={records.state.moreStatus}
+        onreload={() => void records.loadHistory()}
+        onopen={matches.openHistoryMatch}
+        onmore={() => void records.loadMore()}
         onstats={() => openStats()}
       />
     {:else if view === 'stats'}
       <TeamStats
-        {stats}
-        status={statsStatus}
+        stats={records.state.stats}
+        status={records.state.statsStatus}
         {seasonName}
-        focus={statsFocus}
+        focus={records.state.statsFocus}
         name={eventName}
-        onreload={() => void loadStats()}
+        onreload={() => void records.loadStats()}
         onback={() => switchView('history')}
       />
     {/if}

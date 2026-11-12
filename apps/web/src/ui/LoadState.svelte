@@ -1,5 +1,6 @@
 <script lang="ts" module>
-  export type LoadStatus = 'loading' | 'ready' | 'error';
+  import type { LoadStatus as SharedLoadStatus } from './loadStatus.js';
+  export type LoadStatus = SharedLoadStatus;
 </script>
 
 <script lang="ts">
