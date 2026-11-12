@@ -3,7 +3,7 @@ import { ns } from '../core';
 
 const ko = {
   title: '지금 오프사이드에서는',
-  statPlaying: '지금 뛰는 중',
+  statPlaying: '현재 접속 중',
   statSeasons: '오늘 치른 시즌',
   statNew: '오늘 새 선수',
   statRetired: '오늘 은퇴',

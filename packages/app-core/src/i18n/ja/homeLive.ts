@@ -3,7 +3,7 @@ import type { HomeLiveMsgs } from '../ko/homeLive';
 
 export const homeLive: Translation<HomeLiveMsgs> = {
   title: 'いまのOFFSIDE',
-  statPlaying: 'プレー中',
+  statPlaying: '現在接続中',
   statSeasons: '今日のシーズン数',
   statNew: '今日の新選手',
   statRetired: '今日の引退',

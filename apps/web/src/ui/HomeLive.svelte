@@ -1,5 +1,5 @@
 <script lang="ts">
-  // T-10-030 홈 라이브 현황. 서버에 실제로 올라온 시즌·은퇴 기록으로 "지금 뛰는 중" 숫자와 소식 티커를
+  // T-10-030 홈 라이브 현황. 현재 WebSocket 접속 수와 서버에 올라온 시즌·은퇴 소식 티커를
   // 보여 준다(가짜 활동 없음). 1분마다 새로 받고(T-10-045: 폴링은 분 단위 — CLAUDE.md), 그 사이 새 소식은 실시간
   // 소켓으로 바로 받아 맨 위에 끼운다(T-10-072 — 다음 조회가 그 소식을 담으면 조회 결과로 넘긴다). 티커는 3.5초마다 한 줄씩 올라간다 — 감속 모션이면
   // 움직이지 않고 최신 3줄만, 마우스를 올리거나 포커스가 있거나 일시정지를 누르면 멈춘다.
@@ -15,6 +15,7 @@
     advanceCursor,
     applyLoad,
     applyPush,
+    applyPresence,
     emptyHomeLive,
     feedOf,
     isRolling,
@@ -94,7 +95,10 @@
       if (rolling && !paused && !holding && document.visibilityState === 'visible') shifting = true;
     }, STEP_MS);
     document.addEventListener('visibilitychange', loadIfVisible);
-    const disconnect = onLive((p) => p.type === 'event' && onPush(p.event));
+    const disconnect = onLive((p) => {
+      if (p.type === 'event') onPush(p.event);
+      else if (p.type === 'presence') live = applyPresence(live, p);
+    });
     return () => {
       disconnect();
       clearInterval(poll);

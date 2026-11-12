@@ -118,9 +118,11 @@ describe('T-10-072 라이브 소켓 입구', () => {
 describe('T-10-072 LiveHub', () => {
   const sockets = (n: number, broken = 0) =>
     Array.from({ length: n }, (_, i) => ({
-      send: vi.fn(() => {
+      send: vi.fn((_message: string) => {
         if (i < broken) throw new Error('closed');
       }),
+      readyState: 1,
+      deserializeAttachment: () => ({ clientId: `client-${i}`, connectedAt: Date.now() }),
       close: vi.fn(),
     }));
   const hubWith = (list: ReturnType<typeof sockets>) => {
@@ -128,6 +130,7 @@ describe('T-10-072 LiveHub', () => {
       getWebSockets: () => list,
       setWebSocketAutoResponse: vi.fn(),
       acceptWebSocket: vi.fn(),
+      getWebSocketAutoResponseTimestamp: vi.fn((_ws: unknown): Date | null => null),
     };
     return { hub: new LiveHub(ctx as unknown as DurableObjectState, {} as Bindings), ctx };
   };
@@ -160,8 +163,47 @@ describe('T-10-072 LiveHub', () => {
 
   it('연결이 한도에 차면 새 연결을 받지 않는다', async () => {
     const { hub, ctx } = hubWith(sockets(MAX_SOCKETS));
-    expect((await hub.fetch()).status).toBe(503);
+    expect((await hub.fetch(new Request('http://api.test/v1/live/ws'))).status).toBe(503);
     expect(ctx.acceptWebSocket).not.toHaveBeenCalled();
+  });
+
+  it('로그인과 무관한 기기 식별자로 세고, 같은 브라우저의 여러 탭은 한 번만 센다', () => {
+    const list = sockets(3);
+    list[1]!.deserializeAttachment = list[0]!.deserializeAttachment;
+    const { hub } = hubWith(list);
+    expect(hub.presence().online).toBe(2);
+    // 객체 재생성(hibernation 뒤)에도 소켓 attachment가 집계 기준이다.
+    expect(hubWith(list).hub.presence().online).toBe(2);
+    list[0]!.readyState = 3;
+    expect(hub.presence().online).toBe(2);
+    list[1]!.readyState = 2;
+    expect(hub.presence().online).toBe(1);
+  });
+
+  it('90초간 핑 응답이 없는 연결은 빼고, 자동 pong으로 갱신된 연결과 옛 클라이언트는 센다', () => {
+    const now = Date.now();
+    const list = sockets(4);
+    for (const ws of list)
+      ws.deserializeAttachment = () => ({ clientId: 'stale', connectedAt: now - 90_000 });
+    const { hub, ctx } = hubWith(list);
+    ctx.getWebSocketAutoResponseTimestamp.mockImplementation((...args: unknown[]) =>
+      list.indexOf(args[0] as (typeof list)[number]) > 1 ? new Date(now - 1_000) : null,
+    );
+    // attachment 없는 구버전 연결은 각 소켓으로 센다.
+    list[2]!.deserializeAttachment = () => null as never;
+    list[3]!.deserializeAttachment = () => null as never;
+    expect(hub.presence().online).toBe(2);
+  });
+
+  it('마지막 탭을 닫으면 남은 연결에 감소한 접속 수를 보낸다', () => {
+    const list = sockets(2);
+    const { hub } = hubWith(list);
+    hub.webSocketClose(list[0]! as unknown as WebSocket, 1000);
+    expect(JSON.parse(list[1]!.send.mock.calls[0]![0]!)).toMatchObject({
+      type: 'presence',
+      online: 1,
+    });
+    expect(list[0]!.send).not.toHaveBeenCalled();
   });
 
   it('닫힌 소켓은 받은 코드로 닫고, 예약 코드는 1000으로 바꾼다', () => {

@@ -25,7 +25,7 @@ const profile = {
 };
 const live = {
   now: NOW.toISOString(),
-  stats: { playing: 3, seasonsToday: 17, newToday: 5, retiredToday: 2 },
+  stats: { online: 3, playing: 3, seasonsToday: 17, newToday: 5, retiredToday: 2 },
   feed: [
     {
       kind: 'retire',

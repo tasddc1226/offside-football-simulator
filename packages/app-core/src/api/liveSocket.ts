@@ -1,6 +1,13 @@
-import { LIVE_PING, LIVE_PING_SEC, LIVE_SOCKET_PATH } from '@offside/contracts/polling';
+import {
+  LIVE_PING,
+  LIVE_PING_SEC,
+  LIVE_PONG,
+  LIVE_PRESENCE_TTL_SEC,
+  LIVE_SOCKET_PATH,
+} from '@offside/contracts/polling';
 import type { LivePush } from '@offside/contracts';
 import { apiBaseUrl } from './client.js';
+import { loadKey, saveKey } from '@offside/game/storage';
 
 // T-10-072 홈 라이브 실시간 소켓. 새 시즌·은퇴 소식을 올라오는 즉시 받는다. 화면이 보일 때만 붙어 있고(숨으면
 // 끊고, 다시 보이면 붙는다), 끊기면 5초부터 두 배씩 최대 5분까지 기다렸다 다시 붙는다 — 그동안 홈은 1분 폴링으로
@@ -46,8 +53,20 @@ export const watchVisibility = (fn: () => void) => visibility.watch(fn);
 const RETRY_MIN_MS = 5_000;
 const RETRY_MAX_MS = 5 * 60_000;
 
-export const liveSocketUrl = (base = apiBaseUrl()) =>
-  `${base.replace(/^http/, 'ws')}${LIVE_SOCKET_PATH}`;
+// 로그인·익명 프로필과 무관한 이 브라우저/앱의 식별자. 세이브·복구 대상 ft_* 키에 넣지 않는다.
+let ephemeralClientId: string | undefined;
+function presenceClientId(): string | undefined {
+  const saved = loadKey<string>('offside.live-client');
+  if (typeof saved === 'string' && /^[a-f0-9-]{36}$/i.test(saved)) return saved;
+  const id = (ephemeralClientId ??= globalThis.crypto?.randomUUID?.());
+  if (id) saveKey('offside.live-client', id);
+  return id;
+}
+
+export const liveSocketUrl = (base = apiBaseUrl()) => {
+  const id = presenceClientId();
+  return `${base.replace(/^http/, 'ws')}${LIVE_SOCKET_PATH}${id ? `?client=${id}` : ''}`;
+};
 
 const listeners = new Set<(p: LivePush) => void>();
 let stop: (() => void) | null = null;
@@ -73,6 +92,7 @@ function connect(onPush: (p: LivePush) => void): () => void {
   let retry: ReturnType<typeof setTimeout> | undefined;
   let wait = RETRY_MIN_MS;
   let stopped = false;
+  let lastPong = 0;
 
   const drop = () => {
     clearInterval(ping);
@@ -90,10 +110,21 @@ function connect(onPush: (p: LivePush) => void): () => void {
     ws = sock;
     sock.onopen = () => {
       wait = RETRY_MIN_MS;
-      ping = setInterval(() => sock.send(LIVE_PING), LIVE_PING_SEC * 1000);
+      lastPong = Date.now();
+      ping = setInterval(() => {
+        if (Date.now() - lastPong >= LIVE_PRESENCE_TTL_SEC * 1000) {
+          sock.close();
+          return;
+        }
+        sock.send(LIVE_PING);
+      }, LIVE_PING_SEC * 1000);
     };
     sock.onmessage = (m) => {
-      if (typeof m.data !== 'string' || !m.data.startsWith('{')) return; // pong
+      if (m.data === LIVE_PONG) {
+        lastPong = Date.now();
+        return;
+      }
+      if (typeof m.data !== 'string' || !m.data.startsWith('{')) return;
       try {
         onPush(JSON.parse(m.data) as LivePush);
       } catch {

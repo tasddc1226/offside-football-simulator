@@ -6,6 +6,7 @@ import {
   advanceCursor,
   applyLoad,
   applyPush,
+  applyPresence,
   emptyHomeLive,
   feedOf,
   isRolling,
@@ -47,7 +48,7 @@ const retire = (over: Partial<Extract<LiveEvent, { kind: 'retire' }>> = {}): Liv
 });
 const res = (feed: LiveEvent[], now = '2026-10-02T04:00:00.000Z'): LiveResponse => ({
   now,
-  stats: { playing: 10, seasonsToday: 5, newToday: 1, retiredToday: 0 },
+  stats: { playing: 10, online: 10, seasonsToday: 5, newToday: 1, retiredToday: 0 },
   feed,
 });
 const at = (min: number) => `2026-10-02T04:${String(min).padStart(2, '0')}:00.000Z`;
@@ -136,19 +137,42 @@ describe('홈 라이브 상태 합치기', () => {
     expect(feedOf(pushed)[0]!.at).toBe(at(40));
   });
 
+  it('조회보다 먼저 온 접속 수와 늦은 캐시 응답을 서버 시각으로 합친다', () => {
+    const presence = { type: 'presence' as const, online: 4, at: at(2) };
+    const early = applyPresence(emptyHomeLive(), presence);
+    const loaded = applyLoad(early, res([], at(1)));
+    expect(statsOf(loaded)?.online).toBe(4);
+    expect(statsOf(applyLoad(loaded, res([], at(3))))?.online).toBe(10);
+    expect(applyPresence(loaded, { ...presence, at: at(1), online: 99 })).toBe(loaded);
+    expect(applyPresence(loaded, { ...presence, online: -1 })).toBe(loaded);
+  });
+
+  it('구버전 시즌 활동 수를 접속 수로 대체 표시하지 않고, 확인된 0명만 표시한다', () => {
+    const stats = res([]).stats;
+    expect(statTiles({ ...stats, online: undefined }).some((t) => t.key === 'playing')).toBe(false);
+    expect(statTiles({ ...stats, online: null }).some((t) => t.key === 'playing')).toBe(false);
+    expect(statTiles({ ...stats, online: 0 }).find((t) => t.key === 'playing')?.n).toBe(0);
+  });
+
   it('숫자 칸: 소켓 소식은 오늘 숫자에만 더하고(뛰는 중은 그대로), 0인 칸은 뺀다', () => {
     const base = applyLoad(emptyHomeLive(), res([]));
     expect(statsOf(emptyHomeLive())).toBeNull();
     expect(statTiles(null)).toEqual([]);
     expect(statTiles(statsOf(base)).map((t) => [t.key, t.label, t.n])).toEqual([
-      ['playing', '지금 뛰는 중', 10],
+      ['playing', '현재 접속 중', 10],
       ['seasons', '오늘 치른 시즌', 5],
       ['new', '오늘 새 선수', 1],
     ]);
     let s = applyPush(base, season({ at: at(9), first: true, club: 'A' }));
     s = applyPush(s, season({ at: at(10), club: 'B' }));
     s = applyPush(s, retire({ at: at(11) }));
-    expect(statsOf(s)).toEqual({ playing: 10, seasonsToday: 7, newToday: 2, retiredToday: 1 });
+    expect(statsOf(s)).toEqual({
+      playing: 10,
+      online: 10,
+      seasonsToday: 7,
+      newToday: 2,
+      retiredToday: 1,
+    });
     expect(statTiles(statsOf(s)).map((t) => t.n)).toEqual([10, 7, 2, 1]);
   });
 });

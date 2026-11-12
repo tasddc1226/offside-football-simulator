@@ -9,8 +9,6 @@ import { honorsOf } from './firsts.js';
 
 // T-10-030 홈 라이브 현황. 시각은 모두 ISO 문자열(UTC)이라 문자열 비교가 곧 시간 비교다.
 const MIN = 60_000;
-/** 이 시간 안에 시즌을 올린 진행 중 커리어를 '지금 뛰는 중'으로 센다. */
-const PLAYING_WINDOW_MS = 20 * MIN;
 /** 피드가 이만큼 차지 않으면 기간을 넓힌다: 1시간 → 24시간 → 7일(가장 넓은 기간으로 한 번만 읽고 거른다). */
 const FEED_MIN = 4;
 const WINDOWS_MS = [60 * MIN, 24 * 60 * MIN];
@@ -27,15 +25,13 @@ const countSince = (t: typeof careers | typeof careerSeasons, since: string) =>
     number | null
   >`(select max(rowid) from ${t}) - (select rowid from ${t} where ${t.createdAt} >= ${since} order by ${t.createdAt} limit 1) + 1`;
 
-export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
+export async function liveStats(
+  db: Db,
+  nowMs: number,
+): Promise<Omit<LiveStats, 'playing' | 'online'>> {
   // 오늘 = 한국 시각 자정부터(운영 대시보드와 같은 기준).
   const today = kstDays(new Date(nowMs), 1).startIso;
-  const recent = new Date(nowMs - PLAYING_WINDOW_MS).toISOString();
-  const [[playing], daily, [retired]] = await Promise.all([
-    db
-      .select({ n: sql<number>`count(*)` })
-      .from(careers)
-      .where(and(eq(careers.status, 'active'), gte(careers.updatedAt, recent))),
+  const [daily, [retired]] = await Promise.all([
     db.get<{ seasons: number | null; created: number | null }>(
       sql`select ${countSince(careerSeasons, today)} as seasons, ${countSince(careers, today)} as created`,
     ),
@@ -45,7 +41,6 @@ export async function liveStats(db: Db, nowMs: number): Promise<LiveStats> {
       .where(eq(appMeta.key, retiredCountKey(new Date(nowMs)))),
   ]);
   return {
-    playing: Number(playing?.n ?? 0),
     seasonsToday: Number(daily?.seasons ?? 0),
     newToday: Number(daily?.created ?? 0),
     retiredToday: Number(retired?.n ?? 0),

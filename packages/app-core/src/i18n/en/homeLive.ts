@@ -4,7 +4,7 @@ import { plural } from './_util';
 
 export const homeLive: Translation<HomeLiveMsgs> = {
   title: 'Right now on OFFSIDE',
-  statPlaying: 'Playing now',
+  statPlaying: 'Online now',
   statSeasons: 'Seasons played today',
   statNew: 'New players today',
   statRetired: 'Retired today',
