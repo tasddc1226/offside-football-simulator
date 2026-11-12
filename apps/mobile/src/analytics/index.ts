@@ -61,9 +61,9 @@ export const nativeAnalytics = createNativeAnalytics({
   writeRetireExp: (raw) =>
     raw === null ? kv.remove(RETIRE_EXP_STORE) : kv.set(RETIRE_EXP_STORE, raw),
   retireAccountKey: () => accountKeyNow(),
-  // host가 이 모듈을 import하므로 순환을 피해 필요할 때만 불러온다(5분 메모 계정 확인).
+  // Keep account access lazy without importing the game composition root.
   retireNeedAccount: () => {
-    void import('../game/host').then((m) => m.ensureAccount()).catch(() => {});
+    void import('../game/account').then((m) => m.ensureAccount()).catch(() => {});
   },
 });
 export const { analytics, trackPage } = nativeAnalytics;

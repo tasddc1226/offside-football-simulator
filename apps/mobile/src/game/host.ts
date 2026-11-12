@@ -20,15 +20,10 @@ import { createRetiredNumbers } from '@offside/app-core/retiredNumber';
 import { createNews } from '@offside/app-core/news';
 import { createOwnerConflicts } from '@offside/app-core/ownerConflict';
 import { createNavStack } from '@offside/app-core/navHistory';
-import { getProfile } from '@offside/app-core/api/client';
-import { noteOwner } from '@offside/app-core/api/friendPending';
-import { isMember } from '@offside/app-core/account';
 import { gameText as T } from '@offside/app-core/i18n/ko/game';
 import { APP_VERSION, WEB_ORIGIN } from '../platform/config';
 import { showRetireAd } from '../platform/interstitial';
-import { ensureSession, renewSession, sessionToken } from '../platform/session';
 import {
-  accountCache,
   appState,
   clubCustom,
   compCustomSync,
@@ -200,49 +195,14 @@ Outbox.configureOutbox({
   onRetiredNumber: (e) => recordRn(e.careerId, e.result, e.serviceSeason, e.title, e.miss),
 });
 
-/** 프로필을 다시 받아 캐시에 둔다. 실패는 'error'(서버에 연결하지 못함). 토큰이 무효(폐기·만료·탈퇴)면 버리고
- * 새 익명 세션으로 한 번 더 받는다. */
-export async function refreshAccount() {
-  await ensureSession();
-  let r = await getProfile();
-  if (!r.ok && r.error.code === 'PROFILE_REQUIRED' && sessionToken()) {
-    if (await renewSession()) r = await getProfile();
-  }
-  const before = accountCache.value;
-  accountCache.fetchedAt = Date.now();
-  accountCache.value = r.ok ? r.data : 'error';
-  // T-11-669 다른 계정이 되면 세대를 올린다(은퇴 화면 실험이 기다리던 배정을 버리게).
-  const id = (p: typeof before) => (p && p !== 'error' ? p.id : p);
-  if (id(before) !== id(accountCache.value)) accountGen++;
-  // T-11-275 로그인 상태를 구단주 표시로도 남겨 홈 선물이 로그인한 기기에서만 묻게 한다.
-  if (r.ok) noteOwner(isMember(r.data));
-}
-
-let accountGen = 0;
-export const accountGeneration = () => accountGen;
-const ACCOUNT_REVALIDATE_MS = 5 * 60_000;
-let accountInflight: Promise<void> | null = null;
-function loadAccountOnce(): Promise<void> {
-  accountInflight ??= refreshAccount().finally(() => (accountInflight = null));
-  return accountInflight;
-}
-/** 계정 상태를 쓰는 화면(설정 계정 카드 · 구단주 · 상점, T-11-567)이 열릴 때. 처음이면 묻고, 5분이 지났으면 조용히 다시 묻는다. */
-export function ensureAccount() {
-  if (accountCache.value === undefined) void loadAccountOnce();
-  else if (Date.now() - accountCache.fetchedAt > ACCOUNT_REVALIDATE_MS) void loadAccountOnce();
-}
-/** T-11-669 처음이거나 5분 지난 캐시면 다시 확인이 끝날 때까지 기다린다(옛 계정으로 판단하지 않게). */
-export function freshAccount(): Promise<void> {
-  if (
-    accountCache.value === undefined ||
-    Date.now() - accountCache.fetchedAt > ACCOUNT_REVALIDATE_MS
-  )
-    return loadAccountOnce();
-  return accountInflight ?? Promise.resolve();
-}
-/** 캐시가 확인된 지 5분 안이다(확인 중 · 만료면 false). */
-export const accountFresh = () =>
-  accountCache.value !== undefined && Date.now() - accountCache.fetchedAt <= ACCOUNT_REVALIDATE_MS;
+// Keep compatibility for existing screen imports; analytics can depend on account directly.
+export {
+  refreshAccount,
+  accountGeneration,
+  ensureAccount,
+  freshAccount,
+  accountFresh,
+} from './account';
 
 // ───────── 뒤로 가기 ─────────
 /** 화면 방문 기록 — 화면이 바뀔 때 track(), Android 뒤로 버튼·'← 이전으로'가 back(). */
