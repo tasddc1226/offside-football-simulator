@@ -37,6 +37,8 @@
 
 리그 뉴스는 `team/leagueNews.ts`가 조회, `leagueNewsSelection.ts`가 순수 후보 계획, `leagueNewsProjection.ts`가 표시 조립을 담당한다. 선택 전 전체 경기 상세를 읽지 않는다.
 
+Team의 `teamRecords.svelte.ts` / `useTeamRecords.ts`는 기록·통계·업적, `teamMatches.svelte.ts` / `useTeamMatches.ts`는 랭크/친선 결과 상태를 소유한다. `Team.svelte` / `Team.tsx`는 초안·저장·탭 진입과 새로고침 시점을 소유한다. 앱의 `TeamFormationToolbar` / `TeamCoachCard`는 표시 전용이며 편집·펼침 상태를 소유하지 않는다.
+
 ## 빠른 검증 경로
 
 루트에서 실행한다. 아래는 해당 변경의 개발 중 확인 명령이며 필수 CI나 플랫폼 검증을 대체하지 않는다. 파일 분리 뒤에는 먼저 타입·린트를 통과시키고 테스트를 돌린다. UI 편집 중/푸시 전/PR의 범위는 [CI 테스트 정책](ci-test-policy.md)을 따른다.
