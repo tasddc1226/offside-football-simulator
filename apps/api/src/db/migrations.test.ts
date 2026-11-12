@@ -186,6 +186,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
   reroll_mileage: ['profile_id', 'used', 'progress', 'rewarded', 'updated_at'],
   referrals: ['invitee_id', 'inviter_id', 'claimed_at', 'done_at', 'career_id', 'inviter_rewarded'],
   acquisition_consents: ['profile_id', 'version', 'granted_at', 'revoked_at', 'revision'],
+  creator_attributions: ['profile_id', 'tracking_id', 'attributed_at', 'created_at'],
   acquisition_sessions: [
     'id',
     'profile_id',

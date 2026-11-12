@@ -28,7 +28,11 @@ import { installSheetKey } from './ui/skin.svelte.js';
 import { applyLocale, bootLocale } from './ui/locale.js';
 import { startSeasonSchedule } from '@offside/app-core/seasonSchedule';
 import { detectAdLanding } from './ui/adLanding.js';
-import { detectCreatorTracking } from './ui/creatorTracking.js';
+import {
+  detectCreatorTracking,
+  hasPendingCreatorTracking,
+  syncCreatorTracking,
+} from './ui/creatorTracking.js';
 
 // 시즌 일정(게이지가 확정한 마감·다음 시즌): 저장해 둔 일정을 세이브·화면보다 먼저 입히고 서버 일정으로 맞춘다.
 installTextSize();
@@ -64,6 +68,23 @@ function start() {
   // T-11-195 메타 광고로 들어왔는지(분석 시작 전에 — 픽셀이 이번 탭의 클릭 ID를 쓴다).
   detectAdLanding();
   detectCreatorTracking();
+  // T-11-704 크리에이터 링크로 들어왔으면 계정을 확인할 때 프로필에 묶는다(링크로 들어온 방문만 요청이 나간다).
+  // 계정을 아직 묻지 않았으면 한 번 묻는다(첫 방문이면 이때 프로필이 생긴다).
+  // 링크로 들어온 방문만 계정 모듈을 따로 불러온다(첫 화면 번들에 넣지 않는다).
+  if (hasPendingCreatorTracking())
+    void Promise.all([
+      import('./ui/account-state.svelte.js'),
+      import('@offside/app-core/api/webPay'),
+    ]).then(([account, webPay]) => {
+      account.onAccountChange(() => {
+        const p = account.accountCache.value;
+        void syncCreatorTracking(
+          p && p !== 'error' ? { id: p.id, linked: !!(p.linked.google || p.linked.apple) } : null,
+          webPay.recordCreatorAttribution,
+        );
+      });
+      account.ensureAccount();
+    });
   initializeAnalytics(appState.screen, appState.G && !appState.G.retired ? appState.G.cid : null);
   syncBalance();
   // T-10-114 모바일 뒤로 가기(iOS 가장자리 밀기·Android 뒤로)가 앱 안의 이전 화면으로 가게 한다.
