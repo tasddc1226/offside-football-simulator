@@ -41,3 +41,12 @@
 - 후보 스카우팅의 시드·킵·공개·리롤·프리미엄 계획을 scouting-actions로 옮겼다. 후보를 뽑은 입력과 시작 시 킵 해제를 같은 시점에 유지한다.
 - 시장 카드/계약의 목적지 설명은 transferDestination을 공유한다. 진행·pending·RNG 연출·저장 순서는 유지한다.
 - app-core 전체 160파일 1,606개 테스트, 타입 검사 및 변경 파일 ESLint 통과.
+
+## 단계 4 검증
+
+- 공통 accountCache가 TTL 경계·singleflight·세대·계정 상태를 관리한다. 모바일 토큰 갱신과 웹 구단주 알림은 각 어댑터에 유지한다.
+- 모바일 analytics는 전체 host 대신 좁은 account 모듈을 지연 로딩한다. host의 기존 계정 export는 호환 경로로 유지한다.
+- api/client는 기존 export를 보존하는 facade다. transport는 단일 요청/캐시/세션 실행 경로, profile/public은 endpoint wrappers, mutationPolicy는 무효화 범위만 소유한다. outbox 전용 전송은 유지한다.
+- 웹 계정 기존 4개, 공통 캐시 3개, 모바일 unit 20파일 170개 테스트 통과. app-core 전체 161파일 1,609개 통과(maxWorkers=4).
+- 기본 병렬도로 전체 검사를 돌릴 때 upload의 커리어 시뮬레이션 1개가 5초 timeout에 걸렸다. 타입 검사 등 동시 작업을 줄이고 worker 4개로 전체를 재실행해 모두 통과했다. timeout 설정·테스트 표본 수는 바꾸지 않았다.
+- app-core·mobile 타입 검사와 변경 파일 ESLint 통과.
