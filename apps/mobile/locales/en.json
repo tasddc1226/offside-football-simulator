@@ -2,7 +2,8 @@
   "ios": {
     "CFBundleDisplayName": "OFFSIDE",
     "CFBundleName": "OFFSIDE",
-    "NSPhotoLibraryUsageDescription": "Allow photo access so you can choose a picture for your team logo."
+    "NSPhotoLibraryUsageDescription": "Allow photo access so you can choose a picture for your team logo.",
+    "NSUserTrackingUsageDescription": "Allow tracking so OFFSIDE can show ads that match your interests. Your game and rewards stay the same either way."
   },
   "android": {
     "app_name": "OFFSIDE"

@@ -2,7 +2,7 @@
   "expo": {
     "name": "OFFSIDE",
     "slug": "offside",
-    "version": "1.1.7",
+    "version": "1.1.8",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "offside",
@@ -106,6 +106,12 @@
         {
           "androidAppId": "ca-app-pub-3797087216173591~9704816739",
           "iosAppId": "ca-app-pub-3797087216173591~4994406373"
+        }
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Allow tracking so OFFSIDE can show ads that match your interests. Your game and rewards stay the same either way."
         }
       ]
     ],
