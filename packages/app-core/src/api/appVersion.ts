@@ -1,9 +1,10 @@
 // T-11-042 스토어 앱 업데이트 안내. 서버가 알려 준 플랫폼별 버전보다 이 앱이 낮으면 스토어 주소를 돌려준다.
 import type { AppVersionResponse } from '@offside/contracts';
-import { cachedGet } from './client.js';
+import { persistedGet } from './client.js';
 
 /** 켤 때·돌아올 때 묻는다. 서버 응답 캐시(max-age=300)와 같은 5분 안에서는 받아 둔 값을 쓴다. */
-export const fetchAppVersion = () => cachedGet<AppVersionResponse>('/v1/app/version', 5 * 60_000);
+export const fetchAppVersion = () =>
+  persistedGet<AppVersionResponse>('/v1/app/version', 5 * 60_000);
 
 /** `1.2.3` 꼴 버전 비교(a < b면 음수). 모자란 자리는 0으로 본다. */
 export function compareVersions(a: string, b: string): number {

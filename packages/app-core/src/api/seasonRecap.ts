@@ -6,7 +6,7 @@ import type {
 } from '@offside/contracts';
 import { lastClosedSeason } from '@offside/contracts/service-seasons';
 import { recapSeen } from '../seasonRecap.js';
-import { cachedGet } from './client.js';
+import { cachedGet, hasSessionHint } from './client.js';
 
 export type {
   OwnerHonor,
@@ -32,7 +32,8 @@ export async function recapUnseen(now = new Date().toISOString()): Promise<boole
 /** T-11-604 아직 안 열어 본 결산의 시즌(없으면 null). 명예관 칸을 누르면 이 시즌부터 연다. */
 export async function recapUnseenSeason(now = new Date().toISOString()): Promise<number | null> {
   const season = lastClosedSeason(now);
-  if (season === null || recapSeen(season)) return null;
+  // T-11-724 세션이 없는 첫 방문자는 구단주일 수 없다 — 묻지 않는다(401만 돌아온다).
+  if (season === null || recapSeen(season) || !hasSessionHint()) return null;
   const r = await cachedGet<OwnerRecapStatus>('/v1/owner/recap-status', 60_000);
   return r.ok && r.data.tier !== null && !recapSeen(r.data.tier.season) ? r.data.tier.season : null;
 }

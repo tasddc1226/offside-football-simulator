@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-vi.mock('./client.js', () => ({ cachedGet: vi.fn() }));
+vi.mock('./client.js', () => ({ cachedGet: vi.fn(), hasSessionHint: vi.fn() }));
 vi.mock('../seasonRecap.js', () => ({ recapSeen: vi.fn() }));
-import { cachedGet } from './client.js';
+import { cachedGet, hasSessionHint } from './client.js';
 import { recapSeen } from '../seasonRecap.js';
 import { recapUnseen } from './seasonRecap.js';
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(hasSessionHint).mockReturnValue(true);
+});
 describe('recap unread indicator', () => {
   it('does not request any data for an already seen season', async () => {
     vi.mocked(recapSeen).mockReturnValue(true);
@@ -24,5 +27,11 @@ describe('recap unread indicator', () => {
   it('does not show an unread dot for pending or missing recaps', async () => {
     vi.mocked(cachedGet).mockResolvedValue({ ok: true, data: { tier: null } });
     expect(await recapUnseen('2026-10-10T00:00:00Z')).toBe(false);
+  });
+  it('T-11-724 does not ask when the device has no session yet', async () => {
+    vi.mocked(recapSeen).mockReturnValue(false);
+    vi.mocked(hasSessionHint).mockReturnValue(false);
+    expect(await recapUnseen('2026-10-10T00:00:00Z')).toBe(false);
+    expect(cachedGet).not.toHaveBeenCalled();
   });
 });
