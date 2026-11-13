@@ -23,6 +23,8 @@ import { createNavStack } from '@offside/app-core/navHistory';
 import { gameText as T } from '@offside/app-core/i18n/ko/game';
 import { APP_VERSION, WEB_ORIGIN } from '../platform/config';
 import { showRetireAd } from '../platform/interstitial';
+import { claimReward, prepareReward, rewardOffer } from '../platform/rewarded';
+import { adFree, adsOff } from '../platform/adFree';
 import {
   appState,
   clubCustom,
@@ -114,6 +116,12 @@ export const {
   analytics,
   trackPage,
   retired: () => void showRetireAd(),
+  // T-11-720 시즌 결산 보너스 보상형 광고(광고 제거 · 멤버십은 광고 없이 바로).
+  reward: {
+    offer: (p) => rewardOffer(p, adsOff(adFree)),
+    prepare: (p) => prepareReward(p),
+    claim: (p, onEarned, skipped) => claimReward(p, onEarned, skipped),
+  },
 });
 
 // ───────── 클럽 커스텀 · 선수 상세 · 영구결번 · 새 소식 · 소유권 충돌 ─────────

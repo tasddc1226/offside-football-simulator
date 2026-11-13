@@ -62,6 +62,8 @@ export const CUP_KO = {
   giftClaimed: '이미 받은 선물이에요.',
   // T-11-360 출석 체크.
   attendanceChecked: '오늘은 이미 출석했어요.',
+  attendanceAdNotChecked: '출석한 뒤에 한 번 더 받을 수 있어요.',
+  attendanceAdTaken: '오늘은 이미 한 번 더 받았어요.',
   // T-11-174 인앱 상품 구매 확인.
   iapInvalid: '구매를 확인하지 못했어요.',
   iapPending: '결제가 아직 끝나지 않았어요. 결제가 끝나면 자동으로 받아요.',

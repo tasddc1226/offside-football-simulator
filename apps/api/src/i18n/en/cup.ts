@@ -66,6 +66,8 @@ export const CUP_EN: Record<CupTextKey, string> = {
   renameSame: 'That is already the current name.',
   giftClaimed: 'You have already claimed this gift.',
   attendanceChecked: 'You have already checked in today.',
+  attendanceAdNotChecked: 'Check in first to get the extra reward.',
+  attendanceAdTaken: 'You already got the extra reward today.',
   iapInvalid: "We couldn't verify this purchase.",
   iapPending: "The payment hasn't finished yet. You'll get it automatically once it does.",
   iapOtherAccount: 'This purchase was made on a different account. Log in with that account.',

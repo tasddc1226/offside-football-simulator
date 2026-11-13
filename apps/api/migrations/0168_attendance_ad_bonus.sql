@@ -1,0 +1,1 @@
+ALTER TABLE `owner_attendance_days` ADD `ad_claim_id` text;

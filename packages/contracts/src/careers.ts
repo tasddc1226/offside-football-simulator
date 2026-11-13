@@ -287,6 +287,9 @@ const AdPlacementCountsSchema = z.strictObject({
   c: signalCount,
   p: signalCount,
   b: signalCount,
+  /** T-11-720 시즌 결산 보너스 · 출석 한 번 더. 배포 전 앱은 보내지 않는다. */
+  s: signalCount.optional(),
+  a: signalCount.optional(),
 });
 /**
  * T-11-486a 앱 광고 이용 요약(관찰 전용). 지난 시즌 업로드(또는 앱 설치)부터 이 시즌이 끝날 때까지 이 기기에서 센 값이다.

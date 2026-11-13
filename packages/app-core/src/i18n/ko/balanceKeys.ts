@@ -83,6 +83,8 @@ const ko = {
   teamDivReward5: '엘리트 II 시즌 보상 리롤권',
   teamDivReward6: '엘리트 I 시즌 보상 리롤권',
   teamDivReward7: '마스터 시즌 보상 리롤권',
+  adSeasonBonus: '시즌 결산 광고 보너스 비율',
+  adSeasonBonusMin: '시즌 결산 광고 보너스 하한',
   retireExpShare: '은퇴 화면 실험 비율',
   eventWeight: (p: { n: number }) => `이벤트 등장 빈도 조정 ${p.n}건`,
   choiceBonus: (p: { n: number }) => `선택지 성공 확률 조정 ${p.n}건`,

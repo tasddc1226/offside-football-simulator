@@ -4,8 +4,10 @@
 import { RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
+import { useSnapshot } from 'valtio';
 import {
   checkInAttendance,
+  claimAttendanceAdBonus,
   fetchAttendance,
   type AttendanceCard,
 } from '@offside/app-core/api/attendance';
@@ -19,6 +21,9 @@ import {
 } from '@offside/app-core/attendance-view';
 import { claimHomePopup, passHomePopup } from '@offside/app-core/homePopup';
 import { attendanceText as L } from '@offside/app-core/i18n/ko/attendance';
+import { adText as AD } from '@offside/app-core/i18n/ko/ad';
+import { adFree, adsOff } from '../../platform/adFree';
+import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
 import type { OwnerItem } from '@offside/contracts/cup';
 import { toast } from '../../game/host';
 import { goRerollShop } from '../../game/nav';
@@ -46,6 +51,16 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
   const [got, setGot] = useState<string | null>(null);
   // 응답을 못 받아 다시 누르면 같은 키로 보내 서버가 두 번 주지 않는다. 출석이 끝나면 새 키(다음 날 누름)로 바꾼다.
   const key = useRef(crypto.randomUUID());
+  // T-11-720 광고 보고 한 번 더 받기. 광고를 끝까지 봤는데 응답을 못 받았으면(earned) 다시 누를 때 광고 없이 같은 키로 보낸다.
+  const adKey = useRef(crypto.randomUUID());
+  const adEarned = useRef(false);
+  const adOffer = rewardOffer('attendance', adsOff(useSnapshot(adFree)));
+  const owner = card?.kind === 'owner' ? card.att : null;
+  // 옛 서버(adBonus 없음)에는 버튼을 보이지 않는다.
+  const canAd = !!adOffer && !!owner?.checkedIn && owner.adBonus === false;
+  useEffect(() => {
+    if (open && canAd) prepareReward('attendance');
+  }, [open, canAd]);
   const reload = useCallback(async (auto = false) => {
     const next = await fetchAttendance();
     setCard(next);
@@ -88,6 +103,39 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
       setCard({ kind: 'guest' });
     } else {
       toast(L.fail);
+    }
+  };
+
+  const adBonus = async () => {
+    if (!att || busy || !canAd) return;
+    setBusy(true);
+    if (!adEarned.current) {
+      const msg = await claimReward(
+        'attendance',
+        () => {
+          adEarned.current = true;
+        },
+        AD.attendWatch,
+      );
+      if (!adEarned.current) {
+        setBusy(false);
+        if (msg) toast(msg);
+        return;
+      }
+    }
+    const r = await claimAttendanceAdBonus(adKey.current);
+    setBusy(false);
+    if (r.ok) {
+      adEarned.current = false;
+      adKey.current = crypto.randomUUID();
+      setCard({ kind: 'owner', att: r.data.attendance });
+      setGot(rewardText(r.data.granted));
+      toast(L.got({ reward: rewardText(r.data.granted) }));
+    } else if (r.error.reason === 'ATTENDANCE_AD_TAKEN') {
+      adEarned.current = false;
+      setCard({ kind: 'owner', att: { ...att, adBonus: true } });
+    } else {
+      toast(AD.attendFail);
     }
   };
 
@@ -255,6 +303,17 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
               <Txt v="sm" bold center tone="accent" testID="attendance-done">
                 {L.checked}
               </Txt>
+              {canAd ? (
+                <Btn
+                  kind="accent"
+                  block
+                  disabled={busy}
+                  testID="attendance-ad-bonus"
+                  onPress={() => void adBonus()}
+                >
+                  {busy ? L.busy : adOffer === 'free' ? AD.attendFree : AD.attendAd}
+                </Btn>
+              ) : null}
               {got ? (
                 <>
                   <View
