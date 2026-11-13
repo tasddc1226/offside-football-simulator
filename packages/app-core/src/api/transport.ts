@@ -1,7 +1,7 @@
 import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import type { Profile as ContractProfile } from '@offside/contracts';
 import { mutationCacheScope } from './mutationPolicy.js';
-import { storage } from '@offside/game/storage';
+import { loadKey, saveKey, storage } from '@offside/game/storage';
 import { markAchDirty, touchesAchievements } from '../achDirty.js';
 import { getLocale } from '@offside/contracts/i18n';
 import { settingsApiText as L } from '../i18n/ko/settingsApi.js';
@@ -22,7 +22,8 @@ let host: ApiHost = { baseUrl: 'http://localhost:8787', auth: () => ({ credentia
 /** 시작할 때 한 번(첫 요청 전에) 부른다. */
 export function configureApi(h: ApiHost): void {
   host = h;
-  clearApiCache();
+  // 기기에 남긴 공개 조회(persistedGet)는 지우지 않는다 — 다시 열었을 때 쓰려고 남긴 것이다.
+  clearApiCache(false);
 }
 export const apiBaseUrl = (): string => host.baseUrl;
 export const apiAuth = (): ReturnType<ApiHost['auth']> => host.auth();
@@ -69,10 +70,49 @@ function failure<T>(
 const memo = new Map<string, { until: number; result: Promise<ApiResult<unknown>> }>();
 const MEMO_SWEEP_AT = 100;
 
-export function clearApiCache(): void {
+/** persisted: 기기에 남긴 공개 조회(persistedGet)도 함께 버린다. 쓰기 · 로그인 · 당겨서 새로고침은 버리고, 시작할 때만 남긴다. */
+export function clearApiCache(persisted = true): void {
   memo.clear();
   ownerDenied = null;
   cacheGeneration++;
+  if (persisted) dropPersisted();
+}
+
+// T-11-724 잘 바뀌지 않는 공개 조회(밸런스 · 구단 전력 · 게시판 첫 쪽 · 최초 기록 · 시즌 게이지 · 앱 버전)는 응답을 기기에도 남긴다.
+// 메모는 메모리에만 있어 새로고침 · 앱 재시작마다 사라지는데, 남긴 응답이 메모 시간 안이면 서버에 묻지 않고 그것을 쓴다(메모
+// 시간은 그대로라, 앱을 닫지 않았을 때와 같은 신선도다). 모두에게 같은 응답만 남긴다 — 사람마다 다른 응답은 남기지 않는다.
+// 저장소에 지우기가 없어 세대 번호로 한꺼번에 버리고(쓰기 · 로그인 · 당겨서 새로고침), 한 경로만 버릴 때는 시각을 0으로 덮는다.
+const PERSIST_PREFIX = 'ft_api:';
+const PERSIST_GEN = 'ft_api_gen';
+type Persisted = { gen: number; at: number; data: unknown };
+const persistGen = (): number => loadKey<number>(PERSIST_GEN) ?? 0;
+const persistedKeys = new Set<string>();
+function dropPersisted(): void {
+  saveKey(PERSIST_GEN, persistGen() + 1);
+  persistedKeys.clear();
+}
+
+/** cachedGet과 같되 응답을 기기에도 남겨, 다시 열었을 때 메모 시간 안이면 서버에 묻지 않는다. 모두에게 같은 응답에만 쓴다. */
+export function persistedGet<T>(path: string, ttlMs: number): Promise<ApiResult<T>> {
+  const key = withLang(path);
+  const hit = memo.get(key);
+  if (hit && Date.now() < hit.until) return hit.result as Promise<ApiResult<T>>;
+  persistedKeys.add(key);
+  const saved = loadKey<Persisted>(PERSIST_PREFIX + key);
+  const age = saved ? Date.now() - saved.at : -1;
+  if (saved && saved.gen === persistGen() && age >= 0 && age < ttlMs && saved.data !== undefined) {
+    const result = Promise.resolve<ApiResult<T>>({ ok: true, data: saved.data as T });
+    memo.set(key, { until: saved.at + ttlMs, result });
+    return result;
+  }
+  const result = cachedGet<T>(path, ttlMs);
+  const generation = cacheGeneration;
+  void result.then((r) => {
+    // 받는 사이에 메모를 비웠으면(쓰기 · 로그인) 낡은 응답일 수 있어 남기지 않는다.
+    if (r.ok && generation === cacheGeneration)
+      saveKey(PERSIST_PREFIX + key, { gen: persistGen(), at: Date.now(), data: r.data });
+  });
+  return result;
 }
 
 // Only a server-confirmed owner denial is memoized. Network/auth/server failures remain retryable.
@@ -104,9 +144,12 @@ export function withLang(path: string): string {
 
 /** 새 서버 이벤트를 실제로 열 때 해당 기능만 갱신한다. 다른 화면의 메모는 유지한다. */
 export function invalidateApiCache(prefix: string): void {
-  for (const key of memo.keys())
-    if (key === prefix || key.startsWith(`${prefix}?`) || key.startsWith(`${prefix}/`))
-      memo.delete(key);
+  const under = (key: string) =>
+    key === prefix || key.startsWith(`${prefix}?`) || key.startsWith(`${prefix}/`);
+  for (const key of memo.keys()) if (under(key)) memo.delete(key);
+  // 기기에 남긴 응답도 버린다(이번 실행에서 읽은 경로만 안다 — 그 밖의 것은 메모 시간이 지나면 버려진다).
+  for (const key of persistedKeys)
+    if (under(key)) saveKey(PERSIST_PREFIX + key, { gen: -1, at: 0, data: null });
 }
 
 /** GET을 ttlMs 동안 메모한다. 같은 path의 진행 중 요청도 함께 쓴다(언어가 다르면 다른 요청이다). */
@@ -241,9 +284,14 @@ export async function getProfile(): Promise<ApiResult<Profile>> {
   return r;
 }
 
-/** 세션이 없다는 응답(PROFILE_REQUIRED)을 받은 뒤 새 익명 세션을 받는다. 받았으면 true. */
+/** 세션이 없다는 응답(PROFILE_REQUIRED)을 받은 뒤 새 익명 세션을 받는다. 받았으면 true. 동시에 여러 곳에서 불러도 한 번만 나간다. */
+let renewing: Promise<boolean> | null = null;
 export const renewSession = (): Promise<boolean> =>
-  host.renewSession ? host.renewSession() : getProfile().then((r) => r.ok);
+  (renewing ??= (host.renewSession ? host.renewSession() : getProfile().then((r) => r.ok)).finally(
+    () => {
+      renewing = null;
+    },
+  ));
 
 /** 아직 프로필이 없거나 세션이 무효인 기기면 새 익명 세션을 받은 뒤 한 번 더 보낸다. 익명 프로필로 충분한
  *  요청(좋아요·신고·차단)만 쓴다 — PROFILE_REQUIRED가 로그인 안내인 요청에 쓰면 새 프로필이 생긴다. */

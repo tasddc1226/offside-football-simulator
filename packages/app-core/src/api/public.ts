@@ -16,7 +16,7 @@ import type {
   TickerResponse,
   SeasonGaugeResponse,
 } from '@offside/contracts';
-import { cachedGet, type ApiResult } from './transport.js';
+import { cachedGet, persistedGet, type ApiResult } from './transport.js';
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요) ─────────
 export function getHof(
@@ -106,9 +106,9 @@ export function checkRetiredNumber(
 }
 /** T-10-027 서버 최초 기록(로그인 불필요). T-11-029 시즌마다 따로 — season(0 = 프리시즌)을 안 주면 서버가 지금 시즌을 쓴다. */
 export function getFirsts(season?: number): Promise<ApiResult<FirstsResponse>> {
-  return cachedGet<FirstsResponse>(
+  return persistedGet<FirstsResponse>(
     `/v1/firsts${season === undefined ? '' : `?season=${season}`}`,
-    300_000, // T-11-503 홈에 돌아올 때마다 다시 받지 않게 5분.
+    300_000, // T-11-503 홈에 돌아올 때마다 다시 받지 않게 5분. T-11-724 다시 열어도 5분 안이면 기기에 남긴 것을 쓴다.
   );
 }
 /** T-10-030 홈 라이브 현황(로그인 불필요). 홈이 1분마다 묻는다 — 서버 엣지 캐시와 같은 간격(T-10-045). */
@@ -118,7 +118,7 @@ export function getLive(): Promise<ApiResult<LiveResponse>> {
 }
 /** 시즌 진행 게이지(로그인 불필요). 서버가 30분마다 세고 엣지에 5분 담으므로 5분 메모. */
 export function getSeasonGauge(): Promise<ApiResult<SeasonGaugeResponse>> {
-  return cachedGet<SeasonGaugeResponse>('/v1/season/gauge', 300_000);
+  return persistedGet<SeasonGaugeResponse>('/v1/season/gauge', 300_000);
 }
 /** T-10-122 홈 전광판(로그인 불필요). 서버 엣지 캐시와 같은 간격으로 묻는다. */
 export function getTicker(): Promise<ApiResult<TickerResponse>> {

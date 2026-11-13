@@ -7,7 +7,7 @@ import {
   configureCareerActivityReporter,
   noteCareerActivity,
 } from '@offside/app-core/career';
-import { cachedGet } from '@offside/app-core/api/client';
+import { persistedGet } from '@offside/app-core/api/client';
 import type { BalanceConfig } from '@offside/contracts';
 import { appState } from './state.svelte.js';
 // Existing local retirement data remains the source while the upload code loads.
@@ -70,7 +70,8 @@ export function loadGame() {
  * 실패하면(오프라인 등) 저장된 값으로 계속한다. */
 export function syncBalance(): void {
   syncClubStrength();
-  void cachedGet<BalanceConfig>('/v1/balance', 3_600_000).then((r) => {
+  // T-11-724 응답을 기기에도 남겨 한 시간 안에 다시 열면 묻지 않는다.
+  void persistedGet<BalanceConfig>('/v1/balance', 3_600_000).then((r) => {
     if (r.ok) setLatestBalance(r.data);
   });
 }
