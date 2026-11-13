@@ -2236,6 +2236,31 @@ export const cardSpecials = sqliteTable(
     index('card_specials_season_idx').on(table.season, table.kind, table.rank),
   ],
 );
+/**
+ * T-11-723 오늘의 랭킹 확정 결과. 자정(한국 시각)이 지나면 5분 cron이 전날 1 · 2 · 3위를 한 번 굳힌다(team/dailyRank.ts) —
+ * 아이템 · 알림과 같은 batch로 들어간다. 이 줄이 곧 카드 표식이다: 카드 응답이 career_id로 순위를 읽어 `daily`로 싣는다
+ * (시즌 표식 card_specials와 따로 둔다 — 시즌 결산 목록에 섞이지 않고, 표식을 모르는 옛 앱 응답 모양도 그대로다).
+ * reroll · scout는 실제로 준 장수라, 같은 주에 이미 받은 구단주는 0이다. 하루 세 줄뿐이라 작다.
+ */
+export const dailyRankWinners = sqliteTable(
+  'daily_rank_winners',
+  {
+    /** 한국 날짜(YYYY-MM-DD). */
+    day: text('day').notNull(),
+    rank: integer('rank').notNull(),
+    careerId: text('career_id').notNull(),
+    profileId: text('profile_id').notNull(),
+    legendScore: integer('legend_score').notNull(),
+    reroll: integer('reroll').notNull().default(0),
+    scout: integer('scout').notNull().default(0),
+    createdAt: text('created_at').notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.day, table.rank] }),
+    index('daily_rank_winners_profile_idx').on(table.profileId, table.day),
+    index('daily_rank_winners_career_idx').on(table.careerId),
+  ],
+);
 /** Optional account acquisition consent. Never exported to advertising SDKs. */
 export const acquisitionConsents = sqliteTable('acquisition_consents', {
   profileId: text('profile_id')

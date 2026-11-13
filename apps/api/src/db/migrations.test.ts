@@ -231,6 +231,16 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'last_touch_id',
   ],
   card_specials: ['career_id', 'season', 'kind', 'rank', 'rule_version', 'created_at'],
+  daily_rank_winners: [
+    'day',
+    'rank',
+    'career_id',
+    'profile_id',
+    'legend_score',
+    'reroll',
+    'scout',
+    'created_at',
+  ],
   cards: [
     'career_id',
     'owner_id',

@@ -872,6 +872,25 @@ export async function getPublicHof(
   };
 }
 
+/** T-11-723 공개 명예의 전당 선수 여러 명(목록 줄 모양, 구단주 포함)을 준 id 순서대로. 공개 조건에서 벗어난 선수는 빠진다. */
+export async function listPublicHofByIds(
+  db: Db,
+  ids: readonly string[],
+): Promise<PublicHofEntry[]> {
+  if (!ids.length) return [];
+  const rows = await retryTransientRead(() =>
+    db
+      .select({ ...publicColumns, ...raiserColumns })
+      .from(careers)
+      .leftJoin(retiredNumbers, withRetiredNumber)
+      .leftJoin(profiles, withRaiserProfile)
+      .leftJoin(ownerTeams, withRaiserTeam)
+      .where(and(inArray(careers.id, [...ids]), isPublicRetired)),
+  );
+  const byId = new Map(rows.map((r) => [String(r.id), toPublicEntry(r)]));
+  return ids.flatMap((id) => byId.get(id) ?? []);
+}
+
 /** T-10-013. 한 프로필의 은퇴 선수(명예의 전당 '내 선수'). */
 export async function listOwnHof(
   db: Db,

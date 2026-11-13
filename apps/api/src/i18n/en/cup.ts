@@ -204,4 +204,11 @@ export const CUP_EN: Record<CupTextKey, string> = {
   best11RewardTitle: 'You made the Season {season} BEST 11',
   best11RewardBody:
     '{name} is confirmed in the Season {season} BEST 11. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
+  dailyRankTitle: 'You finished #{rank} in yesterday’s Daily Ranking',
+  dailyRankBodyBoth:
+    'Your retired player’s card now carries the #{rank} mark. You received {s} premium scout ticket(s) and {n} player reroll ticket(s).',
+  dailyRankBodyReroll:
+    'Your retired player’s card now carries the #{rank} mark. You received {n} player reroll ticket(s).',
+  dailyRankBodyMark:
+    'Your retired player’s card now carries the #{rank} mark. Items are given once a week, so this time you received the mark only.',
 };

@@ -188,6 +188,8 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   specialTopAssist: '助攻王',
   specialBest11: '最佳 11 人',
   specialAria: (p) => `賽季特別卡：${p.label}`,
+  specialDaily: (p) => `每日第${p.rank}名`,
+  specialDailyAria: (p) => `今日排行第 ${p.rank} 名的卡片`,
   pickAria: (p) => `選擇 ${p.slot} 位置的球員`,
   pickSortAria: '排序',
   youthNote: '位置留空時由青訓球員上場',

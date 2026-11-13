@@ -480,6 +480,7 @@ export function TeamLineup({
                             number: p.number,
                             legendScore: p.legendScore,
                             specials: p.specials,
+                            daily: p.daily,
                             attrs: p.attrs,
                             attrsEstimated: p.attrsEstimated,
                             height: p.height,

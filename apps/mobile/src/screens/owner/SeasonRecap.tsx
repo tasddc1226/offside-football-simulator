@@ -681,6 +681,7 @@ function BestFace({ best }: { best: Best }) {
               number: card.number,
               legendScore: card.legendScore,
               specials: card.specials,
+              daily: card.daily,
               attrs: card.attrs,
               attrsEstimated: card.attrsEstimated,
               height: card.height,

@@ -178,4 +178,9 @@ export const CUP_ZH: Record<CupTextKey, string> = {
   best11RewardTitle: '入選第 {season} 賽季 BEST 11',
   best11RewardBody:
     '{name} 確定入選第 {season} 賽季 BEST 11。獲得 {n} 張球員候選重抽券、{s} 張高級球探券和 {b} 張潛力強化券。',
+  dailyRankTitle: '昨天的今日排行獲得第 {rank} 名',
+  dailyRankBodyBoth:
+    '退役球員的卡片留下了第 {rank} 名標記。獲得 {s} 張高級球探券和 {n} 張球員候選重抽券。',
+  dailyRankBodyReroll: '退役球員的卡片留下了第 {rank} 名標記。獲得 {n} 張球員候選重抽券。',
+  dailyRankBodyMark: '退役球員的卡片留下了第 {rank} 名標記。道具每週只發一次，這次只有標記。',
 };

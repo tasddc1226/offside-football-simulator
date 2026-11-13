@@ -658,6 +658,25 @@ export const HofListResponseSchema = z.strictObject({
 });
 export type HofListResponse = z.infer<typeof HofListResponseSchema>;
 
+/** T-11-723 `GET /v1/hof/daily` 오늘의 랭킹. entries는 순위 순(1위부터), winners는 어제 굳힌 1 · 2 · 3위. */
+const DailyRankDaySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+export const DailyRankResponseSchema = z.strictObject({
+  /** 오늘(한국 날짜)과 순위가 굳는 시각(다음 자정). */
+  day: DailyRankDaySchema,
+  resetAt: z.iso.datetime(),
+  entries: z.array(PublicHofEntrySchema),
+  /** 어제 결과. 아직 굳히지 않았거나 오른 선수가 없으면 null. */
+  yesterday: z
+    .strictObject({
+      day: DailyRankDaySchema,
+      winners: z.array(
+        z.strictObject({ rank: z.number().int().min(1).max(3), entry: PublicHofEntrySchema }),
+      ),
+    })
+    .nullable(),
+});
+export type DailyRankResponse = z.infer<typeof DailyRankResponseSchema>;
+
 export const HofDetailResponseSchema = z.strictObject({
   entry: PublicHofEntrySchema,
   snapshot: LegendSnapshotSchema.nullable(),

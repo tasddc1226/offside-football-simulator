@@ -36,6 +36,7 @@ import { writeLeagueNewsAi } from './team/leagueNewsAi.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
 import { STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
+import { runDailyRank } from './team/dailyRank.js';
 import { logErrorText } from './logError.js';
 
 import { consumeBillingAlerts, recoverBillingAlerts } from './iap/alerts.js';
@@ -143,6 +144,11 @@ export default {
           ),
         );
       mark('runSeasonClose');
+      // T-11-723 오늘의 랭킹: 자정(한국 시각)이 지나면 전날 1 · 2 · 3위를 한 번 굳힌다(카드 표식 · 아이템 · 알림).
+      await runDailyRank(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
+        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'daily-rank', ...r })))
+        .catch(logged('daily-rank'));
+      mark('runDailyRank');
       // T-11-387 고르지 않고 떠난 장면 경기를 자동 선택으로 마감한다.
       await finishStaleLive(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then(

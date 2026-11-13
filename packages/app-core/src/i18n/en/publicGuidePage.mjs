@@ -90,6 +90,7 @@ export default (guideCopy) => {
         guideCopy.retiredNumberContribution,
         guideCopy.retiredNumberProgress,
         guideCopy.best11,
+        guideCopy.dailyRank,
         'If you meet the retired number requirements but every candidate club’s number has already been retired, you receive the Wall of Honour title. It is separate from a retired number, and you choose your featured title yourself. For existing players, the title is recorded only when the conditions at retirement can be confirmed from server records.',
       ],
     ],

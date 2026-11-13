@@ -364,6 +364,7 @@ export default function Team() {
             number: p.number,
             legendScore: p.legendScore,
             specials: p.specials,
+            daily: p.daily,
             careerId: p.careerId,
             look: p.look,
             nation: p.nation,
