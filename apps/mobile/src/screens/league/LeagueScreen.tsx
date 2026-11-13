@@ -53,12 +53,15 @@ import { rem } from '../../theme/type';
 import { FONT } from '@offside/app-core/design-tokens';
 import { LoginButtons } from '../owner/LoginButtons';
 import { LeagueBoard, LeagueMatchDetail, LeaguePicker } from './LeagueBoard';
+import { LeagueEmblem } from '../../ui/LeagueArt';
+import type { LeagueSpot } from '@offside/app-core/leagueHomeSpot';
 import { LeagueDaily } from './LeagueDaily';
 import { askPushAfter } from '../../platform/pushAsk';
 
 /** 홈의 리그 배너(누구나 보는 리그 소식). 리그가 끝났거나 불러오지 못하면 그리지 않는다. */
 /** 홈의 리그 소식 칸(웹 league/LeagueBanner.svelte). 응답은 홈의 컵 · 리그 줄(HomeEvents)이 불러 넘긴다. */
-export function LeagueBanner({ data }: { data: LeagueResponse }) {
+/** spot: 로그인한 구단주가 배치된 내 리그. 있으면 컵 칸의 트로피 자리에 그 리그 엠블럼을 그린다. */
+export function LeagueBanner({ data, spot }: { data: LeagueResponse; spot?: LeagueSpot | null }) {
   return (
     <Press
       onPress={() => go('league')}
@@ -69,7 +72,14 @@ export function LeagueBanner({ data }: { data: LeagueResponse }) {
     >
       {/* T-11-606 웹과 같이 단계 표시를 오른쪽 위에 두어 컵 배너(트로피 줄)와 글자 시작선을 맞춘다. */}
       <Card gap={8} testID="league-banner" style={{ flex: 1, padding: 14 }}>
-        <View style={{ alignSelf: 'flex-end', marginBottom: 10 }}>
+        <View
+          style={
+            spot
+              ? { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }
+              : { alignSelf: 'flex-end', marginBottom: 10 }
+          }
+        >
+          {spot ? <LeagueEmblem tier={spot.tier} league={spot.league} size={36} /> : null}
           <Pill tone={leaguePhaseActive(data.phase) ? 'good' : undefined}>
             {leaguePhaseLabel(data.phase)}
           </Pill>
