@@ -31,6 +31,11 @@ const COUNT_TTL = 300;
 
 export function registerHofRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/hof', async (c) => {
+    const started = Date.now();
+    let loaded = false;
+    let backfillMs = 0;
+    let listMs = 0;
+    let countMs = 0;
     const limit = parseWithAppError(HofListQuerySchema, c.req.query('limit'));
     const page = parseWithAppError(HofPageQuerySchema, c.req.query('page'));
     const sort = parseWithAppError(HofSortSchema, c.req.query('sort'));
@@ -48,11 +53,17 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
       EDGE.hofList(limit, page, sort, season?.id, q, pos, dpos),
       LIST_TTL,
       async () => {
+        loaded = true;
         const db = getDb(c);
+        const readDb = getPublicReadDb(c);
         // 모두 한 번뿐인 소급 — 조회마다 한 조각씩 나아간다(몸값은 리그 이름으로도 매겨 순서에 기대지 않는다).
-        filling = await ensureHofBackfilled(db);
+        // This first-primary metadata SELECT anchors the SAME session used by later reads.
+        const beforeBackfill = Date.now();
+        filling = await ensureHofBackfilled(db, readDb);
+        backfillMs = Date.now() - beforeBackfill;
+        const beforeList = Date.now();
         return listPublicHof(
-          filling ? db : getPublicReadDb(c),
+          filling ? db : readDb,
           limit,
           page,
           sort,
@@ -60,29 +71,64 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
           q,
           pos,
           dpos,
-          (load) =>
-            q
-              ? load()
-              : edgeCached(
-                  c,
-                  EDGE.hofCount(sort, season?.id, pos, dpos),
-                  COUNT_TTL,
-                  // T-11-688 엣지 캐시가 끝난 데이터센터마다 다시 세지 않고 D1에 한 벌만 둔 값을 읽는다.
-                  () =>
-                    filling
-                      ? load()
-                      : sharedCount(
-                          c.env.DB,
-                          EDGE.hofCount(sort, season?.id, pos, dpos),
-                          load,
-                          (p) => waitUntil(c, p),
-                        ),
-                  () => !filling,
-                ),
-        );
+          async (load) => {
+            const beforeCount = Date.now();
+            try {
+              return await (q
+                ? load()
+                : edgeCached(
+                    c,
+                    EDGE.hofCount(sort, season?.id, pos, dpos),
+                    COUNT_TTL,
+                    // T-11-688 엣지 캐시가 끝난 데이터센터마다 다시 세지 않고 D1에 한 벌만 둔 값을 읽는다.
+                    () =>
+                      filling
+                        ? load()
+                        : sharedCount(
+                            readDb.$client,
+                            EDGE.hofCount(sort, season?.id, pos, dpos),
+                            load,
+                            (p) => waitUntil(c, p),
+                          ),
+                    () => !filling,
+                  ));
+            } finally {
+              countMs = Date.now() - beforeCount;
+            }
+          },
+        ).finally(() => {
+          listMs = Date.now() - beforeList;
+        });
       },
       () => !filling,
     );
+    const routeMs = Date.now() - started;
+    const beforeRouteMs = Math.max(0, started - (c.get('startedAt') ?? started));
+    const ms = routeMs + beforeRouteMs;
+    if (ms >= 1000)
+      console.info(
+        JSON.stringify({
+          job: 'hof-read',
+          requestId: c.get('requestId'),
+          ms,
+          beforeRouteMs,
+          routeMs,
+          edgeHit: !loaded,
+          backfillMs,
+          listMs,
+          countMs,
+          edgeMs: Math.max(0, routeMs - backfillMs - listMs),
+          sort,
+          season: season?.id ?? null,
+          pos: pos ?? null,
+          dpos: dpos ?? null,
+          page,
+          limit,
+          search: !!q,
+          filling,
+          readSessions: c.env.D1_READ_SESSIONS_DISABLED !== '1',
+        }),
+      );
     return ok(c, HofListResponseSchema, data, 200, CACHE);
   });
 

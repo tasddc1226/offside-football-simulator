@@ -6,9 +6,11 @@ import { CAREER_VALUES_BACKFILL_KEYS, ensureCareerValuesBackfilled } from './car
 
 /** Request-local completion/cursor snapshot: one indexed metadata read, never an isolate-wide flag.
  * Each unfinished backfill retains its bounded page, writes and completion checks. */
-export async function ensureHofBackfilled(db: Db): Promise<boolean> {
+export async function ensureHofBackfilled(db: Db, metadataDb: Db = db): Promise<boolean> {
   const keys = [...CLUB_IDS_BACKFILL_KEYS, ...CAREER_VALUES_BACKFILL_KEYS];
-  const rows = await db.select().from(appMeta).where(inArray(appMeta.key, keys));
+  // The caller may anchor a read session with this metadata SELECT. Any unfinished writes
+  // still use db, never the public read adapter. Completion is not cached across requests.
+  const rows = await metadataDb.select().from(appMeta).where(inArray(appMeta.key, keys));
   const meta = new Map(rows.map((row) => [row.key, row.value]));
   const results = await Promise.all([
     ensureClubIdsBackfilled(db, undefined, meta),
