@@ -1163,6 +1163,13 @@
       "when": 1794540064314,
       "tag": "0168_attendance_ad_bonus",
       "breakpoints": true
+    },
+    {
+      "idx": 169,
+      "version": "6",
+      "when": 1794574050019,
+      "tag": "0169_daily_rank_winners",
+      "breakpoints": true
     }
   ]
 }

@@ -90,6 +90,7 @@ export default (guideCopy) => {
         guideCopy.retiredNumberContribution,
         guideCopy.retiredNumberProgress,
         guideCopy.best11,
+        guideCopy.dailyRank,
         '영구결번 자격을 채웠지만 후보 구단의 번호가 모두 먼저 결번되면 명예의 벽 칭호를 받습니다. 영구결번과는 별개이며 대표 칭호는 직접 고릅니다. 기존 선수는 은퇴 당시 조건을 서버 기록으로 확인할 수 있는 경우에만 칭호가 기록됩니다.',
       ],
     ],

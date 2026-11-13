@@ -34,7 +34,7 @@
   import { DEFAULT_NATION, NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
   import { cardBody, cardFootNote, cardSeasonBadge, cardSeasonColor, cardTier, isLegendTier } from '@offside/app-core/format';
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
-  import { SPECIAL_COLORS, specialRibbon } from '@offside/app-core/cardSpecial';
+  import { specialRibbon } from '@offside/app-core/cardSpecial';
   import { enhanceFx } from '@offside/app-core/cardEnhanceFx';
   import { showsPosOvr } from '@offside/app-core/cardEnhance';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
@@ -47,8 +47,8 @@
   const country = $derived(!youth ? NATION_BY_CODE.get(nation ?? player?.nation ?? DEFAULT_NATION) : undefined);
   const tier = $derived(youth ? 'youth' : cardTier(player?.legendScore, player?.peak ?? rating));
   // T-11-372 시즌 특별 카드 띠(가장 최근 시즌 · 높은 표식 하나).
-  const special = $derived(youth ? null : specialRibbon(player?.specials));
-  const specialColor = $derived(special ? SPECIAL_COLORS[special.kind] : null);
+  const special = $derived(youth ? null : specialRibbon(player?.specials, player?.daily));
+  const specialColor = $derived(special?.color ?? null);
   // T-11-373 강화 단계 효과(등급 색 위에 입힌다).
   const level = $derived(youth ? 0 : (player?.enhance ?? 0));
   const fx = $derived(enhanceFx(level));

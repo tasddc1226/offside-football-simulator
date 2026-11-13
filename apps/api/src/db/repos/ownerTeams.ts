@@ -225,7 +225,7 @@ export type LiveTeam = Pick<OwnerTeamRow, 'id' | 'season' | 'name' | 'manager' |
  * 쿼리의 select에 넣어 목록 응답과 한 번에 싣는다(표식만 따로 부르지 않는다).
  */
 export const specialsJsonOf = (careerId: AnyColumn | SQL) =>
-  sql<string>`(select json_group_array(json_object('season', s.season, 'kind', s.kind, 'rank', s.rank)) from card_specials s where s.career_id = ${careerId})`;
+  sql<string>`(select json_group_array(json_object('season', s.season, 'kind', s.kind, 'rank', s.rank)) from (select season, kind, rank from card_specials where career_id = ${careerId} union all select 0, 'daily', rank from daily_rank_winners where career_id = ${careerId}) s)`;
 
 const SPECIAL_KINDS = new Set<string>(CARD_SPECIAL_KINDS);
 
@@ -241,6 +241,18 @@ export function parseSpecials(json: string | null | undefined): CardSpecial[] {
     );
   } catch {
     return [];
+  }
+}
+
+/** T-11-723 specialsJsonOf 결과 → 오늘의 랭킹 순위(1 · 2 · 3). 없으면 null. */
+export function parseDaily(json: string | null | undefined): number | null {
+  if (!json || !json.includes('daily')) return null;
+  try {
+    const rows = JSON.parse(json) as { kind: string; rank: number }[];
+    const rank = rows.find((r) => r.kind === 'daily')?.rank;
+    return rank && rank >= 1 && rank <= 3 ? rank : null;
+  } catch {
+    return null;
   }
 }
 
@@ -329,10 +341,11 @@ export function teamPlayerCard(
   };
 }
 
-/** 표식이 있을 때만 싣는다(없는 카드의 응답 모양은 그대로). */
+/** 표식이 있을 때만 싣는다(없는 카드의 응답 모양은 그대로). T-11-723 오늘의 랭킹 순위는 `daily`로 따로 싣는다. */
 const specialsOf = (json: string | null | undefined) => {
   const specials = parseSpecials(json);
-  return specials.length ? { specials } : {};
+  const daily = parseDaily(json);
+  return { ...(specials.length ? { specials } : {}), ...(daily ? { daily } : {}) };
 };
 
 /** T-11-180 카드에 싣는 키·몸무게 — 둘 다 있을 때만(체격 기능 전 커리어는 없다). */

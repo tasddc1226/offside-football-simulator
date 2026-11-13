@@ -90,6 +90,7 @@ export default (guideCopy) => {
         guideCopy.retiredNumberContribution,
         guideCopy.retiredNumberProgress,
         guideCopy.best11,
+        guideCopy.dailyRank,
         '永久欠番の資格を満たしたものの、候補クラブの番号がすべて先に欠番になっていた場合は、名誉の壁の称号を受け取ります。永久欠番とは別で、代表称号は自分で選びます。既存の選手は、引退当時の条件をサーバー記録で確認できる場合にだけ称号が記録されます。',
       ],
     ],

@@ -201,6 +201,14 @@ export const CUP_KO = {
   best11RewardTitle: '시즌 {season} BEST 11에 뽑혔어요',
   best11RewardBody:
     '{name} 선수가 시즌 {season} BEST 11로 확정됐어요. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
+  // T-11-723 오늘의 랭킹 확정 보상.
+  dailyRankTitle: '어제 오늘의 랭킹 {rank}위예요',
+  dailyRankBodyBoth:
+    '은퇴한 선수 카드에 {rank}위 표식이 남았어요. 프리미엄 스카우트권 {s}장과 선수 후보 리롤권 {n}장을 받았어요.',
+  dailyRankBodyReroll:
+    '은퇴한 선수 카드에 {rank}위 표식이 남았어요. 선수 후보 리롤권 {n}장을 받았어요.',
+  dailyRankBodyMark:
+    '은퇴한 선수 카드에 {rank}위 표식이 남았어요. 아이템은 한 주에 한 번이라 이번에는 표식만 받았어요.',
 } as const;
 
 export type CupTextKey = keyof typeof CUP_KO;

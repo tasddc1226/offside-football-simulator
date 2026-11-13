@@ -158,6 +158,8 @@ export const TeamPlayerSchema = z.strictObject({
   locked: z.boolean().optional(),
   /** T-11-372 이 카드가 받은 시즌 표식(없으면 빠진다). 배포 전 응답엔 없다. */
   specials: z.array(CardSpecialSchema).optional(),
+  /** T-11-723 오늘의 랭킹 1 · 2 · 3위를 한 카드의 순위. 없으면 싣지 않는다. */
+  daily: z.number().int().min(1).max(3).optional(),
   /** T-11-080 판매 등록 중이면 그 등록. */
   listing: z.strictObject({ id: z.string(), price: z.number().int() }).nullable().optional(),
   /** T-11-373 카드 강화 단계(1~5). 강화하지 않은 카드 · 구버전 응답에는 없다. 자리 실력에 강화 OVR이 더해진다. */

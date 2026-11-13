@@ -210,6 +210,9 @@ const ko = {
   specialTopAssist: '도움왕',
   specialBest11: '베스트 11',
   specialAria: (p: { label: string }) => `시즌 특별 카드: ${p.label}`,
+  // T-11-723 오늘의 랭킹 표식
+  specialDaily: (p: { rank: number }) => `데일리 ${p.rank}위`,
+  specialDailyAria: (p: { rank: number }) => `오늘의 랭킹 ${p.rank}위 카드`,
   // 선수 고르기
   pickAria: (p: { slot: string }) => `${p.slot} 자리 선수 고르기`,
   pickSortAria: '정렬',

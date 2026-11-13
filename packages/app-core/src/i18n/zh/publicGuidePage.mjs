@@ -90,6 +90,7 @@ export default (guideCopy) => {
         guideCopy.retiredNumberContribution,
         guideCopy.retiredNumberProgress,
         guideCopy.best11,
+        guideCopy.dailyRank,
         '雖然符合退休背號資格，但候選俱樂部的號碼都已被先一步退休時，會獲得榮譽牆稱號。它與退休背號是兩回事，代表稱號由自己挑選。既有球員只有在能以伺服器紀錄確認退役當時條件時，才會記錄稱號。',
       ],
     ],

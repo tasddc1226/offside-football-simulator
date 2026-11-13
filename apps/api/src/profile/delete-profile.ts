@@ -25,6 +25,7 @@ import {
   giftClaims,
   ownerAttendance,
   ownerAttendanceDays,
+  dailyRankWinners,
   ownerItems,
   cardExchangeClaims,
   scoutPity,
@@ -171,6 +172,11 @@ export async function executeProfileDeletion(
     db.delete(ownerTitleProgress).where(eq(ownerTitleProgress.profileId, input.profileId)),
     db.delete(cupPredictions).where(eq(cupPredictions.profileId, input.profileId)),
     db.delete(ownerItems).where(eq(ownerItems.profileId, input.profileId)),
+    // T-11-723 오늘의 랭킹 결과 줄은 카드 표식이라 남기고(팔린 카드에도 붙어 있다), 구단주 id만 지운다.
+    db
+      .update(dailyRankWinners)
+      .set({ profileId: '' })
+      .where(eq(dailyRankWinners.profileId, input.profileId)),
     // T-11-374 카드 과제 낸 기록.
     db.delete(cardExchangeClaims).where(eq(cardExchangeClaims.profileId, input.profileId)),
     db.delete(scoutPity).where(eq(scoutPity.profileId, input.profileId)),

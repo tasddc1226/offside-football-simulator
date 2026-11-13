@@ -190,6 +190,8 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   specialTopAssist: 'アシスト王',
   specialBest11: 'ベストイレブン',
   specialAria: (p) => `シーズン特別カード: ${p.label}`,
+  specialDaily: (p) => `デイリー${p.rank}位`,
+  specialDailyAria: (p) => `今日のランキング${p.rank}位のカード`,
   pickAria: (p) => `${p.slot}の枠の選手を選ぶ`,
   pickSortAria: '並び替え',
   youthNote: '枠を空けておくとユース選手が出場します',

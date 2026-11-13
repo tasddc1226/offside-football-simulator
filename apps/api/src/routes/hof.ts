@@ -1,5 +1,6 @@
 import {
   CareerIdParamSchema,
+  DailyRankResponseSchema,
   HofDetailResponseSchema,
   HofListQuerySchema,
   HofListResponseSchema,
@@ -11,7 +12,7 @@ import {
   HofSortSchema,
 } from '@offside/contracts';
 import type { Hono } from 'hono';
-import { notFoundError, ok } from './shared.js';
+import { notFoundError, nowIso, ok } from './shared.js';
 import { getPublicHof, listPublicHof } from '../db/repos/careers.js';
 import { ensureHofBackfilled } from '../db/repos/hofBackfill.js';
 import { edgeCached, waitUntil } from '../edgeCache.js';
@@ -19,6 +20,8 @@ import { EDGE } from '../edgeKeys.js';
 import { getDb, getPublicReadDb, type AppEnv } from '../env.js';
 import { parseWithAppError } from '../errors.js';
 import { sharedCount } from '../hof/sharedCount.js';
+import { readDailyRank } from '../team/dailyRank.js';
+import { dailyRankDays } from '@offside/contracts/daily-rank';
 
 // T-10-005 공개 명예의 전당. 로그인 없이 누구나 읽는다 — 응답에는 유저가 공개를 고른 이름과 커리어
 // 기록만 있고 프로필·계정 정보는 없다. D1 읽기를 줄이려고 짧게 캐시한다.
@@ -130,6 +133,16 @@ export function registerHofRoutes(app: Hono<AppEnv>): void {
         }),
       );
     return ok(c, HofListResponseSchema, data, 200, CACHE);
+  });
+
+  // T-11-723 오늘의 랭킹 — 오늘(한국 시각) 은퇴한 선수의 레전드 점수 순위와 어제 1 · 2 · 3위. 모두에게 같아 날짜마다 한 벌을
+  // 1분 엣지 캐시에 담는다(세션을 보지 않는다). '/v1/hof/:careerId'보다 먼저 등록한다.
+  app.get('/v1/hof/daily', async (c) => {
+    const now = nowIso();
+    const data = await edgeCached(c, EDGE.dailyRank(dailyRankDays(now).today), LIST_TTL, () =>
+      readDailyRank(getPublicReadDb(c), now),
+    );
+    return ok(c, DailyRankResponseSchema, data, 200, CACHE);
   });
 
   app.get('/v1/hof/:careerId', async (c) => {

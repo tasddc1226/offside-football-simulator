@@ -191,6 +191,8 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   specialTopAssist: 'Top assists',
   specialBest11: 'Best XI',
   specialAria: (p) => `Season special card: ${p.label}`,
+  specialDaily: (p) => `Daily #${p.rank}`,
+  specialDailyAria: (p) => `Daily Ranking #${p.rank} card`,
   pickAria: (p) => `Pick a player for ${p.slot}`,
   pickSortAria: 'Sort',
   youthNote: 'Leave the spot empty and a youth player plays',

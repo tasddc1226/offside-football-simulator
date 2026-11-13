@@ -38,7 +38,7 @@ const cardHeight = (p: TeamPlayer) =>
   CARD_HEIGHT +
   (typeName(p.pos, p.type) ? CARD_STYLE_ROW : 0) +
   (cardBody(p) ? CARD_BODY_ROW : 0) +
-  (specialRibbon(p.specials) ? CARD_SPECIAL_ROW : 0);
+  (specialRibbon(p.specials, p.daily) ? CARD_SPECIAL_ROW : 0);
 
 /** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다(웹 PlayerPeek). */
 export function PlayerPeek({
@@ -166,6 +166,7 @@ export function PlayerPeek({
                 number: player.number,
                 legendScore: player.legendScore,
                 specials: player.specials,
+                daily: player.daily,
                 attrs: player.attrs,
                 attrsEstimated: player.attrsEstimated,
                 height: player.height,

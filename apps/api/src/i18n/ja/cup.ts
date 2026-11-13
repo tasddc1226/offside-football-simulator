@@ -194,4 +194,11 @@ export const CUP_JA: Record<CupTextKey, string> = {
   best11RewardTitle: 'シーズン{season} BEST 11に選ばれました',
   best11RewardBody:
     '{name}選手がシーズン{season} BEST 11に確定しました。選手候補リロール券{n}枚、プレミアムスカウト券{s}枚、ポテンシャル強化券{b}枚を受け取りました。',
+  dailyRankTitle: '昨日の今日のランキングで{rank}位でした',
+  dailyRankBodyBoth:
+    '引退した選手のカードに{rank}位のマークが付きました。プレミアムスカウト券{s}枚と選手候補リロール券{n}枚を受け取りました。',
+  dailyRankBodyReroll:
+    '引退した選手のカードに{rank}位のマークが付きました。選手候補リロール券{n}枚を受け取りました。',
+  dailyRankBodyMark:
+    '引退した選手のカードに{rank}位のマークが付きました。アイテムは週に1回のため、今回はマークのみです。',
 };

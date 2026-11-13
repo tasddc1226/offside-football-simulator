@@ -1,0 +1,34 @@
+{
+  "id": "t-11-723-daily-ranking",
+  "title": "기록실에 오늘의 랭킹",
+  "items": [
+    "기록실 데일리 탭에서 오늘 은퇴한 선수의 레전드 점수 순위를 볼 수 있어요. 11월 14일 0시 뒤에 은퇴한 선수부터 겨뤄요. 로그인한 구단주의 선수만 오르고 구단주마다 한 명이 올라요",
+    "자정에 순위가 정해지면 1 · 2 · 3위 선수 카드에 순위 표식이 남아요. 1위는 프리미엄 스카우트권 1장과 리롤권 1장, 2 · 3위는 리롤권 1장을 받아요",
+    "아이템은 한 주에 한 번 받아요. 같은 주에 다시 3위 안에 들면 표식만 받아요"
+  ],
+  "en": {
+    "title": "Daily ranking in Records",
+    "items": [
+      "The Daily tab in Records ranks players who retired today by legend score, starting with players who retire from Nov 14, 0:00 KST. Only players of signed-in owners appear, one per owner.",
+      "When the ranking is settled at midnight (KST), the top three players keep a rank mark on their card. 1st gets 1 premium scout ticket and 1 reroll ticket; 2nd and 3rd get 1 reroll ticket.",
+      "Items are given once a week. Finishing in the top three again in the same week earns the mark only."
+    ]
+  },
+  "ja": {
+    "title": "記録室に今日のランキング",
+    "items": [
+      "記録室のデイリータブで、今日引退した選手のレジェンドスコア順位を見られます。11月14日0時(韓国時間)以降に引退した選手から対象です。ログインしたオーナーの選手だけが載り、オーナーごとに1人です。",
+      "0時(韓国時間)に順位が決まると、1・2・3位の選手カードに順位マークが残ります。1位はプレミアムスカウト券1枚とリロール券1枚、2・3位はリロール券1枚を受け取ります。",
+      "アイテムは週に1回です。同じ週にもう一度3位以内に入るとマークのみです。"
+    ]
+  },
+  "zh": {
+    "title": "紀錄室新增今日排行",
+    "items": [
+      "在紀錄室的每日分頁可以查看今天退役球員的傳奇分數排行，從 11 月 14 日 0 點（韓國時間）起退役的球員開始計算。只有已登入老闆的球員會上榜，每位老闆一名。",
+      "午夜（韓國時間）排名確定後，前三名球員的卡片會留下名次標記。第 1 名獲得 1 張高級球探券和 1 張重抽券，第 2 · 3 名獲得 1 張重抽券。",
+      "道具每週只發一次，同一週再次進入前三名時只會得到標記。"
+    ]
+  },
+  "availability": "web-app"
+}

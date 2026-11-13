@@ -36,7 +36,7 @@ import { tn } from '@offside/game/i18n/names';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
 import { enhanceFx, type EnhanceFx } from '@offside/app-core/cardEnhanceFx';
 import { showsPosOvr } from '@offside/app-core/cardEnhance';
-import { SPECIAL_COLORS, specialRibbon, type SpecialRibbon } from '@offside/app-core/cardSpecial';
+import { specialRibbon, type SpecialRibbon } from '@offside/app-core/cardSpecial';
 import type { CardSpecialMark } from '@offside/contracts/card-special';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
@@ -252,6 +252,8 @@ export type PlayerCardData = {
   enhance?: number | undefined;
   /** T-11-372 시즌 특별 카드 표식 — 테두리 색 · 띠. 없으면 빈 칸. */
   specials?: readonly CardSpecialMark[] | undefined;
+  /** T-11-723 오늘의 랭킹 순위(1 · 2 · 3). */
+  daily?: number | undefined;
   youth: boolean;
 };
 
@@ -570,7 +572,7 @@ function SeasonBadge({ season, compact }: { season: number; compact: boolean }) 
 
 /** T-11-372 시즌 특별 카드 띠(웹 PlayerCard .card-special) — 작은 카드는 아래쪽에 겹치고, 큰 카드는 맨 아래 줄. */
 function SpecialBadge({ ribbon, compact }: { ribbon: SpecialRibbon; compact: boolean }) {
-  const color = SPECIAL_COLORS[ribbon.kind];
+  const color = ribbon.color;
   return (
     <View
       testID="card-special"
@@ -701,8 +703,8 @@ export function PlayerCard({
   // 플레이스타일(웹 PlayerCard .card-type). 자리가 좁은 compact 카드에는 넣지 않는다.
   const style = !compact && cell.pos ? typeName(cell.pos, cell.type) : null;
   const body = compact ? null : cardBody(cell);
-  const ribbon = cell.youth ? null : specialRibbon(cell.specials);
-  const special = ribbon ? SPECIAL_COLORS[ribbon.kind] : null;
+  const ribbon = cell.youth ? null : specialRibbon(cell.specials, cell.daily);
+  const special = ribbon?.color ?? null;
   // T-11-373 강화 단계 효과(등급 색 위에 입힌다).
   const fx = enhanceFx(level);
   const height = compact

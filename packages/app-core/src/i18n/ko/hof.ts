@@ -10,6 +10,20 @@ const ko = {
   tabRn: '영구결번',
   tabTeams: '팀 랭킹',
   tabAch: '구단주 랭킹',
+  // T-11-723 오늘의 랭킹 탭
+  tabDaily: '데일리',
+  dailyTitle: '오늘의 랭킹',
+  dailyLead:
+    '오늘 은퇴한 선수의 레전드 점수 순위예요. 로그인한 구단주의 선수만 오르고, 구단주마다 가장 높은 선수 한 명이 올라요.',
+  dailyReset: (p: { when: string }) => `${p.when}(한국 시각)에 순위가 정해져요.`,
+  dailyReward: (p: { scout: number; reroll: number; rest: number }) =>
+    `1 · 2 · 3위 선수 카드에는 순위 표식이 남아요. 1위는 프리미엄 스카우트권 ${p.scout}장과 리롤권 ${p.reroll}장, 2 · 3위는 리롤권 ${p.rest}장을 받아요. 아이템은 한 주에 한 번 받아요.`,
+  dailyCount: (p: { n: number }) => `오늘 ${p.n}명`,
+  dailyEmpty: '오늘은 아직 오른 선수가 없어요.',
+  dailyOpens: (p: { when: string }) => `${p.when}(한국 시각)부터 은퇴한 선수로 순위를 매겨요.`,
+  dailyFailed: '오늘의 랭킹을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.',
+  dailyYesterday: '어제 1 · 2 · 3위',
+  dailyRankLabel: (p: { rank: number }) => `${p.rank}위`,
   title: '명예의 전당',
   // 순위 유형
   sortScore: '레전드 점수',

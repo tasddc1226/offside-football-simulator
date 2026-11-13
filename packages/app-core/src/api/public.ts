@@ -2,6 +2,7 @@ import type { DetailPos } from '@offside/contracts/positions';
 import { LIVE_POLL_SEC, TICKER_POLL_SEC } from '@offside/contracts/polling';
 import type {
   Best11Response,
+  DailyRankResponse,
   FirstsResponse,
   HofDetailResponse,
   HofListResponse,
@@ -30,6 +31,10 @@ export function getHof(
   const q = `limit=${limit}${page > 1 ? `&page=${page}` : ''}${sort !== 'score' ? `&sort=${sort}` : ''}${season !== null ? `&season=${season}` : ''}${name ? `&q=${encodeURIComponent(name)}` : ''}${pos ? `&pos=${pos}` : ''}${dpos ? `&dpos=${dpos}` : ''}`;
   // T-11-503 홈 상위 목록이 홈에 돌아올 때마다 다시 받지 않게 5분 메모. 내 은퇴 업로드는 outbox가 메모를 비운다.
   return cachedGet<HofListResponse>(`/v1/hof?${q}`, 300_000);
+}
+/** T-11-723 오늘의 랭킹(공개). 탭을 열 때만 부르고 1분 메모한다(서버 엣지 캐시와 같은 길이). */
+export function getDailyRank(): Promise<ApiResult<DailyRankResponse>> {
+  return cachedGet<DailyRankResponse>('/v1/hof/daily', 60_000);
 }
 /** T-11-463 시즌 BEST 11(공개). 자리 주인은 은퇴마다 바뀌지만 화면을 열 때만 부른다. */
 export function getBest11(season: number): Promise<ApiResult<Best11Response>> {

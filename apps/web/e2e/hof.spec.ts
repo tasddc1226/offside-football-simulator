@@ -285,6 +285,7 @@ test('구단주 내 선수: 계정에 연결되지 않았으면 이 기기 기�
   await page.locator('[data-act="hof"]').click();
   await expect(page.locator('[data-hof-tab]')).toHaveText([
     '명예의 전당',
+    '데일리',
     'BEST 11',
     '영구결번',
     '팀 랭킹',

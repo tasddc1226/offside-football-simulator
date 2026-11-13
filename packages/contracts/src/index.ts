@@ -154,6 +154,8 @@ export {
   type PublicHofEntry,
   type HofRaiser,
   type HofListResponse,
+  DailyRankResponseSchema,
+  type DailyRankResponse,
   type HofSort,
   type MyCareersResponse,
   type HofDetailResponse,
