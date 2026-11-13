@@ -25,7 +25,7 @@ Meta 앱 설치 광고(광고 관리자 'JP App Promo Test')는 앱이 설치 ·
 3. **Google Play 데이터 보안**: '앱 활동(앱 상호작용)', '기기 또는 기타 ID'를 '공유: Meta, 광고 · 마케팅 측정, 선택 사항(동의)'으로 고친다.
 4. **1.1.7 production 빌드**(iOS · 안드로이드)를 PR 브랜치에서 만들고, `.github/scripts/ota-store-runtime.mjs`의
    `STORE_RUNTIMES`가 그 빌드의 지문과 같은지 확인한 뒤 머지 · 배포한다. 1.1.6 · 1.1.5 · 1.1.4 빌드는
-   `prepare-ota-legacy.mjs`가 Meta 모듈 · 플러그인을 빼는 경로로 계속 OTA를 받는다.
+   `prepare-ota-legacy.mjs`가 Meta 모듈 · 플러그인을 빼는 경로로 OTA를 받다가 T-11-719에서 끝났다.
 5. 개인정보처리방침(웹 `/legal/privacy/` 8항)은 이 PR의 웹 배포로 바뀐다. 시행일이 배포일보다 앞서지 않는지 확인한다.
 
 ## 확인
