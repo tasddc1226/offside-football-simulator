@@ -77,7 +77,7 @@
     fx = out;
   }
   // T-11-153 웹은 광고가 없어 앱의 광고 자리(선수 자금이 모자란 시즌 · 추가 시도의 강화 · 이번 시즌 평가 보기)를 로그인한
-  // 구단주의 구단 자금으로 받는다. 두 자리 중 하나라도 보일 때만 값을 묻는다(30초 메모).
+  // 구단주의 구단 자금으로 받는다. 두 자리 중 하나라도 보일 때만 값을 묻는다(5분 메모).
   let club = $state<RewardShopResponse | null>(null);
   let clubBusy = $state(false);
   let clubMsg = $state('');
@@ -131,7 +131,7 @@
     if (r.boost !== null) tickets = r.boost;
     clubMsg = r.message;
   }
-  // T-11-513 구단 자금 확정 강화. 이 선수가 이번 시즌에 받을 수 있고 로그인한 구단주일 때만 값을 묻는다(30초 메모).
+  // T-11-513 구단 자금 확정 강화. 이 선수가 이번 시즌에 받을 수 있고 로그인한 구단주일 때만 값을 묻는다(5분 메모).
   let sure = $state<SureShopResponse | null>(null);
   let sureBusy = $state(false);
   $effect(() => {
