@@ -15,6 +15,8 @@ export const AttendanceSchema = z.strictObject({
   bestStreak: Count,
   /** T-11-512 클럽 멤버십 구독 중이라 출석 보상을 2배로 받는다. 배포 전 응답엔 없다. */
   member: z.boolean().optional(),
+  /** T-11-720 오늘 광고를 보고 출석 보상을 한 번 더 받았다(앱 전용). 배포 전 응답 · 출석 전에는 없다. */
+  adBonus: z.boolean().optional(),
 });
 export type Attendance = z.infer<typeof AttendanceSchema>;
 
@@ -24,3 +26,7 @@ export const AttendanceCheckInResponseSchema = z.strictObject({
   granted: z.strictObject({ reroll: Count, boost: Count, scout: Count, rename: Count }),
 });
 export type AttendanceCheckInResponse = z.infer<typeof AttendanceCheckInResponseSchema>;
+
+/** T-11-720 POST /v1/attendance/ad-bonus — 오늘 출석한 뒤 광고를 보고 그날 칸 보상을 한 번 더 받은 상태와 받은 아이템. */
+export const AttendanceAdBonusResponseSchema = AttendanceCheckInResponseSchema;
+export type AttendanceAdBonusResponse = AttendanceCheckInResponse;

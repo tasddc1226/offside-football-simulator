@@ -3,7 +3,7 @@ import type { AdMsgs } from '../ko/ad';
 
 export const ad: Translation<AdMsgs> = {
   title: '移除廣告',
-  body: '永久關閉紀錄室・消息・傳奇頁面底部的廣告，以及退役時的全螢幕廣告。重新抽候選・查看潛力・賽季評價・潛力強化的獎勵廣告也不用看，直接領取。機率與次數上限不變，也不包含重抽券・球探券・強化券。同一個商店帳號的其他裝置也能恢復購買。',
+  body: '永久關閉退役時的全螢幕廣告。重新抽候選・查看潛力・賽季評價・潛力強化・賽季結算獎金・簽到再領一次的獎勵廣告也不用看，直接領取。機率與次數上限不變，也不包含重抽券・球探券・強化券。同一個商店帳號的其他裝置也能恢復購買。',
   owned: '你已購買移除廣告，謝謝支持！',
   checking: '正在確認商店…',
   buyPrice: (p) => `移除廣告 ${p.price}`,
@@ -26,4 +26,12 @@ export const ad: Translation<AdMsgs> = {
     `要重新抽 3 名候選嗎？目前的候選與已確認的潛力範圍都會消失，今天還剩 ${p.n} 次。`,
   adRerollWatch: '要看完廣告才能重新抽候選。',
   adRerollDone: (p) => `已重新抽候選。今天還能再抽 ${p.n} 次。`,
+  seasonBonusAd: (p) => `看廣告領賽季結算獎金 ${p.money}`,
+  seasonBonusFree: (p) => `領取賽季結算獎金 ${p.money}`,
+  seasonBonusWatch: '看完廣告才能領取賽季結算獎金。',
+  seasonBonusDone: (p) => `已領取賽季結算獎金 ${p.money}。`,
+  attendAd: '看廣告再領一次',
+  attendFree: '再領一次',
+  attendWatch: '看完廣告才能再領一次。',
+  attendFail: '無法領取，請稍後再按一次。',
 };

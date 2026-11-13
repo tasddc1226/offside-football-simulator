@@ -63,6 +63,8 @@ export const CUP_JA: Record<CupTextKey, string> = {
   renameSame: '今の名前と同じです。',
   giftClaimed: 'このプレゼントはすでに受け取りました。',
   attendanceChecked: '今日はすでに出席しました。',
+  attendanceAdNotChecked: '出席した後にもう一度受け取れます。',
+  attendanceAdTaken: '今日はすでにもう一度受け取りました。',
   iapInvalid: '購入を確認できませんでした。',
   iapPending: 'お支払いがまだ完了していません。完了すると自動で受け取れます。',
   iapOtherAccount: '別のアカウントで購入されています。購入したアカウントでログインしてください。',

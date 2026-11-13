@@ -83,6 +83,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivReward5: 'Elite II season reward rerolls',
   teamDivReward6: 'Elite I season reward rerolls',
   teamDivReward7: 'Master season reward rerolls',
+  adSeasonBonus: 'Season-end ad bonus share',
+  adSeasonBonusMin: 'Season-end ad bonus minimum',
   retireExpShare: 'Retirement screen experiment share',
   eventWeight: (p) => `Event frequency changes: ${p.n}`,
   choiceBonus: (p) => `Choice success chance changes: ${p.n}`,

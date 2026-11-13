@@ -40,6 +40,16 @@ const UNITS = {
     ios: 'ca-app-pub-3797087216173591/3708867561',
     android: 'ca-app-pub-3797087216173591/3204550669',
   },
+  /** T-11-720 ios·android-season-bonus-rewarded(시즌 결산 보너스) */
+  season: {
+    ios: 'ca-app-pub-3797087216173591/8115905453',
+    android: 'ca-app-pub-3797087216173591/5489742110',
+  },
+  /** T-11-720 ios·android-attendance-double-rewarded(출석 한 번 더 받기) */
+  attendance: {
+    ios: 'ca-app-pub-3797087216173591/9261466164',
+    android: 'ca-app-pub-3797087216173591/8363317467',
+  },
 };
 type RewardPlacement = keyof typeof UNITS;
 const unitOf = (p: RewardPlacement) => (__DEV__ ? TestIds.REWARDED : Platform.select(UNITS[p]));

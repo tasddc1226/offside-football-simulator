@@ -83,6 +83,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivReward5: 'エリートIIシーズン報酬のリロール券',
   teamDivReward6: 'エリートIシーズン報酬のリロール券',
   teamDivReward7: 'マスターシーズン報酬のリロール券',
+  adSeasonBonus: 'シーズン決算の広告ボーナス割合',
+  adSeasonBonusMin: 'シーズン決算の広告ボーナス下限',
   retireExpShare: '引退画面の実験割合',
   eventWeight: (p) => `イベント出現頻度の調整 ${p.n}件`,
   choiceBonus: (p) => `選択肢の成功確率の調整 ${p.n}件`,

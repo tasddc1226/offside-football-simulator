@@ -18,3 +18,4 @@ export * from './legend.js';
 export * from './turn.js';
 export * from './moments.js';
 export type * from './types.js';
+export * from './adBonus.js';

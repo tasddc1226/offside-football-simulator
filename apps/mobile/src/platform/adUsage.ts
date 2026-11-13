@@ -5,11 +5,16 @@ import { kv } from './setup';
 import { adFree } from './adFree';
 
 const KEY = 'offside_ad_usage';
-export type AdUsagePlacement = 'candidates' | 'peek' | 'boost';
-const SHORT = { candidates: 'c', peek: 'p', boost: 'b' } as const;
+export type AdUsagePlacement = 'candidates' | 'peek' | 'boost' | 'season' | 'attendance';
+// T-11-720 시즌 결산 보너스(s) · 출석 한 번 더(a)를 더했다. 옛 앱이 보낸 요약에는 s · a가 없다.
+const SHORT = { candidates: 'c', peek: 'p', boost: 'b', season: 's', attendance: 'a' } as const;
 
 type Counts = Omit<AdUsage, 'af'>;
-const empty = (): Counts => ({ rw: { c: 0, p: 0, b: 0 }, fr: { c: 0, p: 0, b: 0 }, it: 0 });
+const empty = (): Counts => ({
+  rw: { c: 0, p: 0, b: 0, s: 0, a: 0 },
+  fr: { c: 0, p: 0, b: 0, s: 0, a: 0 },
+  it: 0,
+});
 
 function read(): Counts {
   try {
@@ -31,7 +36,8 @@ function bump(change: (c: Counts) => void) {
 /** 보상을 받았을 때. free는 광고 제거 구매자가 광고 없이 받은 경우. */
 export function countReward(p: AdUsagePlacement, free: boolean) {
   bump((c) => {
-    c[free ? 'fr' : 'rw'][SHORT[p]]++;
+    const k = c[free ? 'fr' : 'rw'];
+    k[SHORT[p]] = (k[SHORT[p]] ?? 0) + 1;
   });
 }
 

@@ -436,6 +436,18 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '마스터 시즌 보상 리롤권',
     desc: '시즌 마감 때 마스터 디비전인 구단주가 받는 선수 후보 리롤권 장수',
   },
+  adSeasonBonus: {
+    group: 'growth',
+    label: '시즌 결산 광고 보너스 비율', // i18n-ignore 운영 도구 이름(ko balanceKeys와 같아야 한다)
+    // i18n-ignore 운영 도구 설명
+    desc: '앱 시즌 결산 화면에서 광고를 끝까지 보면 이번 계약 연봉에 이 값을 곱한 선수 자금을 준다(시즌마다 한 번, 광고 제거 · 멤버십은 광고 없이 바로)',
+  },
+  adSeasonBonusMin: {
+    group: 'growth',
+    label: '시즌 결산 광고 보너스 하한', // i18n-ignore 운영 도구 이름(ko balanceKeys와 같아야 한다)
+    // i18n-ignore 운영 도구 설명
+    desc: '연봉이 없거나 적어도 이만큼은 준다(만 원). 비율과 하한이 모두 0이면 보너스 칸이 나오지 않는다',
+  },
   // T-11-669 운영 도구 문구는 한국어로 둔다(CLAUDE.md 다국어 규칙). 공개 이력 이름은 app-core balanceKeys 4개 언어.
   retireExpShare: {
     group: 'experiment',

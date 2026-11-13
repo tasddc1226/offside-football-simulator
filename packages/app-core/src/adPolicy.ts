@@ -4,20 +4,27 @@
 export type AdPlace =
   'records-bottom' | 'board-bottom' | 'legend-bottom' | 'retired-bottom' | 'owner-summary';
 
-/** 위치별 켜기 스위치 — 지표가 나빠지면 여기서 끈다(기획 6절). 다음 단계 위치는 여기에 더한다(5절). */
+/** 위치별 켜기 스위치 — 지표가 나빠지면 여기서 끈다(기획 6절). 다음 단계 위치는 여기에 더한다(5절).
+ *  T-11-720 다섯 곳 모두 끈다. 10-30 ~ 11-12 14일 동안 배너 수익이 합쳐서 US$1.8(eCPM 약 $0.2)이라
+ *  화면만 무겁게 했다. 다시 켤 때는 여기서 위치만 true로 바꾼다. */
 export const AD_PLACES: Record<AdPlace, boolean> = {
-  'records-bottom': true,
-  'board-bottom': true,
-  'legend-bottom': true,
-  'retired-bottom': true,
-  'owner-summary': true,
+  'records-bottom': false,
+  'board-bottom': false,
+  'legend-bottom': false,
+  'retired-bottom': false,
+  'owner-summary': false,
 };
 
 /** 같은 위치는 세션 안에서 이 간격 안에 다시 요청하지 않는다. */
 export const AD_REPEAT_MS = 5 * 60_000;
 
 /** lastShown: 이 세션에서 그 위치를 마지막으로 요청한 시각. 안 채워진 위치는 Infinity로 둬 다시 요청하지 않는다. */
-export function shouldShow(place: AdPlace, now: number, lastShown?: number): boolean {
-  if (!AD_PLACES[place]) return false;
+export function shouldShow(
+  place: AdPlace,
+  now: number,
+  lastShown?: number,
+  places: Record<AdPlace, boolean> = AD_PLACES,
+): boolean {
+  if (!places[place]) return false;
   return lastShown === undefined || now - lastShown >= AD_REPEAT_MS;
 }

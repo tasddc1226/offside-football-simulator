@@ -157,7 +157,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'claim_id',
     'updated_at',
   ],
-  owner_attendance_days: ['profile_id', 'day', 'checked_at'],
+  owner_attendance_days: ['profile_id', 'day', 'checked_at', 'ad_claim_id'],
   season_passes: [
     'profile_id',
     'season',
