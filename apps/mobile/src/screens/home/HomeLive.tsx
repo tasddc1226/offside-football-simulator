@@ -312,9 +312,9 @@ export function HomeLive() {
   );
 }
 
-/** 웹 .live-stats — 칸 폭은 남은 칸이 나눠 갖는다(최소 70). */
+/** 웹 .live-stats — T-11-606 한 줄에 네 칸(칸 사이 6). */
 function StatGrid({ children }: { children: React.ReactNode }) {
-  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>{children}</View>;
+  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>{children}</View>;
 }
 function StatBox({
   label,
@@ -333,12 +333,11 @@ function StatBox({
       accessibilityLabel={label}
       style={{
         flexGrow: 1,
-        flexBasis: 70,
+        flexBasis: '22%',
         minWidth: 0,
         backgroundColor: c.surface2,
         borderRadius: RADIUS.sm,
-        paddingVertical: 8,
-        paddingHorizontal: 10,
+        padding: 8,
         gap: 1,
       }}
     >

@@ -31,8 +31,6 @@ export const home: Translation<HomeMsgs> = {
   chatLabel: '聊天',
   chatLabelUnread: (p) => `聊天，未讀訊息${p.n}則`,
   chatStatusUnread: (p) => `未讀聊天訊息${p.n}則`,
-  noticeTitle: '公告',
-  releaseTitle: '更新資訊',
   more: '查看更多',
   moreAria: (p) => `查看更多${p.what}`,
   newsTagNotice: '公告',

@@ -2,9 +2,6 @@
 import { ns } from '../core';
 
 const ko = {
-  dexSubApp: '선택지마다 성공 확률 공개 · 확률 도감 보기 →',
-  galleryWideTitle: '오프사이드 마이너 갤러리 ↗',
-  galleryWideSub: '디시인사이드에서 커리어 자랑 · 공략 · 건의 나누기',
   chatLabelApp: '라운지 채팅',
   // 알림 권유 카드(앱)
   pushTitle: '컵 접수와 경기 결과를 알림으로 받을까요?',

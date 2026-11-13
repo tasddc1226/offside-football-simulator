@@ -42,8 +42,6 @@ const ko = {
   chatLabelUnread: (p: { n: number }) => `채팅, 읽지 않은 메시지 ${p.n}개`,
   chatStatusUnread: (p: { n: number }) => `읽지 않은 채팅 메시지 ${p.n}개`,
   // 소식 섹션
-  noticeTitle: '공지사항',
-  releaseTitle: '릴리즈 노트',
   // T-11-130 섹션 머리의 다른 화면으로 넘어가는 링크(소식·명예의 전당·구단 가치).
   more: '더보기',
   moreAria: (p: { what: string }) => `${p.what} 더보기`,

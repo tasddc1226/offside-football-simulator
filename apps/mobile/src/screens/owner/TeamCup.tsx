@@ -1,12 +1,11 @@
 // T-11-145 오프사이드 컵 — 홈의 컵 배너 · 신청/취소 · 편성 화면의 명단 마감 안내. 컵 전체 화면은 CupScreen.
 // 서버가 대회를 치르므로 앱은 fetchCup(누구나) · fetchCupMe(내 참가·자격·다음 경기·명단 잠금)를 보여 주기만 한다.
-import { RADIUS } from '@offside/app-core/design-tokens';
+import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, View } from 'react-native';
 import {
   enterCup,
   fetchCup,
-  fetchCupHome,
   type CupHomeResponse,
   fetchCupMe,
   withdrawCup,
@@ -16,7 +15,6 @@ import {
 import { cupText as L } from '@offside/app-core/i18n/ko/cup';
 import { cupRewardText } from '@offside/app-core/cupReward';
 import { cupAppText as A } from '@offside/app-core/i18n/ko/cupApp';
-import { cupOnHome } from '@offside/app-core/cupHome';
 import { cupEnterConfirmLines, cupEntryTeamAction } from '@offside/app-core/cupEntry';
 import { divisionLabel } from '@offside/app-core/cupDivision';
 import type { CupLineupBar } from '@offside/app-core/cupLineupBar';
@@ -28,6 +26,7 @@ import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Pill, Press, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
+import { rem } from '../../theme/type';
 import { TeamLogo } from '../../components/TeamLogo';
 import { CupTrophy } from '../../ui/CupTrophy';
 import { dayTimeText, phaseLabel, reasonText, roundLabel, stageLabel, whenText } from './cupText';
@@ -529,17 +528,8 @@ export function CupLockNotice({
 }
 
 /** 홈의 컵 배너(누구나 보는 대회 소식). 취소됐거나 끝난 지 일주일이 지났거나 불러오지 못하면 그리지 않는다. */
-export function CupBanner({ onOpen }: { onOpen: () => void }) {
-  const [data, setData] = useState<CupHomeResponse | null>(null);
-  const reload = useCallback(async () => {
-    const r = await fetchCupHome();
-    if (r.ok) setData(r.data);
-  }, []);
-  useEffect(() => {
-    void reload();
-  }, [reload]);
-  useOnPull(reload);
-  if (!data || !cupOnHome(data)) return null;
+/** 홈의 컵 소식 칸(웹 cup/CupBanner.svelte). 응답은 홈의 컵 · 리그 줄(HomeEvents)이 불러 넘긴다. */
+export function CupBanner({ data, onOpen }: { data: CupHomeResponse; onOpen: () => void }) {
   let text: string;
   switch (data.phase) {
     case 'soon':
@@ -574,21 +564,38 @@ export function CupBanner({ onOpen }: { onOpen: () => void }) {
       testID="cup-open"
       scale={0.985}
       accessibilityLabel={`${L.fullTitle({ n: data.cup.edition })} · ${L.open}`}
+      style={{ flex: 1, minWidth: 0 }}
     >
-      <Card gap={8} testID="cup-banner">
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <CupTrophy stage="champion" edition={data?.cup.edition} size={44} bare />
-          <View style={{ flex: 1, minWidth: 0 }}>
-            <Txt v="eyebrow">Offside Cup</Txt>
-            <Txt v="h2" accessibilityRole="header">
-              {L.fullTitle({ n: data.cup.edition })}
-            </Txt>
-          </View>
-          <Pill tone={data.phase === 'open' ? 'good' : undefined}>{phaseLabel(data.phase)}</Pill>
+      {/* T-11-606 웹과 같이 트로피 · 단계 한 줄, 아래에 이름 · 소식(리그 배너와 한 줄 두 칸). */}
+      <Card gap={8} testID="cup-banner" style={{ flex: 1, padding: 14 }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 12,
+          }}
+        >
+          <CupTrophy stage="champion" edition={data.cup.edition} size={36} bare />
+          <Pill
+            tone={
+              data.phase === 'open' || data.phase === 'group' || data.phase === 'knockout'
+                ? 'good'
+                : undefined
+            }
+          >
+            {phaseLabel(data.phase)}
+          </Pill>
         </View>
-        <Txt v="sm" bold={data.phase === 'done' && !!data.championName}>
-          {text}
-        </Txt>
+        <View style={{ gap: 2, minWidth: 0 }}>
+          <Txt v="eyebrow">Offside Cup</Txt>
+          <Txt bold accessibilityRole="header" style={{ fontSize: rem(FONT.body1) }}>
+            {L.fullTitle({ n: data.cup.edition })}
+          </Txt>
+          <Txt v="sm" tone="muted" bold={data.phase === 'done' && !!data.championName}>
+            {text}
+          </Txt>
+        </View>
       </Card>
     </Press>
   );

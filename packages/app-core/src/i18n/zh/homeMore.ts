@@ -2,9 +2,6 @@ import type { Translation } from '../core';
 import type { HomeMoreMsgs } from '../ko/homeMore';
 
 export const homeMore: Translation<HomeMoreMsgs> = {
-  dexSubApp: '公開各選項的成功機率 · 查看機率圖鑑 →',
-  galleryWideTitle: 'OFFSIDE 社群留言板 ↗',
-  galleryWideSub: '在 DCinside 分享生涯炫耀 · 攻略 · 建議',
   chatLabelApp: '交誼廳聊天',
   pushTitle: '要用通知接收盃賽報名與比賽結果嗎？',
   pushBody:

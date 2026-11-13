@@ -33,8 +33,6 @@ export const home: Translation<HomeMsgs> = {
   chatLabel: 'Chat',
   chatLabelUnread: (p) => `Chat, ${plural(p.n, 'unread message')}`,
   chatStatusUnread: (p) => plural(p.n, 'unread chat message'),
-  noticeTitle: 'Announcements',
-  releaseTitle: 'Release notes',
   more: 'More',
   moreAria: (p) => `More ${p.what}`,
   newsTagNotice: 'Notice',

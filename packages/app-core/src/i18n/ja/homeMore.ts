@@ -2,9 +2,6 @@ import type { Translation } from '../core';
 import type { HomeMoreMsgs } from '../ko/homeMore';
 
 export const homeMore: Translation<HomeMoreMsgs> = {
-  dexSubApp: '選択肢ごとの成功確率を公開 · 確率図鑑を見る →',
-  galleryWideTitle: 'OFFSIDE コミュニティ掲示板 ↗',
-  galleryWideSub: 'DCinsideでキャリア自慢 · 攻略 · 要望を共有',
   chatLabelApp: 'ラウンジチャット',
   pushTitle: 'カップの受付と試合結果を通知で受け取りますか？',
   pushBody:
