@@ -3,7 +3,7 @@ import type { AdMsgs } from '../ko/ad';
 
 export const ad: Translation<AdMsgs> = {
   title: 'Remove ads',
-  body: 'Turns off the ads at the bottom of Records, News and Legends and the full-screen ad shown when you retire, for good. Rewarded ads for candidate rerolls, potential peeks, season reviews and potential boosts are granted right away without an ad. Odds and limits stay the same, and no rerolls, scout tickets or boost tickets are included. You can restore your purchase on other devices with the same store account.',
+  body: 'Turns off the full-screen ad shown when you retire, for good. Rewarded ads for candidate rerolls, potential peeks, season reviews, potential boosts, the season-end bonus and the extra check-in reward are granted right away without an ad. Odds and limits stay the same, and no rerolls, scout tickets or boost tickets are included. You can restore your purchase on other devices with the same store account.',
   owned: 'Remove ads purchased. Thank you.',
   checking: 'Checking the store…',
   buyPrice: (p) => `Remove ads ${p.price}`,
@@ -26,4 +26,12 @@ export const ad: Translation<AdMsgs> = {
     `Redraw all 3 candidates? Your current candidates and any revealed potential ranges will be lost. ${p.n} left today after this.`,
   adRerollWatch: 'Watch the whole ad to redraw your candidates.',
   adRerollDone: (p) => `Candidates redrawn. ${p.n} more today.`,
+  seasonBonusAd: (p) => `Watch an ad for a ${p.money} season bonus`,
+  seasonBonusFree: (p) => `Get the ${p.money} season bonus`,
+  seasonBonusWatch: 'Watch the ad to the end to get the season bonus.',
+  seasonBonusDone: (p) => `You got a ${p.money} season bonus.`,
+  attendAd: 'Watch an ad to get it again',
+  attendFree: 'Get it again',
+  attendWatch: 'Watch the ad to the end to get the reward again.',
+  attendFail: 'Could not get it. Please try again in a moment.',
 };

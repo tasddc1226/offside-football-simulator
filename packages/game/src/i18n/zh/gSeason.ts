@@ -70,4 +70,5 @@ export const gSeason: Translation<GSeasonMsgs> = {
   lgWc: '世界冠軍賽奪冠',
   lgCentury: '百場俱樂部',
   lgControl: '比賽掌控',
+  adBonusLog: (p) => `獲得 ${p.year} 賽季結算獎金 ${p.money}。`,
 };

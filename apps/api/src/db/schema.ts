@@ -1865,6 +1865,8 @@ export const ownerAttendanceDays = sqliteTable(
       .references(() => profiles.id, { onDelete: 'cascade' }),
     day: text('day').notNull(),
     checkedAt: text('checked_at').notNull(),
+    /** T-11-720 그날 광고를 보고 보상을 한 번 더 받은 요청(같은 batch의 아이템 지급 조건). 받지 않았으면 NULL. */
+    adClaimId: text('ad_claim_id'),
   },
   (table) => [primaryKey({ columns: [table.profileId, table.day] })],
 );

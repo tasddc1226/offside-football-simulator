@@ -82,4 +82,5 @@ export const gSeason: Translation<GSeasonMsgs> = {
   lgWc: 'World Championship wins',
   lgCentury: 'Century club',
   lgControl: 'Match control',
+  adBonusLog: (p) => `Received a ${p.money} season-end bonus for ${p.year}.`,
 };

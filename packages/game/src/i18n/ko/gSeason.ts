@@ -110,6 +110,8 @@ const ko = {
   lgWc: '월드 챔피언십 우승',
   lgCentury: '센추리 클럽',
   lgControl: '경기 장악',
+  adBonusLog: (p: { year: number; money: string }) =>
+    `${p.year} 시즌 결산 보너스 ${p.money}을 받았다.`,
 };
 export type GSeasonMsgs = typeof ko;
 export const gSeasonText = ns('gSeason', ko);

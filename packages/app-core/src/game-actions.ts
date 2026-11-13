@@ -1,4 +1,6 @@
 import { appendLocalHof } from '@offside/game/hof-store';
+import { canClaimSeasonAdBonus, claimSeasonAdBonus, seasonAdBonus } from '@offside/game/adBonus';
+import { adText as AD } from './i18n/ko/ad.js';
 import { createScoutingActions, releaseScoutSeed } from './scouting-actions.js';
 import { transferDestination } from './transferDestination.js';
 import { careerMomentText as CM } from './i18n/ko/careerMoment';
@@ -90,7 +92,7 @@ import {
   type AppState,
   type Screen,
 } from './state.js';
-import { type PhaseReport, type TickerRow } from './sheets.js';
+import { type PhaseReport, type SheetButton, type TickerRow } from './sheets.js';
 
 import { compGameViews, natViews, tourView } from './game-report.js';
 
@@ -115,6 +117,15 @@ export interface GameHost {
   trackPage(screen: Screen): void;
   /** T-11-455 은퇴 화면으로 넘어간 직후(앱은 여기서 전면광고를 띄운다). */
   retired?(): void;
+  /**
+   * T-11-720 보상형 광고 자리(앱 전용, 웹은 없다). offer는 'free'(광고 제거 · 멤버십) · 'ad' · null(버튼 없음).
+   * claim은 끝까지 봤으면(또는 free) onEarned를 부르고 ''를, 아니면 띄울 안내를 돌려준다.
+   */
+  reward?: {
+    offer(place: 'season'): 'free' | 'ad' | null;
+    prepare?(place: 'season'): void;
+    claim(place: 'season', onEarned: () => void, skipped: string): Promise<string>;
+  };
 }
 
 export function createGameActions(host: GameHost) {
@@ -467,6 +478,16 @@ export function createGameActions(host: GameHost) {
       transferredThisSeason: !!prev && prev.club !== rec.club,
       hasMilestone: miles.length > 0,
     });
+    const toMarket: SheetButton = {
+      label: L.toMarket,
+      cls: 'btn-primary',
+      fn: () => {
+        const p = appState.G!.pending;
+        if (p?.type === 'market') p.res = null;
+        host.save();
+        nextPending();
+      },
+    };
     sheet.showSheet(
       {
         kind: 'season',
@@ -508,19 +529,48 @@ export function createGameActions(host: GameHost) {
         fans,
         age: s.age,
       },
-      [
-        {
-          label: L.toMarket,
-          cls: 'btn-primary',
-          fn: () => {
-            const p = appState.G!.pending;
-            if (p?.type === 'market') p.res = null;
-            host.save();
-            nextPending();
-          },
-        },
-      ],
+      [...seasonBonusButton(rec.year), toMarket],
     );
+  }
+
+  // T-11-720 시즌 결산 보너스 버튼. 앱이 보상형 광고를 줄 수 있고 이 시즌 보너스를 아직 안 받았을 때만 보인다.
+  function seasonBonusButton(year: number): SheetButton[] {
+    const s = appState.G!;
+    const offer = host.reward?.offer('season');
+    if (!offer || !canClaimSeasonAdBonus(s, year)) return [];
+    host.reward!.prepare?.('season');
+    const money = fmtMoney(seasonAdBonus(s));
+    let pressed = false;
+    const btn: SheetButton = {
+      label: offer === 'free' ? AD.seasonBonusFree({ money }) : AD.seasonBonusAd({ money }),
+      fn: () => {
+        if (pressed || sheet.state.busy) return;
+        pressed = true;
+        sheet.state.busy = true;
+        void host
+          .reward!.claim(
+            'season',
+            () => {
+              const got = claimSeasonAdBonus(appState.G!, year);
+              if (!got) return;
+              host.save();
+              host.toast(AD.seasonBonusDone({ money: fmtMoney(got) }));
+            },
+            AD.seasonBonusWatch,
+          )
+          .then((msg) => {
+            if (msg) host.toast(msg);
+          })
+          .finally(() => {
+            sheet.state.busy = false;
+            pressed = false;
+            // 받았으면 버튼을 지운다(같은 시트를 다시 그리지 않아 스크롤이 그대로다). 상태 프록시가 버튼을 감싸 같은 객체 비교는 안 되니 이름으로 찾는다.
+            if (!canClaimSeasonAdBonus(appState.G!, year))
+              sheet.state.buttons = sheet.state.buttons.filter((b) => b.label !== btn.label);
+          });
+      },
+    };
+    return [btn];
   }
 
   function showMarket(m: MarketResult) {

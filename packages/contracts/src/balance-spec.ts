@@ -564,6 +564,21 @@ export const BALANCE_SPEC = {
     max: 20,
     step: 1,
   },
+  // T-11-720 앱 시즌 결산 광고 보너스(선수 자금): 이번 계약 연봉의 비율과 하한(만 원). 둘 다 0이면 보너스 칸이 없다.
+  adSeasonBonus: {
+    def: 0.1,
+    min: 0,
+    max: 0.5,
+    step: 0.01,
+    unit: 'pct',
+  },
+  adSeasonBonusMin: {
+    def: 200,
+    min: 0,
+    max: 2000,
+    step: 10,
+    unit: 'man',
+  },
   // T-11-669 은퇴 화면 실험 비율. 게임 엔진은 읽지 않는다. 앱이 서버 최신 값(latestBalance)을 은퇴 화면에서 바로 읽는다.
   retireExpShare: {
     def: 0,

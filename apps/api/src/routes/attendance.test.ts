@@ -1,4 +1,5 @@
 import {
+  AttendanceAdBonusResponseSchema,
   AttendanceCheckInResponseSchema,
   AttendanceSchema,
   OwnerItemsResponseSchema,
@@ -11,6 +12,7 @@ import { callJson, deleteProfile, issueCookie, issueGoogleCookie } from '../test
 
 const StateRes = successEnvelope(AttendanceSchema);
 const CheckRes = successEnvelope(AttendanceCheckInResponseSchema);
+const AdRes = successEnvelope(AttendanceAdBonusResponseSchema);
 const ItemsRes = successEnvelope(OwnerItemsResponseSchema);
 
 // KST 날짜 d일 정오(UTC 03:00).
@@ -71,6 +73,7 @@ describe('T-11-360 출석 체크', () => {
         streak: 1,
         bestStreak: 1,
         member: false,
+        adBonus: false,
       },
       granted: { reroll: 1, boost: 0, scout: 0, rename: 0 },
     });
@@ -82,7 +85,12 @@ describe('T-11-360 출석 체크', () => {
     });
     expect(await state()).toMatchObject({ checkedIn: true, stamps: 1, streak: 1 });
     expect(await ctx.db.select().from(ownerAttendanceDays)).toEqual([
-      { profileId: me.profileId, day: '2026-10-17', checkedAt: at('2026-10-17').toISOString() },
+      {
+        profileId: me.profileId,
+        day: '2026-10-17',
+        checkedAt: at('2026-10-17').toISOString(),
+        adClaimId: null,
+      },
     ]);
   });
 
@@ -116,6 +124,47 @@ describe('T-11-360 출석 체크', () => {
     expect(s).toMatchObject({ checkedIn: false, stamps: 7, streak: 0, bestStreak: 7 });
     const after = await checkOn('2026-10-22');
     expect(after.attendance).toMatchObject({ stamps: 8, streak: 1, bestStreak: 7 });
+  });
+
+  it('T-11-720 출석한 날 광고 보상은 그날 칸 기본 보상 한 번, 하루 한 번만 받는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(at('2026-10-17'));
+    const ad = (headers = key()) =>
+      call('POST', '/v1/attendance/ad-bonus', { cookie: me.cookie, headers });
+    const before = await ad();
+    expect(before.status).toBe(409);
+    expect(await before.json()).toMatchObject({
+      error: { details: { reason: 'ATTENDANCE_NOT_CHECKED' } },
+    });
+    await call('POST', '/v1/attendance/check-in', { cookie: me.cookie, headers: key() });
+    const first = key();
+    const got = AdRes.parse(await (await ad(first)).json()).data;
+    expect(got.granted).toEqual({ reroll: 1, boost: 0, scout: 0, rename: 0 });
+    expect(got.attendance).toMatchObject({ checkedIn: true, stamps: 1, adBonus: true });
+    // 같은 키 재전송은 같은 응답, 새 키는 409.
+    expect(AdRes.parse(await (await ad(first)).json()).data).toEqual(got);
+    const again = await ad();
+    expect(again.status).toBe(409);
+    expect(await again.json()).toMatchObject({
+      error: { details: { reason: 'ATTENDANCE_AD_TAKEN' } },
+    });
+    const items = ItemsRes.parse(
+      await (await call('GET', '/v1/items', { cookie: me.cookie })).json(),
+    ).data;
+    expect(items).toMatchObject({ reroll: 2 });
+    const state = StateRes.parse(
+      await (await call('GET', '/v1/attendance', { cookie: me.cookie })).json(),
+    ).data;
+    expect(state).toMatchObject({ checkedIn: true, adBonus: true });
+    // 다음 날은 출석 전이라 adBonus가 없고, 출석하면 다시 받을 수 있다.
+    vi.setSystemTime(at('2026-10-18'));
+    const next = StateRes.parse(
+      await (await call('GET', '/v1/attendance', { cookie: me.cookie })).json(),
+    ).data;
+    expect(next).not.toHaveProperty('adBonus');
+    await call('POST', '/v1/attendance/check-in', { cookie: me.cookie, headers: key() });
+    expect((await ad()).status).toBe(200);
   });
 
   it('계정을 지우면 출석 기록도 지운다', async () => {

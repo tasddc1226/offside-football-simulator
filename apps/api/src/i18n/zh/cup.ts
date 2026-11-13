@@ -61,6 +61,8 @@ export const CUP_ZH: Record<CupTextKey, string> = {
   renameSame: '和目前的名字相同。',
   giftClaimed: '這份禮物已經領取過了。',
   attendanceChecked: '今天已經簽到過了。',
+  attendanceAdNotChecked: '簽到後才能再領一次。',
+  attendanceAdTaken: '今天已經再領過一次了。',
   iapInvalid: '無法確認這筆購買。',
   iapPending: '付款尚未完成。完成後會自動發放。',
   iapOtherAccount: '這筆購買屬於其他帳號。請用購買時的帳號登入。',

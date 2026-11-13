@@ -1156,6 +1156,13 @@
       "when": 1794492143788,
       "tag": "0167_league_progress_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 168,
+      "version": "6",
+      "when": 1794540064314,
+      "tag": "0168_attendance_ad_bonus",
+      "breakpoints": true
     }
   ]
 }
