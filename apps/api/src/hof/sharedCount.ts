@@ -13,6 +13,7 @@ const FIRST_WAIT_TRIES = 6;
 const FIRST_WAIT_MS = 250;
 
 type Stored = { n?: number; at?: number; lock?: number };
+type CountDb = D1Database | D1DatabaseSession;
 
 const metaKey = (key: string) => `hof_count:${key}`;
 
@@ -26,7 +27,7 @@ function parse(raw: string | undefined): Stored | undefined {
   }
 }
 
-async function read(db: D1Database, key: string): Promise<string | undefined> {
+async function read(db: CountDb, key: string): Promise<string | undefined> {
   const row = await db
     .prepare('SELECT value FROM app_meta WHERE key = ?')
     .bind(metaKey(key))
@@ -34,7 +35,7 @@ async function read(db: D1Database, key: string): Promise<string | undefined> {
   return row?.value;
 }
 
-async function write(db: D1Database, key: string, n: number, now: number) {
+async function write(db: CountDb, key: string, n: number, now: number) {
   await db
     .prepare('UPDATE app_meta SET value = ? WHERE key = ?')
     .bind(JSON.stringify({ n, at: now }), metaKey(key))
@@ -42,7 +43,7 @@ async function write(db: D1Database, key: string, n: number, now: number) {
 }
 
 /** 이전 값이 raw 그대로일 때만 lock을 건다(다른 요청이 먼저 잡았으면 false). */
-async function claim(db: D1Database, key: string, raw: string, prev: Stored, now: number) {
+async function claim(db: CountDb, key: string, raw: string, prev: Stored, now: number) {
   const res = await db
     .prepare('UPDATE app_meta SET value = ? WHERE key = ? AND value = ?')
     .bind(JSON.stringify({ ...prev, lock: now }), metaKey(key), raw)
@@ -53,7 +54,7 @@ async function claim(db: D1Database, key: string, raw: string, prev: Stored, now
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function sharedCount(
-  db: D1Database,
+  db: CountDb,
   key: string,
   load: () => Promise<number>,
   background: (p: Promise<unknown>) => void,

@@ -3,7 +3,8 @@ import { createTestD1, type TestD1 } from '../test/d1.js';
 import { COUNT_FRESH_MS, COUNT_LOCK_MS, sharedCount } from './sharedCount.js';
 
 let t: TestD1;
-const D = () => t.env.DB;
+let sessions = false;
+const D = () => (sessions ? t.env.DB.withSession('first-primary') : t.env.DB);
 const T0 = Date.parse('2026-11-10T13:00:00Z');
 
 beforeAll(async () => {
@@ -19,7 +20,10 @@ const counter = (n: number) => {
   return { calls, load: async () => (calls.n++, n) };
 };
 
-describe('sharedCount (T-11-688)', () => {
+describe.each([false, true])('sharedCount (T-11-688), session=%s', (useSession) => {
+  beforeEach(() => {
+    sessions = useSession;
+  });
   it('counts once for many concurrent first requests', async () => {
     const { calls, load } = counter(209_000);
     const bg: Promise<unknown>[] = [];
