@@ -1,0 +1,30 @@
+{
+  "id": "t-11-722-rank-losing-streak",
+  "title": "랭크 연패 안내",
+  "items": [
+    "랭크 경기를 세 번 연달아 지면 결과 화면에서 이유를 알려줘요. 하루에 한 번 보여요",
+    "밀린 줄이 있으면 바꿀 자리로 바로 가고, 기대 득점이 앞섰던 연패는 골이 따라오지 않았다고 알려줘요"
+  ],
+  "en": {
+    "title": "Losing streak note in ranked",
+    "items": [
+      "After three ranked losses in a row, the result screen tells you why. It shows once a day.",
+      "If a line was behind, it takes you to the slot to change. If you led on expected goals, it says the goals didn’t come."
+    ]
+  },
+  "ja": {
+    "title": "ランク連敗のお知らせ",
+    "items": [
+      "ランク戦で3連敗すると、結果画面で理由をお知らせします。1日に1回表示されます。",
+      "押されたラインがあれば替える枠へ移動でき、期待得点で上回っていた連敗はゴールがついてこなかったとお知らせします。"
+    ]
+  },
+  "zh": {
+    "title": "排名賽連敗提示",
+    "items": [
+      "排名賽連輸三場時，結果畫面會告訴你原因，每天顯示一次。",
+      "若有落後的線，可直接前往要更換的位置；若預期進球領先卻連敗，會提示進球沒有跟上。"
+    ]
+  },
+  "availability": "web-app"
+}

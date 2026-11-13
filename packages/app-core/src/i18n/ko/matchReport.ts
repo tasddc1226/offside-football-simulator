@@ -25,6 +25,16 @@ const ko = {
   dDefDown: (p: { n: string }) => `수비벽이 상대 공격보다 ${p.n} 약해 기회를 많이 내줬어요.`,
   fix: (p: { pos: string }) => `${p.pos} 바꾸기`,
   fixAria: (p: { pos: string }) => `${p.pos} 자리에 넣을 선수 고르기`,
+  // T-11-722 랭크 연패 안내
+  streakTitle: (p: { n: number }) => `${p.n}연패 중이에요`,
+  streakLuck: (p: { k: number; mine: string; opp: string }) =>
+    `최근 ${p.k}경기 기대 득점은 ${p.mine} : ${p.opp}로 앞섰어요. 전력은 밀리지 않았고 골이 따라오지 않았어요.`,
+  streakAtk: (p: { k: number; n: string }) =>
+    `최근 ${p.k}경기에서 공격이 상대 수비벽보다 평균 ${p.n} 밀렸어요.`,
+  streakMid: (p: { k: number; n: string }) =>
+    `최근 ${p.k}경기에서 중원이 상대 중원보다 평균 ${p.n} 밀렸어요.`,
+  streakDef: (p: { k: number; n: string }) =>
+    `최근 ${p.k}경기에서 수비벽이 상대 공격보다 평균 ${p.n} 약했어요.`,
   // 시즌 리포트
   seasonTitle: '경기 리포트',
   seasonEmpty: '기대 득점은 이번 업데이트 뒤에 치른 경기부터 모여요.',

@@ -13,11 +13,14 @@
   import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
   import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
   import { usesRankLadder, type ReportLine } from '@offside/contracts/owner-team';
+  import type { StreakHint } from '@offside/app-core/losingStreak';
+  import { matchReportText as R } from '@offside/app-core/i18n/ko/matchReport';
 
   let {
     m,
     team,
     shift = null,
+    streak = null,
     eventName,
     matchesLeft,
     ontoTeam,
@@ -31,6 +34,8 @@
     team: OwnerTeam | null;
     /** T-11-375 방금 치른 경기의 내 디비전 전후(기록에서 연 경기는 null). */
     shift?: DivisionShift | null;
+    /** T-11-722 랭크 연패 안내 — 방금 마감한 내가 건 랭크 경기에만 온다. */
+    streak?: StreakHint | null;
     eventName: (id: string | null, fallback: string) => string;
     matchesLeft: number;
     ontoTeam: () => void;
@@ -49,6 +54,8 @@
   const won = $derived(outcome(m) === '승'); // i18n-ignore 결과 키
   const record = $derived(team && m.mine === 'home' && !m.friendly ? recordText(team.record) : null);
   const goalsOf = (side: 'home' | 'away') => m.events.filter((e) => e.side === side);
+  // 연패 안내가 고칠 곳을 가리키면 버튼은 거기 하나만 둔다(리포트의 같은 버튼은 숨긴다).
+  const streakFix = $derived(streak?.line && fix ? fix(streak.line) : null);
 </script>
 
 {#snippet scorers(side: 'home' | 'away')}
@@ -130,7 +137,16 @@
       <div><b>{moved.title}</b><small class="muted">{moved.body}</small></div>
     </div>
   {/if}
-  <TeamReport {m} {fix} />
+  {#if streak}
+    <div class="tm-streak" role="status" data-streak-hint={streak.kind}>
+      <b>{streak.title}</b>
+      <p class="fs-sm">{streak.body}</p>
+      {#if streakFix}
+        <button class="btn tm-streak-fix" onclick={streakFix.go} aria-label={R.fixAria({ pos: streakFix.pos })} data-act="team-streak-fix">{R.fix({ pos: streakFix.pos })}</button>
+      {/if}
+    </div>
+  {/if}
+  <TeamReport {m} fix={streakFix ? undefined : fix} />
   <div class="tm-actions">
     <button class="btn btn-primary tm-again" onclick={onagain} disabled={matchesLeft === 0}>
       <span>{L.again}</span>
@@ -346,6 +362,29 @@
   .tm-player:focus-visible {
     outline: 2px solid var(--pitch-accent);
     outline-offset: 2px;
+  }
+  /* T-11-722 연패 안내 — 리포트 바로 위, 강조 선 하나로 구분한다. */
+  .tm-streak {
+    display: grid;
+    gap: 6px;
+    padding: 12px 14px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    background: var(--surface-2);
+  }
+  .tm-streak b {
+    font-size: var(--fs-body);
+  }
+  .tm-streak p {
+    margin: 0;
+  }
+  .tm-streak-fix {
+    justify-self: start;
+    margin-top: 4px;
+    border-color: var(--accent);
+    color: var(--accent-text);
+    background: transparent;
   }
   .tm-div-shift {
     display: flex;

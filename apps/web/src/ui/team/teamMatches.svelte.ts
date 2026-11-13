@@ -9,6 +9,8 @@ import {
 } from '@offside/app-core/api/team';
 import { usesRankLadder } from '@offside/contracts/owner-team';
 import { markDivisionSeen, type DivisionShift } from '@offside/app-core/teamDivision';
+import { streakStep, type StreakHint } from '@offside/app-core/losingStreak';
+import { loadKey, saveKey } from '@offside/game/storage';
 import type { TeamView } from '@offside/app-core/state';
 import type { LoadStatus } from '../loadStatus.js';
 import { toast } from '../helpers.js';
@@ -23,6 +25,9 @@ type MatchHost = {
   openHistoryResult: () => void;
 };
 
+/** T-11-722 랭크 연패 기록(이 기기에만). */
+const STREAK_KEY = 'ft_rank_streak';
+
 /** Ranked/friendly result state. Team retains editing and tab-entry fetch triggers. */
 export function createTeamMatches(host: MatchHost) {
   const state = $state({
@@ -33,6 +38,8 @@ export function createTeamMatches(host: MatchHost) {
     playing: false,
     result: null as TeamMatch | null,
     divisionShift: null as DivisionShift | null,
+    /** T-11-722 방금 마감한 경기에 보일 연패 안내(기록에서 연 경기 · 친선전은 null). */
+    streakHint: null as StreakHint | null,
     resultOrigin: 'opponents' as 'opponents' | 'history',
     live: false,
     liveMoments: undefined as TeamLiveData | undefined,
@@ -71,6 +78,8 @@ export function createTeamMatches(host: MatchHost) {
     state.oppPick = 0;
     state.rankFound = null;
     state.result = r.data.match;
+    // 고를 장면이 없는 경기는 시작 응답이 곧 마감이다(중계가 onfinal을 부르지 않는다).
+    state.streakHint = r.data.live ? null : noteStreak(r.data.match);
     state.liveMoments = r.data.live;
     state.resultOrigin = 'opponents';
     state.live = true;
@@ -80,6 +89,13 @@ export function createTeamMatches(host: MatchHost) {
     applyPlayed(r.data);
     host.show('result');
     window.scrollTo(0, 0);
+  }
+
+  /** T-11-722 마감한 경기를 연패 기록에 더하고 이 결과에 보일 안내를 돌려준다. */
+  function noteStreak(m: TeamMatch): StreakHint | null {
+    const r = streakStep(loadKey<string>(STREAK_KEY), m);
+    if (r.raw !== null) saveKey(STREAK_KEY, r.raw);
+    return r.hint;
   }
 
   /** 경기 결과의 기록 · 레이팅을 내 팀에 반영한다(장면 경기는 시작 때 경기 전 값, 끝날 때 결과 값이 온다). */
@@ -100,6 +116,7 @@ export function createTeamMatches(host: MatchHost) {
   function liveFinal(r: PlayTeamMatchResponse) {
     state.result = r.match;
     state.liveMoments = undefined;
+    state.streakHint = noteStreak(r.match);
     host.setMatchesLeft(r.matchesLeft);
     host.setMatchesNextAt(r.matchesNextAt ?? null);
     applyPlayed(r);
@@ -109,6 +126,7 @@ export function createTeamMatches(host: MatchHost) {
   function openFriendly(m: TeamMatch, left: number, fresh: boolean) {
     state.result = m;
     state.divisionShift = null;
+    state.streakHint = null;
     state.resultOrigin = 'opponents';
     state.live = fresh;
     state.friendlyLeft = left;
@@ -119,6 +137,7 @@ export function createTeamMatches(host: MatchHost) {
   function openHistoryMatch(m: TeamMatch) {
     state.result = m;
     state.divisionShift = null;
+    state.streakHint = null;
     state.resultOrigin = 'history';
     state.live = false;
     host.openHistoryResult();
