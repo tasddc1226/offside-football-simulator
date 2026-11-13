@@ -21,7 +21,7 @@ export interface ClubOffer {
   confirm: string;
 }
 
-/** 구단주라면 보상 값을 받는다. 아니거나 못 받으면 null — 구단 자금 버튼을 보이지 않는다. 30초 메모라 여러 자리가 불러도 요청은 하나. */
+/** 구단주라면 보상 값을 받는다. 아니거나 못 받으면 null — 구단 자금 버튼을 보이지 않는다. 5분 메모라 여러 자리가 불러도 요청은 하나. */
 export async function loadClubShop(): Promise<RewardShopResponse | null> {
   if (!hasSessionHint()) return null;
   const r = await fetchRewardShop();
@@ -104,7 +104,7 @@ export async function payWithTicket(
 // ───────── T-11-513 확정 강화 ─────────
 // 보상 값 응답과 따로 받는다(옛 앱의 엄격한 스키마). 같은 멱등 키 규칙으로 서버에서 자금을 뺀 뒤 grant로 강화한다.
 
-/** 구단주라면 확정 강화 값을 받는다. 아니거나 못 받으면 null — 버튼을 보이지 않는다(30초 메모). */
+/** 구단주라면 확정 강화 값을 받는다. 아니거나 못 받으면 null — 버튼을 보이지 않는다(5분 메모). */
 export async function loadSureShop(): Promise<SureShopResponse | null> {
   if (!hasSessionHint()) return null;
   const r = await fetchSureShop();

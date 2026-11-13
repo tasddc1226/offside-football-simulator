@@ -45,8 +45,12 @@ export const enterCup = (cupId: string) =>
 export const withdrawCup = (cupId: string) =>
   apiFetch<undefined>(`/v1/cups/${cupId}/entries/me`, { method: 'DELETE' });
 
-// 후보 화면에 들어올 때마다 묻지 않게 잠깐 메모한다. 리롤권을 쓰면(쓰기 성공) apiFetch가 메모를 비운다.
-export const fetchItems = () => ownerCachedGet<OwnerItemsResponse>('/v1/items', 30_000);
+// T-11-725 가진 아이템 · 구단 자금 보상 값 · 확정 강화 값의 메모 시간. 선수 탭을 열 때마다 셋을 같이 묻는데 30초 메모로는 플레이
+// 내내 다시 받았다(셋 합쳐 하루 약 3만 7천 건). 내가 쓰거나 사면(쓰기 성공) apiFetch가 메모를 비우고, 낡은 값으로 사려 하면
+// 서버가 거절해 새로 받으므로 5분으로 늘려도 잘못 쓰이지 않는다. 받은 선물 · 자정에 바뀌는 상한은 최대 5분 늦게 보인다.
+const ITEMS_MEMO_MS = 5 * 60_000;
+// 후보 화면에 들어올 때마다 묻지 않게 메모한다. 리롤권을 쓰면(쓰기 성공) apiFetch가 메모를 비운다.
+export const fetchItems = () => ownerCachedGet<OwnerItemsResponse>('/v1/items', ITEMS_MEMO_MS);
 /**
  * 리롤권 1장 쓰기. 성공하면 남은 장수 — 그다음 gameActions.rerollCandidates()로 후보를 다시 뽑는다.
  * key는 한 번의 '다시 뽑기' 시도마다 하나: 응답을 못 받아 다시 누르면 같은 key로 보내 서버가 두 번 차감하지 않는다.
@@ -97,7 +101,7 @@ export const buyReroll = (price: number, key: string) =>
  * 때만 부른다. 받으면(쓰기 성공) 메모가 비워진다.
  */
 export const fetchRewardShop = () =>
-  ownerCachedGet<RewardShopResponse>('/v1/items/rewards', 30_000);
+  ownerCachedGet<RewardShopResponse>('/v1/items/rewards', ITEMS_MEMO_MS);
 /** 보상 한 번을 구단 자금으로 받는다. price는 화면에서 본 가격, key는 한 번의 시도마다 하나(재시도해도 두 번 쓰지 않는다). */
 export const buyRewardWithFunds = (kind: RewardKind, price: number, key: string) =>
   apiFetch<RewardShopResponse>('/v1/items/rewards/buy', {
@@ -107,7 +111,8 @@ export const buyRewardWithFunds = (kind: RewardKind, price: number, key: string)
   });
 
 /** T-11-513 구단 자금 확정 강화의 지금 값. 로그인한 구단주가 강화 자리를 볼 때만 부른다. 받으면(쓰기 성공) 메모가 비워진다. */
-export const fetchSureShop = () => ownerCachedGet<SureShopResponse>('/v1/items/sure', 30_000);
+export const fetchSureShop = () =>
+  ownerCachedGet<SureShopResponse>('/v1/items/sure', ITEMS_MEMO_MS);
 /** 확정 강화 한 번을 구단 자금으로 받는다. price는 화면에서 본 가격, key는 한 번의 시도마다 하나. */
 export const buySureWithFunds = (price: number, key: string) =>
   apiFetch<SureShopResponse>('/v1/items/sure/buy', {
