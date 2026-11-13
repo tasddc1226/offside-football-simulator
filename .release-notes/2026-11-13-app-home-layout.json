@@ -1,0 +1,30 @@
+{
+  "id": "t-11-721-app-home-layout",
+  "title": "앱 홈 화면 정리",
+  "items": [
+    "앱 홈을 웹과 같은 배치로 바꿨어요. 컵 · 리그 소식은 한 줄에 두 칸으로 보여요",
+    "공지와 업데이트 소식을 카드 하나로 합쳤어요. 순위는 아래 기록실에서 볼 수 있어요"
+  ],
+  "en": {
+    "title": "Tidier app home",
+    "items": [
+      "The app home now uses the same layout as the web. Cup and league news sit side by side.",
+      "Notices and update notes are combined into one card. Rankings are in Records at the bottom."
+    ]
+  },
+  "ja": {
+    "title": "アプリのホームを整理",
+    "items": [
+      "アプリのホームをウェブと同じ配置にしました。カップ・リーグのお知らせは1行に2つ並びます。",
+      "お知らせとアップデートを1つのカードにまとめました。ランキングは下の記録室で見られます。"
+    ]
+  },
+  "zh": {
+    "title": "App 首頁整理",
+    "items": [
+      "App 首頁改成與網頁相同的配置，盃賽 · 聯賽消息並排顯示在同一行。",
+      "公告與更新消息合併成一張卡片，排名請到下方的紀錄室查看。"
+    ]
+  },
+  "availability": "app"
+}

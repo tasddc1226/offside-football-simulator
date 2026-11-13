@@ -44,8 +44,13 @@ export function homeTodoOf(gift: unknown, attendance: AttendanceCard | null): Ho
   };
 }
 
-/** 블록 순서. 받을 것은 맨 앞(히어로 바로 아래)으로, 선물이 출석보다 먼저다. 나머지는 원래 순서를 지킨다. */
-export function homeOrder(todo: HomeTodo): HomeBlock[] {
+/**
+ * 블록 순서. 받을 것은 맨 앞(히어로 바로 아래)으로, 선물이 출석보다 먼저다. 나머지는 원래 순서를 지킨다.
+ * T-11-606 진행 중인 커리어가 없으면 시즌 · 대회 소식보다 서버 현황(live)을 먼저 보여 준다(받을 것 바로 아래).
+ */
+export function homeOrder(todo: HomeTodo, career = true): HomeBlock[] {
   const up = (['gift', 'attendance'] as const).filter((k) => todo[k]);
-  return [...up, ...HOME_BLOCKS.filter((b) => !(up as readonly HomeBlock[]).includes(b))];
+  const rest = HOME_BLOCKS.filter((b) => !(up as readonly HomeBlock[]).includes(b));
+  if (career) return [...up, ...rest];
+  return [...up, 'live', ...rest.filter((b) => b !== 'live')];
 }

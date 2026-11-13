@@ -28,14 +28,8 @@
   const live = $derived(!!appState.G && !appState.G.retired);
   // T-11-435 받을 선물 · 오늘 출석. 선물 · 출석 블록이 부르는 것과 같은 메모 조회라 새 요청이 없다(불러오기는 첫 화면 번들 밖).
   let todo = $state<HomeTodo>(NO_HOME_TODO);
-  // 커리어가 없으면 시즌 · 대회 소식보다 서버 현황을 먼저 보여 준다(받을 것 바로 아래).
-  const order = $derived.by((): HomeBlock[] => {
-    const all = homeOrder(todo);
-    if (live) return all;
-    const rest = all.filter((b) => b !== 'live');
-    const up = Number(todo.gift) + Number(todo.attendance);
-    return [...rest.slice(0, up), 'live', ...rest.slice(up)];
-  });
+  // 커리어가 없으면 시즌 · 대회 소식보다 서버 현황을 먼저 보여 준다(받을 것 바로 아래, 앱과 같은 homeOrder).
+  const order = $derived<HomeBlock[]>(homeOrder(todo, live));
   $effect(() => {
     void import('@offside/app-core/homeTodo').then(({ loadHomeTodo }) => loadHomeTodo()).then((t) => (todo = t));
   });

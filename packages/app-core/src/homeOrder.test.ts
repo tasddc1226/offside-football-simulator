@@ -33,6 +33,13 @@ describe('T-11-435 홈 블록 순서', () => {
     expect([...order].sort()).toEqual([...HOME_BLOCKS].sort());
   });
 
+  it('T-11-606 커리어가 없으면 서버 현황이 받을 것 바로 아래로 온다', () => {
+    expect(homeOrder(NO_HOME_TODO, false)[0]).toBe('live');
+    const order = homeOrder({ gift: true, attendance: true }, false);
+    expect(order.slice(0, 3)).toEqual(['gift', 'attendance', 'live']);
+    expect([...order].sort()).toEqual([...HOME_BLOCKS].sort());
+  });
+
   it('받을 것: 선물이 있으면, 출석은 오늘 출석 전인 구단주만', () => {
     expect(homeTodoOf({ id: 'g', boost: 1, scout: 1 }, null)).toEqual({
       gift: true,

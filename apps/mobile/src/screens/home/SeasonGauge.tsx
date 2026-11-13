@@ -3,6 +3,7 @@
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState } from 'react';
 import { AppState, View } from 'react-native';
+import Svg, { Circle, Path } from 'react-native-svg';
 import {
   seasonGaugeInfo,
   seasonGaugeLines,
@@ -63,15 +64,31 @@ export function SeasonGauge() {
         accessibilityLabel={T.openLabel({ aria: lines.aria })}
         onPress={() => setOpen(true)}
       >
-        <Card gap={8} testID="season-gauge">
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'baseline',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Txt v="eyebrow">Season progress ⓘ</Txt>
+        {/* T-11-606 웹과 같이 줄인 진행률: 제목 · ⓘ · 퍼센트 한 줄, 얇은 막대, 작은 날짜. */}
+        <Card gap={6} testID="season-gauge">
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Txt
+              v="h2"
+              accessibilityRole="header"
+              style={{
+                flexShrink: 1,
+                fontSize: rem(FONT.title3),
+                ...(locked ? { color: c.accentText } : null),
+              }}
+            >
+              {lines.countdown ?? lines.title}
+            </Txt>
+            <View style={{ marginRight: 'auto' }} accessible={false}>
+              <Svg width={14} height={14} viewBox="0 0 24 24">
+                <Circle cx={12} cy={12} r={9} fill="none" stroke={c.muted} strokeWidth={2} />
+                <Path
+                  d="M12 11v5M12 8h.01"
+                  stroke={c.muted}
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                />
+              </Svg>
+            </View>
             <Txt
               testID="season-gauge-pct"
               style={[num(700), { fontSize: rem(FONT.title1), color: c.accentText }]}
@@ -79,20 +96,13 @@ export function SeasonGauge() {
               {`${lines.pct}%`}
             </Txt>
           </View>
-          <Txt
-            v="h2"
-            accessibilityRole="header"
-            style={{ fontSize: rem(FONT.title3), ...(locked ? { color: c.accentText } : null) }}
-          >
-            {lines.countdown ?? lines.title}
-          </Txt>
           <View
             accessible
             accessibilityRole="progressbar"
             accessibilityLabel={lines.aria}
             accessibilityValue={{ min: 0, max: 100, now: lines.pct }}
             style={{
-              height: 12,
+              height: 8,
               borderRadius: RADIUS.pill,
               backgroundColor: c.surface2,
               overflow: 'hidden',
@@ -119,12 +129,12 @@ export function SeasonGauge() {
             />
           </View>
           {lines.endDate ? (
-            <Txt testID="season-gauge-date" style={{ fontSize: rem(FONT.label), color: c.muted }}>
+            <Txt testID="season-gauge-date" style={{ fontSize: rem(FONT.caption), color: c.muted }}>
               {lines.endDate}
             </Txt>
           ) : null}
           {lines.why ? (
-            <Txt testID="season-gauge-why" style={{ fontSize: rem(FONT.label), color: c.muted }}>
+            <Txt testID="season-gauge-why" style={{ fontSize: rem(FONT.caption), color: c.muted }}>
               {lines.why}
             </Txt>
           ) : null}

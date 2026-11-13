@@ -1,4 +1,5 @@
-// 홈(웹 Home.svelte — ui.ts renderHome() 포트): 전광판 · 히어로 · 라이브 현황 · 타일 · 명예의 전당 TOP 3 · 소식 · 푸터.
+// 홈(웹 Home.svelte와 같은 구조, T-11-606 · T-11-721): 히어로 · 받을 것 · 시즌 · 컵 · 리그 · 전광판 · 라이브 현황 · 타일 · 소식 · 푸터.
+// 순위(명예의 전당 · 구단 가치)는 하단 기록실에서 본다.
 import Reanimated from 'react-native-reanimated';
 import { useBarFollow, useBarInset } from '../../ui/navBar';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
@@ -12,7 +13,6 @@ import type { GameState } from '@offside/game/types';
 import { homeText as L } from '@offside/app-core/i18n/ko/home';
 import { homeMoreText } from '@offside/app-core/i18n/ko/homeMore';
 import { DC_GALLERY_URL } from '@offside/app-core/links';
-import { HallOfFame } from '../../components/HallOfFame';
 import { SiteFooter } from '../../components/SiteFooter';
 import { adoptCareer, keepOnDevice } from '../../game/host';
 import { go, goContinue, goNew } from '../../game/nav';
@@ -23,14 +23,12 @@ import { useColors } from '../../theme/useColors';
 import { Btn, Card, PitchCard, Press, Row, Screen, Topbar, Txt } from '../../ui';
 import { ClubBadge } from '../../ui/ClubBadge';
 import { HeroFigure } from './HeroFigure';
-import { CupBanner } from '../owner/TeamCup';
-import { LeagueBanner } from '../league/LeagueScreen';
 import { CupChampionPopup } from './CupChampionPopup';
 import { PartnerPopup } from './PartnerPopup';
-import { HomeClubValue } from './HomeClubValue';
 import { HomeFirsts } from './HomeFirsts';
 import { HomeGift } from './HomeGift';
 import { HomeAttendance } from './HomeAttendance';
+import { HomeEvents } from './HomeEvents';
 import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
 import { HomeTicker } from './HomeTicker';
@@ -81,7 +79,8 @@ export default function Home() {
   const c = useColors();
   const G = s.G && !s.G.retired ? s.G : null;
   const narrow = useWindowDimensions().width < 360;
-  const order = homeOrder(useHomeTodo());
+  // 커리어가 없으면 서버 현황(live)이 받을 것 바로 아래로 온다(웹과 같은 homeOrder).
+  const order = homeOrder(useHomeTodo(), !!G);
   const blocks: Record<HomeBlock, ReactNode> = {
     pushOptIn: <PushOptInCard />,
     ownerConflict:
@@ -106,22 +105,25 @@ export default function Home() {
     // T-11-338 진행 중인 감독 커리어 이어 하기(기기 세이브가 있을 때만).
     managerResume: <ManagerResume />,
     seasonGauge: <SeasonGauge />,
-    // T-11-145 오프사이드 컵 소식은 모두가 먼저 보는 홈에서. 신청은 대회 화면에서 한다.
-    cup: <CupBanner onOpen={() => go('cup')} />,
-    // T-11-418 오프사이드 리그 소식(신청은 리그 화면에서).
-    league: <LeagueBanner />,
+    // T-11-145 · T-11-418 컵 · 리그 소식은 한 줄 두 칸으로(하나만 있으면 한 칸). 신청은 각 대회 화면에서 한다.
+    cup: <HomeEvents />,
+    league: null,
     // 홈 선물 칸 · 시즌 업적 보상(T-11-386, 받으면 사라진다. T-11-472 구단주 선물은 없앴다).
     gift: <HomeGift />,
     attendance: <HomeAttendance auto={firstHome} />,
-    live: <HomeLive />,
+    // T-10-122 이적 · 서버 최초 기록 전광판은 같은 서버 소식인 라이브 현황 바로 위에 둔다(웹과 같다).
+    live: (
+      <>
+        <HomeTicker />
+        <HomeLive />
+      </>
+    ),
   };
 
   return (
     <View style={{ flex: 1 }}>
       <Screen>
         <Topbar right={<InboxButton />} />
-        {/* 이적·서버 최초 기록이 흐르는 전광판 */}
-        <HomeTicker />
         {G ? (
           // 진행 중인 커리어가 있으면 첫 카드를 '이번 커리어'로 바꿔 이어하기를 가장 먼저 보여 준다.
           <PitchCard>
@@ -256,15 +258,35 @@ export default function Home() {
         <CupChampionPopup />
         {/* T-11-423 아마축구 상호 홈 팝업 — 약정 기간 · 한국어 · 하루 숨김. 컵 우승 팝업과 한 번에 하나만. */}
         <PartnerPopup />
+        {/* T-11-606 타일은 웹과 같이 두 칸씩: 이적시장 · 서버 최초, 확률 이벤트 · 갤러리, 맨 아래 넓은 칸에 친구 초대. */}
         {/* T-11-080f 구단주 화면을 거치지 않고 이적시장으로 바로 간다(뒤로 가기는 홈으로). 홈에서는 서버를 부르지 않는다. */}
-        <Tile
-          wide
-          testID="home-market"
-          eyebrow="Transfer market"
-          title={L.marketTitle}
-          sub={L.marketSub}
-          onPress={() => go('market')}
-        />
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Tile
+            testID="home-market"
+            eyebrow="Transfer market"
+            title={L.marketTitle}
+            sub={L.marketSub}
+            onPress={() => go('market')}
+          />
+          <HomeFirsts />
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <Tile
+            testID="dex"
+            eyebrow="Events"
+            title={L.dexTitle}
+            sub={L.dexSubWeb}
+            onPress={() => go('dex')}
+          />
+          {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. */}
+          <Tile
+            testID="dc-gallery"
+            eyebrow="Community"
+            title={L.galleryTitle}
+            sub={L.gallerySub}
+            onPress={() => void Linking.openURL(DC_GALLERY_URL)}
+          />
+        </View>
         {/* T-11-175 친구 초대 이벤트는 구단주 → 경기 → 친구까지 들어가야 보여서 홈에서 바로 친구 화면(이벤트 카드가 맨 위)으로 간다. */}
         <Tile
           wide
@@ -274,30 +296,8 @@ export default function Home() {
           sub={L.inviteSub({ n: INVITE_REROLLS, s: INVITE_SCOUTS })}
           onPress={openFriends}
         />
-        <View style={{ flexDirection: 'row', gap: 10 }}>
-          <HomeFirsts />
-          <Tile
-            testID="dex"
-            eyebrow="Events"
-            title={L.dexTitle}
-            sub={homeMoreText.dexSubApp}
-            onPress={() => go('dex')}
-          />
-        </View>
-        {/* T-11-009 디시인사이드 마이너 갤러리로 가는 커뮤니티 타일. T-11-440 앱을 이미 쓰는 사람에게 같은 앱 테스트
-            신청(T-11-016)을 권하지 않도록 안드로이드 앱에서도 테스터 모집 타일을 빼고 두 칸 폭으로 둔다. */}
-        <Tile
-          wide
-          testID="dc-gallery"
-          eyebrow="Community"
-          title={homeMoreText.galleryWideTitle}
-          sub={homeMoreText.galleryWideSub}
-          onPress={() => void Linking.openURL(DC_GALLERY_URL)}
-        />
-        <HallOfFame />
-        <HomeClubValue />
-        <HomeNews board="notice" eyebrow="Notice" title={L.noticeTitle} />
-        <HomeNews board="release" eyebrow="Release notes" title={L.releaseTitle} />
+        {/* 공지 · 릴리즈 노트를 합친 최근 글(최근 공지 1개 + 최신 글). */}
+        <HomeNews />
         <SiteFooter />
         {/* T-11-221 맨 아래까지 내려도 떠 있는 채팅 버튼이 하단 문구를 가리지 않게 버튼 높이만큼 비워 둔다. */}
         <View style={{ height: 56 }} />
