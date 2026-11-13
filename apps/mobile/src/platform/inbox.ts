@@ -73,6 +73,8 @@ export function openInboxTarget(
   router.dismissTo('/');
   if (parsed.data.type === 'board') {
     invalidateApiCache(`/v1/boards/posts/${parsed.data.postId}`);
+    // T-11-724 목록 첫 쪽은 기기에 남겨 두므로, 새 글 알림으로 들어오면 버리고 다시 받는다.
+    invalidateApiCache(`/v1/boards/${parsed.data.board}/posts`);
     openBoard(parsed.data.board, parsed.data.postId);
   } else {
     if (parsed.data.screen === 'team') {

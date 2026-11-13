@@ -15,7 +15,7 @@ import type {
   PostTranslations,
 } from '@offside/contracts';
 import type { BoardKey } from '@offside/contracts/board-limits';
-import { apiFetch, cachedGet, withProfile } from './client.js';
+import { apiFetch, cachedGet, persistedGet, withProfile } from './client.js';
 
 export type {
   BoardBlock,
@@ -31,11 +31,14 @@ export type PostSummary = BoardListResponse['posts'][number];
 export const fetchBoardViewer = () => cachedGet<BoardViewerResponse>('/v1/boards/viewer', 600_000);
 // T-11-503 홈 소식 칸 · 새 소식 확인이 같이 쓴다. 홈에 돌아올 때마다 다시 받지 않게 새 소식 확인 간격(10분)만큼 메모한다.
 // 관리자가 쓴 글은 그 기기에서 apiFetch가 메모를 비우고, 앱은 당겨서 새로고침이 비운다.
+// T-11-724 첫 쪽은 기기에도 남겨 10분 안에 다시 열면 묻지 않는다(이어 보기 쪽은 메모만).
 export const fetchPosts = (board: BoardKey, before?: string) =>
-  cachedGet<BoardListResponse>(
-    `/v1/boards/${board}/posts${before ? `?before=${encodeURIComponent(before)}` : ''}`,
-    600_000,
-  );
+  before
+    ? cachedGet<BoardListResponse>(
+        `/v1/boards/${board}/posts?before=${encodeURIComponent(before)}`,
+        600_000,
+      )
+    : persistedGet<BoardListResponse>(`/v1/boards/${board}/posts`, 600_000);
 export const fetchPost = (id: string) => apiFetch<PostDetailResponse>(`/v1/boards/posts/${id}`);
 export const createPost = (board: BoardKey, input: PostInput) =>
   apiFetch<Post>(`/v1/boards/${board}/posts`, { method: 'POST', body: JSON.stringify(input) });

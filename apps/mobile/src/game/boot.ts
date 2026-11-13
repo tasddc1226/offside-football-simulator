@@ -11,7 +11,7 @@ import {
   configureCareerActivityReporter,
   noteCareerActivity,
 } from '@offside/app-core/career';
-import { cachedGet, hasSessionHint } from '@offside/app-core/api/client';
+import { hasSessionHint, persistedGet } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
 import { NEWS_GAP_MS } from '@offside/app-core/news';
 import { ensureSession, loadSession } from '../platform/session';
@@ -66,7 +66,8 @@ export async function boot(): Promise<void> {
 
   syncClubStrength();
   // 최신 밸런스 — 각 커리어는 다음 시즌부터 쓴다. 실패하면 저장된 값으로.
-  void cachedGet<BalanceConfig>('/v1/balance', 3_600_000).then((r) => {
+  // T-11-724 응답을 기기에도 남겨 한 시간 안에 다시 열면 묻지 않는다.
+  void persistedGet<BalanceConfig>('/v1/balance', 3_600_000).then((r) => {
     if (r.ok) setLatestBalance(r.data);
   });
   // 앱 세션이 없으면(첫 실행) 받고, 있으면 서버의 클럽 꾸미기와 맞춘다.
