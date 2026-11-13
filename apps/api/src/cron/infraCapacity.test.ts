@@ -147,12 +147,12 @@ describe('capacity safeguards', () => {
     ).toBe(true);
   });
 
-  it('public HOF anchors on primary before count while authenticated reads keep using primary', async () => {
+  it('public HOF anchors metadata before page/count while authenticated reads keep using primary', async () => {
     for (const key of ['club_ids_backfill', 'career_values_backfill'])
       await run("INSERT OR REPLACE INTO app_meta(key,value) VALUES (?1,'1')", key);
     const { cookie } = await issueCookie(ctx);
     const primary: string[] = [];
-    const replica: string[] = [];
+    const sessionQueries: string[] = [];
     const constraints: string[] = [];
     const DB = new Proxy(ctx.env.DB, {
       get(target, key) {
@@ -168,7 +168,7 @@ describe('capacity safeguards', () => {
               get(session, property) {
                 if (property === 'prepare')
                   return (query: string) => {
-                    replica.push(query);
+                    sessionQueries.push(query);
                     return session.prepare(query);
                   };
                 const value = Reflect.get(session, property) as unknown;
@@ -183,9 +183,16 @@ describe('capacity safeguards', () => {
     const app = createApp();
     expect((await app.request('/v1/hof', {}, { ...ctx.env, DB })).status).toBe(200);
     expect(constraints).toEqual(['first-primary']);
-    expect(replica).toHaveLength(2);
-    expect(replica[1]).toContain('count(*)');
-    expect([...primary, ...replica].some((s) => s.includes('"sessions"'))).toBe(false);
+    // The same session now owns metadata and the shared counter too. An absent counter
+    // still uses its guarded INSERT, one count and UPDATE (writes route to D1 primary).
+    expect(sessionQueries).toHaveLength(6);
+    expect(sessionQueries[0]).toContain('from "app_meta"');
+    expect(sessionQueries[1]).toContain('hof_page');
+    expect(sessionQueries[2]).toBe('SELECT value FROM app_meta WHERE key = ?');
+    expect(sessionQueries[3]).toContain('INSERT OR IGNORE INTO app_meta');
+    expect(sessionQueries[4]).toContain('count(*)');
+    expect(sessionQueries[5]).toBe('UPDATE app_meta SET value = ? WHERE key = ?');
+    expect([...primary, ...sessionQueries].some((s) => s.includes('"sessions"'))).toBe(false);
     expect(
       (await app.request('/v1/owner/season-recap', { headers: { cookie } }, { ...ctx.env, DB }))
         .status,

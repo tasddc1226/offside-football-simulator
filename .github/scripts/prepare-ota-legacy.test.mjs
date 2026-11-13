@@ -6,10 +6,8 @@ import { join } from 'node:path';
 import test from 'node:test';
 import {
   APP_JSON,
-  LOCAL_NATIVE_IN_NEW,
   MOBILE_PACKAGE,
   NATIVE_ADDED_118,
-  NATIVE_ONLY_IN_NEW,
   assertRuntime,
   prepare,
   targets,
@@ -29,6 +27,9 @@ test('only the reviewed legacy store runtimes can receive their bundle', () => {
     assert.throws(() => assertRuntime(name, 'web', undefined), /mismatch/);
   }
   assert.throws(() => assertRuntime('1.1.3', 'ios', 'x'), /Unknown/);
+  // T-11-719 최소 앱 버전(1.1.7)보다 낮은 앱에는 OTA를 내보내지 않는다.
+  for (const old of ['1.1.6', '1.1.5', '1.1.4'])
+    assert.throws(() => assertRuntime(old, 'ios', 'x'), /Unknown/);
 });
 
 test('preparation protects dirty work and existing native test environments', () => {
@@ -37,17 +38,17 @@ test('preparation protects dirty work and existing native test environments', ()
     execFileSync('git', ['init', '-q', root]);
     const keep = join(root, 'work.txt');
     writeFileSync(keep, 'keep my work');
-    assert.throws(() => prepare(root, '1.1.5'), /clean disposable/);
+    assert.throws(() => prepare(root, '1.1.7'), /clean disposable/);
     assert.equal(readFileSync(keep, 'utf8'), 'keep my work');
     rmSync(keep);
     mkdirSync(join(root, 'apps/mobile/android'), { recursive: true });
-    assert.throws(() => prepare(root, '1.1.5'), /native project exists/);
+    assert.throws(() => prepare(root, '1.1.7'), /native project exists/);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
 });
 
-for (const [name, { source, skia, meta }] of Object.entries(targets)) {
+for (const [name, { source }] of Object.entries(targets)) {
   test(`the ${name} overlay restores the reviewed app config and drops the new native modules`, (t) => {
     const repo = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
     // PR 검사는 얕은 체크아웃이라 기준 커밋이 없다. 운영 배포 OTA 잡은 fetch-depth: 0으로 받는다.
@@ -70,11 +71,9 @@ for (const [name, { source, skia, meta }] of Object.entries(targets)) {
       );
       assert.equal(JSON.parse(readFileSync(join(root, APP_JSON), 'utf8')).expo.version, name);
       const after = JSON.parse(readFileSync(join(root, MOBILE_PACKAGE), 'utf8'));
-      // 1.1.7에서 더한 Meta 앱 이벤트 모듈 · 플러그인은 1.1.7보다 옛 경로가 뺀다.
-      for (const path of LOCAL_NATIVE_IN_NEW)
-        assert.equal(existsSync(join(root, path)), !!meta, path);
-      // 1.1.8에서 더한 ATT 모듈은 모든 옛 경로가 빼고, Skia는 Skia가 없는 빌드만 뺀다. 나머지 의존성은 그대로다.
-      const dropped = [...NATIVE_ADDED_118, ...(skia ? [] : NATIVE_ONLY_IN_NEW)];
+      // 1.1.8에서 더한 ATT 모듈만 빼고 나머지 의존성 · Meta 앱 이벤트 모듈은 그대로다.
+      assert.ok(existsSync(join(root, 'apps/mobile/modules/meta-app-events')));
+      const dropped = NATIVE_ADDED_118;
       for (const dep of dropped) assert.equal(after.dependencies[dep], undefined);
       for (const dep of dropped) delete before.dependencies[dep];
       assert.deepEqual(after, before);
@@ -90,7 +89,7 @@ test('the deploy workflow publishes each legacy lane with its own runtime check'
     'utf8',
   );
   const job = workflow.split('  app-update:')[1].split('  release-tag:')[0];
-  assert.match(job, /target: \[current, '1\.1\.7', '1\.1\.6', '1\.1\.5', '1\.1\.4'\]/);
+  assert.match(job, /target: \[current, '1\.1\.7'\]/);
   assert.doesNotMatch(job, /prepare-ota-11[2-4]/);
   assert.match(
     job,
