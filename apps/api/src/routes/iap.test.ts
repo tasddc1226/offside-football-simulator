@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { grantIapPurchase, ownerItemsOf, revokeIapPurchase } from '../db/repos/iap.js';
 import { iapPurchases, ownerItems } from '../db/schema.js';
 import { resetGoogleTokenCache } from '../iap/google.js';
+import { billingAlertId } from '../iap/alerts.js';
 import { syncGoogleVoided } from '../iap/refunds.js';
 import { createApp } from '../app.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
@@ -481,6 +482,69 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
       });
     },
   );
+
+  it('T-11-717 delayed Google acknowledgement failure preserves the grant, response and replay', async () => {
+    const me = await issueGoogleCookie(ctx);
+    ctx.env.GOOGLE_PLAY_SA_JSON = await serviceAccountJson();
+    const body = { store: 'google', productId: REROLL_5, token: 'private-ack-token' };
+    let finishAck!: (response: Response) => void;
+    const pendingAck = new Promise<Response>((resolve) => {
+      finishAck = resolve;
+    });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const fetcher = vi.fn(async (url: string) => {
+      if (url.startsWith('https://oauth2.googleapis.com/token'))
+        return Response.json({ access_token: 'private-access-token', expires_in: 3600 });
+      if (url.endsWith(':acknowledge')) return pendingAck;
+      return Response.json({
+        purchaseState: 0,
+        acknowledgementState: 0,
+        obfuscatedExternalAccountId: accountOf(me.profileId),
+      });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    try {
+      const response = await claim(me.cookie, body);
+      expect(response.status).toBe(200);
+      expect(ItemsRes.parse(await response.json()).data.reroll).toBe(5);
+      const replay = await claim(me.cookie, body);
+      expect(replay.status).toBe(200);
+      expect(ItemsRes.parse(await replay.json()).data.reroll).toBe(5);
+      expect(fetcher).toHaveBeenCalledTimes(3); // token, get, acknowledge; replay never calls Google.
+
+      finishAck(
+        Response.json(
+          {
+            error: {
+              message: `private response ${body.token}`,
+              errors: [{ reason: 'invalidPurchaseState' }],
+            },
+          },
+          { status: 400 },
+        ),
+      );
+      await vi.waitFor(() => expect(log).toHaveBeenCalledOnce());
+      expect(JSON.parse(log.mock.calls[0]![0])).toMatchObject({
+        job: 'iap-ack',
+        grantCompleted: true,
+        httpStatus: 400,
+        reason: 'invalidPurchaseState',
+        id: await billingAlertId({
+          store: 'google',
+          transactionId: body.token,
+          kind: 'purchase',
+          productId: REROLL_5,
+          test: false,
+        }),
+      });
+      expect(JSON.stringify(log.mock.calls)).not.toContain('private');
+      expect(await ctx.db.select().from(iapPurchases)).toHaveLength(1);
+      expect((await ownerItemsOf(ctx.db, me.profileId)).reroll).toBe(5);
+    } finally {
+      finishAck(new Response());
+      log.mockRestore();
+    }
+  });
 
   it('T-11-215 Apple 환불 알림이 오면 가진 장수 안에서 한 번만 회수한다', async () => {
     const me = await issueGoogleCookie(ctx);

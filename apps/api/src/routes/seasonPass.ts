@@ -19,6 +19,7 @@ import { waitUntil } from '../edgeCache.js';
 import { getDb, type AppEnv, type Bindings } from '../env.js';
 import { AppError } from '../errors.js';
 import { recordBillingAlert } from '../iap/alerts.js';
+import { acknowledgeAfterGrant } from '../iap/acknowledgement.js';
 import { iapAccount, iapStores, verifyIapClaim, type IapRejection } from '../iap/verify.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
@@ -110,11 +111,14 @@ export function registerSeasonPassRoutes(app: Hono<AppEnv>) {
     if (verdict.after)
       waitUntil(
         c,
-        verdict
-          .after()
-          .catch((e: unknown) =>
-            console.error(JSON.stringify({ job: 'pass-ack', error: String(e).slice(0, 200) })),
-          ),
+        acknowledgeAfterGrant(verdict.after, {
+          job: 'pass-ack',
+          store: input.store,
+          transactionId: verdict.transactionId,
+          kind: 'purchase',
+          productId: SEASON_PASS_PRODUCT_ID,
+          test: verdict.test,
+        }),
       );
     return ok(c, SeasonPassResponseSchema, await passView(c.env, db, me.id), 200, NO_STORE);
   });

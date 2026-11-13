@@ -11,6 +11,7 @@ import { AppError } from '../errors.js';
 import { verifyPubsubToken } from '../iap/pubsub.js';
 import { handleGoogleRtdn } from '../iap/rtdn.js';
 import { billingAlertId } from '../iap/alerts.js';
+import { acknowledgeAfterGrant } from '../iap/acknowledgement.js';
 import { handleAppleNotification } from '../iap/refunds.js';
 import { iapAccount, iapStores, verifyIapClaim, type IapRejection } from '../iap/verify.js';
 import { APPLE_IAP_NOTIFY_PATH } from '../middleware/originGuard.js';
@@ -159,11 +160,14 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
     if (verdict.after)
       waitUntil(
         c,
-        verdict
-          .after()
-          .catch((e: unknown) =>
-            console.error(JSON.stringify({ job: 'iap-ack', error: String(e).slice(0, 200) })),
-          ),
+        acknowledgeAfterGrant(verdict.after, {
+          job: 'iap-ack',
+          store: input.store,
+          transactionId: verdict.transactionId,
+          kind: 'purchase',
+          productId: input.productId,
+          test: verdict.test,
+        }),
       );
     return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
   });
