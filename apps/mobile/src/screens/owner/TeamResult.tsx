@@ -9,6 +9,8 @@ import { kstMonthDayTime } from '@offside/app-core/boardText';
 import { OUTCOME_TITLE, outcomeOf } from '@offside/app-core/teamOwner';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
+import { matchReportText as R } from '@offside/app-core/i18n/ko/matchReport';
+import type { StreakHint } from '@offside/app-core/losingStreak';
 import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
 import { recordText, signedNum } from '@offside/app-core/teamText';
 import { DISPLAY, rem } from '../../theme/type';
@@ -22,6 +24,7 @@ export function TeamResult({
   m,
   team,
   shift = null,
+  streak = null,
   eventName,
   matchesLeft,
   toTeam,
@@ -35,6 +38,8 @@ export function TeamResult({
   team: OwnerTeam | null;
   /** T-11-375 방금 치른 경기의 디비전 전후(기록에서 연 경기는 null). */
   shift?: DivisionShift | null;
+  /** T-11-722 랭크 연패 안내 — 방금 마감한 내가 건 랭크 경기에만 온다(웹 TeamResult streak). */
+  streak?: StreakHint | null;
   eventName: (id: string | null, fallback: string) => string;
   matchesLeft: number;
   toTeam: () => void;
@@ -55,6 +60,8 @@ export function TeamResult({
   const won = outcomeOf(m) === '승'; // i18n-ignore 결과 키
   const record = team && !friendly && m.mine === 'home' ? recordText(team.record) : null;
   const soft = { color: c.onPitch, opacity: 0.72 } as const;
+  // 연패 안내가 고칠 곳을 가리키면 버튼은 거기 하나만 둔다(리포트의 같은 버튼은 숨긴다).
+  const streakFix = streak?.line && fix ? fix(streak.line) : null;
   const side = (s: TeamMatch['home'], mine: boolean) => (
     <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: 'center' }}>
       <TeamLogo logo={s.logo} name={s.name} size={52} decorative />
@@ -309,7 +316,40 @@ export function TeamResult({
           </View>
         </View>
       ) : null}
-      <TeamReport m={m} fix={fix} />
+      {streak ? (
+        <View
+          accessibilityRole="alert"
+          testID={`team-streak-hint-${streak.kind}`}
+          style={{
+            gap: 6,
+            paddingVertical: 12,
+            paddingHorizontal: 14,
+            borderRadius: RADIUS.md,
+            borderWidth: 1,
+            borderColor: c.line,
+            borderLeftWidth: 3,
+            borderLeftColor: c.accent,
+            backgroundColor: c.surface2,
+          }}
+        >
+          <Txt bold style={{ fontSize: rem(FONT.body) }}>
+            {streak.title}
+          </Txt>
+          <Txt v="sm">{streak.body}</Txt>
+          {streakFix ? (
+            <View style={{ alignSelf: 'flex-start', marginTop: 4 }}>
+              <Btn
+                onPress={streakFix.go}
+                accessibilityLabel={R.fixAria({ pos: streakFix.pos })}
+                testID="team-streak-fix"
+              >
+                {R.fix({ pos: streakFix.pos })}
+              </Btn>
+            </View>
+          ) : null}
+        </View>
+      ) : null}
+      <TeamReport m={m} fix={streakFix ? undefined : fix} />
       <View style={{ gap: 6 }}>
         <Btn
           block

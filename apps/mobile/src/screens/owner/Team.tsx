@@ -226,6 +226,7 @@ export default function Team() {
     playing,
     result,
     divisionShift,
+    streakHint,
     live,
     setLive,
     liveMoments,
@@ -1076,6 +1077,7 @@ export default function Team() {
         m={result}
         team={team}
         shift={divisionShift}
+        streak={streakHint}
         eventName={eventName}
         matchesLeft={matchesLeft}
         toTeam={() => show(resultOrigin === 'history' ? 'history' : 'team')}

@@ -645,6 +645,7 @@
           m={matches.state.result}
           {team}
           shift={matches.state.divisionShift}
+          streak={matches.state.streakHint}
           {eventName}
           matchesLeft={matches.state.result.friendly ? matches.state.friendlyLeft : matchesLeft}
           ontoTeam={() => switchView('team')}

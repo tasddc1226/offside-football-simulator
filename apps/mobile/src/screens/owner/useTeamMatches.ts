@@ -10,9 +10,11 @@ import {
 } from '@offside/app-core/api/team';
 import { usesRankLadder } from '@offside/contracts/owner-team';
 import { markDivisionSeen, type DivisionShift } from '@offside/app-core/teamDivision';
+import type { StreakHint } from '@offside/app-core/losingStreak';
 import type { TeamView } from '@offside/app-core/state';
 import type { LoadStatus } from '../../components/LoadState';
 import { toast } from '../../game/host';
+import { rankStreakHint } from '../../platform/rankStreak';
 import { scrollTo } from '../../ui';
 
 type MatchHost = {
@@ -47,6 +49,8 @@ export function useTeamMatches({
   const [result, setResult] = useState<TeamMatch | null>(null);
   /** T-11-375 방금 치른 경기의 디비전 전후(결과 화면 승격 · 강등), 받은 경기로 바뀐 디비전 알림. */
   const [divisionShift, setDivisionShift] = useState<DivisionShift | null>(null);
+  /** T-11-722 방금 마감한 경기에 보일 연패 안내(기록에서 연 경기 · 친선전은 null). */
+  const [streakHint, setStreakHint] = useState<StreakHint | null>(null);
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
   const [live, setLive] = useState(false);
   /** T-11-387 방금 시작한 장면 경기의 고를 장면(중계가 끝나면 비운다). */
@@ -55,6 +59,7 @@ export function useTeamMatches({
   function openHistoryMatch(m: TeamMatch) {
     setResultOrigin('history');
     setDivisionShift(null);
+    setStreakHint(null);
     setResult(m);
     setLiveMoments(undefined);
     setLive(false);
@@ -91,6 +96,8 @@ export function useTeamMatches({
     setRankFound(null);
     setOppPick(0);
     setResultOrigin('opponents');
+    // 고를 장면이 없는 경기는 시작 응답이 곧 마감이다(중계가 onfinal을 부르지 않는다).
+    setStreakHint(r.data.live ? null : rankStreakHint(r.data.match));
     setResult(r.data.match);
     setLiveMoments(r.data.live);
     setLive(true);
@@ -123,6 +130,7 @@ export function useTeamMatches({
   /** 장면 경기가 끝났어요. 결과 화면을 마감한 경기로 바꾼다. */
   function liveFinal(r: PlayTeamMatchResponse) {
     setResult(r.match);
+    setStreakHint(rankStreakHint(r.match));
     setLiveMoments(undefined);
     setMatchesLeft(r.matchesLeft);
     setMatchesNextAt(r.matchesNextAt ?? null);
@@ -132,6 +140,7 @@ export function useTeamMatches({
   /** 친구 칸에서 친선전을 치렀거나(중계부터) 최근 친선전을 열 때(결과부터). 친선전은 레이팅·전적을 건드리지 않는다. */
   function showFriendly(m: TeamMatch, withLive: boolean) {
     setDivisionShift(null);
+    setStreakHint(null);
     setResultOrigin('opponents');
     setResult(m);
     setLiveMoments(undefined);
@@ -150,6 +159,7 @@ export function useTeamMatches({
     playing,
     result,
     divisionShift,
+    streakHint,
     live,
     setLive,
     liveMoments,

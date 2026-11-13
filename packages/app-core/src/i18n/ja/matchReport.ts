@@ -23,6 +23,12 @@ export const matchReport: Translation<MatchReportMsgs> = {
   dDefDown: (p) => `守備壁が相手の攻撃より${p.n}弱く、チャンスを多く与えました。`,
   fix: (p) => `${p.pos}を替える`,
   fixAria: (p) => `${p.pos}の枠に入れる選手を選ぶ`,
+  streakTitle: (p) => `${p.n}連敗中です`,
+  streakLuck: (p) =>
+    `直近${p.k}試合の期待得点は ${p.mine} : ${p.opp} で上回っていました。戦力では負けておらず、ゴールがついてきませんでした。`,
+  streakAtk: (p) => `直近${p.k}試合で、攻撃が相手の守備壁に平均${p.n}及びませんでした。`,
+  streakMid: (p) => `直近${p.k}試合で、中盤が相手の中盤に平均${p.n}及びませんでした。`,
+  streakDef: (p) => `直近${p.k}試合で、守備壁が相手の攻撃より平均${p.n}弱くなっていました。`,
   seasonTitle: '試合レポート',
   seasonEmpty: '期待得点はこのアップデート以降の試合から集まります。',
   seasonXg: (p) =>

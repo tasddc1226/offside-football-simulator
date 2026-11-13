@@ -23,6 +23,15 @@ export const matchReport: Translation<MatchReportMsgs> = {
   dDefDown: (p) => `Your wall was ${p.n} weaker than their attack and gave up many chances.`,
   fix: (p) => `Change ${p.pos}`,
   fixAria: (p) => `Pick a player for the ${p.pos} slot`,
+  streakTitle: (p) => `${p.n} losses in a row`,
+  streakLuck: (p) =>
+    `Over the last ${p.k} matches you led on expected goals, ${p.mine} : ${p.opp}. Your squad held up. The goals didn’t come.`,
+  streakAtk: (p) =>
+    `Over the last ${p.k} matches your attack trailed their wall by ${p.n} on average.`,
+  streakMid: (p) =>
+    `Over the last ${p.k} matches your midfield trailed theirs by ${p.n} on average.`,
+  streakDef: (p) =>
+    `Over the last ${p.k} matches your wall was ${p.n} weaker than their attack on average.`,
   seasonTitle: 'Match report',
   seasonEmpty: 'Expected goals are collected from matches played after this update.',
   seasonXg: (p) =>

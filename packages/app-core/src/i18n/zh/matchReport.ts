@@ -23,6 +23,12 @@ export const matchReport: Translation<MatchReportMsgs> = {
   dDefDown: (p) => `防線比對手攻擊弱了${p.n}，讓對手有很多機會。`,
   fix: (p) => `更換${p.pos}`,
   fixAria: (p) => `選擇放入${p.pos}位置的球員`,
+  streakTitle: (p) => `目前${p.n}連敗`,
+  streakLuck: (p) =>
+    `最近${p.k}場的預期進球為 ${p.mine} : ${p.opp}，我方領先。實力沒有落後，只是進球沒有跟上。`,
+  streakAtk: (p) => `最近${p.k}場，攻擊平均比對手防線低了${p.n}。`,
+  streakMid: (p) => `最近${p.k}場，中場平均比對手中場低了${p.n}。`,
+  streakDef: (p) => `最近${p.k}場，防線平均比對手攻擊弱了${p.n}。`,
   seasonTitle: '比賽報告',
   seasonEmpty: '預期進球會從這次更新之後的比賽開始累積。',
   seasonXg: (p) =>
