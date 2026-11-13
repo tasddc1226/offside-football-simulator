@@ -3,6 +3,7 @@
 // 재무 데이터 보기 · 주문 관리 권한)의 JSON 키를 secret GOOGLE_PLAY_SA_JSON으로 두고, 그 키로 서명한 JWT를 액세스 토큰으로
 // 바꾼다. 확인한 구매는 서버가 바로 승인(acknowledge)해 둔다 — 앱이 소비(consume)하기 전에 꺼져도 3일 뒤 자동 환불되지 않게.
 import { bytesToBase64Url, json64, pemToPkcs8 } from '../auth/base64url.js';
+import { googleAcknowledgementError } from './google-error.js';
 
 export const ANDROID_PACKAGE = 'com.offsidelab.app';
 const SCOPE = 'https://www.googleapis.com/auth/androidpublisher';
@@ -118,7 +119,7 @@ export async function acknowledgeGooglePurchase(
     headers: { 'content-type': 'application/json' },
     body: '{}',
   });
-  if (!res.ok) throw new Error(`Google acknowledge ${res.status}`);
+  if (!res.ok) throw await googleAcknowledgementError(res);
 }
 
 /** T-11-215 Google Play가 무효화(환불 · 결제 취소 · 차지백)한 구매 한 건. */
