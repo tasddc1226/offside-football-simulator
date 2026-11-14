@@ -23,6 +23,8 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     // T-11-676 이용자가 은퇴 커리어 공유 버튼으로 만든 링크. 어디서 공유했는지(앱 · 웹)만 남긴다.
     'offside_app',
     'offside_web',
+    // T-11-726 일본 대상 X 공식 계정(@offside_lab_jp)의 글 · 프로필 링크.
+    'x',
   ],
   utm_medium: ['social', 'community', 'paid', 'partner', 'web', 'share'],
   utm_campaign: [
@@ -36,6 +38,8 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     'app_landing',
     // T-11-676 이용자 공유 링크(운영자가 직접 올린 retirement_share와 나눈다).
     'career_share',
+    // T-11-726 일본 대상 X 계정 운영.
+    'x_jp',
   ],
   utm_content: [
     'career',
@@ -84,6 +88,9 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     'lp_end',
     'lp_qr',
     'lp_nav',
+    // T-11-726 X 글(x_post) · 프로필 링크(x_bio).
+    'x_post',
+    'x_bio',
   ],
 };
 export function campaignQuery(href: string): string {

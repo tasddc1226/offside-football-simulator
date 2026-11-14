@@ -90,6 +90,9 @@ describe('T-11-531 크리에이터 짧은 주소', () => {
         '/ethio-yt',
         'utm_source=youtube&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_short',
       ],
+      // T-11-726 일본 대상 X 계정.
+      ['/x', 'utm_source=x&utm_medium=social&utm_campaign=x_jp&utm_content=x_post'],
+      ['/x-bio', 'utm_source=x&utm_medium=social&utm_campaign=x_jp&utm_content=x_bio'],
     ] as const) {
       const res = await get(path);
       expect(res.status, path).toBe(302);
