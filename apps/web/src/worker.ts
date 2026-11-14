@@ -174,6 +174,9 @@ const SHORT_LINKS: Record<string, string> = {
     '/?utm_source=tiktok&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_tiktok',
   '/ethio-yt':
     '/?utm_source=youtube&utm_medium=partner&utm_campaign=creator_test&utm_content=ethio_short',
+  // T-11-726 일본 대상 X 계정(@offside_lab_jp): 글에 다는 주소와 프로필 링크.
+  '/x': '/?utm_source=x&utm_medium=social&utm_campaign=x_jp&utm_content=x_post',
+  '/x-bio': '/?utm_source=x&utm_medium=social&utm_campaign=x_jp&utm_content=x_bio',
 };
 
 // T-11-622 앱 바로 열기 검증 파일. Apple · Google이 주소 그대로 가져가므로 리다이렉트 없이 JSON으로 내린다.

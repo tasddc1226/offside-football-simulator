@@ -83,6 +83,12 @@ describe('privacy allowlists', () => {
       expect(campaignQuery(`https://offside-lab.com/${query}&ttclid=PRIVATE`)).toBe(query);
     }
   });
+  it('keeps the X account campaign (T-11-726)', () => {
+    for (const content of ['x_post', 'x_bio']) {
+      const query = `?utm_source=x&utm_medium=social&utm_campaign=x_jp&utm_content=${content}`;
+      expect(campaignQuery(`https://offside-lab.com/${query}&twclid=PRIVATE`)).toBe(query);
+    }
+  });
   it('keeps the meta reels ad content per country', () => {
     for (const content of ['jp_reels', 'uk_reels', 'us_reels', 'kr_reels', 'zh_reels']) {
       const query = `?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=${content}`;
