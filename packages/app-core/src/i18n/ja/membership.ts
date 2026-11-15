@@ -37,7 +37,7 @@ export const membership: Translation<MembershipMsgs> = {
   loadFail: 'メンバーシップを読み込めませんでした。',
   retry: '再読み込み',
   entry: 'クラブメンバーシップ',
-  entrySub: '出席2倍 · 毎日強化券 · 広告なし · サポーターバッジ',
+  entrySub: '出席2倍 · 毎日潜在能力強化券 · 広告なし · サポーターバッジ',
   entryActive: '利用中',
   badge: 'サポーター',
   badgeLabel: 'クラブメンバーシップ サポーター',

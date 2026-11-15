@@ -55,6 +55,7 @@ import { teamHomeText as T } from '@offside/app-core/i18n/ko/teamHome';
 import { fundsHistoryText as F } from '@offside/app-core/i18n/ko/fundsHistory';
 import { openFriends } from '../../platform/inbox';
 import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
+import { askLockerFocus } from './lockerFocus';
 import { hallDotLabel, hallSeason } from '@offside/app-core/hallEntry';
 
 function openTeam(v: TeamView = 'team') {
@@ -555,6 +556,17 @@ export default function Owner() {
           ) : null}
           {linked ? (
             <>
+              {/* T-11-728 카드 강화는 팀 관리 라커룸에만 있어 찾기 어려웠다. 메뉴에서 바로 라커룸으로 보낸다. */}
+              <Tile
+                testID="owner-enhance"
+                label={L.enhanceTitle}
+                title={L.enhanceTitle}
+                sub={L.tileEnhance}
+                onPress={() => {
+                  askLockerFocus();
+                  openTeam('team');
+                }}
+              />
               <Tile
                 testID="market"
                 label={`${L.marketTitle} ${L.open}`}

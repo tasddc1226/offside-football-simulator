@@ -5,6 +5,8 @@ import { plural } from './_util';
 export const cardEnhance: Translation<CardEnhanceMsgs> = {
   title: 'Card enhance',
   open: 'Enhance',
+  openLv: (p) => `Enhance +${p.lv}`,
+  effectNow: (p) => `Now +${p.n} to slot rating and team OVR`,
   openAria: (p) => `Enhance ${p.name}'s card`,
   now: 'Now',
   next: 'On success',

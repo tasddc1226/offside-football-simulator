@@ -22,6 +22,14 @@ import { cardEnhanceText as L } from './i18n/ko/cardEnhance.js';
 /** 카드 배지 — 강화 전이면 null. */
 export const enhanceBadge = (level: number | null | undefined) => (level ? `+${level}` : null);
 
+/** T-11-728 라커룸 강화 버튼 글자. 강화한 뒤에도 '강화'를 남겨 배지가 아니라 버튼으로 읽히게 한다. */
+export const enhanceButtonText = (level: number | null | undefined) =>
+  level ? L.openLv({ lv: level }) : L.open;
+
+/** T-11-728 강화 창 첫 줄: 지금 단계가 자리 실력 · 팀 OVR에 더하는 값(강화 전이면 null). */
+export const enhanceEffectText = (level: number | null | undefined) =>
+  level ? L.effectNow({ n: enhanceOvr(level) }) : null;
+
 /** 단계별 효과 이름(+1 잔디 ~ +10 마지막 휘슬). */
 export const enhanceFxName = (level: number): string =>
   [L.fx1, L.fx2, L.fx3, L.fx4, L.fx5, L.fx6, L.fx7, L.fx8, L.fx9, L.fx10][level - 1] ?? '';
@@ -137,11 +145,11 @@ export const enhanceSellNote = (level: number | null | undefined) =>
   level ? L.sellNote({ lv: level, value: fmtValue(enhanceValue(level)) }) : null;
 
 /**
- * 자리 OVR을 카드에 따로 보일지. 제 자리가 아닐 때만 보인다. 강화 OVR을 뺀 값으로 재서, 강화 덕에 최고 OVR과 숫자가 같아진 경우도 제 자리가 아니면 보인다.
- * (웹 team/PlayerCard.svelte · 앱 components/PlayerCard.tsx)
+ * 자리 OVR을 카드에 따로 보일지. 제 자리가 아니거나 강화한 카드면 보인다. 카드 큰 숫자는 최고 OVR이라 강화해도 그대로여서,
+ * 강화 효과가 들어간 자리 실력을 카드에서 바로 보이게 한다(T-11-728). (웹 team/PlayerCard.svelte · 앱 components/PlayerCard.tsx)
  */
 export const showsPosOvr = (peak: number, posOvr: number, level: number | null | undefined) =>
-  posOvr - (level ?? 0) !== peak;
+  !!level || posOvr !== peak;
 
 /** 방출 · 카드 과제 확인 문구: 강화한 선수가 있으면 단계와 강화에 쓴 자금이 함께 사라진다고 알린다(없으면 null). */
 export function enhanceLossNote(players: readonly { enhance?: number | null | undefined }[]) {

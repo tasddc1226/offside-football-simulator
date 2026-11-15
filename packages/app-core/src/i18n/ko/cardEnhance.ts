@@ -5,6 +5,8 @@ import { iGa } from '../../format';
 const ko = {
   title: '카드 강화',
   open: '강화',
+  openLv: (p: { lv: number }) => `강화 +${p.lv}`,
+  effectNow: (p: { n: number }) => `지금 자리 실력 · 팀 OVR +${p.n}`,
   openAria: (p: { name: string }) => `${p.name} 카드 강화`,
   now: '지금',
   next: '성공하면',

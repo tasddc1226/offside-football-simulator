@@ -37,7 +37,7 @@ const ko = {
   loadFail: '멤버십을 불러오지 못했어요.',
   retry: '다시 불러오기',
   entry: '클럽 멤버십',
-  entrySub: '출석 2배 · 매일 강화권 · 광고 제거 · 서포터 뱃지',
+  entrySub: '출석 2배 · 매일 잠재력 강화권 · 광고 제거 · 서포터 뱃지',
   entryActive: '이용 중',
   badge: '서포터',
   badgeLabel: '클럽 멤버십 서포터',

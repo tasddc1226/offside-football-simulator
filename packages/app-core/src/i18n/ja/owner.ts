@@ -78,7 +78,9 @@ export const owner: Translation<OwnerMsgs> = {
   tileManager: '監督として続ける',
   tileHall: 'シーズン記録・称号',
   shopTitle: 'ショップ',
-  tileShop: 'リロール・強化・スカウト券',
+  tileShop: 'リロール券・潜在能力強化券・スカウト券',
+  enhanceTitle: 'カード強化',
+  tileEnhance: 'クラブ資金でチームOVRを上げる',
   shopLoginNeeded: 'ショップはログインしたオーナーだけが使えます。',
   teamEmptyWith: (p) =>
     `${p.season}に引退した自分の選手${p.n}人でチームを組めます。空いた枠はユースの選手が埋めます。`,

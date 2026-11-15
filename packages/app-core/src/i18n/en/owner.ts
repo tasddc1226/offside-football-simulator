@@ -80,7 +80,9 @@ export const owner: Translation<OwnerMsgs> = {
   tileManager: 'Carry on as a manager',
   tileHall: 'Season records · titles',
   shopTitle: 'Shop',
-  tileShop: 'Rerolls · boosts · scout tickets',
+  tileShop: 'Rerolls · potential boosts · scout tickets',
+  enhanceTitle: 'Card enhance',
+  tileEnhance: 'Raise team OVR with club funds',
   shopLoginNeeded: 'Sign in as a club owner to use the shop.',
   teamEmptyWith: (p) =>
     `You can build a team from your ${plural(p.n, 'player')} who retired in ${p.season}. Youth players fill any empty spots.`,

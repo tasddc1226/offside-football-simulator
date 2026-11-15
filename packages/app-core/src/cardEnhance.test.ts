@@ -15,6 +15,8 @@ import {
   enhanceSellNote,
   enhanceLossNote,
   showsPosOvr,
+  enhanceButtonText,
+  enhanceEffectText,
   enhanceView,
   runEnhanceAuto,
   enhanceAutoFinal,
@@ -78,9 +80,10 @@ describe('카드 강화 창 (T-11-373)', () => {
     expect(enhanceSellNote(2)).toContain('+2');
   });
 
-  it('자리 OVR은 제 자리가 아닐 때만 따로 보인다(강화 OVR만큼 높은 것은 제 자리)', () => {
+  it('자리 OVR은 제 자리가 아니거나 강화한 카드면 따로 보인다', () => {
     expect(showsPosOvr(84, 84, 0)).toBe(false);
-    expect(showsPosOvr(84, 87, 3)).toBe(false);
+    // T-11-728 제 자리라도 강화했으면 강화 OVR이 들어간 자리 실력을 보인다.
+    expect(showsPosOvr(84, 87, 3)).toBe(true);
     expect(showsPosOvr(84, 79, 0)).toBe(true);
     expect(showsPosOvr(84, 82, 3)).toBe(true);
     // 강화 덕에 최고 OVR과 숫자가 같아져도 제 자리가 아니면 보인다(제 자리면 87이다).
@@ -273,5 +276,13 @@ describe('enhanceAutoTickMs', () => {
     expect(enhanceAutoTickMs(20)).toBe(200);
     expect(enhanceAutoTickMs(100)).toBe(80);
     expect(enhanceAutoTickMs(0)).toBe(320);
+  });
+
+  it('T-11-728 강화 버튼은 강화한 뒤에도 강화라는 말을 남기고, 창 첫 줄은 지금 효과를 알린다', () => {
+    expect(enhanceButtonText(0)).toBe('강화');
+    expect(enhanceButtonText(undefined)).toBe('강화');
+    expect(enhanceButtonText(5)).toBe('강화 +5');
+    expect(enhanceEffectText(0)).toBeNull();
+    expect(enhanceEffectText(5)).toBe('지금 자리 실력 · 팀 OVR +5');
   });
 });

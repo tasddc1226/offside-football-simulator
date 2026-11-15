@@ -9,6 +9,8 @@
   import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
   import { lockToggleable } from '@offside/app-core/market';
   import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
+  import { enhanceButtonText } from '@offside/app-core/cardEnhance';
+  import { takeLockerFocus } from './lockerFocus.js';
   import { synergyApplies, type TeamSynergy as Synergy } from '@offside/contracts/owner-team';
   import { coachLineBonus } from '@offside/app-core/managerCard';
   import TeamLines from './TeamLines.svelte';
@@ -71,6 +73,13 @@
     sort = 'fit';
     focusSlot = null;
     requestAnimationFrame(() => pitch?.querySelectorAll<HTMLButtonElement>('[data-slot]')[selectedSlot ?? 0]?.scrollIntoView({ block: 'center', behavior: dur(1) ? 'smooth' : 'instant' }));
+  });
+  // T-11-728 내 구단 메뉴 '카드 강화'로 들어왔으면 라커룸까지 내려 준다.
+  let locker = $state<HTMLElement>();
+  $effect(() => {
+    if (!locker || !takeLockerFocus()) return;
+    const el = locker;
+    requestAnimationFrame(() => el.scrollIntoView({ block: 'start', behavior: 'instant' }));
   });
   function preset(f: FormationId) { formation = f; layout = null; selectedSlot = null; announcement = L.presetAnnounce({ f }); }
   // T-11-216 시즌 1 배치 프리셋(세부 포지션 자리). 프리시즌 팀은 옛 세 가지만.
@@ -216,7 +225,7 @@
 {/if}
 
 {#if editable}
-  <section class="locker-room card" data-team-locker class:drop-active={drag?.moving && drag.from !== null} aria-label={L.lockerTitle}>
+  <section bind:this={locker} class="locker-room card" data-team-locker class:drop-active={drag?.moving && drag.from !== null} aria-label={L.lockerTitle}>
     <div class="locker-head"><div><h2>{L.lockerTitle}</h2><p class="muted fs-sm">{L.lockerCount({ n: players.length, starters: filled, bench: players.length - filled })}</p>{#if onach}<button class="link-btn fs-sm season-raised" data-act="locker-season-ach" onclick={onach}>{seasonRaisedText(players, season)} · {L.seasonRaisedAch} →</button>{/if}</div><span class="locker-count">{roster.length}</span></div>
     <p class="muted fs-sm">{L.lockerNoteWeb}</p>
     {#if players.length}
@@ -244,7 +253,7 @@
               {#if stamina}<span class="stamina" data-stamina={stamina.left} role="img" title={TC.fatigueHint} aria-label={TC.staminaAria({ left: stamina.left, total: STAMINA_CELLS, pct: stamina.pct })}><small aria-hidden="true">{TC.staminaLabel}</small><span class="stamina-bar" aria-hidden="true">{#each { length: STAMINA_CELLS } as _, k (k)}<i class:on={k < stamina.left}></i>{/each}</span></span>{/if}
               {#if team}<button class="lock-toggle" aria-label={LC.sharePlayerAria({ name: nameOf(p) })} title={LC.sharePlayerAct} data-act="player-lounge-share" onclick={() => void shareToLounge({ kind: 'player', careerId: p.careerId })}><svg viewBox="0 0 20 20" width="13" height="13" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9l-4 3v-3a2 2 0 0 1-2-2z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg></button>{/if}
               {#if onlock}<button class="lock-toggle" class:on={p.locked} aria-pressed={!!p.locked} aria-label={L.lockerLockAria({ name: nameOf(p) })} data-act="lock" disabled={!lockToggleable(p)} onclick={() => onlock(p)}><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5" /><path d={p.locked ? 'M5.5 7V5a2.5 2.5 0 0 1 5 0v2' : 'M5.5 7V5a2.5 2.5 0 0 1 4.9-.7'} /></svg><span>{p.locked ? L.lockerLocked : p.listing ? L.lockerListed : L.lockerLock}</span></button>{/if}
-              {#if onenhance && p.cardValue != null}<button class="lock-toggle enhance-toggle" aria-label={CE.openAria({ name: nameOf(p) })} data-act="enhance" onclick={() => onenhance(p)}><span>{p.enhance ? `+${p.enhance}` : CE.open}</span></button>{/if}
+              {#if onenhance && p.cardValue != null}<button class="lock-toggle enhance-toggle" aria-label={CE.openAria({ name: nameOf(p) })} data-act="enhance" onclick={() => onenhance(p)}><span>{enhanceButtonText(p.enhance)}</span></button>{/if}
             </div>
             <button class="drag-handle" aria-label={L.dragAria({ name: nameOf(p) })} onpointerdown={(e) => start(e, p.careerId, null)} onclick={() => pickPlayer(p.careerId)}><svg viewBox="0 0 18 12" aria-hidden="true"><path d="M3 2h2M3 6h2M3 10h2M8 2h2M8 6h2M8 10h2M13 2h2M13 6h2M13 10h2" /></svg><span>{L.dragLabel}</span></button>
           </article>

@@ -82,7 +82,9 @@ const ko = {
   tileManager: '감독으로 이어 가기',
   tileHall: '시즌 기록 · 칭호',
   shopTitle: '상점',
-  tileShop: '리롤 · 강화 · 스카우트권',
+  tileShop: '리롤권 · 잠재력 강화권 · 스카우트권',
+  enhanceTitle: '카드 강화',
+  tileEnhance: '구단 자금으로 팀 OVR 올리기',
   shopLoginNeeded: '상점은 로그인한 구단주만 써요.',
   // ownerHub.ts
   teamEmptyWith: (p: { season: string; n: number }) =>

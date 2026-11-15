@@ -4,6 +4,8 @@ import type { CardEnhanceMsgs } from '../ko/cardEnhance';
 export const cardEnhance: Translation<CardEnhanceMsgs> = {
   title: '卡牌強化',
   open: '強化',
+  openLv: (p) => `強化 +${p.lv}`,
+  effectNow: (p) => `目前位置實力 · 球隊 OVR +${p.n}`,
   openAria: (p) => `強化${p.name}的卡牌`,
   now: '目前',
   next: '成功後',
