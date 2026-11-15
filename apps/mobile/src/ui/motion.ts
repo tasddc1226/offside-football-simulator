@@ -4,3 +4,13 @@
  * synchronouslyUpdateUIProps)에 묶여 입력이 밀리고 ANR이 난다. 작은 장식은 움직임 줄이기와 같은 모양으로 멈춰 그린다.
  */
 export const DECOR_MOTION_MIN = 40;
+
+/**
+ * T-11-730 큰 장식도 끝없이 돌리지 않고 이 횟수만 돌고 쉰다. Reanimated 4.5는 안드로이드에서 투명도 · 변형을 바로 갱신하다
+ * 실패하면(그려지지 않은 화면의 뷰 등) 매번 스택이 붙은 경고 로그를 메인 스레드에서 찍어서, 끝없는 반복이 쌓이면 입력이 밀려
+ * ANR이 났다(1.1.7까지 상위 ANR 묶음, Play vitals). 처음 몇 번만 반짝여도 장식의 뜻은 전해진다.
+ */
+export const DECOR_REPEATS = 3;
+
+/** T-11-730 불러오는 중 뼈대가 숨 쉬는 횟수(한 번 1.4초). 그보다 오래 걸리면 멈춘 채로 둔다. */
+export const SKELETON_BREATHS = 6;
