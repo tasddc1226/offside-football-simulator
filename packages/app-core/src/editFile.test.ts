@@ -12,7 +12,7 @@ describe('T-11-729 에디트 파일 읽기', () => {
   });
 
   it('붙여넣을 때 섞인 BOM · 앞뒤 글 · 둥근 따옴표를 걸러 읽는다', () => {
-    expect(readEditFile(`﻿${clubs}`, 'clubs').ok).toBe(true);
+    expect(readEditFile(`\uFEFF${clubs}`, 'clubs').ok).toBe(true);
     expect(readEditFile(`offside-clubs.json\n${clubs}\n공유합니다`, 'clubs').ok).toBe(true);
     const smart = clubs.replace(/"/g, (_, i: number) => (i % 2 ? '”' : '“'));
     expect(readEditFile(smart, 'clubs')).toMatchObject({

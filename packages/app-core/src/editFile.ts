@@ -19,7 +19,7 @@ const count = (t: string, ch: string) => t.split(ch).length - 1;
 
 /** 에디트 파일 글을 읽는다. 구단 파일은 옛 형식(감싸지 않은 구단 표)도 받는다. */
 export function readEditFile(text: string, kind: EditFileKind): EditFileRead {
-  const t = text.replace(/^﻿/, '').trim();
+  const t = text.replace(/^\uFEFF/, '').trim();
   if (!t) return { ok: false, reason: 'empty' };
   const start = t.indexOf('{');
   if (start < 0) return { ok: false, reason: /https?:\/\/|www\./i.test(t) ? 'link' : 'notFile' };
