@@ -37,7 +37,7 @@ import {
   type TrophyStage,
 } from '@offside/app-core/cupTrophy';
 import { prefs } from '../store';
-import { DECOR_MOTION_MIN } from './motion';
+import { DECOR_MOTION_MIN, DECOR_REPEATS } from './motion';
 
 const CYCLE: Record<TrophyStage, number> = { champion: 8500, runnerup: 8000, sf: 9500 };
 const STAR = 'M8 0L10 6L16 8L10 10L8 16L6 10L0 8L6 6Z';
@@ -182,7 +182,7 @@ export function CupTrophy({
     if (motionOK && active)
       phase.value = withRepeat(
         withTiming(1, { duration: CYCLE[stage], easing: Easing.linear }),
-        -1,
+        DECOR_REPEATS,
       );
     return () => cancelAnimation(phase);
   }, [motionOK, active, stage, phase]);

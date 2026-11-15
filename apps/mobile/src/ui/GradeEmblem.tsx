@@ -23,7 +23,7 @@ import { useSnapshot } from 'valtio';
 import { EMBLEM_PALETTE, gradeEmblem } from '@offside/app-core/gradeEmblem';
 import type { AchGrade } from '@offside/contracts/owner-team';
 import { prefs } from '../store';
-import { DECOR_MOTION_MIN } from './motion';
+import { DECOR_MOTION_MIN, DECOR_REPEATS } from './motion';
 
 const CYCLE: Record<AchGrade['id'], number> = {
   rookie: 9000,
@@ -60,12 +60,12 @@ export function GradeEmblem({ id, size = 20 }: { id: string; size?: number }) {
     if (motionOK && active && grade !== 'rookie') {
       phase.value = withRepeat(
         withTiming(1, { duration: CYCLE[grade], easing: Easing.linear }),
-        -1,
+        DECOR_REPEATS,
       );
       if (movingHalo)
         orbit.value = withRepeat(
           withTiming(1, { duration: grade === 'legend' ? 10000 : 12000, easing: Easing.linear }),
-          -1,
+          DECOR_REPEATS,
         );
     }
     return () => {
