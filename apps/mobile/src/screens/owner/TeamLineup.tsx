@@ -22,6 +22,8 @@ import { teamCoreText as TC } from '@offside/app-core/i18n/ko/teamCore';
 import { lockToggleable } from '@offside/app-core/market';
 import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
 import { cardEnhanceText as CE } from '@offside/app-core/i18n/ko/cardEnhance';
+import { enhanceButtonText } from '@offside/app-core/cardEnhance';
+import { takeLockerFocus } from './lockerFocus';
 import { DragPlayer, type PlayerDrag } from '../../components/DragPlayer';
 import { PlayerCard } from '../../components/PlayerCard';
 import { PlayerPeek, pitchPeekOrigin, type PeekOrigin } from '../../components/PlayerPeek';
@@ -142,6 +144,15 @@ export function TeamLineup({
       setPeek({ i, origin: pitchPeekOrigin(px, py, w, h, pos) });
     });
   }
+  // T-11-728 내 구단 메뉴 '카드 강화'로 들어왔으면 라커룸까지 내려 준다(그려진 뒤 자리를 잰다).
+  useEffect(() => {
+    if (!editable || !takeLockerFocus()) return;
+    const t = setTimeout(
+      () => locker.current?.measureInWindow((_x, y) => scrollTo(Math.max(0, scrollY() + y - 60))),
+      300,
+    );
+    return () => clearTimeout(t);
+  }, [editable]);
   const latest = useRef({ layout, slots, change, dragging });
   latest.current = { layout, slots, change, dragging };
   useEffect(() => {
@@ -617,7 +628,7 @@ export function TeamLineup({
                           }}
                         >
                           <Txt v="xs" style={{ color: c.accentText, fontWeight: '600' }}>
-                            {p.enhance ? `+${p.enhance}` : CE.open}
+                            {enhanceButtonText(p.enhance)}
                           </Txt>
                         </Press>
                       ) : null}

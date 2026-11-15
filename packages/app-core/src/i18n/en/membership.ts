@@ -38,7 +38,7 @@ export const membership: Translation<MembershipMsgs> = {
   loadFail: "Couldn't load the membership.",
   retry: 'Try again',
   entry: 'Club membership',
-  entrySub: 'Double check-in · Daily boost ticket · No ads · Supporter badge',
+  entrySub: 'Double check-in · Daily potential boost ticket · No ads · Supporter badge',
   entryActive: 'Active',
   badge: 'Supporter',
   badgeLabel: 'Club membership supporter',

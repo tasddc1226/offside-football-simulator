@@ -4,7 +4,7 @@
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { holdAchCheck } from '@offside/app-core/achDirty';
   import { enhanceCard, enhanceCardAuto, fetchEnhanceState, type EnhanceResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
-  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoFinal, enhanceAutoSummary, enhanceAutoTickMs, enhanceAutoTargets, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
+  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoFinal, enhanceAutoSummary, enhanceAutoTickMs, enhanceAutoTargets, enhanceEffectText, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
   import { fmtValue } from '@offside/app-core/format';
   import { fundsText } from '@offside/app-core/funds';
   import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
@@ -199,6 +199,11 @@
     <p class="note" data-enhance-error>{L.loadFail}</p>
     <button class="btn btn-block" onclick={load}>{L.retry}</button>
   {:else}
+    <!-- T-11-728 강화가 무엇을 바꾸는지 맨 위에 둔다(예전에는 창 맨 아래 자금 줄 밑에 있었다). -->
+    <div class="effect" data-enhance-effect>
+      {#if enhanceEffectText(view.level)}<b>{enhanceEffectText(view.level)}</b>{/if}
+      <span>{L.effectNote}</span>
+    </div>
     <dl class="grid">
       <div><dt>{L.now} → {L.next}</dt><dd data-enhance-step>{view.next === null ? `+${view.level}` : `+${view.level} → +${view.next}`}</dd></div>
       <div><dt>{L.rate}</dt><dd data-enhance-rate>{view.next === null ? '-' : view.ratePct}</dd></div>
@@ -243,8 +248,7 @@
       </details>
     {/if}
     <p class="muted fs-xs foot">
-      {L.balance} {fundsText(info.balance)}<br />
-      {L.effectNote}
+      {L.balance} {fundsText(info.balance)}
     </p>
   {/if}
   </div>
@@ -254,6 +258,9 @@
 <style>
   dialog{box-sizing:border-box;width:min(400px,calc(100% - 24px));max-width:100%;max-height:85dvh;overflow:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:18px;padding:20px;background:var(--surface);color:var(--ink);}
   dialog::backdrop{background:#0009;}
+  .effect{display:flex;flex-direction:column;gap:2px;margin:0 0 12px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);font-size:13px;line-height:1.45;}
+  .effect b{color:var(--accent-text);font-size:15px;}
+  .effect span{color:var(--muted);}
   header{display:flex;align-items:center;justify-content:space-between;gap:8px;}
   h2{font-size:18px;margin:0;}
   .close{flex:none;width:44px;height:44px;border:0;background:transparent;color:inherit;font-size:28px;cursor:pointer;}

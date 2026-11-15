@@ -174,3 +174,18 @@ test('T-11-679 자동 강화: 목표 · 쓸 금액을 골라 시작하면 이어
   ]);
   expect(hits.state).toBe(1);
 });
+
+test('T-11-728 내 구단 메뉴의 카드 강화로 팀 화면 라커룸까지 바로 내려가고, 창 맨 위에 효과 안내가 있다', async ({
+  page,
+}) => {
+  await stub(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="owner-enhance"]').click();
+  await expect(page.locator('[data-team-locker]')).toBeInViewport();
+  const btn = page.locator('[data-team-locker] [data-act="enhance"]').first();
+  await expect(btn).toHaveText('강화');
+  await btn.click();
+  const sheet = page.locator('[data-enhance-sheet]');
+  await expect(sheet.locator('[data-enhance-effect]')).toContainText('팀 OVR에 더해져요');
+});

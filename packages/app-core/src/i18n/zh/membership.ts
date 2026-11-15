@@ -35,7 +35,7 @@ export const membership: Translation<MembershipMsgs> = {
   loadFail: '無法載入會員資訊。',
   retry: '重新載入',
   entry: '俱樂部會員',
-  entrySub: '簽到 2 倍 · 每日強化券 · 移除廣告 · 支持者徽章',
+  entrySub: '簽到 2 倍 · 每日潛力強化券 · 移除廣告 · 支持者徽章',
   entryActive: '使用中',
   badge: '支持者',
   badgeLabel: '俱樂部會員 支持者',

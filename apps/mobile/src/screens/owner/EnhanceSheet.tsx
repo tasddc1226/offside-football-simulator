@@ -18,6 +18,7 @@ import {
   enhanceAutoSummary,
   enhanceAutoTickMs,
   enhanceAutoTargets,
+  enhanceEffectText,
   enhanceErrorText,
   enhanceKeepKey,
   enhanceResultKind,
@@ -258,6 +259,20 @@ export function EnhanceSheet({
         </>
       ) : (
         <>
+          {/* T-11-728 강화가 무엇을 바꾸는지 맨 위에 둔다(예전에는 창 맨 아래 자금 줄 밑에 있었다). */}
+          <View
+            testID="enhance-effect"
+            style={{ gap: 2, padding: 10, borderRadius: 12, borderWidth: 1, borderColor: c.line }}
+          >
+            {enhanceEffectText(view.level) ? (
+              <Txt bold style={{ color: c.accentText }}>
+                {enhanceEffectText(view.level)}
+              </Txt>
+            ) : null}
+            <Txt v="sm" tone="muted">
+              {L.effectNote}
+            </Txt>
+          </View>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
             {cell(
               `${L.now} → ${L.next}`,
@@ -412,7 +427,7 @@ export function EnhanceSheet({
             </View>
           ) : null}
           <Txt v="xs" tone="muted">
-            {[`${L.balance} ${fundsText(info.balance)}`, L.effectNote].join('\n')}
+            {`${L.balance} ${fundsText(info.balance)}`}
           </Txt>
         </>
       )}

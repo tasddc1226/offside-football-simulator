@@ -43,6 +43,7 @@
   import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from './cup/TitleBadge.svelte';
   import { webPay } from './cup/webPay.svelte.js';
+  import { askLockerFocus } from './team/lockerFocus.js';
 
   // T-10-016: 운영자면 프로필 편집에 운영 도구 표시를 넘긴다(운영 도구 입구는 T-11-567부터 설정 화면의 계정 카드).
   // 관리자는 구글 연결 계정이라, 연결된 계정일 때만 서버에 묻는다(10분 메모 — 익명 사용자는 요청이 나가지 않는다).
@@ -241,6 +242,12 @@
       {#if !guest || localCount > 0}
         <button class="owner-tile" data-act="open-owner-players" data-owner-players-entry aria-label={P.openPlayers} onclick={() => { appState.playersView = linked ? 'manage' : 'records'; go('players'); }}>
           <b>{P.title}</b><span>{L.tilePlayers}</span>
+        </button>
+      {/if}
+      {#if linked}
+        <!-- T-11-728 카드 강화는 팀 관리 라커룸에만 있어 찾기 어려웠다. 메뉴에서 바로 라커룸으로 보낸다. -->
+        <button class="owner-tile" data-act="owner-enhance" data-owner-enhance onclick={() => { askLockerFocus(); openTeam('team'); }}>
+          <b>{L.enhanceTitle}</b><span>{L.tileEnhance}</span>
         </button>
       {/if}
       {#if linked}
@@ -479,6 +486,8 @@
     cursor: pointer;
   }
   .owner-tile:hover { background: var(--surface-2); }
+  /* 칸 수가 홀수면 마지막 칸을 한 줄로 늘린다. */
+  .owner-tile:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .owner-tile b {
     display: flex;
     align-items: center;
