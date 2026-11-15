@@ -27,8 +27,6 @@ const ko = {
   fixAria: (p: { pos: string }) => `${p.pos} 자리에 넣을 선수 고르기`,
   // T-11-722 랭크 연패 안내
   streakTitle: (p: { n: number }) => `${p.n}연패 중이에요`,
-  streakLuck: (p: { k: number; mine: string; opp: string }) =>
-    `최근 ${p.k}경기 기대 득점은 ${p.mine} : ${p.opp}로 앞섰어요. 전력은 밀리지 않았고 골이 따라오지 않았어요.`,
   streakAtk: (p: { k: number; n: string }) =>
     `최근 ${p.k}경기에서 공격이 상대 수비벽보다 평균 ${p.n} 밀렸어요.`,
   streakMid: (p: { k: number; n: string }) =>

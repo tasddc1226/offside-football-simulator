@@ -4,6 +4,8 @@ import { STREAK_HINT_MIN, streakStep } from './losingStreak.js';
 
 type Lines = { atk: number; mid: number; def: number; gk: number };
 const even: Lines = { atk: 80, mid: 80, def: 80, gk: 80 };
+/** 수비가 밀리는 팀(경기 기본값 — 기대 득점도 밀린다). */
+const weakDef: Lines = { atk: 80, mid: 80, def: 70, gk: 70 };
 const side = (goals: number, xg?: number, lines?: Lines) => ({
   teamId: 't',
   name: '팀',
@@ -20,10 +22,10 @@ const match = (
   ga: number,
   o: { xg?: [number, number]; mine?: Lines; opp?: Lines; friendly?: boolean; away?: boolean } = {},
 ): TeamMatch => {
-  const xg = o.xg ?? [2, 1];
+  const xg = o.xg ?? [1, 2];
   return {
     id,
-    home: side(gf, xg[0], o.mine ?? even),
+    home: side(gf, xg[0], o.mine ?? weakDef),
     away: side(ga, xg[1], o.opp ?? even),
     events: [],
     mine: o.away ? 'away' : 'home',
@@ -45,19 +47,36 @@ function play(ms: TeamMatch[], now = day1, raw: string | null = null) {
 }
 
 describe('T-11-722 랭크 연패 안내', () => {
-  it('세 번 연달아 져야 알리고, 기대 득점이 앞섰으면 운 이야기를 한다', () => {
+  it('세 번 연달아 져야 알리고, 평균으로 가장 밀린 줄을 고칠 곳으로 준다', () => {
     const two = play([match('a', 0, 1), match('b', 1, 2)]);
     expect(two.hint).toBeNull();
-    const three = play([match('c', 0, 2, { xg: [2.2, 1.5] })], day1, two.raw);
     expect(STREAK_HINT_MIN).toBe(3);
-    expect(three.hint).toMatchObject({ n: 3, kind: 'luck', line: null });
-    expect(three.hint!.title).toBe('3연패 중이에요');
-    expect(three.hint!.body).toContain('6.2 : 3.5');
+    const lose = (id: string) => match(id, 0, 2, { xg: [1.2, 2.4] });
+    const r = play([lose('c')], day1, two.raw);
+    expect(r.hint).toMatchObject({ n: 3, kind: 'weak', line: 'def' });
+    expect(r.hint!.title).toBe('3연패 중이에요');
+    expect(r.hint!.body).toBe('최근 3경기에서 수비벽이 상대 공격보다 평균 10 약했어요.');
   });
 
-  it('기대 득점이 밀렸으면 평균으로 가장 밀린 줄을 고칠 곳으로 준다', () => {
-    const weakDef: Lines = { atk: 80, mid: 80, def: 70, gk: 70 };
-    const lose = (id: string) => match(id, 0, 2, { xg: [1.2, 2.4], mine: weakDef });
+  it('T-11-727 기대 득점이 앞선 연패에는 띄우지 않고, 밀린 줄이 생기면 그때 알린다', () => {
+    const unlucky = (id: string) => match(id, 0, 1, { xg: [2.2, 1.5], mine: even });
+    const three = play([unlucky('a'), unlucky('b'), unlucky('c')]);
+    expect(three.hint).toBeNull();
+    expect(JSON.parse(three.raw!).n).toBe(3);
+    // 앞선 쪽이어도 줄 힘이 밀리면 띄우지 않는다(고칠 곳보다 결과가 먼저다).
+    expect(play([match('x', 0, 1, { xg: [3, 1] })], day1, three.raw).hint).toBeNull();
+    // 기대 득점 합이 뒤집히고 밀린 줄이 있으면 네 번째 패배에서 알린다.
+    const four = play([match('d', 0, 3, { xg: [0.2, 4] })], day1, three.raw);
+    expect(four.hint).toMatchObject({ n: 4, kind: 'weak', line: 'def' });
+  });
+
+  it('기대 득점은 밀렸어도 줄 힘이 고르면 띄우지 않는다', () => {
+    const lose = (id: string) => match(id, 0, 2, { mine: even });
+    expect(play([lose('a'), lose('b'), lose('c')]).hint).toBeNull();
+  });
+
+  it('밀린 줄의 평균 차이를 말한다', () => {
+    const lose = (id: string) => match(id, 0, 2, { xg: [1.2, 2.4] });
     const r = play([lose('a'), lose('b'), lose('c')]);
     expect(r.hint).toMatchObject({ n: 3, kind: 'weak', line: 'def' });
     expect(r.hint!.body).toBe('최근 3경기에서 수비벽이 상대 공격보다 평균 10 약했어요.');

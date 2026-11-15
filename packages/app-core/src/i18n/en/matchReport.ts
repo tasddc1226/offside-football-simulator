@@ -24,8 +24,6 @@ export const matchReport: Translation<MatchReportMsgs> = {
   fix: (p) => `Change ${p.pos}`,
   fixAria: (p) => `Pick a player for the ${p.pos} slot`,
   streakTitle: (p) => `${p.n} losses in a row`,
-  streakLuck: (p) =>
-    `Over the last ${p.k} matches you led on expected goals, ${p.mine} : ${p.opp}. Your squad held up. The goals didn’t come.`,
   streakAtk: (p) =>
     `Over the last ${p.k} matches your attack trailed their wall by ${p.n} on average.`,
   streakMid: (p) =>
