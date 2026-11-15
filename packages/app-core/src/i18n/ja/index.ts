@@ -33,6 +33,7 @@ import { cupApp } from './cupApp';
 import { cupPush } from './cupPush';
 import { customNames } from './customNames';
 import { dex } from './dex';
+import { editFile } from './editFile';
 import { era } from './era';
 import { exchange } from './exchange';
 import { fairness } from './fairness';
@@ -162,6 +163,7 @@ export const ja = {
   cupPush,
   customNames,
   dex,
+  editFile,
   era,
   exchange,
   fairness,

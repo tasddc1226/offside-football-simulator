@@ -18,6 +18,7 @@ import {
 import type { GameState } from '@offside/game/types';
 import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
 import { apiFetch } from './api/client.js';
+import { readEditFile } from './editFile.js';
 import { clubSyncText } from './i18n/ko/clubSync.js';
 
 const KEY = 'ft_clubs';
@@ -141,16 +142,11 @@ export function createClubCustom(
 
   const exportClubCustom = (): string => JSON.stringify({ v: 1, clubs: clubCustom.map }, null, 1);
   /** 가져온 파일로 통째로 바꾼다. 적용된 클럽 수를 돌려준다(형식이 틀리면 -1, 저장 공간이 모자라면 CLUB_IMPORT_NO_SPACE). */
+  // T-11-729 이름 파일 같은 다른 종류를 넣으면 지금 설정을 비우지 않고 -1(이유는 화면이 readEditFile로 알린다).
   function importClubCustom(text: string): number {
-    let raw: unknown;
-    try {
-      raw = JSON.parse(text);
-    } catch {
-      return -1;
-    }
-    const clubs =
-      raw && typeof raw === 'object' && 'clubs' in raw ? (raw as { clubs: unknown }).clubs : raw;
-    const map = sanitizeClubCustom(clubs);
+    const r = readEditFile(text, 'clubs');
+    if (!r.ok) return -1;
+    const map = sanitizeClubCustom(r.data.clubs);
     return commitLocal(map) ? Object.keys(map).length : CLUB_IMPORT_NO_SPACE;
   }
 

@@ -4,6 +4,8 @@
   import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
   import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
   import { encodeClubEmblem } from './clubEmblemImage.js';
+  import { readEditFile } from '@offside/app-core/editFile';
+  import { editFileErrorText } from '@offside/app-core/editFileText';
   import { CLUB_IMPORT_NO_SPACE, CLUB_SYNC_TEXT, customClubsIn, customLeagues } from '@offside/app-core/clubCustom';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { toast } from './helpers.js';
@@ -62,7 +64,11 @@
     const file = input.files?.[0];
     input.value = '';
     if (!file) return;
-    const n = importClubCustom(await file.text());
+    const text = await file.text();
+    // T-11-729 무엇이 틀렸는지 나눠 알리고, 다른 종류의 파일은 지금 설정을 덮어쓰기 전에 막는다.
+    const read = readEditFile(text, 'clubs');
+    if (!read.ok) return toast(editFileErrorText(read.reason, 'clubs'));
+    const n = importClubCustom(text);
     toast(n === CLUB_IMPORT_NO_SPACE ? T.noSpace : n < 0 ? T.badFile : T.imported({ n }));
   }
   function resetLeague() {
@@ -130,7 +136,7 @@
       <div class="row" style="flex-wrap:wrap;gap:8px">
         <button class="icon-btn" onclick={resetLeague}>{T.resetLeague}</button>
         <button class="icon-btn" data-act="export-clubs" onclick={exportFile}>{T.exportFile}</button>
-        <label class="icon-btn">{T.importFile}<input type="file" accept="application/json,.json" hidden onchange={importFile} /></label>
+        <label class="icon-btn">{T.importFile}<input type="file" accept="application/json,.json,text/plain,.txt" hidden onchange={importFile} /></label>
         <button class="icon-btn" onclick={resetAll}>{T.resetAll}</button>
       </div>
     </div>
