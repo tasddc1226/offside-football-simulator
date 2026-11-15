@@ -1,7 +1,7 @@
 // T-11-729 에디트 파일 읽기(구단 이름 · 엠블럼 / 대회 · 수상 · 리그 이름). 웹은 파일을 고르고, 앱은 파일 내용을 붙여넣는다.
 // 붙여넣은 글에는 앞뒤 설명 · 보이지 않는 글자(BOM) · 둥근 따옴표가 섞이기 쉽고, 링크나 잘린 내용을 넣는 일도 잦았다(라운지 · 디시 제보).
 // 무엇이 틀렸는지 나눠 알리고, 다른 종류의 파일은 지금 설정을 덮어쓰기 전에 막는다.
-import { editFileText as L } from './i18n/ko/editFile.js';
+// 첫 화면(customNames 부팅)이 읽으므로 문구 사전을 가져오지 않는다. 안내 문구는 editFileText.ts.
 
 export type EditFileKind = 'clubs' | 'names';
 export type EditFileError = 'empty' | 'link' | 'cut' | 'notFile' | 'wrongKind';
@@ -41,7 +41,3 @@ export function readEditFile(text: string, kind: EditFileKind): EditFileRead {
   if (kind === 'clubs' && Object.keys(obj).length) return { ok: true, data: { clubs: obj } };
   return { ok: false, reason: 'notFile' };
 }
-
-/** 읽기 실패 안내. 다른 종류의 파일이면 어느 설정에서 가져오는지 알려 준다. */
-export const editFileErrorText = (reason: EditFileError, kind: EditFileKind): string =>
-  reason === 'wrongKind' ? (kind === 'clubs' ? L.wrongNames : L.wrongClubs) : L[reason];

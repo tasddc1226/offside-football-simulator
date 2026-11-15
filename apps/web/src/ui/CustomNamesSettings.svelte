@@ -1,7 +1,8 @@
 <script lang="ts">
   // 설정 화면의 "대회·수상 이름 바꾸기" 카드(T-11-647) — 대회·수상·리그 이름을 내 화면에서만 바꾼다. 계정과 맞추고(T-11-684) 에디트 파일로도 옮긴다.
   // 저장은 app-core/customNames. 이름은 저장된 한국어(tn 키)로 고르고, 칸 옆에는 지금 언어의 원래 이름을 보여 준다.
-  import { editFileErrorText, readEditFile } from '@offside/app-core/editFile';
+  import { readEditFile } from '@offside/app-core/editFile';
+  import { editFileErrorText } from '@offside/app-core/editFileText';
   import { CUSTOM_NAME_MAX, CUSTOM_NAMES_LIMIT, CUSTOM_NAMES_NO_SPACE } from '@offside/app-core/customNames';
   import { customNameCatalog, customNameSectionKey, type CustomNameGroup } from '@offside/app-core/customNamesCatalog';
   import { tn, withDefaultNames } from '@offside/game/i18n/names';

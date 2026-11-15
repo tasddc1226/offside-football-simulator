@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { editFileErrorText, readEditFile } from './editFile.js';
+import { readEditFile } from './editFile.js';
+import { editFileErrorText } from './editFileText.js';
 
 const clubs = JSON.stringify({ v: 1, clubs: { 'kr-1': { name: '예쁜말 FC' } } }, null, 1);
 const names = JSON.stringify({ v: 1, names: { K리그1: '한국 리그' }, icons: {} }, null, 1);

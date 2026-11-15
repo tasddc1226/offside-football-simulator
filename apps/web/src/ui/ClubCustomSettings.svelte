@@ -4,7 +4,8 @@
   import { CLUB_NAME_MAX, LOGO_TEXT_MAX, logoOf, type ClubLogo } from '@offside/game/clubs';
   import { CLUB_CUSTOM_IMG_TOTAL_MAX, clubImgTotal } from '@offside/contracts/club-limits';
   import { encodeClubEmblem } from './clubEmblemImage.js';
-  import { editFileErrorText, readEditFile } from '@offside/app-core/editFile';
+  import { readEditFile } from '@offside/app-core/editFile';
+  import { editFileErrorText } from '@offside/app-core/editFileText';
   import { CLUB_IMPORT_NO_SPACE, CLUB_SYNC_TEXT, customClubsIn, customLeagues } from '@offside/app-core/clubCustom';
   import { clubCustom, setClubCustom, resetClubCustom, exportClubCustom, importClubCustom } from './clubCustom.svelte.js';
   import { toast } from './helpers.js';

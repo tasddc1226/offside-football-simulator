@@ -136,7 +136,7 @@ test('T-11-729 대회 · 수상 이름 파일을 넣으면 구단 설정을 비�
   await open(page);
   await importFile(page, JSON.stringify({ v: 1, clubs: { 'pl-0': { name: '바꾼 구단' } } }));
   await expect(page.getByText('구단 1개 설정을 불러왔어요')).toBeVisible();
-  await importFile(page, JSON.stringify({ v: 1, names: { 'K리그1': '한국 리그' }, icons: {} }));
+  await importFile(page, JSON.stringify({ v: 1, names: { K리그1: '한국 리그' }, icons: {} }));
   await expect(page.getByText('대회 · 수상 · 리그 이름 파일이에요')).toBeVisible();
   // 엠블럼 설정은 IndexedDB에 있다(T-11-697). 덮어쓰지 않았으면 바꾼 이름이 남는다.
   await expect.poll(async () => (await storedClubs(page)) ?? '').toContain('바꾼 구단');

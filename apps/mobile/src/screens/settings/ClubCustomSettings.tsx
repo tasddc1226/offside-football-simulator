@@ -1,7 +1,8 @@
 // 설정 화면의 '구단 이름·엠블럼 변경' 카드(웹 ClubCustomSettings.svelte, T-10-009) — 리그별 클럽 이름·엠블럼 편집,
 // 에디트 파일 내보내기/가져오기. 저장·동기화는 웹과 같은 @offside/app-core/clubCustom(host의 set·reset·export·import).
 // 앱과 다른 곳: ① 색은 색 선택 칸 대신 #rrggbb 입력 + 색 견본 고르기. ② 에디트 파일은 파일 대신 공유 시트(JSON 글) · 붙여넣기.
-import { editFileErrorText, readEditFile } from '@offside/app-core/editFile';
+import { readEditFile } from '@offside/app-core/editFile';
+import { editFileErrorText } from '@offside/app-core/editFileText';
 import { editFileText as EF } from '@offside/app-core/i18n/ko/editFile';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';

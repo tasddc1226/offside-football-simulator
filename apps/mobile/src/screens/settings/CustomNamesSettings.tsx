@@ -1,7 +1,8 @@
 // 설정 화면의 '대회·수상 이름 바꾸기' 카드(웹 CustomNamesSettings.svelte, T-11-647) — 대회·수상·리그 이름을 이 기기에서만
 // 바꾸고, 에디트 파일로 옮긴다. 저장은 웹과 같은 @offside/app-core/customNames(host의 set·reset·export·import).
 // 앱과 다른 곳: 에디트 파일은 파일 대신 공유 시트(JSON 글) · 붙여넣기(구단 이름 카드와 같다).
-import { editFileErrorText, readEditFile } from '@offside/app-core/editFile';
+import { readEditFile } from '@offside/app-core/editFile';
+import { editFileErrorText } from '@offside/app-core/editFileText';
 import { editFileText as EF } from '@offside/app-core/i18n/ko/editFile';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useState } from 'react';
