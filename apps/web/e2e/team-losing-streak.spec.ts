@@ -185,37 +185,18 @@ async function shot(page: Page, name: string) {
 const EVEN: Lines = { atk: 60, mid: 55, def: 55, gk: 55 };
 const SHOT = process.env.STREAK_SHOT_DIR;
 
-test('기대 득점이 앞선 3연패에는 골이 따라오지 않았다고 알리고, 같은 날 다시 띄우지 않는다', async ({
-  page,
-}) => {
+test('T-11-727 기대 득점이 앞선 3연패에는 안내를 띄우지 않는다', async ({ page }) => {
   const unlucky = { score: [0, 1] as [number, number], xg: [2.2, 1.5] as [number, number] };
   await stub(
     page,
-    [0, 1, 2, 3].map(() => ({ ...unlucky, mine: EVEN, opp: EVEN })),
+    [0, 1, 2].map(() => ({ ...unlucky, mine: EVEN, opp: EVEN })),
   );
   await openOpponents(page);
-  const hint = page.locator('[data-streak-hint]');
-  await playOne(page);
-  await expect(hint).toHaveCount(0);
-  await again(page);
-  await playOne(page);
-  await expect(hint).toHaveCount(0);
-  await again(page);
-  await playOne(page);
-  await expect(hint).toHaveAttribute('data-streak-hint', 'luck');
-  await expect(hint.locator('b')).toHaveText('3연패 중이에요');
-  await expect(hint.locator('p')).toHaveText(
-    '최근 3경기 기대 득점은 6.6 : 4.5로 앞섰어요. 전력은 밀리지 않았고 골이 따라오지 않았어요.',
-  );
-  await expect(hint.locator('[data-act="team-streak-fix"]')).toHaveCount(0);
-  await shot(page, 'luck');
-  // 다시 보기를 다녀와도 그대로 있고, 같은 날 네 번째 패배에는 다시 띄우지 않는다.
-  await page.locator('[data-act="team-replay"]').click();
-  await page.locator('[data-team-live] [data-act="live-skip"]').click();
-  await expect(hint).toHaveCount(1);
-  await again(page);
-  await playOne(page);
-  await expect(hint).toHaveCount(0);
+  for (let i = 0; i < 3; i++) {
+    if (i) await again(page);
+    await playOne(page);
+    await expect(page.locator('[data-streak-hint]')).toHaveCount(0);
+  }
 });
 
 test('기대 득점이 밀린 3연패에는 가장 밀린 줄을 알리고, 그 자리 바꾸기 버튼은 하나만 둔다', async ({
@@ -227,7 +208,7 @@ test('기대 득점이 밀린 3연패에는 가장 밀린 줄을 알리고, 그 
     mine: { atk: 60, mid: 55, def: 46, gk: 48 },
     opp: { atk: 58, mid: 54, def: 57, gk: 56 },
   };
-  await stub(page, [weak, weak, weak]);
+  await stub(page, [weak, weak, weak, weak, weak]);
   await openOpponents(page);
   const hint = page.locator('[data-streak-hint]');
   await playOne(page);
@@ -242,16 +223,43 @@ test('기대 득점이 밀린 3연패에는 가장 밀린 줄을 알리고, 그 
   await expect(hint.locator('[data-act="team-streak-fix"]')).toContainText(' 바꾸기');
   await expect(page.locator('[data-act="team-report-fix"]')).toHaveCount(0);
   await shot(page, 'weak');
+  // 다시 보기를 다녀와도 그대로 있고, 같은 날 네 번째 패배에는 다시 띄우지 않는다.
+  await page.locator('[data-act="team-replay"]').click();
+  await page.locator('[data-team-live] [data-act="live-skip"]').click();
+  await expect(hint).toHaveCount(1);
+  await again(page);
+  await playOne(page);
+  await expect(hint).toHaveCount(0);
+});
+
+test('안내의 바꾸기 버튼은 그 자리 선수 고르기로 간다', async ({ page }) => {
+  const weak = {
+    score: [0, 2] as [number, number],
+    xg: [1.1, 2.3] as [number, number],
+    mine: { atk: 60, mid: 55, def: 46, gk: 48 },
+    opp: { atk: 58, mid: 54, def: 57, gk: 56 },
+  };
+  await stub(page, [weak, weak, weak]);
+  await openOpponents(page);
+  const hint = page.locator('[data-streak-hint]');
+  await playOne(page);
+  await again(page);
+  await playOne(page);
+  await again(page);
+  await playOne(page);
   await hint.locator('[data-act="team-streak-fix"]').click();
   await expect(page.locator('[data-team-result]')).toHaveCount(0);
 });
 
 test('이기면 연패가 끊겨 안내가 뜨지 않는다', async ({ page }) => {
-  const lose = { score: [0, 1] as [number, number], xg: [2, 1.5] as [number, number] };
+  // 밀린 줄이 있는 패배라 끊기지 않았다면 세 번째에 떴을 경기들이다.
+  const mine = { atk: 60, mid: 55, def: 46, gk: 48 };
+  const opp = { atk: 58, mid: 54, def: 57, gk: 56 };
+  const lose = { score: [0, 2] as [number, number], xg: [1.1, 2.3] as [number, number] };
   const win = { score: [2, 0] as [number, number], xg: [2, 1.5] as [number, number] };
   await stub(
     page,
-    [lose, lose, win, lose].map((x) => ({ ...x, mine: EVEN, opp: EVEN })),
+    [lose, lose, win, lose].map((x) => ({ ...x, mine, opp })),
   );
   await openOpponents(page);
   for (let i = 0; i < 4; i++) {

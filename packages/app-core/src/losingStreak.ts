@@ -1,5 +1,6 @@
 // T-11-722 랭크 연패 안내 — 내가 건 랭크 경기를 연달아 지면 결과 화면에 한 번 알려 준다(웹 · 앱 공통, 표시만).
-// 연패 동안 기대 득점이 앞섰으면 '골이 따라오지 않았다'를, 밀렸으면 가장 밀린 줄을 말한다. 서버를 부르지 않고 경기 응답에
+// 연패 동안 가장 밀린 줄을 말한다. T-11-727 기대 득점이 앞선 연패에는 고칠 곳이 없어 띄우지 않는다('골이 따라오지
+// 않았다'는 안내가 지고 있는 사람에게 놀리는 말로 읽혔다). 서버를 부르지 않고 경기 응답에
 // 든 기대 득점 · 줄 힘을 이 기기에 모아 판단한다(rankQueue의 다른 상대 찾기 횟수와 같은 방식).
 import type { TeamMatch } from './api/team.js';
 import { kstDay } from '@offside/contracts/kst';
@@ -22,12 +23,12 @@ type StreakLog = { n: number; losses: Loss[]; shown?: { day: string; id: string 
 export type StreakHint = {
   /** 연패 수. */
   n: number;
-  /** luck: 기대 득점은 앞섰다 · weak: 밀린 줄이 있다. */
-  kind: 'luck' | 'weak';
+  /** 밀린 줄이 있다(T-11-727 'luck'은 없앴다). 화면의 표시 이름으로 쓴다. */
+  kind: 'weak';
   title: string;
   body: string;
-  /** 고칠 곳으로 갈 줄(weak일 때만). */
-  line: ReportLine | null;
+  /** 고칠 곳으로 갈 줄. */
+  line: ReportLine;
 };
 
 const num = (x: unknown): x is number => typeof x === 'number' && Number.isFinite(x);
@@ -59,7 +60,6 @@ function parse(raw: string | null | undefined): StreakLog {
   }
 }
 
-const one = (x: number) => (Math.round(x * 10) / 10).toFixed(1);
 const gap = (x: number) => String(Math.max(1, Math.round(Math.abs(x))));
 
 function hintOf(log: StreakLog): StreakHint | null {
@@ -69,21 +69,13 @@ function hintOf(log: StreakLog): StreakHint | null {
   const avg = (i: number) => log.losses.reduce((t, x) => t + x.e[i]!, 0) / k;
   const edges = { atk: avg(0), mid: avg(1), def: avg(2) };
   const weak = weakestLine(edges);
-  const title = L.streakTitle({ n: log.n });
-  if (xf > xa)
-    return {
-      n: log.n,
-      kind: 'luck',
-      title,
-      body: L.streakLuck({ k, mine: one(xf), opp: one(xa) }),
-      line: null,
-    };
-  if (!weak) return null;
+  // T-11-727 기대 득점이 앞섰으면 고칠 곳이 없다. 연패 기록은 그대로 두고 다음 패배에서 다시 잰다.
+  if (xf > xa || !weak) return null;
   const p = { k, n: gap(edges[weak]) };
   return {
     n: log.n,
     kind: 'weak',
-    title,
+    title: L.streakTitle({ n: log.n }),
     body: weak === 'atk' ? L.streakAtk(p) : weak === 'mid' ? L.streakMid(p) : L.streakDef(p),
     line: weak,
   };
