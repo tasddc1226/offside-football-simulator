@@ -1,6 +1,8 @@
 // 설정 화면의 '대회·수상 이름 바꾸기' 카드(웹 CustomNamesSettings.svelte, T-11-647) — 대회·수상·리그 이름을 이 기기에서만
 // 바꾸고, 에디트 파일로 옮긴다. 저장은 웹과 같은 @offside/app-core/customNames(host의 set·reset·export·import).
 // 앱과 다른 곳: 에디트 파일은 파일 대신 공유 시트(JSON 글) · 붙여넣기(구단 이름 카드와 같다).
+import { editFileErrorText, readEditFile } from '@offside/app-core/editFile';
+import { editFileText as EF } from '@offside/app-core/i18n/ko/editFile';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Share, View } from 'react-native';
@@ -107,9 +109,12 @@ export function CustomNamesSettings() {
     }
   }
   function doImport(text: string) {
+    // T-11-729 무엇이 틀렸는지 나눠 알리고, 구단 파일은 여기서 막는다.
+    const read = readEditFile(text, 'names');
+    if (!read.ok) return toast(editFileErrorText(read.reason, 'names'));
     const n = importCustomNames(text);
     if (n < 0) return toast(n === CUSTOM_NAMES_NO_SPACE ? T.noSpace : T.badFile);
-    const got = importCompIcons(JSON.parse(text) as unknown);
+    const got = importCompIcons(read.data);
     toast(
       got === COMP_ICONS_NO_SPACE
         ? CI.noSpace
@@ -302,6 +307,9 @@ export function CustomNamesSettings() {
                 returnKeyType="default"
                 style={{ minHeight: 80, maxHeight: 140, fontSize: 14 }}
               />
+              <Txt v="xs" tone="muted">
+                {EF.pasteHint}
+              </Txt>
               <Row gap={8}>
                 <Btn sm disabled={!pasted.trim()} onPress={() => doImport(pasted)}>
                   {T.importBtn}

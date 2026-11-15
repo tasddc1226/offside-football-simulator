@@ -1,6 +1,7 @@
 <script lang="ts">
   // 설정 화면의 "대회·수상 이름 바꾸기" 카드(T-11-647) — 대회·수상·리그 이름을 내 화면에서만 바꾼다. 계정과 맞추고(T-11-684) 에디트 파일로도 옮긴다.
   // 저장은 app-core/customNames. 이름은 저장된 한국어(tn 키)로 고르고, 칸 옆에는 지금 언어의 원래 이름을 보여 준다.
+  import { editFileErrorText, readEditFile } from '@offside/app-core/editFile';
   import { CUSTOM_NAME_MAX, CUSTOM_NAMES_LIMIT, CUSTOM_NAMES_NO_SPACE } from '@offside/app-core/customNames';
   import { customNameCatalog, customNameSectionKey, type CustomNameGroup } from '@offside/app-core/customNamesCatalog';
   import { tn, withDefaultNames } from '@offside/game/i18n/names';
@@ -58,9 +59,12 @@
     input.value = '';
     if (!file) return;
     const text = await file.text();
+    // T-11-729 무엇이 틀렸는지 나눠 알리고, 구단 파일은 여기서 막는다.
+    const read = readEditFile(text, 'names');
+    if (!read.ok) return toast(editFileErrorText(read.reason, 'names'));
     const n = importCustomNames(text);
     if (n < 0) return toast(n === CUSTOM_NAMES_NO_SPACE ? T.noSpace : T.badFile);
-    const icons = importCompIcons(JSON.parse(text) as unknown);
+    const icons = importCompIcons(read.data);
     toast(icons === COMP_ICONS_NO_SPACE ? CI.noSpace : icons > 0 ? `${T.imported({ n })} · ${CI.imported({ n: icons })}` : T.imported({ n }));
   }
   function resetAll() {
@@ -131,7 +135,7 @@
       {/if}
       <div class="row" style="flex-wrap:wrap;gap:8px">
         <button class="icon-btn" data-act="export-names" onclick={exportFile}>{T.exportFile}</button>
-        <label class="icon-btn">{T.importFile}<input type="file" accept="application/json,.json" hidden onchange={importFile} /></label>
+        <label class="icon-btn">{T.importFile}<input type="file" accept="application/json,.json,text/plain,.txt" hidden onchange={importFile} /></label>
         <button class="icon-btn" disabled={!changed && !changedIcons} onclick={resetAll}>{T.resetAll}</button>
       </div>
     </div>

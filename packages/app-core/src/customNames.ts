@@ -10,6 +10,7 @@ import {
   CUSTOM_NAME_MAX,
   CUSTOM_NAMES_LIMIT,
 } from '@offside/contracts/comp-custom-limits';
+import { readEditFile } from './editFile.js';
 
 export { CUSTOM_NAME_MAX, CUSTOM_NAMES_LIMIT };
 
@@ -91,14 +92,10 @@ export function createCustomNames(state: CustomNamesState, onChange?: () => void
   const exportCustomNames = (): string => JSON.stringify({ v: 1, names: state.map }, null, 1);
   /** 가져온 파일로 통째로 바꾼다. 적용된 이름 수(형식이 틀리면 -1, 저장 공간이 모자라면 CUSTOM_NAMES_NO_SPACE). */
   function importCustomNames(text: string): number {
-    let raw: unknown;
-    try {
-      raw = JSON.parse(text);
-    } catch {
-      return -1;
-    }
-    if (!raw || typeof raw !== 'object' || !('names' in raw)) return -1;
-    const map = sanitizeCustomNames((raw as { names: unknown }).names);
+    // T-11-729 붙여넣은 앞뒤 글 · BOM · 둥근 따옴표를 걸러 읽는다(이유는 화면이 readEditFile로 알린다).
+    const r = readEditFile(text, 'names');
+    if (!r.ok) return -1;
+    const map = sanitizeCustomNames(r.data.names);
     return commit(map) ? Object.keys(map).length : CUSTOM_NAMES_NO_SPACE;
   }
 

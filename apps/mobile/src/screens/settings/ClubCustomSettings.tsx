@@ -1,6 +1,8 @@
 // 설정 화면의 '구단 이름·엠블럼 변경' 카드(웹 ClubCustomSettings.svelte, T-10-009) — 리그별 클럽 이름·엠블럼 편집,
 // 에디트 파일 내보내기/가져오기. 저장·동기화는 웹과 같은 @offside/app-core/clubCustom(host의 set·reset·export·import).
 // 앱과 다른 곳: ① 색은 색 선택 칸 대신 #rrggbb 입력 + 색 견본 고르기. ② 에디트 파일은 파일 대신 공유 시트(JSON 글) · 붙여넣기.
+import { editFileErrorText, readEditFile } from '@offside/app-core/editFile';
+import { editFileText as EF } from '@offside/app-core/i18n/ko/editFile';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useState } from 'react';
 import { Alert, Share, View } from 'react-native';
@@ -282,6 +284,9 @@ export function ClubCustomSettings() {
     }
   }
   function doImport(text: string) {
+    // T-11-729 무엇이 틀렸는지 나눠 알리고, 다른 종류의 파일은 지금 설정을 덮어쓰기 전에 막는다.
+    const read = readEditFile(text, 'clubs');
+    if (!read.ok) return toast(editFileErrorText(read.reason, 'clubs'));
     const n = importClubCustom(text);
     toast(n === CLUB_IMPORT_NO_SPACE ? T.noSpace : n < 0 ? T.badFile : T.imported({ n }));
     if (n >= 0) {
@@ -399,6 +404,9 @@ export function ClubCustomSettings() {
                 returnKeyType="default"
                 style={{ minHeight: 80, maxHeight: 140, fontSize: 14 }}
               />
+              <Txt v="xs" tone="muted">
+                {EF.pasteHint}
+              </Txt>
               <Row gap={8}>
                 <Btn sm disabled={!pasted.trim()} onPress={() => doImport(pasted)}>
                   {T.importBtn}
