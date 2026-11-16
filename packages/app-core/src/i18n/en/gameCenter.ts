@@ -1,0 +1,19 @@
+import type { Dict } from '../core';
+
+export const gameCenter: Dict = {
+  title: 'Game Center',
+  body: 'Send this owner’s retirement records to the Game Center account on this device.',
+  connect: 'Connect Game Center',
+  busy: 'Working with Game Center…',
+  leaderboard: 'Leaderboard',
+  achievements: 'Achievements',
+  disconnect: 'Disconnect',
+  disconnectHint: 'Records already sent remain in Game Center after disconnecting.',
+  retry: 'Reconnect',
+  synced: 'Your retirement records are synced with Game Center.',
+  empty: 'There are no retirement records to sync yet.',
+  signIn: 'Could not sign in to Game Center. Check your sign-in status in device settings.',
+  sync: 'Could not send your records. Check your connection and try again.',
+  changed: 'The account changed, so syncing stopped. Reconnect with the account you want to use.',
+  connected: (p: { name: string }) => `Connected to ${p.name}.`,
+};

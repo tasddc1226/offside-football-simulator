@@ -48,6 +48,7 @@ import { gameAttr } from './gameAttr';
 import { gameBoost } from './gameBoost';
 import { gameCare } from './gameCare';
 import { gameCareer } from './gameCareer';
+import { gameCenter } from './gameCenter';
 import { gameLeague } from './gameLeague';
 import { gameLegacy } from './gameLegacy';
 import { gameMySeason } from './gameMySeason';
@@ -181,6 +182,7 @@ export const ja = {
   gameBoost,
   gameCare,
   gameCareer,
+  gameCenter,
   gameLeague,
   gameLegacy,
   gameMySeason,

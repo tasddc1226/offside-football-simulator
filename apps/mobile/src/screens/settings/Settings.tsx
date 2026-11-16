@@ -42,6 +42,7 @@ import { CustomNamesSettings } from './CustomNamesSettings';
 import { AdFreeSettings } from './AdFreeSettings';
 import { PushSettings } from './PushSettings';
 import { ReviewSettings } from './ReviewSettings';
+import { GameCenterSettings } from './GameCenterSettings';
 import { ServerStatus } from './ServerStatus';
 import {
   SelectField,
@@ -338,6 +339,7 @@ export default function Settings() {
       <AdFreeSettings />
       <PushSettings />
       <ReviewSettings />
+      <GameCenterSettings />
       <ClubCustomSettings />
       <CustomNamesSettings />
 

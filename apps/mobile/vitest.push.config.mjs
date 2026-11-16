@@ -12,6 +12,7 @@ export default {
       'src/platform/pushTracking.test.mjs',
       'src/platform/pushPreferences.test.mjs',
       'src/platform/engagement.test.mjs',
+      'src/platform/gameCenter.test.mjs',
       'src/platform/pushAsk.test.mjs',
       'src/platform/chatUnread.test.mjs',
       'src/platform/adConsent.test.mjs',

@@ -2,7 +2,7 @@
   "expo": {
     "name": "OFFSIDE",
     "slug": "offside",
-    "version": "1.1.8",
+    "version": "1.1.9",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "offside",
@@ -30,6 +30,9 @@
       "infoPlist": {
         "CFBundleName": "OFFSIDE",
         "CFBundleAllowMixedLocalizations": true
+      },
+      "entitlements": {
+        "com.apple.developer.game-center": true
       }
     },
     "android": {
