@@ -67,3 +67,30 @@ export const GameCenterExpandedProgressSchema = z.strictObject({
   achievements: z.array(ExpandedAchievementSchema).max(12),
 });
 export type GameCenterExpandedProgress = z.infer<typeof GameCenterExpandedProgressSchema>;
+
+/** Build 31 accepts only twelve keys. New tiers use a separate versioned response. */
+export const GAME_SERVICES_ACHIEVEMENTS = {
+  ...GAME_CENTER_EXPANDED_ACHIEVEMENTS,
+  career_goals_750: 'com.offsidelab.app.achievement.career_goals_750',
+  career_goals_1000: 'com.offsidelab.app.achievement.career_goals_1000',
+  career_assists_500: 'com.offsidelab.app.achievement.career_assists_500',
+  career_trophies_50: 'com.offsidelab.app.achievement.career_trophies_50',
+  career_ballon_10: 'com.offsidelab.app.achievement.career_ballon_10',
+  retirements_50: 'com.offsidelab.app.achievement.retirements_50',
+} as const;
+export const GAME_SERVICES_ACHIEVEMENT_LIMIT = Object.keys(GAME_SERVICES_ACHIEVEMENTS).length;
+export const GameServicesProgressSchema = GameCenterExpandedProgressSchema.extend({
+  achievements: z
+    .array(
+      z.enum(
+        Object.keys(GAME_SERVICES_ACHIEVEMENTS) as [
+          keyof typeof GAME_SERVICES_ACHIEVEMENTS,
+          ...(keyof typeof GAME_SERVICES_ACHIEVEMENTS)[],
+        ],
+      ),
+    )
+    .max(GAME_SERVICES_ACHIEVEMENT_LIMIT),
+});
+export type GameServicesProgress = z.infer<typeof GameServicesProgressSchema>;
+/** Google resets its weekly boards Sunday 00:00 UTC-7, including during standard time. */
+export const PLAY_GAMES_WEEKLY_START = '2026-11-15T07:00:00.000Z';

@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
 import {
   GameCenterProgressSchema,
+  GameServicesProgressSchema,
+  GAME_SERVICES_ACHIEVEMENTS,
   GameCenterExpandedProgressSchema,
   GAME_CENTER_EXPANDED_ACHIEVEMENTS,
   ACHIEVEMENT_EUROPEAN_LEAGUES,
@@ -9,7 +11,11 @@ import {
 import { NATIONAL_WINS } from '@offside/contracts/nations';
 import { createApp } from '../app.js';
 import { createDb } from '../db/client.js';
-import { gameCenterProgress, gameCenterExpandedProgress } from '../db/repos/gameCenter.js';
+import {
+  gameCenterProgress,
+  gameCenterExpandedProgress,
+  gameServicesProgress,
+} from '../db/repos/gameCenter.js';
 import { careers, careerSeasons } from '../db/schema.js';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
 import { issueCookie, TEST_CAREER } from '../test/http.js';
@@ -268,5 +274,135 @@ describe('Game Center server progress', () => {
       (await gameCenterExpandedProgress(ctx.db, me.profileId, '2026-11-29T15:00:00.000Z')).scores
         .weekly_legend,
     ).toBe(200);
+  });
+  it('keeps eighteen-tier endpoints private and the twelve-tier client compatible', async () => {
+    const app = createApp(),
+      me = await issueCookie(ctx);
+    await ctx.db.insert(careers).values(
+      retired('elite', me.profileId, {
+        goals: 1000,
+        assists: 500,
+        trophies: 50,
+        ballon: 10,
+      }),
+    );
+    for (const path of ['/v1/owner/game-center/v2', '/v1/owner/play-games']) {
+      expect((await app.request(path, {}, ctx.env)).status).toBe(401);
+      const response = await app.request(path, { headers: { Cookie: me.cookie } }, ctx.env);
+      expect(response.headers.get('cache-control')).toBe('private, no-store');
+      const progress = GameServicesProgressSchema.parse(
+        ((await response.json()) as { data: unknown }).data,
+      );
+      expect(progress.achievements).toContain('career_goals_1000');
+      expect(progress.achievements).not.toContain('retirements_50');
+    }
+    const legacy = await gameCenterExpandedProgress(
+      ctx.db,
+      me.profileId,
+      '2026-11-23T00:00:00.000Z',
+    );
+    expect(GameCenterExpandedProgressSchema.safeParse(legacy).success).toBe(true);
+    expect(legacy.achievements).not.toContain('career_goals_1000');
+  });
+
+  it('uses exact single-career thresholds and distinct eligible retirees for elite tiers', async () => {
+    const me = await issueCookie(ctx),
+      other = await issueCookie(ctx);
+    const fixtures = [
+      ...Array.from({ length: 49 }, (_, i) =>
+        retired(`retired-${i}`, me.profileId, {
+          goals: 749,
+          assists: 499,
+          trophies: 49,
+          ballon: 9,
+        }),
+      ),
+      retired('short-50th', me.profileId, { retireAge: 29 }),
+      retired('hidden-elite', me.profileId, {
+        hidden: 1,
+        goals: 1000,
+        assists: 500,
+        trophies: 50,
+        ballon: 10,
+      }),
+      retired('active-elite', me.profileId, {
+        status: 'active',
+        goals: 1000,
+        assists: 500,
+        trophies: 50,
+        ballon: 10,
+      }),
+      retired('other-elite', other.profileId, {
+        goals: 1000,
+        assists: 500,
+        trophies: 50,
+        ballon: 10,
+      }),
+    ];
+    for (const row of fixtures) await ctx.db.insert(careers).values(row);
+    await ctx.db
+      .insert(careerSeasons)
+      .values([
+        season('retired-0', ACHIEVEMENT_EUROPEAN_LEAGUES[0]!, [NATIONAL_WINS[0]!]),
+        { ...season('retired-0', '고교리그'), year: 2027 },
+      ]);
+    const before = await gameServicesProgress(
+      ctx.db,
+      me.profileId,
+      '2026-11-23T00:00:00.000Z',
+      'game-center',
+    );
+    expect(
+      before.achievements.filter((a) => !Object.hasOwn(GAME_CENTER_EXPANDED_ACHIEVEMENTS, a)),
+    ).toEqual([]);
+    await ctx.db.update(careers).set({ goals: 750 }).where(eq(careers.id, 'retired-0'));
+    expect(
+      (await gameServicesProgress(ctx.db, me.profileId, '2026-11-23T00:00:00.000Z', 'game-center'))
+        .achievements,
+    ).toContain('career_goals_750');
+    await ctx.db
+      .insert(careers)
+      .values(
+        retired('elite', me.profileId, { goals: 1000, assists: 500, trophies: 50, ballon: 10 }),
+      );
+    const observed = spyDb(ctx.env.DB);
+    const data = await gameServicesProgress(
+      createDb(observed.DB),
+      me.profileId,
+      '2026-11-23T00:00:00.000Z',
+      'game-center',
+    );
+    expect(data.achievements).toEqual(Object.keys(GAME_SERVICES_ACHIEVEMENTS));
+    expect(observed.trips.n).toBe(1);
+  });
+
+  it('uses Google Sunday 07:00 UTC boundaries independently of Apple Monday KST', async () => {
+    const me = await issueCookie(ctx);
+    await ctx.db
+      .insert(careers)
+      .values([
+        retired('old', me.profileId, { retiredAt: '2026-11-15T06:59:59.999Z', legendScore: 900 }),
+        retired('start', me.profileId, { retiredAt: '2026-11-15T07:00:00.000Z', legendScore: 100 }),
+        retired('end', me.profileId, { retiredAt: '2026-11-22T07:00:00.000Z', legendScore: 200 }),
+      ]);
+    const data = await gameServicesProgress(
+      ctx.db,
+      me.profileId,
+      '2026-11-15T07:00:00.000Z',
+      'play-games',
+    );
+    expect(data.week).toEqual({
+      startsAt: '2026-11-15T07:00:00.000Z',
+      endsAt: '2026-11-22T07:00:00.000Z',
+    });
+    expect(data.scores.weekly_legend).toBe(100);
+    expect(
+      (await gameServicesProgress(ctx.db, me.profileId, '2026-11-22T07:00:00.000Z', 'play-games'))
+        .scores.weekly_legend,
+    ).toBe(200);
+    expect(
+      (await gameServicesProgress(ctx.db, me.profileId, '2026-11-15T07:00:00.000Z', 'game-center'))
+        .scores.weekly_legend,
+    ).toBeNull();
   });
 });
