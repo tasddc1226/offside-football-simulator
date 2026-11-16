@@ -1170,6 +1170,13 @@
       "when": 1794574050019,
       "tag": "0169_daily_rank_winners",
       "breakpoints": true
+    },
+    {
+      "idx": 170,
+      "version": "6",
+      "when": 1794801928752,
+      "tag": "0170_career_item_legacy",
+      "breakpoints": true
     }
   ]
 }

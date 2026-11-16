@@ -26,6 +26,8 @@ export const gTitles: Translation<GTitlesMsgs> = {
   legacy_legend: 'Legendary Legacy',
   auction_legend: 'Legendary Lot',
   auction_set: 'Complete Showcase',
+  auction_collector: 'Auction Regular',
+  auction_tycoon: 'Collection Tycoon',
   mil: 'Service complete',
   topscorer: 'Top scorer',
   topscorer3: 'Golden Boot collector',
@@ -96,6 +98,8 @@ export const gTitles: Translation<GTitlesMsgs> = {
   auction_legend_d: 'Win a Legendary item at the luxury auction',
   auction_set_d:
     'Collect all four grades (Common, Fine, Luxury, Legendary) of one item type at the luxury auction',
+  auction_collector_d: 'Collect 12 Luxury Auction pieces',
+  auction_tycoon_d: 'Complete 3 sets (all four grades of one type) at the Luxury Auction',
   oneclub_d:
     "Play 8+ seasons for a single pro club only, then retire (school, university and military seasons don't count)",
   mil_d: 'Complete military service',

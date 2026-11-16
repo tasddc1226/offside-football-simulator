@@ -26,6 +26,8 @@ const ko = {
   legacy_legend: '전설의 유산',
   auction_legend: '전설의 경매품',
   auction_set: '완성된 진열장',
+  auction_collector: '경매장 단골',
+  auction_tycoon: '컬렉션의 제왕',
   mil: '군필',
   topscorer: '득점왕',
   topscorer3: '골든부트 콜렉터',
@@ -96,6 +98,8 @@ const ko = {
   legacy_legend_d: '은퇴 유산을 레전드 등급으로 남기기',
   auction_legend_d: '명품 경매에서 전설 등급 소장품 얻기',
   auction_set_d: '명품 경매에서 한 종류의 네 등급(일반 · 고급 · 명품 · 전설)을 모두 모으기',
+  auction_collector_d: '명품 경매 소장품 12개 모으기',
+  auction_tycoon_d: '명품 경매에서 세트(한 종류 네 등급) 3개 완성하기',
   oneclub_d:
     '프로 구단 한 곳에서만 8시즌 이상 뛰고 은퇴. 고교 · 대학 · 군 복무 시즌은 세지 않아요.',
   mil_d: '병역 의무를 마치기',

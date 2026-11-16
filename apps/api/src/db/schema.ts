@@ -412,6 +412,9 @@ export const careers = sqliteTable(
     snapshotKey: text('snapshot_key'),
     // Server-owned award evidence (slot + grantedAt), independent of client snapshots.
     wallOfHonorJson: text('wall_of_honor_json'),
+    // T-11-735 은퇴 스냅샷의 최고 소장품 등급(1~4)과 은퇴 유산 등급(1~4). 구단주 업적 판정용, 없으면 NULL.
+    itemTop: integer('item_top'),
+    legacyTier: integer('legacy_tier'),
     // T-10-026 은퇴 때의 대표 칭호 id(web game/titles.ts). 옛 은퇴 기록은 NULL.
     title: text('title'),
     // T-10-092 최고 시점 능력치(contracts PeakProfile JSON — 대표 능력치 6개 + 세부 포지션 8자리 실력). 구단주 팀이

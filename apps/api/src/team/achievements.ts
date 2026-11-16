@@ -52,6 +52,9 @@ export type AchievementCareer = {
   retireAge: number;
   /** T-11-541 최고 OVR(모르면 없음). */
   peak?: number;
+  /** T-11-735 최고 소장품 등급(1~4)과 은퇴 유산 등급(1~4). 없으면 없음. */
+  itemTop?: number;
+  legacyTier?: number;
   /** 받아 둔 시즌. */
   seasons: readonly AchievementSeason[];
 };
@@ -658,6 +661,26 @@ function variedPlayerGroups(careers: readonly AchievementCareer[]): ClubAchievem
         'c-df-50',
         anyone((c) => c.pos === 'DF' && c.goals >= 50),
         50,
+      ),
+      // T-11-735 명품 경매 · 은퇴 유산.
+      feat(
+        'c-auction-legend',
+        anyone((c) => (c.itemTop ?? 0) >= 4),
+        50,
+      ),
+      feat(
+        'c-legacy-legend',
+        anyone((c) => (c.legacyTier ?? 0) >= 4),
+        80,
+      ),
+      tier(
+        'c-legacy-players',
+        lbl('c-legacy-players'),
+        achievementUnits['c-legacy-players']!,
+        count((c) => (c.legacyTier ?? 0) >= 3),
+        [1, 5, 20],
+        SHORT,
+        true,
       ),
       tier(
         'c-peak',

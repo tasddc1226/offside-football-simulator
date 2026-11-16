@@ -192,3 +192,22 @@ describe('T-11-735 소장품의 쓸모 · 인기 스폰서', () => {
     expect(sponsorPay(s)).toBe(0);
   });
 });
+
+describe('T-11-735 경매 칭호 추가', () => {
+  it('소장품 12개면 경매장 단골, 세트 3개면 컬렉션의 제왕', () => {
+    const s = pro();
+    const earned = (id: string) => TITLES.find((t) => t.id === id)!.earned(s, {} as never);
+    const kinds: AuctionKind[] = ['watch', 'car', 'art'];
+    s.auction = {
+      y: s.year,
+      r: 0,
+      got: [],
+      items: kinds.flatMap((k) => [1, 2, 3, 4].map((g) => ({ k, g: g as 1, y: 2030 }))),
+    };
+    expect(earned('auction_collector')).toBe(true);
+    expect(earned('auction_tycoon')).toBe(true);
+    s.auction.items = s.auction.items.slice(0, 11);
+    expect(earned('auction_collector')).toBe(false);
+    expect(earned('auction_tycoon')).toBe(false);
+  });
+});
