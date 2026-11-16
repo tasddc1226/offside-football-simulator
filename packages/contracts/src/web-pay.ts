@@ -69,10 +69,18 @@ export type WebPayConfigResponse = z.infer<typeof WebPayConfigResponseSchema>;
 /** POST /v1/web-pay/orders — 주문을 만들고 엑솔라 결제창 주소를 돌려준다. */
 /** 엑솔라 파트너 네트워크가 크리에이터 링크에 붙이는 추적값(32자). 결제 토큰에 실어야 그 크리에이터 실적으로 잡힌다. */
 export const WEB_PAY_TRACKING_ID = /^[A-Za-z0-9]{32}$/;
+/**
+ * T-11-736 결제창을 바로 열 결제 수단. 웹 확인 단계에서 고르면 엑솔라가 수단 고르기를 건너뛰고 그 수단 입력 화면으로 연다.
+ * 카카오페이는 한국에서만 받는 수단이라 서버는 한국 요청에만 싣고, 그 밖에서는 모든 수단을 보여 준다.
+ */
+export const WEB_PAY_METHODS = ['kakaopay'] as const;
+export type WebPayMethod = (typeof WEB_PAY_METHODS)[number];
 export const WebPayOrderBodySchema = z.strictObject({
   productId: z.enum(WEB_PAY_PRODUCT_IDS),
   /** T-11-700 크리에이터 링크로 들어온 브라우저만 보낸다. */
   trackingId: z.string().regex(WEB_PAY_TRACKING_ID).optional(),
+  /** T-11-736 확인 단계에서 고른 결제 수단. 없으면 엑솔라 결제창에서 고른다. */
+  method: z.enum(WEB_PAY_METHODS).optional(),
 });
 export type WebPayOrderBody = z.infer<typeof WebPayOrderBodySchema>;
 

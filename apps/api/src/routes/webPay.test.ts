@@ -118,6 +118,50 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     ]);
   });
 
+  it('T-11-736 카카오페이를 고르면 한국 요청에만 결제 수단을 싣고, 거절되면 수단 없이 다시 만든다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const calls = stubXsolla();
+    const post = (body: Record<string, unknown>, country?: string) =>
+      call('POST', '/v1/web-pay/orders', {
+        cookie: me.cookie,
+        body,
+        ...(country ? { headers: { 'CF-IPCountry': country } } : {}),
+      });
+    const settings = (i: number) => JSON.parse(String(calls[i]?.init?.body)).settings;
+    expect((await post({ productId: REROLL_15, method: 'kakaopay' }, 'KR')).status).toBe(201);
+    expect(settings(0).payment_method).toBe(3555);
+    // 한국 밖 · 나라를 모르는 요청은 모든 수단을 보여 준다(카카오페이는 한국 수단).
+    expect((await post({ productId: REROLL_15, method: 'kakaopay' }, 'JP')).status).toBe(201);
+    expect((await post({ productId: REROLL_15, method: 'kakaopay' })).status).toBe(201);
+    // 고르지 않으면 싣지 않는다.
+    expect((await post({ productId: REROLL_15 }, 'KR')).status).toBe(201);
+    expect([1, 2, 3].map((i) => 'payment_method' in settings(i))).toEqual([false, false, false]);
+    // 모르는 수단은 엑솔라에 보내지 않고 거절한다.
+    expect((await post({ productId: REROLL_15, method: 'toss' }, 'KR')).status).toBe(400);
+    expect(calls).toHaveLength(4);
+  });
+
+  it('T-11-736 결제 수단 때문에 토큰이 거절되면 수단 없이 한 번 더 만들어 결제창을 연다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const bodies: { settings: Record<string, unknown> }[] = [];
+    let n = 2000;
+    vi.stubGlobal('fetch', async (_url: string, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { settings: Record<string, unknown> };
+      bodies.push(body);
+      n += 1;
+      return 'payment_method' in body.settings
+        ? new Response(JSON.stringify({ errorCode: 1102 }), { status: 422 })
+        : new Response(JSON.stringify({ token: `tok_${n}`, order_id: n }), { status: 201 });
+    });
+    const res = await call('POST', '/v1/web-pay/orders', {
+      cookie: me.cookie,
+      body: { productId: REROLL_15, method: 'kakaopay' },
+      headers: { 'CF-IPCountry': 'KR' },
+    });
+    expect(res.status).toBe(201);
+    expect(bodies.map((b) => 'payment_method' in b.settings)).toEqual([true, false]);
+  });
+
   it('T-11-700 크리에이터 추적값은 형식이 맞을 때만 받고 결제 토큰의 user.tracking_id로 넘긴다', async () => {
     const me = await issueGoogleCookie(ctx);
     const calls = stubXsolla();
