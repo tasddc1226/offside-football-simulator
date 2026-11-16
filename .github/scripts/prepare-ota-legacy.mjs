@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { STORE_BUILDS } from './ota-store-runtime.mjs';
 
 /** Last main commit that changed app.json while it matched each reviewed store build. */
 export const targets = Object.freeze({
@@ -20,22 +21,35 @@ export const targets = Object.freeze({
 });
 export const APP_JSON = 'apps/mobile/app.json';
 export const MOBILE_PACKAGE = 'apps/mobile/package.json';
+/** Native inputs only; screen, engine and platform JavaScript stay at the deployment commit. */
+export const NATIVE_PATHS = [
+  APP_JSON,
+  'apps/mobile/app.config.js',
+  'apps/mobile/eas.json',
+  'apps/mobile/plugins',
+  'apps/mobile/modules',
+];
 /** npm native modules added in 1.1.8 that every legacy lane removes. */
 export const NATIVE_ADDED_118 = ['expo-tracking-transparency'];
 
-function target(name) {
+function target(name, platform) {
+  if (name === 'current') {
+    const build = STORE_BUILDS[platform];
+    if (!build) throw new Error(`Unknown store platform: ${platform}`);
+    return { ...build, runtimes: { [platform]: build.runtime } };
+  }
   const t = targets[name];
   if (!t) throw new Error(`Unknown legacy OTA target: ${name}`);
   return t;
 }
 export function assertRuntime(name, platform, actual) {
-  const t = target(name);
+  const t = target(name, platform);
   if (!t.runtimes[platform] || actual !== t.runtimes[platform]) {
     throw new Error(`${name} ${platform}: native fingerprint mismatch; do not publish (${actual})`);
   }
 }
-export function prepare(root, name) {
-  const t = target(name);
+export function prepare(root, name, platform) {
+  const t = target(name, platform);
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' });
   if (git('status', '--porcelain', '--untracked-files=normal').trim()) {
     throw new Error('Use a clean disposable checkout; existing work must be preserved.');
@@ -45,21 +59,22 @@ export function prepare(root, name) {
       throw new Error('Generated native project exists; use a fresh disposable checkout.');
     }
   }
-  writeFileSync(resolve(root, APP_JSON), git('show', `${t.source}:${APP_JSON}`));
+  git('restore', '--source', t.source, '--worktree', '--', ...NATIVE_PATHS);
   const pkgPath = resolve(root, MOBILE_PACKAGE);
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-  for (const dep of NATIVE_ADDED_118) delete pkg.dependencies?.[dep];
+  const dropped = name === '1.1.7' ? NATIVE_ADDED_118 : [];
+  for (const dep of dropped) delete pkg.dependencies?.[dep];
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
   console.log(
-    `Prepared ${name} overlay (app.json from ${t.source.slice(0, 7)}, without ${NATIVE_ADDED_118.join(', ')})`,
+    `Prepared ${name} / ${platform ?? 'both'} native snapshot from ${t.source.slice(0, 7)}; removed npm modules: ${dropped.join(', ') || 'none'}`,
   );
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const [cmd, name, platform, fp] = process.argv.slice(2);
   if (cmd === 'check') assertRuntime(name, platform, fp);
-  else if (cmd === 'prepare') prepare(process.cwd(), name);
+  else if (cmd === 'prepare') prepare(process.cwd(), name, platform);
   else
     throw new Error(
-      'Usage: prepare-ota-legacy.mjs prepare <1.1.7> | check <1.1.7> <platform> <fingerprint>',
+      'Usage: prepare-ota-legacy.mjs prepare <current|1.1.7> <platform> | check <current|1.1.7> <platform> <fingerprint>',
     );
 }

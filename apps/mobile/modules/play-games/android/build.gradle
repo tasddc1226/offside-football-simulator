@@ -1,0 +1,20 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.offsidelab'
+version = '0.1.0'
+
+android {
+  namespace "expo.modules.offsideplaygames"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+}
+
+dependencies {
+  // Application initializes the SDK before automatic platform authentication.
+  api "com.google.android.gms:play-services-games-v2:22.1.0"
+}

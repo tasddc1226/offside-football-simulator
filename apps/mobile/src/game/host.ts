@@ -1,4 +1,5 @@
 import { careerShareUrl } from '@offside/app-core/links';
+import '../platform/gameCenter';
 // ───────── 앱 쪽 연결 (T-11-005) ─────────
 // 게임 진행·시트 연출·업로드·선수 상세·클럽 커스텀·영구결번·새 소식은 웹과 같은 @offside/app-core 로직을 쓴다.
 // 여기서는 앱 상태(valtio)와 화면 쪽 동작(스크롤·토스트·햅틱)을 넘겨 한 벌씩 만든다.

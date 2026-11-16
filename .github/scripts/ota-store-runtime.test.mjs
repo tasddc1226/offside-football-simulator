@@ -1,9 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { STORE_RUNTIMES, assertStoreRuntime } from './ota-store-runtime.mjs';
+import { STORE_BUILDS, STORE_RUNTIMES, assertStoreRuntime } from './ota-store-runtime.mjs';
 test('only exact platform-specific store fingerprints are eligible', () => {
   for (const platform of ['ios', 'android']) {
+    assert.match(STORE_BUILDS[platform].version, /^\d+\.\d+\.\d+$/);
+    assert.match(STORE_BUILDS[platform].source, /^[a-f0-9]{40}$/);
+    assert.equal(STORE_BUILDS[platform].runtime, STORE_RUNTIMES[platform]);
     assert.doesNotThrow(() => assertStoreRuntime(platform, STORE_RUNTIMES[platform]));
     assert.throws(() => assertStoreRuntime(platform, 'unmatched-native-change'));
     assert.throws(() =>

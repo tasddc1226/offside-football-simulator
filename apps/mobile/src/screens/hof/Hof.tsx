@@ -4,6 +4,7 @@ import { useSnapshot } from 'valtio';
 import type { HofTab } from '@offside/app-core/state';
 import { AdSlot } from '../../components/AdSlot';
 import { HallOfFame } from '../../components/HallOfFame';
+import { GameCenterEntry } from '../../components/GameCenterEntry';
 import { appState } from '../../store';
 import { Screen } from '../../ui/Screen';
 import { Topbar } from '../../ui/Topbar';
@@ -93,6 +94,7 @@ export default function Hof() {
         <AchievementRanking />
       ) : (
         <>
+          <GameCenterEntry place="hof" />
           <HallOfFame full />
           <AdSlot place="records-bottom" />
         </>
