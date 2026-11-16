@@ -169,6 +169,29 @@ export function compOfTrophy(trophy: string): string | null {
   return hasCompEmblem(ko) ? ko : null;
 }
 
+// 저장값(트로피 이름 꼬리)이라 한국어로 둔다.
+const MEDAL_TAILS = [
+  [' 은메달', 'silver'], // i18n-ignore 저장값
+  [' 동메달', 'bronze'], // i18n-ignore 저장값
+] as const;
+export type MedalColor = (typeof MEDAL_TAILS)[number][1];
+/** 은 · 동메달 트로피('올림픽 은메달')의 대회와 메달 색. 없으면 null.
+ *  기본 그림은 메달 그림 그대로 두고, 유저가 그 대회 로고를 바꿨을 때만 그 로고 위에 메달 표시를 얹는다. */
+export function medalOfTrophy(trophy: string): { comp: string; medal: MedalColor } | null {
+  const hit = MEDAL_TAILS.find(([t]) => trophy.endsWith(t));
+  if (!hit) return null;
+  const comp = trophy.slice(0, -hit[0].length);
+  return hasCompEmblem(comp) ? { comp, medal: hit[1] } : null;
+}
+/** 로고 위 메달 표시 색과 숫자(2 · 3). */
+export const MEDAL_BADGE: Record<
+  MedalColor,
+  { fill: string; ring: string; ink: string; n: string }
+> = {
+  silver: { fill: '#d5dbe1', ring: '#7d8995', ink: '#2b333b', n: '2' },
+  bronze: { fill: '#d7a173', ring: '#8a5a33', ink: '#3a2412', n: '3' },
+};
+
 /** 바꾼 이름에서 딴 약칭: 영문 · 숫자 위주면 단어 첫 글자(한 단어면 앞 4자), 아니면 앞 두 글자. */
 export function markOf(name: string): string {
   const s = name.trim();

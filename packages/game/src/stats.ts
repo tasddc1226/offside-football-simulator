@@ -152,17 +152,37 @@ const namedChips = () =>
     ['fame', L.chipFame],
     ['trust', L.chipTrust],
   ] as const;
-export type Chip = { label: string; d: number; money?: boolean; text?: string; bad?: boolean };
-export function diffChips(s: GameState, a: Snapshot, b: Snapshot): Chip[] {
+export type Chip = {
+  label: string;
+  d: number;
+  money?: boolean;
+  text?: string;
+  bad?: boolean;
+  /** 능력치 · OVR의 화면 값(반올림) 전후. 구간 리포트가 "68 → 72"로 보인다. */
+  from?: number;
+  to?: number;
+};
+/** range: 능력치 · OVR 칩에 화면 값 전후(from · to)를 붙인다(구간 리포트). 이벤트 결과는 붙이지 않는다. */
+export function diffChips(s: GameState, a: Snapshot, b: Snapshot, range = false): Chip[] {
   const out: Chip[] = [];
   // T-11-183 능력치는 소수 한 자리로 쌓인다 — 반올림한 뒤 빼면 0.4씩 오른 성장이 칩에서 사라진다.
   for (const k of ATTR_KEYS) {
     const d = Math.round((b[k]! - a[k]!) * 10) / 10;
-    if (d) out.push({ label: labelOf(s, k), d });
+    if (d)
+      out.push(
+        range
+          ? { label: labelOf(s, k), d, from: Math.round(a[k]!), to: Math.round(b[k]!) }
+          : { label: labelOf(s, k), d },
+      );
   }
   for (const [k, label] of namedChips()) {
     const d = Math.round(b[k] - a[k]);
-    if (d) out.push({ label, d });
+    if (d)
+      out.push(
+        range && k === 'ovr'
+          ? { label, d, from: Math.round(a[k]), to: Math.round(b[k]) }
+          : { label, d },
+      );
   }
   if (b.money !== a.money) out.push({ label: L.chipMoney, d: b.money! - a.money!, money: true });
   if (b.injury! > a.injury!)

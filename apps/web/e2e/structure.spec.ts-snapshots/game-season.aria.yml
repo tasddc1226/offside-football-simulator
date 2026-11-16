@@ -5,7 +5,9 @@
   - button "대표 칭호 슈퍼스타, 칭호 도감 열기": ‘슈퍼스타’
   - heading "구조테스트" [level=1]
   - text: /\d+세 · 런던 해머스 프리미어리그 · 연봉 \d+억 \d+,\d+만 · 몸값 \d+억 9천만 \d+ OVR 로테이션 부상 4경기 주력 슈팅·드리블/
-  - heading /현재 연도 · \d+년 · 프리시즌/ [level=2]
+  - heading "대회 · 리그 기록" [level=2]
+  - group: 대회 일정 올해 2개
+  - group: 리그 기록 다음 시즌부터
   - text: /\d+-\d+ Season/
   - heading "프리시즌" [level=2]
   - text: 프리시즌 전반기 후반기

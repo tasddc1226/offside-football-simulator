@@ -12,7 +12,14 @@ import {
   initialCompIconsState,
   sanitizeCompIcons,
 } from './compIcons.js';
-import { compEmblem, compKindOf, compOfTrophy, hasCompEmblem, markOf } from './compEmblem.js';
+import {
+  compEmblem,
+  compKindOf,
+  compOfTrophy,
+  hasCompEmblem,
+  markOf,
+  medalOfTrophy,
+} from './compEmblem.js';
 import { customNameCatalog } from './customNamesCatalog.js';
 
 let mem: Map<string, string>;
@@ -134,6 +141,11 @@ describe('리그·대회 기본 로고 (T-11-681)', () => {
     expect(compOfTrophy('올림픽 금메달')).toBe('올림픽');
     expect(compOfTrophy('올림픽 은메달')).toBeNull();
     expect(compOfTrophy('없는 대회 우승')).toBeNull();
+    // 은 · 동메달은 대회와 메달 색을 따로 돌려준다(로고를 바꿨을 때 로고 위에 메달 표시).
+    expect(medalOfTrophy('올림픽 은메달')).toEqual({ comp: '올림픽', medal: 'silver' });
+    expect(medalOfTrophy('올림픽 동메달')).toEqual({ comp: '올림픽', medal: 'bronze' });
+    expect(medalOfTrophy('올림픽 금메달')).toBeNull();
+    expect(medalOfTrophy('없는 대회 은메달')).toBeNull();
   });
 
   it('이름을 바꾸면 약칭을 바꾼 이름에서 따고, 원래 이름으로 그릴 때는 기본 약칭', () => {

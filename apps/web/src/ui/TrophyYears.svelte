@@ -3,11 +3,10 @@
   // 쌓는다. 구단 이름은 바로 앞 줄과 같으면 다시 적지 않는다. 트로피 탭(진행 중)과 은퇴 화면이 같이 쓴다.
   import { groupByYear } from '@offside/app-core/trophyYears';
   import { careerTrophy } from '@offside/app-core/career-trophy';
-  import { compOfTrophy } from '@offside/app-core/compEmblem';
+  import { compOfTrophy, medalOfTrophy } from '@offside/app-core/compEmblem';
   import { tn } from '@offside/game/i18n/names';
-  import CareerTrophy from './CareerTrophy.svelte';
   import ClubMark from './ClubMark.svelte';
-  import CompIcon from './CompIcon.svelte';
+  import TrophyEmblem from './TrophyEmblem.svelte';
 
   type Item = { year: number; t: string; club?: string; clubId?: string | undefined };
   let { items, icons = true, still = false }: { items: readonly Item[]; icons?: boolean; still?: boolean } = $props();
@@ -19,9 +18,8 @@
     <span class="y">{g.year}{#if g.items.length > 1}<small class="ty-n" aria-hidden="true">×{g.items.length}</small>{/if}</span>
     <ul class="ty-items">
       {#each g.items as x, i (i)}
-        {@const comp = icons ? compOfTrophy(x.t) : null}
         <li class="ty-item" class:ty-plain={!icons}>
-          {#if icons}{#if comp}<CompIcon ko={comp} size={30} {still} />{:else}<CareerTrophy art={careerTrophy(x.t)} size={30} />{/if}{/if}
+          {#if icons}<TrophyEmblem art={careerTrophy(x.t)} comp={compOfTrophy(x.t)} medal={medalOfTrophy(x.t)} size={30} {still} />{/if}
           <div>
             <b>{tn(x.t)}</b>
             {#if x.club && (i === 0 || g.items[i - 1]!.club !== x.club)}<span class="muted fs-xs"><ClubMark name={x.club} id={x.clubId} size={14} /> {tn(x.club)}</span>{/if}
