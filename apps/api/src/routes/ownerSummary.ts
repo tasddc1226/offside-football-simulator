@@ -1,4 +1,6 @@
 import { OwnerSummaryResponseSchema, OwnerRecapStatusSchema } from '@offside/contracts';
+import { GameCenterProgressSchema } from '@offside/contracts/game-center';
+import { gameCenterProgress } from '../db/repos/gameCenter.js';
 import type { Hono } from 'hono';
 import { commentIdentity } from '../auth/admin.js';
 import { listOwnSummary } from '../db/repos/careers.js';
@@ -10,6 +12,15 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { nowIso, ok } from './shared.js';
 
 export function registerOwnerSummaryRoutes(app: Hono<AppEnv>): void {
+  app.get('/v1/owner/game-center', requireProfile, async (c) =>
+    ok(
+      c,
+      GameCenterProgressSchema,
+      await gameCenterProgress(getDb(c), getSessionOrThrow(c).profileId),
+      200,
+      'private, no-store',
+    ),
+  );
   app.get('/v1/owner/recap-status', requireProfile, async (c) => {
     const tier = await ownerTierOfProfile(getDb(c), getSessionOrThrow(c).profileId, nowIso());
     return ok(c, OwnerRecapStatusSchema, { tier }, 200, 'private, no-store');
