@@ -10,6 +10,7 @@
   import Chips from './sheets/Chips.svelte';
   import CountUp from './CountUp.svelte';
   import { buzz } from './motion.js';
+  import { playSfx } from './sfx.js';
   import PixelAvatar from './PixelAvatar.svelte';
   import { managerAvatarSpec } from '@offside/game/avatar';
   import type { Chip } from './sheetState.svelte.js';
@@ -233,7 +234,10 @@
   function liveDone() {
     live = null;
     const h = st?.history.at(-1);
-    if (h && seasonBadges(h).some((b) => !b.bad)) buzz(40);
+    if (h && seasonBadges(h).some((b) => !b.bad)) {
+      buzz(40);
+      playSfx('trophy');
+    }
   }
 
   const ev = $derived(st && st.phase === 'event' ? currentEvent(st) : null);

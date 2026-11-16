@@ -5,7 +5,9 @@
   import { onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import type { BoostOutcome } from '@offside/app-core/boost-view';
+  import { boostSfx } from '@offside/app-core/sfxKind';
   import { buzz, dur, motionOK } from './motion.js';
+  import { playSfx } from './sfx.js';
   import { gameBoostText as L } from '@offside/app-core/i18n/ko/gameBoost';
 
   let { out, onDone }: { out: BoostOutcome; onDone: () => void } = $props();
@@ -28,6 +30,7 @@
       else {
         done = true;
         buzz(out.great ? 60 : out.ok ? 40 : 15);
+        playSfx(boostSfx(out));
         queueMicrotask(() => closeBtn?.focus());
       }
     };

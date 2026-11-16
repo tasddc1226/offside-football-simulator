@@ -9,7 +9,7 @@
     - switch "다크 모드"
     - text: Sound
     - strong: 효과음
-    - text: 버튼을 누를 때 클릭 소리를 내요.
+    - text: 버튼 클릭음과 강화 · 보상 · 경기 결과 소리를 내요.
     - switch "효과음" [checked]
     - button "Team settings 구단 이름·엠블럼 변경":
         - text: ''

@@ -33,6 +33,7 @@
   import { tn } from '@offside/game/i18n/names';
   import { localCareerNames } from '@offside/game/hof-store';
   import { exchangeText as L } from '@offside/app-core/i18n/ko/exchange';
+  import { playSfx } from '../sfx.js';
 
   const { onclose }: { onclose: () => void } = $props();
   const local = localCareerNames();
@@ -132,6 +133,7 @@
       return;
     }
     const name = exchangeName(def.key);
+    playSfx('reward');
     if (r.data.rewards.length || r.data.titles.length)
       done = { reward: r.data.rewards.length ? rewardText(r.data.rewards) : null, titles: r.data.titles };
     else toast = L.doneToast({ name, left: Math.max(0, defs.length - r.data.done) });

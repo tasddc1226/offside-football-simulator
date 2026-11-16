@@ -23,7 +23,7 @@ const ko = {
   sheetBodyBefore: '게임 화면을 스프레드시트로 바꾸고 소리를 꺼요. ',
   sheetBodyAfter: '(숫자 1 왼쪽 키)로 켜고 꺼요. PC 브라우저 전용이며 이 기기에 저장돼요.',
   sfxTitle: '효과음',
-  sfxBody: '버튼을 누를 때 클릭 소리를 내요.',
+  sfxBody: '버튼 클릭음과 강화 · 보상 · 경기 결과 소리를 내요.',
   bgmTitle: '배경음악',
   bgmBody: '기록실·선수 상세에서는 다른 곡이 나와요. 화면 위 스피커 버튼으로도 켜고 꺼요.',
   bgmVolume: '배경음악 음량',

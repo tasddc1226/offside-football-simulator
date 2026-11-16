@@ -23,7 +23,7 @@ export const settings: Translation<SettingsMsgs> = {
   sheetBodyBefore: 'Turns the game into a spreadsheet and mutes sound. Press ',
   sheetBodyAfter: ' (the key left of 1) to toggle. PC browsers only. Saved on this device.',
   sfxTitle: 'Sound effects',
-  sfxBody: 'Play a click when you tap a button.',
+  sfxBody: 'Play button clicks and short sounds for upgrades, rewards and match results.',
   bgmTitle: 'Music',
   bgmBody:
     'Records and player pages play a different track. You can also toggle it with the speaker button at the top.',

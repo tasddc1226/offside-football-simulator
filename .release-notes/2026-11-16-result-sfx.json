@@ -1,0 +1,34 @@
+{
+  "id": "t-11-738-result-sfx",
+  "title": "결과 효과음",
+  "items": [
+    "카드 강화 · 훈련 부스트 결과, 출석 · 선물 · 시즌 패스 보상, 랭크전 상대 찾기, 감독 경기 종료에 짧은 소리를 넣었어요",
+    "은퇴 리포트를 처음 열면 풀타임 휘슬이 울려요",
+    "설정의 효과음 스위치를 끄면 모두 나지 않아요"
+  ],
+  "en": {
+    "title": "Result sound effects",
+    "items": [
+      "Short sounds now play for card upgrade and training boost results, attendance, gift and season pass rewards, finding a ranked opponent, and the end of a manager match.",
+      "The full-time whistle blows the first time you open a retirement report.",
+      "Turn off Sound effects in Settings to mute them all."
+    ]
+  },
+  "ja": {
+    "title": "結果の効果音",
+    "items": [
+      "カード強化・トレーニングブーストの結果、出席・プレゼント・シーズンパスの報酬、ランク戦の相手探し、監督試合の終了に短い音を追加しました。",
+      "引退レポートを初めて開くと、試合終了のホイッスルが鳴ります。",
+      "設定の効果音をオフにすると、すべて鳴らなくなります。"
+    ]
+  },
+  "zh": {
+    "title": "結果音效",
+    "items": [
+      "卡片強化與訓練加成的結果、出席・禮物・賽季通行證獎勵、找到排名賽對手、教練比賽結束時，會播放短音效。",
+      "第一次打開退役報告時，會響起終場哨聲。",
+      "在設定關閉音效後，就不會播放任何音效。"
+    ]
+  },
+  "availability": "web"
+}

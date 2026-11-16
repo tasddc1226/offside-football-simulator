@@ -66,6 +66,7 @@
   import { managerText as M } from '@offside/app-core/i18n/ko/manager';
   import { untrack } from 'svelte';
   import { buzz } from './motion.js';
+  import { playSfx } from './sfx.js';
   import { managerAvatarSpec } from '@offside/game/avatar';
   import PixelAvatar from './PixelAvatar.svelte';
 
@@ -125,6 +126,7 @@
               ? T.bid_full
               : T.bid_none;
     buzz(r === 'signed' ? 30 : 10);
+    if (r === 'signed') playSfx('found');
   }
   function closeWin() {
     const sold = act(closeWindow);

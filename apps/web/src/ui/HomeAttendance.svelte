@@ -18,6 +18,7 @@
   import PopSheet from './PopSheet.svelte';
   import { toast } from './helpers.js';
   import { goRerollShop } from './nav.js';
+  import { playSfx } from './sfx.js';
 
   let card = $state<AttendanceCard | null>(null);
   // T-11-440 응답을 받았는지. 못 받으면(null) 앱처럼 입구를 숨긴다(누를 수 없는 빈 카드를 남기지 않는다).
@@ -56,6 +57,7 @@
     busy = false;
     if (r.ok) {
       key = crypto.randomUUID();
+      playSfx('reward');
       card = { kind: 'owner', att: r.data.attendance };
       got = rewardText(r.data.granted);
       toast(L.stamped({ n: r.data.attendance.stamps, reward: rewardText(r.data.granted) }));

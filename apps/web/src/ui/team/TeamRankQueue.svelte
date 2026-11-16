@@ -9,6 +9,7 @@
   import { loadKey, saveKey } from '@offside/game/storage';
   import { num, ratingGap, recordText, signedNum } from '@offside/app-core/teamText';
   import { buzz, motionOK } from '../motion';
+  import { playSfx } from '../sfx.js';
   import TitleBadge from '../cup/TitleBadge.svelte';
   import TeamLogo from './TeamLogo.svelte';
   import TeamRankInfo from './TeamRankInfo.svelte';
@@ -88,6 +89,7 @@
     reveal = true;
     phase = 'idle';
     buzz(30);
+    playSfx('found');
   }
 
   function cancel() {

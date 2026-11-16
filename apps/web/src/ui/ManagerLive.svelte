@@ -8,6 +8,7 @@
   import { liveStepMs, liveTally } from '@offside/app-core/manager';
   import { managerText as M } from '@offside/app-core/i18n/ko/manager';
   import { buzz } from './motion.js';
+  import { playSfx } from './sfx.js';
 
   let { n, club, matches, ondone }: { n: number; club: string; matches: MgrMatch[]; ondone: () => void } = $props();
 
@@ -25,6 +26,7 @@
     if (timer) clearInterval(timer);
     timer = null;
     buzz(20);
+    playSfx('whistle');
   }
   function skip() {
     shown = matches.length;
