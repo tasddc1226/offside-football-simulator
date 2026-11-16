@@ -32,7 +32,15 @@ export type XsollaTokenInput = {
   returnUrl: string;
   /** T-11-700 엑솔라 파트너 네트워크 추적값. 있으면 이 결제가 그 크리에이터 실적으로 잡힌다. */
   trackingId?: string;
+  /** T-11-736 엑솔라 결제 수단 ID. 있으면 수단 고르기를 건너뛰고 그 수단 입력 화면으로 연다. */
+  paymentMethod?: number;
 };
+
+/**
+ * T-11-736 엑솔라 결제 수단 ID(퍼블리셔 계정 결제 방식 목록의 한국 카카오페이). 그 나라 요청에만 싣는다.
+ * 프로젝트 · 나라마다 쓸 수 있는 수단이 달라, 다른 나라에서 보내면 엑솔라가 거절하거나 쓸 수 없는 화면을 연다.
+ */
+export const XSOLLA_METHODS = { kakaopay: { id: 3555, country: 'KR' } } as const;
 
 /** 주문과 결제 토큰을 만든다. 실패(엑솔라 오류 · 형식)는 던진다. */
 export async function createXsollaToken(
@@ -62,6 +70,7 @@ export async function createXsollaToken(
         // 엑솔라 언어 코드는 번체 중국어가 tw다(cn은 간체).
         language: input.language === 'zh' ? 'tw' : input.language,
         return_url: input.returnUrl,
+        ...(input.paymentMethod ? { payment_method: input.paymentMethod } : {}),
       },
     }),
   });

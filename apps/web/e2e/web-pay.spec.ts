@@ -121,7 +121,20 @@ for (const width of [320, 390]) {
       body: await page.screenshot(),
       contentType: 'image/png',
     });
+    // T-11-736 누르면 바로 결제창으로 가지 않고 묶음 아래에 확인 단계를 연다.
     await button.click();
+    const confirm = page.locator(`[data-web-pay-confirm="${BOOST_100}"]`);
+    await expect(confirm).toContainText('잠재력 강화권 100장 · 19,800원');
+    const other = confirm.locator('[data-act="web-pay-other"]');
+    const otherBox = await other.boundingBox();
+    expect(otherBox!.x + otherBox!.width).toBeLessThanOrEqual(width);
+    await expect(page.locator('body')).toHaveJSProperty('scrollWidth', width);
+    await testInfo.attach(`boost-100-confirm-${width}px`, {
+      body: await page.screenshot(),
+      contentType: 'image/png',
+    });
+    expect(orderBody()).toBeNull();
+    await other.click();
     await page.waitForURL(/sandbox-secure\.xsolla\.com/);
     expect(orderBody()).toEqual({ productId: BOOST_100 });
   });
@@ -141,15 +154,65 @@ test('상품을 누르면 서버 주문의 결제창으로 가고, 돌아오면 
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="shop"]').click();
   const shop = page.locator('[data-boost-shop]');
-  await shop.locator(`[data-web-pay-product="${BOOST_3}"]`).click();
+  const product = shop.locator(`[data-web-pay-product="${BOOST_3}"]`);
+  // T-11-736 취소하면 주문을 만들지 않고 확인 단계만 닫는다.
+  await product.click();
+  await shop.locator('[data-act="web-pay-cancel"]').click();
+  await expect(shop.locator('[data-web-pay-confirm]')).toHaveCount(0);
+  expect(orderBody()).toBeNull();
+  // 한국어 화면은 카카오페이를 고르면 그 수단으로 바로 여는 주문을 만든다.
+  await product.click();
+  await shop.locator('[data-act="web-pay-kakao"]').click();
   await page.waitForURL(/sandbox-secure\.xsolla\.com/);
-  expect(orderBody()).toEqual({ productId: BOOST_3 });
+  expect(orderBody()).toEqual({ productId: BOOST_3, method: 'kakaopay' });
   await page.goto(`/?webpay=${ORDER}`);
   await expect(page.getByText('결제가 끝나 아이템이 들어왔어요.')).toBeVisible();
   expect(statusCalls).toBe(2);
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator('[data-boost-shop]')).toBeVisible();
   expect(calls()).toBeLessThanOrEqual(2);
+});
+
+test('T-11-736 한국어가 아닌 화면은 카카오페이 없이 결제 화면으로 가는 버튼 하나만 보인다', async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.setItem('ft_lang', JSON.stringify('en')));
+  await setup(page, config);
+  // 영어 화면은 요청 주소에 `?lang=en`이 붙어 같은 응답을 쿼리까지 받는 경로로 다시 건다.
+  await page.route(/\/v1\/(profile|items|web-pay\/config)\?lang=en$/, (r) => {
+    const path = new URL(r.request().url()).pathname;
+    if (path.endsWith('/profile'))
+      return r.fulfill(
+        ok({
+          id: 'owner-pay',
+          nickname: 'PayOwner',
+          linked: { google: true },
+          googleEmailMasked: 'f***@example.com',
+          recoveryCodeIssuedAt: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          avatarId: null,
+        }),
+      );
+    if (path.endsWith('/items')) return r.fulfill(ok({ reroll: 0, boost: 0, scout: 0, rename: 0 }));
+    return r.fulfill(ok(config));
+  });
+  let orderBody: unknown = null;
+  await page.route(/\/v1\/web-pay\/orders\?lang=en/, (r) => {
+    orderBody = r.request().postDataJSON();
+    return r.fulfill(ok({ orderId: ORDER, payUrl: PAY_URL }, 201));
+  });
+  await page.route('https://sandbox-secure.xsolla.com/**', (r) =>
+    r.fulfill({ contentType: 'text/html', body: '<p>fake pay station</p>' }),
+  );
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="shop"]').click();
+  const shop = page.locator('[data-boost-shop]');
+  await shop.locator(`[data-web-pay-product="${BOOST_3}"]`).click();
+  await expect(shop.locator('[data-act="web-pay-kakao"]')).toHaveCount(0);
+  await shop.locator('[data-act="web-pay-go"]').click();
+  await page.waitForURL(/sandbox-secure\.xsolla\.com/);
+  expect(orderBody).toEqual({ productId: BOOST_3 });
 });
 
 test('경기 화면 이름 변경 창: 변경권이 없으면 묶음을 보이고, 결제 뒤 진행 중 선수 화면으로 돌아온다', async ({
@@ -170,6 +233,7 @@ test('경기 화면 이름 변경 창: 변경권이 없으면 묶음을 보이�
   const packs = dialog.locator('[data-web-pay-packs="rename"]');
   await expect(packs).toContainText('선수 이름 변경권 5장 · 1,100원');
   await packs.locator(`[data-web-pay-product="${RENAME_5}"]`).click();
+  await packs.locator('[data-act="web-pay-other"]').click();
   await page.waitForURL(/sandbox-secure\.xsolla\.com/);
   expect(orderBody()).toEqual({ productId: RENAME_5 });
   await page.goto(`/?webpay=${ORDER}`);

@@ -16,6 +16,12 @@ export const webPay: Translation<WebPayMsgs> = {
   done: '決済が完了し、アイテムが入りました。',
   pending: '決済が確認されるとアイテムが自動で入ります。決済していない場合はそのままで大丈夫です。',
   canceled: '返金された決済のため、アイテムを回収しました。',
+  confirmSum: (p) => `${p.pack} · ${p.price}`,
+  confirmLead: 'Xsollaの決済画面でお支払いいただき、終わるとこの画面に戻ります。',
+  payKakao: 'KakaoPayで支払う',
+  payOther: 'カード・その他の方法で支払う',
+  payGo: '決済画面へ進む',
+  payCancel: 'キャンセル',
   refund:
     '受け取ったアイテムを使っていなければ、決済日から7日以内に返金を申請できます。使ったアイテムは返金できません。お問い合わせ: contact@offside-lab.com',
 };
