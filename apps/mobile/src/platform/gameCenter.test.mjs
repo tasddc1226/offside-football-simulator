@@ -88,6 +88,42 @@ beforeEach(() => {
 });
 
 describe('Game Center consent and identity boundaries', () => {
+  it('connects from a contextual entry and opens the requested achievements view', async () => {
+    const m = await import('./gameCenter.ts');
+    expect(await m.enterGameCenter('achievements')).toBe(true);
+    expect(f.dashboard).toHaveBeenCalledWith(
+      'player-a',
+      'com.offsidelab.app.leaderboard.career_legend.v1',
+      true,
+    );
+    expect(f.submit).toHaveBeenCalledOnce();
+    expect(f.save).toHaveBeenCalledWith(
+      'ft_game_services_offer_v1',
+      expect.objectContaining({ handled: true }),
+    );
+  });
+  it('does not open a dashboard or send records when entry sign-in is cancelled', async () => {
+    f.authenticate.mockRejectedValue(new Error('cancelled'));
+    const m = await import('./gameCenter.ts');
+    expect(await m.enterGameCenter('leaderboard')).toBe(false);
+    expect(m.gameCenter.connected).toBe(false);
+    expect(f.dashboard).not.toHaveBeenCalled();
+    expect(f.submit).not.toHaveBeenCalled();
+    expect(f.save).not.toHaveBeenCalled();
+  });
+  it('allows an explicit reconnect from the permanent entry after the player changes', async () => {
+    const m = await import('./gameCenter.ts');
+    await m.connectGameCenter();
+    f.player = { id: 'player-b', alias: 'Other' };
+    expect(await m.openGameCenter('leaderboard')).toBe(false);
+    expect(m.gameCenter.error).toBe('changed');
+    expect(await m.enterGameCenter('leaderboard')).toBe(true);
+    expect(f.dashboard).toHaveBeenLastCalledWith(
+      'player-b',
+      'com.offsidelab.app.leaderboard.career_legend.v1',
+      false,
+    );
+  });
   it('does nothing on old Android or iOS runtimes without the module', async () => {
     f.os = 'android';
     f.available = false;

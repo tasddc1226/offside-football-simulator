@@ -9,6 +9,14 @@ export const gameCenter: Dict = {
   playSynced: '引退記録をGoogle Play Gamesに反映しました。',
   playSignIn:
     'Google Play Gamesにサインインできませんでした。Play Gamesのアカウント設定を確認してください。',
+  offerHomeTitle: '引退記録でランキングに参加',
+  offerRetireTitle: 'この記録でランキングに挑戦',
+  offerBody: (p: { service: string }) =>
+    `このオーナーの引退記録を${p.service}アカウントに送り、ランキングと実績に参加します。`,
+  connectLeaderboard: '連携してランキングを見る',
+  connectAchievements: '連携して実績を見る',
+  dismissOffer: 'ゲームサービス連携の案内を閉じる',
+  opening: '開いています…',
   weekly: '今週のランキング',
   title: 'Game Center',
   body: 'このオーナーの引退記録を、この端末のGame Centerアカウントに送信します。',

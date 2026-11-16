@@ -12,6 +12,7 @@ import {
 import { onRetirementSynced } from '@offside/app-core/outbox';
 import { ensureSession, onSessionChanged } from './session';
 import { PLAY_GAMES_ACHIEVEMENTS, PLAY_GAMES_LEADERBOARDS } from './playGamesIds';
+import { finishGameCenterOffers } from './gameCenterOffer';
 
 type Player = { id: string; alias: string };
 type Connection = { profileId: string; playerId: string; alias: string };
@@ -75,6 +76,7 @@ function check(epoch: number) {
 function bind(next: Connection | null) {
   connection = next;
   saveKey(KEY, next);
+  if (next) finishGameCenterOffers();
   gameCenter.connected = !!next;
   gameCenter.alias = next?.alias ?? '';
   gameCenter.synced = false;
@@ -85,6 +87,7 @@ function bind(next: Connection | null) {
 /** Local consent only: this does not sign out of Game Center or remove previously submitted records. */
 export function disconnectGameCenter() {
   generation++;
+  if (connection) finishGameCenterOffers();
   bind(null);
   gameCenter.error = null;
   invalidateApiCache(PATH);
@@ -228,6 +231,14 @@ export function openGameCenter(view: Dashboard): Promise<boolean> {
     }
     return true;
   });
+}
+
+/** A user-initiated entry point: obtain consent first, then open the requested platform view. */
+export async function enterGameCenter(view: Dashboard): Promise<boolean> {
+  if (!connection || gameCenter.error === 'changed' || gameCenter.error === 'signIn') {
+    if (!(await connectGameCenter())) return false;
+  }
+  return openGameCenter(view);
 }
 
 onRetirementSynced(() => {

@@ -52,6 +52,8 @@ import { useOnPull } from '../../ui/refresh';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { chatUnread } from '../../platform/chatUnread';
 import { CoachTarget } from '../../components/Coachmark';
+import { GameCenterEntry } from '../../components/GameCenterEntry';
+import { loadHOF } from '@offside/game/hof-store';
 
 // T-11-360 출석 창은 앱을 연 뒤 처음 그린 홈에서만 저절로 띄운다(로그아웃 뒤 · 다른 화면에서 돌아올 때는 아니다).
 let homeShown = false;
@@ -79,10 +81,16 @@ export default function Home() {
   const c = useColors();
   const G = s.G && !s.G.retired ? s.G : null;
   const narrow = useWindowDimensions().width < 360;
+  const [hasRetirements] = useState(() => loadHOF().length > 0);
   // 커리어가 없으면 서버 현황(live)이 받을 것 바로 아래로 온다(웹과 같은 homeOrder).
   const order = homeOrder(useHomeTodo(), !!G);
   const blocks: Record<HomeBlock, ReactNode> = {
-    pushOptIn: <PushOptInCard />,
+    pushOptIn: (
+      <>
+        <GameCenterEntry place="home" eligible={hasRetirements} />
+        <PushOptInCard />
+      </>
+    ),
     ownerConflict:
       G && s.ownerConflict ? (
         <View testID="owner-conflict">

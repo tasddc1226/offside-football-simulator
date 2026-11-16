@@ -26,6 +26,7 @@ import { LegendReport } from './LegendReport';
 import { RetiredAdSlot } from './RetiredAdSlot';
 import { OwnHofCards } from './OwnHofCards';
 import { PushAskCard } from '../../components/PushAskCard';
+import { GameCenterEntry } from '../../components/GameCenterEntry';
 import { RetireExp } from './RetireExp';
 import { RetireCohort } from './RetireCohort';
 import { ShareBar } from './ShareBar';
@@ -155,6 +156,7 @@ export default function Retired() {
         end={
           <>
             {v.own?.id ? <OwnHofCards v={v} /> : null}
+            <GameCenterEntry place="retire" eligible={firstRetire} />
             <PushAskCard />
             <Btn
               kind="primary"
