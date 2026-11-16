@@ -7,12 +7,13 @@ import test from 'node:test';
 import {
   APP_JSON,
   MOBILE_PACKAGE,
+  NATIVE_PATHS,
   NATIVE_ADDED_118,
   assertRuntime,
   prepare,
   targets,
 } from './prepare-ota-legacy.mjs';
-import { STORE_RUNTIMES } from './ota-store-runtime.mjs';
+import { STORE_BUILDS, STORE_RUNTIMES } from './ota-store-runtime.mjs';
 
 test('only the reviewed legacy store runtimes can receive their bundle', () => {
   const seen = new Set(Object.values(STORE_RUNTIMES));
@@ -48,8 +49,16 @@ test('preparation protects dirty work and existing native test environments', ()
   }
 });
 
-for (const [name, { source }] of Object.entries(targets)) {
-  test(`the ${name} overlay restores the reviewed app config and drops the new native modules`, (t) => {
+const lanes = [
+  ...Object.entries(targets).map(([name, value]) => ({ name, ...value })),
+  ...Object.entries(STORE_BUILDS).map(([platform, value]) => ({
+    name: 'current',
+    platform,
+    ...value,
+  })),
+];
+for (const { name, source, platform, version } of lanes) {
+  test(`the ${name} ${platform ?? 'both'} overlay restores native inputs while keeping current JavaScript`, (t) => {
     const repo = execFileSync('git', ['rev-parse', '--show-toplevel'], { encoding: 'utf8' }).trim();
     // PR 검사는 얕은 체크아웃이라 기준 커밋이 없다. 운영 배포 OTA 잡은 fetch-depth: 0으로 받는다.
     try {
@@ -64,16 +73,33 @@ for (const [name, { source }] of Object.entries(targets)) {
       execFileSync('git', ['clone', '-q', '--no-checkout', '--shared', repo, root]);
       execFileSync('git', ['-C', root, 'checkout', '-q', 'HEAD']);
       const before = JSON.parse(readFileSync(join(root, MOBILE_PACKAGE), 'utf8'));
-      prepare(root, name);
+      const jsPath = 'apps/mobile/src/platform/gameCenter.ts';
+      const jsBefore = existsSync(join(root, jsPath))
+        ? readFileSync(join(root, jsPath), 'utf8')
+        : null;
+      prepare(root, name, platform);
+      assert.equal(
+        execFileSync('git', ['-C', root, 'diff', source, '--', ...NATIVE_PATHS], {
+          encoding: 'utf8',
+        }),
+        '',
+      );
+      assert.equal(
+        existsSync(join(root, jsPath)) ? readFileSync(join(root, jsPath), 'utf8') : null,
+        jsBefore,
+      );
       assert.equal(
         readFileSync(join(root, APP_JSON), 'utf8'),
         execFileSync('git', ['-C', repo, 'show', `${source}:${APP_JSON}`], { encoding: 'utf8' }),
       );
-      assert.equal(JSON.parse(readFileSync(join(root, APP_JSON), 'utf8')).expo.version, name);
+      assert.equal(
+        JSON.parse(readFileSync(join(root, APP_JSON), 'utf8')).expo.version,
+        version ?? name,
+      );
       const after = JSON.parse(readFileSync(join(root, MOBILE_PACKAGE), 'utf8'));
-      // 1.1.8에서 더한 ATT 모듈만 빼고 나머지 의존성 · Meta 앱 이벤트 모듈은 그대로다.
+      // Keep the existing Meta specialty module; only 1.1.7 lacks the npm ATT dependency.
       assert.ok(existsSync(join(root, 'apps/mobile/modules/meta-app-events')));
-      const dropped = NATIVE_ADDED_118;
+      const dropped = name === '1.1.7' ? NATIVE_ADDED_118 : [];
       for (const dep of dropped) assert.equal(after.dependencies[dep], undefined);
       for (const dep of dropped) delete before.dependencies[dep];
       assert.deepEqual(after, before);
@@ -93,7 +119,7 @@ test('the deploy workflow publishes each legacy lane with its own runtime check'
   assert.doesNotMatch(job, /prepare-ota-11[2-4]/);
   assert.match(
     job,
-    /matrix\.target != 'current'\s*\n\s*run: node \.github\/scripts\/prepare-ota-legacy\.mjs prepare "\$OTA_TARGET"/,
+    /if: env\.EXPO_TOKEN != ''\s*\n\s*run: node \.github\/scripts\/prepare-ota-legacy\.mjs prepare "\$OTA_TARGET" "\$PLATFORM"/,
   );
   assert.match(job, /prepare-ota-legacy\.mjs check "\$OTA_TARGET" "\$PLATFORM" "\$FP"/);
   // overlay가 바뀌면 같은 커밋이라도 다시 게시해야 하므로 변경 판정에 넣는다.
