@@ -5,6 +5,7 @@ export const gSeason: Translation<GSeasonMsgs> = {
   seasonEnd: (p) =>
     `${p.year}シーズン終了 · ${p.league} ${p.rank}位 · 公式戦${p.apps}試合 ${p.goals}ゴール ${p.assists}アシスト`,
   cwcNote: (p) => `クラブワールドチャンピオンシップ ${p.stage}`,
+  sponsorNote: (p) => `人気によるスポンサー収入 · ${p.money}`,
   exemptNote: (p) => `兵役特例（入隊免除） · ${p.what}`,
   promoted: (p) =>
     `${p.club}、${p.league}昇格が決定！来シーズンは${p.league}でプレーします（${p.down}は降格）`,

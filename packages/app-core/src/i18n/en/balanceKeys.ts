@@ -19,6 +19,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   primeCost: 'Prime extension cost multiplier',
   primeGreat: 'Prime extension great-success share',
   primeAdTotal: 'Ad prime extensions per career',
+  auctionCost: 'Luxury auction price multiplier',
+  fameSponsor: 'Fame sponsor income rate',
   potMean: 'Potential average',
   potSd: 'Potential spread',
   potScoutSd: 'Scouting rating error',

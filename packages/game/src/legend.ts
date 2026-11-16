@@ -2,7 +2,7 @@
 // 첫 화면(app-core legend·career)이 쓰는 순수 계산만 둔다. season.ts에 두면 홈이 시즌 엔진을 끌어온다.
 import type { LegendSnapshot } from '@offside/contracts';
 import { legendTermsOfRecord } from '@offside/contracts/hof-rules';
-import type { GameState, LegendSource } from './types.js';
+import type { AuctionGrade, AuctionKind, GameState, LegendSource } from './types.js';
 
 /** 30인 후보 기록과 구분한 실제 발롱도르 수상 횟수. */
 export const ballonWinsOf = (s: Pick<LegendSource, 'awards'>): number =>
@@ -65,5 +65,17 @@ export function legendSnapshot(s: GameState): LegendSnapshot {
     titles: (s.titles || []).map(({ id, year }) => ({ id, year })),
     ...(s.style ? { style: { ...s.style } } : {}),
     ...(s.legacy ? { legacy: { ...s.legacy } } : {}),
+    ...(s.auction?.items.length ? { items: auctionShowcase(s.auction.items) } : {}),
   };
+}
+
+/** T-11-735 명예의 전당에 남길 대표 소장품 3개 — 등급이 높은 순, 같으면 먼저 얻은 순. auction.ts를 끌어오지 않으려고 여기 둔다. */
+export function auctionShowcase(
+  items: readonly { k: AuctionKind; g: AuctionGrade }[],
+): { k: AuctionKind; g: AuctionGrade }[] {
+  return items
+    .map((x, i) => ({ x, i }))
+    .sort((a, b) => b.x.g - a.x.g || a.i - b.i)
+    .slice(0, 3)
+    .map(({ x }) => ({ k: x.k, g: x.g }));
 }

@@ -10,6 +10,8 @@ export const gameLegacy: Translation<GameLegacyMsgs> = {
     `今引退すると${p.kind}・${p.tier}ランクです。${p.next}ランクまであと${p.need}です。`,
   lineTierMax: (p) => `今引退すると${p.kind}・${p.tier}ランクです。最高ランクです。`,
   ladderLabel: 'ランク基準（残りの資金）',
+  itemsLine: (p: { value: string }) =>
+    `オークションのコレクション価値${p.value}も加算されます。人気が高いほど高く評価されます。`,
   note: '引退するときに残りの資金をすべて使い、種類とランクが殿堂に残ります。金額は表示されません。金ランクから称号がもらえます。',
   retireLine: (p) => `引退後のレガシー：${p.kind}・${p.tier}ランクで残ります。`,
   retireLineBelow: (p) => `レガシー（${p.kind}）は銅ランクに届かず、残りません。`,

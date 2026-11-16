@@ -5,6 +5,7 @@ export const gSeason: Translation<GSeasonMsgs> = {
   seasonEnd: (p) =>
     `${p.year}賽季結束 · ${p.league} 第${p.rank}名 · 正式比賽${p.apps}場 ${p.goals}球 ${p.assists}助攻`,
   cwcNote: (p) => `世界俱樂部冠軍賽 ${p.stage}`,
+  sponsorNote: (p) => `人氣帶來的贊助收入 · ${p.money}`,
   exemptNote: (p) => `兵役特例（免除入伍） · ${p.what}`,
   promoted: (p) => `${p.club}確定升級${p.league}！下賽季將在${p.league}出賽（降級球隊：${p.down}）`,
   roleStarter: '保證先發',

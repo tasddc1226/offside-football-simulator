@@ -5,6 +5,8 @@
   import type { LegendView } from './state.svelte.js';
   import PlayStyleCredit from './PlayStyleCredit.svelte';
   import LegacyCredit from './LegacyCredit.svelte';
+  import AuctionCredit from './auction/AuctionCredit.svelte';
+  import { legendItems } from '@offside/app-core/auction-view';
   import RetiredNumberCredit from './RetiredNumberCredit.svelte';
 
   const {
@@ -16,8 +18,11 @@
     rn: RetiredNumberResult | null | undefined;
     reveal: (el: HTMLElement) => { destroy: () => void } | undefined;
   } = $props();
+  // T-11-735 방금 은퇴한 세이브는 auction.items, 명예의 전당 스냅샷은 items.
+  const items = $derived(legendItems(v.d as Parameters<typeof legendItems>[0]));
 </script>
 
 {#if v.d?.style}<PlayStyleCredit d={v.d} {reveal} />{/if}
 {#if v.d?.legacy}<LegacyCredit legacy={v.d.legacy} {reveal} />{/if}
+{#if items.length}<AuctionCredit {items} {reveal} />{/if}
 <RetiredNumberCredit {v} {rn} {reveal} />

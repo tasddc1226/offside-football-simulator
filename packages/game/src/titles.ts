@@ -237,6 +237,13 @@ export const TITLES: TitleDef[] = [
   t('legacy_charity', 'journey', 3, (s) => s.legacy?.k === 'charity' && s.legacy.t >= 3),
   t('legacy_club', 'journey', 3, (s) => s.legacy?.k === 'club' && s.legacy.t >= 3),
   t('legacy_legend', 'journey', 4, (s) => (s.legacy?.t ?? 0) >= 4),
+  // T-11-735 명품 경매: 전설 소장품 하나, 한 종류 네 등급 모두.
+  t('auction_legend', 'journey', 3, (s) => !!s.auction?.items.some((x) => x.g === 4)),
+  t('auction_set', 'journey', 4, (s) =>
+    (['watch', 'car', 'art', 'trophy', 'wine', 'shirt'] as const).some((k) =>
+      [1, 2, 3, 4].every((g) => s.auction?.items.some((x) => x.k === k && x.g === g)),
+    ),
+  ),
   only(
     isKorean,
     t('mil', 'journey', 1, (s) => !!s.mil?.served && !s.mil.serving, undefined, true),

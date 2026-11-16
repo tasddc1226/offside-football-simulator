@@ -29,7 +29,7 @@ export const glossary: Translation<GlossaryMsgs> = {
     'How confident and happy the player feels. Higher morale means better performances and more growth from training. Losses and missed games lower it.',
   t_fame: 'Fame',
   d_fame:
-    'How well known the player is. Higher fame helps with national team call-ups, transfer offers and ad deals. Trophies and individual awards raise it.',
+    'How well known the player is. Higher fame helps with national team call-ups, transfer offers and ad deals, and pays sponsor income at the end of each season in proportion to salary (20% of salary at 100). It also raises the value of your auction collection. Trophies and individual awards raise it.',
   t_rating: 'Rating',
   d_rating:
     'A score for how well you played in one match. It runs from 4.5 to 10. Around 6.8 is average and above 8 is an excellent game.',

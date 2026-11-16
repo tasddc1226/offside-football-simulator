@@ -162,6 +162,10 @@ function nextYear(s: GameState, o: number): string | null {
 }
 
 /** 시즌 정산: 순위·트로피·개인상 → 커리어 기록 → 이정표·칭호 → 병역 → 한 해 넘기기(RNG 순서). */
+/** T-11-735 시즌 말 인기 스폰서 수입(만 원, 10 단위). 계약이 없으면 0. */
+export const sponsorPay = (s: GameState): number =>
+  s.contract ? Math.round((s.contract.salary * (fameEff(s) / 100) * BAL.fameSponsor) / 10) * 10 : 0;
+
 export function endSeason(s: GameState): SeasonEndResult {
   natInit(s);
   const L = leagueOf(s.leagueId),
@@ -199,6 +203,12 @@ export function endSeason(s: GameState): SeasonEndResult {
   );
   awards.forEach((t) => s.awards.push({ year: s.year, t }));
   addStat(s, 'fame', trophies.length * 3 + awards.length * 4);
+  // T-11-735 인기 스폰서 수입 — 인기가 높을수록 시즌이 끝날 때 연봉에 비례한 수입이 들어온다(RNG 없음).
+  const sponsor = sponsorPay(s);
+  if (sponsor > 0) {
+    addStat(s, 'money', sponsor);
+    notes.push(T.sponsorNote({ money: fmtMoney(sponsor) }));
+  }
 
   const rec = seasonRecord(s, o, rank, avg, [...trophies, ...awards]);
   s.career.push(rec);

@@ -14,6 +14,7 @@ const ko = {
   }) =>
     `${p.year} 시즌 종료 · ${p.league} ${p.rank}위 · 공식전 ${p.apps}경기 ${p.goals}골 ${p.assists}도움`,
   cwcNote: (p: { stage: string }) => `클럽 월드 챔피언십 ${p.stage}`,
+  sponsorNote: (p: { money: string }) => `인기 덕분에 스폰서 수입 ${p.money}`,
   exemptNote: (p: { what: string }) => `병역 특례(입대 면제) · ${p.what}`,
   promoted: (p: { club: string; league: string; down: string }) =>
     `${p.club} ${p.league} 승격 확정! 다음 시즌은 ${p.league}에서 뜁니다. 강등된 팀은 ${p.down}입니다.`,

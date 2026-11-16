@@ -19,6 +19,8 @@ const ko = {
   primeCost: '전성기 연장 비용 배율',
   primeGreat: '전성기 연장 대성공 비율',
   primeAdTotal: '커리어당 광고 연장 횟수',
+  auctionCost: '명품 경매품 값 배율',
+  fameSponsor: '인기 스폰서 수입 비율',
   potMean: '잠재력 평균',
   potSd: '잠재력 편차',
   potScoutSd: '스카우트 평가 오차',

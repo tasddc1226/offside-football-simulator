@@ -11,6 +11,8 @@ const ko = {
   lineTierMax: (p: { kind: string; tier: string }) =>
     `지금 은퇴하면 ${p.kind} ${p.tier} 등급이에요. 가장 높은 등급이에요.`,
   ladderLabel: '등급 기준(남은 자금)',
+  itemsLine: (p: { value: string }) =>
+    `명품 경매 소장품 가치 ${p.value}도 함께 더해져요. 인기가 높을수록 비싸게 쳐 줘요.`,
   note: '은퇴할 때 남은 자금을 모두 쓰고 종류와 등급이 명예의 전당에 남아요. 금액은 보이지 않아요. 금 등급부터 칭호를 받아요.',
   retireLine: (p: { kind: string; tier: string }) =>
     `은퇴 유산: ${p.kind} ${p.tier} 등급으로 남아요.`,
