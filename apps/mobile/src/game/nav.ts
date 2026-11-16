@@ -25,7 +25,8 @@ export function openOwnerHallVisit(teamId: string) {
 
 // 다른 화면에서 들어올 때 한 칸을 펼쳐 둔다(한 번만 읽힌다). T-11-141 설정 '확률과 공정성' → 확률 도감의 그 칸,
 // T-11-152 후보 화면 '리롤권 상점 가기' → 상점 화면의 리롤권 상점(T-11-567), '프리미엄 스카우트권 보기' → 스카우트권 상점.
-type Focus = 'fairness' | 'rerollShop' | 'scoutShop' | 'types' | 'backup' | 'marketRelease';
+type Focus =
+  'fairness' | 'glossary' | 'rerollShop' | 'scoutShop' | 'types' | 'backup' | 'marketRelease';
 let pending: Focus | null = null;
 function goFocus(screen: Screen, focus: Focus) {
   go(screen);
@@ -38,6 +39,8 @@ export const goScoutShop = () => goFocus('shop', 'scoutShop');
 export const goMarketRelease = () => goFocus('market', 'marketRelease');
 // T-11-355 처음 안내 카드 · 설정 → 확률 도감의 선수 유형 도감을 펼친 채로.
 export const goTypeDex = () => goFocus('dex', 'types');
+// T-11-732 설정 · "?" 설명 창 → 확률 도감의 용어 사전을 펼친 채로.
+export const goGlossary = () => goFocus('dex', 'glossary');
 // T-11-437 게임 화면 저장 위치 안내 → 설정의 백업 코드 카드로.
 export const goBackup = () => goFocus('settings', 'backup');
 // 라운지 공유 카드 → 그 선수의 구매창.

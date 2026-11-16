@@ -16,7 +16,7 @@
   import SiteFooter from './SiteFooter.svelte';
   import { publicDocPath } from '@offside/app-core/links';
   import { showInstallGuide } from './install.js';
-  import { goFairness, goHome, goTypeDex, takeFocus } from './nav.js';
+  import { goFairness, goGlossary, goHome, goTypeDex, takeFocus } from './nav.js';
   import Account from './Account.svelte';
   import LoginButtons from './LoginButtons.svelte';
   import { accountCache } from './account-state.svelte.js';
@@ -29,6 +29,7 @@
   import { onMount } from 'svelte';
   import ItemsHint from './ItemsHint.svelte';
   import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
+  import { glossaryText as GL } from '@offside/app-core/i18n/ko/glossary';
   import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
   import ClubCustomSettings from './ClubCustomSettings.svelte';
   import CustomNamesSettings from './CustomNamesSettings.svelte';
@@ -217,6 +218,7 @@
       <a href={publicDocPath('/faq/')}>{L.faq} <span aria-hidden="true">›</span></a>
       <button data-act="fairness" onclick={goFairness}>{L.fairness} <span aria-hidden="true">›</span></button>
       <button data-act="type-dex" onclick={goTypeDex}>{FG.typeDex} <span aria-hidden="true">›</span></button>
+      <button data-act="glossary" onclick={goGlossary}>{GL.title} <span aria-hidden="true">›</span></button>
       <!-- T-11-473 첫 커리어 따라가기 안내를 처음부터(홈으로 가서 새 커리어 버튼을 비춘다). -->
       <button data-act="tutorial-replay" onclick={replayTutorial}>{TU.replay} <span aria-hidden="true">›</span></button>
     </nav>

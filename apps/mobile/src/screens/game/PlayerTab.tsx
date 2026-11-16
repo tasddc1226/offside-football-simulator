@@ -28,6 +28,7 @@ import { NATION_EN } from '@offside/contracts/nations-en';
 import { fmtValue } from '@offside/app-core/format';
 import { retireAsk, save } from '../../game/host';
 import { BoostFx } from '../../components/BoostFx';
+import { TermHelp } from '../../components/TermHelp';
 import { appState } from '../../store';
 import { adFree, adsOff } from '../../platform/adFree';
 import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
@@ -439,9 +440,12 @@ export function PlayerTab({ s }: { s: GameState }) {
 
       <Card gap={0}>
         <Txt v="eyebrow">Profile</Txt>
-        <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 10 }}>
-          {L.profile}
-        </Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+          <Txt v="h2" accessibilityRole="header" style={{ flexShrink: 1 }}>
+            {L.profile}
+          </Txt>
+          <TermHelp of="playerProfile" />
+        </View>
         <Kv rows={info} />
         {pot.kind === 'shown' ? (
           <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 8 }} testID="pot-note">
