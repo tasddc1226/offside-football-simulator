@@ -543,6 +543,8 @@ export function createGameActions(host: GameHost) {
     let pressed = false;
     const btn: SheetButton = {
       label: offer === 'free' ? AD.seasonBonusFree({ money }) : AD.seasonBonusAd({ money }),
+      // T-11-731 회색 버튼이라 광고 시청이 1.1%였다(11-15). 금액이 보이는 강조 버튼으로 둔다.
+      cls: 'btn-accent',
       fn: () => {
         if (pressed || sheet.state.busy) return;
         pressed = true;
