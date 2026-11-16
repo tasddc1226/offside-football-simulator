@@ -42,6 +42,9 @@ export const achievementLabels: Record<string, string> = {
   // 커리어의 모양
   'c-journeyman': '한 선수가 다섯 리그에서 뛰기',
   'c-df-50': '통산 50골 수비수',
+  'c-auction-legend': '전설 소장품을 가진 선수',
+  'c-legacy-legend': '레전드 등급 은퇴 유산',
+  'c-legacy-players': '금 등급 이상 은퇴 유산을 남긴 선수',
   'c-peak': '최고 OVR',
   'c-ballon-players': '발롱도르를 받은 선수',
   'c-legends': '레전드 점수 1,000점 선수',
@@ -73,6 +76,7 @@ export const achievementUnits: Record<string, string> = {
   'c-peak': '',
   'c-ballon-players': '명',
   'c-legends': '명',
+  'c-legacy-players': '명',
   'team-clean': '승',
   'team-thrash': '승',
   'mgr-titles': '회',
@@ -113,6 +117,9 @@ export const achievementDescs: Record<string, string> = {
   's-quadruple':
     '리그 · 컵 · 대륙 대회 같은 클럽 우승을 한 시즌에 4개 들면 돼요. 슈퍼컵 · 클럽 월드컵 · 대표팀 우승은 세지 않아요.',
   'c-journeyman': '병역 시즌을 빼고 프로 리그 다섯 곳 이상에서 뛰면 돼요.',
+  'c-auction-legend': '명품 경매에서 전설 등급 소장품을 얻은 선수를 은퇴시키면 돼요.',
+  'c-legacy-legend': '은퇴 유산을 레전드 등급으로 남긴 선수를 은퇴시키면 돼요.',
+  'c-legacy-players': '은퇴 유산을 금 등급 이상으로 남긴 선수 수를 세요.',
   'team-clean': '내가 건 경기에서 실점 없이 이긴 경기를 세요.',
   'team-thrash': '내가 건 경기에서 4골 차 이상으로 이긴 경기를 세요.',
   'team-six': '내가 건 경기에서 한 번에 6골 이상 넣으면 돼요.',

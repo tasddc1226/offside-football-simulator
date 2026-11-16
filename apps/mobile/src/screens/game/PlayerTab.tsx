@@ -29,6 +29,7 @@ import { fmtValue } from '@offside/app-core/format';
 import { retireAsk, save } from '../../game/host';
 import { BoostFx } from '../../components/BoostFx';
 import { TermHelp } from '../../components/TermHelp';
+import { AuctionCard } from './AuctionCard';
 import { appState } from '../../store';
 import { adFree, adsOff } from '../../platform/adFree';
 import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded';
@@ -469,6 +470,11 @@ function LegacyCard({ s }: { s: GameState }) {
       <Txt v="sm" testID="legacy-line">
         {v.line}
       </Txt>
+      {v.items ? (
+        <Txt v="sm" testID="legacy-items">
+          {v.items}
+        </Txt>
+      ) : null}
       <View
         accessible
         accessibilityLabel={GL.ladderLabel}
@@ -702,6 +708,7 @@ export function PlayerTab({ s }: { s: GameState }) {
       <PrimeCard s={s} />
       <CareCard s={s} />
       <LegacyCard s={s} />
+      <AuctionCard s={s} />
 
       <Card gap={0}>
         {/* 영어 나라 이름은 웹에서 첫 화면 번들 밖에서 불러왔지만 앱은 한 번들이라 바로 쓴다. */}

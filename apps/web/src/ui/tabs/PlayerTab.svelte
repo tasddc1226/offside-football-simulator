@@ -43,6 +43,7 @@
   import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
   import WebPayPacks from '../cup/WebPayPacks.svelte';
   import TermHelp from '../TermHelp.svelte';
+  import AuctionCard from '../auction/AuctionCard.svelte';
 
   const { s }: { s: GameState } = $props();
   const lg = $derived(leagueOf(s.leagueId));
@@ -358,9 +359,13 @@
     <ul class="legacy-ladder fs-xs" aria-label={GL.ladderLabel}>
       {#each legacy.ladder as r (r.t)}<li class:on={r.on}><b>{r.name}</b><span>{r.min}</span></li>{/each}
     </ul>
+    {#if legacy.items}<p class="fs-sm" data-legacy-items>{legacy.items}</p>{/if}
     <p class="muted fs-xs">{legacy.note}</p>
   </section>
 {/if}
+
+<!-- T-11-735 명품 경매 -->
+<AuctionCard {s} />
 
 <section class="card">
   <!-- 영어 나라 이름은 첫 화면 번들에 싣지 않는다 — 외국 국적만 처음 볼 때 불러온다(T-10-096). -->

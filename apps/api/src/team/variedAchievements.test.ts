@@ -75,9 +75,12 @@ const NEW_PLAYER = [
   's-ballon-treble',
   'c-journeyman',
   'c-df-50',
+  'c-auction-legend',
+  'c-legacy-legend',
   'c-peak',
   'c-ballon-players',
   'c-legends',
+  'c-legacy-players',
   'secret-farewell',
   'secret-homecoming',
 ];
@@ -166,8 +169,8 @@ describe('시즌 2 새 업적 — 빈 상태', () => {
       expect(i.points).toBe(0);
       expect(i.worth).toBeGreaterThan(0);
     }
-    // 22개를 더한다.
-    expect(NEW_PLAYER.length + NEW_TEAM.length + 2).toBe(22);
+    // 22개를 더한다(T-11-735 명품 경매 · 은퇴 유산 업적 3개를 더해 25개).
+    expect(NEW_PLAYER.length + NEW_TEAM.length + 2).toBe(25);
     expect(achievementScore(g).score).toBe(0);
   });
 
@@ -512,5 +515,29 @@ describe('경기 장면 재료(ownerActivityIn) — 같은 경기 행 한 번 �
     });
     const empty = await ownerActivityIn(ctx.db, me.profileId, 3, 't-none');
     expect(empty).toMatchObject({ matchDays: 0, cleanWins: 0, bigWins: 0, topScore: 0 });
+  });
+});
+
+describe('T-11-735 명품 경매 · 은퇴 유산 업적', () => {
+  it('전설 소장품 · 레전드 유산 선수, 금 이상 유산 선수 수', () => {
+    const none = groupsOf([career()], S2);
+    expect(item(none, 'c-auction-legend').done).toBe(false);
+    expect(item(none, 'c-legacy-legend').done).toBe(false);
+    expect(item(none, 'c-legacy-players')).toMatchObject({ level: 0, cur: 0 });
+    const g = groupsOf(
+      [
+        career({ itemTop: 4, legacyTier: 4 }),
+        career({ legacyTier: 3 }),
+        career({ itemTop: 3, legacyTier: 2 }),
+      ],
+      S2,
+    );
+    expect(item(g, 'c-auction-legend')).toMatchObject({ done: true, points: 50 });
+    expect(item(g, 'c-legacy-legend')).toMatchObject({ done: true, points: 80 });
+    expect(item(g, 'c-legacy-players')).toMatchObject({ level: 1, cur: 2, next: 5 });
+    const en = localizeAchievements(g, 'en');
+    const label = (id: string) => en.flatMap((x) => x.items).find((i) => i.id === id)!.label;
+    expect(label('c-auction-legend')).toBe('Player with a Legendary collectible');
+    expect(label('c-legacy-players')).toBe('Players with a Gold+ retirement legacy');
   });
 });

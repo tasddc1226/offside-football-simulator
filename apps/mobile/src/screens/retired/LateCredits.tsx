@@ -4,6 +4,8 @@ import type { RetiredNumberResult } from '@offside/contracts';
 import type { LegendView } from '@offside/app-core/state';
 import { PlayStyleCredit } from './PlayStyleCredit';
 import { LegacyCredit } from './LegacyCredit';
+import { AuctionCredit } from './AuctionCredit';
+import { legendItems } from '@offside/app-core/auction-view';
 import { RetiredNumberCredit } from './RetiredNumberCredit';
 
 export function LateCredits({
@@ -13,10 +15,13 @@ export function LateCredits({
   v: LegendView;
   rn: RetiredNumberResult | null | undefined;
 }) {
+  // T-11-735 방금 은퇴한 세이브는 auction.items, 명예의 전당 스냅샷은 items.
+  const items = legendItems(v.d as Parameters<typeof legendItems>[0]);
   return (
     <>
       {v.d?.style ? <PlayStyleCredit d={v.d} /> : null}
       {v.d?.legacy ? <LegacyCredit legacy={v.d.legacy} /> : null}
+      {items.length ? <AuctionCredit items={items} /> : null}
       <RetiredNumberCredit v={v} rn={rn} />
     </>
   );

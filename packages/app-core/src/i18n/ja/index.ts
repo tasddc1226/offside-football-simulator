@@ -45,6 +45,7 @@ import { fundsHistory } from './fundsHistory';
 import { game } from './game';
 import { gameActions } from './gameActions';
 import { gameAttr } from './gameAttr';
+import { gameAuction } from './gameAuction';
 import { gameBoost } from './gameBoost';
 import { gameCare } from './gameCare';
 import { gameCareer } from './gameCareer';
@@ -178,6 +179,7 @@ export const ja = {
   game,
   gameActions,
   gameAttr,
+  gameAuction,
   gameBoost,
   gameCare,
   gameCareer,

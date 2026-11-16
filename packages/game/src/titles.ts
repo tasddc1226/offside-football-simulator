@@ -3,6 +3,7 @@
 // 여정(miles)·수상(awards)은 그대로 "그때 일어난 일" 로그로 남고, 칭호는 그 로그와 통산 기록을 읽어
 // 파생되는 "지금 나를 부르는 이름"이다. 판정은 전부 순수 함수 — 시드 RNG를 절대 호출하지 않는다(결정성).
 // 획득한 순간만 s.titles에 {id, year}로 적어 두고(획득 연도·새 칭호 연출용), 획득하면 등급만큼 인기가 오른다.
+import { completeKinds } from './collection.js';
 import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { LEAGUES } from './data.js';
 import { CONT, CUPS, POTY, TOP_SCORER } from './comps.js';
@@ -237,6 +238,21 @@ export const TITLES: TitleDef[] = [
   t('legacy_charity', 'journey', 3, (s) => s.legacy?.k === 'charity' && s.legacy.t >= 3),
   t('legacy_club', 'journey', 3, (s) => s.legacy?.k === 'club' && s.legacy.t >= 3),
   t('legacy_legend', 'journey', 4, (s) => (s.legacy?.t ?? 0) >= 4),
+  // T-11-735 명품 경매: 전설 소장품 하나, 한 종류 네 등급 모두.
+  t('auction_legend', 'journey', 3, (s) => !!s.auction?.items.some((x) => x.g === 4)),
+  t('auction_set', 'journey', 4, (s) =>
+    (['watch', 'car', 'art', 'trophy', 'wine', 'shirt'] as const).some((k) =>
+      [1, 2, 3, 4].every((g) => s.auction?.items.some((x) => x.k === k && x.g === g)),
+    ),
+  ),
+  // 소장품 12개(진열장 절반), 세트 3개.
+  t('auction_collector', 'journey', 2, (s) => (s.auction?.items.length ?? 0) >= 12),
+  t(
+    'auction_tycoon',
+    'journey',
+    4,
+    (s) => !!s.auction && completeKinds(s.auction.items).length >= 3,
+  ),
   only(
     isKorean,
     t('mil', 'journey', 1, (s) => !!s.mil?.served && !s.mil.serving, undefined, true),

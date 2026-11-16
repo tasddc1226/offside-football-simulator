@@ -4,6 +4,7 @@ import { events } from './_events';
 import { names } from './_names';
 import { roman } from './_roman';
 import { gAttrLabel } from './gAttrLabel';
+import { gAuction } from './gAuction';
 import { gBigStage } from './gBigStage';
 import { gBoost } from './gBoost';
 import { gCare } from './gCare';
@@ -44,6 +45,7 @@ export const zh = {
   __names: names,
   __roman: roman,
   gAttrLabel,
+  gAuction,
   gBigStage,
   gBoost,
   gCare,

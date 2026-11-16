@@ -3,6 +3,8 @@ import {
   LEGACY_AGE,
   LEGACY_KINDS,
   LEGACY_TIERS,
+  legacyFund,
+  legacyItemsValue,
   legacyTierOf,
   legacyToNext,
 } from '@offside/game/legacy';
@@ -23,15 +25,19 @@ export interface LegacyView {
   line: string;
   /** 등급 기준표(동 · 은 · 금 · 레전드). */
   ladder: { t: LegacyTier; name: string; min: string; on: boolean }[];
+  /** 소장품 가치가 더해질 때 한 줄. */
+  items?: string;
   note: string;
 }
 
 /** 카드를 보일 때만(30세부터, 은퇴 전). */
 export function legacyView(s: GameState): LegacyView | null {
   if (s.retired || s.age < LEGACY_AGE) return null;
-  const tier = legacyTierOf(s.money);
+  const fund = legacyFund(s);
+  const tier = legacyTierOf(fund);
   const pick = s.legacyPick;
-  const next = legacyToNext(s.money);
+  const next = legacyToNext(fund);
+  const iv = legacyItemsValue(s);
   const line = !pick
     ? L.linePick
     : tier
@@ -52,6 +58,7 @@ export function legacyView(s: GameState): LegacyView | null {
       const t = (i + 1) as LegacyTier;
       return { t, name: legacyTierName(t), min: won(min), on: tier >= t };
     }),
+    ...(iv ? { items: L.itemsLine({ value: won(iv) }) } : {}),
     note: L.note,
   };
 }
@@ -60,7 +67,7 @@ export function legacyView(s: GameState): LegacyView | null {
 export function legacyRetireLine(s: GameState): string | null {
   const pick = s.legacyPick;
   if (!pick) return null;
-  const tier = legacyTierOf(s.money);
+  const tier = legacyTierOf(legacyFund(s));
   return tier
     ? L.retireLine({ kind: G[pick], tier: legacyTierName(tier) })
     : L.retireLineBelow({ kind: G[pick] });
