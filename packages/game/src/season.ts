@@ -294,7 +294,7 @@ const DOWN: Record<string, string> = {
 const FAR_FROM_AMATEUR = new Set(['mls', 'spl', 'csl', 'bra']);
 /** T-11-457 사우디 · 중국은 MLS처럼 주로 베테랑에게 제의한다. */
 const RICH = new Set(['spl', 'csl']);
-/** T-11-736 가장 센 구단의 전력 — 제의 하한 · 가중치 중심의 상한. */
+/** T-11-737 가장 센 구단의 전력 — 제의 하한 · 가중치 중심의 상한. */
 const TOP_STR = Math.max(...CLUBS.map((c) => c.str));
 /** 마지막으로 뛴(군 복무가 아닌) 시즌 기록. */
 const lastPlayed = (s: GameState) => s.career.filter((r) => !r.mil).pop();
@@ -319,7 +319,7 @@ export function makeOffers(s: GameState) {
           (clubLeague(c, s).tier <= (value >= 66 ? 4 : 3) && !FAR_FROM_AMATEUR.has(c.leagueId))) &&
         (clubLeague(c, s).tier < 4 || leagueOf(s.leagueId).tier >= 4 || c.str <= value - 3),
     );
-  // T-11-736 평가값이 최상위 구단보다 훨씬 높아도(OVR 99 + 좋은 평점 + 인기) 제의가 0개가 되지 않게, 하한은 최상위 구단
+  // T-11-737 평가값이 최상위 구단보다 훨씬 높아도(OVR 99 + 좋은 평점 + 인기) 제의가 0개가 되지 않게, 하한은 최상위 구단
   // 전력 - 6까지만 올린다. 전엔 평가값 101을 넘으면 후보가 비어 재계약밖에 없었다(라운지 '로마 감옥').
   let pool = eligible(Math.min(value - 14, TOP_STR - 6));
   // 고교·대학은 갈 수 있는 리그가 정해져 있어 너무 잘 크면 하한에 걸려 후보가 빈다. 그때는 하한 없이
