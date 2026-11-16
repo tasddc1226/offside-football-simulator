@@ -36,6 +36,7 @@
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
   import WebPayPacks from '../cup/WebPayPacks.svelte';
+  import TermHelp from '../TermHelp.svelte';
 
   const { s }: { s: GameState } = $props();
   const lg = $derived(leagueOf(s.leagueId));
@@ -189,7 +190,7 @@
 
 <section class="card">
   <div class="eyebrow">Profile</div>
-  <h2 style="margin-bottom:10px">{L.profile}</h2>
+  <h2 style="margin-bottom:10px">{L.profile}<TermHelp of="playerProfile" /></h2>
   <dl class="kv">
     <dt>{L.nation}</dt><dd data-nation><span aria-hidden="true">{flagOf(nation.code)}</span> {tn(nation.ko)}</dd>
     <dt>{L.body}</dt><dd data-body>{body.h}cm · {body.w}kg</dd>

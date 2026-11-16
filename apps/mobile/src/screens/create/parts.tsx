@@ -17,13 +17,28 @@ export function mixHex(a: string, b: string, w: number): string {
 }
 
 /** 라벨 + 내용(웹 .field). */
-export function Field({ label, children }: { label?: string; children: ReactNode }) {
+/** help: 이름 옆에 붙는 "?" 버튼(T-11-732 TermHelp). */
+export function Field({
+  label,
+  help,
+  children,
+}: {
+  label?: string;
+  help?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <View style={{ gap: 6 }}>
       {label ? (
-        <Txt tone="muted" style={{ fontSize: 13, fontWeight: '600', lineHeight: 13 * 1.5 }}>
-          {label}
-        </Txt>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Txt
+            tone="muted"
+            style={{ flexShrink: 1, fontSize: 13, fontWeight: '600', lineHeight: 13 * 1.5 }}
+          >
+            {label}
+          </Txt>
+          {help}
+        </View>
       ) : null}
       {children}
     </View>

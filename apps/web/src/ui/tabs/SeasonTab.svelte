@@ -35,6 +35,7 @@
   import { gameSeasonText as L } from '@offside/app-core/i18n/ko/gameSeason';
   import { bracketView } from '@offside/app-core/bracket';
   import CompIcon from '../CompIcon.svelte';
+  import TermHelp from '../TermHelp.svelte';
 
   const { s }: { s: GameState } = $props();
 
@@ -268,7 +269,7 @@
 </section>
 {:else}
 <section class="card stack" data-prep data-tour="prep">
-  <div><div class="eyebrow">Next · {label}</div><h2>{L.prepTitle}</h2></div>
+  <div><div class="eyebrow">Next · {label}</div><h2>{L.prepTitle}<TermHelp of="seasonPrep" /></h2></div>
   <div class="meters">
     <div class="meter"><span>{L.condition}</span><div class="bar"><i class={meterCls(s.cond, 40, 65)} style="width:{Math.round(s.cond)}%"></i></div><span class="v">{Math.round(s.cond)}</span></div>
     <div class="meter"><span>{L.morale}</span><div class="bar"><i class={meterCls(s.morale, 40, 60)} style="width:{Math.round(s.morale)}%"></i></div><span class="v">{Math.round(s.morale)}</span></div>

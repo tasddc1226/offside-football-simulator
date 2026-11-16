@@ -57,6 +57,7 @@ import { gameReport } from './gameReport';
 import { gameSeason } from './gameSeason';
 import { gameTrophy } from './gameTrophy';
 import { gift } from './gift';
+import { glossary } from './glossary';
 import { hof } from './hof';
 import { hofOwn } from './hofOwn';
 import { hofRn } from './hofRn';
@@ -187,6 +188,7 @@ export const ja = {
   gameSeason,
   gameTrophy,
   gift,
+  glossary,
   hof,
   hofOwn,
   hofRn,

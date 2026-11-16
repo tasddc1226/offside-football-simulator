@@ -16,7 +16,7 @@ import { namePublicEnabled, setNamePublic } from '@offside/app-core/namePublic';
 import { saveKey } from '@offside/game/storage';
 import { buzz } from '../../game/host';
 import { SiteFooter } from '../../components/SiteFooter';
-import { go, goFairness, goHome, goTypeDex, takeFocus } from '../../game/nav';
+import { go, goFairness, goGlossary, goHome, goTypeDex, takeFocus } from '../../game/nav';
 import { Account } from '../owner/Account';
 import { LoginButtons } from '../owner/LoginButtons';
 import { accountCache } from '../../store';
@@ -28,6 +28,7 @@ import { tutorialText as TU } from '@offside/app-core/i18n/ko/tutorial';
 import { scrollBackTo } from '../../ui/scroll';
 import { ItemsHint } from '../../components/ItemsHint';
 import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
+import { glossaryText as GL } from '@offside/app-core/i18n/ko/glossary';
 import { openWeb } from '../../platform/openWeb';
 import { appBuildInfo } from '../../platform/updates';
 import { prefs } from '../../store';
@@ -348,6 +349,7 @@ export default function Settings() {
             { text: L.faq, path: publicDocPath('/faq/'), id: 'faq' },
             { text: L.fairness, id: 'fairness', onPress: goFairness },
             { text: FG.typeDex, id: 'type-dex', onPress: goTypeDex },
+            { text: GL.title, id: 'glossary', onPress: goGlossary },
             // T-11-473 첫 커리어 따라가기 안내를 처음부터(홈으로 가서 새 커리어 버튼을 비춘다).
             { text: TU.replay, id: 'tutorial-replay', onPress: replayTutorial },
           ]}
