@@ -4,10 +4,11 @@ import { proxy } from 'valtio';
 import { loadKey, saveKey } from '@offside/game/storage';
 import { cachedGet, invalidateApiCache } from '@offside/app-core/api/client';
 import {
-  GAME_CENTER_ACHIEVEMENTS,
+  GAME_CENTER_EXPANDED_ACHIEVEMENTS,
+  GAME_CENTER_LEADERBOARDS,
   GAME_CENTER_LEADERBOARD_ID,
-  GameCenterProgressSchema,
-  type GameCenterProgress,
+  GameCenterExpandedProgressSchema,
+  type GameCenterExpandedProgress,
 } from '@offside/contracts/game-center';
 import { onRetirementSynced } from '@offside/app-core/outbox';
 import { ensureSession, onSessionChanged } from './session';
@@ -28,7 +29,7 @@ interface NativeGameCenter {
   showDashboard(playerId: string, leaderboardId: string, achievements: boolean): Promise<boolean>;
 }
 
-const PATH = '/v1/owner/game-center';
+const PATH = '/v1/owner/game-center/expanded';
 const KEY = 'ft_game_center_connection';
 const native =
   Platform.OS === 'ios' ? requireOptionalNativeModule<NativeGameCenter>('OffsideGameCenter') : null;
@@ -114,16 +115,16 @@ async function authenticate(): Promise<Player> {
   }
 }
 
-async function progress(epoch: number): Promise<GameCenterProgress> {
-  const result = await cachedGet<GameCenterProgress>(PATH, 60_000);
+async function progress(epoch: number): Promise<GameCenterExpandedProgress> {
+  const result = await cachedGet<GameCenterExpandedProgress>(PATH, 60_000);
   check(epoch);
   if (!result.ok) throw new GameCenterFailure('sync');
-  const parsed = GameCenterProgressSchema.safeParse(result.data);
+  const parsed = GameCenterExpandedProgressSchema.safeParse(result.data);
   if (!parsed.success) throw new GameCenterFailure('sync');
   return parsed.data;
 }
 
-async function send(data: GameCenterProgress, target: Connection, epoch: number) {
+async function send(data: GameCenterExpandedProgress, target: Connection, epoch: number) {
   check(epoch);
   if (data.profileId !== target.profileId || (await native!.getPlayer())?.id !== target.playerId)
     throw new GameCenterFailure('changed');
@@ -131,23 +132,39 @@ async function send(data: GameCenterProgress, target: Connection, epoch: number)
   const fingerprint = JSON.stringify([
     target.profileId,
     target.playerId,
-    data.legendScore,
+    data.scores,
+    data.week,
     data.achievements,
   ]);
   if (submitted !== fingerprint) {
-    await native!.submitProgress(
-      target.playerId,
-      GAME_CENTER_LEADERBOARD_ID,
-      data.legendScore,
-      data.achievements.map((key) => GAME_CENTER_ACHIEVEMENTS[key]),
-    );
+    let ids = data.achievements.map((key) => GAME_CENTER_EXPANDED_ACHIEVEMENTS[key]);
+    for (const key of Object.keys(
+      GAME_CENTER_LEADERBOARDS,
+    ) as (keyof typeof GAME_CENTER_LEADERBOARDS)[]) {
+      const score = data.scores[key];
+      if (score === null) continue;
+      // Never let a cached response from a finished week populate the next recurrence.
+      if (
+        key === 'weekly_legend' &&
+        (Date.now() < Date.parse(data.week.startsAt) || Date.now() >= Date.parse(data.week.endsAt))
+      )
+        continue;
+      check(epoch);
+      await native!.submitProgress(target.playerId, GAME_CENTER_LEADERBOARDS[key], score, ids);
+      check(epoch);
+      ids = [];
+    }
+    if (ids.length) {
+      check(epoch);
+      await native!.submitProgress(target.playerId, GAME_CENTER_LEADERBOARD_ID, null, ids);
+    }
     check(epoch);
     if ((await native!.getPlayer())?.id !== target.playerId) throw new GameCenterFailure('changed');
     check(epoch);
     submitted = fingerprint;
   }
   gameCenter.synced = true;
-  gameCenter.hasRecords = data.legendScore !== null || data.achievements.length > 0;
+  gameCenter.hasRecords = data.scores.legend !== null || data.achievements.length > 0;
 }
 
 /** Explicit consent: bind this OFFSIDE profile to the currently authenticated Game Center player on this device. */

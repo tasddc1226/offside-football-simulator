@@ -50,7 +50,7 @@ public final class OffsideGameCenterModule: Module {
 
     AsyncFunction("submitProgress") {
       (playerID: String, leaderboardID: String, score: Int?, achievementIDs: [String], promise: Promise) in
-      guard self.matches(playerID), score.map({ $0 >= 0 }) ?? true, achievementIDs.count <= 4 else {
+      guard self.matches(playerID), score.map({ $0 >= 0 }) ?? true, achievementIDs.count <= 12 else {
         promise.reject("ERR_GAME_CENTER_PLAYER_CHANGED", "Player changed or progress is invalid")
         return
       }
@@ -87,10 +87,8 @@ public final class OffsideGameCenterModule: Module {
       // No floating access-point overlay: settings owns the accessible entry buttons.
       if achievements {
         GKAccessPoint.shared.trigger(state: .achievements) { promise.resolve(true) }
-      } else if #available(iOS 18.0, *) {
-        GKAccessPoint.shared.trigger(leaderboardID: leaderboardID,
-          playerScope: .global, timeScope: .allTime) { promise.resolve(true) }
       } else {
+        // Open the list so weekly, goals and assists are reachable alongside the default board.
         GKAccessPoint.shared.trigger(state: .leaderboards) { promise.resolve(true) }
       }
     }.runOnQueue(.main)

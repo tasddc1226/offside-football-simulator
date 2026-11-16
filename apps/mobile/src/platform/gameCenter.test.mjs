@@ -50,11 +50,12 @@ vi.mock('./session', () => ({
   },
 }));
 
-const data = (extra = {}) => ({
+const data = ({ legendScore = 250, ...extra } = {}) => ({
   ok: true,
   data: {
     profileId: 'owner-a',
-    legendScore: 250,
+    scores: { legend: legendScore, career_goals: null, career_assists: null, weekly_legend: null },
+    week: { startsAt: '2026-11-22T15:00:00.000Z', endsAt: '2026-11-29T15:00:00.000Z' },
     achievements: ['first_retirement', 'first_ballon'],
     ...extra,
   },
@@ -182,5 +183,73 @@ describe('Game Center consent and identity boundaries', () => {
     expect(f.submit).toHaveBeenCalledOnce();
     expect(m.gameCenter.connected).toBe(false);
     expect(f.save).toHaveBeenLastCalledWith('ft_game_center_connection', null);
+  });
+  it('submits distinct board maxima and all twelve achievements only once per snapshot', async () => {
+    const { GAME_CENTER_EXPANDED_ACHIEVEMENTS } = await import('@offside/contracts/game-center');
+    const achievements = Object.keys(GAME_CENTER_EXPANDED_ACHIEVEMENTS);
+    f.read.mockResolvedValue(
+      data({
+        scores: { legend: 3000, career_goals: 300, career_assists: 200, weekly_legend: null },
+        achievements,
+      }),
+    );
+    const m = await import('./gameCenter.ts');
+    expect(await m.connectGameCenter()).toBe(true);
+    expect(f.submit).toHaveBeenCalledTimes(3);
+    expect(f.submit.mock.calls.map((x) => x.slice(1, 3))).toEqual([
+      ['com.offsidelab.app.leaderboard.career_legend.v1', 3000],
+      ['com.offsidelab.app.leaderboard.career_goals.v1', 300],
+      ['com.offsidelab.app.leaderboard.career_assists.v1', 200],
+    ]);
+    expect(f.submit.mock.calls[0][3]).toEqual(Object.values(GAME_CENTER_EXPANDED_ACHIEVEMENTS));
+    expect(f.submit.mock.calls[1][3]).toEqual([]);
+    await m.syncGameCenter();
+    expect(f.submit).toHaveBeenCalledTimes(3);
+  });
+  it('does not put a cached score from an expired week into the next recurrence', async () => {
+    f.read.mockResolvedValue(
+      data({
+        scores: { legend: 3000, career_goals: null, career_assists: null, weekly_legend: 2000 },
+        week: { startsAt: '2020-11-22T15:00:00.000Z', endsAt: '2020-11-29T15:00:00.000Z' },
+      }),
+    );
+    const m = await import('./gameCenter.ts');
+    expect(await m.connectGameCenter()).toBe(true);
+    expect(f.submit).toHaveBeenCalledOnce();
+  });
+  it('submits the current weekly score separately from the all-time best', async () => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-23T00:00:00.000Z'));
+    try {
+      f.read.mockResolvedValue(
+        data({
+          scores: { legend: 3000, career_goals: null, career_assists: null, weekly_legend: 2000 },
+        }),
+      );
+      const m = await import('./gameCenter.ts');
+      expect(await m.connectGameCenter()).toBe(true);
+      expect(f.submit).toHaveBeenLastCalledWith(
+        'player-a',
+        'com.offsidelab.app.leaderboard.weekly_legend.v1',
+        2000,
+        [],
+      );
+    } finally {
+      now.mockRestore();
+    }
+  });
+  it('stops between boards when the OFFSIDE account changes during submission', async () => {
+    f.read.mockResolvedValue(
+      data({
+        scores: { legend: 3000, career_goals: 300, career_assists: 200, weekly_legend: null },
+      }),
+    );
+    const m = await import('./gameCenter.ts');
+    f.submit.mockImplementationOnce(async () => {
+      f.sessionChanged();
+      return true;
+    });
+    expect(await m.connectGameCenter()).toBe(false);
+    expect(f.submit).toHaveBeenCalledOnce();
+    expect(m.gameCenter.connected).toBe(false);
   });
 });
