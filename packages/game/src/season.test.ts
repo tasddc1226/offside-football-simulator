@@ -276,6 +276,40 @@ describe('아마추어 고OVR 제의', () => {
   });
 });
 
+// T-11-737: 평가값이 최상위 구단보다 훨씬 높으면(OVR 99 + 좋은 평점) 하한에 걸려 제의가 0개였다(라운지 '로마 감옥').
+describe('최상위 선수 자유계약 제의', () => {
+  it('OVR 99에 평점이 좋아도 다른 최상위 구단의 제의가 온다', async () => {
+    await import('./index.js');
+    const { makeOffers } = await import('./season.js');
+    const { CLUBS } = await import('./data.js');
+    const top = Math.max(...CLUBS.map((c) => c.str));
+    const roma = CLUBS.find((c) => c.leagueId === 'sa' && c.str < top - 5)!;
+    for (let seed = 1; seed <= 30; seed++) {
+      setActiveRng(createRng(seed));
+      const s = newGame(
+        { name: '전성기', number: 3, pos: 'FW', foot: '왼발', type: 'poacher', trait: 'normal' },
+        seed,
+      );
+      Object.assign(s, { club: { ...roma }, leagueId: 'sa', age: 27, contract: null, fame: 100 });
+      for (const key of Object.keys(s.sub)) s.sub[key] = 99;
+      s.career.push({
+        ...s.career[0],
+        y: s.year,
+        age: 26,
+        apps: 34,
+        rating: 7.8,
+        mil: false,
+      } as never);
+      const offers = makeOffers(s);
+      expect(offers.length).toBeGreaterThan(0);
+      for (const o of offers) {
+        expect(o.clubId).not.toBe(roma.id);
+        expect(o.str).toBeGreaterThanOrEqual(top - 6);
+      }
+    }
+  });
+});
+
 describe('T-11-257 임대', () => {
   const setup = async () => {
     await import('./index.js');

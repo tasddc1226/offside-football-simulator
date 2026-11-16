@@ -1,0 +1,27 @@
+{
+  "id": "t-11-737-elite-offers",
+  "title": "최상위 선수도 자유계약 때 다른 구단 제의를 받아요",
+  "items": [
+    "OVR이 아주 높고 지난 시즌 평점까지 좋으면 이적 시장에 다른 구단 제의가 하나도 오지 않던 문제를 고쳤어요. 이제는 최상위 구단들이 제의를 보내요."
+  ],
+  "en": {
+    "title": "Top players now get offers as free agents",
+    "items": [
+      "Fixed a bug where a player with a very high OVR and a strong last season got no offers from other clubs in the transfer market. Top clubs now send offers."
+    ]
+  },
+  "ja": {
+    "title": "トップ選手もフリーのときに他クラブからオファーが届きます",
+    "items": [
+      "OVRがとても高く前シーズンの評価も良いと、移籍市場で他クラブからのオファーが1件も届かない不具合を直しました。これからはトップクラブがオファーを出します。"
+    ]
+  },
+  "zh": {
+    "title": "頂尖球員自由身時也會收到其他球隊的邀約",
+    "items": [
+      "修正了 OVR 很高且上季評分也好時，轉會市場上完全收不到其他球隊邀約的問題。現在頂尖球隊會送出邀約。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}
