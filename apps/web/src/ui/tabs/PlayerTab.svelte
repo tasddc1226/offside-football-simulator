@@ -30,6 +30,12 @@
   import { fundsText } from '@offside/app-core/funds';
   import type { RewardShopResponse, SureShopResponse } from '@offside/contracts';
   import { careView, doCare } from '@offside/app-core/care-view';
+  import { doPrime, primeView } from '@offside/app-core/prime-view';
+  import { legacyView } from '@offside/app-core/legacy-view';
+  import { gameLegacyText as GL } from '@offside/app-core/i18n/ko/gameLegacy';
+  import { pickLegacy } from '@offside/game/legacy';
+  import type { LegacyKind } from '@offside/game/types';
+  import { gamePrimeText as PL } from '@offside/app-core/i18n/ko/gamePrime';
   import { gameCareText as CL } from '@offside/app-core/i18n/ko/gameCare';
   import type { CareTier } from '@offside/game/care';
   import { fetchItems } from '@offside/app-core/api/cup';
@@ -168,6 +174,26 @@
     save();
     careMsg = msg;
   }
+  // T-11-733 전성기 연장. 강화처럼 한 번 더 눌러 도전하고, 결과는 강화 연출(BoostFx)로 보여 준다. 웹은 광고 자리가 없다.
+  const prime = $derived(primeView(s));
+  let primeArm = $state(false);
+  function onPrime() {
+    if (!primeArm) {
+      primeArm = true;
+      return;
+    }
+    primeArm = false;
+    const out = doPrime(s);
+    if (!out) return;
+    save();
+    fx = out;
+  }
+  // T-11-733 은퇴 유산. 종류를 골라 두면 은퇴할 때 남은 자금으로 등급이 정해진다(같은 것을 다시 누르면 취소).
+  const legacy = $derived(legacyView(s));
+  function onLegacy(k: LegacyKind) {
+    pickLegacy(s, k);
+    save();
+  }
   async function onClubBoost() {
     const o = clubTry;
     if (clubBusy || !o) return;
@@ -268,6 +294,33 @@
   </section>
 {/if}
 
+{#if prime}
+  <section class="card" data-prime={prime.status}>
+    <div class="eyebrow">Prime</div>
+    <div class="boost-head">
+      <h2>{PL.title}</h2>
+      <span class="boost-steps" aria-label={PL.stepsLabel({ max: prime.max, lv: prime.lv })}>
+        {#each { length: prime.max } as _, i (i)}<i class:on={i < prime.lv}></i>{/each}
+        <b>+{prime.lv}</b>
+      </span>
+    </div>
+    <p class="fs-sm" data-prime-line>{prime.line}</p>
+    {#if prime.button}
+      {#if primeArm}<p class="fs-sm boost-confirm" data-prime-confirm>{prime.confirm}</p>{/if}
+      <div class="boost-acts">
+        <button class="btn btn-tonal btn-block" data-act="prime" onclick={onPrime}>{#if primeArm}{PL.confirmBtn}{:else}{prime.button}<span class="btn-badge">{prime.badge} · {prime.chance}%</span>{/if}</button>
+        {#if primeArm}<button class="btn" data-act="prime-cancel" onclick={() => (primeArm = false)}>{PL.cancel}</button>{/if}
+      </div>
+    {/if}
+    <p class="muted fs-xs">{prime.note}</p>
+    {#if prime.history.length}
+      <ul class="boost-log muted fs-xs" data-prime-log>
+        {#each prime.history as h, i (i)}<li>{h}</li>{/each}
+      </ul>
+    {/if}
+  </section>
+{/if}
+
 {#if care}
   <section class="card" data-care={care.status}>
     <div class="eyebrow">Conditioning</div>
@@ -288,6 +341,23 @@
     {/if}
     {#if careMsg}<p class="muted fs-sm" aria-live="polite">{careMsg}</p>{/if}
     <p class="muted fs-xs">{care.note}</p>
+  </section>
+{/if}
+
+{#if legacy}
+  <section class="card" data-legacy-card={s.legacyPick ?? 'none'}>
+    <div class="eyebrow">Legacy</div>
+    <h2 style="margin-bottom:6px">{GL.title}</h2>
+    <div class="legacy-kinds" role="group" aria-label={GL.title}>
+      {#each legacy.kinds as o (o.k)}
+        <button class="btn btn-sm" class:btn-tonal={o.on} aria-pressed={o.on} data-act="legacy-{o.k}" onclick={() => onLegacy(o.k)}>{o.name}</button>
+      {/each}
+    </div>
+    <p class="fs-sm" data-legacy-line>{legacy.line}</p>
+    <ul class="legacy-ladder fs-xs" aria-label={GL.ladderLabel}>
+      {#each legacy.ladder as r (r.t)}<li class:on={r.on}><b>{r.name}</b><span>{r.min}</span></li>{/each}
+    </ul>
+    <p class="muted fs-xs">{legacy.note}</p>
   </section>
 {/if}
 
@@ -390,6 +460,33 @@
   .boost-acts [data-act='care-cancel'] {
     flex: none;
     white-space: nowrap;
+  }
+  .legacy-kinds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 4px 0 8px;
+  }
+  .legacy-ladder {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 4px;
+    text-align: center;
+  }
+  .legacy-ladder li {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 4px 2px;
+    display: flex;
+    flex-direction: column;
+    color: var(--muted);
+  }
+  .legacy-ladder li.on {
+    border-color: var(--accent);
+    color: var(--ink);
   }
   .boost-log {
     margin: 6px 0 0;

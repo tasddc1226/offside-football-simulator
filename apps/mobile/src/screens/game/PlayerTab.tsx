@@ -34,6 +34,11 @@ import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded
 import { openPeek, openPeekWithClub, peekAvailable, potPeek } from '../../platform/rewardedPeek';
 import { useClubReward, useSureShop } from '../../platform/clubShop';
 import { careView, doCare } from '@offside/app-core/care-view';
+import { doPrime, primeView } from '@offside/app-core/prime-view';
+import { legacyView } from '@offside/app-core/legacy-view';
+import { gameLegacyText as GL } from '@offside/app-core/i18n/ko/gameLegacy';
+import { pickLegacy } from '@offside/game/legacy';
+import { gamePrimeText as PL } from '@offside/app-core/i18n/ko/gamePrime';
 import { gameCareText as CL } from '@offside/app-core/i18n/ko/gameCare';
 import type { CareTier } from '@offside/game/care';
 import { iapItems, useIapItems } from '../../platform/iapItems';
@@ -296,6 +301,204 @@ function BoostCard({ s }: { s: GameState }) {
   );
 }
 
+/**
+ * T-11-733 전성기 연장(웹 PlayerTab.svelte data-prime). 정점 나이 1년 전 시즌부터 선수 자금으로 정점 나이를 한 해씩 늦추는 데
+ * 도전한다. 자금이 모자라면 보상형 광고를 끝까지 보고(광고 제거 구매자는 바로) 도전한다(커리어 합계 상한, 앱 전용).
+ */
+function PrimeCard({ s }: { s: GameState }) {
+  const c = useColors();
+  const [arming, setArming] = useState(false);
+  const [fx, setFx] = useState<BoostOutcome | null>(null);
+  const [adBusy, setAdBusy] = useState(false);
+  const [adMessage, setAdMessage] = useState('');
+  const owned = adsOff(useSnapshot(adFree));
+  const v = primeView(s, rewardOffer('prime', owned));
+  const primeAd = !!v?.adButton && rewardOffer('prime', owned) === 'ad';
+  useEffect(() => {
+    if (primeAd) prepareReward('prime');
+  }, [primeAd]);
+  if (!v) return null;
+  // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다. 결과를 먼저 저장하고 연출을 연다.
+  const run = (pay: 'money' | 'ad') => {
+    const out = doPrime(appState.G!, pay);
+    if (!out) return;
+    save();
+    setFx(out);
+  };
+  const onPrime = () => {
+    if (!arming) return setArming(true);
+    setArming(false);
+    run('money');
+  };
+  const onAdPrime = async () => {
+    if (adBusy) return;
+    setAdBusy(true);
+    setAdMessage('');
+    try {
+      setAdMessage(await claimReward('prime', () => run('ad'), PL.adWatch));
+    } finally {
+      setAdBusy(false);
+    }
+  };
+  return (
+    <Card gap={0} testID="prime">
+      {fx ? <BoostFx out={fx} onDone={() => setFx(null)} /> : null}
+      <Txt v="eyebrow">Prime</Txt>
+      <View
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginBottom: 6,
+        }}
+      >
+        <Txt v="h2" accessibilityRole="header">
+          {PL.title}
+        </Txt>
+        <View
+          accessible
+          accessibilityLabel={PL.stepsLabel({ max: v.max, lv: v.lv })}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+        >
+          {Array.from({ length: v.max }, (_, i) => (
+            <View
+              key={i}
+              style={{
+                width: 10,
+                height: 10,
+                borderRadius: RADIUS.xs,
+                borderWidth: 1.5,
+                borderColor: i < v.lv ? c.accent : c.line,
+                backgroundColor: i < v.lv ? c.accent : 'transparent',
+              }}
+            />
+          ))}
+          <Txt style={{ marginLeft: 4, fontWeight: '700' }}>+{v.lv}</Txt>
+        </View>
+      </View>
+      <Txt v="sm" testID="prime-line">
+        {v.line}
+      </Txt>
+      {v.button ? (
+        <View style={{ marginVertical: 8, gap: 8 }}>
+          {arming ? (
+            <Txt v="sm" style={{ color: c.bad }} testID="prime-confirm">
+              {v.confirm}
+            </Txt>
+          ) : null}
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <Btn
+              kind="tonal"
+              style={{ flex: 1 }}
+              testID="prime-btn"
+              badge={arming ? undefined : `${v.badge} · ${v.chance}%`}
+              onPress={onPrime}
+            >
+              {arming ? PL.confirmBtn : v.button}
+            </Btn>
+            {arming ? (
+              <Btn testID="prime-cancel" onPress={() => setArming(false)}>
+                {PL.cancel}
+              </Btn>
+            ) : null}
+          </View>
+        </View>
+      ) : null}
+      {v.adButton ? (
+        <View style={{ marginVertical: 8, gap: 6 }} testID="prime-ad">
+          <Txt v="sm" tone="muted" testID="prime-ad-note">
+            {adMessage || v.adNote}
+          </Txt>
+          <Btn
+            kind="tonal"
+            disabled={adBusy}
+            testID="prime-ad-btn"
+            badge={adBusy ? undefined : v.adBadge}
+            onPress={() => void onAdPrime()}
+          >
+            {adBusy ? B.adLoading : v.adButton}
+          </Btn>
+        </View>
+      ) : adMessage ? (
+        <Txt v="sm" tone="muted">
+          {adMessage}
+        </Txt>
+      ) : null}
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 4 }}>
+        {v.note}
+      </Txt>
+      {v.history.map((h, i) => (
+        <Txt key={i} tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 2 }}>
+          {`· ${h}`}
+        </Txt>
+      ))}
+    </Card>
+  );
+}
+
+/** T-11-733 은퇴 유산(웹 PlayerTab.svelte data-legacy-card). 종류를 골라 두면 은퇴할 때 남은 자금으로 등급이 정해진다. */
+function LegacyCard({ s }: { s: GameState }) {
+  const c = useColors();
+  const v = legacyView(s);
+  if (!v) return null;
+  return (
+    <Card gap={0} testID="legacy">
+      <Txt v="eyebrow">Legacy</Txt>
+      <Txt v="h2" accessibilityRole="header" style={{ marginBottom: 6 }}>
+        {GL.title}
+      </Txt>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+        {v.kinds.map((o) => (
+          <Btn
+            key={o.k}
+            sm
+            kind={o.on ? 'tonal' : undefined}
+            testID={`legacy-${o.k}`}
+            accessibilityState={{ selected: o.on }}
+            onPress={() => {
+              // s는 읽기 전용 스냅샷이라 스토어의 세이브를 고친다.
+              pickLegacy(appState.G!, o.k);
+              save();
+            }}
+          >
+            {o.name}
+          </Btn>
+        ))}
+      </View>
+      <Txt v="sm" testID="legacy-line">
+        {v.line}
+      </Txt>
+      <View
+        accessible
+        accessibilityLabel={GL.ladderLabel}
+        style={{ flexDirection: 'row', gap: 4, marginVertical: 8 }}
+      >
+        {v.ladder.map((r) => (
+          <View
+            key={r.t}
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              paddingVertical: 4,
+              borderRadius: RADIUS.sm,
+              borderWidth: 1,
+              borderColor: r.on ? c.accent : c.line,
+            }}
+          >
+            <Txt style={{ fontWeight: '700', fontSize: rem(FONT.caption) }}>{r.name}</Txt>
+            <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
+              {r.min}
+            </Txt>
+          </View>
+        ))}
+      </View>
+      <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
+        {v.note}
+      </Txt>
+    </Card>
+  );
+}
+
 /** T-11-513 몸 관리: 정점을 넘긴 시즌에 선수 자금으로 시즌 끝 하락을 줄인다. 고른 단계를 한 번 더 눌러 받는다. */
 function CareCard({ s }: { s: GameState }) {
   const c = useColors();
@@ -492,7 +695,9 @@ export function PlayerTab({ s }: { s: GameState }) {
       </Card>
 
       {boostHidden(s) ? null : <BoostCard s={s} />}
+      <PrimeCard s={s} />
       <CareCard s={s} />
+      <LegacyCard s={s} />
 
       <Card gap={0}>
         {/* 영어 나라 이름은 웹에서 첫 화면 번들 밖에서 불러왔지만 앱은 한 번들이라 바로 쓴다. */}

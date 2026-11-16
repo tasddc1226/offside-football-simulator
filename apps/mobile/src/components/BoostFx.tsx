@@ -124,7 +124,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
           {!done ? (
             <>
               <Txt v="h2" accessibilityRole="header">
-                {L.rolling}
+                {out.rolling ?? L.rolling}
               </Txt>
               <View
                 style={{

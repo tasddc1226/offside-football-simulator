@@ -232,6 +232,11 @@ export const TITLES: TitleDef[] = [
   t('big5', 'journey', 3, (s) => mile(s, 'big5')),
   t('veteran', 'journey', 3, (s) => s.career.some((r) => r.pro && r.age >= 38 && r.apps > 0)),
   t('oneclub', 'journey', 4, (s) => mile(s, 'oneclub')),
+  // T-11-733 은퇴 유산 — 은퇴 때(legacy.settleLegacy) 금 등급 이상이면 종류별 칭호, 레전드 등급이면 최고 칭호.
+  t('legacy_academy', 'journey', 3, (s) => s.legacy?.k === 'academy' && s.legacy.t >= 3),
+  t('legacy_charity', 'journey', 3, (s) => s.legacy?.k === 'charity' && s.legacy.t >= 3),
+  t('legacy_club', 'journey', 3, (s) => s.legacy?.k === 'club' && s.legacy.t >= 3),
+  t('legacy_legend', 'journey', 4, (s) => (s.legacy?.t ?? 0) >= 4),
   only(
     isKorean,
     t('mil', 'journey', 1, (s) => !!s.mil?.served && !s.mil.serving, undefined, true),

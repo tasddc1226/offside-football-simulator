@@ -177,6 +177,9 @@ export interface BoostOutcome {
   chance: number;
   /** T-11-593 시도한 대성공 확률(%). 없으면 0. */
   greatChance: number;
+  /** T-11-733 연출을 같이 쓰는 다른 기능(전성기 연장)의 대화창 이름 · 진행 문구. 없으면 잠재력 강화 문구. */
+  head?: string;
+  rolling?: string;
   /** 연출 결과 화면 제목·본문. */
   title: string;
   text: string;
