@@ -174,16 +174,14 @@ describe('Game Center server progress', () => {
   it('awards all twelve milestones without counting joined seasons as retirees; uses one owner query', async () => {
     const me = await issueCookie(ctx);
     for (let i = 0; i < 5; i++)
-      await ctx.db
-        .insert(careers)
-        .values(
-          retired(`career-${i}`, me.profileId, {
-            goals: i === 0 ? 300 : 0,
-            assists: i === 0 ? 200 : 0,
-            trophies: 10,
-            ballon: 3,
-          }),
-        );
+      await ctx.db.insert(careers).values(
+        retired(`career-${i}`, me.profileId, {
+          goals: i === 0 ? 300 : 0,
+          assists: i === 0 ? 200 : 0,
+          trophies: 10,
+          ballon: 3,
+        }),
+      );
     await ctx.db
       .insert(careerSeasons)
       .values([
@@ -214,32 +212,30 @@ describe('Game Center server progress', () => {
   it('uses one-player maxima rather than sums and excludes hidden and other-owner records', async () => {
     const me = await issueCookie(ctx),
       other = await issueCookie(ctx);
-    await ctx.db
-      .insert(careers)
-      .values([
-        retired('a', me.profileId, {
-          goals: 99,
-          assists: 99,
-          trophies: 9,
-          ballon: 2,
-          retireAge: 39,
-        }),
-        retired('b', me.profileId, {
-          goals: 99,
-          assists: 99,
-          trophies: 9,
-          ballon: 2,
-          retireAge: 39,
-        }),
-        retired('hidden', me.profileId, {
-          hidden: 1,
-          goals: 999,
-          assists: 999,
-          trophies: 99,
-          ballon: 9,
-        }),
-        retired('other', other.profileId, { goals: 999, assists: 999, trophies: 99, ballon: 9 }),
-      ]);
+    await ctx.db.insert(careers).values([
+      retired('a', me.profileId, {
+        goals: 99,
+        assists: 99,
+        trophies: 9,
+        ballon: 2,
+        retireAge: 39,
+      }),
+      retired('b', me.profileId, {
+        goals: 99,
+        assists: 99,
+        trophies: 9,
+        ballon: 2,
+        retireAge: 39,
+      }),
+      retired('hidden', me.profileId, {
+        hidden: 1,
+        goals: 999,
+        assists: 999,
+        trophies: 99,
+        ballon: 9,
+      }),
+      retired('other', other.profileId, { goals: 999, assists: 999, trophies: 99, ballon: 9 }),
+    ]);
     const data = await gameCenterExpandedProgress(ctx.db, me.profileId, '2026-11-23T00:00:00.000Z');
     expect(data.scores.career_goals).toBe(99);
     expect(data.scores.career_assists).toBe(99);
