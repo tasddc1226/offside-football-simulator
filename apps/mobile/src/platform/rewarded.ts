@@ -51,6 +51,11 @@ const UNITS = {
     ios: 'ca-app-pub-3797087216173591/9261466164',
     android: 'ca-app-pub-3797087216173591/8363317467',
   },
+  /** T-11-733 전성기 연장. 따로 만든 단위가 생기기 전까지 잠재력 강화 단위를 같이 쓴다(실적은 adUsage e · GA4 place로 나눠 본다). */
+  prime: {
+    ios: 'ca-app-pub-3797087216173591/9962450572',
+    android: 'ca-app-pub-3797087216173591/7873589266',
+  },
 };
 type RewardPlacement = keyof typeof UNITS;
 const unitOf = (p: RewardPlacement) => (__DEV__ ? TestIds.REWARDED : Platform.select(UNITS[p]));

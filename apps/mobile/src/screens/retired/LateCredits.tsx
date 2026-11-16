@@ -3,6 +3,7 @@
 import type { RetiredNumberResult } from '@offside/contracts';
 import type { LegendView } from '@offside/app-core/state';
 import { PlayStyleCredit } from './PlayStyleCredit';
+import { LegacyCredit } from './LegacyCredit';
 import { RetiredNumberCredit } from './RetiredNumberCredit';
 
 export function LateCredits({
@@ -15,6 +16,7 @@ export function LateCredits({
   return (
     <>
       {v.d?.style ? <PlayStyleCredit d={v.d} /> : null}
+      {v.d?.legacy ? <LegacyCredit legacy={v.d.legacy} /> : null}
       <RetiredNumberCredit v={v} rn={rn} />
     </>
   );

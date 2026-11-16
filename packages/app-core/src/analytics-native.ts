@@ -46,6 +46,7 @@ export const REWARD_PLACES = [
   'repick',
   'season',
   'attendance',
+  'prime',
 ] as const;
 export type RewardPlace = (typeof REWARD_PLACES)[number];
 export type RewardAction = 'view' | 'press' | 'earned' | 'closed' | 'failed';

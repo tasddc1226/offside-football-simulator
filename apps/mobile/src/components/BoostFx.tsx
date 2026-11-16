@@ -100,7 +100,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
             transform: [{ translateX: shake }],
           }}
         >
-          <Txt v="eyebrow">Potential</Txt>
+          <Txt v="eyebrow">{out.eyebrow ?? 'Potential'}</Txt>
           <View style={{ flexDirection: 'row', gap: 10 }} accessible={false}>
             {Array.from({ length: out.max }, (_, i) => {
               const on = i < lit;
@@ -124,7 +124,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
           {!done ? (
             <>
               <Txt v="h2" accessibilityRole="header">
-                {L.rolling}
+                {out.rolling ?? L.rolling}
               </Txt>
               <View
                 style={{

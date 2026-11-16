@@ -29,11 +29,13 @@ export const careDef = (t: CareTier): CareDef => CARES[t - 1]!;
 export const careCutPct = (d: CareDef): number => Math.round((1 - d.keep) * 100);
 
 /** 이 나이를 넘기는 시즌 끝부터 능력치가 떨어진다(T-11-428 커브 2는 1년 늦게). */
-export function peakEndAge(s: Pick<GameState, 'trait' | 'pos' | 'gcv'>): number {
+export function peakEndAge(s: Pick<GameState, 'trait' | 'pos' | 'gcv' | 'prime'>): number {
   const v2 = (s.gcv ?? 1) >= 2;
   return (
     (s.trait === 'early' ? (v2 ? 30 : 29) : s.trait === 'late' ? (v2 ? 31 : 32) : 30) +
-    (s.pos === 'GK' ? 3 : 0)
+    (s.pos === 'GK' ? 3 : 0) +
+    // T-11-733 전성기 연장 단계만큼 늦어진다. 시도하지 않은 커리어는 0이라 예전과 같다.
+    (s.prime?.lv ?? 0)
   );
 }
 

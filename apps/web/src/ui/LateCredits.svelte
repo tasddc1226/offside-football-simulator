@@ -4,6 +4,7 @@
   import type { RetiredNumberResult } from '@offside/contracts';
   import type { LegendView } from './state.svelte.js';
   import PlayStyleCredit from './PlayStyleCredit.svelte';
+  import LegacyCredit from './LegacyCredit.svelte';
   import RetiredNumberCredit from './RetiredNumberCredit.svelte';
 
   const {
@@ -18,4 +19,5 @@
 </script>
 
 {#if v.d?.style}<PlayStyleCredit d={v.d} {reveal} />{/if}
+{#if v.d?.legacy}<LegacyCredit legacy={v.d.legacy} {reveal} />{/if}
 <RetiredNumberCredit {v} {rn} {reveal} />

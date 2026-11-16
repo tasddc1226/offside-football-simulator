@@ -96,6 +96,24 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '몸 관리 비용 배율',
     desc: '30대 몸 관리 비용(단계별 연봉 비례·최소 금액·하락 깊이)에 곱하는 값',
   },
+  primeCost: {
+    group: 'growth',
+    label: '전성기 연장 비용 배율', // i18n-ignore 운영 도구 이름(ko balanceKeys와 같아야 한다)
+    // i18n-ignore 운영 도구 설명
+    desc: '전성기 연장 비용(단계별 연봉 비례·최소 금액)에 곱하는 값',
+  },
+  primeGreat: {
+    group: 'growth',
+    label: '전성기 연장 대성공 비율', // i18n-ignore 운영 도구 이름(ko balanceKeys와 같아야 한다)
+    // i18n-ignore 운영 도구 설명
+    desc: '연장 성공 중 두 단계를 한 번에 올리는 비율(대성공 확률 = 성공 확률 × 이 값). 마지막 단계 시도엔 없다. 0이면 끈다',
+  },
+  primeAdTotal: {
+    group: 'growth',
+    label: '커리어당 광고 연장 횟수', // i18n-ignore 운영 도구 이름(ko balanceKeys와 같아야 한다)
+    // i18n-ignore 운영 도구 설명
+    desc: '자금이 모자란 시즌에 광고로 전성기 연장을 시도하는 횟수(커리어 전체). 0이면 없다',
+  },
   potMean: {
     group: 'growth',
     label: '잠재력 평균',

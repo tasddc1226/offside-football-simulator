@@ -5,14 +5,22 @@ import { kv } from './setup';
 import { adFree } from './adFree';
 
 const KEY = 'offside_ad_usage';
-export type AdUsagePlacement = 'candidates' | 'peek' | 'boost' | 'season' | 'attendance';
+export type AdUsagePlacement = 'candidates' | 'peek' | 'boost' | 'season' | 'attendance' | 'prime';
 // T-11-720 시즌 결산 보너스(s) · 출석 한 번 더(a)를 더했다. 옛 앱이 보낸 요약에는 s · a가 없다.
-const SHORT = { candidates: 'c', peek: 'p', boost: 'b', season: 's', attendance: 'a' } as const;
+// T-11-733 전성기 연장(e)을 더했다.
+const SHORT = {
+  candidates: 'c',
+  peek: 'p',
+  boost: 'b',
+  season: 's',
+  attendance: 'a',
+  prime: 'e',
+} as const;
 
 type Counts = Omit<AdUsage, 'af'>;
 const empty = (): Counts => ({
-  rw: { c: 0, p: 0, b: 0, s: 0, a: 0 },
-  fr: { c: 0, p: 0, b: 0, s: 0, a: 0 },
+  rw: { c: 0, p: 0, b: 0, s: 0, a: 0, e: 0 },
+  fr: { c: 0, p: 0, b: 0, s: 0, a: 0, e: 0 },
   it: 0,
 });
 

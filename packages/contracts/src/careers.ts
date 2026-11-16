@@ -290,6 +290,8 @@ const AdPlacementCountsSchema = z.strictObject({
   /** T-11-720 시즌 결산 보너스 · 출석 한 번 더. 배포 전 앱은 보내지 않는다. */
   s: signalCount.optional(),
   a: signalCount.optional(),
+  /** T-11-733 전성기 연장. 배포 전 앱은 보내지 않는다. */
+  e: signalCount.optional(),
 });
 /**
  * T-11-486a 앱 광고 이용 요약(관찰 전용). 지난 시즌 업로드(또는 앱 설치)부터 이 시즌이 끝날 때까지 이 기기에서 센 값이다.
@@ -572,6 +574,10 @@ export const LegendSnapshotSchema = z.strictObject({
     .optional(),
   /** T-10-077 플레이 성향. 기능이 나오기 전에 은퇴한 스냅샷엔 없다. */
   style: PlayStyleSchema.optional(),
+  /** T-11-733 은퇴 유산(종류 · 등급 1~4). 금액은 남기지 않는다. 고르지 않았거나 기능 전 스냅샷엔 없다. */
+  legacy: z
+    .strictObject({ k: z.enum(['academy', 'charity', 'club']), t: z.number().int().min(1).max(4) })
+    .optional(),
 });
 export type LegendSnapshot = z.infer<typeof LegendSnapshotSchema>;
 

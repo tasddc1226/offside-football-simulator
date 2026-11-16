@@ -64,6 +64,7 @@ import { gSeasonText as T } from './i18n/ko/gSeason.js';
 import { tnBase as tn } from './i18n/names.js';
 import { eraSeasonEnd, type EraNote } from './era.js';
 import { careKeep, peakEndAge } from './care.js';
+import { settleLegacy } from './legacy.js';
 
 /** 시즌 결산 결과 — 결산 시트가 그린다. tours는 명단에 들었거나 경기가 없던(예선 결과) 대회와 우승 대회만. */
 export interface SeasonEndResult {
@@ -839,6 +840,8 @@ function applyRetirement(s: GameState): number {
   if (s.age < MIN_RETIRE_AGE) throw new Error('RETIREMENT_AGE_LOCKED');
   s.retired = true;
   retireMilestones(s);
+  // T-11-733 은퇴 유산은 칭호 판정 전에 정한다(금 · 레전드 등급 칭호).
+  settleLegacy(s);
   const score = legendScore(s);
   checkTitles(s, { score });
   log(s, T.retireLog({ age: s.age }), 'big');
