@@ -103,7 +103,9 @@
   - paragraph: 굵은 글씨가 스트라이커 OVR을 결정하는 능력치예요. % 숫자는 지금 포지션 OVR에 반영되는 비율이에요.
   - paragraph: /성장이 느린 이유 · OVR이 잠재력에 거의 닿아 성장이 \d+% 줄었어요\. 낮은 능력치를 훈련해도 똑같이 느려요\./
   - text: Profile
-  - heading "선수 정보" [level=2]
+  - heading "선수 정보 잠재력 · OVR · 계약 · 연봉 뜻 보기" [level=2]:
+    - text: 선수 정보
+    - button "잠재력 · OVR · 계약 · 연봉 뜻 보기": "?"
   - term: 국적
   - definition: 대한민국
   - term: 체격
