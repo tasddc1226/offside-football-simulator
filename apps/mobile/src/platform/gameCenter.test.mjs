@@ -10,6 +10,8 @@ const f = vi.hoisted(() => ({
   getPlayer: vi.fn(),
   submit: vi.fn(),
   dashboard: vi.fn(),
+  weekly: vi.fn(),
+  nativeName: vi.fn(),
   read: vi.fn(),
   invalidate: vi.fn(),
   save: vi.fn(),
@@ -22,18 +24,21 @@ vi.mock('react-native', () => ({
   },
 }));
 vi.mock('expo', () => ({
-  requireOptionalNativeModule: () =>
-    f.available
+  requireOptionalNativeModule: (name) => {
+    f.nativeName(name);
+    return f.available
       ? {
           authenticate: f.authenticate,
           getPlayer: f.getPlayer,
           submitProgress: f.submit,
           showDashboard: f.dashboard,
+          showWeeklyLeaderboard: f.weekly,
         }
-      : null,
+      : null;
+  },
 }));
 vi.mock('valtio', () => ({ proxy: (x) => x }));
-vi.mock('@offside/game/storage', () => ({ loadKey: () => f.stored, saveKey: f.save }));
+vi.mock('@offside/game/storage', () => ({ loadKey: (key) => f.stored?.[key], saveKey: f.save }));
 vi.mock('@offside/app-core/api/client', () => ({
   cachedGet: f.read,
   invalidateApiCache: f.invalidate,
@@ -79,11 +84,13 @@ beforeEach(() => {
   f.read.mockResolvedValue(data());
   f.submit.mockResolvedValue(true);
   f.dashboard.mockResolvedValue(true);
+  f.weekly.mockResolvedValue(true);
 });
 
 describe('Game Center consent and identity boundaries', () => {
-  it('does nothing on Android or old runtimes without the module', async () => {
+  it('does nothing on old Android or iOS runtimes without the module', async () => {
     f.os = 'android';
+    f.available = false;
     let m = await import('./gameCenter.ts');
     expect(m.gameCenter.available).toBe(false);
     expect(await m.connectGameCenter()).toBe(false);
@@ -251,5 +258,57 @@ describe('Game Center consent and identity boundaries', () => {
     expect(await m.connectGameCenter()).toBe(false);
     expect(f.submit).toHaveBeenCalledOnce();
     expect(m.gameCenter.connected).toBe(false);
+  });
+
+  it('keeps iOS consent separate and uses only Google IDs and the Android endpoint', async () => {
+    f.os = 'android';
+    f.stored = {
+      ft_game_center_connection: { profileId: 'owner-a', playerId: 'player-a', alias: 'Player' },
+    };
+    const m = await import('./gameCenter.ts');
+    expect(m.gameCenter.connected).toBe(false);
+    f.retirement();
+    expect(f.read).not.toHaveBeenCalled();
+    expect(await m.connectGameCenter()).toBe(true);
+    const { PLAY_GAMES_ACHIEVEMENTS, PLAY_GAMES_LEADERBOARDS } = await import('./playGamesIds');
+    expect(f.nativeName).toHaveBeenCalledWith('OffsidePlayGames');
+    expect(f.read).toHaveBeenCalledWith('/v1/owner/play-games', 60_000);
+    expect(f.submit).toHaveBeenCalledWith('player-a', PLAY_GAMES_LEADERBOARDS.legend, 250, [
+      PLAY_GAMES_ACHIEVEMENTS.first_retirement,
+      PLAY_GAMES_ACHIEVEMENTS.first_ballon,
+    ]);
+    expect(f.save).toHaveBeenCalledWith(
+      'ft_play_games_connection',
+      expect.objectContaining({ playerId: 'player-a' }),
+    );
+    m.disconnectGameCenter();
+    expect(f.save).toHaveBeenLastCalledWith('ft_play_games_connection', null);
+  });
+
+  it('opens the dedicated Google weekly board and submits all eighteen tiers once', async () => {
+    f.os = 'android';
+    const { GAME_SERVICES_ACHIEVEMENTS } = await import('@offside/contracts/game-center');
+    const { PLAY_GAMES_ACHIEVEMENTS, PLAY_GAMES_LEADERBOARDS } = await import('./playGamesIds');
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-11-16T00:00:00Z'));
+    try {
+      f.read.mockResolvedValue(
+        data({
+          scores: { legend: 3000, career_goals: 1000, career_assists: 500, weekly_legend: 2000 },
+          week: { startsAt: '2026-11-15T07:00:00.000Z', endsAt: '2026-11-22T07:00:00.000Z' },
+          achievements: Object.keys(GAME_SERVICES_ACHIEVEMENTS),
+        }),
+      );
+      const m = await import('./gameCenter.ts');
+      expect(await m.connectGameCenter()).toBe(true);
+      expect(f.submit).toHaveBeenCalledTimes(4);
+      expect(f.submit.mock.calls[0][3]).toEqual(Object.values(PLAY_GAMES_ACHIEVEMENTS));
+      expect(f.submit.mock.calls.slice(1).every((x) => x[3].length === 0)).toBe(true);
+      expect(await m.openGameCenter('weekly')).toBe(true);
+      expect(f.weekly).toHaveBeenCalledWith('player-a', PLAY_GAMES_LEADERBOARDS.weekly_legend);
+      expect(f.dashboard).not.toHaveBeenCalled();
+      expect(f.submit).toHaveBeenCalledTimes(4);
+    } finally {
+      now.mockRestore();
+    }
   });
 });

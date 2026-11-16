@@ -1,6 +1,14 @@
 import type { Dict } from '../core';
 
 export const gameCenter: Dict = {
+  playTitle: 'Google Play Games',
+  playBody: 'Send this owner’s retirement records to the Google Play Games account on this device.',
+  playConnect: 'Connect Google Play Games',
+  playBusy: 'Working with Google Play Games…',
+  playDisconnectHint: 'Records already sent remain in Google Play Games after disconnecting.',
+  playSynced: 'Your retirement records are synced with Google Play Games.',
+  playSignIn: 'Could not sign in to Google Play Games. Check your Play Games account settings.',
+  weekly: 'This week’s leaderboard',
   title: 'Game Center',
   body: 'Send this owner’s retirement records to the Game Center account on this device.',
   connect: 'Connect Game Center',

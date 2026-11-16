@@ -1,4 +1,4 @@
-import { View } from 'react-native';
+import { Platform, View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import { gameCenterText as L } from '@offside/app-core/i18n/ko/gameCenter';
 import { Btn, Txt } from '../../ui';
@@ -13,17 +13,27 @@ import { SettingsCard, SettingsLabel } from './parts';
 export function GameCenterSettings() {
   const state = useSnapshot(gameCenter);
   if (!state.available) return null;
+  const android = Platform.OS === 'android';
+  const service = {
+    title: android ? L.playTitle : L.title,
+    body: android ? L.playBody : L.body,
+    connect: android ? L.playConnect : L.connect,
+    busy: android ? L.playBusy : L.busy,
+    synced: android ? L.playSynced : L.synced,
+    signIn: android ? L.playSignIn : L.signIn,
+    disconnectHint: android ? L.playDisconnectHint : L.disconnectHint,
+  };
   return (
     <SettingsCard gap={12}>
-      <SettingsLabel title={L.title} muted={L.body} />
+      <SettingsLabel title={service.title} muted={service.body} />
       {state.connected ? <Txt>{L.connected({ name: state.alias })}</Txt> : null}
       {state.error ? (
         <Txt tone="bad" accessibilityLiveRegion="polite" testID="game-center-error">
-          {L[state.error]}
+          {state.error === 'signIn' ? service.signIn : L[state.error]}
         </Txt>
       ) : state.synced ? (
         <Txt tone="muted" accessibilityLiveRegion="polite">
-          {state.hasRecords ? L.synced : L.empty}
+          {state.hasRecords ? service.synced : L.empty}
         </Txt>
       ) : null}
       {!state.connected || state.error ? (
@@ -35,7 +45,7 @@ export function GameCenterSettings() {
           accessibilityState={{ busy: state.busy }}
           onPress={() => void connectGameCenter()}
         >
-          {state.busy ? L.busy : state.error ? L.retry : L.connect}
+          {state.busy ? service.busy : state.error ? L.retry : service.connect}
         </Btn>
       ) : null}
       {state.connected ? (
@@ -47,8 +57,18 @@ export function GameCenterSettings() {
             accessibilityState={{ busy: state.busy }}
             onPress={() => void openGameCenter('leaderboard')}
           >
-            {state.busy ? L.busy : L.leaderboard}
+            {state.busy ? service.busy : L.leaderboard}
           </Btn>
+          {android ? (
+            <Btn
+              block
+              disabled={state.busy}
+              testID="game-center-weekly"
+              onPress={() => void openGameCenter('weekly')}
+            >
+              {L.weekly}
+            </Btn>
+          ) : null}
           <Btn
             block
             disabled={state.busy}
@@ -60,7 +80,7 @@ export function GameCenterSettings() {
           <Btn block kind="ghost" testID="game-center-disconnect" onPress={disconnectGameCenter}>
             {L.disconnect}
           </Btn>
-          <Txt tone="muted">{L.disconnectHint}</Txt>
+          <Txt tone="muted">{service.disconnectHint}</Txt>
         </View>
       ) : null}
     </SettingsCard>

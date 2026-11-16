@@ -6,17 +6,17 @@ import { cachedGet, invalidateApiCache } from '@offside/app-core/api/client';
 import {
   GAME_SERVICES_ACHIEVEMENTS,
   GAME_CENTER_LEADERBOARDS,
-  GAME_CENTER_LEADERBOARD_ID,
   GameServicesProgressSchema,
   type GameServicesProgress,
 } from '@offside/contracts/game-center';
 import { onRetirementSynced } from '@offside/app-core/outbox';
 import { ensureSession, onSessionChanged } from './session';
+import { PLAY_GAMES_ACHIEVEMENTS, PLAY_GAMES_LEADERBOARDS } from './playGamesIds';
 
 type Player = { id: string; alias: string };
 type Connection = { profileId: string; playerId: string; alias: string };
 type Failure = 'signIn' | 'sync' | 'changed';
-type Dashboard = 'leaderboard' | 'achievements';
+type Dashboard = 'leaderboard' | 'achievements' | 'weekly';
 interface NativeGameCenter {
   getPlayer(): Promise<Player | null>;
   authenticate(): Promise<Player>;
@@ -27,12 +27,20 @@ interface NativeGameCenter {
     ids: string[],
   ): Promise<boolean>;
   showDashboard(playerId: string, leaderboardId: string, achievements: boolean): Promise<boolean>;
+  showWeeklyLeaderboard?(playerId: string, leaderboardId: string): Promise<boolean>;
 }
 
-const PATH = '/v1/owner/game-center/v2';
-const KEY = 'ft_game_center_connection';
+const android = Platform.OS === 'android';
+const PATH = android ? '/v1/owner/play-games' : '/v1/owner/game-center/v2';
+const KEY = android ? 'ft_play_games_connection' : 'ft_game_center_connection';
+const boards = android ? PLAY_GAMES_LEADERBOARDS : GAME_CENTER_LEADERBOARDS;
+const achievements = android ? PLAY_GAMES_ACHIEVEMENTS : GAME_SERVICES_ACHIEVEMENTS;
 const native =
-  Platform.OS === 'ios' ? requireOptionalNativeModule<NativeGameCenter>('OffsideGameCenter') : null;
+  Platform.OS === 'ios'
+    ? requireOptionalNativeModule<NativeGameCenter>('OffsideGameCenter')
+    : android
+      ? requireOptionalNativeModule<NativeGameCenter>('OffsidePlayGames')
+      : null;
 const stored = loadKey<Partial<Connection>>(KEY);
 let connection: Connection | null =
   stored &&
@@ -137,10 +145,8 @@ async function send(data: GameServicesProgress, target: Connection, epoch: numbe
     data.achievements,
   ]);
   if (submitted !== fingerprint) {
-    let ids = data.achievements.map((key) => GAME_SERVICES_ACHIEVEMENTS[key]);
-    for (const key of Object.keys(
-      GAME_CENTER_LEADERBOARDS,
-    ) as (keyof typeof GAME_CENTER_LEADERBOARDS)[]) {
+    let ids = data.achievements.map((key) => achievements[key]);
+    for (const key of Object.keys(boards) as (keyof typeof GAME_CENTER_LEADERBOARDS)[]) {
       const score = data.scores[key];
       if (score === null) continue;
       // Never let a cached response from a finished week populate the next recurrence.
@@ -150,13 +156,13 @@ async function send(data: GameServicesProgress, target: Connection, epoch: numbe
       )
         continue;
       check(epoch);
-      await native!.submitProgress(target.playerId, GAME_CENTER_LEADERBOARDS[key], score, ids);
+      await native!.submitProgress(target.playerId, boards[key], score, ids);
       check(epoch);
       ids = [];
     }
     if (ids.length) {
       check(epoch);
-      await native!.submitProgress(target.playerId, GAME_CENTER_LEADERBOARD_ID, null, ids);
+      await native!.submitProgress(target.playerId, boards.legend, null, ids);
     }
     check(epoch);
     if ((await native!.getPlayer())?.id !== target.playerId) throw new GameCenterFailure('changed');
@@ -214,11 +220,12 @@ export function openGameCenter(view: Dashboard): Promise<boolean> {
       gameCenter.error = 'sync';
     }
     check(epoch);
-    await native!.showDashboard(
-      target.playerId,
-      GAME_CENTER_LEADERBOARD_ID,
-      view === 'achievements',
-    );
+    if (view === 'weekly') {
+      if (!native!.showWeeklyLeaderboard) return false;
+      await native!.showWeeklyLeaderboard(target.playerId, boards.weekly_legend);
+    } else {
+      await native!.showDashboard(target.playerId, boards.legend, view === 'achievements');
+    }
     return true;
   });
 }

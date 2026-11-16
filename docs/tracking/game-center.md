@@ -1,18 +1,18 @@
-# iOS Game Center (T-11-734)
+# Game Center · Google Play Games (T-11-734)
 
-1.1.9에서 검증하는 iOS 전용 기능이다. TestFlight 검증과 스토어 출시는 별개다.
+1.1.9에서 iOS Game Center와 Android Google Play Games를 검증한다. 내부 테스트와 스토어 출시는 별개다.
 네이티브 모듈·entitlement를 더하므로 기존 앱에 OTA만 보내서 사용할 수 없다.
 현재 스토어 런타임 지문·최소/최신 버전 안내는 실제 출시 전까지 바꾸지 않는다.
 
 ## 등록 항목
 
-| 용도 | App Store Connect ID |
-| --- | --- |
-| 최고 레전드 점수 | `com.offsidelab.app.leaderboard.career_legend.v1` |
-| 첫 은퇴 | `com.offsidelab.app.achievement.first_retirement` |
-| 첫 유럽 진출 | `com.offsidelab.app.achievement.first_europe` |
+| 용도             | App Store Connect ID                                  |
+| ---------------- | ----------------------------------------------------- |
+| 최고 레전드 점수 | `com.offsidelab.app.leaderboard.career_legend.v1`     |
+| 첫 은퇴          | `com.offsidelab.app.achievement.first_retirement`     |
+| 첫 유럽 진출     | `com.offsidelab.app.achievement.first_europe`         |
 | 첫 국제대회 우승 | `com.offsidelab.app.achievement.first_national_title` |
-| 첫 발롱도르 | `com.offsidelab.app.achievement.first_ballon` |
+| 첫 발롱도르      | `com.offsidelab.app.achievement.first_ballon`         |
 
 ID 정본은 `packages/contracts/src/game-center.ts`다. 순위표는 정수·최고점 유지·내림차순,
 목표 달성은 숨기지 않고 한 번씩(20/30/40/50점) 부여한다. Game Center 점수는 게임 재화가 아니다.
@@ -22,33 +22,70 @@ ID 정본은 `packages/contracts/src/game-center.ts`다. 순위표는 정수·�
 빌드 30의 연결·순위표·목표 열기는 사용자 실기기 확인을 받았다. 아래 확장은 별도 TestFlight 빌드에서 검증한다.
 기존 ID와 기본 순위표를 유지한다. 목표는 기존 4개와 새 8개, 총 12개(470점)다.
 
-| 추가 순위표 | ID 끝부분 | 집계 |
-| --- | --- | --- |
-| 주간 레전드 | `weekly_legend.v1` | 해당 주에 서버가 처음 은퇴를 수락한 선수 중 최고 레전드 점수 |
-| 한 선수 최다 골 | `career_goals.v1` | 은퇴 선수 한 명의 통산 골 최댓값 |
-| 한 선수 최다 도움 | `career_assists.v1` | 은퇴 선수 한 명의 통산 도움 최댓값 |
+| 추가 순위표       | ID 끝부분           | 집계                                                         |
+| ----------------- | ------------------- | ------------------------------------------------------------ |
+| 주간 레전드       | `weekly_legend.v1`  | 해당 주에 서버가 처음 은퇴를 수락한 선수 중 최고 레전드 점수 |
+| 한 선수 최다 골   | `career_goals.v1`   | 은퇴 선수 한 명의 통산 골 최댓값                             |
+| 한 선수 최다 도움 | `career_assists.v1` | 은퇴 선수 한 명의 통산 도움 최댓값                           |
 
 순위표 ID 접두사는 `com.offsidelab.app.leaderboard.`다. 모두 30세 이상·비숨김 은퇴 기록으로 집계한다.
 주간 순위는 2026-11-23 월요일 00:00 KST부터 7일마다 초기화한다. 시작 포함·끝 제외 구간이며,
 과거 최고점은 새 주에 다시 제출하지 않는다. 서버의 최초 `retired_at`은 은퇴 재전송으로 바뀌지 않는다.
 골·도움은 여러 선수의 합이 아니며, 값이 없는 옛 기록을 0으로 추정하지 않는다.
 
-| 추가 목표 | ID 끝부분 | 조건 | 점수 |
-| --- | --- | --- | --- |
-| 100골 클럽 | `career_goals_100` | 한 선수로 100골 이상 은퇴 | 30 |
-| 300골의 전설 | `career_goals_300` | 한 선수로 300골 이상 은퇴 | 50 |
-| 100도움 클럽 | `career_assists_100` | 한 선수로 100도움 이상 은퇴 | 30 |
-| 경기를 만드는 선수 | `career_assists_200` | 한 선수로 200도움 이상 은퇴 | 50 |
-| 트로피 수집가 | `career_trophies_10` | 한 선수로 우승 10회 이상 은퇴 | 40 |
-| 발롱도르 세 번 | `career_ballon_3` | 한 선수로 발롱도르 3회 이상 은퇴 | 60 |
-| 다섯 번의 휘슬 | `retirements_5` | 30세 이상 은퇴 선수 5명 | 30 |
-| 마흔까지 현역 | `veteran_40` | 40세 이상 은퇴 | 40 |
+| 추가 목표          | ID 끝부분            | 조건                             | 점수 |
+| ------------------ | -------------------- | -------------------------------- | ---- |
+| 100골 클럽         | `career_goals_100`   | 한 선수로 100골 이상 은퇴        | 30   |
+| 300골의 전설       | `career_goals_300`   | 한 선수로 300골 이상 은퇴        | 50   |
+| 100도움 클럽       | `career_assists_100` | 한 선수로 100도움 이상 은퇴      | 30   |
+| 경기를 만드는 선수 | `career_assists_200` | 한 선수로 200도움 이상 은퇴      | 50   |
+| 트로피 수집가      | `career_trophies_10` | 한 선수로 우승 10회 이상 은퇴    | 40   |
+| 발롱도르 세 번     | `career_ballon_3`    | 한 선수로 발롱도르 3회 이상 은퇴 | 60   |
+| 다섯 번의 휘슬     | `retirements_5`      | 30세 이상 은퇴 선수 5명          | 30   |
+| 마흔까지 현역      | `veteran_40`         | 40세 이상 은퇴                   | 40   |
 
 목표 ID 접두사는 `com.offsidelab.app.achievement.`다. 한 번씩 달성하며 숨기지 않는다.
 기존 4개 목표 응답은 `/v1/owner/game-center`에 그대로 두고, 새 앱만
 `/v1/owner/game-center/expanded`를 사용한다. 확장도 인증된 구단주 기록을 조회 한 번으로 집계한다.
 네이티브 전송 상한 12개와 전체 순위표 목록 열기는 새 빌드에 포함된다. 만료된 주간 응답은 기기에서 제출하지 않는다.
 동일 조건 커리어 생성과 초대 진입 처리가 필요한 Challenges·Activities는 이 카탈로그에 포함하지 않는다.
+
+## 시즌 2 기록에 맞춘 상위 목표
+
+기존 ID와 획득 조건을 유지하고, 아래 6개를 별도 ID로 추가한다. 총 18개·950점이다.
+신규 유저의 초반 이정표와 오래 플레이한 유저의 장기 목표를 함께 제공한다.
+한 선수 기록은 구단주 전체 합산이 아닌, 남아 있는 은퇴 선수 한 명의 최댓값이다.
+
+| 추가 목표           | ID 끝부분            | 조건                            | 점수 |
+| ------------------- | -------------------- | ------------------------------- | ---- |
+| 750골의 기록        | `career_goals_750`   | 한 선수 750골 이상 은퇴         | 60   |
+| 1,000골의 전설      | `career_goals_1000`  | 한 선수 1,000골 이상 은퇴       | 100  |
+| 500도움의 설계자    | `career_assists_500` | 한 선수 500도움 이상 은퇴       | 70   |
+| 우승 50회의 주인공  | `career_trophies_50` | 한 선수 우승 50회 이상 은퇴     | 100  |
+| 발롱도르 열 번      | `career_ballon_10`   | 한 선수 발롱도르 10회 이상 은퇴 | 80   |
+| 쉰 번의 마지막 휘슬 | `retirements_50`     | 30세 이상 은퇴 선수 50명        | 70   |
+
+기존 빌드 30의 4개 응답과 빌드 31의 12개 응답은 변경하지 않는다. 새 iOS 앱은
+`/v1/owner/game-center/v2`, Android 앱은 `/v1/owner/play-games`를 사용한다.
+양쪽 모두 `GameServicesProgressSchema`를 사용하며 같은 구단주 인덱스 조회 한 번으로 판정한다.
+기존 저장 형식과 커리어 결과·확률·점수 공식을 바꾸지 않는다.
+
+## Android 구성
+
+Google Play Games 프로젝트 ID는 `641136073759`다. Play Console이 발급한 실제 업적·순위표 ID는
+`apps/mobile/src/platform/playGamesIds.ts`에 둔다. Apple의 문자열 ID를 Google로 보내지 않는다.
+로컬 Expo 모듈 `OffsidePlayGames`와 `withPlayGames` 플러그인이 SDK 초기화와 매니페스트 설정을 맡는다.
+플러그인만 수정하며 CNG로 생성한 `android/` 파일은 커밋하지 않는다.
+
+- 플랫폼 인증은 OFFSIDE 로그인·계정 병합과 별개다. 기기의 Play Games 플레이어 ID를 서버 로그인 수단으로 쓰지 않는다.
+- SDK의 기존 프로필 자동 인증은 지원하되, 새 프로필 생성 안내는 설정의 명시적 연결 동작에서만 연다.
+- OFFSIDE 기록 전송 동의는 플랫폼마다 다른 기기 저장 키에 보관한다. iOS 동의를 Android에서 재사용하지 않는다.
+- Google의 주간 경계는 일요일 07:00 UTC(한국 시각 일요일 16:00)다. Apple의 월요일 00:00 KST 경계와 구별한다.
+- Google은 모든 순위표에 일간·주간·전체 보기 탭을 제공한다. 별도 주간 레전드 순위표만 해당 주에 은퇴한 선수의 점수를 전송한다.
+  다른 최고 기록 순위표의 주간 탭은 Google이 최근 제출한 점수를 분류하는 방식이다.
+- Android의 이번 주 순위 버튼은 주간 레전드 순위표의 주간 탭으로 바로 연다. 이전 주의 응답은 새 주에 제출하지 않는다.
+- 연결을 끊어도 이미 보낸 플랫폼 최고점·업적은 유지된다. 오프라인 실패와 플랫폼 오류는 게임 진행·저장을 막지 않는다.
+- Android 내부 테스트는 Play에서 서명한 앱으로 확인한다. 로컬 APK의 서명은 운영 OAuth 인증서와 다를 수 있다.
 
 ## 기록과 계정
 

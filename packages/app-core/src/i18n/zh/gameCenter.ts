@@ -1,6 +1,14 @@
 import type { Dict } from '../core';
 
 export const gameCenter: Dict = {
+  playTitle: 'Google Play Games',
+  playBody: '將這位經營者的退役紀錄傳送至此裝置的Google Play Games帳號。',
+  playConnect: '連接Google Play Games',
+  playBusy: 'Google Play Games處理中…',
+  playDisconnectHint: '中斷連接後，已傳送的紀錄仍會保留在Google Play Games。',
+  playSynced: '退役紀錄已同步至Google Play Games。',
+  playSignIn: '無法登入Google Play Games。請確認Play Games帳號設定。',
+  weekly: '本週排行榜',
   title: 'Game Center',
   body: '將這位經營者的退役紀錄傳送至此裝置的Game Center帳號。',
   connect: '連接Game Center',

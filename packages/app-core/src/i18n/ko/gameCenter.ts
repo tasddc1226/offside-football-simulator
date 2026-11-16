@@ -1,6 +1,14 @@
 import { ns } from '../core';
 
 const ko = {
+  playTitle: 'Google Play Games',
+  playBody: '현재 기기의 Google Play Games 계정에 이 구단주의 은퇴 기록을 보내요.',
+  playConnect: 'Google Play Games 연결',
+  playBusy: 'Google Play Games 처리 중…',
+  playDisconnectHint: '연결을 끊어도 이미 보낸 기록은 Google Play Games에 남아요.',
+  playSynced: '은퇴 기록을 Google Play Games에 반영했어요.',
+  playSignIn: 'Google Play Games에 로그인하지 못했어요. Play Games 계정 설정을 확인해 주세요.',
+  weekly: '이번 주 순위',
   title: 'Game Center',
   body: '현재 기기의 Game Center 계정에 이 구단주의 은퇴 기록을 보내요.',
   connect: 'Game Center 연결',
