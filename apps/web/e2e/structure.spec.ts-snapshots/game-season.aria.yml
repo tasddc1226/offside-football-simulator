@@ -12,7 +12,9 @@
   - heading "프리미어리그 순위" [level=3]
   - paragraph: /개막하면 \d+개 팀 순위표가 채워져요\./
   - text: Next · 프리시즌
-  - heading "다음 구간 준비" [level=2]
+  - heading "다음 구간 준비 컨디션 · 사기 · 인기 뜻 보기" [level=2]:
+    - text: 다음 구간 준비
+    - button "컨디션 · 사기 · 인기 뜻 보기": "?"
   - text: /컨디션 \d+ 사기 \d+ 인기 \d+/
   - heading "코치 메모" [level=3]
   - paragraph: /이번 시즌 OVR \d+ → \d+\. 아직 표시할 능력치 변화가 없어요\./

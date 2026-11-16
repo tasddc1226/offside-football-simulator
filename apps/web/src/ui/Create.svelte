@@ -53,6 +53,7 @@
   import ScoutScan from './ScoutScan.svelte';
   import RevealFx from './RevealFx.svelte';
   import CountUp from './CountUp.svelte';
+  import TermHelp from './TermHelp.svelte';
   import { gradeTier, revealTotal } from '@offside/app-core/reveal';
   import { revealText as R } from '@offside/app-core/i18n/ko/reveal';
 
@@ -277,7 +278,7 @@
     <section class="card stack create-form">
       {#if appState.createStep === 'pos'}
         <div class="field" data-coach="pos">
-          <span class="lbl">{L.position}</span>
+          <span class="lbl">{L.position}<TermHelp of="createPos" more={false} /></span>
           <div class="seg pos-grid">
             {#each posKeys as k (k)}
               <button class="opt dpos-opt" data-set="pos" data-val={k} aria-pressed={C.pos === k} onclick={() => setPos(k)}><b>{tn(POS[k].label)}</b></button>
@@ -309,7 +310,7 @@
         {/if}
       {:else if appState.createStep === 'focus'}
         <div class="field" data-coach="focus">
-          <span class="lbl">{L.focusTitle({ n: FOCUS_PICK })}</span>
+          <span class="lbl">{L.focusTitle({ n: FOCUS_PICK })}<TermHelp of="createFocus" more={false} /></span>
           <div class="seg two">
             {#each ATTR_KEYS as k (k)}
               {@const d = preview[k] ?? 0}

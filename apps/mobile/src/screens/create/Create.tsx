@@ -107,6 +107,7 @@ import { CreateLook } from './CreateLook';
 import { ScoutScan } from './ScoutScan';
 import { PositionGuide } from '../game/PositionGuide';
 import { ItemsHint } from '../../components/ItemsHint';
+import { TermHelp } from '../../components/TermHelp';
 import { BodyInput, Field, Seg, SegCell, mixHex, useInputStyle } from './parts';
 import { tn } from '@offside/game/i18n/names';
 
@@ -557,7 +558,7 @@ export default function Create() {
               {formStep === 'pos' ? (
                 <>
                   <CoachTarget id="pos">
-                    <Field label={L.position}>
+                    <Field label={L.position} help={<TermHelp of="createPos" more={false} />}>
                       <View style={{ flexDirection: 'row', gap: 6 }}>
                         {posKeys.map((k) => (
                           <View key={k} testID={`pos-${k}`} style={{ flex: 1, minWidth: 0 }}>
@@ -650,7 +651,10 @@ export default function Create() {
               ) : formStep === 'focus' ? (
                 <>
                   <CoachTarget id="focus">
-                    <Field label={L.focusTitle({ n: FOCUS_PICK })}>
+                    <Field
+                      label={L.focusTitle({ n: FOCUS_PICK })}
+                      help={<TermHelp of="createFocus" more={false} />}
+                    >
                       <Seg>
                         {ATTR_KEYS.map((k) => {
                           const d = preview[k] ?? 0;

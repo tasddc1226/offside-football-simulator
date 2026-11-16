@@ -1,0 +1,30 @@
+{
+  "id": "t-11-732-glossary",
+  "title": "용어 사전",
+  "items": [
+    "설정 → 도움말에 용어 사전을 넣었어요. OVR · 잠재력 같은 게임 숫자와 이적 · 임대 · 승격 같은 축구 용어를 한 줄씩 풀었어요",
+    "선수 만들기 · 시즌 탭 · 선수 탭의 ? 버튼을 누르면 그 화면에 나오는 용어 뜻을 바로 볼 수 있어요"
+  ],
+  "en": {
+    "title": "Glossary",
+    "items": [
+      "Settings → Help now has a glossary. Game numbers like OVR and potential and football terms like transfer, loan and promotion are explained in one line each.",
+      "Tap the ? button in player creation, the season tab or the player tab to see what the terms on that screen mean."
+    ]
+  },
+  "ja": {
+    "title": "用語集",
+    "items": [
+      "設定 → ヘルプに用語集を追加しました。OVR・潜在能力などのゲームの数字と、移籍・レンタル・昇格などのサッカー用語を一行ずつ説明します。",
+      "選手作成・シーズンタブ・選手タブの ? ボタンを押すと、その画面に出てくる用語の意味をすぐに見られます。"
+    ]
+  },
+  "zh": {
+    "title": "用語辭典",
+    "items": [
+      "在設定 → 說明加入了用語辭典，用一句話說明 OVR、潛力等遊戲數值，以及轉會、租借、升級等足球用語。",
+      "在建立球員、賽季分頁、球員分頁按下 ? 按鈕，就能馬上看到該畫面用語的意思。"
+    ]
+  },
+  "availability": "web-app"
+}

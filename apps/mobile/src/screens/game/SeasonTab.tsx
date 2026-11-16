@@ -70,6 +70,7 @@ import { PhaseReport } from './PhaseReport';
 import { CompIcon } from '../../ui/CompIcon';
 import { tn } from '@offside/game/i18n/names';
 import { appFormatText } from '@offside/app-core/i18n/ko/appFormat';
+import { TermHelp } from '../../components/TermHelp';
 
 function meterTone(v: number, badAt: number, warnAt: number): 'bad' | 'warn' | 'good' {
   return v < badAt ? 'bad' : v < warnAt ? 'warn' : 'good';
@@ -798,9 +799,12 @@ export function SeasonTab({ s }: { s: GameState }) {
           <Card gap={10}>
             <View>
               <Txt v="eyebrow">{`Next · ${label}`}</Txt>
-              <Txt v="h2" accessibilityRole="header">
-                {L.prepTitle}
-              </Txt>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <Txt v="h2" accessibilityRole="header" style={{ flexShrink: 1 }}>
+                  {L.prepTitle}
+                </Txt>
+                <TermHelp of="seasonPrep" />
+              </View>
             </View>
             <View style={{ gap: 9 }}>
               <Meter label={L.condition} value={s.cond} tone={meterTone(s.cond, 40, 65)} />
