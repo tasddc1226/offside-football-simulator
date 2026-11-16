@@ -21,6 +21,11 @@ const FRESH_MS = 50 * 60_000;
 const RETRY_MS = 5 * 60_000;
 /** 은퇴를 짧은 간격으로 거듭해도 전면광고는 이 간격 안에 한 번만 띄운다. */
 const GAP_MS = 3 * 60_000;
+/**
+ * iOS는 내려가는 중인 시트(네이티브 Modal) 위에 광고 화면을 올리지 못하고 그냥 실패한다. 은퇴 버튼은 시트 안에 있어
+ * 시트를 닫는 순간 띄우던 iOS는 불러 둔 광고의 7%만 노출됐다(11-13~15, Android 54%). 시트가 다 내려간 뒤 띄운다.
+ */
+export const SHOW_DELAY_MS = Platform.OS === 'ios' ? 700 : 0;
 
 /** 전면광고가 떠 있는 동안 true. 리뷰 요청 창은 광고가 닫힐 때까지 기다린다. */
 export const interstitial = proxy({ showing: false });
@@ -63,7 +68,7 @@ export function prepareRetireAd(now = Date.now()) {
 }
 
 /** 은퇴 직후 부른다. 준비된 광고가 있으면 띄우고 true를 돌려준다. 한 번 쓴 광고는 버린다. */
-export function showRetireAd(now = Date.now()): boolean {
+export function showRetireAd(now = Date.now(), delayMs = SHOW_DELAY_MS): boolean {
   const ad = ready;
   ready = null;
   if (!ad || adsOff(adFree) || now - loadedAt >= FRESH_MS || now - shownAt < GAP_MS) return false;
@@ -79,6 +84,8 @@ export function showRetireAd(now = Date.now()): boolean {
     offs.forEach((off) => off());
     interstitial.showing = false;
   }
-  ad.show().catch(done);
+  const show = () => void ad.show().catch(done);
+  if (delayMs > 0) setTimeout(show, delayMs);
+  else show();
   return true;
 }

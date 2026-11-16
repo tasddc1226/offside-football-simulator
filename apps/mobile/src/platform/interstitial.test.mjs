@@ -7,7 +7,14 @@ const f = vi.hoisted(() => ({
   ads: [],
   countInterstitial: vi.fn(),
 }));
-vi.mock('react-native', () => ({ Platform: { select: (units) => units[f.platform] } }));
+vi.mock('react-native', () => ({
+  Platform: {
+    select: (units) => units[f.platform],
+    get OS() {
+      return f.platform;
+    },
+  },
+}));
 vi.mock('react-native-google-mobile-ads', () => ({
   AdEventType: { LOADED: 'loaded', OPENED: 'opened', CLOSED: 'closed', ERROR: 'error' },
   TestIds: { INTERSTITIAL: 'test-interstitial' },
@@ -70,7 +77,7 @@ describe('retire interstitial', () => {
     f.platform = platform;
     const m = await loaded(Date.now());
     expect(f.create).toHaveBeenCalledWith(unit, { requestNonPersonalizedAdsOnly: true });
-    expect(m.showRetireAd()).toBe(true);
+    expect(m.showRetireAd(Date.now(), 0)).toBe(true);
     const ad = f.ads[0];
     expect(ad.show).toHaveBeenCalledOnce();
     expect(m.interstitial.showing).toBe(true);
@@ -81,6 +88,17 @@ describe('retire interstitial', () => {
     expect(ad.listeners.size).toBe(0);
     // 한 번 쓴 광고는 다시 띄우지 않는다.
     expect(m.showRetireAd()).toBe(false);
+  });
+
+  it('waits for the closing sheet on iOS before showing', async () => {
+    const m = await loaded(Date.now());
+    expect(m.SHOW_DELAY_MS).toBeGreaterThan(0);
+    expect(m.showRetireAd(Date.now(), 30)).toBe(true);
+    const ad = f.ads[0];
+    expect(m.interstitial.showing).toBe(true);
+    expect(ad.show).not.toHaveBeenCalled();
+    await new Promise((r) => setTimeout(r, 40));
+    expect(ad.show).toHaveBeenCalledOnce();
   });
 
   it('does not request again while a fresh ad is waiting', async () => {

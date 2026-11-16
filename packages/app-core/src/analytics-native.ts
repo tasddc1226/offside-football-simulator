@@ -35,6 +35,20 @@ export const PUSH_ASK_PLACES = [
   'quiet',
 ] as const;
 export type PushAskPlace = (typeof PUSH_ASK_PLACES)[number];
+/**
+ * T-11-731 앱 보상형 광고 깔때기. view(버튼이 보임, 실행마다 곳별 한 번) → press(광고를 보려고 누름) → earned(끝까지 봄) ·
+ * closed(보다가 닫음) · failed(동의 · 불러오기 · 보여 주기 실패). 광고 제거 · 멤버십은 광고가 없어 보내지 않는다.
+ */
+export const REWARD_PLACES = [
+  'candidates',
+  'peek',
+  'boost',
+  'repick',
+  'season',
+  'attendance',
+] as const;
+export type RewardPlace = (typeof REWARD_PLACES)[number];
+export type RewardAction = 'view' | 'press' | 'earned' | 'closed' | 'failed';
 /** OS 권한 요청 결과. failed는 권한은 받았지만 기기 등록이 실패한 경우다. */
 export type PushAskResult = 'granted' | 'denied' | 'blocked' | 'failed';
 
@@ -73,6 +87,7 @@ export function createNativeAnalytics(io: IO) {
   let pending = Promise.resolve();
   const pushSeen = new Set<string>();
   const askSeen = new Set<PushAskPlace>();
+  const rewardSeen = new Set<RewardPlace>();
   const listeners = new Set<() => void>();
   const allowed = () => io.enabled() && consent === 'granted' && ready;
   // Serialized SDK access; stale sends are dropped when the user withdraws consent.
@@ -240,6 +255,15 @@ export function createNativeAnalytics(io: IO) {
         ...(action === 'result' && result ? { result } : {}),
         ...(action === 'pick' && groups !== undefined ? { groups } : {}),
       });
+    },
+    /** T-11-731 보상형 광고 깔때기(REWARD_PLACES). view는 실행마다 곳별로 한 번만 보낸다. */
+    rewarded(action: RewardAction, place: RewardPlace) {
+      if (!REWARD_PLACES.includes(place)) return;
+      if (action === 'view') {
+        if (!allowed() || rewardSeen.has(place)) return;
+        rewardSeen.add(place);
+      }
+      send('reward_ad_' + action, { place });
     },
     /** 강화권 · 스카우트권 구매 퍼널(commerceStage). 보내는 순간의 이용 분석 동의만 본다. 쌓아 두거나 다시 보내지 않는다. */
     commerce(o: CommerceObservation, alive?: () => boolean) {

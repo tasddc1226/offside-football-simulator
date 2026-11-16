@@ -6,6 +6,7 @@ const f = vi.hoisted(() => ({
   create: vi.fn(),
   listeners: new Map(),
   countReward: vi.fn(),
+  funnel: vi.fn(),
   poolCreate: vi.fn(),
 }));
 vi.mock('react-native', () => ({ Platform: { select: (units) => units[f.platform] } }));
@@ -38,6 +39,7 @@ vi.mock('./adFree', () => ({
   adsOff: (s) => s.owned || s.member,
 }));
 vi.mock('./adUsage', () => ({ countReward: f.countReward }));
+vi.mock('./adFunnel', () => ({ rewardFunnel: f.funnel }));
 vi.mock('@offside/app-core/i18n/ko/ad', () => ({
   adText: { rewardedUnavailable: 'unavailable' },
 }));
@@ -91,6 +93,10 @@ describe('candidate report rewarded placement', () => {
       expect(await result).toBe('');
       expect(grant).toHaveBeenCalledOnce();
       expect(f.countReward).toHaveBeenCalledExactlyOnceWith('candidates', false);
+      expect(f.funnel.mock.calls).toEqual([
+        ['press', 'candidates'],
+        ['earned', 'candidates'],
+      ]);
       expect(f.listeners.size).toBe(0);
     },
   );
@@ -102,6 +108,7 @@ describe('candidate report rewarded placement', () => {
     expect(await result).toBe('skipped');
     expect(grant).not.toHaveBeenCalled();
     expect(f.countReward).not.toHaveBeenCalled();
+    expect(f.funnel).toHaveBeenLastCalledWith('closed', 'candidates');
   });
   it.each(['closed', 'error'])('reports unavailable on %s before the ad opens', async (event) => {
     const { grant, result } = await begin();
@@ -115,6 +122,10 @@ describe('candidate report rewarded placement', () => {
     expect(await result).toBe('unavailable');
     expect(f.create).not.toHaveBeenCalled();
     expect(grant).not.toHaveBeenCalled();
+    expect(f.funnel.mock.calls).toEqual([
+      ['press', 'candidates'],
+      ['failed', 'candidates'],
+    ]);
   });
   it('grants without an ad for an ad-free purchaser', async () => {
     f.owned = true;
@@ -123,6 +134,7 @@ describe('candidate report rewarded placement', () => {
     expect(grant).toHaveBeenCalledOnce();
     expect(f.create).not.toHaveBeenCalled();
     expect(f.countReward).toHaveBeenCalledExactlyOnceWith('candidates', true);
+    expect(f.funnel).not.toHaveBeenCalled();
   });
   it('uses Google test ads in development', async () => {
     vi.stubGlobal('__DEV__', true);

@@ -387,3 +387,25 @@ describe('T-11-669 retire experiment (native)', () => {
     expect(h.raw()).toBeNull();
   });
 });
+
+describe('T-11-731 rewarded ad funnel', () => {
+  it('sends allowlisted places with one view per place per run', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.rewarded('view', 'season');
+    h.a.rewarded('view', 'season');
+    h.a.rewarded('press', 'season');
+    h.a.rewarded('earned', 'season');
+    h.a.rewarded('failed', 'attendance');
+    h.a.rewarded('view', 'PRIVATE' as never);
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name.startsWith('reward_ad_'));
+    expect(events.map((e) => [e.name, e.params.place])).toEqual([
+      ['reward_ad_view', 'season'],
+      ['reward_ad_press', 'season'],
+      ['reward_ad_earned', 'season'],
+      ['reward_ad_failed', 'attendance'],
+    ]);
+    expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
+  });
+});
