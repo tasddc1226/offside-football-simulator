@@ -3,7 +3,6 @@ export { TrophyRow } from './TrophyRow';
 // 트로피 탭(웹 tabs/TrophyTab.svelte): 우승 연혁 · 개인 수상 · 발롱도르 순위 · 시대의 라이벌 · 완결된 스토리.
 // 선수 상세(은퇴 화면)도 같은 카드를 쓸 수 있게 LegendSource를 받는다.
 import { FONT } from '@offside/app-core/design-tokens';
-import { CareerTrophy } from '../../ui/CareerTrophy';
 import { careerTrophy } from '@offside/app-core/career-trophy';
 import { View } from 'react-native';
 import type { LegendSource } from '@offside/game/types';
@@ -17,8 +16,8 @@ import { tn } from '@offside/game/i18n/names';
 import type { EraState } from '@offside/game/era';
 import { eraTab } from '@offside/app-core/era-view';
 import { EraTabCard } from './EraRival';
-import { compOfTrophy } from '@offside/app-core/compEmblem';
-import { CompIcon } from '../../ui/CompIcon';
+import { compOfTrophy, medalOfTrophy } from '@offside/app-core/compEmblem';
+import { TrophyEmblem } from '../../ui/TrophyEmblem';
 import { groupByYear } from '@offside/app-core/trophyYears';
 
 type YearItem = { year: number; t: string; club?: string; clubId?: string | undefined };
@@ -91,16 +90,18 @@ export function TrophyYears({
           </View>
           <View style={{ flex: 1, gap: 10 }}>
             {g.items.map((x, i) => {
-              const comp = icons ? compOfTrophy(x.t) : null;
               const club = x.club && (i === 0 || g.items[i - 1]!.club !== x.club) ? x.club : null;
               return (
                 <View key={i} style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   {icons ? (
-                    comp ? (
-                      <CompIcon ko={comp} size={30} still={still} />
-                    ) : (
-                      <CareerTrophy art={careerTrophy(x.t)} size={30} color={c.accent} />
-                    )
+                    <TrophyEmblem
+                      art={careerTrophy(x.t)}
+                      comp={compOfTrophy(x.t)}
+                      medal={medalOfTrophy(x.t)}
+                      size={30}
+                      still={still}
+                      color={c.accent}
+                    />
                   ) : null}
                   <View style={{ flex: 1 }}>
                     <Txt style={{ fontWeight: '700', color: c.ink }}>{tn(x.t)}</Txt>

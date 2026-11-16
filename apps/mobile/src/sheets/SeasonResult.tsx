@@ -1,8 +1,7 @@
 // 시즌 결산 시트(웹 sheets/SeasonResult.svelte): 기록·수상·대회·국가대표·시상식·여정·새 칭호·팬 반응.
 // 모션(CH 배지 팝, 스카우트 카드 팝, 팬 반응 순차 등장)은 웹 CSS 애니메이션 자리 — 동작 줄이기면 바로 보인다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { CareerTrophy } from '../ui/CareerTrophy';
-import { CompIcon } from '../ui/CompIcon';
+import { TrophyEmblem } from '../ui/TrophyEmblem';
 import { careerMomentText as CM } from '@offside/app-core/i18n/ko/careerMoment';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -90,11 +89,14 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
               }}
             >
               <Enter kind="translateY" from={10} ms={480}>
-                {t.comp ? (
-                  <CompIcon ko={t.comp} size={48} still />
-                ) : (
-                  <CareerTrophy art={t.art} color={c.accent} />
-                )}
+                <TrophyEmblem
+                  art={t.art}
+                  comp={t.comp}
+                  medal={t.medal}
+                  size={48}
+                  still
+                  color={c.accent}
+                />
               </Enter>
               <Txt bold style={{ flex: 1, fontSize: rem(FONT.body2), color: c.accentText }}>
                 {t.name}

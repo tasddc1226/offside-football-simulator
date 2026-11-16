@@ -220,6 +220,8 @@ export type SheetView =
         art: import('./career-trophy').CareerTrophy;
         /** T-11-695 로고를 붙일 대회(저장된 한국어 이름). 없으면 트로피 그림. */
         comp?: string | null;
+        /** 은 · 동메달의 대회와 색. 그 대회 로고를 바꿨으면 로고 위에 메달 표시를 얹는다. */
+        medal?: { comp: string; medal: import('./compEmblem').MedalColor } | null;
       }[];
       comps: string[];
       /** T-11-261 대륙 대회 녹아웃 경로(대회 키·이름·한 줄). 녹아웃을 치른 대회만. */

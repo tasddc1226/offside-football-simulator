@@ -6,7 +6,7 @@ import { createScoutingActions, releaseScoutSeed } from './scouting-actions.js';
 import { transferDestination } from './transferDestination.js';
 import { careerMomentText as CM } from './i18n/ko/careerMoment';
 import { careerTrophy } from './career-trophy';
-import { compOfTrophy } from './compEmblem';
+import { compOfTrophy, medalOfTrophy } from './compEmblem';
 import { measureOperation } from './measurement.js';
 import { keyMomentsOn } from './keyMomentPref.js';
 import type { Progress } from './player-metrics.js';
@@ -220,7 +220,7 @@ export function createGameActions(host: GameHost) {
           role: roleOf(s),
           comps: comp.map((c) => ({ t: c.t, good: c.k === 'good', games: compGameViews(c.games) })),
           nat: natViews(nt),
-          chips: diffChips(s, before, x.after),
+          chips: diffChips(s, before, x.after, true),
           titles: x.titles.map(titleView),
         };
       };
@@ -508,6 +508,7 @@ export function createGameActions(host: GameHost) {
           name: tn(name),
           art: careerTrophy(name),
           comp: compOfTrophy(name),
+          medal: medalOfTrophy(name),
         })),
         comps: (rec.comps || []).map((c) =>
           L.compLine({ name: tn(c.name), stage: tn(c.stage), apps: c.apps, g: c.g, a: c.a }),

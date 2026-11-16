@@ -66,9 +66,15 @@ test('이벤트를 닫고 일정과 기록을 확인한 뒤 같은 선택지로 
   await expect(page.locator('[data-career-overview] .calendar')).toContainText('발탁 필요');
   await page.locator('[data-career-scoring] summary').click();
   await expect(page.locator('[data-career-scoring]')).toContainText('리그 경기만 집계');
-  await expect(page.locator('[data-scoring-me]')).toHaveCount(1);
+  // 개막 전에는 모두 0이라 순위 대신 빈 안내를 보인다.
+  await expect(page.locator('[data-career-scoring] summary')).toContainText('개막 전');
+  await expect(page.locator('[data-scoring-empty]')).toBeVisible();
+  await expect(page.locator('[data-scoring-me]')).toHaveCount(0);
   await page.getByRole('button', { name: '도움', exact: true }).click();
-  await expect(page.getByRole('list', { name: '도움', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: '도움', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   expect(await page.evaluate(() => localStorage.getItem('ft_save'))).toBe(saved);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.locator('[data-act="resume"]').click();

@@ -1,12 +1,9 @@
 // 능력치·자금 변화 칩 줄(웹 sheets/Chips.svelte). split이면 오른 것·내린 것을 두 줄로. pop이면 칩마다 70ms 간격으로 튀어 오른다(delay: 구간 리포트가 늦춰 준다).
 import { View } from 'react-native';
-import { fmtMoney } from '@offside/game/engine';
+import { chipValue } from '@offside/app-core/chipValue';
 import type { Chip as ChipData } from '@offside/app-core/sheets';
 import { Chip } from '../ui/bits';
 import { Pop } from './anim';
-
-const val = (c: ChipData) =>
-  c.text || (c.money ? (c.d > 0 ? '+' : '') + fmtMoney(c.d) : (c.d > 0 ? '+' : '') + c.d);
 
 export function Chips({
   chips,
@@ -17,7 +14,7 @@ export function Chips({
   chips: readonly ChipData[];
   pop?: boolean;
   delay?: number;
-  /** T-11-200 구간 리포트: 오른 것과 내린 것을 한 줄씩 나눠 그린다. */
+  /** T-11-200 구간 리포트: 오른 것과 내린 것을 한 줄씩 나눠 그린다. 능력치 · OVR은 "68 → 72"로 전후 값을 보인다. */
   split?: boolean;
 }) {
   if (!chips.length) return null;
@@ -30,7 +27,9 @@ export function Chips({
       {rows.map((row, ri) => (
         <View key={ri} style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
           {row.map((c, i) => {
-            const chip = <Chip text={`${c.label} ${val(c)}`} dir={down(c) ? 'down' : 'up'} />;
+            const chip = (
+              <Chip text={`${c.label} ${chipValue(c, split)}`} dir={down(c) ? 'down' : 'up'} />
+            );
             const at = (ri ? rows[0]!.length : 0) + i;
             return pop ? (
               <Pop key={i} delay={delay + at * 70}>
