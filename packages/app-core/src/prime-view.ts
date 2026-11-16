@@ -113,6 +113,7 @@ export function doPrime(s: GameState, pay: 'money' | 'ad' = 'money'): BoostOutco
     chance: r.chance,
     greatChance: r.greatChance,
     head: L.title,
+    eyebrow: 'Prime',
     rolling: L.rolling,
     title: r.great ? L.resultGreatTitle : r.ok ? L.resultOkTitle : L.resultFailTitle,
     text: r.ok ? L.resultOk({ peak: r.peak }) : L.resultFail({ pct: PRIME_PITY_PCT }),

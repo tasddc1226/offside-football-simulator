@@ -44,7 +44,7 @@
 
 <div class="boost-fx" class:ok={done && out.ok} class:great={done && out.great} class:fail={done && !out.ok} data-boost-fx={done ? (out.great ? 'great' : out.ok ? 'ok' : 'fail') : 'rolling'} role="dialog" aria-modal="true" aria-label={out.head ?? L.title} transition:fade={{ duration: dur(180) }}>
   <div class="bf-card" aria-live="polite">
-    <div class="eyebrow">Potential</div>
+    <div class="eyebrow">{out.eyebrow ?? 'Potential'}</div>
     <div class="bf-steps" aria-hidden="true">
       {#each { length: out.max } as _, i (i)}
         <i class:on={i < lit} class:new={done && i >= out.lv - out.up && i < out.lv}></i>

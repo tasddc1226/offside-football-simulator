@@ -462,10 +462,15 @@
     white-space: nowrap;
   }
   .legacy-kinds {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 6px;
     margin: 4px 0 8px;
+  }
+  .legacy-kinds .btn {
+    white-space: normal;
+    line-height: 1.25;
+    min-width: 0;
   }
   .legacy-ladder {
     list-style: none;
