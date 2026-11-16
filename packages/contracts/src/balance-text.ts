@@ -114,6 +114,18 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     // i18n-ignore 운영 도구 설명
     desc: '자금이 모자란 시즌에 광고로 전성기 연장을 시도하는 횟수(커리어 전체). 0이면 없다',
   },
+  auctionCost: {
+    group: 'growth',
+    label: '명품 경매품 값 배율', // i18n-ignore 운영 도구 이름(ko balanceKeys와 같아야 한다)
+    // i18n-ignore 운영 도구 설명
+    desc: '명품 경매품 한 개 값(연봉 × 0.5, 최소 3,000만)에 곱하는 값. 소장품 가치는 은퇴 유산에 더해지고, 한 종류 네 등급 세트는 경기력에 작은 보정을 준다',
+  },
+  fameSponsor: {
+    group: 'growth',
+    label: '인기 스폰서 수입 비율', // i18n-ignore 운영 도구 이름(ko balanceKeys와 같아야 한다)
+    // i18n-ignore 운영 도구 설명
+    desc: '시즌이 끝날 때 연봉 × 인기(100까지)/100 × 이 값을 스폰서 수입으로 준다. 0이면 끈다',
+  },
   potMean: {
     group: 'growth',
     label: '잠재력 평균',

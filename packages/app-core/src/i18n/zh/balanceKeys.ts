@@ -19,6 +19,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   primeCost: '全盛期延長費用倍率',
   primeGreat: '全盛期延長大成功比例',
   primeAdTotal: '每段生涯廣告延長次數',
+  auctionCost: '名品拍賣價格倍率',
+  fameSponsor: '人氣贊助收入比例',
   potMean: '潛力平均值',
   potSd: '潛力離散度',
   potScoutSd: '球探評估誤差',

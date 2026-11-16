@@ -292,6 +292,8 @@ const AdPlacementCountsSchema = z.strictObject({
   a: signalCount.optional(),
   /** T-11-733 전성기 연장. 배포 전 앱은 보내지 않는다. */
   e: signalCount.optional(),
+  /** T-11-735 명품 경매 새로 받기. 배포 전 앱은 보내지 않는다. */
+  u: signalCount.optional(),
 });
 /**
  * T-11-486a 앱 광고 이용 요약(관찰 전용). 지난 시즌 업로드(또는 앱 설치)부터 이 시즌이 끝날 때까지 이 기기에서 센 값이다.
@@ -577,6 +579,16 @@ export const LegendSnapshotSchema = z.strictObject({
   /** T-11-733 은퇴 유산(종류 · 등급 1~4). 금액은 남기지 않는다. 고르지 않았거나 기능 전 스냅샷엔 없다. */
   legacy: z
     .strictObject({ k: z.enum(['academy', 'charity', 'club']), t: z.number().int().min(1).max(4) })
+    .optional(),
+  /** T-11-735 명품 경매 대표 소장품(종류 · 등급 1~4, 높은 등급 순 3개까지). 사지 않았거나 기능 전 스냅샷엔 없다. */
+  items: z
+    .array(
+      z.strictObject({
+        k: z.enum(['watch', 'car', 'art', 'trophy', 'wine', 'shirt']),
+        g: z.number().int().min(1).max(4),
+      }),
+    )
+    .max(3)
     .optional(),
 });
 export type LegendSnapshot = z.infer<typeof LegendSnapshotSchema>;

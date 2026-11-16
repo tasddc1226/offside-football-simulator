@@ -1164,6 +1164,12 @@ describe('조작된 기록 보정', () => {
       nat: { caps: 0 },
       storyLog: [],
       miles: [],
+      // T-11-735 대표 소장품 · 은퇴 유산은 구단주 업적용 열로도 남는다.
+      items: [
+        { k: 'watch', g: 4 },
+        { k: 'wine', g: 2 },
+      ],
+      legacy: { k: 'academy', t: 3 },
     };
     const res = await put(`/v1/careers/${CAREER_ID}/retirement`, {
       ...retirementBody(),
@@ -1182,6 +1188,7 @@ describe('조작된 기록 보정', () => {
     const r = await row();
     expect(r.peak).toBe(85);
     expect(r.value).toBe(retireValue(rows, r.legendScore!));
+    expect(r).toMatchObject({ itemTop: 4, legacyTier: 3 });
     const [card] = await ctx.db.select().from(cards).where(eq(cards.careerId, CAREER_ID));
     expect(card?.cardValue).toBe(cardValue(rows, 85));
     expect(card?.cardValue).toBeLessThan(cardValue(snapshot.career, 200));

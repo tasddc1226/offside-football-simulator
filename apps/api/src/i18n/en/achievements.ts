@@ -15,6 +15,9 @@ export const achievementDescs: Record<string, string> = {
   's-quadruple':
     'Win four club trophies such as league, cup and continental titles in one season. Super cups, the Club World Championship and national team titles do not count.',
   'c-journeyman': 'Play in five or more pro leagues, not counting military seasons.',
+  'c-auction-legend': 'Retire a player who got a Legendary piece at the Luxury Auction.',
+  'c-legacy-legend': 'Retire a player who left a Legend-tier retirement legacy.',
+  'c-legacy-players': 'Counts players who left a Gold or higher retirement legacy.',
   'team-clean': 'Counts wins without conceding in matches you started.',
   'team-thrash': 'Counts wins by 4 or more goals in matches you started.',
   'team-six': 'Score 6 or more goals in a match you started.',

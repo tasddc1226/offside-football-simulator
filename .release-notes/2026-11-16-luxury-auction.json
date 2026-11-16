@@ -1,0 +1,47 @@
+{
+  "id": "t-11-735-auction",
+  "title": "30대 선수 자금 쓰는 곳: 명품 경매 · 인기 스폰서 수입",
+  "items": [
+    "선수 탭에 명품 경매가 생겼어요. 시즌마다 경매품 3개가 올라오고, 선수 자금으로 사서 상자를 열면 일반 · 고급 · 명품 · 전설 등급이 정해져요. 확률은 카드에 숫자로 보여요.",
+    "소장품은 진열장에 모여요. 전설 소장품을 얻거나 한 종류의 네 등급을 모두 모으면 칭호를 받고, 은퇴하면 대표 소장품 3개가 명예의 전당에 남아요.",
+    "칭호 4개(전설의 경매품 · 완성된 진열장 · 경매장 단골 · 컬렉션의 제왕)와 구단주 업적 3개(전설 소장품을 가진 선수 · 레전드 등급 은퇴 유산 · 금 등급 이상 은퇴 유산을 남긴 선수)가 생겼어요.",
+    "소장품마다 가치가 매겨져 은퇴할 때 은퇴 유산에 더해져요. 한 종류의 네 등급을 모으면 세트 효과로 경기력이 조금 올라요.",
+    "인기가 쓸모 있어졌어요. 시즌이 끝날 때 인기에 따라 연봉에 비례한 스폰서 수입이 들어오고, 인기가 높을수록 소장품을 비싸게 쳐 줘요.",
+    "앱에서는 시즌에 한 번 광고를 보고 경매품을 새로 받을 수 있어요."
+  ],
+  "en": {
+    "title": "Luxury Auction and fame sponsor income",
+    "items": [
+      "The Luxury Auction is on the Player tab. Three lots go up each season. Buy one with career funds and open the box to reveal its grade: Common, Fine, Luxury, or Legendary. The odds are shown on the card.",
+      "Your pieces gather in the showcase. Getting a Legendary piece or collecting all four grades of one type earns a title, and your top 3 pieces stay in the Hall of Fame when you retire.",
+      "Four new titles (Legendary Lot, Complete Showcase, Auction Regular, Collection Tycoon) and three new owner achievements (player with a Legendary collectible, Legend-tier retirement legacy, players with a Gold+ retirement legacy).",
+      "Each piece has a value that is added to your retirement legacy. Collecting all four grades of one type gives a set bonus that slightly lifts match performance.",
+      "Fame now pays off. You get sponsor income in proportion to salary at the end of each season, and higher fame makes your collection worth more.",
+      "In the app, you can watch an ad once per season to get new lots."
+    ]
+  },
+  "ja": {
+    "title": "高級オークションと人気スポンサー収入",
+    "items": [
+      "選手タブに高級オークションが加わりました。シーズンごとに3点が出品され、選手資金で買って箱を開けると一般・高級・名品・伝説の等級が決まります。確率はカードに数字で表示されます。",
+      "手に入れた品はコレクション棚に並びます。伝説の品を手に入れるか、1種類の4等級をすべて集めると称号がもらえ、引退すると代表的な3点が殿堂に残ります。",
+      "称号4つ（伝説の逸品・完成したコレクション・オークションの常連・コレクションの帝王）とオーナー実績3つ（伝説の品を持つ選手・レジェンドランクの引退レガシー・金ランク以上の引退レガシーを残した選手）が加わりました。",
+      "品ごとに価値がつき、引退するときに引退レガシーに加算されます。1種類の4等級を集めるとセット効果で試合のパフォーマンスが少し上がります。",
+      "人気に使い道ができました。シーズン終了時に人気に応じて年俸に比例したスポンサー収入が入り、人気が高いほどコレクションも高く評価されます。",
+      "アプリではシーズンに1回、広告を見て出品を入れ替えられます。"
+    ]
+  },
+  "zh": {
+    "title": "名品拍賣與人氣贊助收入",
+    "items": [
+      "球員分頁新增名品拍賣。每個賽季上架 3 件拍品，用球員資金買下並打開盒子，就會決定一般・高級・名品・傳說等級。機率會以數字顯示在卡片上。",
+      "收藏品會放進收藏櫃。獲得傳說收藏品或集齊同一種類的四個等級可以獲得稱號，退休時三件代表收藏品會留在名人堂。",
+      "新增 4 個稱號（傳說拍品・完整的收藏櫃・拍賣場常客・收藏之王）和 3 個老闆成就（擁有傳說收藏品的球員・傳奇等級的退休遺產・留下金等級以上退休遺產的球員）。",
+      "每件收藏品都有價值，退休時會計入退休遺產。集齊同一種類的四個等級，套組效果會讓比賽表現略微提升。",
+      "人氣變得有用了。賽季結束時會依人氣獲得與年薪成比例的贊助收入，人氣越高，收藏品估價也越高。",
+      "在 App 中每個賽季可以看一次廣告換一批拍品。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

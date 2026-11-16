@@ -1,3 +1,4 @@
+import { collectionEdge } from './collection.js';
 import {
   POS,
   ATTR_KEYS,
@@ -326,7 +327,8 @@ export function simBlock(s: GameState, mo?: MomentHooks): BlockResult {
       pp.form = gauss() * 0.8;
       pp.cond = (s.cond - 70) / 60;
       pp.morale = (s.morale - 60) / 90;
-      perf = pp.ovrEdge + pp.form + pp.cond + pp.morale;
+      // T-11-735 명품 경매 세트(한 종류 네 등급) 하나당 작은 보정. 소장품이 없으면 0이라 결과가 같다.
+      perf = pp.ovrEdge + pp.form + pp.cond + pp.morale + collectionEdge(s);
       let lg: number, la: number;
       ({ g, a, lg, la } = rollScoring(s, power, perf, L.avg, mins));
       // T-11-390 찬스 장면: 이 경기 골(미드필더는 골 · 도움)이 났는지에 묶은 장면 난수 u를 성공 기준선과 비교한다.

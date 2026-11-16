@@ -1,0 +1,33 @@
+import type { Translation } from '../core';
+import type { GameAuctionMsgs } from '../ko/gameAuction';
+
+export const gameAuction: Translation<GameAuctionMsgs> = {
+  title: '名品拍賣',
+  line: (p) => `本賽季的拍品上架了。每件${p.cost}，打開盒子才知道等級。`,
+  lineDone: '本賽季的拍品都買完了。下個賽季會有新拍品上架。',
+  buy: '競拍',
+  got: '已拍下',
+  short: '資金不足',
+  confirm: (p) => `要以${p.cost}買下${p.item}盒子嗎？等級要打開才知道。`,
+  confirmBtn: '確認競拍',
+  cancel: '取消',
+  odds: (p) => `等級機率：一般 ${p.g1}% · 高級 ${p.g2}% · 名品 ${p.g3}% · 傳說 ${p.g4}%`,
+  note: '每件收藏品都有價值，退役時會計入退休遺產（人氣越高估價越高）。集齊同一種類的四個等級，套組效果會讓比賽表現略微提升。重複的收藏品會以買價的一半轉賣。退役後，三件代表收藏品會留在名人堂。',
+  adButton: '換一批拍品',
+  adBadge: '廣告',
+  adNote: '看廣告可以換一批本賽季的拍品（每賽季一次）。',
+  adNoteFree: '已移除廣告，可以換一批本賽季的拍品（每賽季一次）。',
+  adWatch: '看完廣告就能換一批拍品。',
+  refreshed: '新拍品上架了。',
+  shelfWorth: (p) => (p.sets ? `價值${p.value} · 套組${p.sets}` : `價值${p.value}`),
+  shelfTitle: '收藏櫃',
+  shelfCount: (p) => `收藏品 ${p.n}/${p.total}`,
+  shelfLabel: (p) => `${p.item} ${p.grade} ${p.on ? '已收藏' : '未收藏'}`,
+  rolling: '正在打開盒子…',
+  resultTitle: (p) => `${p.grade}${p.item}`,
+  resultNew: (p) => `收藏櫃多了一件新收藏品。價值${p.value}。`,
+  resultDupe: (p) => `這件已經有了，所以以${p.refund}轉賣了。`,
+  resultComplete: (p) => `集齊了${p.item}的四個等級。套組效果讓比賽表現略微提升。`,
+  close: '確定',
+  creditTitle: '代表收藏品',
+};

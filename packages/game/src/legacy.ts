@@ -4,7 +4,8 @@
 // 분포(2026-11-16, 하위 25% · 중앙값 · 상위 25% · 상위 5%)에 맞췄다. 금 이상은 종류별 칭호, 레전드는 최고 칭호를 준다.
 // 명예의 전당에는 종류와 등급만 남고 금액은 남지 않는다. 레전드 점수 · 구단 자금 · 게임 결과에는 영향이 없다. RNG를 쓰지 않는다.
 import { fmtMoney } from './player.js';
-import { log } from './stats.js';
+import { collectionValue } from './collection.js';
+import { fameEff, log } from './stats.js';
 import type { GameState, LegacyKind, LegacyTier } from './types.js';
 import { gLegacyText as T } from './i18n/ko/gLegacy.js';
 
@@ -13,6 +14,15 @@ export const LEGACY_KINDS: readonly LegacyKind[] = ['academy', 'charity', 'club'
 export const LEGACY_TIERS: readonly number[] = [700_000, 1_700_000, 3_700_000, 8_000_000];
 /** 카드를 보이는 나이(30대 소비처). */
 export const LEGACY_AGE = 30;
+
+/** 소장품 가치(만 원) — 인기가 높을수록 비싸게 쳐 준다(인기 100이면 1.5배). T-11-735. */
+export function legacyItemsValue(s: GameState): number {
+  const v = collectionValue(s.auction?.items);
+  return v ? Math.round((v * (1 + fameEff(s) / 200)) / 10) * 10 : 0;
+}
+
+/** 은퇴 유산에 쓰는 돈 = 남은 자금 + 소장품 가치. */
+export const legacyFund = (s: GameState): number => s.money + legacyItemsValue(s);
 
 /** 이 자금이면 몇 등급인가(못 미치면 0). */
 export function legacyTierOf(money: number): LegacyTier | 0 {
@@ -37,9 +47,10 @@ export function pickLegacy(s: GameState, k: LegacyKind): void {
 export function settleLegacy(s: GameState): void {
   const k = s.legacyPick;
   if (!k || s.legacy) return;
-  const t = legacyTierOf(s.money);
+  const fund = legacyFund(s);
+  const t = legacyTierOf(fund);
   if (!t) return;
   s.legacy = { k, t };
-  log(s, T.settled({ kind: T[k], tier: T[`tier${t}`], money: fmtMoney(s.money) }), 'big');
+  log(s, T.settled({ kind: T[k], tier: T[`tier${t}`], money: fmtMoney(fund) }), 'big');
   s.money = 0;
 }

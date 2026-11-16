@@ -56,6 +56,11 @@ const UNITS = {
     ios: 'ca-app-pub-3797087216173591/9962450572',
     android: 'ca-app-pub-3797087216173591/7873589266',
   },
+  /** T-11-735 명품 경매 새로 받기. 전성기 연장과 같이 잠재력 강화 단위를 쓴다(adUsage u · GA4 place로 나눠 본다). */
+  auction: {
+    ios: 'ca-app-pub-3797087216173591/9962450572',
+    android: 'ca-app-pub-3797087216173591/7873589266',
+  },
 };
 type RewardPlacement = keyof typeof UNITS;
 const unitOf = (p: RewardPlacement) => (__DEV__ ? TestIds.REWARDED : Platform.select(UNITS[p]));

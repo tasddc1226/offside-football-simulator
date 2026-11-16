@@ -388,6 +388,9 @@ export async function putRetirement(
                 : { snapshotJson: JSON.stringify(verifiedSnapshot(snapshot, false)) }),
               shirtNumber: snapshot.number,
               value: retireValue(rows, summary.legendScore),
+              // T-11-735 구단주 업적(전설 소장품 · 은퇴 유산) 판정용.
+              itemTop: snapshot.items?.length ? Math.max(...snapshot.items.map((x) => x.g)) : null,
+              legacyTier: snapshot.legacy?.t ?? null,
             }
           : {}),
         ...(profile ? { peakProfile: JSON.stringify(profile) } : {}),

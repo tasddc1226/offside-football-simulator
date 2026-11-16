@@ -213,6 +213,29 @@ export type LegacyKind = 'academy' | 'charity' | 'club';
 /** 1 동 · 2 은 · 3 금 · 4 레전드. */
 export type LegacyTier = 1 | 2 | 3 | 4;
 
+/** T-11-735 명품 경매 소장품 종류(auction.ts). */
+export type AuctionKind = 'watch' | 'car' | 'art' | 'trophy' | 'wine' | 'shirt';
+/** 1 일반 · 2 고급 · 3 명품 · 4 전설. */
+export type AuctionGrade = 1 | 2 | 3 | 4;
+/** 소장품 하나(같은 종류 · 등급은 하나만 남는다). y는 얻은 시즌. */
+export interface AuctionItem {
+  k: AuctionKind;
+  g: AuctionGrade;
+  y: number;
+  /** 가치(만 원) = 산 값 × 등급 배율(collection.ts ITEM_VALUE). 은퇴 유산에 더한다. */
+  v?: number;
+}
+/** T-11-735 명품 경매(auction.ts). */
+export interface AuctionState {
+  /** 아래 r · got이 가리키는 시즌. */
+  y: number;
+  /** 이번 시즌 광고로 경매품을 새로 받은 횟수(경매품 종류가 바뀐다). */
+  r: number;
+  /** 이번 시즌(새로 받은 뒤) 산 경매품 칸(0부터). */
+  got: number[];
+  items: AuctionItem[];
+}
+
 /** T-11-733 전성기 연장 한 번의 시도(prime.ts). */
 export interface PrimeTry {
   y: number;
@@ -452,6 +475,8 @@ export interface GameState {
   legacyPick?: LegacyKind | undefined;
   /** T-11-733 은퇴 때 정해진 유산(종류 · 등급). 고르지 않았거나 동 등급에 못 미쳤으면 없다. */
   legacy?: { k: LegacyKind; t: number } | undefined;
+  /** T-11-735 명품 경매(auction.ts). 기능 전 저장·사지 않은 커리어엔 없다. */
+  auction?: AuctionState | undefined;
   retired: boolean;
   chains: ChainEvent[];
   story: Record<string, StoryState>;
@@ -552,6 +577,8 @@ export type LegendSource = Pick<
 > & {
   /** goals·assists는 T-10-086부터 남긴다 — 옛 은퇴 스냅샷엔 없다. */
   nat: { caps: number; goals?: number | undefined; assists?: number | undefined };
+  /** T-11-735 명품 경매 대표 소장품(은퇴 스냅샷). 사지 않았거나 기능 전 스냅샷엔 없다. */
+  items?: { k: AuctionKind; g: number }[] | undefined;
 };
 
 export interface Choice {

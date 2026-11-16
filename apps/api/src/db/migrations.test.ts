@@ -578,6 +578,9 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     // T-11-467 리그 컬러 · 클럽 동료.
     'main_league',
     'main_club',
+    // T-11-735 최고 소장품 등급 · 은퇴 유산 등급.
+    'item_top',
+    'legacy_tier',
   ],
   career_seasons: [
     'career_id',

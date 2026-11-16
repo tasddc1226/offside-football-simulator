@@ -1274,6 +1274,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
         retireAge: careers.retireAge,
         retiredAt: careers.retiredAt,
         peak: careers.peak,
+        itemTop: careers.itemTop,
+        legacyTier: careers.legacyTier,
         rn: retiredNumbers.careerId,
       })
       .from(careers)
@@ -1331,6 +1333,8 @@ export async function seasonCareersOf(db: Db, profileId: string, season: number)
     retireAge: r.retireAge ?? 0,
     retiredAt: r.retiredAt,
     peak: r.peak ?? 0,
+    ...(r.itemTop ? { itemTop: r.itemTop } : {}),
+    ...(r.legacyTier ? { legacyTier: r.legacyTier } : {}),
     seasons: byCareer.get(r.id) ?? [],
   }));
 }
