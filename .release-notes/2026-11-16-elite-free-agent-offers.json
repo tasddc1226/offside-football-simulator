@@ -22,5 +22,6 @@
       "修正了 OVR 很高且上季評分也好時，轉會市場上完全收不到其他球隊邀約的問題。現在頂尖球隊會送出邀約。"
     ]
   },
-  "availability": "web-app"
+  "availability": "web-app",
+  "balance": true
 }
