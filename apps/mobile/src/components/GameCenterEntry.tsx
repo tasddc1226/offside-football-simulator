@@ -88,7 +88,7 @@ export function GameCenterEntry({
           kind="tonal"
           disabled={state.busy}
           accessibilityState={{ busy: state.busy }}
-          style={{ flexGrow: 1, flexBasis: 128 }}
+          style={{ flexGrow: 1, flexBasis: needsConnection ? '100%' : 128 }}
           onPress={() => void enterGameCenter('leaderboard')}
         >
           {state.busy ? L.opening : needsConnection ? L.connectLeaderboard : L.leaderboard}
@@ -98,7 +98,7 @@ export function GameCenterEntry({
             testID={`${id}-achievements`}
             disabled={state.busy}
             accessibilityState={{ busy: state.busy }}
-            style={{ flexGrow: 1, flexBasis: 128 }}
+            style={{ flexGrow: 1, flexBasis: needsConnection ? '100%' : 128 }}
             onPress={() => void enterGameCenter('achievements')}
           >
             {state.busy ? L.opening : needsConnection ? L.connectAchievements : L.achievements}
