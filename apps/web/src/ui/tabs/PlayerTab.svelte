@@ -457,7 +457,8 @@
     margin: 8px 0;
   }
   .boost-acts [data-act='boost-cancel'],
-  .boost-acts [data-act='care-cancel'] {
+  .boost-acts [data-act='care-cancel'],
+  .boost-acts [data-act='prime-cancel'] {
     flex: none;
     white-space: nowrap;
   }
