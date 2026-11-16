@@ -14,6 +14,7 @@ import { gDex } from './gDex';
 import { gDexGroups } from './gDexGroups';
 import { gFanfeed } from './gFanfeed';
 import { gGkLabel } from './gGkLabel';
+import { gLegacy } from './gLegacy';
 import { gLegend } from './gLegend';
 import { gLife } from './gLife';
 import { gLoan } from './gLoan';
@@ -24,6 +25,7 @@ import { gMoments } from './gMoments';
 import { gNational } from './gNational';
 import { gPeek } from './gPeek';
 import { gPlayStyle } from './gPlayStyle';
+import { gPrime } from './gPrime';
 import { gRarity } from './gRarity';
 import { gRecords } from './gRecords';
 import { gRival } from './gRival';
@@ -52,6 +54,7 @@ export const en = {
   gDexGroups,
   gFanfeed,
   gGkLabel,
+  gLegacy,
   gLegend,
   gLife,
   gLoan,
@@ -62,6 +65,7 @@ export const en = {
   gNational,
   gPeek,
   gPlayStyle,
+  gPrime,
   gRarity,
   gRecords,
   gRival,

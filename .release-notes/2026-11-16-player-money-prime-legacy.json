@@ -1,0 +1,35 @@
+{
+  "id": "t-11-733-prime-legacy",
+  "title": "30대 선수 자금 쓰는 곳: 전성기 연장 · 은퇴 유산",
+  "items": [
+    "선수 탭에 전성기 연장이 생겼어요. 정점 나이 1년 전 시즌부터 선수 자금으로 능력치가 떨어지기 시작하는 나이를 한 해씩 늦추는 데 도전해요. 성공 확률은 40% · 25% · 15%이고, 성공 중 15%는 두 해를 한꺼번에 늘리는 대성공이에요.",
+    "앱에서는 자금이 모자랄 때 광고를 보고 커리어에서 두 번까지 전성기 연장에 도전할 수 있어요.",
+    "30세부터 선수 탭에서 은퇴 유산을 골라 둘 수 있어요. 은퇴할 때 남은 자금으로 아카데미 · 재단 · 첫 구단 후원의 등급(동 · 은 · 금 · 레전드)이 정해지고 명예의 전당에 남아요. 금 등급부터 칭호를 받아요."
+  ],
+  "en": {
+    "title": "New ways to use funds in your 30s: Extend Prime and Retirement Legacy",
+    "items": [
+      "Extend Prime is on the Player tab. From the season before your peak age, spend career funds to push back the age your attributes start to decline, one year at a time. Success chances are 40% · 25% · 15%, and 15% of successes add two years at once.",
+      "In the app, when funds are short, you can watch an ad to try Extend Prime up to twice per career.",
+      "From age 30, choose a Retirement Legacy on the Player tab. When you retire, your remaining funds set the tier (Bronze · Silver · Gold · Legend) of your academy, foundation, or first-club sponsorship, and it stays in the Hall of Fame. Gold and above earn a title."
+    ]
+  },
+  "ja": {
+    "title": "30代の選手資金の使い道：全盛期延長・引退後のレガシー",
+    "items": [
+      "選手タブに全盛期延長が加わりました。ピーク年齢の1年前のシーズンから、選手資金で能力値が下がり始める年齢を1年ずつ遅らせる挑戦ができます。成功確率は40%・25%・15%で、成功のうち15%は2年まとめて延びる大成功です。",
+      "アプリでは資金が足りないとき、広告を見てキャリアで2回まで全盛期延長に挑戦できます。",
+      "30歳から選手タブで引退後のレガシーを選んでおけます。引退するときの残りの資金で、アカデミー・財団・最初のクラブ支援のランク（銅・銀・金・レジェンド）が決まり、殿堂に残ります。金ランクから称号がもらえます。"
+    ]
+  },
+  "zh": {
+    "title": "30 多歲的球員資金用途：全盛期延長・退休遺產",
+    "items": [
+      "球員分頁新增全盛期延長。從巔峰年齡前一年的賽季起，可以用球員資金挑戰把能力值開始下滑的年齡一次延後一年。成功率為 40%・25%・15%，成功中有 15% 是一次延長兩年的大成功。",
+      "在 App 中資金不足時，可以看廣告挑戰全盛期延長，每段生涯最多兩次。",
+      "從 30 歲起可以在球員分頁先選好退休遺產。退休時依剩餘資金決定學院・基金會・贊助第一支球隊的等級（銅・銀・金・傳奇），並留在名人堂。金等級起可獲得稱號。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

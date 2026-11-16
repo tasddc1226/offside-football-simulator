@@ -208,6 +208,38 @@ export interface BoostState {
   log: BoostTry[];
 }
 
+/** T-11-733 은퇴 유산 종류(legacy.ts): 유소년 아카데미 · 자선 재단 · 첫 프로 구단 후원. */
+export type LegacyKind = 'academy' | 'charity' | 'club';
+/** 1 동 · 2 은 · 3 금 · 4 레전드. */
+export type LegacyTier = 1 | 2 | 3 | 4;
+
+/** T-11-733 전성기 연장 한 번의 시도(prime.ts). */
+export interface PrimeTry {
+  y: number;
+  age: number;
+  /** 시도 전 단계. */
+  lv: number;
+  /** 시도한 확률(%). */
+  p: number;
+  /** 쓴 자금(만 원). 광고로 시도했으면 0. */
+  c: number;
+  ok: boolean;
+  /** 대성공 — 두 단계를 올렸다. */
+  g?: true;
+  /** 자금이 모자라 보상형 광고로 시도했다(앱). */
+  ad?: true;
+}
+
+/** T-11-733 전성기 연장(prime.ts). 단계만큼 정점 나이(care.ts peakEndAge)가 늦어진다. */
+export interface PrimeState {
+  lv: number;
+  /** 지금 단계에서 연속으로 실패한 횟수(실패 보정). */
+  fails: number;
+  /** 마지막으로 시도한 시즌(시즌마다 한 번). */
+  year?: number | undefined;
+  log: PrimeTry[];
+}
+
 export interface Flags {
   potBonus?: number;
   rescout?: number;
@@ -414,6 +446,12 @@ export interface GameState {
   boost?: BoostState | undefined;
   /** T-11-513 마지막으로 받은 몸 관리(care.ts): 시즌 · 단계 · 쓴 자금(만 원). 기능 전 저장·받지 않은 커리어엔 없다. */
   care?: { y: number; t: 1 | 2 | 3; c: number } | undefined;
+  /** T-11-733 전성기 연장(prime.ts). 기능 전 저장·시도하지 않은 커리어엔 없다. */
+  prime?: PrimeState | undefined;
+  /** T-11-733 은퇴 유산으로 고른 종류(legacy.ts). 은퇴 전에 바꿀 수 있다. 고르지 않았으면 없다. */
+  legacyPick?: LegacyKind | undefined;
+  /** T-11-733 은퇴 때 정해진 유산(종류 · 등급). 고르지 않았거나 동 등급에 못 미쳤으면 없다. */
+  legacy?: { k: LegacyKind; t: number } | undefined;
   retired: boolean;
   chains: ChainEvent[];
   story: Record<string, StoryState>;
@@ -510,6 +548,7 @@ export type LegendSource = Pick<
   | 'miles'
   | 'titles'
   | 'style'
+  | 'legacy'
 > & {
   /** goals·assists는 T-10-086부터 남긴다 — 옛 은퇴 스냅샷엔 없다. */
   nat: { caps: number; goals?: number | undefined; assists?: number | undefined };

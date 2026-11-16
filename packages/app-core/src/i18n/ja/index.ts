@@ -49,10 +49,12 @@ import { gameBoost } from './gameBoost';
 import { gameCare } from './gameCare';
 import { gameCareer } from './gameCareer';
 import { gameLeague } from './gameLeague';
+import { gameLegacy } from './gameLegacy';
 import { gameMySeason } from './gameMySeason';
 import { gamePlayer } from './gamePlayer';
 import { gamePotential } from './gamePotential';
 import { gamePotentialNote } from './gamePotentialNote';
+import { gamePrime } from './gamePrime';
 import { gameReport } from './gameReport';
 import { gameSeason } from './gameSeason';
 import { gameTrophy } from './gameTrophy';
@@ -180,10 +182,12 @@ export const ja = {
   gameCare,
   gameCareer,
   gameLeague,
+  gameLegacy,
   gameMySeason,
   gamePlayer,
   gamePotential,
   gamePotentialNote,
+  gamePrime,
   gameReport,
   gameSeason,
   gameTrophy,

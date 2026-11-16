@@ -111,6 +111,29 @@ export const BALANCE_SPEC = {
     step: 0.05,
     unit: 'x',
   },
+  /** T-11-733 전성기 연장 비용 배율. */
+  primeCost: {
+    def: 1,
+    min: 0.25,
+    max: 4,
+    step: 0.05,
+    unit: 'x',
+  },
+  /** T-11-733 전성기 연장 성공 중 대성공(두 단계) 비율. */
+  primeGreat: {
+    def: 0.15,
+    min: 0,
+    max: 0.5,
+    step: 0.05,
+    unit: 'pct',
+  },
+  /** T-11-733 자금이 모자랄 때 광고로 시도하는 횟수(커리어 전체). */
+  primeAdTotal: {
+    def: 2,
+    min: 0,
+    max: 5,
+    step: 1,
+  },
   potMean: {
     def: 75,
     min: 65,

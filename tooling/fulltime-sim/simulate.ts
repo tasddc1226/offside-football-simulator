@@ -34,6 +34,7 @@ import {
 import { pick, ri, rnd, createRng, setActiveRng, freshSeed } from '@offside/game/rng';
 import { setLatestBalance } from '@offside/game/balance';
 import { claimSeasonAdBonus } from '@offside/game/adBonus';
+import { tryPrime } from '@offside/game/prime';
 import { BODY_DEFAULT, BODY_LIMITS } from '../../packages/contracts/src/body.js';
 import type { EventDef, GameState, MarketOption, OfferOption } from '@offside/game/types';
 
@@ -58,6 +59,8 @@ const DETAIL = !!process.env.DPOS;
 const INVEST = process.env.INVEST === '1';
 // T-11-720 AD_BONUS=1: 앱 시즌 결산 광고 보너스(선수 자금)를 매 시즌 받는다. 난수를 쓰지 않아 끄면 예전과 같다.
 const AD_BONUS = process.env.AD_BONUS === '1';
+// T-11-733 PRIME=1: 시즌 시작마다 전성기 연장을 시도한다(자금이 있을 때). 끄면 예전과 같다(RNG를 쓰지 않는다).
+const PRIME = process.env.PRIME === '1';
 // T-11-018 운영 유저에 맞춘 정책. RETIRE_AGE=<나이>: 그 나이부터 스스로 은퇴(기본 35 — 41이면 강제 은퇴까지 뛴다).
 // MG=<0~1>: 원터치 미니게임 장면(페널티킥·1대1·승부차기)을 손으로 가린 것처럼 이 확률로 성공한다(능력치 확률 대신).
 // MG가 없으면 예전처럼 난수로 판정한다(RNG 소비도 같다).
@@ -197,6 +200,7 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
 
     try {
       for (let y = 0; y < 30 && !s.retired; y++) {
+        if (PRIME) tryPrime(s);
         for (let ph = 0; ph <= LAST_PHASE; ph++) {
           s.training = pickTraining(s);
           if (INVEST) s.invest = pickInvest(s);

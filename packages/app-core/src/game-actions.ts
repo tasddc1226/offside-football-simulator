@@ -1,4 +1,5 @@
 import { appendLocalHof } from '@offside/game/hof-store';
+import { legacyRetireLine } from './legacy-view';
 import { canClaimSeasonAdBonus, claimSeasonAdBonus, seasonAdBonus } from '@offside/game/adBonus';
 import { adText as AD } from './i18n/ko/ad.js';
 import { createScoutingActions, releaseScoutSeed } from './scouting-actions.js';
@@ -895,9 +896,12 @@ export function createGameActions(host: GameHost) {
       return;
     }
     // T-10-032: 짧은 커리어는 전체 명예의 전당에 오르지 않는다 — 은퇴 전에 미리 알린다.
-    const text = isHofEligible(appState.G!.age)
+    const base = isHofEligible(appState.G!.age)
       ? L.retireTextHof
       : L.retireTextShort({ note: SHORT_CAREER_NOTE });
+    // T-11-733 고른 은퇴 유산이 있으면 은퇴 전에 등급을 알린다.
+    const legacy = legacyRetireLine(appState.G!);
+    const text = legacy ? `${base} ${legacy}` : base;
     sheet.showSheet(
       { kind: 'notice', eyebrow: 'Retirement', title: L.retireTitle, muted: true, text },
       [

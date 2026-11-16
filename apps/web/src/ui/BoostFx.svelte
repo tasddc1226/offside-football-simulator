@@ -42,16 +42,16 @@
 
 <svelte:window {onkeydown} />
 
-<div class="boost-fx" class:ok={done && out.ok} class:great={done && out.great} class:fail={done && !out.ok} data-boost-fx={done ? (out.great ? 'great' : out.ok ? 'ok' : 'fail') : 'rolling'} role="dialog" aria-modal="true" aria-label={L.title} transition:fade={{ duration: dur(180) }}>
+<div class="boost-fx" class:ok={done && out.ok} class:great={done && out.great} class:fail={done && !out.ok} data-boost-fx={done ? (out.great ? 'great' : out.ok ? 'ok' : 'fail') : 'rolling'} role="dialog" aria-modal="true" aria-label={out.head ?? L.title} transition:fade={{ duration: dur(180) }}>
   <div class="bf-card" aria-live="polite">
-    <div class="eyebrow">Potential</div>
+    <div class="eyebrow">{out.eyebrow ?? 'Potential'}</div>
     <div class="bf-steps" aria-hidden="true">
       {#each { length: out.max } as _, i (i)}
         <i class:on={i < lit} class:new={done && i >= out.lv - out.up && i < out.lv}></i>
       {/each}
     </div>
     {#if !done}
-      <h2>{L.rolling}</h2>
+      <h2>{out.rolling ?? L.rolling}</h2>
       <div class="bf-gauge" aria-hidden="true"><span style={`width:${p * 100}%`}></span></div>
       <p class="muted fs-sm">{out.greatChance ? L.chanceGreat({ n: out.chance, g: out.greatChance }) : L.chance({ n: out.chance })}</p>
     {:else}
