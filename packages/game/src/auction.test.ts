@@ -14,6 +14,7 @@ import {
 import { collectionEdge, ITEM_VALUE, SET_EDGE } from './collection.js';
 import { newGame } from './engine.js';
 import { legacyFund, legacyItemsValue, legacyTierOf, settleLegacy } from './legacy.js';
+import { sponsorPay } from './season.js';
 import { legendSnapshot } from './legend.js';
 import { createRng, getActiveRng, setActiveRng } from './rng.js';
 import { TITLES } from './titles.js';
@@ -179,5 +180,15 @@ describe('T-11-735 소장품의 쓸모 · 인기 스폰서', () => {
       items: [1, 2, 3, 4].map((g) => ({ k: 'car' as const, g: g as 1, y: 2030 })),
     };
     expect(collectionEdge(s)).toBe(SET_EDGE);
+  });
+
+  it('스폰서 수입은 연봉 × 인기(100까지)/100 × 0.2, 계약이 없으면 0', () => {
+    const s = pro();
+    s.fame = 50;
+    expect(sponsorPay(s)).toBe(2000);
+    s.fame = 500;
+    expect(sponsorPay(s)).toBe(4000);
+    s.contract = null;
+    expect(sponsorPay(s)).toBe(0);
   });
 });

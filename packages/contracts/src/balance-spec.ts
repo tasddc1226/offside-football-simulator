@@ -136,7 +136,7 @@ export const BALANCE_SPEC = {
   },
   /** T-11-735 인기 스폰서 수입: 시즌이 끝날 때 연봉 × 인기(100까지)/100 × 이 값. */
   fameSponsor: {
-    def: 0,
+    def: 0.2,
     min: 0,
     max: 1,
     step: 0.05,
