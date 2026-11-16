@@ -184,9 +184,9 @@ describe('Game Center consent and identity boundaries', () => {
     expect(m.gameCenter.connected).toBe(false);
     expect(f.save).toHaveBeenLastCalledWith('ft_game_center_connection', null);
   });
-  it('submits distinct board maxima and all twelve achievements only once per snapshot', async () => {
-    const { GAME_CENTER_EXPANDED_ACHIEVEMENTS } = await import('@offside/contracts/game-center');
-    const achievements = Object.keys(GAME_CENTER_EXPANDED_ACHIEVEMENTS);
+  it('submits distinct board maxima and all eighteen achievements only once per snapshot', async () => {
+    const { GAME_SERVICES_ACHIEVEMENTS } = await import('@offside/contracts/game-center');
+    const achievements = Object.keys(GAME_SERVICES_ACHIEVEMENTS);
     f.read.mockResolvedValue(
       data({
         scores: { legend: 3000, career_goals: 300, career_assists: 200, weekly_legend: null },
@@ -201,7 +201,7 @@ describe('Game Center consent and identity boundaries', () => {
       ['com.offsidelab.app.leaderboard.career_goals.v1', 300],
       ['com.offsidelab.app.leaderboard.career_assists.v1', 200],
     ]);
-    expect(f.submit.mock.calls[0][3]).toEqual(Object.values(GAME_CENTER_EXPANDED_ACHIEVEMENTS));
+    expect(f.submit.mock.calls[0][3]).toEqual(Object.values(GAME_SERVICES_ACHIEVEMENTS));
     expect(f.submit.mock.calls[1][3]).toEqual([]);
     await m.syncGameCenter();
     expect(f.submit).toHaveBeenCalledTimes(3);

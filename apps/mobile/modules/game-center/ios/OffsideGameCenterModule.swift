@@ -50,7 +50,7 @@ public final class OffsideGameCenterModule: Module {
 
     AsyncFunction("submitProgress") {
       (playerID: String, leaderboardID: String, score: Int?, achievementIDs: [String], promise: Promise) in
-      guard self.matches(playerID), score.map({ $0 >= 0 }) ?? true, achievementIDs.count <= 12 else {
+      guard self.matches(playerID), score.map({ $0 >= 0 }) ?? true, achievementIDs.count <= 18 else {
         promise.reject("ERR_GAME_CENTER_PLAYER_CHANGED", "Player changed or progress is invalid")
         return
       }

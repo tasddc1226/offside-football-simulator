@@ -4,11 +4,11 @@ import { proxy } from 'valtio';
 import { loadKey, saveKey } from '@offside/game/storage';
 import { cachedGet, invalidateApiCache } from '@offside/app-core/api/client';
 import {
-  GAME_CENTER_EXPANDED_ACHIEVEMENTS,
+  GAME_SERVICES_ACHIEVEMENTS,
   GAME_CENTER_LEADERBOARDS,
   GAME_CENTER_LEADERBOARD_ID,
-  GameCenterExpandedProgressSchema,
-  type GameCenterExpandedProgress,
+  GameServicesProgressSchema,
+  type GameServicesProgress,
 } from '@offside/contracts/game-center';
 import { onRetirementSynced } from '@offside/app-core/outbox';
 import { ensureSession, onSessionChanged } from './session';
@@ -29,7 +29,7 @@ interface NativeGameCenter {
   showDashboard(playerId: string, leaderboardId: string, achievements: boolean): Promise<boolean>;
 }
 
-const PATH = '/v1/owner/game-center/expanded';
+const PATH = '/v1/owner/game-center/v2';
 const KEY = 'ft_game_center_connection';
 const native =
   Platform.OS === 'ios' ? requireOptionalNativeModule<NativeGameCenter>('OffsideGameCenter') : null;
@@ -115,16 +115,16 @@ async function authenticate(): Promise<Player> {
   }
 }
 
-async function progress(epoch: number): Promise<GameCenterExpandedProgress> {
-  const result = await cachedGet<GameCenterExpandedProgress>(PATH, 60_000);
+async function progress(epoch: number): Promise<GameServicesProgress> {
+  const result = await cachedGet<GameServicesProgress>(PATH, 60_000);
   check(epoch);
   if (!result.ok) throw new GameCenterFailure('sync');
-  const parsed = GameCenterExpandedProgressSchema.safeParse(result.data);
+  const parsed = GameServicesProgressSchema.safeParse(result.data);
   if (!parsed.success) throw new GameCenterFailure('sync');
   return parsed.data;
 }
 
-async function send(data: GameCenterExpandedProgress, target: Connection, epoch: number) {
+async function send(data: GameServicesProgress, target: Connection, epoch: number) {
   check(epoch);
   if (data.profileId !== target.profileId || (await native!.getPlayer())?.id !== target.playerId)
     throw new GameCenterFailure('changed');
@@ -137,7 +137,7 @@ async function send(data: GameCenterExpandedProgress, target: Connection, epoch:
     data.achievements,
   ]);
   if (submitted !== fingerprint) {
-    let ids = data.achievements.map((key) => GAME_CENTER_EXPANDED_ACHIEVEMENTS[key]);
+    let ids = data.achievements.map((key) => GAME_SERVICES_ACHIEVEMENTS[key]);
     for (const key of Object.keys(
       GAME_CENTER_LEADERBOARDS,
     ) as (keyof typeof GAME_CENTER_LEADERBOARDS)[]) {
