@@ -16,6 +16,12 @@ export const webPay: Translation<WebPayMsgs> = {
   done: '付款完成，道具已存入。',
   pending: '付款確認後，道具會自動存入。如果沒有付款，不用理會即可。',
   canceled: '此筆付款已退款，已收回道具。',
+  confirmSum: (p) => `${p.pack} · ${p.price}`,
+  confirmLead: '將在 Xsolla 付款頁面完成付款，結束後會回到此畫面。',
+  payKakao: '使用 KakaoPay 付款',
+  payOther: '使用信用卡或其他方式付款',
+  payGo: '前往付款頁面',
+  payCancel: '取消',
   refund:
     '若未使用已收到的道具，可在付款日起 7 天內申請退款。已使用的道具無法退款。聯絡我們：contact@offside-lab.com',
 };

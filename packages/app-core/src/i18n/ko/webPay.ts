@@ -16,6 +16,12 @@ const ko = {
   done: '결제가 끝나 아이템이 들어왔어요.',
   pending: '결제가 확인되면 아이템이 자동으로 들어와요. 결제하지 않았다면 그대로 두면 돼요.',
   canceled: '환불된 결제라 아이템을 회수했어요.',
+  confirmSum: (p: { pack: string; price: string }) => `${p.pack} · ${p.price}`,
+  confirmLead: '엑솔라 결제 화면에서 결제해요. 끝나면 이 화면으로 돌아와요.',
+  payKakao: '카카오페이로 결제',
+  payOther: '카드 · 다른 수단으로 결제',
+  payGo: '결제 화면으로 가기',
+  payCancel: '취소',
   refund:
     '받은 아이템을 쓰지 않았다면 결제일로부터 7일 안에 환불을 요청할 수 있어요. 쓴 아이템은 환불되지 않아요. 문의: contact@offside-lab.com',
 };

@@ -8,6 +8,7 @@ import {
   fetchWebPayConfig,
   fetchWebPayOrder,
   type WebPayConfigResponse,
+  type WebPayMethod,
 } from '@offside/app-core/api/webPay';
 import { webPayText as L } from '@offside/app-core/i18n/ko/webPay';
 import { commerceOffer, type CommerceEntry } from '@offside/app-core/commerceStage';
@@ -108,21 +109,26 @@ async function checkPending() {
   await settle(p.orderId, p.back);
 }
 
-/** 상품을 고르면 주문을 만들고 엑솔라 결제창으로 간다. */
-export async function startWebPay(productId: string, back: WebPayBack = 'owner') {
+/**
+ * 상품을 고르면 주문을 만들고 엑솔라 결제창으로 간다. T-11-736 아이템 묶음(WebPayPacks)은 확인 단계를 거친 뒤 부르고,
+ * payMethod를 고르면 결제창이 그 수단 입력 화면으로 바로 열린다.
+ */
+export async function startWebPay(
+  productId: string,
+  back: WebPayBack = 'owner',
+  payMethod?: WebPayMethod,
+) {
   if (webPay.busy) return;
   webPay.busy = true;
-  // 강화권 · 스카우트권만 구매 퍼널에 남긴다(리롤권 · 이름 변경권 · 패스 · 멤버십은 null). checkout_request는 주문 요청을
-  // 보내기 직전에 남기고, 주문 응답을 기다린 뒤의 실패는 그 사이 계정 · 동의가 바뀌지 않았을 때만 남긴다. 결제창으로 떠난
-  // 뒤의 취소 · 성공은 이 탭 메모리로 이어 갈 수 없어 남기지 않는다(commerceStage 머리말). 주문 · 미확인 주문 저장은 그대로다.
+  // 강화권 · 스카우트권만 구매 퍼널에 남긴다(리롤권 · 이름 변경권 · 패스 · 멤버십은 null). offer_select는 묶음을 누를 때
+  // (WebPayPacks), checkout_request는 확인 단계에서 결제를 고른 뒤 주문 요청을 보내기 직전에 남긴다. 주문 응답을 기다린 뒤의
+  // 실패는 그 사이 계정 · 동의가 바뀌지 않았을 때만 남긴다. 결제창으로 떠난 뒤의 취소 · 성공은 이 탭 메모리로 이어 갈 수
+  // 없어 남기지 않는다(commerceStage 머리말). 주문 · 미확인 주문 저장은 그대로다.
   const offer = commerceOffer(productId, commerceEntry(back), 'xsolla');
   const alive = commerceContext();
-  if (offer) {
-    trackCommerce({ ...offer, stage: 'offer_select' }, alive);
-    trackCommerce({ ...offer, stage: 'checkout_request' }, alive);
-  }
+  if (offer) trackCommerce({ ...offer, stage: 'checkout_request' }, alive);
   toast(L.opening);
-  const r = await createWebPayOrder(productId, creatorTrackingId());
+  const r = await createWebPayOrder(productId, creatorTrackingId(), payMethod);
   if (!r.ok) {
     webPay.busy = false;
     if (offer) trackCommerce({ ...offer, stage: 'checkout_error', reason: 'start_failed' }, alive);

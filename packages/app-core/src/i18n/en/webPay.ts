@@ -17,6 +17,12 @@ export const webPay: Translation<WebPayMsgs> = {
   pending:
     "Your items will arrive once the payment is confirmed. If you didn't pay, you can ignore this.",
   canceled: 'This payment was refunded, so the items were taken back.',
+  confirmSum: (p) => `${p.pack} · ${p.price}`,
+  confirmLead: "You'll pay on Xsolla's checkout page, then come back here.",
+  payKakao: 'Pay with KakaoPay',
+  payOther: 'Pay by card or another method',
+  payGo: 'Go to checkout',
+  payCancel: 'Cancel',
   refund:
     'You can request a refund for unused items within 7 days of payment. Used items are not refundable. Contact: contact@offside-lab.com',
 };

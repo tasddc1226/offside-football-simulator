@@ -35,6 +35,7 @@ import { billingAlertId, recordBillingAlert } from '../iap/alerts.js';
 import {
   createXsollaToken,
   webPayEnabled,
+  XSOLLA_METHODS,
   xsollaPayUrl,
   xsollaSandbox,
   xsollaSignatureOk,
@@ -121,7 +122,7 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
   app.post('/v1/web-pay/orders', requireProfile, async (c) => {
     const me = await requireOwner(c);
     if (!webPayEnabled(c.env, me.id)) throw unavailable();
-    const { productId, trackingId: linkTracking } = readBody(c, WebPayOrderBodySchema);
+    const { productId, trackingId: linkTracking, method } = readBody(c, WebPayOrderBodySchema);
     const db = getDb(c);
     const now = nowIso();
     if (
@@ -138,10 +139,11 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
     // Origin은 originGuard가 허용한 웹 주소다. 결제창이 끝나면 이 주소의 `/?webpay=<주문>`으로 돌아온다.
     const origin = c.req.header('Origin') ?? new URL(c.req.url).origin;
     const cf = (c.req.raw as { cf?: { country?: unknown } }).cf;
+    // 요청 객체의 나라가 없으면 Cloudflare가 덮어쓰는 CF-IPCountry 헤더를 본다(사용자가 바꿀 수 없다).
+    const cfCountry = typeof cf?.country === 'string' ? cf.country : c.req.header('CF-IPCountry');
     const country =
-      typeof cf?.country === 'string' && /^[A-Z]{2}$/.test(cf.country) && cf.country !== 'XX'
-        ? cf.country
-        : null;
+      cfCountry && /^[A-Z]{2}$/.test(cfCountry) && cfCountry !== 'XX' ? cfCountry : null;
+    const picked = method ? XSOLLA_METHODS[method] : null;
     const tokenInput = {
       profileId: me.id,
       sku: productId,
@@ -150,12 +152,21 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
       language: reqLang(c),
       returnUrl: `${origin}/?webpay=${orderId}`,
     };
+    // T-11-700 추적값 · T-11-736 결제 수단 때문에 토큰이 거절되면 둘 다 빼고 한 번 더 만든다. 크리에이터 실적이나 수단 바로
+    // 열기는 빠져도 결제는 막지 않는다.
+    const extras = {
+      ...(trackingId ? { trackingId } : {}),
+      ...(picked && picked.country === country ? { paymentMethod: picked.id } : {}),
+    };
     const token = await (
-      trackingId
-        ? // T-11-700 추적값 때문에 토큰이 거절되면 추적값 없이 한 번 더 만든다. 크리에이터 실적은 빠져도 결제는 막지 않는다.
-          createXsollaToken(c.env, { ...tokenInput, trackingId }).catch((e: unknown) => {
+      Object.keys(extras).length
+        ? createXsollaToken(c.env, { ...tokenInput, ...extras }).catch((e: unknown) => {
             console.error(
-              JSON.stringify({ job: 'web-pay-token-tracking', error: String(e).slice(0, 200) }),
+              JSON.stringify({
+                job: 'web-pay-token-extras',
+                extras: Object.keys(extras),
+                error: String(e).slice(0, 200),
+              }),
             );
             return createXsollaToken(c.env, tokenInput);
           })
