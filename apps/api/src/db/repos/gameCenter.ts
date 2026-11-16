@@ -3,6 +3,8 @@ import {
   ACHIEVEMENT_EUROPEAN_LEAGUES,
   GAME_CENTER_WEEKLY_START,
   GAME_CENTER_WEEK_MS,
+  PLAY_GAMES_WEEKLY_START,
+  type GameServicesProgress,
   type GameCenterAchievement,
   type GameCenterExpandedProgress,
   type GameCenterProgress,
@@ -13,8 +15,13 @@ import { careers, careerSeasons } from '../schema.js';
 import { isPublicRetired, retiredLiteral } from './careers.js';
 
 /** One indexed owner scan across seasons. No player details, R2 reads or per-career queries. */
-async function loadProgress(db: Db, profileId: string, now: string) {
-  const anchor = Date.parse(GAME_CENTER_WEEKLY_START);
+async function loadProgress(
+  db: Db,
+  profileId: string,
+  now: string,
+  weeklyStart = GAME_CENTER_WEEKLY_START,
+) {
+  const anchor = Date.parse(weeklyStart);
   const time = Date.parse(now);
   const start =
     anchor + Math.max(0, Math.floor((time - anchor) / GAME_CENTER_WEEK_MS)) * GAME_CENTER_WEEK_MS;
@@ -42,7 +49,7 @@ async function loadProgress(db: Db, profileId: string, now: string) {
       goals: sql<number | null>`max(case when ${isPublicRetired} then ${careers.goals} end)`,
       assists: sql<number | null>`max(case when ${isPublicRetired} then ${careers.assists} end)`,
       weekly: sql<number | null>`max(case when ${isPublicRetired}
-        and ${now} >= ${GAME_CENTER_WEEKLY_START}
+        and ${now} >= ${weeklyStart}
         and ${careers.retiredAt} >= ${week.startsAt} and ${careers.retiredAt} < ${week.endsAt}
         then ${careers.legendScore} end)`,
       maxGoals: sql<number>`coalesce(max(${careers.goals}), 0)`,
@@ -89,6 +96,14 @@ export async function gameCenterExpandedProgress(
   now: string,
 ): Promise<GameCenterExpandedProgress> {
   const { row, week } = await loadProgress(db, profileId, now);
+  return expandedProgress(row, week, profileId);
+}
+
+function expandedProgress(
+  row: Awaited<ReturnType<typeof loadProgress>>['row'],
+  week: GameCenterExpandedProgress['week'],
+  profileId: string,
+): GameCenterExpandedProgress {
   const achievements: GameCenterExpandedProgress['achievements'] = firstAchievements(row);
   if ((row?.maxGoals ?? 0) >= 100) achievements.push('career_goals_100');
   if ((row?.maxGoals ?? 0) >= 300) achievements.push('career_goals_300');
@@ -109,4 +124,28 @@ export async function gameCenterExpandedProgress(
     week,
     achievements,
   };
+}
+
+/** Same indexed snapshot for both providers; their native weekly reset boundaries differ. */
+export async function gameServicesProgress(
+  db: Db,
+  profileId: string,
+  now: string,
+  provider: 'game-center' | 'play-games',
+): Promise<GameServicesProgress> {
+  const { row, week } = await loadProgress(
+    db,
+    profileId,
+    now,
+    provider === 'play-games' ? PLAY_GAMES_WEEKLY_START : GAME_CENTER_WEEKLY_START,
+  );
+  const data = expandedProgress(row, week, profileId);
+  const achievements: GameServicesProgress['achievements'] = [...data.achievements];
+  if ((row?.maxGoals ?? 0) >= 750) achievements.push('career_goals_750');
+  if ((row?.maxGoals ?? 0) >= 1000) achievements.push('career_goals_1000');
+  if ((row?.maxAssists ?? 0) >= 500) achievements.push('career_assists_500');
+  if ((row?.maxTrophies ?? 0) >= 50) achievements.push('career_trophies_50');
+  if ((row?.maxBallon ?? 0) >= 10) achievements.push('career_ballon_10');
+  if ((row?.retirements ?? 0) >= 50) achievements.push('retirements_50');
+  return { ...data, achievements };
 }
