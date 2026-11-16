@@ -1,6 +1,9 @@
 import { OwnerSummaryResponseSchema, OwnerRecapStatusSchema } from '@offside/contracts';
-import { GameCenterProgressSchema } from '@offside/contracts/game-center';
-import { gameCenterProgress } from '../db/repos/gameCenter.js';
+import {
+  GameCenterProgressSchema,
+  GameCenterExpandedProgressSchema,
+} from '@offside/contracts/game-center';
+import { gameCenterProgress, gameCenterExpandedProgress } from '../db/repos/gameCenter.js';
 import type { Hono } from 'hono';
 import { commentIdentity } from '../auth/admin.js';
 import { listOwnSummary } from '../db/repos/careers.js';
@@ -12,6 +15,15 @@ import { getSessionOrThrow, requireProfile } from '../middleware/requireProfile.
 import { nowIso, ok } from './shared.js';
 
 export function registerOwnerSummaryRoutes(app: Hono<AppEnv>): void {
+  app.get('/v1/owner/game-center/expanded', requireProfile, async (c) =>
+    ok(
+      c,
+      GameCenterExpandedProgressSchema,
+      await gameCenterExpandedProgress(getDb(c), getSessionOrThrow(c).profileId, nowIso()),
+      200,
+      'private, no-store',
+    ),
+  );
   app.get('/v1/owner/game-center', requireProfile, async (c) =>
     ok(
       c,
