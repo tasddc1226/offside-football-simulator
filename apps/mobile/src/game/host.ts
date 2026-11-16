@@ -10,6 +10,7 @@ import { createGameActions } from '@offside/app-core/game-actions';
 import { createUploader } from '@offside/app-core/upload';
 import { takeAdUsage } from '../platform/adUsage';
 import { takePlaySignals } from '../platform/playSignals';
+import { playSfx } from '../platform/sfx';
 import * as Outbox from '@offside/app-core/outbox';
 import { saveGame } from '@offside/app-core/career';
 import { createClubCustom } from '@offside/app-core/clubCustom';
@@ -117,6 +118,7 @@ export const {
   analytics,
   trackPage,
   retired: () => void showRetireAd(),
+  sfx: playSfx,
   // T-11-720 시즌 결산 보너스 보상형 광고(광고 제거 · 멤버십은 광고 없이 바로).
   reward: {
     offer: (p) => rewardOffer(p, adsOff(adFree)),

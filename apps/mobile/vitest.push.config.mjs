@@ -19,6 +19,7 @@ export default {
       'src/platform/adConsent.test.mjs',
       'src/platform/adPersonalization.test.mjs',
       'src/platform/rewarded.test.mjs',
+      'src/platform/sfx.test.mjs',
       'src/platform/interstitial.test.mjs',
       'src/components/AdSlot.test.mjs',
       'src/platform/iapItems.test.mjs',

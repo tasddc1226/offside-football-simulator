@@ -17,6 +17,7 @@ export const settings: Translation<SettingsMsgs> = {
     'The bottom menu hides when you scroll down and comes back when you scroll up. Saved on this device.',
   hapticsTitleApp: 'Vibration',
   hapticsBodyApp: 'Short vibrations on choices and results. Saved on this device.',
+  sfxBodyApp: 'Short sounds for upgrades, rewards and match results. Silent mode mutes them.',
   langTitle: 'Language',
   langBody: 'Changes the language of the game screens and events. Saved on this device.',
   sheetTitle: 'Work mode',

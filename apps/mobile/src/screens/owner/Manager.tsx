@@ -94,6 +94,7 @@ import { CountUp } from '../../components/CountUp';
 import { Chips } from '../../sheets/Chips';
 import { Pop } from '../../sheets/anim';
 import { Skeleton } from '../../ui/Skeleton';
+import { playSfx } from '../../platform/sfx';
 
 type CardRules = {
   mastery: Record<FormationId, string>;
@@ -290,7 +291,10 @@ export default function Manager() {
   function liveDone() {
     setLive(null);
     const h = st?.history.at(-1);
-    if (h && seasonBadges(h).some((b) => !b.bad)) buzz();
+    if (h && seasonBadges(h).some((b) => !b.bad)) {
+      buzz();
+      playSfx('trophy');
+    }
   }
   async function run(fn: () => Promise<{ ok: boolean; error?: { message: string } }>) {
     setBusy(true);

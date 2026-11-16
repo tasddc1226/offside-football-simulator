@@ -65,6 +65,7 @@ import { LateCredits } from './LateCredits';
 import { tn } from '@offside/game/i18n/names';
 import { NATION_BY_CODE, flagOf } from '@offside/contracts/nations';
 import { avatarWidth, retiredAvatarSpec } from '@offside/game/avatar';
+import { playSfx } from '../../platform/sfx';
 
 // end: 리포트 맨 아래(다음 행동 버튼 등).
 /** T-11-371 은퇴 때 실제 잠재력 공개 연출 — 장면이 화면에 올라온 뒤 시작한다. */
@@ -98,7 +99,11 @@ export function LegendReport({
 }) {
   const [potFx] = useState(() => {
     const on = !!fresh && loadKey<string>(POT_SEEN) !== fresh;
-    if (on) saveKey(POT_SEEN, fresh);
+    if (on) {
+      saveKey(POT_SEEN, fresh);
+      // T-11-738 이 커리어를 처음 볼 때 한 번 — 풀타임 휘슬.
+      playSfx('fulltime');
+    }
     return on;
   });
   const c = useColors();

@@ -81,6 +81,7 @@ import { useColors } from '../../theme/useColors';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { PixelAvatar } from '../../ui/PixelAvatar';
 import { ProgBar } from '../../sheets/parts';
+import { playSfx } from '../../platform/sfx';
 
 const small = { fontSize: rem(FONT.body2) } as const;
 const tiny = { fontSize: rem(FONT.caption) } as const;
@@ -288,6 +289,7 @@ export function Manager3({
               : T.bid_none,
     );
     buzz();
+    if (r === 'signed') playSfx('found');
   }
   function closeWin() {
     const sold = act(closeWindow);

@@ -16,6 +16,7 @@ export const settings: Translation<SettingsMsgs> = {
   barAutoHideBodyApp: '向下捲動時隱藏下方選單，向上捲動時再次出現，並儲存在這台裝置上。',
   hapticsTitleApp: '震動',
   hapticsBodyApp: '在選擇與結果揭曉時短暫震動，並儲存在這台裝置上。',
+  sfxBodyApp: '強化、獎勵、比賽結果揭曉時播放短音效。靜音模式下不會播放。',
   langTitle: '語言',
   langBody: '變更遊戲畫面與事件文字的語言，並儲存在這台裝置上。',
   sheetTitle: '上班模式',

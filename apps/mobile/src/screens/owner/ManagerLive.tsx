@@ -14,6 +14,7 @@ import { Enter } from '../../sheets/anim';
 import { ProgBar, StatGrid } from '../../sheets/parts';
 import { ResBadge } from '../../sheets/TickerLine';
 import { Btn, Press, Txt } from '../../ui';
+import { playSfx } from '../../platform/sfx';
 
 export function ManagerLive({
   n,
@@ -43,6 +44,7 @@ export function ManagerLive({
     clearInterval(timer.current);
     timer.current = null;
     buzz();
+    playSfx('whistle');
   }, [finished]);
 
   const played = matches.slice(0, shown);
