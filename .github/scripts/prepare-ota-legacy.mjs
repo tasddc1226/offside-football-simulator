@@ -20,6 +20,14 @@ export const targets = Object.freeze({
       android: '3b6819b34ba45425ee879e20f824f81da095fa05', // 1.1.7 Android build 27 (T-11-563)
     },
   },
+  // T-11-751 Android 1.1.10 became current on 2026-11-17. 1.1.9 was public on Android only (iOS 1.1.9 was withdrawn from review and iOS goes 1.1.8 -> 1.1.10),
+  // so this lane has no iOS runtime and the workflow excludes 1.1.9 / ios.
+  '1.1.9': {
+    source: '59fb22277f64b5150235e56a187224b1fcef368c',
+    runtimes: {
+      android: '84aa755bbc152b4088e0a0e4017b4c009552ad70', // 1.1.9 Android build 30 (T-11-734)
+    },
+  },
 });
 export const APP_JSON = 'apps/mobile/app.json';
 export const MOBILE_PACKAGE = 'apps/mobile/package.json';
@@ -95,6 +103,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   else if (cmd === 'prepare') prepare(process.cwd(), name, platform);
   else
     throw new Error(
-      'Usage: prepare-ota-legacy.mjs prepare <current|1.1.7> <platform> | check <current|1.1.7> <platform> <fingerprint>',
+      'Usage: prepare-ota-legacy.mjs prepare <current|1.1.9|1.1.7> <platform> | check <current|1.1.9|1.1.7> <platform> <fingerprint>',
     );
 }
