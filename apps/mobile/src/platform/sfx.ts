@@ -28,20 +28,36 @@ let audio: Promise<AudioModule | null> | null = null;
 const players = new Map<SfxId, Player>();
 const gate = createSfxGate();
 
+// T-11-745 모듈이 없는 번들(expo-audio를 뺀 옛 스토어 빌드 OTA)에서 Metro의 import()는 거부된 Promise가 아니라
+// 그 자리에서 바로 "Cannot find module"을 던진다. .catch가 붙기 전이라 애니메이션 콜백까지 올라가 앱이 꺼졌다.
+// async 함수 안의 try로 감싸 동기 throw도 null로 바꾼다.
+async function importAudio(): Promise<AudioModule | null> {
+  try {
+    const m = await import('expo-audio');
+    // 효과음이라 무음 스위치를 따르고(playsInSilentMode: false) 음악 · 영상과 섞는다.
+    await m
+      .setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' })
+      .catch(() => {});
+    return m;
+  } catch {
+    return null;
+  }
+}
+
 function load(): Promise<AudioModule | null> {
-  return (audio ??= import('expo-audio')
-    .then(async (m) => {
-      // 효과음이라 무음 스위치를 따르고(playsInSilentMode: false) 음악 · 영상과 섞는다.
-      await m
-        .setAudioModeAsync({ playsInSilentMode: false, interruptionMode: 'mixWithOthers' })
-        .catch(() => {});
-      return m;
-    })
-    .catch(() => null));
+  return (audio ??= importAudio());
 }
 
 /** 결과 효과음을 튼다. 꺼 두었거나 앱이 화면에 없으면 아무것도 하지 않는다. */
 export function playSfx(id: SfxId): void {
+  try {
+    playNow(id);
+  } catch {
+    // 효과음은 어떤 경우에도 화면 동작을 막지 않는다.
+  }
+}
+
+function playNow(id: SfxId): void {
   if (!prefs.sfx || AppState.currentState !== 'active') return;
   if (!gate(id, Date.now())) return;
   void load()
