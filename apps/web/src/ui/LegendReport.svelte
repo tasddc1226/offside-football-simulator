@@ -38,6 +38,7 @@
   import RevealFx from './RevealFx.svelte';
   import { gradeTier } from '@offside/app-core/reveal';
   import { loadKey, saveKey } from '@offside/game/storage';
+  import { playSfx } from './sfx.js';
 
   // end: 리포트 맨 아래(다음 행동 버튼 등). fresh: 은퇴 직후 화면의 커리어 id — 그 커리어를 처음 볼 때만 실제 잠재력 공개 연출(T-11-371).
   const { v, end, fresh }: { v: LegendView; end?: Snippet; fresh?: string | undefined } = $props();
@@ -45,7 +46,11 @@
   // svelte-ignore state_referenced_locally
   const potFx = !!fresh && loadKey<string>(POT_SEEN) !== fresh;
   // svelte-ignore state_referenced_locally
-  if (potFx) saveKey(POT_SEEN, fresh);
+  if (potFx) {
+    saveKey(POT_SEEN, fresh);
+    // T-11-738 이 커리어를 처음 볼 때 한 번 — 풀타임 휘슬.
+    playSfx('fulltime');
+  }
   const d = $derived(v.d);
   const back = $derived(v.pos === 'GK' || v.pos === 'DF');
   const t = $derived(d ? totals(d) : null);

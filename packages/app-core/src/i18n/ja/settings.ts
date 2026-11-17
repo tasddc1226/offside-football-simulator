@@ -24,7 +24,7 @@ export const settings: Translation<SettingsMsgs> = {
   sheetBodyAfter:
     '（数字の1の左のキー）でオン・オフします。PCブラウザ専用で、この端末に保存されます。',
   sfxTitle: '効果音',
-  sfxBody: 'ボタンを押したときにクリック音を鳴らします。',
+  sfxBody: 'ボタンのクリック音と、強化・報酬・試合結果の効果音を鳴らします。',
   bgmTitle: 'BGM',
   bgmBody:
     '記録室・選手詳細では別の曲が流れます。画面上部のスピーカーボタンでもオン・オフできます。',

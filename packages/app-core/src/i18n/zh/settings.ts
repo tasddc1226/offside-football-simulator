@@ -22,7 +22,7 @@ export const settings: Translation<SettingsMsgs> = {
   sheetBodyBefore: '把遊戲畫面變成試算表並關閉聲音。',
   sheetBodyAfter: '（數字 1 左邊的按鍵）可開啟或關閉。僅限電腦瀏覽器，並儲存在這台裝置上。',
   sfxTitle: '音效',
-  sfxBody: '按下按鈕時播放點擊音效。',
+  sfxBody: '播放按鈕點擊音，以及強化、獎勵、比賽結果的音效。',
   bgmTitle: '背景音樂',
   bgmBody: '紀錄室與球員詳情會播放不同的曲子。也可以用畫面上方的喇叭按鈕開關。',
   bgmVolume: '背景音樂音量',

@@ -18,6 +18,7 @@
   import { seasonPassText as L } from '@offside/app-core/i18n/ko/seasonPass';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { loadWebPay, startWebPay, webPay } from '../cup/webPay.svelte.js';
+  import { playSfx } from '../sfx.js';
 
   const { onclose }: { onclose: () => void } = $props();
 
@@ -63,6 +64,7 @@
     pass = r.data.pass;
     const got = rewardText(r.data.granted);
     note = got ? { ok: true, text: L.got({ reward: got }) } : { ok: false, text: L.nothing };
+    if (got) playSfx('reward');
   }
 </script>
 

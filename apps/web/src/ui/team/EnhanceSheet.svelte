@@ -8,7 +8,9 @@
   import { fmtValue } from '@offside/app-core/format';
   import { fundsText } from '@offside/app-core/funds';
   import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
+  import { enhanceSfx } from '@offside/app-core/sfxKind';
   import { buzz, dur } from '../motion.js';
+  import { playSfx } from '../sfx.js';
   import { lockScroll } from '../scrollLock.js';
   import Skeleton from '../Skeleton.svelte';
   import EnhanceFx from './EnhanceFx.svelte';
@@ -127,6 +129,7 @@
       const final = enhanceAutoFinal(run, from);
       result = final;
       if (enhanceResultKind(final) !== 'keep') buzz();
+      playSfx(enhanceSfx(enhanceResultKind(final)));
       onresult(careerId, { success: run.card.level > from, from, to: run.card.level, cost: run.spent, balance: run.balance, card: run.card, ...(run.titles.length ? { titles: run.titles } : {}) });
     }
     if (run.stop === 'error') void load();
@@ -177,6 +180,7 @@
     if (wait > 0) await new Promise((done) => setTimeout(done, wait));
     busy = false;
     if (enhanceResultKind(r.data) !== 'keep') buzz();
+    playSfx(enhanceSfx(enhanceResultKind(r.data)));
     if (info) info = { ...info, balance: r.data.balance, card: r.data.card };
     result = r.data;
     onresult(careerId, r.data);

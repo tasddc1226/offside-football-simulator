@@ -5,6 +5,7 @@
   import { giftText as L } from '@offside/app-core/i18n/ko/gift';
   import { toast } from './helpers.js';
   import { goRerollShop } from './nav.js';
+  import { playSfx } from './sfx.js';
 
   let gift = $state<HomeGift | null>(null);
   let busy = $state(false);
@@ -25,6 +26,7 @@
     const r = await claimHomeGift(gift.id, key);
     busy = false;
     if (r.ok) {
+      playSfx('reward');
       done = giftCopy(gift).done;
       key = crypto.randomUUID();
       gift = null;
