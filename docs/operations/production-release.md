@@ -195,6 +195,8 @@ DROP + CREATE 금지)을 막는다. 큰 표 목록은 2026-11-08 운영 `max(row
 복원 후에도 계산한 지문과 완료된 스토어 빌드의 지문을 검증한다. 지문을 덮어써 호환 검사를 우회하지 않는다.
 npm 네이티브 모듈(`package.json` 의존성)은 복원 대상이 아니므로 `prepare-ota-legacy.mjs`의 `NATIVE_ADDED`에 처음 실린 스토어 버전과 함께 적는다.
 그 버전보다 옛 스토어 빌드 경로(`current` 포함)는 그 모듈을 빼고 잠금 파일을 그 자리에서 맞춘다. 앱 JS는 모듈이 없으면 그 기능을 끈다(T-11-738 1.1.10 `expo-audio`).
+네이티브 코드를 고치는 pnpm 패치(`pnpm-workspace.yaml`의 `patchedDependencies`, `patches/`)도 지문에 들어가므로 `NATIVE_PATCHED`에 처음 실린 스토어 버전과 함께 적는다.
+그 버전보다 옛 스토어 빌드 경로는 패치 없이 설치한다(T-11-750 1.1.11 Reanimated ANR 패치).
 
 스토어에서 새 버전이 실제 제공되면 그 플랫폼의 `STORE_BUILDS`와 `APP_VERSIONS.latest`를 함께 갱신한다.
 기준 커밋은 CI의 전체 이력에서 조회할 수 있는 main 커밋을 사용한다. iOS와 Android의 승인 시점이 다르면 각각 반영한다.

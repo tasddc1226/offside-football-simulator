@@ -18,3 +18,5 @@ allowBuilds:
   '@shopify/react-native-skia': true
 minimumReleaseAgeExclude:
   - '@sveltejs/vite-plugin-svelte@7.3.1'
+patchedDependencies:
+  react-native-reanimated@4.5.1: patches/react-native-reanimated@4.5.1.patch

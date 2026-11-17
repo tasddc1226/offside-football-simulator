@@ -8,7 +8,10 @@ import {
   APP_JSON,
   MOBILE_PACKAGE,
   NATIVE_PATHS,
+  WORKSPACE_YAML,
   droppedModules,
+  droppedPatches,
+  withoutPatches,
   assertRuntime,
   prepare,
   targets,
@@ -60,6 +63,26 @@ test('each lane drops exactly the npm native modules its store build lacks', () 
   assert.deepEqual(droppedModules('1.1.10', 'ios'), []);
   assert.deepEqual(droppedModules('1.1.9', 'ios'), ['expo-audio']);
   assert.throws(() => droppedModules('current', 'web'), /Unknown/);
+});
+
+test('lanes for store builds before 1.1.11 install Reanimated without the ANR patch', () => {
+  // T-11-750 패치는 1.1.11 스토어 빌드부터 실린다. 지금 공개된 빌드(1.1.10 이하)는 모두 패치 없이 맞춘다.
+  for (const platform of Object.keys(STORE_BUILDS))
+    assert.deepEqual(droppedPatches('current', platform), ['react-native-reanimated@4.5.1']);
+  assert.deepEqual(droppedPatches('1.1.7', 'ios'), ['react-native-reanimated@4.5.1']);
+  assert.deepEqual(droppedPatches('1.1.11', 'android'), []);
+  const yaml =
+    'a: 1\npatchedDependencies:\n  react-native-reanimated@4.5.1: patches/r.patch\n  x@1.0.0: patches/x.patch\nb: 2\n';
+  assert.equal(
+    withoutPatches(yaml, ['react-native-reanimated@4.5.1']),
+    'a: 1\npatchedDependencies:\n  x@1.0.0: patches/x.patch\nb: 2\n',
+  );
+  assert.equal(withoutPatches('a: 1\npatchedDependencies:\n  x@1.0.0: p\n', ['x@1.0.0']), 'a: 1\n');
+  assert.equal(withoutPatches(yaml, []), yaml);
+  assert.throws(() => withoutPatches('a: 1\n', ['x@1.0.0']), /missing/);
+  // 실제 워크스페이스 파일에 패치가 있어야 overlay가 뺄 수 있다.
+  const real = readFileSync(new URL(`../../${WORKSPACE_YAML}`, import.meta.url), 'utf8');
+  assert.doesNotMatch(withoutPatches(real, ['react-native-reanimated@4.5.1']), /reanimated/);
 });
 
 const lanes = [
@@ -116,6 +139,8 @@ for (const { name, source, platform, version } of lanes) {
       for (const dep of dropped) assert.equal(after.dependencies[dep], undefined);
       for (const dep of dropped) delete before.dependencies[dep];
       assert.deepEqual(after, before);
+      const yaml = readFileSync(join(root, WORKSPACE_YAML), 'utf8');
+      for (const dep of droppedPatches(name, platform)) assert.ok(!yaml.includes(`${dep}:`));
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
