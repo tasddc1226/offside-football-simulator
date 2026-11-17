@@ -42,6 +42,8 @@ test('320px optional consent, one session/start, campaign new tab and withdrawal
     }
     return r.fulfill({ status: 503, body: '' });
   });
+  // 소개 페이지를 이미 본 기기(첫 광고 방문은 소개 페이지로 간다, public-pages.spec.ts).
+  await page.addInitScript(() => localStorage.setItem('offside_lp_seen', '1'));
   await page.goto(
     '/?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=jp_a&fbclid=PRIVATE',
   );

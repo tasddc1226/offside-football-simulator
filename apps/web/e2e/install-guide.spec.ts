@@ -88,6 +88,8 @@ test.describe('안드로이드 Chrome', () => {
   test('안드로이드는 App Store 없이 Google Play로 보내고 설정에 앱 옮기기 카드를 둔다', async ({
     page,
   }) => {
+    // 소개 페이지를 이미 본 기기(첫 광고 방문은 소개 페이지로 간다, public-pages.spec.ts).
+    await page.addInitScript(() => localStorage.setItem('offside_lp_seen', '1'));
     await page.goto('/?utm_source=meta&utm_medium=paid');
     await expect(page.locator('[data-act="play-store"]')).toBeVisible();
     // T-11-506 광고로 들어온 방문은 먼저 플레이하게 두고 맨 위 띠를 띄우지 않는다.
@@ -112,6 +114,8 @@ test.describe('안드로이드 인스타그램 인앱 브라우저', () => {
   test('T-11-466 Google Play 버튼은 Play 스토어 앱 intent로 지금 창에서 열고 유입 캠페인을 넘긴다', async ({
     page,
   }) => {
+    // 소개 페이지를 이미 본 기기(첫 광고 방문은 소개 페이지로 간다, public-pages.spec.ts).
+    await page.addInitScript(() => localStorage.setItem('offside_lp_seen', '1'));
     await page.goto('/?utm_source=meta&utm_medium=paid&utm_campaign=global_test');
     const play = page.locator('[data-app-conversion="home"] [data-act="play-store"]');
     await expect(play).toHaveAttribute(
