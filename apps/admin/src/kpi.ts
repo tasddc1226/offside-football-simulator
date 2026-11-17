@@ -141,7 +141,7 @@ const REGION = new Intl.DisplayNames(['ko'], { type: 'region' });
 export const dimLabel = (dim: string) =>
   DIM_LABEL[dim] ?? (/^[a-z]{2}$/.test(dim) ? (REGION.of(dim.toUpperCase()) ?? dim) : dim);
 
-const ITEM_LABEL: Record<string, string> = {
+export const ITEM_LABEL: Record<string, string> = {
   reroll: '리롤권',
   boost: '잠재력 강화권',
   scout: '스카우트권',

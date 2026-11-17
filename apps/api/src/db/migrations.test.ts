@@ -146,6 +146,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'season_cards_only',
   ],
   owner_items: ['profile_id', 'item', 'qty', 'updated_at'],
+  item_use_daily: ['day', 'item', 'uses'],
   gift_claims: ['profile_id', 'gift_id', 'claim_id', 'claimed_at'],
   owner_attendance: [
     'profile_id',

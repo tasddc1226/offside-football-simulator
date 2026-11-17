@@ -1177,6 +1177,13 @@
       "when": 1794801928752,
       "tag": "0170_career_item_legacy",
       "breakpoints": true
+    },
+    {
+      "idx": 171,
+      "version": "6",
+      "when": 1794818292231,
+      "tag": "0171_item_use_daily",
+      "breakpoints": true
     }
   ]
 }

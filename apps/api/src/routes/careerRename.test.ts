@@ -49,6 +49,7 @@ describe('POST /v1/careers/:careerId/rename', () => {
   beforeEach(async () => {
     await ctx.db.delete(cards);
     await ctx.db.delete(careerRenames);
+    await ctx.env.DB.prepare('DELETE FROM item_use_daily').run();
     await ctx.db
       .update(careers)
       .set({ status: 'retired', publicName: '옛이름', nameHiddenAt: null })
@@ -57,6 +58,9 @@ describe('POST /v1/careers/:careerId/rename', () => {
     await give(buyer.profileId, 2);
   });
   afterAll(async () => ctx?.dispose());
+
+  const usesOf = async () =>
+    (await ctx.env.DB.prepare('SELECT item, uses FROM item_use_daily').all()).results;
 
   it('키운 사람이 한 장으로 이름을 바꾸고 기록을 남긴다(같은 멱등 키 재시도는 한 장만)', async () => {
     const first = await rename(raiser.cookie, '  새이름 ', ID, 'rename-same-key');
@@ -73,6 +77,8 @@ describe('POST /v1/careers/:careerId/rename', () => {
     expect(logs).toMatchObject([
       { careerId: ID, profileId: raiser.profileId, oldName: '옛이름', newName: '새이름' },
     ]);
+    // T-11-739 같은 멱등 키 재시도는 하루 사용 수도 한 번만 센다.
+    expect(await usesOf()).toEqual([{ item: 'rename', uses: 1 }]);
   });
 
   it('T-11-548 키운 사람이 계정을 지워 기록이 없는 카드는 카드에 이름을 붙이고 팀 · 경기 기록 · 신고가 그 이름을 쓴다', async () => {
@@ -147,6 +153,7 @@ describe('POST /v1/careers/:careerId/rename', () => {
     expect(await nameOf()).toBe('옛이름');
     expect(await qtyOf(buyer.profileId)).toBe(2);
     expect(await ctx.db.select().from(careerRenames)).toEqual([]);
+    expect(await usesOf()).toEqual([]);
   });
 
   it('로그인하지 않은 기기는 403, 서버에 아직 없는 진행 중 커리어는 장수만 빼고 기록한다', async () => {
