@@ -14,7 +14,7 @@ export const APP_VERSIONS: AppVersionResponse = {
   ios: { min: '1.1.7', latest: '1.1.8', url: 'https://apps.apple.com/kr/app/id6817463687' },
   android: {
     min: '1.1.7',
-    latest: '1.1.8',
+    latest: '1.1.9',
     url: 'https://play.google.com/store/apps/details?id=com.offsidelab.app',
   },
 };
