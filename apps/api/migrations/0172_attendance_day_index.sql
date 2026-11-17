@@ -1,0 +1,1 @@
+CREATE INDEX `owner_attendance_days_day_idx` ON `owner_attendance_days` (`day`);
