@@ -14,6 +14,8 @@ import { useColors } from '../theme/useColors';
 import { rem } from '../theme/type';
 import { Btn } from '../ui/Btn';
 import { Txt } from '../ui/Txt';
+import { boostSfx } from '@offside/app-core/sfxKind';
+import { playSfx } from '../platform/sfx';
 
 export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void }) {
   const c = useColors();
@@ -33,6 +35,7 @@ export function BoostFx({ out, onDone }: { out: BoostOutcome; onDone: () => void
     roll.start(({ finished }) => {
       if (!finished) return;
       setDone(true);
+      playSfx(boostSfx(out));
       if (!motionOK) return;
       if (hapticsOn())
         void Haptics.notificationAsync(

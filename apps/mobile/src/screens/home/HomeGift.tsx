@@ -20,6 +20,7 @@ import { alpha } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Txt } from '../../ui';
 import { useOnPull } from '../../ui/refresh';
+import { playSfx } from '../../platform/sfx';
 
 export function HomeGift() {
   const c = useColors();
@@ -67,6 +68,7 @@ export function HomeGift() {
     const r = await claimHomeGift(gift.id, key.current);
     setBusy(false);
     if (r.ok) {
+      playSfx('reward');
       setDone(copy.done);
       // T-11-586 시즌 보상을 받은 직후는 리뷰를 묻기 좋은 순간이다. 결과 카드가 자리 잡은 뒤 OS 리뷰 창을 요청한다.
       const giftId = gift.id;

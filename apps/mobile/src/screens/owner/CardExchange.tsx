@@ -42,6 +42,7 @@ import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, DisclosureRow, Press, Txt } from '../../ui';
 import { PopSheet } from '../../ui/PopSheet';
+import { playSfx } from '../../platform/sfx';
 
 const Check = ({ color, size = 14 }: { color: string; size?: number }) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -155,6 +156,7 @@ export function CardExchange({ onClose }: { onClose: () => void }) {
       setConfirm(null);
       return;
     }
+    playSfx('reward');
     if (r.data.rewards.length || r.data.titles.length)
       setDone({
         reward: r.data.rewards.length ? rewardText(r.data.rewards) : null,
