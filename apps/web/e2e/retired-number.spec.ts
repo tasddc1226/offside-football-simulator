@@ -74,7 +74,8 @@ test('결번을 받으면 심사 카드와 유니폼 세리머니가 나온다',
   const rn = page.locator('[data-legend-rn="granted"]');
   await rn.evaluate((el) => el.scrollIntoView({ block: 'center' }));
   await expect(page.locator('[data-rn-judge]')).toHaveCount(0);
-  await expect(page.locator('body')).not.toContainText('827');
+  // 판정 기준 점수(827)가 화면에 새지 않는다. 커리어 시드(9자리 무작위 숫자) 같은 긴 숫자 속 827은 세지 않는다.
+  await expect(page.locator('body')).not.toContainText(/(?<!\d)827(?!\d)/);
   await expect(rn).toContainText('10번은 이제,');
   await expect(rn).toContainText('맨체스터 스카이블루 영구결번 · 서버 3번째 결번');
   await expect(page.locator('[data-legend-rn-pill]')).toContainText('영구결번 10');
