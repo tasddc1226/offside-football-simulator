@@ -17,6 +17,7 @@ import { startAppLinks } from '../platform/appLink';
 import { openAppLink } from '../platform/inbox';
 import { startPush } from '../platform/push';
 import { syncAdFree } from '../platform/adFree';
+import { askTracking } from '../platform/tracking';
 import { recoverIapItems } from '../platform/iapItems';
 import { recoverSeasonPass } from '../platform/seasonPass';
 import { recoverMembership } from '../platform/membership';
@@ -48,6 +49,8 @@ export default function RootLayout() {
   const show = ready && fonts;
   useEffect(() => {
     if (!show) return;
+    // T-11-740 iOS 추적 허용 창은 첫 화면이 뜨면 바로 묻는다(광고 · 다른 권한 창보다 먼저).
+    void askTracking();
     startPush();
     startAppLinks(openAppLink);
     void syncAdFree();

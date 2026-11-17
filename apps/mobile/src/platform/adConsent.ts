@@ -7,25 +7,14 @@
 // 초기화 없이 바로 요청하면 첫 요청에 입찰 신호가 빠진다. 초기화가 늦어도 광고를 막지 않게 INIT_WAIT_MS까지만 기다린다.
 // T-11-632 · T-11-687 요청 옵션은 여기서 정한다. 동의 확인 전과 iOS · 동의 메시지 지역은 비개인화이고, Android는 방침 9항의
 // 날짜부터 풀린다(adPersonalization.ts).
-// T-11-698 iOS는 동의 확인(UMP)이 IDFA 설명 메시지와 ATT 창을 띄운 뒤의 추적 허용 여부를 읽어 넘긴다.
+// T-11-698 iOS는 추적 허용 여부를 읽어 넘긴다. T-11-740부터 ATT 창은 앱이 직접 띄우고(tracking.ts), 광고 요청 전에 그 답을 기다린다.
 import { Platform } from 'react-native';
 import mobileAds, { AdsConsent, AdsConsentStatus } from 'react-native-google-mobile-ads';
 import { deviceLocales } from '@offside/app-core/i18n/core';
 import { allowPersonalizedAds } from './adPersonalization';
+import { askTracking } from './tracking';
 
 // T-11-587 운영자 iPhone 재설치로 바뀐 ID(9401…)를 더한다. 옛 ID는 다른 설치본용으로 남긴다.
-/** iOS 앱 추적 허용 여부. 추적 모듈이 없는 옛 스토어 빌드(OTA)는 허용하지 않은 것으로 본다. */
-async function trackingAllowed(): Promise<boolean> {
-  if (Platform.OS !== 'ios') return false;
-  try {
-    const tt = await import('expo-tracking-transparency');
-    if (!tt.isAvailable()) return false;
-    return (await tt.getTrackingPermissionsAsync()).granted;
-  } catch {
-    return false;
-  }
-}
-
 const TEST_DEVICES = ['cf501bb8e326505e664bd41f504f4164', '9401ba83ecab139866f77381004260bc'];
 const INIT_WAIT_MS = 5_000;
 
@@ -35,8 +24,8 @@ export const adRequestOptions = () => ({ requestNonPersonalizedAdsOnly: nonPerso
 
 let consent: Promise<boolean> | undefined;
 export const askConsent = () =>
-  (consent ??= mobileAds()
-    .setRequestConfiguration({ testDeviceIdentifiers: TEST_DEVICES })
+  (consent ??= askTracking()
+    .then(() => mobileAds().setRequestConfiguration({ testDeviceIdentifiers: TEST_DEVICES }))
     .then(() => AdsConsent.gatherConsent())
     .then(async (info) => {
       if (!info.canRequestAds) return false;
@@ -44,7 +33,7 @@ export const askConsent = () =>
         os: Platform.OS,
         locales: deviceLocales(),
         consentRequired: info.status !== AdsConsentStatus.NOT_REQUIRED,
-        ...(Platform.OS === 'ios' ? { tracking: await trackingAllowed() } : {}),
+        ...(Platform.OS === 'ios' ? { tracking: await askTracking() } : {}),
       });
       await Promise.race([
         mobileAds()
