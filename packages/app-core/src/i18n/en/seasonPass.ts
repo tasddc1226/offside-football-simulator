@@ -25,6 +25,9 @@ export const seasonPass: Translation<SeasonPassMsgs> = {
   stateLocked: 'Locked',
   tierLabel: (p) => `Tier ${p.tier}, ${p.need}, ${p.reward}, ${p.state}`,
   buy: (p) => `Buy pass for ${p.price}`,
+  nowTitle: 'Yours right away if you buy now',
+  nowTiers: (p) =>
+    p.tier === 1 ? 'Tier 1 reward.' : `Tiers 1–${p.tier} combined (all unlocked so far).`,
   buyBusy: 'Paying…',
   owned: 'You have this pass',
   bought: 'Pass unlocked',
@@ -33,8 +36,6 @@ export const seasonPass: Translation<SeasonPassMsgs> = {
   got: (p) => `You got: ${p.reward}`,
   nothing: 'No rewards to claim right now',
   claimFail: "Couldn't claim. Please try again in a moment.",
-  buyHint:
-    'Buy the pass to claim the first tier and any tiers you have already unlocked right away.',
   pastTitle: 'Past season passes',
   pastLead: 'You still have rewards to claim.',
   aheadTitle: (p) => `You already have the Season ${p.season} pass`,

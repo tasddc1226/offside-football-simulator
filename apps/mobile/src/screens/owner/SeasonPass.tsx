@@ -1,6 +1,6 @@
 // T-11-511 시즌 패스(내 구단 화면 '시즌 패스' 칸으로 연다, 웹 owner/SeasonPass.svelte). 열 때 한 번 패스 상태(1분 메모)를
 // 받고, 서버가 이 스토어에서 팔면 스토어 가격을 묻는다. 산 패스의 열린 단계 보상을 받는다.
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SeasonPassResponse, SeasonPassSeason } from '@offside/contracts';
@@ -11,6 +11,7 @@ import { needsOwnerLogin } from '@offside/app-core/market';
 import {
   PASS_RULE,
   PASS_TIER_COUNT,
+  passBuyNowText,
   passClaimable,
   passNext,
   passTiers,
@@ -29,10 +30,13 @@ function Track({
   s,
   busy,
   onClaim,
+  buy,
 }: {
   s: SeasonPassSeason;
   busy: boolean;
   onClaim: (s: SeasonPassSeason) => void;
+  /** T-11-748 진행 띠와 단계표 사이에 두는 구매 칸(지금 사면 받는 보상 + 사기 버튼). */
+  buy?: ReactNode;
 }) {
   const c = useColors();
   const next = passNext(s);
@@ -85,6 +89,7 @@ function Track({
           </Txt>
         </View>
       </PitchCard>
+      {buy}
       {passTiers(s).map((t) => {
         const state =
           t.state === 'claimed' ? L.stateClaimed : t.state === 'open' ? L.stateOpen : L.stateLocked;
@@ -226,28 +231,45 @@ export function SeasonPass({ onClose }: { onClose: () => void }) {
                   </View>
                 ) : null}
                 <Txt style={{ fontSize: rem(0.875) }}>{L.lead}</Txt>
-                <Track s={current} busy={busy} onClaim={(s) => void claim(s)} />
-                {!current.owned ? (
-                  store.price ? (
-                    <View style={{ gap: 6 }}>
-                      <Btn
-                        kind="accent"
-                        block
-                        testID="pass-buy"
-                        disabled={store.busy}
-                        onPress={() => void buySeasonPass()}
+                <Track
+                  s={current}
+                  busy={busy}
+                  onClaim={(s) => void claim(s)}
+                  buy={
+                    !current.owned && store.price ? (
+                      <View
+                        testID="pass-buy-now"
+                        style={{
+                          gap: 8,
+                          padding: 12,
+                          borderRadius: RADIUS.md,
+                          borderWidth: 1,
+                          borderColor: c.accent,
+                          backgroundColor: c.surface,
+                        }}
                       >
-                        {store.busy ? L.buyBusy : L.buy({ price: store.price })}
-                      </Btn>
-                      <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
-                        {L.buyHint}
-                      </Txt>
-                    </View>
-                  ) : !pass.onSale ? (
-                    <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
-                      {L.notOnSale}
-                    </Txt>
-                  ) : null
+                        <Txt bold>{L.nowTitle}</Txt>
+                        <Txt>{passBuyNowText(current)}</Txt>
+                        <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
+                          {L.nowTiers({ tier: current.tier })}
+                        </Txt>
+                        <Btn
+                          kind="accent"
+                          block
+                          testID="pass-buy"
+                          disabled={store.busy}
+                          onPress={() => void buySeasonPass()}
+                        >
+                          {store.busy ? L.buyBusy : L.buy({ price: store.price })}
+                        </Btn>
+                      </View>
+                    ) : null
+                  }
+                />
+                {!current.owned && !store.price && !pass.onSale ? (
+                  <Txt tone="muted" style={{ fontSize: rem(0.875) }}>
+                    {L.notOnSale}
+                  </Txt>
                 ) : null}
                 <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
                   {`${L.rule(PASS_RULE)} ${L.midSeason} ${L.once}`}
