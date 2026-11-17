@@ -128,7 +128,14 @@ test('the deploy workflow publishes each legacy lane with its own runtime check'
     'utf8',
   );
   const job = workflow.split('  app-update:')[1].split('  release-tag:')[0];
-  assert.match(job, /target: \[current, '1\.1\.7'\]/);
+  // 경로 목록과 matrix가 같다. 런타임이 없는 플랫폼(예: Android에만 공개된 1.1.9의 iOS)은 matrix에서 뺀다.
+  const names = Object.keys(targets).sort().reverse();
+  assert.match(job, new RegExp(`target: \\[current, ${names.map((n) => `'${n}'`).join(', ')}\\]`));
+  for (const [name, { runtimes }] of Object.entries(targets))
+    for (const platform of ['ios', 'android']) {
+      const excluded = new RegExp(`- target: '${name}'\\s*\\n\\s*platform: ${platform}`).test(job);
+      assert.equal(excluded, !runtimes[platform], `${name} ${platform} matrix exclusion`);
+    }
   assert.doesNotMatch(job, /prepare-ota-11[2-4]/);
   assert.match(
     job,
