@@ -3,6 +3,7 @@
   import type { KpiReport } from '@offside/contracts';
   import { dimLabel, fmt, periodSum, valueOn } from '../kpi.ts';
   import { byDim, dimTotals, lastValue, trendOf, viewOf } from '../kpi-page.ts';
+  import { acqFunnel, campaignName } from '../kpi-insights.ts';
   import { loader } from '../load.svelte.ts';
   import Load from '../ui/Load.svelte';
   import Stat from '../ui/Stat.svelte';
@@ -11,6 +12,7 @@
   let { days, tick }: { days: number; tick: number } = $props();
   const kpi = loader<KpiReport>(() => `/v1/admin/kpi?days=${days}`, () => tick);
   const META_EMPTY = 'Meta 광고 수집(매일 08:50) 뒤 보여요.';
+  const ACQ_EMPTY = '이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
 </script>
 
 <div class="page">
@@ -109,6 +111,39 @@
         <StackedBars title="새 리뷰 (스토어별)" days={v.days} series={byDim(v, 'store_reviews_new')} empty="스토어 리뷰 수집(매일 08:50) 뒤 보여요." />
         <StackedBars title="스토어 설치" days={v.days} series={byDim(v, 'store_installs')} empty="스토어 설치 보고서가 연결되면 보여요." />
       </div>
+      {@const funnel = acqFunnel(v)}
+      <h2 class="section-title">유입 캠페인 단계 (서버 기준)</h2>
+      <div class="cols">
+        <StackedBars
+          title="유입 방문 (캠페인별)"
+          days={v.days}
+          series={byDim(v, 'acq_visits').map((s) => ({ ...s, label: campaignName(s.key) }))}
+          empty={ACQ_EMPTY}
+        />
+        <section class="panel">
+          <header><h2>캠페인별 전환</h2><span class="hint">{days}일 · 방문한 날 기준</span></header>
+          {#if funnel.length}
+            <div class="tbl-wrap">
+              <table class="tbl">
+                <thead><tr><th>캠페인</th><th class="num">방문</th><th class="num">커리어 시작</th><th class="num">스토어 클릭</th></tr></thead>
+                <tbody>
+                  {#each funnel as f (f.dim)}
+                    <tr>
+                      <td>{f.label}</td>
+                      <td class="num">{fmt(f.visits)}</td>
+                      <td class="num">{fmt(f.started)} ({fmt(f.startRate, 'pct')})</td>
+                      <td class="num">{fmt(f.clicks)} ({fmt(f.clickRate, 'pct')})</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+          {:else}
+            <p class="note">{ACQ_EMPTY}</p>
+          {/if}
+        </section>
+      </div>
+      <p class="note">캠페인 링크(utm)로 들어온 방문을 서버가 센 값이에요. 커리어 시작 · 스토어 클릭은 그날 들어온 방문 가운데 이어진 수라 사흘 동안 조금씩 늘어요. 캠페인은 출처 · 캠페인 · 소재로 묶어요.</p>
       {@const ig = lastValue(v, 'followers', ['instagram'])}
       {@const th = lastValue(v, 'followers', ['threads'])}
       <div class="stats">

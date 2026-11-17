@@ -198,6 +198,39 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
       ),
     ]);
 
+    // T-11-742 유입 단계 · 웹 결제 단계 · 구단 자금 흐름(원장은 운영처럼 시각 순서로 쌓인다).
+    const acq = (id: string, campaign: string, at: string, started: boolean, clicked: boolean) =>
+      env.DB.prepare(
+        `INSERT INTO acquisition_sessions (id, profile_id, campaign, received_at, started_at, store_clicked_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+      ).bind(id, admin.profileId, campaign, at, started ? at : null, clicked ? at : null);
+    const order = (id: string, product: string, status: string, test: number, at: string) =>
+      env.DB.prepare(
+        `INSERT INTO web_pay_orders (order_id, profile_id, product_id, xsolla_order_id, status, test, created_at) VALUES (?1, ?2, ?3, ?1, ?4, ?5, ?6)`,
+      ).bind(id, admin.profileId, product, status, test, at);
+    const ledger = (kind: string, delta: number, at: string) =>
+      env.DB.prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, created_at) VALUES (?1, ?2, ?3, 0, ?4)`,
+      ).bind(admin.profileId, kind, delta, at);
+    await env.DB.batch([
+      acq('acq1', '?utm_source=meta&utm_medium=paid&utm_content=jp_a', mid, true, true),
+      acq('acq2', '?utm_source=meta&utm_medium=social&utm_content=jp_a', mid, false, false),
+      acq('acq3', '', mid, true, false),
+      acq('acq4', '?utm_source=x', twoDaysAgo, true, true),
+      order('wp1', 'reroll_40', 'PAID', 0, mid),
+      order('wp2', 'reroll_40', 'CANCELED', 0, mid),
+      order('wp3', 'reroll_40', 'READY', 0, mid),
+      order('wp4', 'reroll_40', 'PAID', 1, mid),
+      ledger('market_sale', 900, twoDaysAgo),
+      ledger('enhance', -300, mid),
+      ledger('enhance', 50, mid),
+      ledger('market_sale', 1000, mid),
+      ledger('market_buy', -1000, mid),
+      env.DB.prepare(
+        `INSERT INTO owner_funds (profile_id, balance, updated_at) VALUES (?1, 5000, ?2)
+         ON CONFLICT (profile_id) DO UPDATE SET balance = 5000`,
+      ).bind(admin.profileId, mid),
+    ]);
+
     let result: KpiDailyResult | undefined;
     let steps = 0;
     do {
@@ -252,6 +285,24 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     expect(value(r, yesterday!, 'ads_rewarded', 'a')).toBe(0);
     expect(value(r, yesterday!, 'ads_free_rewards', 'b')).toBe(4);
     expect(value(r, yesterday!, 'ads_free_rewards', 'a')).toBe(1);
+    // 시즌은 위 최상위 시즌 픽스처 3개(커리어 2개).
+    expect(value(r, yesterday!, 'seasons_played', 'all')).toBe(3);
+    expect(value(r, yesterday!, 'seasons_played', 'careers')).toBe(2);
+    // 매체(medium)는 나눔에서 빠져 같은 소스 · 소재로 합친다.
+    expect(value(r, yesterday!, 'acq_visits', 'meta:-:jp_a')).toBe(2);
+    expect(value(r, yesterday!, 'acq_started', 'meta:-:jp_a')).toBe(1);
+    expect(value(r, yesterday!, 'acq_store_clicks', 'meta:-:jp_a')).toBe(1);
+    expect(value(r, yesterday!, 'acq_visits', 'direct')).toBe(1);
+    expect(value(r, yesterday!, 'acq_visits', 'x:-:-')).toBeUndefined();
+    expect(value(r, yesterday!, 'webpay_orders', 'reroll_40')).toBe(3);
+    expect(value(r, yesterday!, 'webpay_paid', 'reroll_40')).toBe(1);
+    expect(value(r, yesterday!, 'webpay_canceled', 'reroll_40')).toBe(1);
+    expect(value(r, yesterday!, 'fund_out', 'enhance')).toBe(300);
+    expect(value(r, yesterday!, 'fund_in', 'enhance')).toBe(50);
+    expect(value(r, yesterday!, 'fund_in', 'market_sale')).toBe(1000);
+    expect(value(r, yesterday!, 'fund_out', 'market_buy')).toBe(1000);
+    expect(value(r, yesterday!, 'funds_total')).toBeGreaterThanOrEqual(5000);
+    expect(value(r, yesterday!, 'funds_holders')).toBeGreaterThanOrEqual(1);
     expect(r.sources.map((s) => s.source)).toEqual(['d1']);
     expect(r.sources[0]!.lastDay).toBe(yesterday);
     const count = await env

@@ -3,7 +3,7 @@
   import type { AdminStats, KpiReport } from '@offside/contracts';
   import { fmt, KPI_EMPTY, metricSeries, nonEmpty, ratio } from '../kpi.ts';
   import { byDim, lastDims, periodTotal, trendOf, viewOf } from '../kpi-page.ts';
-  import { balanceHealth, PEAK_BANDS } from '../kpi-insights.ts';
+  import { balanceHealth, PEAK_BANDS, seasonsPerDau } from '../kpi-insights.ts';
   import HBars from '../ui/HBars.svelte';
   import { loader } from '../load.svelte.ts';
   import Load from '../ui/Load.svelte';
@@ -112,6 +112,43 @@
       {/snippet}
     </Load>
   </div>
+
+  <h2 class="section-title">플레이 깊이 ({days}일)</h2>
+  <Load r={kpi.r} height={260}>
+    {#snippet children(rep)}
+      {@const v = viewOf(rep)}
+      {@const per = seasonsPerDau(v)}
+      {@const seasons = periodTotal(v, 'seasons_played', ['all'])}
+      {@const careers = periodTotal(v, 'seasons_played', ['careers'])}
+      {@const known = per.filter((x): x is number => x !== null)}
+      <div class="stats">
+        <Stat label={`${days}일 진행한 시즌`} value={seasons} trend={trendOf(v, 'seasons_played', ['all'])} sub="서버에 올라온 시즌 기록 기준" />
+        <Stat
+          label="DAU당 시즌 (하루 평균)"
+          value={known.length ? Math.round((known.reduce((s, x) => s + x, 0) / known.length) * 10) / 10 : null}
+          trend={per}
+          sub="DAU는 GA4, 없는 날은 운영 DB 접속"
+        />
+        <Stat
+          label="시즌을 진행한 커리어당 시즌 (하루)"
+          value={seasons && careers ? Math.round((seasons / careers) * 10) / 10 : null}
+          trend={trendOf(v, 'seasons_played', ['all']).map((n, i) => {
+            const c = trendOf(v, 'seasons_played', ['careers'])[i];
+            return c && n !== null ? n / c : null;
+          })}
+          sub="하루에 한 커리어를 몇 시즌 굴리는지"
+        />
+      </div>
+      <div class="cols">
+        <StackedBars
+          title="하루 진행한 시즌"
+          days={v.days}
+          series={nonEmpty([{ key: 'all', label: '시즌', values: trendOf(v, 'seasons_played', ['all']) }])}
+          empty={BAL_EMPTY}
+        />
+      </div>
+    {/snippet}
+  </Load>
 
   <h2 class="section-title">밸런스 이상 감시 ({days}일)</h2>
   <p class="note">그날 은퇴한 커리어와 그날 올라온 시즌으로 매일 04:00(KST)에 세요. 평균은 은퇴 수로 가중해요. 최상위 시즌은 OVR {ELITE_OVR} 이상 · {ELITE_AGE}세 이하 시즌이고, 이적률은 그 가운데 전 시즌과 구단이 다른 비율이에요.</p>

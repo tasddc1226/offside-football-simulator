@@ -53,6 +53,8 @@ export const D1_SNAPSHOT_METRICS = [
   'items_held',
   'items_holders',
   'items_used_total',
+  'funds_total',
+  'funds_holders',
 ] as const;
 export const D1_METRICS = [
   'signups',
@@ -87,6 +89,15 @@ export const D1_METRICS = [
   'bal_elite_moved',
   'retired_item_top',
   'retired_legacy',
+  'seasons_played',
+  'acq_visits',
+  'acq_started',
+  'acq_store_clicks',
+  'webpay_orders',
+  'webpay_paid',
+  'webpay_canceled',
+  'fund_in',
+  'fund_out',
 ] as const;
 /**
  * T-11-739 보상형 광고 자리별 시청(시즌 측정 기록의 광고 요약 합). 측정 기록은 이틀 남짓 뒤 R2로 옮겨져 다시 쓰는 사흘 가운데
@@ -363,6 +374,7 @@ export async function collectD1Day(
     if (ops !== d1 && size(errors!.meta) > 0) add('db_size_mb', 'ops', mb(size(errors!.meta)));
     rows.push(...(await collectItemSnapshot(d1)));
   }
+  rows.push(...(await collectFlowDay(d1, day)));
   return rows;
 }
 
@@ -371,7 +383,7 @@ export async function collectD1Day(
  * 구단명 변경 기록, 강화권은 누적 기록이 없어 item_use_daily부터 센다). 표가 수천~수만 줄이라 한 번의 왕복으로 훑는다.
  */
 export async function collectItemSnapshot(d1: D1Database): Promise<KpiRow[]> {
-  const [held, used] = await d1.batch<Record<string, unknown>>([
+  const [held, used, funds] = await d1.batch<Record<string, unknown>>([
     d1.prepare(
       'SELECT item, coalesce(sum(qty), 0) qty, coalesce(sum(qty > 0), 0) holders FROM owner_items GROUP BY item',
     ),
@@ -380,7 +392,12 @@ export async function collectItemSnapshot(d1: D1Database): Promise<KpiRow[]> {
        UNION ALL SELECT 'reroll', coalesce(sum(used), 0) FROM reroll_mileage
        UNION ALL SELECT 'rename', count(*) FROM career_renames`,
     ),
+    // T-11-742 구단 자금 총량(인플레이션 감시). 구단주 수만큼이라 가볍다.
+    d1.prepare(
+      'SELECT coalesce(sum(balance), 0) total, coalesce(sum(balance > 0), 0) holders FROM owner_funds',
+    ),
   ]);
+  const f = funds!.results[0];
   return [
     ...held!.results.flatMap((r) => {
       const dim = dimOf(r.item, 'etc');
@@ -394,29 +411,107 @@ export async function collectItemSnapshot(d1: D1Database): Promise<KpiRow[]> {
       dim: dimOf(r.item, 'etc'),
       value: num(r.n),
     })),
+    { metric: 'funds_total', dim: 'all', value: num(f?.total) },
+    { metric: 'funds_holders', dim: 'all', value: num(f?.holders) },
   ];
 }
 
 /**
- * 시즌 측정 기록에서 created_at이 at 이상인 첫 행의 id(이분 탐색). 이 표는 쓰기를 줄이려고 보조 인덱스가 없고 id가 올라온
- * 순서라, 기본 키로 몇십 번만 짚어 하루의 id 범위를 찾는다. ?1 = 찾는 시각.
+ * created_at이 at 이상인 첫 행의 id(이분 탐색). 시즌 측정 기록 · 구단 자금 원장은 시각 인덱스가 없고 id가 쓴 순서라,
+ * 기본 키로 몇십 번만 짚어 하루의 id 범위를 찾는다. param = 찾는 시각 자리.
  */
-const TELEMETRY_BOUND = (name: string, param: string) => {
+const ID_BOUND = (table: string, name: string, param: string) => {
   // 재귀 표는 재귀 쪽 FROM에 한 번만, 하위 질의 밖에 둬야 해서 가운데 행 시각을 두 번 짚는다(기본 키라 가볍다).
-  const mid = `coalesce((SELECT created_at FROM season_telemetry WHERE id >= (a + b) / 2 ORDER BY id LIMIT 1), ${param})`;
+  const mid = `coalesce((SELECT created_at FROM ${table} WHERE id >= (a + b) / 2 ORDER BY id LIMIT 1), ${param})`;
   return `${name}(a, b) AS (
-    SELECT (SELECT min(id) FROM season_telemetry), (SELECT max(id) FROM season_telemetry) + 1
+    SELECT (SELECT min(id) FROM ${table}), (SELECT max(id) FROM ${table}) + 1
     UNION ALL
     SELECT CASE WHEN ${mid} < ${param} THEN (a + b) / 2 + 1 ELSE a END,
            CASE WHEN ${mid} < ${param} THEN b ELSE (a + b) / 2 END
     FROM ${name} WHERE a < b)`;
 };
 const sumJson = (path: string) => `coalesce(sum(json_extract(ads_json, '${path}')), 0)`;
+const TELEMETRY_BOUND = (name: string, param: string) => ID_BOUND('season_telemetry', name, param);
 const AD_USAGE_SQL = `WITH RECURSIVE ${TELEMETRY_BOUND('lo', '?1')}, ${TELEMETRY_BOUND('hi', '?2')}
   SELECT count(*) uploads, coalesce(sum(json_extract(ads_json, '$.af')), 0) af, ${sumJson('$.it')} it,
     ${AD_PLACEMENTS.map((k) => `${sumJson(`$.rw.${k}`)} rw_${k}, ${sumJson(`$.fr.${k}`)} fr_${k}`).join(', ')}
   FROM season_telemetry
   WHERE id >= (SELECT a FROM lo WHERE a >= b) AND id < (SELECT a FROM hi WHERE a >= b) AND ads_json IS NOT NULL`;
+
+const FUND_DAY_SQL = `WITH RECURSIVE ${ID_BOUND('owner_fund_ledger', 'lo', '?1')}, ${ID_BOUND('owner_fund_ledger', 'hi', '?2')}
+  SELECT kind, coalesce(sum(max(delta, 0)), 0) gain, coalesce(-sum(min(delta, 0)), 0) spend
+  FROM owner_fund_ledger
+  WHERE id >= (SELECT a FROM lo WHERE a >= b) AND id < (SELECT a FROM hi WHERE a >= b) GROUP BY kind`;
+
+/** 'utm_source=meta&utm_campaign=x&utm_content=jp_a' → 'meta:x:jp_a'(없는 칸은 -). 캠페인 없는 방문은 direct. */
+export function campaignDim(raw: unknown) {
+  const q = new URLSearchParams(String(raw ?? '').replace(/^\?/, ''));
+  const parts = ['utm_source', 'utm_campaign', 'utm_content'].map((k) => q.get(k) ?? '');
+  return parts.some(Boolean) ? dimOf(parts.map((x) => x || '-').join(':'), 'direct') : 'direct';
+}
+
+/**
+ * T-11-742 그날 플레이 깊이 · 유입 단계 · 웹 결제 단계 · 구단 자금 흐름.
+ * 시즌은 시각 인덱스, 유입은 받은 시각 인덱스로 하루만 읽는다. 유입 · 웹 결제는 그날 들어온(만든) 것 가운데 이어진 단계를
+ * 세서, 다시 쓰는 사흘 동안 늦게 시작 · 결제한 것이 채워진다. 웹 결제는 표가 작다. 자금 원장은 id 이분 탐색으로 하루만 읽는다.
+ */
+export async function collectFlowDay(d1: D1Database, day: string): Promise<KpiRow[]> {
+  const { start, end } = kstDayRange(day);
+  const [seasons, acq, pay, fund] = await d1.batch<Record<string, unknown>>([
+    d1
+      .prepare(
+        'SELECT count(*) n, count(DISTINCT career_id) careers FROM career_seasons WHERE created_at >= ?1 AND created_at < ?2',
+      )
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT campaign, count(*) visits, count(started_at) started, count(store_clicked_at) clicks
+           FROM acquisition_sessions WHERE received_at >= ?1 AND received_at < ?2 GROUP BY campaign`,
+      )
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT product_id, count(*) n, coalesce(sum(status = 'PAID'), 0) paid, coalesce(sum(status = 'CANCELED'), 0) canceled
+           FROM web_pay_orders WHERE test = 0 AND created_at >= ?1 AND created_at < ?2 GROUP BY product_id`,
+      )
+      .bind(start, end),
+    d1.prepare(FUND_DAY_SQL).bind(start, end),
+  ]);
+  const rows: KpiRow[] = [];
+  const sum = (metric: string, dim: string, value: unknown) => {
+    const hit = rows.find((r) => r.metric === metric && r.dim === dim);
+    if (hit) hit.value += num(value);
+    else rows.push({ metric, dim, value: num(value) });
+  };
+  const sn = seasons!.results[0];
+  if (num(sn?.n)) {
+    sum('seasons_played', 'all', sn?.n);
+    sum('seasons_played', 'careers', sn?.careers);
+  }
+  for (const r of acq!.results) {
+    const dim = campaignDim(r.campaign);
+    sum('acq_visits', dim, r.visits);
+    sum('acq_started', dim, r.started);
+    sum('acq_store_clicks', dim, r.clicks);
+  }
+  for (const r of pay!.results) {
+    const dim = dimOf(
+      String(r.product_id ?? '')
+        .split('.')
+        .at(-1),
+      'etc',
+    );
+    sum('webpay_orders', dim, r.n);
+    sum('webpay_paid', dim, r.paid);
+    sum('webpay_canceled', dim, r.canceled);
+  }
+  for (const r of fund!.results) {
+    const dim = dimOf(r.kind, 'etc');
+    if (num(r.gain)) sum('fund_in', dim, r.gain);
+    if (num(r.spend)) sum('fund_out', dim, r.spend);
+  }
+  return rows;
+}
 
 /** T-11-739 그날 시즌 업로드의 광고 요약 합(자리별 보상형 시청 · 광고 제거로 받은 보상 · 은퇴 전면광고). */
 export async function collectAdUsageDay(d1: D1Database, day: string): Promise<KpiRow[]> {

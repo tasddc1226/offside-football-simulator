@@ -3,7 +3,7 @@
   import type { AdminRevenue, KpiReport } from '@offside/contracts';
   import { dimLabel, fmt, KPI_EMPTY, metricSeries, nonEmpty, periodSum, productLabel, valueOn } from '../kpi.ts';
   import { byDim, dimTotals, periodTotal, trendOf, viewOf } from '../kpi-page.ts';
-  import { formatName, placementName, placementTotals } from '../kpi-insights.ts';
+  import { formatName, placementName, placementTotals, webPayFunnel } from '../kpi-insights.ts';
   import { monetization } from '../kpi-money.ts';
   import { loader } from '../load.svelte.ts';
   import AdFreePrice from '../ui/AdFreePrice.svelte';
@@ -19,6 +19,7 @@
   const rev30 = loader<AdminRevenue>(() => '/v1/admin/revenue?days=30', () => tick);
   const avg = (krw: number, n: number) => (n ? `결제 건당 ${fmt(krw / n, 'krw')}` : '');
   const MEMBER_EMPTY = '멤버십 흐름은 다음 일일 수집(04:00)부터 보여요.';
+  const WEBPAY_EMPTY = '웹 결제 주문은 이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
   const ADS_EMPTY = '자리별 시청은 이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
   const ADMOB_SPLIT_EMPTY = '형식 · 단위별 수익은 이번 배포 뒤 다음 AdMob 수집(08:50)부터 보여요.';
 </script>
@@ -215,6 +216,34 @@
         />
       </div>
       <p class="note">DAU는 GA4 값을 쓰고, 없는 날은 운영 DB 접속 프로필로 대신해요. 스토어 매출은 아이템 · 광고 제거 · 시즌 패스 · 멤버십(새 가입 · 갱신) 정가 합이에요.</p>
+
+      <h2 class="section-title">웹 결제 단계 (엑솔라)</h2>
+      {@const wp = webPayFunnel(v)}
+      <div class="stats">
+        <Stat label={`${days}일 결제 주문`} value={wp.orders} trend={trendOf(v, 'webpay_orders')} sub="결제 창을 연 주문(테스트 제외)" />
+        <Stat label="결제 완료율" value={wp.paidRate} unit="pct" trend={wp.daily} sub={`완료 ${fmt(wp.paid)} · 취소 ${fmt(wp.canceled)} · 그대로 둠 ${fmt(wp.open)}`} />
+      </div>
+      <div class="cols">
+        <StackedBars
+          title="웹 결제 주문 (완료 · 취소 · 그대로 둠)"
+          days={v.days}
+          empty={WEBPAY_EMPTY}
+          series={nonEmpty([
+            { key: 'paid', label: '완료', values: trendOf(v, 'webpay_paid') },
+            { key: 'canceled', label: '취소', values: trendOf(v, 'webpay_canceled') },
+            {
+              key: 'open',
+              label: '그대로 둠',
+              values: v.days.map((d) => {
+                const o = valueOn(v.idx, d, 'webpay_orders');
+                return o === null ? null : Math.max(0, o - (valueOn(v.idx, d, 'webpay_paid') ?? 0) - (valueOn(v.idx, d, 'webpay_canceled') ?? 0));
+              }),
+            },
+          ])}
+        />
+        <StackedBars title="웹 결제 완료 (상품별)" days={v.days} series={byDim(v, 'webpay_paid').map((s) => ({ ...s, label: productLabel(s.key) }))} empty={WEBPAY_EMPTY} />
+      </div>
+      <p class="note">주문을 만든 날 기준이에요. 늦게 결제를 마친 주문은 사흘 동안 다시 세어 채워요.</p>
 
       <h2 class="section-title">클럽 멤버십</h2>
       {@const last = v.days.at(-1)}
