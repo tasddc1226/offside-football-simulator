@@ -44,6 +44,13 @@ export const NATIVE_ADDED = Object.freeze({
   '1.1.8': ['expo-tracking-transparency'],
   '1.1.10': ['expo-audio'],
 });
+/** pnpm patches (pnpm-workspace.yaml patchedDependencies) by the store version that first shipped them. Patched native
+ * code is part of the fingerprint, so lanes for older store builds install the package unpatched. */
+export const NATIVE_PATCHED = Object.freeze({
+  // T-11-750 Android ANR: skip unmounted views in synchronouslyUpdateUIProps (Reanimated 4.7 backport).
+  '1.1.11': ['react-native-reanimated@4.5.1'],
+});
+export const WORKSPACE_YAML = 'pnpm-workspace.yaml';
 const ver = (v) => v.split('.').map(Number);
 const older = (a, b) => {
   const [x, y] = [ver(a), ver(b)];
@@ -58,6 +65,35 @@ export function droppedModules(name, platform) {
   return Object.entries(NATIVE_ADDED)
     .filter(([since]) => older(version, since))
     .flatMap(([, deps]) => deps);
+}
+
+/** pnpm patches the store build for this lane lacks. */
+export function droppedPatches(name, platform) {
+  const version = name === 'current' ? STORE_BUILDS[platform]?.version : name;
+  if (!version) throw new Error(`Unknown store platform: ${platform}`);
+  return Object.entries(NATIVE_PATCHED)
+    .filter(([since]) => older(version, since))
+    .flatMap(([, deps]) => deps);
+}
+/** Remove patchedDependencies entries (and the key when it empties) from pnpm-workspace.yaml text. */
+export function withoutPatches(yaml, deps) {
+  if (!deps.length) return yaml;
+  const lines = yaml.split('\n');
+  const start = lines.indexOf('patchedDependencies:');
+  let end = start + 1;
+  while (start >= 0 && end < lines.length && /^\s+\S/.test(lines[end])) end++;
+  const entries = lines.slice(start + 1, end);
+  const keyOf = (l) =>
+    l
+      .trim()
+      .split(':')[0]
+      .replace(/^['"]|['"]$/g, '');
+  const missing = deps.filter((d) => !entries.some((l) => keyOf(l) === d));
+  if (start < 0 || missing.length)
+    throw new Error(`pnpm patch missing: ${missing.join(', ') || deps.join(', ')}`);
+  const kept = entries.filter((l) => !deps.includes(keyOf(l)));
+  const block = kept.length ? ['patchedDependencies:', ...kept] : [];
+  return [...lines.slice(0, start), ...block, ...lines.slice(end)].join('\n');
 }
 
 function target(name, platform) {
@@ -93,8 +129,12 @@ export function prepare(root, name, platform) {
   const dropped = droppedModules(name, platform);
   for (const dep of dropped) delete pkg.dependencies?.[dep];
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
+  const patches = droppedPatches(name, platform);
+  const yamlPath = resolve(root, WORKSPACE_YAML);
+  if (patches.length)
+    writeFileSync(yamlPath, withoutPatches(readFileSync(yamlPath, 'utf8'), patches));
   console.log(
-    `Prepared ${name} / ${platform ?? 'both'} native snapshot from ${t.source.slice(0, 7)}; removed npm modules: ${dropped.join(', ') || 'none'}`,
+    `Prepared ${name} / ${platform ?? 'both'} native snapshot from ${t.source.slice(0, 7)}; removed npm modules: ${dropped.join(', ') || 'none'}; removed pnpm patches: ${patches.join(', ') || 'none'}`,
   );
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

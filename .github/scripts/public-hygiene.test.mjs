@@ -28,3 +28,14 @@ test('운영자 도메인 메일만 허용하고, 개인 메일은 어느 파일
   assert.deepEqual(kinds('mailto:contact@offside-lab.com'), []);
   assert.deepEqual(kinds('contact someone@gmail.com'), ['1:email']);
 });
+
+test('pnpm 패치 파일 이름은 허용하고, 비슷한 실제 메일은 잡는다', () => {
+  assert.deepEqual(
+    kinds(
+      'patchedDependencies:\n  react-native-reanimated@4.5.1: patches/react-native-reanimated@4.5.1.patch',
+    ),
+    [],
+  );
+  assert.deepEqual(kinds('  @scope/pkg@1.2.3-rc.1: patches/@scope__pkg@1.2.3-rc.1.patch'), []);
+  assert.deepEqual(kinds('mail me at someone@gmail.patch'), ['1:email']);
+});
