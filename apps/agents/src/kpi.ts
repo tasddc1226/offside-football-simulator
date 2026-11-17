@@ -225,3 +225,27 @@ export async function runKpiIngest(env: Env, at: number, fetcher: Fetch = fetch)
     }
   return out;
 }
+
+/** T-11-744 AdMob 거꾸로 채우기 한 번에 받을 수 있는 최대 날 수(요청 1번에 날마다 3번 부른다). */
+export const ADMOB_BACKFILL_MAX_DAYS = 60;
+
+/**
+ * T-11-744 AdMob을 그끄제부터 days일 거꾸로 다시 넣는다(어제 · 그제는 정기 수집이 넣는다). 단위 · 형식별 수익처럼 나중에 더한
+ * 나눔을 지난날에도 채우려고 쓴다. 서버는 그날 AdMob 지표를 통째로 바꾸므로 여러 번 돌려도 같다.
+ */
+export async function runAdmobBackfill(env: Env, at: number, days: number, fetcher: Fetch = fetch) {
+  if (!kpiReady(env) || !admobReady(env)) return [];
+  const n = Math.min(Math.max(Math.trunc(days), 0), ADMOB_BACKFILL_MAX_DAYS);
+  const out: { source: string; day: string; rows?: number; error?: string }[] = [];
+  for (let i = 3; i < 3 + n; i += 1) {
+    const day = kstDayAgo(at, i);
+    try {
+      const rows = await admobRows(env, day, fetcher);
+      await ingest(env, day, 'admob', rows, fetcher);
+      out.push({ source: 'admob', day, rows: rows.length });
+    } catch (e) {
+      out.push({ source: 'admob', day, error: String(e).slice(0, 200) });
+    }
+  }
+  return out;
+}

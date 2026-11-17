@@ -4,13 +4,18 @@ name: KPI ingest now
 
 on:
   workflow_dispatch:
+    inputs:
+      admob_backfill_days:
+        description: 'AdMob을 그끄제부터 며칠 거꾸로 다시 넣을지(0이면 안 함, 최대 60). 단위 · 형식별 수익을 지난날에 채울 때'
+        required: false
+        default: '0'
 
 permissions: {}
 
 jobs:
   ingest:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Run agent KPI ingest
         env:
@@ -21,4 +26,18 @@ jobs:
           echo "$out" | jq -r '.result[] | [.source, .day, (.rows // "error"), (.error // "")] | @tsv'
           if echo "$out" | jq -e '[.result[] | select(.error)] | length > 0' >/dev/null; then
             echo "::warning::일부 원천이 실패했어요(위 표의 error)"
+          fi
+      # T-11-744 AdMob 거꾸로 채우기(입력이 0보다 클 때만).
+      - name: Backfill AdMob
+        if: ${{ inputs.admob_backfill_days != '' && inputs.admob_backfill_days != '0' }}
+        env:
+          AGENTS_READ_TOKEN: ${{ secrets.AGENTS_READ_TOKEN }}
+          DAYS: ${{ inputs.admob_backfill_days }}
+        run: |
+          case "$DAYS" in ''|*[!0-9]*) echo "::error::admob_backfill_days는 숫자여야 해요"; exit 1;; esac
+          out=$(curl -sS -f -X POST "https://agents.offside-lab.com/internal/run?job=kpi-admob-backfill&days=$DAYS" \
+            -H "Authorization: Bearer $AGENTS_READ_TOKEN")
+          echo "$out" | jq -r '.result[] | [.source, .day, (.rows // "error"), (.error // "")] | @tsv'
+          if echo "$out" | jq -e '[.result[] | select(.error)] | length > 0' >/dev/null; then
+            echo "::warning::일부 날이 실패했어요(위 표의 error)"
           fi
