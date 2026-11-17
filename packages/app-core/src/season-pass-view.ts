@@ -3,6 +3,7 @@ import type { SeasonPassSeason } from '@offside/contracts';
 import { SEASON_GAUGE } from '@offside/contracts/season-gauge';
 import {
   PASS_BONUS_FROM,
+  passRewardBetween,
   passRewardTotal,
   SEASON_PASS_TIERS,
 } from '@offside/contracts/season-pass';
@@ -34,6 +35,13 @@ export function passNext(s: SeasonPassSeason) {
 
 /** 받을 보상이 있나(산 패스에서 열렸지만 받지 않은 단계). */
 export const passClaimable = (s: SeasonPassSeason) => s.owned && s.tier > s.claimed;
+
+/**
+ * T-11-748 패스가 없는 구단주가 지금 사면 바로 받는 보상(1단계 + 진행도로 이미 열린 단계). 패스가 있으면 빈 문자열.
+ * 앞으로 열릴 단계(전체 합계)를 지금 받는 보상처럼 보이지 않게 열린 단계까지만 합친다.
+ */
+export const passBuyNowText = (s: SeasonPassSeason) =>
+  s.owned ? '' : rewardText(passRewardBetween(0, Math.max(1, s.tier)));
 
 export const PASS_TIER_COUNT = SEASON_PASS_TIERS.length;
 export const passTotalText = () => rewardText(passRewardTotal());

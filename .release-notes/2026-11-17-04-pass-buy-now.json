@@ -1,0 +1,26 @@
+{
+  "id": "t-11-748-pass-buy-now",
+  "title": "시즌 패스에서 지금 받을 보상 보기",
+  "items": [
+    "패스가 없으면 진행 칸 바로 아래에 지금 사면 바로 받는 보상(1단계와 이미 연 단계의 합계)과 사기 버튼이 보여요"
+  ],
+  "en": {
+    "title": "See what you get now in Season Pass",
+    "items": [
+      "Without a pass, the rewards you get right away if you buy now (tier 1 plus every tier you've already unlocked) and the buy button now appear right under your progress."
+    ]
+  },
+  "ja": {
+    "title": "シーズンパスで今受け取れる報酬を表示",
+    "items": [
+      "パスを持っていない場合、進行状況のすぐ下に、今買うとすぐ受け取れる報酬（1段階目とすでに開いた段階の合計）と購入ボタンが表示されます。"
+    ]
+  },
+  "zh": {
+    "title": "在賽季通行證查看現在可領取的獎勵",
+    "items": [
+      "尚未擁有通行證時，進度下方會顯示現在購買可立即領取的獎勵（第 1 階段與已開放階段的合計）和購買按鈕。"
+    ]
+  },
+  "availability": "web-app"
+}

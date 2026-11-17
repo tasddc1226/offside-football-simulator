@@ -1,6 +1,7 @@
 <script lang="ts">
   // T-11-511 시즌 패스(내 구단 화면 '시즌 패스' 칸으로 연다). 열 때 한 번 패스 상태(1분 메모)를 받는다. 산 패스의 열린 단계
   // 보상을 받고, T-11-591부터 웹 결제가 열린 구단주는 웹에서 이번 시즌 패스를 산다(엑솔라).
+  import type { Snippet } from 'svelte';
   import PopSheet from '../PopSheet.svelte';
   import Skeleton from '../Skeleton.svelte';
   import type { SeasonPassResponse, SeasonPassSeason } from '@offside/contracts';
@@ -10,6 +11,7 @@
   import {
     PASS_RULE,
     PASS_TIER_COUNT,
+    passBuyNowText,
     passClaimable,
     passNext,
     passTiers,
@@ -68,7 +70,7 @@
   }
 </script>
 
-{#snippet track(s: SeasonPassSeason)}
+{#snippet track(s: SeasonPassSeason, buy?: Snippet)}
   {@const next = passNext(s)}
   <div class="sp-band stack">
     <div class="sp-band-top">
@@ -83,6 +85,7 @@
       <span class="sp-soft">{next ? L.next(next) : L.allOpen}</span>
     </div>
   </div>
+  {@render buy?.()}
   <ol class="sp-tiers" data-pass-tiers={s.season}>
     {#each passTiers(s) as t (t.tier)}
       {@const state = t.state === 'claimed' ? L.stateClaimed : t.state === 'open' ? L.stateOpen : L.stateLocked}
@@ -102,6 +105,18 @@
   {/if}
 {/snippet}
 
+{#snippet buyNow()}
+  {#if current && webPass}
+    <section class="sp-buy stack" data-pass-buy-now>
+      <b>{L.nowTitle}</b>
+      <span>{passBuyNowText(current)}</span>
+      <small class="muted">{L.nowTiers({ tier: current.tier })}</small>
+      <button class="btn btn-primary btn-block" data-act="pass-web-buy" disabled={webPay.busy} onclick={() => void startWebPay(webPass.productId, 'pass')}>{L.webBuyBtn({ price: webPass.amount.toLocaleString('ko-KR') })}</button>
+      <small class="muted">{L.webBuyNote}</small>
+    </section>
+  {/if}
+{/snippet}
+
 <PopSheet label={L.title} step={pass ? 'pass' : 'load'} {onclose}>
   <div class="stack sp" data-season-pass aria-busy={busy}>
     <div class="sp-head">
@@ -118,14 +133,9 @@
     {:else}
       {#if note}<p class="sp-note" class:bad={!note.ok} role="status">{note.text}</p>{/if}
       <p class="fs-sm">{L.lead}</p>
-      {@render track(current)}
-      {#if !current.owned}
-        {#if webPass}
-          <button class="btn btn-primary btn-block" data-act="pass-web-buy" disabled={webPay.busy} onclick={() => void startWebPay(webPass.productId, 'pass')}>{L.webBuyBtn({ price: webPass.amount.toLocaleString('ko-KR') })}</button>
-          <p class="fs-xs muted">{L.webBuyNote}</p>
-        {:else}
-          <p class="fs-sm muted" data-pass-web-buy>{pass.onSale ? L.webBuy : L.notOnSale}</p>
-        {/if}
+      {@render track(current, !current.owned && webPass ? buyNow : undefined)}
+      {#if !current.owned && !webPass}
+        <p class="fs-sm muted" data-pass-web-buy>{pass.onSale ? L.webBuy : L.notOnSale}</p>
       {/if}
       <p class="fs-xs muted">{L.rule(PASS_RULE)} {L.midSeason} {L.once}</p>
       <p class="fs-xs muted">{L.total({ reward: passTotalText() })}</p>
@@ -166,6 +176,7 @@
   .sp-state {font-weight:700;}
   .sp-tier.claimed .sp-state {color:var(--good);}
   .sp-tier.open .sp-state {color:var(--accent);}
+  .sp-buy {gap:8px;padding:12px;border-radius:var(--radius-md);border:1px solid var(--accent);background:var(--surface);}
   .sp-card {gap:4px;padding:12px;border-radius:var(--radius-md);background:var(--surface-2);}
   .sp-note {margin:0;padding:10px 12px;border-radius:var(--radius-md);background:var(--surface-2);color:var(--good);}
   .sp-note.bad {color:var(--ink);}

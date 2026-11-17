@@ -24,6 +24,8 @@ const ko = {
   tierLabel: (p: { tier: number; need: string; reward: string; state: string }) =>
     `${p.tier}단계, ${p.need}, ${p.reward}, ${p.state}`,
   buy: (p: { price: string }) => `${p.price}에 패스 사기`,
+  nowTitle: '지금 사면 바로 받는 보상',
+  nowTiers: (p: { tier: number }) => `열린 ${p.tier}단계까지의 보상을 합쳤어요.`,
   buyBusy: '결제 중…',
   owned: '패스를 가지고 있어요',
   bought: '패스를 열었어요',
@@ -32,7 +34,6 @@ const ko = {
   got: (p: { reward: string }) => `받은 아이템: ${p.reward}`,
   nothing: '지금 받을 보상이 없어요',
   claimFail: '받지 못했어요. 잠시 뒤 다시 눌러 주세요.',
-  buyHint: '패스를 사면 첫 단계와 이미 열린 단계의 보상을 바로 받을 수 있어요.',
   pastTitle: '지난 시즌 패스',
   pastLead: '받지 않은 보상이 남아 있어요.',
   aheadTitle: (p: { season: number }) => `시즌 ${p.season} 패스를 미리 가지고 있어요`,

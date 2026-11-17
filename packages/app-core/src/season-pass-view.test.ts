@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  passBuyNowText,
   passClaimable,
   passNext,
   passTiers,
@@ -49,5 +50,25 @@ describe('T-11-511 시즌 패스 화면', () => {
     expect(passTotalText()).toBe(
       '리롤권 59장, 잠재력 강화권 65장, 프리미엄 스카우트권 14장, 선수 이름 변경권 2장',
     );
+  });
+
+  it('T-11-748 지금 사면 받는 보상은 열린 단계까지만 합친다', () => {
+    const none = { owned: false, claimed: 0 };
+    // 진행도 0: 1단계(사면 바로)만.
+    expect(passBuyNowText(season({ ...none, progress: 0, tier: 1 }))).toBe(
+      '리롤권 10장, 잠재력 강화권 10장, 프리미엄 스카우트권 2장',
+    );
+    // 은퇴 12명 = 1~8단계 합계. 앞으로 열릴 단계(전체 합계)는 섞지 않는다.
+    const twelve = passBuyNowText(season({ ...none, progress: 12, tier: 8 }));
+    expect(twelve).toBe(
+      '리롤권 33장, 잠재력 강화권 23장, 프리미엄 스카우트권 5장, 선수 이름 변경권 1장',
+    );
+    expect(twelve).not.toBe(passTotalText());
+    // 모든 단계를 열었으면 전체 합계와 같다.
+    expect(passBuyNowText(season({ ...none, progress: 60, tier: PASS_TIER_COUNT }))).toBe(
+      passTotalText(),
+    );
+    // 이미 산 패스는 구매 안내가 없다.
+    expect(passBuyNowText(season())).toBe('');
   });
 });
