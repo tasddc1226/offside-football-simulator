@@ -2,7 +2,7 @@
   // T-11-577 게임 · 커뮤니티: 커리어 · 게시판 실시간 현황 + 일일 수집 추세.
   import type { AdminStats, KpiReport } from '@offside/contracts';
   import { fmt, KPI_EMPTY, metricSeries, nonEmpty, ratio } from '../kpi.ts';
-  import { byDim, lastDims, periodTotal, trendOf, viewOf } from '../kpi-page.ts';
+  import { byDim, lastDims, lastValue, periodTotal, trendOf, viewOf } from '../kpi-page.ts';
   import { balanceHealth, PEAK_BANDS, seasonsPerDau } from '../kpi-insights.ts';
   import HBars from '../ui/HBars.svelte';
   import { loader } from '../load.svelte.ts';
@@ -19,6 +19,7 @@
   const VOICE: Record<string, string> = { bug: '버그 의심', idea: '개선 제안', request: '요구사항', etc: '기타' };
   const AGENT_EMPTY = '매일 08:50(KST)에 전날 값을 받아요.';
   const BAL_EMPTY = '이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
+  const ENGAGE_EMPTY = '이번 배포 뒤 다음 일일 수집(04:00)부터 지난 사흘이 보여요.';
   const BAL_SUB = '운영자 · QA 커리어 포함';
   /** 서버 수집 기준(apps/api kpi.ts ELITE_OVR · ELITE_MAX_AGE)과 같게. */
   const ELITE_OVR = 95;
@@ -145,6 +146,71 @@
           days={v.days}
           series={nonEmpty([{ key: 'all', label: '시즌', values: trendOf(v, 'seasons_played', ['all']) }])}
           empty={BAL_EMPTY}
+        />
+      </div>
+    {/snippet}
+  </Load>
+
+  <h2 class="section-title">출석 · 이적시장 ({days}일)</h2>
+  <Load r={kpi.r} height={260}>
+    {#snippet children(rep)}
+      {@const v = viewOf(rep)}
+      {@const checkins = periodTotal(v, 'attendance_checkins')}
+      {@const adBonus = periodTotal(v, 'attendance_ad_bonus')}
+      {@const sold = periodTotal(v, 'market_sold')}
+      {@const volume = periodTotal(v, 'market_volume')}
+      {@const fee = periodTotal(v, 'market_fee')}
+      {@const open = lastValue(v, 'market_open')}
+      <div class="stats">
+        <Stat label={`${days}일 출석 (하루 합)`} value={checkins} trend={trendOf(v, 'attendance_checkins')} sub="그날 출석 도장을 찍은 구단주" />
+        <Stat
+          label="광고 보고 한 번 더 받기"
+          value={checkins && adBonus !== null ? ratio(adBonus, checkins) : null}
+          unit="pct"
+          trend={trendOf(v, 'attendance_checkins').map((n, i) => {
+            const a = trendOf(v, 'attendance_ad_bonus')[i];
+            return n && a != null ? a / n : null;
+          })}
+          sub={`출석 가운데 · ${fmt(adBonus)}번`}
+        />
+        <Stat label={`${days}일 이적시장 거래`} value={sold} trend={trendOf(v, 'market_sold')} sub={`거래 대금 ${fmt(volume)}만 원 · 수수료 ${fmt(fee)}만 원`} />
+        <Stat label="열린 판매 등록" value={open?.value ?? null} trend={trendOf(v, 'market_open')} sub={open ? `${open.day} 끝 기준` : ''} />
+      </div>
+      <div class="cols">
+        <StackedBars
+          title="하루 출석"
+          days={v.days}
+          series={nonEmpty([
+            {
+              key: 'plain',
+              label: '출석만',
+              values: trendOf(v, 'attendance_checkins').map((n, i) => {
+                const a = trendOf(v, 'attendance_ad_bonus')[i];
+                return n === null ? null : n - (a ?? 0);
+              }),
+            },
+            { key: 'ad', label: '광고로 한 번 더', values: trendOf(v, 'attendance_ad_bonus') },
+          ])}
+          empty={ENGAGE_EMPTY}
+        />
+        <StackedBars
+          title="이적시장 하루 등록 · 거래 · 취소"
+          days={v.days}
+          series={nonEmpty([
+            { key: 'listed', label: '새 등록', values: trendOf(v, 'market_listed') },
+            { key: 'sold', label: '팔림', values: trendOf(v, 'market_sold') },
+            { key: 'cancelled', label: '취소', values: trendOf(v, 'market_cancelled') },
+          ])}
+          empty={ENGAGE_EMPTY}
+        />
+        <StackedBars
+          title="이적시장 하루 산 사람 · 판 사람"
+          days={v.days}
+          series={nonEmpty([
+            { key: 'buyers', label: '산 사람', values: trendOf(v, 'market_buyers') },
+            { key: 'sellers', label: '판 사람', values: trendOf(v, 'market_sellers') },
+          ])}
+          empty={ENGAGE_EMPTY}
         />
       </div>
     {/snippet}

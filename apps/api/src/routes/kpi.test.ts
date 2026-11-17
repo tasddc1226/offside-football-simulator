@@ -231,6 +231,40 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
       ).bind(admin.profileId, mid),
     ]);
 
+    // T-11-746 출석 · 이적시장 · 알림 주제.
+    const [, dayBefore] = kstPastDays(at, 2);
+    const listing = (
+      id: string,
+      seller: string,
+      buyer: string | null,
+      price: number,
+      fee: number,
+      status: string,
+      created: string,
+      closed: string | null,
+    ) =>
+      env.DB.prepare(
+        `INSERT INTO market_listings (id, career_id, seller_id, buyer_id, season, price, fee, status, created_at, closed_at)
+         VALUES (?1, ?1, ?2, ?3, 2, ?4, ?5, ?6, ?7, ?8)`,
+      ).bind(id, seller, buyer, price, fee, status, created, closed);
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO owner_attendance_days (profile_id, day, checked_at, ad_claim_id) VALUES (?1, ?2, ?3, 'ad1'), (?1, ?4, ?5, NULL)`,
+      ).bind(admin.profileId, yesterday, mid, dayBefore, twoDaysAgo),
+      listing('m1', admin.profileId, 'p2', 1000, 50, 'sold', twoDaysAgo, mid),
+      listing('m2', 'p3', 'p2', 500, 25, 'sold', mid, mid),
+      listing('m3', 'p3', null, 700, 0, 'cancelled', mid, mid),
+      listing('m4', 'p3', null, 800, 0, 'open', mid, null),
+      listing('m5', 'p3', 'p2', 900, 45, 'sold', twoDaysAgo, twoDaysAgo),
+      env.DB.prepare(
+        `INSERT INTO push_devices (installation_hash, session_id, profile_id, token, platform, app_version, updated_at, permission)
+         VALUES ('dev1', (SELECT id FROM sessions WHERE profile_id = ?1 LIMIT 1), ?1, 't', 'ios', '1.1.9', ?2, 'authorized')`,
+      ).bind(admin.profileId, mid),
+      env.DB.prepare(
+        `INSERT INTO push_preferences (profile_id, team, nudge, topic_cup) VALUES (?1, 1, 0, 0)`,
+      ).bind(admin.profileId),
+    ]);
+
     let result: KpiDailyResult | undefined;
     let steps = 0;
     do {
@@ -303,6 +337,27 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     expect(value(r, yesterday!, 'fund_out', 'market_buy')).toBe(1000);
     expect(value(r, yesterday!, 'funds_total')).toBeGreaterThanOrEqual(5000);
     expect(value(r, yesterday!, 'funds_holders')).toBeGreaterThanOrEqual(1);
+    expect(value(r, yesterday!, 'attendance_checkins')).toBe(1);
+    expect(value(r, yesterday!, 'attendance_ad_bonus')).toBe(1);
+    expect(value(r, dayBefore!, 'attendance_checkins')).toBe(1);
+    expect(value(r, dayBefore!, 'attendance_ad_bonus')).toBe(0);
+    // 어제 닫힌 판매 2건(그제 팔린 m5는 빠진다), 어제 새로 올린 등록 3건(m2 · m3 · m4).
+    expect(value(r, yesterday!, 'market_sold')).toBe(2);
+    expect(value(r, yesterday!, 'market_volume')).toBe(1500);
+    expect(value(r, yesterday!, 'market_fee')).toBe(75);
+    expect(value(r, yesterday!, 'market_buyers')).toBe(1);
+    expect(value(r, yesterday!, 'market_sellers')).toBe(2);
+    expect(value(r, yesterday!, 'market_listed')).toBe(3);
+    expect(value(r, yesterday!, 'market_cancelled')).toBe(1);
+    expect(value(r, yesterday!, 'market_open')).toBe(1);
+    // 주제 칸이 비면 옛 종류 설정(team · nudge), 설정이 없으면 받기.
+    expect(value(r, yesterday!, 'push_topic_base')).toBe(1);
+    expect(value(r, yesterday!, 'push_topic_custom')).toBe(1);
+    expect(value(r, yesterday!, 'push_topic_on', 'match')).toBe(1);
+    expect(value(r, yesterday!, 'push_topic_on', 'cup')).toBe(0);
+    expect(value(r, yesterday!, 'push_topic_on', 'attendance')).toBe(0);
+    expect(value(r, yesterday!, 'push_topic_on', 'market')).toBe(1);
+    expect(value(r, yesterday!, 'push_topic_on', 'reward')).toBe(1);
     expect(r.sources.map((s) => s.source)).toEqual(['d1']);
     expect(r.sources[0]!.lastDay).toBe(yesterday);
     const count = await env

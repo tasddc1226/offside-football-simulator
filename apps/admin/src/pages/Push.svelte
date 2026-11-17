@@ -4,7 +4,7 @@
   // 효과는 아래 버튼을 눌렀을 때만 부른다.
   import type { KpiReport } from '@offside/contracts';
   import { fmt, KPI_EMPTY, ratio } from '../kpi.ts';
-  import { dimTotals, lastDims, periodTotal, trendOf, viewOf, type KpiView } from '../kpi-page.ts';
+  import { dimTotals, lastDims, lastValue, periodTotal, trendOf, viewOf, type KpiView } from '../kpi-page.ts';
   import { loader } from '../load.svelte.ts';
   import HBars from '../ui/HBars.svelte';
   import Load from '../ui/Load.svelte';
@@ -35,6 +35,8 @@
     community: '게시판',
     etc: '기타',
   };
+  /** 받고 싶은 알림에서 고를 수 있는 주제(T-11-746 켜 둔 사람 수). */
+  const TOPIC_KEYS = ['match', 'cup', 'league', 'market', 'friend', 'reward', 'attendance', 'comeback', 'notice', 'release'];
   const PERMISSION: Record<string, string> = {
     authorized: '정식 허용',
     provisional: '조용한 알림 (iOS)',
@@ -64,6 +66,9 @@
       a === null ? null : Math.max(0, a - (clicks[i] ?? 0)),
     );
   };
+  /** 마지막 날 나눔 값(0이라 lastDims가 뺀 주제도 0으로). */
+  const valueOf = (items: { dim: string; value: number }[], dim: string) =>
+    items.find((x) => x.dim === dim)?.value ?? 0;
   const devices = (v: KpiView, platform: string) => {
     const last = lastDims(v, 'push_devices');
     const items = last.items.filter((x) => x.dim.startsWith(`${platform}:`));
@@ -125,6 +130,28 @@
           </section>
         {/each}
       </div>
+
+      {@const topics = lastDims(v, 'push_topic_on')}
+      {@const base = lastValue(v, 'push_topic_base')}
+      {@const custom = lastValue(v, 'push_topic_custom')}
+      <section class="panel">
+        <header>
+          <h2>받고 싶은 알림 (주제별 켜 둔 사람)</h2>
+          <span class="hint">{topics.day ? `${topics.day} 끝 기준 · 받을 수 있는 구단주 ${fmt(base?.value ?? null)}명 · 직접 고른 사람 ${fmt(custom?.value ?? null)}명 (${pct(custom?.value ?? null, base?.value ?? null)})` : ''}</span>
+        </header>
+        {#if topics.day}
+          <HBars
+            unit="n"
+            items={TOPIC_KEYS.map((k) => {
+              const n = valueOf(topics.items, k);
+              return { key: k, label: TOPIC[k] ?? k, value: n, note: pct(n, base?.value ?? null) };
+            })}
+          />
+          <p class="note">알림을 허용한 기기가 있는 구단주(권한을 보내지 않는 옛 앱 포함)를 세요. 주제를 고르지 않았으면 옛 설정을, 설정이 없으면 받기로 세요.</p>
+        {:else}
+          <p class="note">다음 일일 수집(04:00)부터 하루 한 번 쌓여요.</p>
+        {/if}
+      </section>
 
       <section class="panel">
         <header><h2>알림 권유 퍼널 ({days}일)</h2><span class="hint">GA4 · 하루 사용자 수의 합이라 여러 날 본 사람은 겹쳐요</span></header>

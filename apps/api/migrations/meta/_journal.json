@@ -1184,6 +1184,13 @@
       "when": 1794818292231,
       "tag": "0171_item_use_daily",
       "breakpoints": true
+    },
+    {
+      "idx": 172,
+      "version": "6",
+      "when": 1794898117085,
+      "tag": "0172_attendance_day_index",
+      "breakpoints": true
     }
   ]
 }

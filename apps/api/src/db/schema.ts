@@ -1885,7 +1885,11 @@ export const ownerAttendanceDays = sqliteTable(
     /** T-11-720 그날 광고를 보고 보상을 한 번 더 받은 요청(같은 batch의 아이템 지급 조건). 받지 않았으면 NULL. */
     adClaimId: text('ad_claim_id'),
   },
-  (table) => [primaryKey({ columns: [table.profileId, table.day] })],
+  (table) => [
+    primaryKey({ columns: [table.profileId, table.day] }),
+    // T-11-746 운영 지표: 그날 출석한 사람 수를 날짜 범위로만 센다.
+    index('owner_attendance_days_day_idx').on(table.day),
+  ],
 );
 
 /**

@@ -55,6 +55,10 @@ export const D1_SNAPSHOT_METRICS = [
   'items_used_total',
   'funds_total',
   'funds_holders',
+  'market_open',
+  'push_topic_base',
+  'push_topic_on',
+  'push_topic_custom',
 ] as const;
 export const D1_METRICS = [
   'signups',
@@ -98,6 +102,15 @@ export const D1_METRICS = [
   'webpay_canceled',
   'fund_in',
   'fund_out',
+  'attendance_checkins',
+  'attendance_ad_bonus',
+  'market_sold',
+  'market_volume',
+  'market_fee',
+  'market_buyers',
+  'market_sellers',
+  'market_listed',
+  'market_cancelled',
 ] as const;
 /**
  * T-11-739 보상형 광고 자리별 시청(시즌 측정 기록의 광고 요약 합). 측정 기록은 이틀 남짓 뒤 R2로 옮겨져 다시 쓰는 사흘 가운데
@@ -372,9 +385,9 @@ export async function collectD1Day(
     const mb = (bytes: number) => Math.round(bytes / 1024 / 1024);
     if (size(signups!.meta) > 0) add('db_size_mb', 'game', mb(size(signups!.meta)));
     if (ops !== d1 && size(errors!.meta) > 0) add('db_size_mb', 'ops', mb(size(errors!.meta)));
-    rows.push(...(await collectItemSnapshot(d1)));
+    rows.push(...(await collectItemSnapshot(d1)), ...(await collectEngageSnapshot(d1)));
   }
-  rows.push(...(await collectFlowDay(d1, day)));
+  rows.push(...(await collectFlowDay(d1, day)), ...(await collectEngageDay(d1, day)));
   return rows;
 }
 
@@ -746,4 +759,105 @@ export async function runKpiDaily(
     written: days,
     push: pushDays,
   };
+}
+
+/**
+ * T-11-746 그날 출석(출석 · 광고 보고 한 번 더 받기)과 이적시장(팔린 수 · 거래 대금 · 수수료 · 산 사람 · 판 사람 · 새 등록 · 취소).
+ * 출석은 날짜 인덱스, 판매 등록은 (상태, 시각) 인덱스로 하루만 읽는다.
+ */
+export async function collectEngageDay(d1: D1Database, day: string): Promise<KpiRow[]> {
+  const { start, end } = kstDayRange(day);
+  const [att, sold, listed, cancelled] = await d1.batch<Record<string, unknown>>([
+    d1
+      .prepare('SELECT count(*) n, count(ad_claim_id) ad FROM owner_attendance_days WHERE day = ?1')
+      .bind(day),
+    d1
+      .prepare(
+        `SELECT count(*) n, coalesce(sum(price), 0) volume, coalesce(sum(fee), 0) fee,
+                count(DISTINCT buyer_id) buyers, count(DISTINCT seller_id) sellers
+           FROM market_listings WHERE status = 'sold' AND closed_at >= ?1 AND closed_at < ?2`,
+      )
+      .bind(start, end),
+    d1
+      .prepare(
+        `SELECT count(*) n FROM market_listings
+          WHERE status IN ('open', 'sold', 'cancelled') AND created_at >= ?1 AND created_at < ?2`,
+      )
+      .bind(start, end),
+    d1
+      .prepare(
+        "SELECT count(*) n FROM market_listings WHERE status = 'cancelled' AND closed_at >= ?1 AND closed_at < ?2",
+      )
+      .bind(start, end),
+  ]);
+  const a = att!.results[0];
+  const s = sold!.results[0];
+  const rows: KpiRow[] = [];
+  if (num(a?.n)) {
+    rows.push({ metric: 'attendance_checkins', dim: 'all', value: num(a?.n) });
+    rows.push({ metric: 'attendance_ad_bonus', dim: 'all', value: num(a?.ad) });
+  }
+  const listedN = num(listed!.results[0]?.n);
+  const cancelledN = num(cancelled!.results[0]?.n);
+  if (num(s?.n) || listedN || cancelledN)
+    rows.push(
+      { metric: 'market_sold', dim: 'all', value: num(s?.n) },
+      { metric: 'market_volume', dim: 'all', value: num(s?.volume) },
+      { metric: 'market_fee', dim: 'all', value: num(s?.fee) },
+      { metric: 'market_buyers', dim: 'all', value: num(s?.buyers) },
+      { metric: 'market_sellers', dim: 'all', value: num(s?.sellers) },
+      { metric: 'market_listed', dim: 'all', value: listedN },
+      { metric: 'market_cancelled', dim: 'all', value: cancelledN },
+    );
+  return rows;
+}
+
+/** T-11-746 알림 주제(받고 싶은 알림 고르기 T-11-685). 주제 칸이 비어 있으면 옛 종류 설정을, 설정이 없으면 받기(기본값)를 따른다. */
+export const PUSH_TOPICS = {
+  match: 'coalesce(p.topic_match, p.team, 1)',
+  cup: 'coalesce(p.topic_cup, p.team, 1)',
+  league: 'coalesce(p.topic_league, p.team, 1)',
+  market: 'coalesce(p.market, 1)',
+  friend: 'coalesce(p.topic_friend, p.social, 1)',
+  reward: 'coalesce(p.topic_reward, max(coalesce(p.team, 1), coalesce(p.social, 1)))',
+  attendance: 'coalesce(p.topic_attendance, p.nudge, 1)',
+  comeback: 'coalesce(p.topic_comeback, p.nudge, 1)',
+  notice: 'coalesce(p.notice, 1)',
+  release: 'coalesce(p.release, 1)',
+} as const;
+const TOPIC_CHOSEN = ['match', 'cup', 'league', 'friend', 'reward', 'attendance', 'comeback']
+  .map((k) => `p.topic_${k} IS NOT NULL`)
+  .join(' OR ');
+
+/**
+ * T-11-746 지금 상태(어제 수집 때만): 열린 판매 등록 수, 알림을 받을 수 있는 구단주(권한을 준 기기가 있는 프로필, 권한을 보내지
+ * 않는 옛 앱 포함) 가운데 주제마다 켜 둔 사람 · 주제를 하나라도 직접 고른 사람. 기기 · 설정 표는 수천 줄이다.
+ */
+export async function collectEngageSnapshot(d1: D1Database): Promise<KpiRow[]> {
+  const [open, topics] = await d1.batch<Record<string, unknown>>([
+    d1.prepare("SELECT count(*) n FROM market_listings WHERE status = 'open'"),
+    d1.prepare(
+      `SELECT count(*) base, coalesce(sum(${TOPIC_CHOSEN}), 0) custom,
+              ${Object.entries(PUSH_TOPICS)
+                .map(([k, e]) => `coalesce(sum(${e}), 0) t_${k}`)
+                .join(', ')}
+         FROM (SELECT DISTINCT profile_id FROM push_devices
+                WHERE profile_id IS NOT NULL AND (permission IS NULL OR permission IN ('authorized', 'provisional'))) d
+         LEFT JOIN push_preferences p ON p.profile_id = d.profile_id`,
+    ),
+  ]);
+  const t = topics!.results[0];
+  const rows: KpiRow[] = [{ metric: 'market_open', dim: 'all', value: num(open!.results[0]?.n) }];
+  if (num(t?.base)) {
+    rows.push(
+      { metric: 'push_topic_base', dim: 'all', value: num(t?.base) },
+      { metric: 'push_topic_custom', dim: 'all', value: num(t?.custom) },
+      ...Object.keys(PUSH_TOPICS).map((k) => ({
+        metric: 'push_topic_on',
+        dim: k,
+        value: num(t?.[`t_${k}`]),
+      })),
+    );
+  }
+  return rows;
 }
