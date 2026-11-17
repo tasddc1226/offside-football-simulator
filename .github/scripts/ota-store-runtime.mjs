@@ -13,9 +13,9 @@ export const STORE_BUILDS = Object.freeze({
     runtime: '6b0fc3a98f174fbdb4e0a6182a0796d1daec4d47', // iOS build 25
   },
   android: {
-    version: '1.1.8',
-    source: '05c79da6d0fd287c7a9bc9f6e7851e85ef2a8af8',
-    runtime: 'd6b29abc7828406cba1120a9f24a8de8d6dfe2b2', // Android build 28
+    version: '1.1.9',
+    source: '59fb22277f64b5150235e56a187224b1fcef368c',
+    runtime: '84aa755bbc152b4088e0a0e4017b4c009552ad70', // Android build 30; public since 2026-11-16
   },
 });
 export const STORE_RUNTIMES = Object.freeze(
