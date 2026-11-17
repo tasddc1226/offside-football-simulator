@@ -1,0 +1,30 @@
+{
+  "id": "t-11-734-android-119-released",
+  "title": "Android 1.1.9 업데이트",
+  "items": [
+    "Google Play에서 1.1.9로 업데이트하면 Google Play Games 순위표 4개와 업적 18개를 이용할 수 있어요.",
+    "홈과 첫 은퇴 결과의 연결 안내, 기록실 바로가기로 내 은퇴 기록을 연동해요."
+  ],
+  "en": {
+    "title": "Android 1.1.9 is available",
+    "items": [
+      "Update to 1.1.9 on Google Play to access four Google Play Games leaderboards and 18 achievements.",
+      "Connect your retirement records from the prompts on Home and your first retirement report, or the shortcuts in Records."
+    ]
+  },
+  "ja": {
+    "title": "Android版1.1.9を公開しました",
+    "items": [
+      "Google Playで1.1.9に更新すると、Google Play Gamesの4つのランキングと18個の達成項目を利用できます。",
+      "ホームと初めての引退レポートの連携案内、または記録室のショートカットから引退記録を連携できます。"
+    ]
+  },
+  "zh": {
+    "title": "Android 1.1.9已推出",
+    "items": [
+      "在Google Play更新至1.1.9，即可使用Google Play Games的4個排行榜及18項成就。",
+      "透過首頁與首次退役報告的連結提示，或紀錄室的捷徑，連結你的退役紀錄。"
+    ]
+  },
+  "availability": "app"
+}
