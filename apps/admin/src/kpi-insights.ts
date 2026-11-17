@@ -120,3 +120,77 @@ export function placementTotals(v: KpiView) {
     .filter((x) => x.watched || x.free)
     .sort((a, b) => b.watched + b.free - (a.watched + a.free));
 }
+
+// T-11-742 플레이 깊이 · 유입 단계 · 웹 결제 단계 · 구단 자금 흐름.
+
+/** 'meta:-:jp_a' → 'meta · jp_a', 'direct' → '캠페인 없음'. */
+export function campaignName(dim: string) {
+  if (dim === 'direct') return '캠페인 없음';
+  return dim
+    .split(':')
+    .filter((x) => x && x !== '-')
+    .join(' · ');
+}
+
+/** 유입 캠페인별 기간 합과 단계 전환(방문 → 커리어 시작 → 스토어 클릭), 방문 많은 순. */
+export function acqFunnel(v: KpiView) {
+  const sum = (metric: string, dim: string) =>
+    v.days.reduce((s, d) => s + (valueOn(v.idx, d, metric, [dim]) ?? 0), 0);
+  const dims = new Set(v.report.rows.filter((r) => r.metric === 'acq_visits').map((r) => r.dim));
+  return [...dims]
+    .map((dim) => {
+      const visits = sum('acq_visits', dim);
+      const started = sum('acq_started', dim);
+      const clicks = sum('acq_store_clicks', dim);
+      return {
+        dim,
+        label: campaignName(dim),
+        visits,
+        started,
+        clicks,
+        startRate: visits ? started / visits : null,
+        clickRate: visits ? clicks / visits : null,
+      };
+    })
+    .filter((x) => x.visits > 0)
+    .sort((a, b) => b.visits - a.visits);
+}
+
+/** 웹 결제 기간 합과 결제 완료율(주문 → 결제 완료). */
+export function webPayFunnel(v: KpiView) {
+  const total = (metric: string) =>
+    v.days.reduce((s, d) => s + (valueOn(v.idx, d, metric) ?? 0), 0);
+  const orders = total('webpay_orders');
+  const paid = total('webpay_paid');
+  const canceled = total('webpay_canceled');
+  return {
+    orders,
+    paid,
+    canceled,
+    open: Math.max(0, orders - paid - canceled),
+    paidRate: orders ? paid / orders : null,
+    daily: v.days.map((d) => {
+      const o = valueOn(v.idx, d, 'webpay_orders');
+      return o ? (valueOn(v.idx, d, 'webpay_paid') ?? 0) / o : null;
+    }),
+  };
+}
+
+const FUND_KIND: Record<string, string> = {
+  opening: '시작 자금',
+  item: '아이템 상점',
+  enhance: '카드 강화',
+  market_buy: '이적시장 구매',
+  market_sale: '이적시장 판매',
+  release: '방출',
+  manager_release: '감독 방출',
+};
+export const fundKindName = (k: string) => FUND_KIND[k] ?? k;
+
+/** 날짜별 DAU당 시즌 수. DAU는 GA4, 없으면 운영 DB 접속. */
+export const seasonsPerDau = (v: KpiView) =>
+  v.days.map((d) => {
+    const n = valueOn(v.idx, d, 'seasons_played', ['all']);
+    const dau = valueOn(v.idx, d, 'dau') ?? valueOn(v.idx, d, 'active');
+    return n === null || !dau ? null : n / dau;
+  });

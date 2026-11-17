@@ -2,8 +2,9 @@
   // T-11-739 아이템: 남은 장수 · 가진 사람 · 하루 사용 · 들어온 양(산 것 / 받은 것). 모두 일일 수집(kpi_daily)만 읽는다.
   import type { KpiReport } from '@offside/contracts';
   import { fmt, KPI_EMPTY, nonEmpty } from '../kpi.ts';
-  import { byDim, lastDims, lastValue, trendOf, viewOf } from '../kpi-page.ts';
+  import { byDim, dimTotals, lastDims, lastValue, periodTotal, trendOf, viewOf } from '../kpi-page.ts';
   import { avgUse, inflowSplit, itemName, ITEMS, supplyDays } from '../kpi-items.ts';
+  import { fundKindName } from '../kpi-insights.ts';
   import { loader } from '../load.svelte.ts';
   import HBars from '../ui/HBars.svelte';
   import Load from '../ui/Load.svelte';
@@ -13,6 +14,7 @@
   let { days, tick }: { days: number; tick: number } = $props();
   const kpi = loader<KpiReport>(() => `/v1/admin/kpi?days=${days}`, () => tick);
   const SNAP_EMPTY = '남은 장수는 다음 일일 수집(04:00)부터 하루 한 번 쌓여요.';
+  const FUND_EMPTY = '자금 흐름은 이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
   const USE_EMPTY = '하루 사용은 이번 배포 뒤 쓴 장수부터 세요.';
   /** 아이템 이름표를 붙이고 위 카드와 같은 순서로. */
   const named = (s: ReturnType<typeof byDim>) =>
@@ -85,6 +87,38 @@
           <p class="note">{SNAP_EMPTY}</p>
         {/if}
       </section>
+
+      <h2 class="section-title">구단 자금</h2>
+      {@const funds = lastValue(v, 'funds_total')}
+      {@const holders = lastValue(v, 'funds_holders')}
+      {@const gain = periodTotal(v, 'fund_in')}
+      {@const spend = periodTotal(v, 'fund_out')}
+      <div class="stats">
+        <Stat label="구단 자금 총량" value={funds?.value ?? null} trend={trendOf(v, 'funds_total')} sub={funds ? `${funds.day} 기준 · 자금 있는 구단주 ${fmt(holders?.value ?? null)}명` : SNAP_EMPTY} />
+        <Stat label={`${days}일 원장 들어온 돈`} value={gain} trend={trendOf(v, 'fund_in')} />
+        <Stat label={`${days}일 원장 나간 돈`} value={spend} trend={trendOf(v, 'fund_out')} sub={gain !== null || spend !== null ? `순흐름 ${fmt((gain ?? 0) - (spend ?? 0))}` : ''} />
+      </div>
+      <div class="cols">
+        <StackedBars title="들어온 돈 (종류별)" days={v.days} series={byDim(v, 'fund_in').map((s) => ({ ...s, label: fundKindName(s.key) }))} empty={FUND_EMPTY} />
+        <StackedBars title="나간 돈 (종류별)" days={v.days} series={byDim(v, 'fund_out').map((s) => ({ ...s, label: fundKindName(s.key) }))} empty={FUND_EMPTY} />
+        <section class="panel">
+          <header><h2>종류별 합</h2><span class="hint">{days}일 · 나간 돈 기준</span></header>
+          {#if dimTotals(v, 'fund_out').length || dimTotals(v, 'fund_in').length}
+            <HBars
+              items={[...new Set([...dimTotals(v, 'fund_out'), ...dimTotals(v, 'fund_in')].map((x) => x.dim))].map((k) => {
+                const out = periodTotal(v, 'fund_out', [k]) ?? 0;
+                const got = periodTotal(v, 'fund_in', [k]) ?? 0;
+                return { key: k, label: fundKindName(k), value: out, note: got ? `들어옴 ${fmt(got)}` : undefined };
+              }).sort((a, b) => b.value - a.value)}
+            />
+          {:else}
+            <p class="note">{FUND_EMPTY}</p>
+          {/if}
+        </section>
+      </div>
+      <p class="note">
+        원장은 아이템 상점 · 카드 강화 · 이적시장 · 방출처럼 원장에 남는 흐름만 세요. 시즌 · 순위 보상처럼 원장에 남지 않는 지급은 총량 변화로만 보여요.
+      </p>
     {/snippet}
   </Load>
 </div>
