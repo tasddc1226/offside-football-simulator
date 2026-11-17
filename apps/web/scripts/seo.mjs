@@ -15,7 +15,7 @@ import zhGuide from '../../../packages/app-core/src/i18n/zh/publicGuide.mjs';
 import zhArticles from '../../../packages/app-core/src/i18n/zh/publicArticles.mjs';
 import zhGuidePage from '../../../packages/app-core/src/i18n/zh/publicGuidePage.mjs';
 import { APP_SHELL_MARK } from './app-shell.mjs';
-import { LANDING_STATS, landingHtml } from './landing.mjs';
+import { LANDING_LOCALES, LANDING_STATS, landingHtml } from './landing.mjs';
 
 // T-11-073 아이콘 도형은 brand/build-icons.mjs 한 곳에 있다(라이트·다크 두 벌).
 import { BRAND_VERSION, brandSvg as iconSvg } from '../brand/build-icons.mjs';
@@ -55,7 +55,9 @@ export const pathLang = (path) =>
 /** 가이드 · 공략 글 · FAQ의 언어 무관 주소(/guide/…, /faq/). 아니면 null. */
 const guideBase = (path) => {
   const base = path.slice(GUIDE_LOCALES[pathLang(path)].prefix.length);
-  return base === '/faq/' || /^\/guide\/([a-z0-9-]+\/)?$/.test(base) ? base : null;
+  return base === '/faq/' || base === '/app/' || /^\/guide\/([a-z0-9-]+\/)?$/.test(base)
+    ? base
+    : null;
 };
 const KO = GUIDE_LOCALES.ko.page;
 const NAME_POLICY = KO.namePolicy;
@@ -65,12 +67,8 @@ export const PUBLIC_PAGES = {
     description:
       '이번 생은 축구다. 오프사이드(풀타임)에서 고교 3학년부터 은퇴까지, 훈련·이적·이벤트 선택으로 한 선수의 커리어를 만듭니다. 설치 없이 바로 하는 무료 웹 시뮬레이션 게임입니다.',
   },
-  // T-11-584 앱 · 웹 랜딩. 게임 셸 없이 독립 문서로 나간다(landing.mjs).
-  '/app/': {
-    title: '축구 선수 키우기 게임 오프사이드 | 고3부터 은퇴까지',
-    description:
-      '고3 선수 한 명을 프로 데뷔, 이적, 입대, 국가대표를 거쳐 은퇴까지 키우는 축구 인생게임이에요. 은퇴한 선수로 구단주 팀을 만들어 다른 유저와 경기해요. iPhone · Android 앱과 웹에서 할 수 있어요.',
-  },
+  // T-11-584 앱 · 웹 소개 페이지. 게임 셸 없이 독립 문서로 나간다(landing.mjs). 한국어 /app/, 다른 언어 /<언어>/app/.
+  ...Object.fromEntries(Object.values(LANDING_LOCALES).map(({ path, copy }) => [path, copy.meta])),
   ...Object.fromEntries(
     GUIDE_LANGS.flatMap((lang) => {
       const { prefix, page, articles } = GUIDE_LOCALES[lang];
@@ -121,7 +119,13 @@ export function parsePublicSiteUrl(value) {
     return undefined;
   }
 }
-export function resolveSeoConfig({ mode, publicSiteUrl, enableSearchIndexing }) {
+export function resolveSeoConfig({
+  mode,
+  publicSiteUrl,
+  enableSearchIndexing,
+  metaPixelId,
+  analyticsHostname,
+}) {
   const origin = parsePublicSiteUrl(publicSiteUrl);
   if (enableSearchIndexing === 'true' && origin === undefined)
     throw new Error(
@@ -131,6 +135,10 @@ export function resolveSeoConfig({ mode, publicSiteUrl, enableSearchIndexing }) 
     origin,
     indexingEnabled:
       mode === 'production' && enableSearchIndexing === 'true' && origin !== undefined,
+    // 소개 페이지의 Meta 픽셀(게임 셸 src/analytics/meta.ts와 같은 ID · 호스트). 값이 없으면 싣지 않는다.
+    ...(metaPixelId && analyticsHostname
+      ? { pixel: { id: metaPixelId, host: analyticsHostname } }
+      : {}),
   };
 }
 function escapeHtml(value) {
@@ -165,14 +173,15 @@ export function createStructuredData(origin, path) {
         offers: { '@type': 'Offer', price: '0', priceCurrency: 'KRW' },
       },
     ];
-  // 랜딩의 평점은 화면에 보이는 App Store 평점 · 리뷰 수와 같은 값이다(LANDING_STATS).
-  if (path === '/app/')
+  // 소개 페이지의 평점은 화면에 보이는 App Store 평점 · 평가 수와 같은 값이다(LANDING_STATS).
+  const landing = Object.values(LANDING_LOCALES).find((l) => l.path === path);
+  if (landing)
     return [
       {
         '@type': ['VideoGame', 'MobileApplication'],
         name: '오프사이드',
         alternateName: 'OFFSIDE',
-        description: PUBLIC_PAGES['/app/'].description,
+        description: landing.copy.meta.description,
         url,
         image: `${origin}/og-offside-${BRAND_VERSION}.png`,
         inLanguage: ['ko', 'en', 'ja', 'zh-Hant'],
@@ -507,9 +516,13 @@ export const STATIC_PAGES = {
   '/legal/privacy/': privacyBody,
 };
 
-/** T-11-584 /app/ 랜딩 문서. 다른 공개 페이지와 같은 SEO 머리(색인 · canonical · 구조화 데이터)를 쓴다. */
-export const landingPage = (config) =>
-  landingHtml(createHeadMarkup(config, '/app/'), PUBLIC_PAGES['/app/'].title);
+/** T-11-584 소개 페이지 문서. 다른 공개 페이지와 같은 SEO 머리(색인 · canonical · hreflang · 구조화 데이터)를 쓴다. */
+export const landingPage = (config, lang = 'ko') => {
+  const { path } = LANDING_LOCALES[lang];
+  return landingHtml(createHeadMarkup(config, path), PUBLIC_PAGES[path].title, lang, config.pixel);
+};
+const landingLangOf = (path) =>
+  Object.keys(LANDING_LOCALES).find((l) => LANDING_LOCALES[l].path === path);
 
 export function seoPlugin(config) {
   let outputDirectory = 'dist';
@@ -524,9 +537,10 @@ export function seoPlugin(config) {
       server.middlewares.use(async (req, res, next) => {
         const pathname = (req.url ?? '').split('?')[0];
         const path = pathname.endsWith('/') ? pathname : `${pathname}/`;
-        if (path === '/app/') {
+        const landingLang = landingLangOf(path);
+        if (landingLang) {
           res.setHeader('Content-Type', 'text/html; charset=utf-8');
-          return res.end(landingPage(config));
+          return res.end(landingPage(config, landingLang));
         }
         const body = STATIC_PAGES[path];
         if (!body) return next();
@@ -556,8 +570,11 @@ export function seoPlugin(config) {
         await mkdir(directory, { recursive: true });
         await writeFile(join(directory, 'index.html'), pageHtml(base, config, path, body));
       }
-      await mkdir(join(outputDirectory, 'app'), { recursive: true });
-      await writeFile(join(outputDirectory, 'app', 'index.html'), landingPage(config));
+      for (const [lang, { path }] of Object.entries(LANDING_LOCALES)) {
+        const directory = join(outputDirectory, path.slice(1));
+        await mkdir(directory, { recursive: true });
+        await writeFile(join(directory, 'index.html'), landingPage(config, lang));
+      }
       await writeFile(
         join(outputDirectory, 'news-shell.html'),
         pageHtml(base, config, '/', '<!-- public-news-body -->', { forceNoIndex: true }),

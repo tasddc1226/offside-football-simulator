@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => {
     mode,
     publicSiteUrl: env.VITE_PUBLIC_SITE_URL,
     enableSearchIndexing: env.VITE_ENABLE_SEARCH_INDEXING,
+    metaPixelId: env.VITE_META_PIXEL_ID,
+    analyticsHostname: env.VITE_GA4_HOSTNAME,
   });
 
   // T-9-009: 플레이 데이터에 어느 배포에서 온 기록인지 남긴다. CI에서는 커밋 SHA, 로컬은 'dev'.

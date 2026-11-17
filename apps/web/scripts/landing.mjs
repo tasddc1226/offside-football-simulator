@@ -1,59 +1,31 @@
-// T-11-584 앱 · 웹 랜딩(/app/). 광고 · 크리에이터 · 검색 유입을 받아 스토어나 웹 게임으로 보낸다.
+// T-11-584 앱 · 웹 소개 페이지(/app/, /en/app/, /ja/app/, /zh/app/). 광고 · 크리에이터 · 검색 유입을 받아 스토어나 웹 게임으로 보낸다.
 // 게임 셸(index.html)을 쓰지 않는 독립 문서다: 앱 번들 · 사이트 CSS 없이 이 파일의 CSS와 짧은 스크립트만 싣는다.
 // 스토어 버튼은 워커의 /get(기기 · 유입 캠페인에 맞는 스토어 주소로 302)으로, 웹 버튼은 게임(/)으로 간다.
+// 문구는 언어마다 packages/app-core/src/i18n/<언어>/publicLanding.mjs에 있다.
+import ko from '../../../packages/app-core/src/i18n/ko/publicLanding.mjs';
+import en from '../../../packages/app-core/src/i18n/en/publicLanding.mjs';
+import ja from '../../../packages/app-core/src/i18n/ja/publicLanding.mjs';
+import zh from '../../../packages/app-core/src/i18n/zh/publicLanding.mjs';
 
-/** 화면에 보이는 숫자(구조화 데이터 평점도 같은 값). 바꿀 때는 App Store · /v1/hof 값을 다시 확인한다. */
-export const LANDING_STATS = { asOf: '10월 30일', rating: 4.8, ratingCount: 224, legends: '14만' };
+/**
+ * 화면에 보이는 App Store 평점 · 평가 수(구조화 데이터 평점도 같은 값). 기준일 · 명예의 전당 인원은 각 언어 문구의 asOf · legends.
+ * 바꿀 때는 App Store(한국) · /v1/hof 값을 다시 확인하고 네 언어 문구의 asOf · legends도 같이 고친다.
+ */
+export const LANDING_STATS = { rating: 4.8, ratingCount: 254 };
 
-/** App Store 한국 리뷰 원문(맞춤법 그대로, 닉네임 없이 날짜만). */
-const REVIEWS = [
-  ['저녁먹고 깔았는데 정신차리니 새벽 5시', '10월 6일'],
-  ['선수에 욕심이 나서 보는 광고는 이 게임이 처음임', '10월 11일'],
-  ['개발자님 피드백도빠르고 업데이트도빨라서 굿', '10월 10일'],
-  ['이렇게 선수 키워가는 게임이 나와서 너무 좋습니다.', '10월 4일'],
-  ['시간 가는줄도 모르고 했네요', '10월 9일'],
-  ['S급 한번만 맛 보면 여한이 없겠습니다.', '10월 5일'],
-];
-const TICKER = [
-  '저녁먹고 깔았는데 정신차리니 새벽 5시',
-  '진짜 간만에 재밌는 모바일겜',
-  '개발자님 피드백도빠르고 업데이트도빨라서 굿',
-  'S급 한번만 맛 보면 여한이 없겠습니다',
-  '이렇게 선수 키워가는 게임이 나와서 너무 좋습니다',
-];
-const PATH = [
-  ['18', '고3 시즌', '스피드 · 슈팅 · 패스 중 훈련 방향을 정하고 경기를 치러요.'],
-  ['20', '데뷔와 이적', '제의가 오면 출전 기회와 팀 순위를 보고 골라요. 임대, 해외 진출도 있어요.'],
-  ['27', '입대와 대표팀', '입대 시기를 정하고, 뽑히면 A매치와 국제 대회에 나가요.'],
-  [
-    '38',
-    '은퇴',
-    `기록이 명예의 전당에 올라가요. 지금까지 ${LANDING_STATS.legends} 명이 넘게 올라갔어요.`,
-  ],
-];
-const AFTER = [
-  ['구단주 팀', '은퇴 선수로 스쿼드를 짜요.'],
-  ['이적시장', '다른 유저와 선수를 사고팔아요.'],
-  ['오프사이드 컵', '유저 팀끼리 컵과 리그를 치러요.'],
-  ['랭크 경기', '경기 중 선택으로 결과를 바꿔요.'],
-];
-const SHOTS = [
-  ['season', '시즌 순위', '시즌 순위 화면'],
-  ['live', '경기 중계', '경기 문자 중계 화면'],
-  ['pk', '승부차기', '승부차기 미니게임 화면'],
-  ['credits', '은퇴 기록', '은퇴한 선수의 커리어 기록 화면'],
-];
-const FAQ = [
-  [
-    '광고나 결제가 확률을 바꾸나요?',
-    '광고 시청과 광고 제거 구매는 확률에 영향을 주지 않아요. 유료 아이템이 하는 일과 확률은 <a href="/fairness/">확률과 공정성</a> 페이지에 공개돼 있어요.',
-  ],
-  [
-    '웹에서 하던 커리어를 앱으로 옮길 수 있나요?',
-    '백업 코드나 Google · Apple 계정 연결로 옮길 수 있어요.',
-  ],
-  ['어떤 언어로 할 수 있나요?', '한국어, 영어, 일본어, 번체 중국어예요.'],
-];
+/** 언어별 소개 페이지. 한국어는 지금 주소(/app/), 다른 언어는 /<언어>/app/. html은 <html lang>. */
+export const LANDING_LOCALES = {
+  ko: { path: '/app/', html: 'ko', copy: ko },
+  en: { path: '/en/app/', html: 'en', copy: en },
+  ja: { path: '/ja/app/', html: 'ja', copy: ja },
+  zh: { path: '/zh/app/', html: 'zh-Hant', copy: zh },
+};
+/** 언어 고르기에 쓰는 각 언어 자기 이름. */
+const LANG_NAMES = { ko: '한국어', en: 'English', ja: '日本語', zh: '繁體中文' }; // i18n-ignore 언어 자기 이름
+/** 언어마다 그 언어 가이드 · FAQ 주소(공략 · 공정성 · 소개 · 약관은 한국어 한 벌). */
+const guidePrefix = (lang) => (lang === 'ko' ? '' : `/${lang}`);
+
+const SHOT_KEYS = ['season', 'live', 'pk', 'credits'];
 
 /** 유입 캠페인이 없을 때 붙이는 랜딩 꼬리표(contracts/acquisition CAMPAIGNS에 있는 값). */
 export const LANDING_UTM = {
@@ -64,6 +36,7 @@ export const LANDING_UTM = {
 const webHref = (place) =>
   `/?${new URLSearchParams({ ...LANDING_UTM, utm_content: `lp_${place}` })}`;
 const getHref = (os, place) => `/get?os=${os}&amp;p=${place}`;
+const fill = (text, vars) => text.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? vars[k] : m));
 
 const icon = {
   ios: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.6c0-2.4 2-3.5 2-3.6-1.1-1.6-2.8-1.8-3.4-1.8-1.4-.2-2.8.8-3.5.8s-1.8-.8-3-.8C6.9 7.2 5.4 8.1 4.6 9.6c-1.7 2.9-.4 7.2 1.2 9.6.8 1.2 1.7 2.4 3 2.4 1.2-.1 1.6-.8 3.1-.8 1.4 0 1.8.8 3.1.8 1.3 0 2.1-1.2 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7 0 0-2.5-1-2.8-4zM14.1 5.5c.6-.8 1.1-1.9 1-3-.9 0-2.1.6-2.7 1.4-.6.7-1.1 1.8-1 2.9 1 .1 2.1-.5 2.7-1.3z"/></svg>',
@@ -71,70 +44,94 @@ const icon = {
     '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#34a853" d="M4 2.8v18.4c0 .4.4.6.7.4l10.6-9.2L4.7 2.4c-.3-.2-.7 0-.7.4z"/><path fill="#fbbc04" d="m19.4 9.9 2.1 1.2c.6.4.6 1.2 0 1.6l-2.1 1.2-2.4-2z"/><path fill="#ea4335" d="M16.5 12.8 6.8 21.3l11.5-6.6z"/><path fill="#4285f4" d="M16.5 11.2 6.8 2.7l11.5 6.6z"/></svg>',
   web: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2"/><path fill="currentColor" d="m12 7.5 3.4 2.5-1.3 4h-4.2l-1.3-4z"/></svg>',
 };
-const ctas = (place) =>
-  `<div class="ctas"><a class="btn web" data-web href="${webHref(place).replaceAll('&', '&amp;')}">${icon.web}<span><small>설치 없이</small>웹에서 하기</span></a><a class="btn store ios" data-store href="${getHref('ios', place)}">${icon.ios}<span><small>Download on the</small>App Store</span></a><a class="btn store android" data-store href="${getHref('android', place)}">${icon.android}<span><small>GET IT ON</small>Google Play</span></a></div>`;
+const ctas = (c, place) =>
+  `<div class="ctas"><a class="btn web" data-web href="${webHref(place).replaceAll('&', '&amp;')}">${icon.web}<span><small>${c.webSmall}</small>${c.web}</span></a><a class="btn store ios" data-store href="${getHref('ios', place)}">${icon.ios}<span><small>Download on the</small>App Store</span></a><a class="btn store android" data-store href="${getHref('android', place)}">${icon.android}<span><small>GET IT ON</small>Google Play</span></a></div>`;
 
 // 표시 폭은 첫 화면 겹친 사진 150~210px, 갤러리 휴대폰 56vw · PC 260px 안팎이라 320px 판을 먼저 쓴다(T-11-585).
-const shot = ([key, , alt], lazy) =>
+const shot = (key, alt, lazy) =>
   `<img src="/landing/${key}-320.webp" srcset="/landing/${key}-320.webp 320w, /landing/${key}.webp 540w" sizes="${lazy ? '(min-width: 820px) 260px, 56vw' : '(min-width: 820px) 210px, 150px'}" width="540" height="1169" alt="${alt}"${lazy ? ' loading="lazy"' : ' fetchpriority="high"'} decoding="async">`;
 
-export const landingBody = () => `<a class="skip" href="#main">본문으로</a>
-<nav class="nav"><a class="mini" href="/app/">OFFSIDE</a><a class="play-top" href="${webHref('nav').replaceAll('&', '&amp;')}" data-web>웹에서 하기 →</a></nav>
+const langNav = (lang) =>
+  `<nav class="langs" aria-label="Language">${Object.entries(LANDING_LOCALES)
+    .map(
+      ([l, { path, html }]) =>
+        `<a href="${path}" hreflang="${html}" lang="${html}"${l === lang ? ' aria-current="page"' : ''}>${LANG_NAMES[l]}</a>`,
+    )
+    .join('')}</nav>`;
+
+export const landingBody = (lang = 'ko') => {
+  const { path: home, copy: c } = LANDING_LOCALES[lang];
+  const gp = guidePrefix(lang);
+  const vars = { legends: c.legends };
+  const sticker = `<span><b>${c.sticker[0]}</b>${c.sticker[1]}<br>${c.sticker[2]}</span>`;
+  return `<a class="skip" href="#main">${c.skip}</a>
+<nav class="nav"><a class="mini" href="${home}">OFFSIDE</a><a class="play-top" href="${webHref('nav').replaceAll('&', '&amp;')}" data-web>${c.playTop}</a></nav>
 <main id="main">
 <header class="hero">
-  <div class="sticker" aria-hidden="true"><span><b>S2</b>10.31<br>OPEN</span></div>
-  <p class="logo" role="img" aria-label="오프사이드 풀타임">Offside<span>Full Time</span></p>
-  <p class="subtitle">풀타임: 휘슬이 울릴 때까지</p>
-  <h1 class="pitch-line">고3 선수 한 명을 은퇴까지 키우는 축구 커리어 시뮬레이션<small>프로 데뷔, 이적, 입대, 국가대표를 내 선택으로 지나요.</small></h1>
-  ${ctas('hero')}
-  <div class="qr"><img src="/landing/qr-get.svg" width="76" height="76" alt=""><p><b>폰으로 찍어서 받기</b>iPhone · Android 자동으로 맞춰 열려요</p></div>
-  <div class="stack" aria-hidden="true">${SHOTS.filter(([k]) => k !== 'pk')
-    .map((s) => `<figure>${shot(s, false).replace(/alt="[^"]*"/, 'alt=""')}</figure>`)
+  <div class="sticker" aria-hidden="true">${sticker}</div>
+  <p class="logo" role="img" aria-label="${c.logoLabel}">Offside<span>Full Time</span></p>
+  <p class="subtitle">${c.subtitle}</p>
+  <h1 class="pitch-line">${c.h1}<small>${c.h1Small}</small></h1>
+  ${ctas(c, 'hero')}
+  <div class="qr"><img src="/landing/qr-get.svg" width="76" height="76" alt=""><p><b>${c.qrTitle}</b>${c.qrBody}</p></div>
+  <div class="stack" aria-hidden="true">${SHOT_KEYS.filter((k) => k !== 'pk')
+    .map((k) => `<figure>${shot(k, '', false)}</figure>`)
     .join('')}</div>
 </header>
-<div class="ticker" aria-hidden="true"><div class="row">${[...TICKER, ...TICKER].map((t) => `<span>${t}</span>`).join('')}</div></div>
+<div class="ticker" aria-hidden="true"><div class="row">${[...c.ticker, ...c.ticker].map((t) => `<span>${t}</span>`).join('')}</div></div>
 <section class="sec">
-  <p class="tag">한 번의 커리어</p>
-  <h2>열여덟 살에 시작해서 은퇴로 끝나요</h2>
-  <p class="lead">축구 선수 키우기는 후보 세 명 중 한 명을 고르는 데서 시작해요. 같은 선수로 다시 해도 커리어가 매번 다르게 흘러가요.</p>
-  <ol class="path">${PATH.map(([age, h, p]) => `<li><span class="age">${age}</span><h3>${h}</h3><p>${p}</p></li>`).join('')}</ol>
+  <p class="tag">${c.path.tag}</p>
+  <h2>${c.path.title}</h2>
+  <p class="lead">${c.path.lead}</p>
+  <ol class="path">${c.path.items.map(([age, h, p]) => `<li><span class="age">${age}</span><h3>${h}</h3><p>${fill(p, vars)}</p></li>`).join('')}</ol>
 </section>
 <section class="after">
-  <p class="tag">은퇴하고 나서</p>
-  <h2>키운 선수들로 내 팀을 꾸려요</h2>
-  <p class="lead">은퇴한 선수는 내 구단주 팀 선수가 돼요. 다른 유저의 팀과 붙어요.</p>
-  <div class="cards">${AFTER.map(([h, p], i) => `<div><span class="ic">0${i + 1}</span><h3>${h}</h3><p>${p}</p></div>`).join('')}</div>
+  <p class="tag">${c.after.tag}</p>
+  <h2>${c.after.title}</h2>
+  <p class="lead">${c.after.lead}</p>
+  <div class="cards">${c.after.items.map(([h, p], i) => `<div><span class="ic">0${i + 1}</span><h3>${h}</h3><p>${p}</p></div>`).join('')}</div>
 </section>
 <section class="sec">
-  <p class="tag">해 본 사람들</p>
-  <h2>App Store 리뷰</h2>
-  <div class="quotes">${REVIEWS.map(([q, d]) => `<blockquote><div class="st" aria-label="별 5개">★★★★★</div><p>“${q}”</p><cite>App Store 리뷰 · ${d}</cite></blockquote>`).join('')}</div>
-  <div class="score"><span><b>${LANDING_STATS.rating}</b> App Store · 리뷰 ${LANDING_STATS.ratingCount}개 (${LANDING_STATS.asOf})</span><span>원문 그대로 옮김</span></div>
+  <p class="tag">${c.reviews.tag}</p>
+  <h2>${c.reviews.title}</h2>
+  <div class="quotes">${c.reviews.items.map(([q, d]) => `<blockquote><div class="st" aria-label="${c.reviews.stars}">★★★★★</div><p>“${q}”</p><cite>${fill(c.reviews.cite, { date: d })}</cite></blockquote>`).join('')}</div>
+  <div class="score"><span><b>${LANDING_STATS.rating}</b> ${fill(c.reviews.score, { count: LANDING_STATS.ratingCount, asOf: c.asOf })}</span><span>${c.reviews.note}</span></div>
 </section>
 <section class="sec">
-  <p class="tag">스크린샷</p>
-  <h2>게임 화면</h2>
-  <div class="gallery">${SHOTS.map((s) => `<figure><div class="ph">${shot(s, true)}</div><figcaption>${s[1]}</figcaption></figure>`).join('')}</div>
+  <p class="tag">${c.shots.tag}</p>
+  <h2>${c.shots.title}</h2>
+  ${c.shots.note ? `<p class="lead">${c.shots.note}</p>` : ''}
+  <div class="gallery">${SHOT_KEYS.map((k) => `<figure><div class="ph">${shot(k, c.shots.items[k][1], true)}</div><figcaption>${c.shots.items[k][0]}</figcaption></figure>`).join('')}</div>
 </section>
 <div class="duo">
   <section class="sec">
-    <p class="tag">어디서 하나요</p>
-    <h2>앱과 웹, 같은 커리어</h2>
-    <p class="where">iPhone · Android 앱과 브라우저에서 할 수 있어요. 백업 코드나 Google · Apple 계정 연결로 커리어를 옮겨요. 처음이라면 <a href="/guide/">게임 가이드</a>에서 진행 방법을 볼 수 있어요.</p>
+    <p class="tag">${c.where.tag}</p>
+    <h2>${c.where.title}</h2>
+    <p class="where">${fill(c.where.body, { guide: `${gp}/guide/` })}</p>
   </section>
   <section class="sec">
-    <p class="tag">궁금한 것</p>
-    <h2>자주 묻는 질문</h2>
-    <div class="faq">${FAQ.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('')}</div>
+    <p class="tag">${c.faq.tag}</p>
+    <h2>${c.faq.title}</h2>
+    <div class="faq">${c.faq.items.map(([q, a]) => `<details><summary>${q}</summary><p>${a}</p></details>`).join('')}</div>
   </section>
 </div>
-<div class="last"><h2>Kick off</h2><p>시즌 2는 10월 31일에 열려요</p>${ctas('end')}</div>
+<div class="last"><h2>Kick off</h2><p>${c.last}</p>${ctas(c, 'end')}</div>
 </main>
-<footer class="foot"><p class="made">made by Offside Lab</p><a href="/guide/">게임 가이드</a><a href="/faq/">자주 묻는 질문</a><a href="/fairness/">확률과 공정성</a><a href="/about/">소개</a><a href="/legal/terms/">이용약관</a><a href="/legal/privacy/">개인정보처리방침</a></footer>
-<div class="dock" aria-hidden="true">${ctas('dock').replace('<div class="ctas">', '<div class="ctas" inert>')}</div>`;
+<footer class="foot"><p class="made">made by Offside Lab</p>${langNav(lang)}<a href="${gp}/guide/">${c.foot.guide}</a><a href="${gp}/faq/">${c.foot.faq}</a><a href="/fairness/">${c.foot.fairness}</a><a href="/about/">${c.foot.about}</a><a href="/legal/terms/">${c.foot.terms}</a><a href="/legal/privacy/">${c.foot.privacy}</a></footer>
+<div class="dock" aria-hidden="true">${ctas(c, 'dock').replace('<div class="ctas">', '<div class="ctas" inert>')}</div>`;
+};
 
-/** 화면 손글씨 · 포스터 제목 글꼴은 이 페이지에 쓰는 글자만 받는다(Google Fonts text=). */
-function fontHref(body) {
+/**
+ * 화면 손글씨 · 포스터 제목 글꼴은 이 페이지에 쓰는 글자만 받는다(Google Fonts text=). 한국어 · 영어는 Black Han Sans · Gaegu,
+ * 일본어는 같은 느낌의 Dela Gothic One · Yusei Magic. 번체 중국어는 맞는 글꼴이 없어 시스템 굵은 글꼴로 둔다.
+ */
+const DISPLAY_FONTS = {
+  ko: 'family=Black+Han+Sans&family=Gaegu:wght@700',
+  en: 'family=Black+Han+Sans&family=Gaegu:wght@700',
+  ja: 'family=Dela+Gothic+One&family=Yusei+Magic',
+};
+function fontHref(body, lang) {
+  if (!DISPLAY_FONTS[lang]) return null;
   const text = [
     ...new Set(
       body
@@ -146,12 +143,13 @@ function fontHref(body) {
     .sort()
     .join('');
   const q = encodeURIComponent(text);
-  return `https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@700&display=swap&text=${q}`;
+  return `https://fonts.googleapis.com/css2?${DISPLAY_FONTS[lang]}&display=swap&text=${q}`;
 }
 
 // 기기 표시(휴대폰은 그 기기 스토어만) · 유입 캠페인 넘기기 · 첫 화면 지나면 아래 버튼 띄우기.
 // 기기는 그리기 전에(head) 정해 버튼이 바뀌며 깜빡이지 않게 한다. iPadOS는 Mac으로 보이므로 터치로 가른다.
-const OS_SCRIPT = `(()=>{const d=document.documentElement,u=navigator.userAgent;d.dataset.os=/iPhone|iPad|iPod/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)?'ios':/Android/.test(u)?'android':'other'})();`;
+// 소개 페이지를 본 기기는 표시(offside_lp_seen)를 남겨 게임 셸이 광고 유입을 다시 이 페이지로 보내지 않게 한다(index.html).
+const OS_SCRIPT = `(()=>{const d=document.documentElement,u=navigator.userAgent;d.dataset.os=/iPhone|iPad|iPod/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)?'ios':/Android/.test(u)?'android':'other';try{localStorage.setItem('offside_lp_seen','1')}catch(e){}})();`;
 const SCRIPT = `(()=>{const q=new URLSearchParams(location.search);
 if(q.get('utm_source')){const keep=['utm_source','utm_medium','utm_campaign','utm_content'];
 for(const a of document.querySelectorAll('[data-web],[data-store]')){const url=new URL(a.href);
@@ -162,9 +160,32 @@ const sync=()=>{const on=past&&!atEnd;dock.classList.toggle('on',on);dock.toggle
 new IntersectionObserver(([e])=>{past=!e.isIntersecting&&e.boundingClientRect.top<0;sync()}).observe(hero);
 new IntersectionObserver(([e])=>{atEnd=e.isIntersecting;sync()}).observe(end)})();`;
 
+/**
+ * Meta 픽셀(웹 광고 측정, 개인정보처리방침 8항). 게임 셸(src/analytics/meta.ts)과 같은 규칙: 운영 호스트에서만, 광고 측정을 거절하지 않았고
+ * 동의했거나(유럽 · 영국 · 스위스는 동의해야만) 알린 뒤 기본으로 켜는 지역(워커가 붙인 offside_consent_region=notice)일 때만 불러온다.
+ * 이 페이지는 동의 값을 쓰지 않는다. 보내는 것은 페이지 조회와 스토어 버튼 클릭뿐이고 자동 수집은 끈다.
+ * 메타 캠페인이 '랜딩 페이지 조회'로 최적화하므로 광고 유입을 이 페이지로 보낼 때도 조회가 잡혀야 한다.
+ */
+const pixelScript = ({ id, host }) =>
+  `(()=>{if(location.hostname!==${JSON.stringify(host)})return;let a,c;try{a=localStorage.getItem('offside_ad_consent_v1');c=localStorage.getItem('offside_analytics_consent_v1')}catch(e){return}
+const notice=document.cookie.split(';').some((x)=>x.trim()==='offside_consent_region=notice');
+if(a==='denied'||c==='denied'||!(a==='granted'||notice))return;
+const q=function(){q.callMethod?q.callMethod.apply(q,arguments):q.queue.push(arguments)};q.push=q;q.loaded=true;q.version='2.0';q.queue=[];window.fbq=window.fbq||q;window._fbq=window._fbq||q;
+fbq('set','autoConfig',false,'${id}');fbq('init','${id}');fbq('track','PageView');
+const s=document.createElement('script');s.async=true;s.src='https://connect.facebook.net/en_US/fbevents.js';document.head.append(s);
+document.addEventListener('click',(e)=>{if(e.target instanceof Element&&e.target.closest('[data-store]'))fbq('trackCustom','AppStoreClick')})})();`;
+/** 픽셀 ID · 운영 호스트가 둘 다 바른 빌드에서만 픽셀을 싣는다. */
+const validPixel = (pixel) =>
+  pixel &&
+  /^\d{6,20}$/.test(String(pixel.id ?? '')) &&
+  /^[a-z0-9.-]+$/.test(String(pixel.host ?? ''));
+
 const CSS = `:root{--cream:#f4ecd6;--paper:#fffaf0;--ink:#17201a;--ink-2:#4a5148;--pitch:#1d4a35;--pitch-2:#2a6247;--gold:#f2b632;--red:#a8361a;
 --display:'Barlow Condensed','Arial Narrow',sans-serif;--body:'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo',system-ui,sans-serif;
 --hand:'Gaegu',var(--body);--poster:'Black Han Sans',var(--body);color-scheme:light}
+html[lang=ja]{--hand:'Yusei Magic',var(--body);--poster:'Dela Gothic One',var(--body)}
+html[lang=zh-Hant]{--hand:var(--body);--poster:var(--body)}
+html[lang=zh-Hant] .sec h2,html[lang=zh-Hant] .after h2,html[lang=zh-Hant] .quotes p,html[lang=zh-Hant] .path h3,html[lang=zh-Hant] .cards h3,html[lang=zh-Hant] .subtitle{font-weight:900}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--cream);color:var(--ink);font:16px/1.6 var(--body);overflow-x:hidden}
@@ -250,6 +271,9 @@ html[data-os=other] .ctas,html:not([data-os]) .ctas{grid-template-columns:1fr}
 .last .btn.web{background:var(--cream)}
 .foot{padding:24px 16px calc(100px + env(safe-area-inset-bottom));font-size:13px;color:var(--ink-2);display:flex;flex-wrap:wrap;gap:6px 14px;justify-content:center}
 .made{width:100%;margin:0;text-align:center;font-family:var(--hand);font-size:18px;color:var(--ink)}
+.langs{width:100%;display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin:4px 0 8px}
+.langs a{border:2px solid var(--ink);border-radius:999px;padding:3px 10px;background:var(--paper);text-decoration:none;font-weight:700;color:var(--ink)}
+.langs a[aria-current]{background:var(--ink);color:var(--cream)}
 .dock{position:fixed;left:0;right:0;bottom:0;z-index:5;padding:10px max(12px,env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));background:var(--cream);border-top:3px solid var(--ink);transform:translateY(110%);transition:transform .25s;visibility:hidden}
 .dock.on{transform:none;visibility:visible}
 .dock .ctas{margin:0}.dock .btn{min-height:46px;box-shadow:3px 3px 0 var(--ink)}
@@ -271,9 +295,9 @@ html[data-os=other] .qr,html:not([data-os]) .qr{display:inline-flex;align-items:
 .ticker .row{font-size:20px;padding:14px 0}
 .sec{padding:72px 40px 4px;max-width:1200px;margin:0 auto}
 .sec h2,.after h2{font-size:46px}.lead{font-size:17px}
-.path{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}.path li{padding:70px 16px 18px}.path .age{left:16px;top:14px;width:48px;height:48px}
+.path{grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}.path li{padding:70px 16px 18px}.path .age{left:16px;top:14px;width:48px;height:48px}
 .after{margin-top:72px;padding:72px 40px 80px}.after>*{max-width:1120px;margin-left:auto;margin-right:auto}.after .tag{display:block;width:fit-content}
-.cards{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}.cards>div{padding:18px}.cards h3{font-size:21px}.cards p{font-size:14px}
+.cards{grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.cards>div{padding:18px}.cards h3{font-size:21px}.cards p{font-size:14px}
 .quotes{grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}.quotes p{font-size:22px}
 .gallery{grid-auto-flow:row;grid-template-columns:repeat(4,minmax(0,1fr));overflow:visible;gap:22px}
 .duo{display:grid;grid-template-columns:1fr 1fr;gap:40px;max-width:1200px;margin:0 auto;padding:72px 40px 4px}.duo .sec{padding:0;margin:0}
@@ -291,11 +315,12 @@ const lazyCss = (href) => {
   return `<link rel="preload" as="style" href="${h}" onload="this.onload=null;this.rel='stylesheet'" /><noscript><link rel="stylesheet" href="${h}" /></noscript>`;
 };
 
-/** 완성된 /app/ 문서. head는 다른 공개 페이지와 같은 SEO 머리(createHeadMarkup)를 받는다. */
-export function landingHtml(headMarkup, title) {
-  const body = landingBody();
+/** 완성된 소개 페이지 문서. head는 다른 공개 페이지와 같은 SEO 머리(createHeadMarkup)를 받는다. pixel: { id, host } 또는 없음. */
+export function landingHtml(headMarkup, title, lang = 'ko', pixel = undefined) {
+  const body = landingBody(lang);
+  const fonts = [PRETENDARD, BARLOW, fontHref(body, lang)].filter(Boolean);
   return `<!doctype html>
-<html lang="ko">
+<html lang="${LANDING_LOCALES[lang].html}">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -303,12 +328,12 @@ export function landingHtml(headMarkup, title) {
 <title>${title}</title>
 <script>${OS_SCRIPT}</script>
 ${headMarkup}
-${[PRETENDARD, BARLOW, fontHref(body)].map(lazyCss).join('\n')}
+${fonts.map(lazyCss).join('\n')}
 <style>${CSS}</style>
 </head>
 <body>
 ${body}
-<script>${SCRIPT}</script>
+<script>${SCRIPT}</script>${validPixel(pixel) ? `\n<script>${pixelScript(pixel)}</script>` : ''}
 </body>
 </html>
 `;

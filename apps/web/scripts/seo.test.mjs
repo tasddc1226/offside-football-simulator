@@ -28,6 +28,7 @@ import {
   parsePublicSiteUrl,
   resolveSeoConfig,
 } from './seo.mjs';
+import { LANDING_LOCALES } from './landing.mjs';
 
 const FAKE_BASE_HTML = `<!doctype html>
 <html lang="ko">
@@ -108,8 +109,8 @@ test('production discovery files contain the public pages', () => {
   assert.match(createRobotsTxt(config), /Sitemap: https:\/\/play\.example\.com\/sitemap\.xml/);
   assert.equal(
     (createSitemapXml(config.origin).match(/<url>/g) ?? []).length,
-    // T-11-588 가이드 · FAQ · 공략 글은 영어 · 일본어 · 번체 중국어 주소가 더 있다.
-    8 + articlesKo.length + 3 * (2 + articlesKo.length),
+    // T-11-588 가이드 · FAQ · 공략 글 · 소개 페이지는 영어 · 일본어 · 번체 중국어 주소가 더 있다.
+    8 + articlesKo.length + 3 * (3 + articlesKo.length),
   );
   // T-11-231 운영 소개 페이지.
   assert.match(
@@ -226,8 +227,8 @@ test('T-11-584 /app/ 랜딩은 독립 문서이고 색인 · 구조화 데이터
   assert.match(html, /<meta name="robots" content="index, follow" \/>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/play\.example\.com\/app\/" \/>/);
   assert.match(html, /"@type":\["VideoGame","MobileApplication"\]/);
-  assert.match(html, /"ratingCount":224/);
-  assert.match(html, /리뷰 224개/);
+  assert.match(html, /"ratingCount":254/);
+  assert.match(html, /리뷰 254개/);
   assert.match(html, /href="\/get\?os=ios&amp;p=hero"/);
   assert.match(html, /href="\/get\?os=android&amp;p=hero"/);
   assert.match(
@@ -246,6 +247,81 @@ test('T-11-584 /app/ 랜딩은 독립 문서이고 색인 · 구조화 데이터
   for (const path of ['/guide/', '/faq/', '/fairness/', '/about/'])
     assert.match(STATIC_PAGES[path], /href="\/app\/"/, path);
   assert.match(createSitemapXml(config.origin), /<loc>https:\/\/play\.example\.com\/app\/<\/loc>/);
+});
+
+test('소개 페이지는 네 언어가 같은 구조이고 서로 hreflang으로 잇고 다른 언어에는 한글이 없다', () => {
+  const config = { origin: 'https://play.example.com', indexingEnabled: true };
+  const shape = (c) => [
+    Object.keys(c),
+    c.ticker.length,
+    c.path.items.length,
+    c.after.items.length,
+    c.reviews.items.length,
+    Object.keys(c.shots.items),
+    c.faq.items.length,
+    Object.keys(c.foot),
+  ];
+  const ko = LANDING_LOCALES.ko.copy;
+  for (const lang of ['en', 'ja', 'zh']) {
+    const { path, html: htmlLang, copy } = LANDING_LOCALES[lang];
+    assert.deepEqual(shape(copy), shape(ko), lang);
+    assert.doesNotMatch(JSON.stringify(copy), /[가-힣]/, lang);
+    const html = landingPage(config, lang);
+    assert.match(html, new RegExp(`<html lang="${htmlLang}">`));
+    assert.match(
+      html,
+      new RegExp(`<link rel="canonical" href="https://play\\.example\\.com${path}" />`),
+    );
+    assert.match(html, new RegExp(`<title>${copy.meta.title.replace(/[|()]/g, '\\$&')}</title>`));
+    // 화면 문구에 남은 자리표시자가 없다.
+    assert.doesNotMatch(html.replace(/<script[\s\S]*?<\/script>/g, ''), /\{[a-z]+\}/);
+    // 리뷰는 번역임을 밝힌다.
+    assert.match(html, new RegExp(copy.reviews.note));
+    assert.match(html, new RegExp(`href="/${lang}/guide/"`));
+    assert.ok(path in PUBLIC_PAGES);
+    assert.match(
+      createSitemapXml(config.origin),
+      new RegExp(`<loc>https://play\\.example\\.com${path}</loc>`),
+    );
+  }
+  const head = createHeadMarkup(config, '/ja/app/');
+  for (const [hreflang, href] of [
+    ['ko', '/app/'],
+    ['en', '/en/app/'],
+    ['ja', '/ja/app/'],
+    ['zh-Hant', '/zh/app/'],
+    ['x-default', '/app/'],
+  ])
+    assert.match(
+      head,
+      new RegExp(`hreflang="${hreflang}" href="https://play\\.example\\.com${href}"`),
+    );
+  assert.match(head, /og:locale" content="ja_JP"/);
+  assert.match(landingPage(config, 'ko'), /지금까지 18만 명이 넘게/);
+});
+
+test('소개 페이지 Meta 픽셀은 ID · 호스트가 있을 때만 싣고 거절 · 지역 조건을 지킨다', () => {
+  const base = { origin: 'https://play.example.com', indexingEnabled: true };
+  assert.doesNotMatch(landingPage(base, 'ja'), /fbevents/);
+  assert.doesNotMatch(
+    landingPage({ ...base, pixel: { id: 'abc', host: 'offside-lab.com' } }, 'ja'),
+    /fbevents/,
+  );
+  const html = landingPage(
+    { ...base, pixel: { id: '931060609804225', host: 'offside-lab.com' } },
+    'ja',
+  );
+  assert.match(html, /fbevents\.js/);
+  assert.match(html, /location\.hostname!=="offside-lab\.com"/);
+  assert.match(html, /a==='denied'\|\|c==='denied'/);
+  assert.match(html, /offside_consent_region=notice/);
+  assert.match(html, /fbq\('set','autoConfig',false/);
+  assert.match(html, /trackCustom','AppStoreClick'/);
+  // 소개 페이지를 본 기기를 표시해 게임 셸이 다시 보내지 않게 한다.
+  assert.match(html, /localStorage\.setItem\('offside_lp_seen','1'\)/);
+  const config = resolveSeoConfig({ mode: 'production', metaPixelId: '1', analyticsHostname: 'h' });
+  assert.deepEqual(config.pixel, { id: '1', host: 'h' });
+  assert.equal(resolveSeoConfig({ mode: 'production' }).pixel, undefined);
 });
 
 test('T-11-588 가이드 · FAQ 본문은 네 언어가 같은 구조이고 다른 언어 페이지에는 한글이 없다', () => {
