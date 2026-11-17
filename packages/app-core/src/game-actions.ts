@@ -1,6 +1,7 @@
 import { appendLocalHof } from '@offside/game/hof-store';
 import { legacyRetireLine } from './legacy-view';
 import { canClaimSeasonAdBonus, claimSeasonAdBonus, seasonAdBonus } from '@offside/game/adBonus';
+import type { SfxId } from './sfxKind';
 import { adText as AD } from './i18n/ko/ad.js';
 import { createScoutingActions, releaseScoutSeed } from './scouting-actions.js';
 import { transferDestination } from './transferDestination.js';
@@ -122,6 +123,8 @@ export interface GameHost {
    * T-11-720 보상형 광고 자리(앱 전용, 웹은 없다). offer는 'free'(광고 제거 · 멤버십) · 'ad' · null(버튼 없음).
    * claim은 끝까지 봤으면(또는 free) onEarned를 부르고 ''를, 아니면 띄울 안내를 돌려준다.
    */
+  /** T-11-738 결과 효과음(앱만 넘긴다 — 웹의 결과음은 화면에서 직접 낸다). */
+  sfx?(id: SfxId): void;
   reward?: {
     offer(place: 'season'): 'free' | 'ad' | null;
     prepare?(place: 'season'): void;
@@ -559,6 +562,7 @@ export function createGameActions(host: GameHost) {
               if (!got) return;
               host.save();
               host.toast(AD.seasonBonusDone({ money: fmtMoney(got) }));
+              host.sfx?.('reward');
             },
             AD.seasonBonusWatch,
           )

@@ -23,6 +23,7 @@ import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, PitchCard, Txt } from '../../ui';
 import { PopSheet } from '../../ui/PopSheet';
+import { playSfx } from '../../platform/sfx';
 
 function Track({
   s,
@@ -190,6 +191,7 @@ export function SeasonPass({ onClose }: { onClose: () => void }) {
     setPass(r.data.pass);
     const got = rewardText(r.data.granted);
     setNote(got ? { ok: true, text: L.got({ reward: got }) } : { ok: false, text: L.nothing });
+    if (got) playSfx('reward');
   };
 
   const current = pass?.seasons[0] ?? null;

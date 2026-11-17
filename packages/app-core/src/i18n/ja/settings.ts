@@ -17,6 +17,7 @@ export const settings: Translation<SettingsMsgs> = {
     '下にスクロールすると下部メニューが隠れ、上にスクロールすると戻ります。この端末に保存されます。',
   hapticsTitleApp: '振動',
   hapticsBodyApp: '選択や結果の瞬間に短く振動します。この端末に保存されます。',
+  sfxBodyApp: '強化・報酬・試合結果のときに短い音を鳴らします。マナーモードでは鳴りません。',
   langTitle: '言語',
   langBody: 'ゲーム画面とイベントの言語を変えます。この端末に保存されます。',
   sheetTitle: '仕事モード',

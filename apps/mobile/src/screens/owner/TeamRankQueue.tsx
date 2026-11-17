@@ -40,6 +40,7 @@ import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Txt } from '../../ui';
 import { TeamRankInfo } from './TeamRankInfo';
 import { TeamRankSquad } from './TeamRankSquad';
+import { playSfx } from '../../platform/sfx';
 
 const RADAR = 180;
 
@@ -212,6 +213,7 @@ export function TeamRankQueue({
     setReveal(motionOK);
     setPhase('idle');
     buzz();
+    playSfx('found');
   }
   async function repickWithReward() {
     if (adBusy) return;

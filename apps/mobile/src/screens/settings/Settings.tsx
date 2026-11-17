@@ -1,6 +1,6 @@
 // 환경설정 화면(웹 Settings.svelte, T-10-009 · T-10-021) — 다크 모드 · 선수 이름 공개(T-10-065) 켜기/끄기, 백업,
 // 구단 이름·엠블럼, 도움말·서비스 정책 링크. 이 설정들은 이 기기에만 저장된다. 계정·운영 도구는 구단주 화면에 있다.
-// 앱에서 뺀 것(웹 전용): 효과음·배경음악·음량·음악 출처, '홈 화면에 추가하기' 안내.
+// 앱에서 뺀 것(웹 전용): 클릭음·배경음악·음량·음악 출처, '홈 화면에 추가하기' 안내. 결과 효과음은 T-11-738부터 앱에도 있다.
 import { FONT } from '@offside/app-core/design-tokens';
 import { publicDocPath } from '@offside/app-core/links';
 import { setTextSize, TEXT_SIZES } from '@offside/app-core/textSize';
@@ -9,6 +9,7 @@ import { keyMomentsOn, setKeyMomentsOn } from '@offside/app-core/keyMomentPref';
 import { keyMomentText as KM } from '@offside/app-core/i18n/ko/keyMoment';
 import { revealText as RV } from '@offside/app-core/i18n/ko/reveal';
 import { useTextSize } from '../../theme/useTextSize';
+import { playSfx } from '../../platform/sfx';
 import { nativeAnalytics } from '../../analytics';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
@@ -158,7 +159,7 @@ export default function Settings() {
   const textSize = useTextSize();
   const consent = useSyncExternalStore(nativeAnalytics.onConsent, nativeAnalytics.getConsent);
   const [namePublic, setNamePublicState] = useState(namePublicEnabled());
-  const { lang, haptics, revealShort, barAutoHide } = useSnapshot(prefs);
+  const { lang, haptics, sfx, revealShort, barAutoHide } = useSnapshot(prefs);
 
   /** 언어: 이 기기에 저장하고 루트를 다시 그린다(_layout의 key). */
   const setLang = (l: Locale) => {
@@ -191,6 +192,13 @@ export default function Settings() {
     prefs.haptics = on;
     saveKey('ft_haptics', on);
     if (on) buzz();
+  };
+
+  /** T-11-738 결과 효과음: 이 기기에 저장한다(웹과 같은 키). 켤 때 한 번 들려준다. */
+  const setSfx = (on: boolean) => {
+    prefs.sfx = on;
+    saveKey('ft_sfx', on);
+    if (on) playSfx('good');
   };
 
   return (
@@ -275,6 +283,10 @@ export default function Settings() {
             label={L.hapticsTitleApp}
             testID="haptics"
           />
+        </SettingsRow>
+        <SettingsRow first={false}>
+          <SettingsLabel title={L.sfxTitle} muted={L.sfxBodyApp} />
+          <Switch value={sfx} onChange={setSfx} label={L.sfxTitle} testID="sfx" />
         </SettingsRow>
         <SettingsRow first={false}>
           <SettingsLabel title={RV.shortTitle} muted={RV.shortBody} />

@@ -9,6 +9,8 @@ import { hapticsOn } from '../game/host';
 import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { Txt } from '../ui/Txt';
+import { enhanceSfx } from '@offside/app-core/sfxKind';
+import { playSfx } from '../platform/sfx';
 
 type Kind = 'success' | 'keep' | 'down';
 
@@ -105,6 +107,7 @@ export function EnhanceStage({
 
   useEffect(() => {
     if (!kind) return;
+    playSfx(enhanceSfx(kind));
     if (hapticsOn()) {
       void (
         kind === 'keep'

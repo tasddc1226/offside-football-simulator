@@ -34,6 +34,7 @@ import { PopSheet } from '../../ui/PopSheet';
 import { useOnPull } from '../../ui/refresh';
 import { LoginButtons } from '../owner/LoginButtons';
 import { analyticsAskPending } from '../../components/AnalyticsAsk';
+import { playSfx } from '../../platform/sfx';
 
 // 아이템 색: 리롤권 = 기본, 강화권 = 금(r4), 스카우트권 = 파랑(r2). 칭호 등급 색이라 두 테마 모두 대비가 맞다.
 const itemColor = (c: Colors, item: OwnerItem) =>
@@ -94,6 +95,7 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
     setBusy(false);
     if (r.ok) {
       key.current = crypto.randomUUID();
+      playSfx('reward');
       setCard({ kind: 'owner', att: r.data.attendance });
       setGot(rewardText(r.data.granted));
       toast(L.stamped({ n: r.data.attendance.stamps, reward: rewardText(r.data.granted) }));
@@ -128,6 +130,7 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
     if (r.ok) {
       adEarned.current = false;
       adKey.current = crypto.randomUUID();
+      playSfx('reward');
       setCard({ kind: 'owner', att: r.data.attendance });
       setGot(rewardText(r.data.granted));
       toast(L.got({ reward: rewardText(r.data.granted) }));

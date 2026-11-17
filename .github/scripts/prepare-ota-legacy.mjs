@@ -1,6 +1,8 @@
 // Only run in a disposable checkout. Older store builds keep receiving current JS through this overlay:
 // - T-11-698 1.1.8 added expo-tracking-transparency (iOS ATT). The 1.1.7 lane removes the dependency; the JS treats a
 //   missing module as "tracking not allowed".
+// - T-11-738 1.1.10 adds expo-audio (result sounds). Every lane whose store build is older than 1.1.10, current included,
+//   removes it; the JS plays no sound when the module is missing. Add each new npm native module to NATIVE_ADDED.
 // - T-11-719 1.1.6, 1.1.5 and 1.1.4 OTA ended. The minimum app version is 1.1.7 (apps/api/src/routes/appVersion.ts), so
 //   those apps get a store update popup they cannot close. Their Skia and Meta app events overlays went with them.
 import { execFileSync } from 'node:child_process';
@@ -29,8 +31,26 @@ export const NATIVE_PATHS = [
   'apps/mobile/plugins',
   'apps/mobile/modules',
 ];
-/** npm native modules added in 1.1.8 that every legacy lane removes. */
-export const NATIVE_ADDED_118 = ['expo-tracking-transparency'];
+/** npm native modules by the store version that first shipped them. Lanes for older store builds remove them. */
+export const NATIVE_ADDED = Object.freeze({
+  '1.1.8': ['expo-tracking-transparency'],
+  '1.1.10': ['expo-audio'],
+});
+const ver = (v) => v.split('.').map(Number);
+const older = (a, b) => {
+  const [x, y] = [ver(a), ver(b)];
+  for (let i = 0; i < Math.max(x.length, y.length); i++)
+    if ((x[i] ?? 0) !== (y[i] ?? 0)) return (x[i] ?? 0) < (y[i] ?? 0);
+  return false;
+};
+/** npm native modules the store build for this lane lacks. */
+export function droppedModules(name, platform) {
+  const version = name === 'current' ? STORE_BUILDS[platform]?.version : name;
+  if (!version) throw new Error(`Unknown store platform: ${platform}`);
+  return Object.entries(NATIVE_ADDED)
+    .filter(([since]) => older(version, since))
+    .flatMap(([, deps]) => deps);
+}
 
 function target(name, platform) {
   if (name === 'current') {
@@ -62,7 +82,7 @@ export function prepare(root, name, platform) {
   git('restore', '--source', t.source, '--worktree', '--', ...NATIVE_PATHS);
   const pkgPath = resolve(root, MOBILE_PACKAGE);
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
-  const dropped = name === '1.1.7' ? NATIVE_ADDED_118 : [];
+  const dropped = droppedModules(name, platform);
   for (const dep of dropped) delete pkg.dependencies?.[dep];
   writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
   console.log(

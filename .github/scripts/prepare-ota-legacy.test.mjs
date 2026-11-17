@@ -8,7 +8,7 @@ import {
   APP_JSON,
   MOBILE_PACKAGE,
   NATIVE_PATHS,
-  NATIVE_ADDED_118,
+  droppedModules,
   assertRuntime,
   prepare,
   targets,
@@ -47,6 +47,19 @@ test('preparation protects dirty work and existing native test environments', ()
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test('each lane drops exactly the npm native modules its store build lacks', () => {
+  assert.deepEqual(droppedModules('1.1.7', 'ios'), ['expo-tracking-transparency', 'expo-audio']);
+  // T-11-738 1.1.10 전 스토어 빌드(iOS 1.1.8 · Android 1.1.9)는 expo-audio가 없다.
+  for (const platform of Object.keys(STORE_BUILDS))
+    assert.deepEqual(
+      droppedModules('current', platform),
+      STORE_BUILDS[platform].version === '1.1.10' ? [] : ['expo-audio'],
+    );
+  assert.deepEqual(droppedModules('1.1.10', 'ios'), []);
+  assert.deepEqual(droppedModules('1.1.9', 'ios'), ['expo-audio']);
+  assert.throws(() => droppedModules('current', 'web'), /Unknown/);
 });
 
 const lanes = [
@@ -97,9 +110,9 @@ for (const { name, source, platform, version } of lanes) {
         version ?? name,
       );
       const after = JSON.parse(readFileSync(join(root, MOBILE_PACKAGE), 'utf8'));
-      // Keep the existing Meta specialty module; only 1.1.7 lacks the npm ATT dependency.
+      // Keep the existing Meta specialty module; drop only npm modules the store build lacks.
       assert.ok(existsSync(join(root, 'apps/mobile/modules/meta-app-events')));
-      const dropped = name === '1.1.7' ? NATIVE_ADDED_118 : [];
+      const dropped = droppedModules(name, platform);
       for (const dep of dropped) assert.equal(after.dependencies[dep], undefined);
       for (const dep of dropped) delete before.dependencies[dep];
       assert.deepEqual(after, before);
