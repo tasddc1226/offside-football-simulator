@@ -278,9 +278,17 @@ export const admobReady = (env: Env) =>
 /** 보고서 PLATFORM 값은 'iOS' · 'Android'(대소문자를 보지 않는다). */
 const ADMOB_PLATFORM: Record<string, string> = { ios: 'ios', android: 'android' };
 
+/** 광고 단위 이름 → 지표 나눔(소문자 · 영숫자 _ : . - 만, 64자). */
+const admobDim = (v: string) =>
+  v
+    .toLowerCase()
+    .replace(/[^a-z0-9_:.-]/g, '_')
+    .slice(0, 64);
+
 /**
  * AdMob 미디에이션 보고서(모든 광고 소스 합, Meta 입찰 포함)를 플랫폼별로. 수익은 원화(추정 수익, 마이크로 단위).
- * 보고서 날짜는 AdMob 계정 시간대(한국으로 설정) 기준이다.
+ * 보고서 날짜는 AdMob 계정 시간대(한국으로 설정) 기준이다. T-11-739 광고 단위 · 형식으로도 나눠 받아
+ * 단위별(`ad_revenue_unit_krw` · `ad_impressions_unit`, 나눔 = 단위 이름) · 형식별(`ad_revenue_format_krw`, 나눔 = 플랫폼:형식)도 남긴다.
  */
 export async function admobRows(env: Env, day: string, fetcher: Fetch = fetch): Promise<Row[]> {
   const t = await fetcher('https://oauth2.googleapis.com/token', {
@@ -305,7 +313,7 @@ export async function admobRows(env: Env, day: string, fetcher: Fetch = fetch): 
       body: JSON.stringify({
         reportSpec: {
           dateRange: { startDate: date, endDate: date },
-          dimensions: ['PLATFORM'],
+          dimensions: ['PLATFORM', 'AD_UNIT', 'FORMAT'],
           metrics: ['ESTIMATED_EARNINGS', 'IMPRESSIONS', 'AD_REQUESTS', 'MATCHED_REQUESTS'],
           localizationSettings: { currencyCode: 'KRW' },
         },
@@ -315,7 +323,7 @@ export async function admobRows(env: Env, day: string, fetcher: Fetch = fetch): 
   const data = (await r.json().catch(() => null)) as
     | {
         row?: {
-          dimensionValues?: Record<string, { value?: string }>;
+          dimensionValues?: Record<string, { value?: string; displayLabel?: string }>;
           metricValues?: Record<string, { microsValue?: string; integerValue?: string }>;
         };
         error?: { message?: string };
@@ -326,23 +334,51 @@ export async function admobRows(env: Env, day: string, fetcher: Fetch = fetch): 
     throw new Error(
       `AdMob ${r.status} ${(data as { error?: { message?: string } } | null)?.error?.message ?? ''}`.trim(),
     );
-  const rows: Row[] = [];
+  type Sum = { krw: number; imp: number; req: number; matched: number };
+  const add = (m: Map<string, Sum>, k: string, x: Sum) => {
+    const a = m.get(k) ?? { krw: 0, imp: 0, req: 0, matched: 0 };
+    m.set(k, {
+      krw: a.krw + x.krw,
+      imp: a.imp + x.imp,
+      req: a.req + x.req,
+      matched: a.matched + x.matched,
+    });
+  };
+  const platforms = new Map<string, Sum>();
+  const units = new Map<string, Sum>();
+  const formats = new Map<string, Sum>();
   for (const x of data) {
     if (!x.row) continue;
-    const dim = ADMOB_PLATFORM[(x.row.dimensionValues?.PLATFORM?.value ?? '').toLowerCase()];
+    const dv = x.row.dimensionValues ?? {};
+    const dim = ADMOB_PLATFORM[(dv.PLATFORM?.value ?? '').toLowerCase()];
     if (!dim) continue;
     const mv = x.row.metricValues ?? {};
     const int = (k: string) => Number(mv[k]?.integerValue ?? 0);
-    rows.push(
-      {
-        metric: 'ad_revenue_krw',
-        dim,
-        value: Number(mv.ESTIMATED_EARNINGS?.microsValue ?? 0) / 1e6,
-      },
-      { metric: 'ad_impressions', dim, value: int('IMPRESSIONS') },
-      { metric: 'ad_requests', dim, value: int('AD_REQUESTS') },
-      { metric: 'ad_matched', dim, value: int('MATCHED_REQUESTS') },
-    );
+    const sum = {
+      krw: Number(mv.ESTIMATED_EARNINGS?.microsValue ?? 0) / 1e6,
+      imp: int('IMPRESSIONS'),
+      req: int('AD_REQUESTS'),
+      matched: int('MATCHED_REQUESTS'),
+    };
+    add(platforms, dim, sum);
+    const unit = admobDim(dv.AD_UNIT?.displayLabel || dv.AD_UNIT?.value || '');
+    if (unit) add(units, unit, sum);
+    const format = admobDim(dv.FORMAT?.value ?? '');
+    if (format) add(formats, `${dim}:${format}`, sum);
   }
+  const rows: Row[] = [];
+  for (const [dim, x] of platforms)
+    rows.push(
+      { metric: 'ad_revenue_krw', dim, value: x.krw },
+      { metric: 'ad_impressions', dim, value: x.imp },
+      { metric: 'ad_requests', dim, value: x.req },
+      { metric: 'ad_matched', dim, value: x.matched },
+    );
+  for (const [dim, x] of units)
+    rows.push(
+      { metric: 'ad_revenue_unit_krw', dim, value: x.krw },
+      { metric: 'ad_impressions_unit', dim, value: x.imp },
+    );
+  for (const [dim, x] of formats) rows.push({ metric: 'ad_revenue_format_krw', dim, value: x.krw });
   return rows;
 }

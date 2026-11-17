@@ -1,4 +1,5 @@
 import type { Db } from '../client.js';
+import { itemUseStatement } from './itemShop.js';
 
 // T-11-377 선수 이름 변경권. 내 선수(카드가 있으면 지금 카드 주인 = 이적시장에서 산 선수 포함, 없으면 키운 사람)의 공개 이름을
 // 변경권 한 장으로 바꾼다. 서버에 아직 올라가지 않은 진행 중 커리어는 장수만 빼고 기록을 남긴다(이름은 기기가 바꾸고 다음
@@ -61,11 +62,13 @@ export async function renameCareer(
   const results = await d1.batch<{ qty: number }>([
     d1.prepare(LOG_SQL).bind(careerId, profileId, id, name, now),
     d1.prepare(SPEND_SQL).bind(profileId, now, id),
+    // T-11-739 차감 바로 뒤: 차감이 성공했을 때만 하루 사용 수를 센다.
+    itemUseStatement(d1, 'rename', now),
     d1.prepare(NAME_SQL).bind(careerId, name, id),
     d1.prepare(CARD_NAME_SQL).bind(careerId, name, id),
     d1.prepare(QTY_SQL).bind(profileId),
   ]);
   // 읽은 뒤 다른 요청이 마지막 장을 썼거나 운영자가 가렸으면 아무것도 바뀌지 않는다.
   if (!results[0]?.meta.changes) return { ok: false, reason: 'NO_RENAME' };
-  return { ok: true, rename: results[4]?.results[0]?.qty ?? 0 };
+  return { ok: true, rename: results[5]?.results[0]?.qty ?? 0 };
 }

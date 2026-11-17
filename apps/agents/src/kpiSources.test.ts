@@ -103,7 +103,7 @@ describe('운영 지표 추가 수집 (T-11-577)', () => {
     expect(dailyInstalls(csv, '2026-10-29')).toBeNull();
   });
 
-  it('AdMob 보고서를 플랫폼별 원화 수익으로 바꾼다', async () => {
+  it('AdMob 보고서를 플랫폼 · 광고 단위 · 형식별 원화 수익으로 바꾼다', async () => {
     const fetcher = vi.fn(async (url: string) =>
       url.includes('oauth2')
         ? Response.json({ access_token: 'a' })
@@ -111,12 +111,34 @@ describe('운영 지표 추가 수집 (T-11-577)', () => {
             { header: {} },
             {
               row: {
-                dimensionValues: { PLATFORM: { value: 'Android' } },
+                dimensionValues: {
+                  PLATFORM: { value: 'Android' },
+                  AD_UNIT: {
+                    value: 'ca-app-pub-1/1',
+                    displayLabel: 'android-potential-boost-rewarded',
+                  },
+                  FORMAT: { value: 'REWARDED' },
+                },
                 metricValues: {
-                  ESTIMATED_EARNINGS: { microsValue: '12345000000' },
-                  IMPRESSIONS: { integerValue: '900' },
-                  AD_REQUESTS: { integerValue: '1000' },
-                  MATCHED_REQUESTS: { integerValue: '950' },
+                  ESTIMATED_EARNINGS: { microsValue: '12000000000' },
+                  IMPRESSIONS: { integerValue: '800' },
+                  AD_REQUESTS: { integerValue: '900' },
+                  MATCHED_REQUESTS: { integerValue: '850' },
+                },
+              },
+            },
+            {
+              row: {
+                dimensionValues: {
+                  PLATFORM: { value: 'Android' },
+                  AD_UNIT: { value: 'ca-app-pub-1/2', displayLabel: 'Android Retire Interstitial' },
+                  FORMAT: { value: 'INTERSTITIAL' },
+                },
+                metricValues: {
+                  ESTIMATED_EARNINGS: { microsValue: '345000000' },
+                  IMPRESSIONS: { integerValue: '100' },
+                  AD_REQUESTS: { integerValue: '100' },
+                  MATCHED_REQUESTS: { integerValue: '100' },
                 },
               },
             },
@@ -134,6 +156,13 @@ describe('운영 지표 추가 수집 (T-11-577)', () => {
       { metric: 'ad_impressions', dim: 'android', value: 900 },
       { metric: 'ad_requests', dim: 'android', value: 1000 },
       { metric: 'ad_matched', dim: 'android', value: 950 },
+      // T-11-739 광고 단위 · 형식별(단위 이름은 지표 나눔 글자로 바꾼다).
+      { metric: 'ad_revenue_unit_krw', dim: 'android-potential-boost-rewarded', value: 12000 },
+      { metric: 'ad_impressions_unit', dim: 'android-potential-boost-rewarded', value: 800 },
+      { metric: 'ad_revenue_unit_krw', dim: 'android_retire_interstitial', value: 345 },
+      { metric: 'ad_impressions_unit', dim: 'android_retire_interstitial', value: 100 },
+      { metric: 'ad_revenue_format_krw', dim: 'android:rewarded', value: 12000 },
+      { metric: 'ad_revenue_format_krw', dim: 'android:interstitial', value: 345 },
     ]);
     expect(fetcher.mock.calls[1]![0]).toBe(
       'https://admob.googleapis.com/v1/accounts/pub-1/mediationReport:generate',

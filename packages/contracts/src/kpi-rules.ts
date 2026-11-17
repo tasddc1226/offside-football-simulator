@@ -33,7 +33,15 @@ export const KPI_EXTERNAL_METRICS = {
     'd7_retained',
     'push_optin_users',
   ],
-  admob: ['ad_revenue_krw', 'ad_impressions', 'ad_requests', 'ad_matched'],
+  admob: [
+    'ad_revenue_krw',
+    'ad_impressions',
+    'ad_requests',
+    'ad_matched',
+    'ad_revenue_unit_krw',
+    'ad_impressions_unit',
+    'ad_revenue_format_krw',
+  ],
   meta: [
     'ad_spend_krw',
     'ad_impressions_paid',

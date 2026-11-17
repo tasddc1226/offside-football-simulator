@@ -141,6 +141,96 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
       })),
     );
 
+    // T-11-739 아이템 지금 상태 · 하루 사용 수.
+    await env.DB.batch([
+      env.DB.prepare(
+        "INSERT INTO owner_items (profile_id, item, qty, updated_at) VALUES (?1, 'boost', 12, ?2), (?1, 'scout', 0, ?2)",
+      ).bind(admin.profileId, mid),
+      env.DB.prepare(
+        "INSERT INTO scout_pity (profile_id, used, streak, elites, mode, updated_at) VALUES (?1, 7, 0, 0, 'normal', ?2)",
+      ).bind(admin.profileId, mid),
+      env.DB.prepare(
+        "INSERT INTO item_use_daily (day, item, uses) VALUES (?1, 'boost', 5), (?1, 'scout', 2)",
+      ).bind(yesterday),
+    ]);
+
+    // T-11-741 밸런스 감시 · 새 기능 쓰는 비율(그날 은퇴) · 최상위 시즌 이적 · 광고 요약.
+    const twoDaysAgo = new Date(Date.parse(start) - 86_400_000 + 3_600_000).toISOString();
+    const career = (id: string, status: string, extra: string, values: unknown[]) =>
+      env.DB.prepare(
+        `INSERT INTO careers (id, profile_id, pos, foot, type, trait, start_year, status, app_version, created_at, updated_at${extra})
+         VALUES (?1, ?2, 'FW', '오른발', 'test', 'test', 2026, ?3, 'test', ?4, ?4${values.map((_, i) => `, ?${i + 5}`).join('')})`,
+      ).bind(id, admin.profileId, status, mid, ...values);
+    const season = (id: string, year: number, club: string, ovr: number, at: string) =>
+      env.DB.prepare(
+        `INSERT INTO career_seasons (career_id, year, age, club, league, apps, goals, assists, rating, rank, ovr, honors_json, mil, events_json, created_at)
+         VALUES (?1, ?2, 26, ?3, '리그', 30, 10, 5, 7.5, 1, ?4, '[]', 0, '[]', ?5)`,
+      ).bind(id, year, club, ovr, at);
+    const telemetry = (ads: unknown, at: string) =>
+      env.DB.prepare(
+        `INSERT INTO season_telemetry (career_id, year, age, ovr, created_at, ads_json) VALUES ('car_ads', 2031, 26, 80, ?1, ?2)`,
+      ).bind(at, JSON.stringify(ads));
+    const retiredCols =
+      ', retired_at, retire_age, peak, legend_score, ballon, item_top, legacy_tier';
+    await env.DB.batch([
+      career('ret1', 'retired', retiredCols, [mid, 33, 96, 900, 1, 3, 2]),
+      career('ret2', 'retired', retiredCols, [mid, 35, 85, 300, 0, null, null]),
+      career('el1', 'active', '', []),
+      career('el2', 'active', '', []),
+      season('el1', 2030, '구단A', 95, twoDaysAgo),
+      season('el1', 2031, '구단B', 96, mid),
+      season('el2', 2030, '구단A', 96, twoDaysAgo),
+      season('el2', 2031, '구단A', 97, mid),
+      season('el2', 2032, '구단C', 90, mid),
+      // 운영처럼 시각 순서로 쌓인다(하루 범위를 id 이분 탐색으로 찾는다). 어제가 아닌 날은 세지 않는다.
+      telemetry(
+        { af: false, rw: { c: 9, p: 9, b: 9 }, fr: { c: 9, p: 9, b: 9 }, it: 9 },
+        twoDaysAgo,
+      ),
+      telemetry(
+        { af: false, rw: { c: 2, p: 1, b: 3, s: 1 }, fr: { c: 0, p: 0, b: 0 }, it: 1 },
+        mid,
+      ),
+      telemetry({ af: true, rw: { c: 0, p: 0, b: 0 }, fr: { c: 1, p: 0, b: 4, a: 1 }, it: 0 }, mid),
+      telemetry(
+        { af: false, rw: { c: 7, p: 7, b: 7 }, fr: { c: 7, p: 7, b: 7 }, it: 7 },
+        new Date(at).toISOString(),
+      ),
+    ]);
+
+    // T-11-742 유입 단계 · 웹 결제 단계 · 구단 자금 흐름(원장은 운영처럼 시각 순서로 쌓인다).
+    const acq = (id: string, campaign: string, at: string, started: boolean, clicked: boolean) =>
+      env.DB.prepare(
+        `INSERT INTO acquisition_sessions (id, profile_id, campaign, received_at, started_at, store_clicked_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6)`,
+      ).bind(id, admin.profileId, campaign, at, started ? at : null, clicked ? at : null);
+    const order = (id: string, product: string, status: string, test: number, at: string) =>
+      env.DB.prepare(
+        `INSERT INTO web_pay_orders (order_id, profile_id, product_id, xsolla_order_id, status, test, created_at) VALUES (?1, ?2, ?3, ?1, ?4, ?5, ?6)`,
+      ).bind(id, admin.profileId, product, status, test, at);
+    const ledger = (kind: string, delta: number, at: string) =>
+      env.DB.prepare(
+        `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, created_at) VALUES (?1, ?2, ?3, 0, ?4)`,
+      ).bind(admin.profileId, kind, delta, at);
+    await env.DB.batch([
+      acq('acq1', '?utm_source=meta&utm_medium=paid&utm_content=jp_a', mid, true, true),
+      acq('acq2', '?utm_source=meta&utm_medium=social&utm_content=jp_a', mid, false, false),
+      acq('acq3', '', mid, true, false),
+      acq('acq4', '?utm_source=x', twoDaysAgo, true, true),
+      order('wp1', 'reroll_40', 'PAID', 0, mid),
+      order('wp2', 'reroll_40', 'CANCELED', 0, mid),
+      order('wp3', 'reroll_40', 'READY', 0, mid),
+      order('wp4', 'reroll_40', 'PAID', 1, mid),
+      ledger('market_sale', 900, twoDaysAgo),
+      ledger('enhance', -300, mid),
+      ledger('enhance', 50, mid),
+      ledger('market_sale', 1000, mid),
+      ledger('market_buy', -1000, mid),
+      env.DB.prepare(
+        `INSERT INTO owner_funds (profile_id, balance, updated_at) VALUES (?1, 5000, ?2)
+         ON CONFLICT (profile_id) DO UPDATE SET balance = 5000`,
+      ).bind(admin.profileId, mid),
+    ]);
+
     let result: KpiDailyResult | undefined;
     let steps = 0;
     do {
@@ -167,6 +257,52 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     expect(value(r, yesterday!, 'members_autorenew_off', 'apple')).toBe(1);
     expect(value(r, yesterday!, 'members_autorenew_off', 'google')).toBeUndefined();
     expect(value(r, yesterday!, 'client_errors', 'android')).toBe(7);
+    expect(value(r, yesterday!, 'items_held', 'boost')).toBe(12);
+    expect(value(r, yesterday!, 'items_holders', 'boost')).toBe(1);
+    expect(value(r, yesterday!, 'items_holders', 'scout')).toBe(0);
+    expect(value(r, yesterday!, 'items_used', 'boost')).toBe(5);
+    expect(value(r, yesterday!, 'items_used', 'scout')).toBe(2);
+    expect(value(r, yesterday!, 'items_used_total', 'scout')).toBe(7);
+    expect(value(r, yesterday!, 'items_used_total', 'rename')).toBe(0);
+    // 산 팩 장수(테스트 결제 40장은 빠진다).
+    expect(value(r, yesterday!, 'items_bought', 'reroll')).toBe(45);
+    expect(value(r, yesterday!, 'bal_retired_age')).toBe(34);
+    expect(value(r, yesterday!, 'bal_retired_peak')).toBe(90.5);
+    expect(value(r, yesterday!, 'bal_retired_ballon')).toBe(1);
+    expect(value(r, yesterday!, 'bal_retired_peak_band', '95p')).toBe(1);
+    expect(value(r, yesterday!, 'bal_retired_peak_band', '80_89')).toBe(1);
+    // 최상위 시즌 2개(OVR 90 시즌은 빠진다) 가운데 전 시즌과 구단이 다른 1개.
+    expect(value(r, yesterday!, 'bal_elite_seasons')).toBe(2);
+    expect(value(r, yesterday!, 'bal_elite_moved')).toBe(1);
+    expect(value(r, yesterday!, 'retired_item_top', '3')).toBe(1);
+    expect(value(r, yesterday!, 'retired_item_top', '0')).toBe(1);
+    expect(value(r, yesterday!, 'retired_legacy', '2')).toBe(1);
+    expect(value(r, yesterday!, 'ads_uploads')).toBe(2);
+    expect(value(r, yesterday!, 'ads_uploads_ad_free')).toBe(1);
+    expect(value(r, yesterday!, 'ads_interstitial')).toBe(1);
+    expect(value(r, yesterday!, 'ads_rewarded', 'b')).toBe(3);
+    expect(value(r, yesterday!, 'ads_rewarded', 's')).toBe(1);
+    expect(value(r, yesterday!, 'ads_rewarded', 'a')).toBe(0);
+    expect(value(r, yesterday!, 'ads_free_rewards', 'b')).toBe(4);
+    expect(value(r, yesterday!, 'ads_free_rewards', 'a')).toBe(1);
+    // 시즌은 위 최상위 시즌 픽스처 3개(커리어 2개).
+    expect(value(r, yesterday!, 'seasons_played', 'all')).toBe(3);
+    expect(value(r, yesterday!, 'seasons_played', 'careers')).toBe(2);
+    // 매체(medium)는 나눔에서 빠져 같은 소스 · 소재로 합친다.
+    expect(value(r, yesterday!, 'acq_visits', 'meta:-:jp_a')).toBe(2);
+    expect(value(r, yesterday!, 'acq_started', 'meta:-:jp_a')).toBe(1);
+    expect(value(r, yesterday!, 'acq_store_clicks', 'meta:-:jp_a')).toBe(1);
+    expect(value(r, yesterday!, 'acq_visits', 'direct')).toBe(1);
+    expect(value(r, yesterday!, 'acq_visits', 'x:-:-')).toBeUndefined();
+    expect(value(r, yesterday!, 'webpay_orders', 'reroll_40')).toBe(3);
+    expect(value(r, yesterday!, 'webpay_paid', 'reroll_40')).toBe(1);
+    expect(value(r, yesterday!, 'webpay_canceled', 'reroll_40')).toBe(1);
+    expect(value(r, yesterday!, 'fund_out', 'enhance')).toBe(300);
+    expect(value(r, yesterday!, 'fund_in', 'enhance')).toBe(50);
+    expect(value(r, yesterday!, 'fund_in', 'market_sale')).toBe(1000);
+    expect(value(r, yesterday!, 'fund_out', 'market_buy')).toBe(1000);
+    expect(value(r, yesterday!, 'funds_total')).toBeGreaterThanOrEqual(5000);
+    expect(value(r, yesterday!, 'funds_holders')).toBeGreaterThanOrEqual(1);
     expect(r.sources.map((s) => s.source)).toEqual(['d1']);
     expect(r.sources[0]!.lastDay).toBe(yesterday);
     const count = await env

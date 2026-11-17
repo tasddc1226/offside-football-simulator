@@ -2,7 +2,9 @@
   // T-11-577 수익: 서버 원장(아이템) · 스토어 알림(광고 제거) 실시간 합 + 일일 수집(시즌 패스 · 멤버십 · 광고 수익).
   import type { AdminRevenue, KpiReport } from '@offside/contracts';
   import { dimLabel, fmt, KPI_EMPTY, metricSeries, nonEmpty, periodSum, productLabel, valueOn } from '../kpi.ts';
-  import { byDim, viewOf } from '../kpi-page.ts';
+  import { byDim, dimTotals, periodTotal, trendOf, viewOf } from '../kpi-page.ts';
+  import { formatName, placementName, placementTotals, webPayFunnel } from '../kpi-insights.ts';
+  import { monetization } from '../kpi-money.ts';
   import { loader } from '../load.svelte.ts';
   import AdFreePrice from '../ui/AdFreePrice.svelte';
   import HBars from '../ui/HBars.svelte';
@@ -17,6 +19,9 @@
   const rev30 = loader<AdminRevenue>(() => '/v1/admin/revenue?days=30', () => tick);
   const avg = (krw: number, n: number) => (n ? `결제 건당 ${fmt(krw / n, 'krw')}` : '');
   const MEMBER_EMPTY = '멤버십 흐름은 다음 일일 수집(04:00)부터 보여요.';
+  const WEBPAY_EMPTY = '웹 결제 주문은 이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
+  const ADS_EMPTY = '자리별 시청은 이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
+  const ADMOB_SPLIT_EMPTY = '형식 · 단위별 수익은 이번 배포 뒤 다음 AdMob 수집(08:50)부터 보여요.';
 </script>
 
 <div class="page">
@@ -126,6 +131,119 @@
         <StackedBars title="광고 수익 (AdMob)" unit="krw" days={v.days} series={byDim(v, 'ad_revenue_krw')} empty="AdMob 수집이 붙으면 보여요." />
       </div>
       <p class="note">매출은 상품별 한국 정가 기준 추정이에요(스토어 환산 · 수수료 전). 광고 제거는 판매 시각의 가격으로 세요.</p>
+
+      <h2 class="section-title">광고 수익 · 시청 자리</h2>
+      {@const places = placementTotals(v)}
+      {@const uploads = periodTotal(v, 'ads_uploads')}
+      {@const units = dimTotals(v, 'ad_revenue_unit_krw').filter((x) => x.value > 0)}
+      <div class="stats">
+        <Stat
+          label={`${days}일 보상형 시청`}
+          value={periodTotal(v, 'ads_rewarded')}
+          sub={`광고 제거로 바로 받은 보상 ${fmt(periodTotal(v, 'ads_free_rewards'))}회`}
+          trend={trendOf(v, 'ads_rewarded')}
+        />
+        <Stat label={`${days}일 은퇴 전면광고`} value={periodTotal(v, 'ads_interstitial')} trend={trendOf(v, 'ads_interstitial')} />
+        <Stat
+          label="광고 제거 상태로 올린 시즌"
+          value={uploads ? (periodTotal(v, 'ads_uploads_ad_free') ?? 0) / uploads : null}
+          unit="pct"
+          sub={`시즌 업로드 ${fmt(uploads)}개 중`}
+        />
+      </div>
+      <div class="cols">
+        <StackedBars
+          title="보상형 시청 (자리별)"
+          days={v.days}
+          series={byDim(v, 'ads_rewarded').map((x) => ({ ...x, label: placementName(x.key) }))}
+          empty={ADS_EMPTY}
+        />
+        <StackedBars
+          title="광고 수익 (플랫폼 · 형식별)"
+          unit="krw"
+          days={v.days}
+          series={byDim(v, 'ad_revenue_format_krw').map((x) => ({ ...x, label: formatName(x.key) }))}
+          empty={ADMOB_SPLIT_EMPTY}
+        />
+        <section class="panel">
+          <header><h2>자리별 시청 · 받은 보상</h2><span class="hint">{days}일 합</span></header>
+          {#if places.length}
+            <HBars items={places.map((x) => ({ key: x.key, label: x.label, value: x.watched, note: x.free ? `광고 제거 ${fmt(x.free)}회` : undefined }))} />
+          {:else}
+            <p class="note">{ADS_EMPTY}</p>
+          {/if}
+        </section>
+        <section class="panel">
+          <header><h2>광고 단위별 수익</h2><span class="hint">{days}일 합</span></header>
+          {#if units.length}
+            <HBars
+              unit="krw"
+              items={units.map((x) => {
+                const imp = periodTotal(v, 'ad_impressions_unit', [x.dim]);
+                return { key: x.dim, label: x.dim, value: x.value, note: imp ? `노출 ${fmt(imp)} · 1천 회당 ${fmt((x.value / imp) * 1000, 'krw')}` : undefined };
+              })}
+            />
+          {:else}
+            <p class="note">{ADMOB_SPLIT_EMPTY}</p>
+          {/if}
+        </section>
+      </div>
+      <p class="note">시청 횟수는 시즌을 올릴 때 앱이 보낸 광고 요약(그 시즌 동안 본 횟수)을 올린 날로 모은 값이라 실제 시청 날과 하루쯤 어긋날 수 있어요. 광고 수익은 AdMob 추정 수익(모든 광고 소스 합)이에요.</p>
+
+      <h2 class="section-title">사용자당 매출 · 결제 전환</h2>
+      {@const mon = monetization(v)}
+      <div class="stats">
+        <Stat
+          label="DAU당 매출 (스토어 + 광고)"
+          value={mon.period.arpdau}
+          unit="krw"
+          sub={`DAU가 있는 ${fmt(mon.period.days)}일 합으로 계산`}
+          trend={mon.arpdauStore.map((x, i) => (x === null && mon.arpdauAd[i] === null ? null : (x ?? 0) + (mon.arpdauAd[i] ?? 0)))}
+        />
+        <Stat label="결제 전환 (아이템 구매자 ÷ DAU)" value={mon.period.payerRate} unit="pct" trend={mon.payerRate} />
+        <Stat label="결제한 사람당 아이템 매출" value={mon.period.arppu} unit="krw" sub="아이템 매출 ÷ 하루 구매자 합" />
+      </div>
+      <div class="cols">
+        <StackedBars
+          title="DAU당 매출 (원)"
+          unit="krw"
+          days={v.days}
+          empty="DAU(GA4)와 매출이 함께 들어온 날부터 보여요."
+          series={nonEmpty([
+            { key: 'store', label: '스토어', values: mon.arpdauStore },
+            { key: 'ad', label: '광고 (AdMob)', values: mon.arpdauAd },
+          ])}
+        />
+      </div>
+      <p class="note">DAU는 GA4 값을 쓰고, 없는 날은 운영 DB 접속 프로필로 대신해요. 스토어 매출은 아이템 · 광고 제거 · 시즌 패스 · 멤버십(새 가입 · 갱신) 정가 합이에요.</p>
+
+      <h2 class="section-title">웹 결제 단계 (엑솔라)</h2>
+      {@const wp = webPayFunnel(v)}
+      <div class="stats">
+        <Stat label={`${days}일 결제 주문`} value={wp.orders} trend={trendOf(v, 'webpay_orders')} sub="결제 창을 연 주문(테스트 제외)" />
+        <Stat label="결제 완료율" value={wp.paidRate} unit="pct" trend={wp.daily} sub={`완료 ${fmt(wp.paid)} · 취소 ${fmt(wp.canceled)} · 그대로 둠 ${fmt(wp.open)}`} />
+      </div>
+      <div class="cols">
+        <StackedBars
+          title="웹 결제 주문 (완료 · 취소 · 그대로 둠)"
+          days={v.days}
+          empty={WEBPAY_EMPTY}
+          series={nonEmpty([
+            { key: 'paid', label: '완료', values: trendOf(v, 'webpay_paid') },
+            { key: 'canceled', label: '취소', values: trendOf(v, 'webpay_canceled') },
+            {
+              key: 'open',
+              label: '그대로 둠',
+              values: v.days.map((d) => {
+                const o = valueOn(v.idx, d, 'webpay_orders');
+                return o === null ? null : Math.max(0, o - (valueOn(v.idx, d, 'webpay_paid') ?? 0) - (valueOn(v.idx, d, 'webpay_canceled') ?? 0));
+              }),
+            },
+          ])}
+        />
+        <StackedBars title="웹 결제 완료 (상품별)" days={v.days} series={byDim(v, 'webpay_paid').map((s) => ({ ...s, label: productLabel(s.key) }))} empty={WEBPAY_EMPTY} />
+      </div>
+      <p class="note">주문을 만든 날 기준이에요. 늦게 결제를 마친 주문은 사흘 동안 다시 세어 채워요.</p>
 
       <h2 class="section-title">클럽 멤버십</h2>
       {@const last = v.days.at(-1)}
