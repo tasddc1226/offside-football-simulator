@@ -112,7 +112,9 @@ export function eventView(s: M3State, ev: M3Event): EventView {
         : ev.choice === 0
           ? T.ev_renewal_signed({ wage: fmtValue(p.wage) })
           : null;
-  const detail = wage && p ? `${playerLine(p)} · ${wage}` : null;
+  // 유저 건의(11-17): 빅클럽 제안도 팔지 판단하게 포지션 · 나이 · OVR을 보여 준다.
+  const detail =
+    wage && p ? `${playerLine(p)} · ${wage}` : ev.kind === 'bigbid' && p ? playerLine(p) : null;
   return { ...head, detail, result: ev.choice === null ? null : r(ev.choice) };
 }
 

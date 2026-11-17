@@ -513,28 +513,33 @@ export function Manager3({
                     {T.bidsEmpty}
                   </Txt>,
                 ]
-              : st.bids.map((b, i) => (
-                  <Row
-                    key={b.player}
-                    lines={[
-                      T.bidFrom({
-                        club: tn(b.club),
-                        name: nameOfId(b.player),
-                        fee: fmtValue(b.fee),
-                      }),
-                    ]}
-                    action={
-                      <>
-                        <Btn sm onPress={() => act((s) => answerBid(s, i, true))}>
-                          {T.bidAccept}
-                        </Btn>
-                        <Btn sm onPress={() => act((s) => answerBid(s, i, false))}>
-                          {T.bidReject}
-                        </Btn>
-                      </>
-                    }
-                  />
-                ))}
+              : st.bids.map((b, i) => {
+                  // 유저 건의(11-17): 제안 받은 선수의 포지션 · 나이 · OVR을 같이 보여 준다.
+                  const p = st.squad.find((x) => x.id === b.player);
+                  return (
+                    <Row
+                      key={b.player}
+                      lines={[
+                        T.bidFrom({
+                          club: tn(b.club),
+                          name: nameOfId(b.player),
+                          fee: fmtValue(b.fee),
+                        }),
+                        ...(p ? [playerLine(p)] : []),
+                      ]}
+                      action={
+                        <>
+                          <Btn sm onPress={() => act((s) => answerBid(s, i, true))}>
+                            {T.bidAccept}
+                          </Btn>
+                          <Btn sm onPress={() => act((s) => answerBid(s, i, false))}>
+                            {T.bidReject}
+                          </Btn>
+                        </>
+                      }
+                    />
+                  );
+                })}
         <Btn kind="primary" testID="m3-close-window" onPress={closeWin}>
           {T.windowClose}
         </Btn>
