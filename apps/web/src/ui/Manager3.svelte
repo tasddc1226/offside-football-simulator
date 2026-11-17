@@ -274,7 +274,10 @@
       {#each st.bids as b, i (b.player)}
         {@const p = st.squad.find((x) => x.id === b.player)}
         <div class="mg-row">
-          <span class="mg-info"><small>{T.bidFrom({ club: tn(b.club), name: p ? pname(p.name) : '', fee: fmtValue(b.fee) })}</small></span>
+          <span class="mg-info">
+            <small>{T.bidFrom({ club: tn(b.club), name: p ? pname(p.name) : '', fee: fmtValue(b.fee) })}</small>
+            {#if p}<small data-manager3-bid-player>{playerLine(p)}</small>{/if}
+          </span>
           <span class="m3-btns">
             <button class="btn btn-sm" onclick={() => act((s) => answerBid(s, i, true))}>{T.bidAccept}</button>
             <button class="btn btn-sm" onclick={() => act((s) => answerBid(s, i, false))}>{T.bidReject}</button>

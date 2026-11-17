@@ -1,0 +1,31 @@
+diff --git a/android/src/main/java/com/swmansion/reanimated/NativeProxy.kt b/android/src/main/java/com/swmansion/reanimated/NativeProxy.kt
+index 48e37714232d5ccf74d99d61cb2fac56314087aa..c9caf7e8e9111872c37bab83604bd0d4a29e83be 100644
+--- a/android/src/main/java/com/swmansion/reanimated/NativeProxy.kt
++++ b/android/src/main/java/com/swmansion/reanimated/NativeProxy.kt
+@@ -238,6 +238,12 @@ open class NativeProxy {
+         }
+     }
+ 
++    // T-11-750: backport of the 4.7 guard. Skip views that are not mounted (unmounted, recycled or not yet created)
++    // instead of throwing every frame; the failure log printed a full stack trace on the UI thread and caused ANRs.
++    private val getViewExistsMethod by lazy {
++        runCatching { mountingManager.javaClass.getMethod("getViewExists", Int::class.javaPrimitiveType) }.getOrNull()
++    }
++
+     private val updatePropsSynchronouslyMethod by lazy {
+         mountingManager.javaClass.methods
+             .first {
+@@ -253,9 +259,12 @@ open class NativeProxy {
+         SynchronousPropsBufferParser.parse(intBuffer, doubleBuffer) { viewTag, props ->
+             if (BuildConfig.IS_REACT_NATIVE_86_OR_NEWER) {
+                 try {
++                    if (getViewExistsMethod?.invoke(mountingManager, viewTag) == false) {
++                        return@parse
++                    }
+                     updatePropsSynchronouslyMethod.invoke(mountingManager, viewTag, props)
+                 } catch (e: Exception) {
+-                    Log.w("Reanimated", "synchronouslyUpdateUIProps failed for tag $viewTag", e)
++                    Log.w("Reanimated", "synchronouslyUpdateUIProps failed for tag $viewTag: ${e.cause ?: e}")
+                 }
+             } else {
+                 mFabricUIManager.synchronouslyUpdateViewOnUIThread(viewTag, props)

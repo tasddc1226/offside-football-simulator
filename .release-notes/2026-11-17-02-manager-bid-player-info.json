@@ -1,0 +1,24 @@
+{
+  "id": "t-11-749-manager-bid-player-info",
+  "title": "감독 모드 이적 제안 정보",
+  "items": [
+    "다른 구단이 우리 선수에게 이적 제안을 보내면 그 선수의 포지션 · 나이 · OVR을 함께 보여 줘요."
+  ],
+  "en": {
+    "title": "Transfer bid details in Manager mode",
+    "items": [
+      "When another club bids for one of your players, you now see that player's position, age, and OVR."
+    ]
+  },
+  "ja": {
+    "title": "監督モードの移籍オファー情報",
+    "items": [
+      "他のクラブから自チームの選手に移籍オファーが届くと、その選手のポジション・年齢・OVRも表示します。"
+    ]
+  },
+  "zh": {
+    "title": "教練模式轉會報價資訊",
+    "items": ["其他球隊向你的球員提出轉會報價時，會一併顯示該球員的位置、年齡與OVR。"]
+  },
+  "availability": "web-app"
+}
