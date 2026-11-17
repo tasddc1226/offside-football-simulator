@@ -93,4 +93,13 @@ describe('감독 커리어 3 화면 (T-11-689)', () => {
       eventView(s, { kind: 'playtime', id: 'playtime', player: p.id, choice: null }).detail,
     ).toBeNull();
   });
+
+  it('빅클럽 제안은 팔지 판단하게 선수 포지션 · 나이 · OVR을 보여 주고, 팔려서 선수단에 없으면 숨긴다', () => {
+    const s = clubState();
+    const p = s.squad[0]!;
+    const ev: M3Event = { kind: 'bigbid', id: 'bigbid', player: p.id, fee: 50_000, choice: null };
+    expect(eventView(s, ev).detail).toBe(playerLine(p));
+    s.squad = s.squad.filter((x) => x.id !== p.id);
+    expect(eventView(s, { ...ev, choice: 0 }).detail).toBeNull();
+  });
 });
