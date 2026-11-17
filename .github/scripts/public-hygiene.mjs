@@ -17,6 +17,9 @@ const RULES = [
 const ALLOWED_EMAIL =
   /@(?:(?:[a-z0-9-]+\.)*(?:example\.(?:com|org|net)|test|invalid|localhost)|offside-lab\.com|users\.noreply\.github\.com|anthropic\.com)$/i;
 
+// pnpm 패치 파일 이름(`이름@버전.patch`, pnpm-workspace.yaml patchedDependencies)은 메일 모양이지만 메일이 아니다.
+const PNPM_PATCH = /@\d+(?:\.\d+)+(?:-[A-Za-z0-9.]+)?\.patch$/;
+
 // 검사하지 않는 파일: 해시만 가득한 lockfile, 규칙 예시를 일부러 담은 이 검사의 테스트.
 const SKIP_FILES = new Set(['pnpm-lock.yaml', '.github/scripts/public-hygiene.test.mjs']);
 
@@ -26,7 +29,7 @@ export function findViolations(text) {
   text.split('\n').forEach((lineText, i) => {
     for (const { kind, re } of RULES) {
       for (const [match] of lineText.matchAll(re)) {
-        if (kind === 'email' && ALLOWED_EMAIL.test(match)) continue;
+        if (kind === 'email' && (ALLOWED_EMAIL.test(match) || PNPM_PATCH.test(match))) continue;
         out.push({ line: i + 1, kind });
       }
     }
