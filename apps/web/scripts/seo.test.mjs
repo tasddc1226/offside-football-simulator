@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { brandSvg } from '../brand/build-icons.mjs';
 import guideKo from '../../../packages/app-core/src/i18n/ko/publicGuide.mjs';
 import guideEn from '../../../packages/app-core/src/i18n/en/publicGuide.mjs';
@@ -298,6 +298,12 @@ test('소개 페이지는 네 언어가 같은 구조이고 서로 hreflang으�
     );
   assert.match(head, /og:locale" content="ja_JP"/);
   assert.match(landingPage(config, 'ko'), /지금까지 18만 명이 넘게/);
+  // 일본어는 일본어 게임 화면 스크린샷을, 나머지는 한국어 화면을 쓴다.
+  assert.match(landingPage(config, 'ja'), /src="\/landing\/ja\/season-320\.webp"/);
+  assert.doesNotMatch(landingPage(config, 'en'), /\/landing\/ja\//);
+  for (const k of ['season', 'live', 'pk', 'credits'])
+    for (const f of [`${k}.webp`, `${k}-320.webp`])
+      assert.ok(existsSync(new URL(`../public/landing/ja/${f}`, import.meta.url)), f);
 });
 
 test('소개 페이지 Meta 픽셀은 ID · 호스트가 있을 때만 싣고 거절 · 지역 조건을 지킨다', () => {

@@ -26,6 +26,9 @@ const LANG_NAMES = { ko: '한국어', en: 'English', ja: '日本語', zh: '繁�
 const guidePrefix = (lang) => (lang === 'ko' ? '' : `/${lang}`);
 
 const SHOT_KEYS = ['season', 'live', 'pk', 'credits'];
+/** 그 언어 게임 화면으로 찍은 스크린샷이 있는 언어(public/landing/<언어>/, e2e/landing-shots.spec.ts). 없으면 한국어 화면. */
+const SHOT_LANGS = new Set(['ja']);
+const shotDir = (lang) => (SHOT_LANGS.has(lang) ? `/landing/${lang}/` : '/landing/');
 
 /** 유입 캠페인이 없을 때 붙이는 랜딩 꼬리표(contracts/acquisition CAMPAIGNS에 있는 값). */
 export const LANDING_UTM = {
@@ -48,8 +51,8 @@ const ctas = (c, place) =>
   `<div class="ctas"><a class="btn web" data-web href="${webHref(place).replaceAll('&', '&amp;')}">${icon.web}<span><small>${c.webSmall}</small>${c.web}</span></a><a class="btn store ios" data-store href="${getHref('ios', place)}">${icon.ios}<span><small>Download on the</small>App Store</span></a><a class="btn store android" data-store href="${getHref('android', place)}">${icon.android}<span><small>GET IT ON</small>Google Play</span></a></div>`;
 
 // 표시 폭은 첫 화면 겹친 사진 150~210px, 갤러리 휴대폰 56vw · PC 260px 안팎이라 320px 판을 먼저 쓴다(T-11-585).
-const shot = (key, alt, lazy) =>
-  `<img src="/landing/${key}-320.webp" srcset="/landing/${key}-320.webp 320w, /landing/${key}.webp 540w" sizes="${lazy ? '(min-width: 820px) 260px, 56vw' : '(min-width: 820px) 210px, 150px'}" width="540" height="1169" alt="${alt}"${lazy ? ' loading="lazy"' : ' fetchpriority="high"'} decoding="async">`;
+const shot = (dir, key, alt, lazy) =>
+  `<img src="${dir}${key}-320.webp" srcset="${dir}${key}-320.webp 320w, ${dir}${key}.webp 540w" sizes="${lazy ? '(min-width: 820px) 260px, 56vw' : '(min-width: 820px) 210px, 150px'}" width="540" height="1169" alt="${alt}"${lazy ? ' loading="lazy"' : ' fetchpriority="high"'} decoding="async">`;
 
 const langNav = (lang) =>
   `<nav class="langs" aria-label="Language">${Object.entries(LANDING_LOCALES)
@@ -62,6 +65,7 @@ const langNav = (lang) =>
 export const landingBody = (lang = 'ko') => {
   const { path: home, copy: c } = LANDING_LOCALES[lang];
   const gp = guidePrefix(lang);
+  const dir = shotDir(lang);
   const vars = { legends: c.legends };
   const sticker = `<span><b>${c.sticker[0]}</b>${c.sticker[1]}<br>${c.sticker[2]}</span>`;
   return `<a class="skip" href="#main">${c.skip}</a>
@@ -75,7 +79,7 @@ export const landingBody = (lang = 'ko') => {
   ${ctas(c, 'hero')}
   <div class="qr"><img src="/landing/qr-get.svg" width="76" height="76" alt=""><p><b>${c.qrTitle}</b>${c.qrBody}</p></div>
   <div class="stack" aria-hidden="true">${SHOT_KEYS.filter((k) => k !== 'pk')
-    .map((k) => `<figure>${shot(k, '', false)}</figure>`)
+    .map((k) => `<figure>${shot(dir, k, '', false)}</figure>`)
     .join('')}</div>
 </header>
 <div class="ticker" aria-hidden="true"><div class="row">${[...c.ticker, ...c.ticker].map((t) => `<span>${t}</span>`).join('')}</div></div>
@@ -101,7 +105,7 @@ export const landingBody = (lang = 'ko') => {
   <p class="tag">${c.shots.tag}</p>
   <h2>${c.shots.title}</h2>
   ${c.shots.note ? `<p class="lead">${c.shots.note}</p>` : ''}
-  <div class="gallery">${SHOT_KEYS.map((k) => `<figure><div class="ph">${shot(k, c.shots.items[k][1], true)}</div><figcaption>${c.shots.items[k][0]}</figcaption></figure>`).join('')}</div>
+  <div class="gallery">${SHOT_KEYS.map((k) => `<figure><div class="ph">${shot(dir, k, c.shots.items[k][1], true)}</div><figcaption>${c.shots.items[k][0]}</figcaption></figure>`).join('')}</div>
 </section>
 <div class="duo">
   <section class="sec">
