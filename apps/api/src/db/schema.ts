@@ -1774,6 +1774,20 @@ export const ownerItems = sqliteTable(
 );
 
 /**
+ * T-11-739 아이템 하루 사용 수(KST 날짜 × 아이템). 아이템 한 장을 쓰는 batch가 차감에 성공했을 때만 1을 더한다(spendItem ·
+ * 구단명 변경). 운영 대시보드 일일 수집(kpi `items_used`)이 하루치를 읽는다. 하루 네 줄뿐이라 작다.
+ */
+export const itemUseDaily = sqliteTable(
+  'item_use_daily',
+  {
+    day: text('day').notNull(),
+    item: text('item').notNull(),
+    uses: integer('uses').notNull().default(0),
+  },
+  (table) => [primaryKey({ columns: [table.day, table.item] })],
+);
+
+/**
  * T-11-244 프리미엄 스카우트 천장 카운트. used = 누적 사용, streak = 마지막 S 뒤 S 없이 쓴 장수, elites = 받은 특급 S 수,
  * mode = 마지막 한 장의 모드(normal · sure · elite). 스카우트권을 쓰는 batch가 장수 차감과 함께 고친다(spendScout).
  */

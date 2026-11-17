@@ -7,6 +7,7 @@ import {
   type OwnerItem,
   type RewardKind,
 } from '@offside/contracts';
+import { kstDay } from '@offside/contracts/kst';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 import { eventNotificationStatements } from '../../push/events.js';
@@ -33,6 +34,18 @@ export const grantItemStatement = (
        ON CONFLICT (profile_id, item) DO UPDATE SET qty = qty + excluded.qty, updated_at = excluded.updated_at`,
     )
     .bind(profileId, item, qty, now, ...(guard.params ?? []));
+
+/**
+ * T-11-739 아이템 하루 사용 수에 1을 더하는 문장. batch 안에서 차감(UPDATE owner_items ...) 바로 뒤에 둔다. 차감이 한 줄도
+ * 바꾸지 못했으면(가진 장이 없으면) changes()가 0이라 세지 않는다. 날짜는 KST.
+ */
+export const itemUseStatement = (d1: D1Database, item: string, now: string) =>
+  d1
+    .prepare(
+      `INSERT INTO item_use_daily (day, item, uses) SELECT ?, ?, 1 WHERE changes() > 0
+       ON CONFLICT (day, item) DO UPDATE SET uses = uses + 1`,
+    )
+    .bind(kstDay(now), item);
 
 /** 리롤권 상점 수치(활성 버전, 없으면 기본값). T-11-244 프리미엄 스카우트권은 한 주 상한 · 같은 가격. */
 export async function rerollShopRules(db: Db) {

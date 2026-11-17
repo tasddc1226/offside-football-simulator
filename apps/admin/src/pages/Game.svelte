@@ -3,6 +3,7 @@
   import type { AdminStats, KpiReport } from '@offside/contracts';
   import { fmt, KPI_EMPTY, metricSeries, nonEmpty, ratio } from '../kpi.ts';
   import { byDim, lastDims, periodTotal, trendOf, viewOf } from '../kpi-page.ts';
+  import { balanceHealth, PEAK_BANDS } from '../kpi-insights.ts';
   import HBars from '../ui/HBars.svelte';
   import { loader } from '../load.svelte.ts';
   import Load from '../ui/Load.svelte';
@@ -17,6 +18,11 @@
   const ROOM: Record<string, string> = { ko: '한국어 방', en: '영어 방', ja: '일본어 방', zh: '중국어 방' };
   const VOICE: Record<string, string> = { bug: '버그 의심', idea: '개선 제안', request: '요구사항', etc: '기타' };
   const AGENT_EMPTY = '매일 08:50(KST)에 전날 값을 받아요.';
+  const BAL_EMPTY = '이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
+  const BAL_SUB = '운영자 · QA 커리어 포함';
+  /** 서버 수집 기준(apps/api kpi.ts ELITE_OVR · ELITE_MAX_AGE)과 같게. */
+  const ELITE_OVR = 95;
+  const ELITE_AGE = 31;
 </script>
 
 <div class="page">
@@ -106,4 +112,71 @@
       {/snippet}
     </Load>
   </div>
+
+  <h2 class="section-title">밸런스 이상 감시 ({days}일)</h2>
+  <p class="note">그날 은퇴한 커리어와 그날 올라온 시즌으로 매일 04:00(KST)에 세요. 평균은 은퇴 수로 가중해요. 최상위 시즌은 OVR {ELITE_OVR} 이상 · {ELITE_AGE}세 이하 시즌이고, 이적률은 그 가운데 전 시즌과 구단이 다른 비율이에요.</p>
+  <Load r={kpi.r} height={260}>
+    {#snippet children(rep)}
+      {@const v = viewOf(rep)}
+      {@const h = balanceHealth(v)}
+      {@const avg = (x: number | null, d = 1) => (x === null ? null : Math.round(x * 10 ** d) / 10 ** d)}
+      <div class="stats">
+        <Stat label="은퇴 나이 (평균)" value={avg(h.age)} trend={trendOf(v, 'bal_retired_age')} sub={BAL_SUB} />
+        <Stat label="은퇴 선수 최고 OVR (평균)" value={avg(h.peak)} trend={trendOf(v, 'bal_retired_peak')} sub={BAL_SUB} />
+        <Stat label="레전드 점수 (평균)" value={avg(h.legend, 0)} trend={trendOf(v, 'bal_retired_legend')} sub={BAL_SUB} />
+        <Stat label="발롱도르 받고 은퇴" value={h.ballon.period} unit="pct" trend={h.ballon.values} sub={BAL_SUB} />
+        <Stat
+          label="최상위 선수 이적률"
+          value={h.eliteMoved.period}
+          unit="pct"
+          trend={h.eliteMoved.values}
+          sub={`최상위 시즌 ${fmt(periodTotal(v, 'bal_elite_seasons'))}개 중 ${fmt(periodTotal(v, 'bal_elite_moved'))}개`}
+        />
+      </div>
+      <div class="cols">
+        <StackedBars
+          title="은퇴 선수 최고 OVR 구간"
+          days={v.days}
+          series={nonEmpty(PEAK_BANDS.map((b) => ({ key: b.key, label: b.label, values: trendOf(v, 'bal_retired_peak_band', [b.key]) })))}
+          empty={BAL_EMPTY}
+        />
+        <StackedBars
+          title="최상위 시즌 (구단 옮김 · 그대로)"
+          days={v.days}
+          series={nonEmpty([
+            { key: 'moved', label: '옮김', values: trendOf(v, 'bal_elite_moved') },
+            {
+              key: 'stay',
+              label: '그대로',
+              values: v.days.map((_, i) => {
+                const all = trendOf(v, 'bal_elite_seasons')[i];
+                return all == null ? null : all - (trendOf(v, 'bal_elite_moved')[i] ?? 0);
+              }),
+            },
+          ])}
+          empty={BAL_EMPTY}
+        />
+      </div>
+
+      <h2 class="section-title">새 기능 쓰는 비율 (그날 은퇴 기준)</h2>
+      <div class="stats">
+        <Stat label="명품 경매 소장품을 갖고 은퇴" value={h.itemTop.period} unit="pct" trend={h.itemTop.values} sub={BAL_SUB} />
+        <Stat label="레거시 등급을 갖고 은퇴" value={h.legacy.period} unit="pct" trend={h.legacy.values} sub={BAL_SUB} />
+      </div>
+      <div class="cols">
+        <StackedBars
+          title="은퇴 때 가장 높은 소장품 등급"
+          days={v.days}
+          series={byDim(v, 'retired_item_top').map((x) => ({ ...x, label: x.key === '0' ? '없음' : `${x.key}등급` }))}
+          empty={BAL_EMPTY}
+        />
+        <StackedBars
+          title="은퇴 때 레거시 등급"
+          days={v.days}
+          series={byDim(v, 'retired_legacy').map((x) => ({ ...x, label: x.key === '0' ? '없음' : `${x.key}등급` }))}
+          empty={BAL_EMPTY}
+        />
+      </div>
+    {/snippet}
+  </Load>
 </div>

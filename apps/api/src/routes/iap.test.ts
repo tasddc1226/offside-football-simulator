@@ -62,6 +62,9 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
 
   const call = (method: string, path: string, opts?: Parameters<typeof callJson>[3]) =>
     callJson(ctx.env, method, path, opts);
+  /** T-11-739 아이템 하루 사용 수(날짜 빼고). */
+  const usesOf = async () =>
+    (await ctx.env.DB.prepare('SELECT item, uses FROM item_use_daily ORDER BY item').all()).results;
   const claim = (cookie: string, body: Record<string, string>) =>
     call('POST', '/v1/items/iap', { cookie, body });
   const appleFor = (profileId: string, over: Record<string, unknown> = {}) => ({
@@ -177,6 +180,8 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     expect(empty.status).toBe(409);
     expect(await empty.json()).toMatchObject({ error: { details: { reason: 'NO_BOOST' } } });
     expect((await ctx.db.select().from(iapPurchases))[0]?.test).toBe(false);
+    // T-11-739 쓴 세 장만 하루 사용 수에 남고, 없어서 막힌 시도는 세지 않는다.
+    expect(await usesOf()).toEqual([{ item: 'boost', uses: 3 }]);
   });
 
   it('grants the 100-ticket pack once and refunds only the remaining tickets once', async () => {
@@ -246,6 +251,7 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     const empty = await use();
     expect(empty.status).toBe(409);
     expect(await empty.json()).toMatchObject({ error: { details: { reason: 'NO_SCOUT' } } });
+    expect(await usesOf()).toEqual([{ item: 'scout', uses: 1 }]);
   });
 
   it('T-11-244 S 없이 29장을 쓰면 30장째는 S 확정, 누적 100장째는 특급 S, 옛 앱은 확정을 받지 않는다', async () => {
@@ -381,6 +387,8 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
       await (await call('GET', '/v1/items', { cookie: me.cookie })).json(),
     );
     expect(items.data).toMatchObject({ reroll: 0, scout: 2, mileage: 1 });
+    // T-11-739 같은 멱등 키 재전송 · 409는 세지 않아 쓴 장수(61)와 같다.
+    expect(await usesOf()).toEqual([{ item: 'reroll', uses: 61 }]);
   });
 
   it('T-11-614 계정을 지우면 아이템은 지우고 구매 원장은 남긴다', async () => {

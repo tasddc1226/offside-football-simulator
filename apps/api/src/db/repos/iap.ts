@@ -12,7 +12,7 @@ import {
 import type { VerifiedPurchaseMetadata } from '../../iap/metadata.js';
 import { ACQUISITION_WINDOW_MS } from '@offside/contracts/acquisition';
 import type { Db } from '../client.js';
-import { grantItemStatement } from './itemShop.js';
+import { grantItemStatement, itemUseStatement } from './itemShop.js';
 
 // T-11-145 구단주 아이템(리롤권 · T-11-174 잠재력 강화권) 읽기 · 쓰기 · 인앱 구매 지급.
 
@@ -116,6 +116,8 @@ export async function spendItem(
          WHERE profile_id = ? AND item = ? AND qty > 0`,
       )
       .bind(now, profileId, item),
+    // T-11-739 바로 앞 차감이 성공했을 때만 하루 사용 수를 센다(이 문장이 차감 바로 뒤여야 changes()가 맞는다).
+    itemUseStatement(d1, item, now),
     ...(item === 'scout'
       ? [
           d1
@@ -136,8 +138,8 @@ export async function spendItem(
   ]);
   if (!results[0]?.meta.changes) return null;
   const items = foldItems(results.at(-1)?.results ?? []);
-  if (item === 'reroll') return results[2]?.meta.changes ? { ...items, mileageScout: true } : items;
-  const mode = item === 'scout' ? results[1]?.results[0]?.mode : undefined;
+  if (item === 'reroll') return results[3]?.meta.changes ? { ...items, mileageScout: true } : items;
+  const mode = item === 'scout' ? results[2]?.results[0]?.mode : undefined;
   return mode ? { ...items, scoutMode: mode } : items;
 }
 
