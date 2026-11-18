@@ -5,6 +5,7 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  SCHEDULE_DASHBOARD?: { snapshot(): Promise<unknown> };
   CLIENT_ERROR_LIMITER: RateLimit;
   ACQUISITION_ENABLED?: string;
   /** All app push sends and receipt checks execute in Queue consumers. */

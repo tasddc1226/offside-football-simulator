@@ -5,3 +5,5 @@ export class DurableObject<E = unknown> {
     readonly env: E,
   ) {}
 }
+
+export { DurableObject as WorkerEntrypoint };

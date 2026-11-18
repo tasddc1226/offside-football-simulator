@@ -282,3 +282,4 @@ export async function scanReactions(env: Env, now = Date.now()) {
   await threadOf(env, 'plan', env.DESK_CHANNEL, 'triage').enqueue(task);
   return { items: items.length, errors };
 }
+export { ScheduleDashboard } from './scheduleDashboard.ts';

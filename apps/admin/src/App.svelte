@@ -16,6 +16,7 @@
   import Reports from './pages/Reports.svelte';
   import Push from './pages/Push.svelte';
   import Data from './pages/Data.svelte';
+  import Schedules from './pages/Schedules.svelte';
   import Service from './pages/Service.svelte';
 
   type PageProps = { days: number; tick: number };
@@ -36,6 +37,7 @@
     { id: 'push', label: '푸시', icon: 'bell', desc: '보낸 알림의 도달 · 클릭 · 복귀', page: Push },
     { id: 'reports', label: '신고 · 이상', icon: 'flag', desc: '채팅 · 이름 신고와 비정상 커리어', page: Reports },
     { id: 'service', label: '서비스 상태', icon: 'pulse', desc: 'API 요청 · 오류 · DB 크기 · OTA', page: Service },
+    { id: 'schedules', label: '주기 작업', icon: 'pulse', desc: '예약 일정과 최근 실행 결과 · 한국시간', page: Schedules },
     { id: 'data', label: '데이터', icon: 'data', desc: '수집 원천 상태와 원본 표', page: Data },
   ];
 
@@ -44,6 +46,14 @@
     return PAGES.some((p) => p.id === id) ? id : 'overview';
   };
   let current = $state(fromHash());
+  let navigation: HTMLElement;
+  $effect(() => {
+    const selected = navigation?.querySelector<HTMLElement>(`a[href="#/${current}"]`);
+    if (selected && navigation.scrollWidth > navigation.clientWidth) {
+      const offset = selected.getBoundingClientRect().left - navigation.getBoundingClientRect().left;
+      navigation.scrollLeft += offset - (navigation.clientWidth - selected.offsetWidth) / 2;
+    }
+  });
   let days = $state<number>(30);
   let tick = $state(0);
   let refreshedAt = $state(new Date());
@@ -70,7 +80,7 @@
       <span class="logo">OFF</span>
       <span><strong>OFFSIDE</strong><small>운영 대시보드</small></span>
     </a>
-    <nav aria-label="화면">
+    <nav bind:this={navigation} aria-label="화면">
       {#each PAGES as p (p.id)}
         <a href={`#/${p.id}`} class:on={p.id === current} aria-current={p.id === current ? 'page' : undefined}>
           <Icon name={p.icon} />
@@ -93,11 +103,13 @@
         <p>{page.desc}</p>
       </div>
       <div class="controls">
-        <div class="seg" role="group" aria-label="기간">
-          {#each KPI_DAYS as d (d)}
-            <button class:on={days === d} aria-pressed={days === d} onclick={() => (days = d)}>{d}일</button>
-          {/each}
-        </div>
+        {#if current !== 'schedules'}
+          <div class="seg" role="group" aria-label="기간">
+            {#each KPI_DAYS as d (d)}
+              <button class:on={days === d} aria-pressed={days === d} onclick={() => (days = d)}>{d}일</button>
+            {/each}
+          </div>
+        {/if}
         <button class="icon-btn" onclick={refresh} title="새로고침" aria-label={`새로고침 (마지막 ${hhmm(refreshedAt)})`}>
           <Icon name="refresh" size={16} /><span>{hhmm(refreshedAt)}</span>
         </button>
@@ -316,6 +328,7 @@
       gap: 4px;
     }
     nav a {
+      min-height: 44px;
       padding: 7px 10px;
     }
     .links {

@@ -1,3 +1,11 @@
+import { backupControl, setBackupControl } from '../cron/backupControl.js';
+import {
+  BACKUP_CONTROL_PATH,
+  BackupCommandSchema,
+  BackupControlSchema,
+  AdminSchedulesSchema,
+} from '@offside/contracts';
+import { readAdminSchedules } from '../cron/adminSchedules.js';
 import { automationEnforcement } from '../db/repos/automationEnforcement.js';
 import {
   AdminCommentListSchema,
@@ -53,6 +61,21 @@ const STATS_TTL = 60;
 const HEAVY_TTL = 60;
 
 export function registerAdminRoutes(app: Hono<AppEnv>): void {
+  app.get(BACKUP_CONTROL_PATH, async (c) => {
+    await requireAdmin(c);
+    return ok(c, BackupControlSchema, await backupControl(c.env.DB), 200, 'private, no-store');
+  });
+  app.post(BACKUP_CONTROL_PATH, async (c) => {
+    const viewer = await requireAdmin(c);
+    const { action, revision } = readBody(c, BackupCommandSchema);
+    const data = await setBackupControl(c.env.DB, action, revision, viewer.profileId!);
+    return ok(c, BackupControlSchema, data, 200, 'private, no-store');
+  });
+  app.get('/v1/admin/schedules', async (c) => {
+    await requireAdmin(c);
+    const data = await edgeCached(c, '/v1/admin/schedules', 60, () => readAdminSchedules(c.env));
+    return ok(c, AdminSchedulesSchema, data, 200, 'private, no-store');
+  });
   app.get('/v1/admin/push-performance', async (c) => {
     await requireAdmin(c);
     const query = parseWithAppError(PushPerformanceQuerySchema, c.req.query());
