@@ -9,6 +9,9 @@ import { readBody } from './shared.js';
 export function registerClientErrorRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/client-errors', async (c) => {
     const report = readBody(c, ClientErrorReportSchema);
+    const source = c.req.header('CF-Connecting-IP') ?? 'unknown';
+    const { success } = await c.env.CLIENT_ERROR_LIMITER.limit({ key: source });
+    if (!success) return c.body(null, 204);
     const dropped = await recordClientErrors(report, Date.now());
     if (dropped)
       console.log(JSON.stringify({ level: 'warn', msg: 'client-errors-dropped', dropped }));

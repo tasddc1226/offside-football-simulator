@@ -49,7 +49,7 @@ export function topFrame(stack: string | undefined): string {
     .map((l) => l.trim())
     .find((l) => /^at\s|@|\.(js|ts|tsx|bundle)\b/.test(l) && !/^\w*Error\b/.test(l));
   if (!line) return '';
-  return line
+  return scrub(line)
     .replace(/^at\s+/, '')
     .replace(/https?:\/\/[^/\s)]+/g, '')
     .replace(/[-.][0-9a-f]{6,}(?=\.(js|mjs|bundle))/gi, '')

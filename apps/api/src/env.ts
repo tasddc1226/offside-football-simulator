@@ -5,6 +5,7 @@ import type { ChatRoom } from './chat/room.js';
 import type { LiveHub } from './live/hub.js';
 
 export type Bindings = {
+  CLIENT_ERROR_LIMITER: RateLimit;
   ACQUISITION_ENABLED?: string;
   /** All app push sends and receipt checks execute in Queue consumers. */
   PUSH_QUEUE?: Queue<import('./push/queuePublish.js').PushWork>;

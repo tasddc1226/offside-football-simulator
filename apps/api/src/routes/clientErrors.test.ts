@@ -36,6 +36,40 @@ describe('앱·웹 오류 모으기 (T-11-331)', () => {
     ).toBe('<email> https://x.com/p <code> id <n> short 123');
   });
 
+  it('저장하는 프레임과 스택을 정제하고 같은 지문으로 집계한다', async () => {
+    for (const email of ['first@example.com', 'other@example.com']) {
+      await recordClientErrors(report('boom', `at fn (/src/${email}/ABCD-EFGH-IJKL.js:1:2)`), T0);
+    }
+    await flushClientErrors(ctx.env.OPS_DB!, takeClientErrors());
+    const { results } = await ctx.env
+      .OPS_DB!.prepare('SELECT frame, stack, count FROM client_errors')
+      .all();
+    expect(results).toEqual([
+      {
+        frame: 'fn (/src/<email>/<code>.js)',
+        stack: 'at fn (/src/<email>/<code>.js:1:2)',
+        count: 2,
+      },
+    ]);
+  });
+
+  it('발신원 제한에 걸린 보고는 204로 마치고 집계하지 않는다', async () => {
+    const keys: string[] = [];
+    ctx.env.CLIENT_ERROR_LIMITER = {
+      limit: async ({ key }) => {
+        keys.push(key);
+        return { success: false };
+      },
+    };
+    const res = await callJson(ctx.env, 'POST', '/v1/client-errors', {
+      headers: { 'CF-Connecting-IP': '192.0.2.1', 'X-Forwarded-For': '192.0.2.2' },
+      body: report('boom'),
+    });
+    expect(res.status).toBe(204);
+    expect(keys).toEqual(['192.0.2.1']);
+    expect(takeClientErrors()).toEqual([]);
+  });
+
   it('값 · 줄 번호 · 빌드 해시가 달라도 같은 오류로 묶는다', async () => {
     expect(normalizeMessage('Index 12 out of range 30')).toBe('Index # out of range #');
     expect(
