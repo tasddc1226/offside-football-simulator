@@ -2,7 +2,7 @@
 // 탭바(시즌·선수·홈·커리어·트로피 — 홈은 가운데)가 아래 안전 영역을 채우고, 진행 바는 그 바로 위에 붙는다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
+import { Animated, Easing, useWindowDimensions, View, type LayoutChangeEvent } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSnapshot } from 'valtio';
 import { posLabel } from '@offside/game/data';
@@ -16,14 +16,20 @@ import type { GameState } from '@offside/game/types';
 import type { Tab } from '@offside/app-core/state';
 import { fmtValue } from '@offside/app-core/format';
 import { seasonAction } from '@offside/app-core/seasonAction';
+import {
+  nextOvrShown,
+  ovrDeltaText,
+  OVR_DELTA_MS,
+  type OvrShown,
+} from '@offside/app-core/ovr-delta';
 import { gameText as T } from '@offside/app-core/i18n/ko/game';
 import { playerNudgeText as PN } from '@offside/app-core/i18n/ko/playerNudge';
 import { CareerTab } from '../../components/CareerTab';
 import { advance, buzz, navStack, nextPending } from '../../game/host';
 import { goHome } from '../../game/nav';
-import { Enter } from '../../sheets/anim';
+import { Enter, Pop } from '../../sheets/anim';
 import { useTween } from '../../sheets/useTween';
-import { appState, prefs } from '../../store';
+import { appState, prefs, sheetState } from '../../store';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
 import { ActionBar } from '../../ui/ActionBar';
@@ -85,6 +91,63 @@ function HeroPill({
   );
 }
 
+/** T-11-756 웹 .ovr-delta — OVR 숫자 왼쪽에 +2 · −1이 튀어 올랐다가 1.6초 뒤 줄어들며 사라진다. opacity는 그대로 둔다.
+ *  동작 줄이기면 움직임 없이 떠 있다가 부모가 치운다. */
+function OvrDelta({ d }: { d: number }) {
+  const c = useColors();
+  const { motionOK } = useSnapshot(prefs);
+  const v = useRef(new Animated.Value(motionOK ? 0 : 0.5)).current;
+  useEffect(() => {
+    if (!motionOK) return;
+    const a = Animated.timing(v, {
+      toValue: 1,
+      duration: OVR_DELTA_MS,
+      easing: Easing.linear,
+      useNativeDriver: true,
+    });
+    a.start();
+    return () => a.stop();
+  }, [motionOK, v]);
+  const at = [0, 0.14, 0.24, 0.8, 1];
+  const text = ovrDeltaText(d);
+  return (
+    <Animated.View
+      testID="ovr-delta"
+      accessible
+      accessibilityRole="text"
+      accessibilityLiveRegion="polite"
+      accessibilityLabel={`OVR ${text}`}
+      style={{
+        position: 'absolute',
+        right: '100%',
+        top: 2,
+        marginRight: 6,
+        borderRadius: RADIUS.pill,
+        paddingVertical: 3,
+        paddingHorizontal: 9,
+        backgroundColor: d > 0 ? c.accent : c.bad,
+        transform: [
+          { translateY: v.interpolate({ inputRange: at, outputRange: [10, 0, 0, 0, -8] }) },
+          { scale: v.interpolate({ inputRange: at, outputRange: [0.4, 1.18, 1, 1, 0] }) },
+        ],
+      }}
+    >
+      <Txt
+        numberOfLines={1}
+        style={{
+          fontFamily: DISPLAY[700],
+          fontSize: rem(FONT.body1),
+          lineHeight: rem(FONT.body1) * 1.2,
+          color: d > 0 ? c.accentInk : '#fff',
+          fontVariant: ['tabular-nums'],
+        }}
+      >
+        {text}
+      </Txt>
+    </Animated.View>
+  );
+}
+
 /** 웹 .tab-panel — 탭이 바뀔 때마다 새로 마운트돼 아래에서 8px 올라오며 들어온다(160ms, 동작 줄이기면 바로). */
 function TabPanel({
   children,
@@ -122,7 +185,22 @@ export default function Game() {
   };
   const s = snap.G as GameState | null;
   // OVR 숫자 트윈(T-10-003 goal 3): 훈련·이벤트 결과로 능력치가 바뀔 때마다 즉시 점프하는 대신 짧게 카운트업/다운한다.
-  const [ovrNow] = useTween([s ? ovr(s) : 0], 420);
+  // T-11-756 시트(이벤트 결과 · 경기 중계)가 헤더를 덮는 동안은 숫자를 붙잡아 두고, 닫히면 그동안의 변화를 한 번에 알린다.
+  const sheetOpen = useSnapshot(sheetState).open;
+  const ovrInt = s ? ovr(s) : 0;
+  const cid = s?.cid ?? '';
+  const [ovrShown, setOvrShown] = useState<OvrShown>(() => nextOvrShown(null, cid, ovrInt, false));
+  useEffect(() => {
+    setOvrShown((p) => nextOvrShown(p, cid, ovrInt, sheetOpen));
+  }, [cid, ovrInt, sheetOpen]);
+  const [ovrBadge, setOvrBadge] = useState<number | null>(null);
+  useEffect(() => {
+    if (!ovrShown.seq) return setOvrBadge(null);
+    setOvrBadge(ovrShown.seq);
+    const id = setTimeout(() => setOvrBadge(null), OVR_DELTA_MS);
+    return () => clearTimeout(id);
+  }, [ovrShown.seq]);
+  const [ovrNow] = useTween([ovrShown.n], 420);
 
   // 대표 칭호를 누르면 트로피 탭의 칭호 도감으로 간다(웹 scrollIntoView 자리 — 탭 패널·도감 위치를 재 둔다).
   const panelY = useRef(0);
@@ -362,17 +440,19 @@ export default function Game() {
                 accessibilityLabel={`OVR ${Math.round(ovrNow!)}`}
                 style={{ alignItems: 'flex-end' }}
               >
-                <Txt
-                  style={{
-                    fontFamily: DISPLAY[700],
-                    fontSize: rem(3.625),
-                    lineHeight: rem(3.625) * 0.9,
-                    color: c.accent,
-                    fontVariant: ['tabular-nums'],
-                  }}
-                >
-                  {Math.round(ovrNow!)}
-                </Txt>
+                <Pop key={ovrShown.seq} from={ovrShown.seq ? 1.28 : 1} ms={500}>
+                  <Txt
+                    style={{
+                      fontFamily: DISPLAY[700],
+                      fontSize: rem(3.625),
+                      lineHeight: rem(3.625) * 0.9,
+                      color: c.accent,
+                      fontVariant: ['tabular-nums'],
+                    }}
+                  >
+                    {Math.round(ovrNow!)}
+                  </Txt>
+                </Pop>
                 <Txt
                   style={{
                     fontFamily: DISPLAY[400],
@@ -384,6 +464,9 @@ export default function Game() {
                 >
                   OVR
                 </Txt>
+                {ovrBadge === ovrShown.seq && ovrShown.seq ? (
+                  <OvrDelta key={ovrShown.seq} d={ovrShown.delta} />
+                ) : null}
               </View>
             </View>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>

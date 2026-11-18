@@ -144,9 +144,11 @@ export function snapshot(s: GameState): Snapshot {
     stories: Object.keys(s.story || {}).filter((k) => !s.story[k]!.done),
   } as Snapshot;
 }
+/** OVR 칩의 라벨(모든 언어에서 같다). 이벤트 결과 화면이 이 칩을 빼고 그린다(T-11-756). */
+export const OVR_CHIP = 'OVR';
 const namedChips = () =>
   [
-    ['ovr', 'OVR'],
+    ['ovr', OVR_CHIP],
     ['cond', L.chipCond],
     ['morale', L.chipMorale],
     ['fame', L.chipFame],

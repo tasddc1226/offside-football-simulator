@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import '@offside/game/index';
-import { chipValue } from './chipValue.js';
+import { chipValue, eventChips } from './chipValue.js';
 
 it('shows before and after values only in the phase report range mode', () => {
   const c = { label: '패스', d: 4, from: 68, to: 72 };
@@ -29,4 +29,24 @@ it('adds shown before and after values to stat chips only for the phase report',
   expect(ranged).toMatchObject({ from: 68, to: 72 });
   expect(chipValue(ranged, true)).toBe('68 → 72');
   expect(diffChips(s, a, b).find((c) => c.d === 4.2)).not.toHaveProperty('from');
+});
+
+it('drops the OVR chip from the event result and keeps it in the phase report (T-11-756)', async () => {
+  const { newGame } = await import('@offside/game/engine');
+  const { snapshot, diffChips } = await import('@offside/game/stats');
+  const { setActiveRng, createRng } = await import('@offside/game/rng');
+  setActiveRng(createRng(7));
+  const s = newGame(
+    { name: 'T', number: 9, pos: 'FW', foot: '오른발', type: 'poacher', trait: 'late' },
+    7,
+  );
+  const a = snapshot(s);
+  const b = { ...a, ovr: a.ovr + 2, morale: a.morale + 5 };
+  expect(diffChips(s, a, b).map((c) => c.label)).toContain('OVR');
+  expect(eventChips(diffChips(s, a, b)).map((c) => c.d)).toEqual([5]);
+  expect(diffChips(s, a, b, true).find((c) => c.label === 'OVR')).toMatchObject({
+    d: 2,
+    from: a.ovr,
+    to: a.ovr + 2,
+  });
 });
