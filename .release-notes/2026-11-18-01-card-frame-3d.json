@@ -1,0 +1,30 @@
+{
+  "id": "t-11-753-card-frame-3d",
+  "title": "선수 카드 새 틀과 3D 카드",
+  "items": [
+    "선수 카드 틀이 등급마다 금속 질감으로 바뀌었어요. 골드부터는 모서리 장식이, 엘리트부터는 별 문장이, 레전드 · 아이콘 카드에는 보석과 금박 무늬가 붙어요",
+    "팀 그라운드에서 카드를 누르면 카드가 돌아서 나오고, 손가락을 댄 쪽으로 기울며 빛이 비쳐요"
+  ],
+  "en": {
+    "title": "New player card frames and 3D cards",
+    "items": [
+      "Player card frames now have a metal finish for each tier. Gold cards get corner studs, Elite cards add a star crest, and Legend and Icon cards get gems and gold-leaf patterns.",
+      "Tap a card on your team pitch and it spins into view, then tilts toward your finger with a shine."
+    ]
+  },
+  "ja": {
+    "title": "選手カードの新しい枠と3Dカード",
+    "items": [
+      "選手カードの枠が等級ごとに金属の質感になりました。ゴールドからは角の飾り、エリートからは星の紋章、レジェンド・アイコンには宝石と金箔の模様が付きます。",
+      "チームのピッチでカードをタップすると、カードが回転して現れ、指を当てた方向に傾いて光が差します。"
+    ]
+  },
+  "zh": {
+    "title": "球員卡新外框與 3D 卡片",
+    "items": [
+      "球員卡外框依等級改為金屬質感。黃金起有邊角裝飾，菁英起加上星形徽章，傳奇與圖標卡還有寶石和金箔花紋。",
+      "在球隊場地點擊卡片，卡片會旋轉出現，並朝手指按住的方向傾斜、映出光澤。"
+    ]
+  },
+  "availability": "web-app"
+}

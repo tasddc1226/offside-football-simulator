@@ -38,6 +38,9 @@ import { enhanceFx, type EnhanceFx } from '@offside/app-core/cardEnhanceFx';
 import { showsPosOvr } from '@offside/app-core/cardEnhance';
 import { specialRibbon, type SpecialRibbon } from '@offside/app-core/cardSpecial';
 import type { CardSpecialMark } from '@offside/contracts/card-special';
+import { Image as ExpoImage } from 'expo-image';
+import { CARD_FRAME_BOT, CARD_FRAME_TOP, cardShieldPath } from '@offside/app-core/cardFrame';
+import { cardFrame } from './cardFrameSources';
 
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
@@ -692,8 +695,10 @@ export function PlayerCard({
     [cell.youth, cell.careerId, cell.look],
   );
   const country = !cell.youth ? NATION_BY_CODE.get(cell.nation ?? DEFAULT_NATION) : undefined;
-  const tone =
-    CARD_TONES[cell.youth ? 'youth' : cardTier(cell.legendScore, cell.peak ?? cell.rating)];
+  const tier = cell.youth ? 'youth' : cardTier(cell.legendScore, cell.peak ?? cell.rating);
+  const tone = CARD_TONES[tier];
+  // T-11-753 등급 틀 그림(Blender 렌더, 위 · 가운데 · 아래).
+  const frame = cardFrame(tier);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [cardWidth, setCardWidth] = useState(compact ? 62 : 100);
   const shirtWidth = compact ? 25 : Math.min(43, Math.max(24, cardWidth - 56));
@@ -716,7 +721,8 @@ export function PlayerCard({
       (style ? CARD_STYLE_ROW : 0) +
       (body ? CARD_BODY_ROW : 0) +
       (ribbon ? CARD_SPECIAL_ROW : 0);
-  const shield = 'M2 14H17L25 5L50 1L75 5L83 14H98L97 149L88 161L50 173L12 161L3 149Z';
+  // 방패 모양은 틀 그림과 같게 너비 기준으로 잡는다(viewBox 0 0 100 174 좌표).
+  const shield = cardShieldPath(cardWidth, height);
   return (
     <View
       onLayout={(e) => setCardWidth(e.nativeEvent.layout.width)}
@@ -728,6 +734,26 @@ export function PlayerCard({
         alignItems: 'center',
       }}
     >
+      <View
+        pointerEvents="none"
+        style={{ position: 'absolute', left: 0, top: 0, width: cardWidth, height }}
+      >
+        <ExpoImage
+          source={frame.top}
+          contentFit="fill"
+          style={{ width: cardWidth, height: cardWidth * CARD_FRAME_TOP }}
+        />
+        <ExpoImage
+          source={frame.mid}
+          contentFit="fill"
+          style={{ width: cardWidth, flex: 1, marginVertical: -1 }}
+        />
+        <ExpoImage
+          source={frame.bot}
+          contentFit="fill"
+          style={{ width: cardWidth, height: cardWidth * CARD_FRAME_BOT }}
+        />
+      </View>
       <Svg
         width={cardWidth}
         height={height}
@@ -739,11 +765,6 @@ export function PlayerCard({
         importantForAccessibility="no-hide-descendants"
       >
         <Defs>
-          <LinearGradient id={`${uid}face`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={tone.light} />
-            <Stop offset="0.5" stopColor={tone.base} />
-            <Stop offset="1" stopColor={tone.shade} />
-          </LinearGradient>
           {fx ? (
             <LinearGradient id={`${uid}fx`} x1="0" y1="0" x2="1" y2="1">
               {fx.stops.map((c, i) => (
@@ -752,27 +773,8 @@ export function PlayerCard({
             </LinearGradient>
           ) : null}
         </Defs>
-        <Path
-          d={shield}
-          fill={`url(#${uid}face)`}
-          stroke={special ? special.bg : tone.line}
-          strokeWidth={special ? 3 : 1.5}
-        />
+        {special ? <Path d={shield} fill="none" stroke={special.bg} strokeWidth={3} /> : null}
         {fx ? <EnhanceFxArt level={level} uid={uid} shield={shield} /> : null}
-        <Path
-          d="M7 21H20L28 12L50 8L72 12L80 21H93M8 147L16 157L50 166L84 157L92 147"
-          fill="none"
-          stroke={tone.light}
-          strokeOpacity={0.7}
-          strokeWidth={1}
-        />
-        <Path
-          d="M43 26L91 44M41 33L90 51M40 40L89 58"
-          fill="none"
-          stroke={tone.line}
-          strokeOpacity={0.18}
-          strokeWidth={1}
-        />
       </Svg>
       {fx && level >= 3 && !compact && animate ? (
         <EnhanceFxPulse width={cardWidth} height={height} shield={shield} fx={fx} />

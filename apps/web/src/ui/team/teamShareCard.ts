@@ -5,6 +5,9 @@ import { defaultTeamLogo, type TeamLogo } from '@offside/contracts/team-logo';
 import { CREST_SHAPES, CREST_PATTERNS } from '@offside/game/crests';
 import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
 import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
+import { cardTier } from '@offside/app-core/format';
+import { CARD_FRAME_BOT, CARD_FRAME_TOP } from '@offside/app-core/cardFrame';
+import { cardFrameUrls } from './cardFrameSources';
 
 export type TeamShareData = {
   /** 저장된 내 팀 그대로라 라운지에 올릴 수 있다. */
@@ -29,6 +32,9 @@ export const TEAM_SHARE_W = 1080;
 export const TEAM_SHARE_H = 1350;
 const BODY = "'Pretendard Variable', 'Apple SD Gothic Neo', sans-serif";
 const DISPLAY = "'Barlow Condensed', 'Arial Narrow', sans-serif";
+/** 공유 이미지 카드 한 장의 크기(px). */
+const CARD_W_SHARE = 146;
+const CARD_H_SHARE = 178;
 const SHIELD = new Path2D(
   'M0 16H23L36 4 73 0 110 4 123 16H146L143 150 126 166 73 178 20 166 3 150Z',
 );
@@ -65,7 +71,9 @@ export async function makeTeamShareFile(data: TeamShareData): Promise<File> {
   canvas.width = TEAM_SHARE_W;
   canvas.height = TEAM_SHARE_H;
   let logoImage: HTMLImageElement | undefined;
+  let frames: CardFrameImages = new Map();
   try {
+    frames = await loadCardFrames(data.cells.map(cellTier));
     if (data.logo?.img) {
       try {
         logoImage = new Image();
@@ -75,12 +83,13 @@ export async function makeTeamShareFile(data: TeamShareData): Promise<File> {
         logoImage = undefined;
       }
     }
-    drawTeamShareCard(canvas, data, logoImage);
+    drawTeamShareCard(canvas, data, logoImage, frames);
     return await cardFile(canvas, `team-${data.name}`);
   } finally {
     canvas.width = 0;
     canvas.height = 0;
     if (logoImage) logoImage.src = '';
+    for (const f of frames.values()) for (const img of f) img.src = '';
   }
 }
 
@@ -104,10 +113,37 @@ function nameLines(ctx: CanvasRenderingContext2D, value: string, width: number) 
   return { lines, size: Math.max(11, size) };
 }
 
+/** T-11-753 등급별 카드 틀 그림(위 · 가운데 · 아래). 화면 카드(PlayerCard)와 같은 그림이다. */
+type CardFrameImages = Map<string, readonly [HTMLImageElement, HTMLImageElement, HTMLImageElement]>;
+const cellTier = (cell: TeamShareData['cells'][number]) =>
+  cell.youth ? 'youth' : cardTier(cell.player?.legendScore, cell.player?.peak ?? cell.rating);
+/** 쓰는 등급의 틀만 받는다. 못 받은 등급은 빠지고, 그 카드는 예전 그라데이션 방패로 그린다. */
+async function loadCardFrames(tiers: readonly string[]): Promise<CardFrameImages> {
+  const out: CardFrameImages = new Map();
+  await Promise.all(
+    [...new Set(tiers)].map(async (tier) => {
+      const urls = cardFrameUrls(tier);
+      const imgs = [urls.top, urls.mid, urls.bot].map((u) => {
+        const img = new Image();
+        img.src = u;
+        return img;
+      }) as [HTMLImageElement, HTMLImageElement, HTMLImageElement];
+      try {
+        await Promise.all(imgs.map((img) => img.decode()));
+        out.set(tier, imgs);
+      } catch {
+        // 틀 없이 그린다.
+      }
+    }),
+  );
+  return out;
+}
+
 export function drawTeamShareCard(
   canvas: HTMLCanvasElement,
   data: TeamShareData,
   logoImage?: HTMLImageElement,
+  frames: CardFrameImages = new Map(),
 ) {
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('canvas context');
@@ -190,11 +226,21 @@ export function drawTeamShareCard(
       1,
       legend ? '#101e17' : cell.youth ? '#9bae9b' : gold ? '#8a6324' : '#83989c',
     );
-    ctx.fillStyle = gradient;
-    ctx.fill(SHIELD);
-    ctx.strokeStyle = legend || gold ? '#d1ac5f' : '#9fb3b6';
-    ctx.lineWidth = 2;
-    ctx.stroke(SHIELD);
+    const frame = frames.get(cellTier(cell));
+    if (frame) {
+      // 위 · 아래 조각은 비율 그대로, 가운데만 늘린다(웹 PlayerCard와 같은 방식).
+      const top = CARD_W_SHARE * CARD_FRAME_TOP;
+      const bot = CARD_W_SHARE * CARD_FRAME_BOT;
+      ctx.drawImage(frame[1], 0, top - 1, CARD_W_SHARE, CARD_H_SHARE - top - bot + 2);
+      ctx.drawImage(frame[0], 0, 0, CARD_W_SHARE, top);
+      ctx.drawImage(frame[2], 0, CARD_H_SHARE - bot, CARD_W_SHARE, bot);
+    } else {
+      ctx.fillStyle = gradient;
+      ctx.fill(SHIELD);
+      ctx.strokeStyle = legend || gold ? '#d1ac5f' : '#9fb3b6';
+      ctx.lineWidth = 2;
+      ctx.stroke(SHIELD);
+    }
     ctx.save();
     ctx.translate(51, 22);
     ctx.scale(0.78, 0.78);

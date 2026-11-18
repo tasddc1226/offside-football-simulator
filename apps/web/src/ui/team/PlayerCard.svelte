@@ -38,14 +38,19 @@
   import { enhanceFx } from '@offside/app-core/cardEnhanceFx';
   import { showsPosOvr } from '@offside/app-core/cardEnhance';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
+  import { cardFrameVars } from './cardFrameSources';
 
-  let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr }:
-    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; mini?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string } = $props();
+  let { player, name, rating, role, nation, season, compact = false, mini = false, youth = false, deploymentRating, ratingLabel = L.peakOvr, shine = false }:
+    { player?: TeamPlayer | undefined; name: string; rating: number; role: DetailPos; nation?: string | null | undefined; season?: number | undefined; compact?: boolean; mini?: boolean; youth?: boolean; deploymentRating?: number | undefined; ratingLabel?: string;
+      /** T-11-753 3D로 기울이는 큰 카드(PlayerPeek)의 빛 반사. 자리 · 세기는 바깥이 --shine-x · --shine-y · --shine-o로 준다. */
+      shine?: boolean } = $props();
   // T-11-114 카드 시즌 뱃지(유스 선수·시즌을 모르는 옛 응답은 없다).
   const portrait = $derived(!youth && player?.careerId ? cardAvatarSpec(player) : null);
   const cardSeason = $derived(youth ? undefined : (season ?? player?.season));
   const country = $derived(!youth ? NATION_BY_CODE.get(nation ?? player?.nation ?? DEFAULT_NATION) : undefined);
   const tier = $derived(youth ? 'youth' : cardTier(player?.legendScore, player?.peak ?? rating));
+  // T-11-753 등급 틀 그림(위 · 가운데 · 아래).
+  const frame = $derived(cardFrameVars(tier));
   // T-11-372 시즌 특별 카드 띠(가장 최근 시즌 · 높은 표식 하나).
   const special = $derived(youth ? null : specialRibbon(player?.specials, player?.daily));
   const specialColor = $derived(special?.color ?? null);
@@ -78,7 +83,7 @@
 </script>
 
 {#snippet card()}
-<div class="player-card" data-enhance={fx ? level : undefined} style:--fx-line={fxLine} style:--fx-spin={fxSpin} data-fx-spin={fxSpin ? '' : undefined} class:compact class:mini class:youth class:deployed class:special={!!special} data-tier={tier} data-special={special?.kind} style:--special-bg={specialColor?.bg} style:--special-ink={specialColor?.ink} style:--special-glow={specialColor?.glow}>
+<div class="player-card" style:--frame-top={frame.top} style:--frame-mid={frame.mid} style:--frame-bot={frame.bot} data-enhance={fx ? level : undefined} style:--fx-line={fxLine} style:--fx-spin={fxSpin} data-fx-spin={fxSpin ? '' : undefined} class:compact class:mini class:youth class:deployed class:special={!!special} data-tier={tier} data-special={special?.kind} style:--special-bg={specialColor?.bg} style:--special-ink={specialColor?.ink} style:--special-glow={specialColor?.glow}>
   <div class="card-face">
     {#if fx}<span class="card-fx" aria-hidden="true">{#each fxBits as b (`${b.x}-${b.d}`)}<i style:left="{b.x}%" style:top="{b.y}%" style:--z="{b.z}px" style:animation-delay="{b.d}s"></i>{/each}</span>{/if}
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
@@ -114,21 +119,27 @@
       {#if special}<div class="card-special-foot" data-card-special={special.kind} data-card-special-season={special.season} role="img" aria-label={special.aria}>{special.text}</div>{/if}
       <div class="card-foot">{cardFootNote(player ?? {}) ?? (isLegendTier(tier) ? L.footLegend : L.footMine)}</div>
     {/if}
+    {#if shine}<span class="card-shine" aria-hidden="true"></span>{/if}
   </div>
 </div>
 {/snippet}
 
-{#if fx}<div class="card-fx-wrap" data-enhance={level} style:--fx-glow={fx.glow}>{@render card()}</div>{:else}{@render card()}{/if}
+<div class="card-wrap">{#if fx}<div class="card-fx-wrap" data-enhance={level} style:--fx-glow={fx.glow}>{@render card()}</div>{:else}{@render card()}{/if}</div>
 
 <style>
-  .player-card { --card-base:#e8d5a8; --card-light:#fff2ce; --card-dark:#8a6324; --card-ink:#392b14; --card-line:#b79654; width:100%; padding:2px; background:var(--card-line); clip-path:polygon(0 9%,16% 9%,25% 2%,50% 0,75% 2%,84% 9%,100% 9%,98% 84%,86% 93%,50% 100%,14% 93%,2% 84%); filter:drop-shadow(0 4px 5px #0003); }
+  /* T-11-753 틀은 Blender로 렌더한 그림이다. 위 · 아래 조각은 너비에 맞춰 비율을 지키고 가운데만 늘린다. 모양(clip-path)도 그림과 같게
+     너비 기준(카드 너비 = 100cqw, .card-wrap이 기준 상자)으로 잡는다. 숫자는 그림 기준(너비 96칸)의 방패 꼭짓점이다. */
+  .card-wrap { width:100%; container-type:inline-size; }
+  .player-card { --card-base:#e8d5a8; --card-light:#fff2ce; --card-dark:#8a6324; --card-ink:#392b14; --card-line:#b79654; --pad:0px; --W:100cqw; width:100%; padding:var(--pad); background:var(--card-line); clip-path:polygon(0 calc(var(--W) * .15625),15.625% calc(var(--W) * .15625),23.958% calc(var(--W) * .0625),50% 0,76.042% calc(var(--W) * .0625),84.375% calc(var(--W) * .15625),100% calc(var(--W) * .15625),98.958% calc(100% - var(--W) * .27083),89.583% calc(100% - var(--W) * .14583),50% 100%,10.417% calc(100% - var(--W) * .14583),1.042% calc(100% - var(--W) * .27083)); filter:drop-shadow(0 4px 5px #0003); }
   .player-card[data-tier='icon'] { --card-base:#1d2547; --card-light:#4a5a92; --card-dark:#0a0f26; --card-ink:#ffe9b0; --card-line:#e6c369; }
   .player-card[data-tier='legend'] { --card-base:#28382e; --card-light:#51614b; --card-dark:#101e17; --card-ink:#fce7b1; --card-line:#d1ac5f; }
   .player-card[data-tier='elite'] { --card-base:#f1c654; --card-light:#fff4bf; --card-dark:#a36f12; --card-ink:#3b2604; --card-line:#d99a1e; }
   .player-card[data-tier='silver'] { --card-base:#d6dfe0; --card-light:#f8faf6; --card-dark:#83989c; --card-ink:#243339; --card-line:#9fb3b6; }
   .player-card[data-tier='bronze'] { --card-base:#d7a27a; --card-light:#f6d6bb; --card-dark:#7d4a29; --card-ink:#3a1f0e; --card-line:#a86e45; }
   .player-card[data-tier='youth'] { --card-base:#d5e4d8; --card-light:#eaf3e9; --card-dark:#9bae9b; --card-ink:#365342; --card-line:#8cab97; opacity:.82; }
-  .card-face { position:relative; overflow:hidden; min-height:183px; padding:28px 10px 20px; clip-path:inherit; background:linear-gradient(135deg,transparent 34%,#ffffff25 34.5%,transparent 35%,transparent 62%,#ffffff1c 62.5%,transparent 63%),radial-gradient(ellipse at 80% 10%,var(--card-light),transparent 70%),linear-gradient(165deg,var(--card-base),var(--card-dark)); color:var(--card-ink); }
+  .card-face { --fw:calc(var(--W) - 2 * var(--pad)); position:relative; overflow:hidden; min-height:183px; padding:28px 10px 20px; clip-path:polygon(0 calc(var(--fw) * .15625),15.625% calc(var(--fw) * .15625),23.958% calc(var(--fw) * .0625),50% calc(var(--fw) * .02083),76.042% calc(var(--fw) * .0625),84.375% calc(var(--fw) * .15625),100% calc(var(--fw) * .15625),98.958% calc(100% - var(--fw) * .27083),89.583% calc(100% - var(--fw) * .14583),50% calc(100% - var(--fw) * .02083),10.417% calc(100% - var(--fw) * .14583),1.042% calc(100% - var(--fw) * .27083)); background:var(--frame-top) center top/100% auto no-repeat,var(--frame-bot) center bottom/100% auto no-repeat,var(--frame-mid) center calc(var(--fw) * .4278 - 1px)/100% calc(100% - var(--fw) * .875 + 2px) no-repeat,linear-gradient(165deg,var(--card-base),var(--card-dark)); color:var(--card-ink); }
+  /* T-11-753 3D 큰 카드의 빛 반사(방패 안쪽에만). 눌린 자리를 따라 둥근 빛과 무지개 띠가 움직인다. */
+  .card-shine {position:absolute;inset:0;z-index:3;pointer-events:none;opacity:var(--shine-o,0);transition:opacity .35s ease-out;mix-blend-mode:overlay;background:radial-gradient(circle at var(--shine-x,50%) var(--shine-y,30%),#ffffffc0,#ffffff00 48%),linear-gradient(115deg,transparent calc(var(--shine-x,50%) - 34%),#ff9ad955 calc(var(--shine-x,50%) - 14%),#8ff3ff66 var(--shine-x,50%),#fff38f55 calc(var(--shine-x,50%) + 14%),transparent calc(var(--shine-x,50%) + 34%));}
   .card-rating { position:absolute; top:28px; left:11px; display:flex; flex-direction:column; align-items:center; z-index:1; }
   .card-rating b { font-family:var(--display); font-size:2.3rem; font-weight:800; line-height:.9; }
   .card-rating span { font-family:var(--display); font-size:var(--fs-label); font-weight:700; line-height:1; margin-top:4px; }
@@ -145,11 +156,11 @@
   .card-fx-wrap[data-enhance='6'],.card-fx-wrap[data-enhance='7'] {--fx-blur:12px;}
   .card-fx-wrap[data-enhance='8'],.card-fx-wrap[data-enhance='9'] {--fx-blur:14px;}
   .card-fx-wrap[data-enhance='10'] {--fx-blur:18px;}
-  .player-card[data-enhance] {position:relative;background:var(--fx-line);padding:3px;filter:none;}
-  .player-card[data-enhance='1'],.player-card[data-enhance='2'] {padding:2px;}
-  .player-card[data-enhance='3'],.player-card[data-enhance='4'] {width:calc(100% + 2px);margin:-1px;}
-  .player-card[data-fx-spin] {width:calc(100% + 4px);margin:-2px;padding:4px;overflow:hidden;}
-  .player-card[data-enhance='10'] {width:calc(100% + 6px);margin:-3px;padding:5px;}
+  .player-card[data-enhance] {--pad:3px;position:relative;background:var(--fx-line);filter:none;}
+  .player-card[data-enhance='1'],.player-card[data-enhance='2'] {--pad:2px;}
+  .player-card[data-enhance='3'],.player-card[data-enhance='4'] {--W:calc(100cqw + 2px);width:calc(100% + 2px);margin:-1px;}
+  .player-card[data-fx-spin] {--W:calc(100cqw + 4px);--pad:4px;width:calc(100% + 4px);margin:-2px;overflow:hidden;}
+  .player-card[data-enhance='10'] {--W:calc(100cqw + 6px);--pad:5px;width:calc(100% + 6px);margin:-3px;}
   .player-card[data-fx-spin]::before {content:'';position:absolute;left:50%;top:50%;width:190%;aspect-ratio:1;translate:-50% -50%;background:var(--fx-spin);animation:fx-spin 5s linear infinite;}
   .player-card[data-enhance='10']::before {animation-duration:3s;}
   .player-card[data-enhance] > .card-face {z-index:1;}
@@ -203,7 +214,7 @@
   .card-season {position:absolute;top:9px;left:50%;transform:translateX(-50%);z-index:1;padding:2px 5px 1px;border-radius:3px;background:var(--season-bg);color:#fff;font:800 9px/1.1 system-ui,sans-serif;letter-spacing:.06em;box-shadow:0 0 0 1px #ffffff55 inset;}
   .compact .card-season {top:4px;padding:1px 3px 0;font-size:7px;}
   /* T-11-372 시즌 특별 카드: 테두리를 표식 색으로 바꾸고 빛을 두르며, 아래쪽에 띠를 단다. */
-  .player-card.special { --card-line:var(--special-bg); filter:drop-shadow(0 0 5px var(--special-glow)) drop-shadow(0 4px 5px #0003); }
+  .player-card.special { --card-line:var(--special-bg); --pad:2px; filter:drop-shadow(0 0 5px var(--special-glow)) drop-shadow(0 4px 5px #0003); }
   .card-special {position:absolute;left:50%;bottom:6px;transform:translateX(-50%);z-index:2;max-width:86%;padding:2px 7px 1px;border-radius:3px;background:var(--special-bg);color:var(--special-ink);font:800 9px/1.2 system-ui,sans-serif;letter-spacing:.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 0 1px #ffffff88 inset,0 1px 3px #0005;}
   .compact .card-special {bottom:4px;padding:1px 4px 0;font-size:7px;}
   .mini .card-special {display:none;}
