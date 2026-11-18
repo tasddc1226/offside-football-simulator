@@ -1,3 +1,4 @@
+import { backupControl, setBackupControl } from './backupControl.js';
 import { gunzipSync } from 'node:zlib';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
@@ -388,6 +389,7 @@ describe('capacity safeguards', () => {
     );
     await ready;
     try {
+      expect((await setBackupControl(ctx.env.DB, 'pause', 0, 'admin')).draining).toBe(true);
       await expect(backupToR2(ctx.env.DB, ctx.env.BACKUP!, 'backup-lease', NOW)).rejects.toThrow(
         'D1 backup already running',
       );
@@ -395,6 +397,8 @@ describe('capacity safeguards', () => {
       release();
     }
     await first;
+    expect((await backupControl(ctx.env.DB)).draining).toBe(false);
+    await setBackupControl(ctx.env.DB, 'resume', 1, 'admin');
     expect(
       await ctx.env.DB.prepare("SELECT value FROM app_meta WHERE key='cron:backup:lease'").first(),
     ).toBeNull();

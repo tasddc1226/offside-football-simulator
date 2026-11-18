@@ -15,6 +15,7 @@ import {
   type BackupResult,
   type BackupState,
 } from './backup.js';
+import { BACKUP_CONTROL_KEY, setBackupControl } from './backupControl.js';
 import { cleanupExpired } from './cleanup.js';
 import { DAILY_META_KEY, runDaily } from './daily.js';
 import { archiveGrowth, KEEP_DAYS } from './growthArchive.js';
@@ -250,6 +251,21 @@ describe('T-10-070 D1 → R2 백업', () => {
       'd1/test/2026-09-20.sql.gz',
       chunkKey(backupKey('test', NOW), 1),
     ]);
+  });
+
+  it('정지 중에는 다음 조각을 쓰지 않고 기한이 지나면 같은 위치에서 이어 간다', async () => {
+    await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+    const step = () => runBackupStep(ctx.env.DB, bucket(), 'pause-test', NOW, { stepMs: 0 });
+    expect(await step()).toMatchObject({ chunk: 1 });
+    const cursor = await meta(BACKUP_STATE_KEY);
+    await setBackupControl(ctx.env.DB, 'pause', 0, 'admin');
+    expect(await step()).toBeNull();
+    expect(await meta(BACKUP_STATE_KEY)).toEqual(cursor);
+    await run(
+      "UPDATE app_meta SET value=json_set(value,'$.pausedUntil',0) WHERE key=?",
+      BACKUP_CONTROL_KEY,
+    );
+    expect(await step()).toMatchObject({ chunk: 2 });
   });
 
   it('T-11-274 5분 cron이 한 번에 한 조각씩 이어받고, 끝나면 기록을 남기며 같은 날은 다시 시작하지 않는다', async () => {

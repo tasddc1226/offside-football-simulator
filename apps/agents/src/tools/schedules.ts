@@ -37,7 +37,10 @@ export function scheduleTools(d: ScheduleDeps): Tool[] {
 
 /** 주기 작업 목록 모으기(schedules · report_digest가 같이 쓴다). */
 /** sinceMs: 그 뒤 예약 실행을 최대 runs번까지(기본 최근 5번). */
-export function scheduleData(d: ScheduleDeps, opt: { runs?: number; sinceMs?: number } = {}) {
+export function scheduleData(
+  d: ScheduleDeps,
+  opt: { runs?: number; sinceMs?: number; dashboard?: boolean } = {},
+) {
   const f = d.fetcher ?? fetch;
   const gh = async <T>(path: string): Promise<T> => {
     const r = await f(`https://api.github.com/repos/${d.repo}${path}`, {
@@ -51,25 +54,68 @@ export function scheduleData(d: ScheduleDeps, opt: { runs?: number; sinceMs?: nu
     return r.json() as Promise<T>;
   };
 
+  // Dashboard reads the main workflow directory in one call, including evidence of removed workflows.
+  async function dashboardInputs() {
+    const query = `query($owner:String!,$name:String!){repository(owner:$owner,name:$name){object(expression:"main:.github/workflows"){... on Tree{entries{name object{... on Blob{text}}}}}}}`;
+    const [owner, name] = d.repo.split('/');
+    const [files, runs] = await Promise.all([
+      f('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'offside-agents',
+          ...(await ghAuth(d.githubToken)),
+        },
+        body: JSON.stringify({ query, variables: { owner, name } }),
+      }),
+      gh<{ workflow_runs: (Run & { workflow_id: number })[] }>(
+        '/actions/runs?event=schedule&branch=main&per_page=100',
+      ),
+    ]);
+    const body = (await files.json()) as {
+      errors?: unknown[];
+      data?: {
+        repository?: { object?: { entries?: { name: string; object?: { text?: string } }[] } };
+      };
+    };
+    const entries = body.data?.repository?.object?.entries;
+    if (!files.ok || body.errors?.length || !entries)
+      throw new Error('Workflow definitions unavailable');
+    return {
+      files: new Map(entries.map((e) => ['.github/workflows/' + e.name, e.object?.text])),
+      runs: runs.workflow_runs,
+    };
+  }
+
   async function actions(now: number) {
-    const { workflows } = await gh<{
-      workflows: { id: number; name: string; path: string; state: string }[];
-    }>('/actions/workflows?per_page=100');
+    const [{ workflows }, dashboard] = await Promise.all([
+      gh<{ workflows: { id: number; name: string; path: string; state: string }[] }>(
+        '/actions/workflows?per_page=100',
+      ),
+      opt.dashboard ? dashboardInputs() : null,
+    ]);
     const out = [];
     for (const w of workflows.filter((x) => x.state === 'active')) {
-      const r = await f(`https://raw.githubusercontent.com/${d.repo}/main/${w.path}`);
-      if (!r.ok) continue;
-      const crons = [...(await r.text()).matchAll(/^\s*-\s*cron:\s*['"]([^'"]+)['"]/gm)].map(
-        (m) => m[1]!,
-      );
+      let yaml = dashboard?.files.get(w.path);
+      if (!dashboard) {
+        const r = await f(`https://raw.githubusercontent.com/${d.repo}/main/${w.path}`);
+        if (!r.ok) continue;
+        yaml = await r.text();
+      }
+      if (!yaml) continue;
+      const crons = [...yaml.matchAll(/^\s*-\s*cron:\s*['"]([^'"]+)['"]/gm)].map((m) => m[1]!);
       if (!crons.length) continue;
-      const { workflow_runs } = await gh<{ workflow_runs: Run[] }>(
-        `/actions/workflows/${w.id}/runs?event=schedule&per_page=${opt.runs ?? 5}${
-          opt.sinceMs
-            ? `&created=${encodeURIComponent(`>=${new Date(opt.sinceMs).toISOString()}`)}`
-            : ''
-        }`,
-      );
+      const workflow_runs = dashboard
+        ? dashboard.runs.filter((run) => run.workflow_id === w.id).slice(0, 5)
+        : (
+            await gh<{ workflow_runs: Run[] }>(
+              `/actions/workflows/${w.id}/runs?event=schedule&per_page=${opt.runs ?? 5}${
+                opt.sinceMs
+                  ? `&created=${encodeURIComponent(`>=${new Date(opt.sinceMs).toISOString()}`)}`
+                  : ''
+              }`,
+            )
+          ).workflow_runs;
       out.push({
         kind: 'github-actions',
         name: w.name,
@@ -105,7 +151,7 @@ export function scheduleData(d: ScheduleDeps, opt: { runs?: number; sinceMs?: nu
         errors?: { message: string }[];
         result?: { schedules: { cron: string }[] };
       };
-      if (!data.success) {
+      if (!data.success || !Array.isArray(data.result?.schedules)) {
         out.push({
           kind: 'worker-cron',
           worker: name,

@@ -69,6 +69,9 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     const user = await issueCookie(ctx);
     for (const [method, path] of [
       ['GET', '/v1/admin/stats'],
+      ['GET', '/v1/admin/schedules'],
+      ['GET', '/v1/admin/schedules/backup'],
+      ['POST', '/v1/admin/schedules/backup'],
       ['GET', '/v1/admin/comments'],
       ['POST', '/v1/admin/comments/purge'],
       ['GET', '/v1/admin/automation'],
@@ -84,6 +87,57 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
         path,
       ).toBe(403);
     }
+  });
+
+  it('주기 작업은 외부 조회가 실패해도 최근 완료 기록을 안전한 필드만 반환한다', async () => {
+    const admin = await makeAdmin();
+    env.SCHEDULE_DASHBOARD = {
+      snapshot: async () => {
+        throw new Error('unavailable');
+      },
+    };
+    const backup = { startedAt: 1000, finishedAt: 2000, steps: 3 };
+    await env.DB.prepare('INSERT INTO app_meta(key,value) VALUES(?,?)')
+      .bind('cron:backup:last', JSON.stringify({ ...backup, key: 'private' }))
+      .run();
+    const res = await call('GET', '/v1/admin/schedules', { cookie: admin.cookie });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Cache-Control')).toBe('private, no-store');
+    expect(await data(res)).toEqual({
+      observedAt: expect.any(Number),
+      sources: null,
+      daily: null,
+      backup,
+      backupRunningSince: null,
+      infra: null,
+    });
+  });
+
+  it('백업 제어는 관리자 이력을 남기고 오래된 화면의 작업을 거부한다', async () => {
+    const { cookie } = await makeAdmin();
+    const path = '/v1/admin/schedules/backup';
+    const change = (action: string, revision: number) =>
+      call('POST', path, { cookie, body: { action, revision } });
+    const prod = { ...env, ENVIRONMENT: 'production' };
+    const postFromDashboard = (route: string) =>
+      callJson(prod, 'POST', `https://api.offside-lab.com${route}`, {
+        cookie,
+        headers: { Origin: 'https://admin.offside-lab.com' },
+        body: { action: 'pause', revision: 0 },
+      });
+    expect((await postFromDashboard('/v1/admin/comments/purge')).status).toBe(403);
+    const pause = await postFromDashboard(path);
+    expect(pause.status).toBe(200);
+    const v = await data<import('@offside/contracts').BackupControl>(pause);
+    expect(v.pausedUntil - v.history[0]!.at).toBe(30 * 60_000);
+    expect(v.history[0]?.actor).toBeTruthy();
+    expect((await change('resume', 0)).status).toBe(409);
+    const resumed = await change('resume', 1);
+    expect(await data(resumed)).toMatchObject({
+      revision: 2,
+      pausedUntil: 0,
+      history: [{ action: 'resume' }, { action: 'pause' }],
+    });
   });
 
   it('T-11-263 아이템 지급·회수는 관리자만, 감사 기록·알림을 남기고 가진 것보다 많이는 못 뺀다', async () => {

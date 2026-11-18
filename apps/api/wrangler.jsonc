@@ -97,6 +97,13 @@
       },
     },
     "production": {
+      "services": [
+        {
+          "binding": "SCHEDULE_DASHBOARD",
+          "service": "offside-agents",
+          "entrypoint": "ScheduleDashboard",
+        },
+      ],
       "ratelimits": [
         {
           "name": "CLIENT_ERROR_LIMITER",
