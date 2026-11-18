@@ -1,7 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "offside-api",
-  "ratelimits": [{ "name": "CLIENT_ERROR_LIMITER", "namespace_id": "73001", "simple": { "limit": 12, "period": 60 } }],
+  "ratelimits": [
+    {
+      "name": "CLIENT_ERROR_LIMITER",
+      "namespace_id": "73001",
+      "simple": { "limit": 12, "period": 60 },
+    },
+  ],
   "main": "src/index.ts",
   "compatibility_date": "2026-09-02",
   "d1_databases": [
@@ -48,7 +54,13 @@
   },
   "env": {
     "staging": {
-      "ratelimits": [{ "name": "CLIENT_ERROR_LIMITER", "namespace_id": "73002", "simple": { "limit": 12, "period": 60 } }],
+      "ratelimits": [
+        {
+          "name": "CLIENT_ERROR_LIMITER",
+          "namespace_id": "73002",
+          "simple": { "limit": 12, "period": 60 },
+        },
+      ],
       "name": "offside-api-staging",
       // T-11-146 공지 번역 초안·댓글·채팅 번역 보기(src/translate). 로컬·테스트엔 두지 않는다(원격 호출) — 없으면 번역만 503.
       "ai": { "binding": "AI" },
@@ -85,7 +97,13 @@
       },
     },
     "production": {
-      "ratelimits": [{ "name": "CLIENT_ERROR_LIMITER", "namespace_id": "73003", "simple": { "limit": 12, "period": 60 } }],
+      "ratelimits": [
+        {
+          "name": "CLIENT_ERROR_LIMITER",
+          "namespace_id": "73003",
+          "simple": { "limit": 12, "period": 60 },
+        },
+      ],
       "name": "offside-api",
       "workers_dev": true,
       // T-11-385 invocation metrics already showed most fetches in SIN with Smart Placement.
