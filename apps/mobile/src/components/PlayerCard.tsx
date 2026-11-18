@@ -1,5 +1,5 @@
 import { RADIUS } from '@offside/app-core/design-tokens';
-import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, Text, View } from 'react-native';
 import Svg, {
   Circle,
@@ -42,6 +42,16 @@ import { Image as ExpoImage } from 'expo-image';
 import { CARD_FRAME_BOT, CARD_FRAME_TOP, cardShieldPath } from '@offside/app-core/cardFrame';
 import { cardFrame } from './cardFrameSources';
 
+/**
+ * T-11-755 카드를 그리는 배율. 크게 보여 주는 카드(PlayerPeek)는 transform scale로 키우지 않고 이 배율로 글씨 · 그림을 처음부터 그 크기로
+ * 그린다. scale로 키우면 작게 그린 그림을 늘리는 것이라 3D로 기울일 때 글씨 · 선수 그림이 흐려진다.
+ */
+const CardScale = createContext(1);
+const useZ = () => {
+  const k = useContext(CardScale);
+  return (n: number) => n * k;
+};
+
 /** Only overflowing names move; reduced motion keeps the full name accessible. */
 function CardName({
   name,
@@ -54,6 +64,7 @@ function CardName({
   animate: boolean;
   compact: boolean;
 }) {
+  const z = useZ();
   const { motionOK } = useSnapshot(prefs);
   const [width, setWidth] = useState(0);
   const [textWidth, setTextWidth] = useState(0);
@@ -79,8 +90,8 @@ function CardName({
     return () => loop.stop();
   }, [textWidth, width, name, motionOK, animate, offset]);
   const style = {
-    fontSize: compact ? 10.5 : 12,
-    lineHeight: compact ? 16 : 19,
+    fontSize: z(compact ? 10.5 : 12),
+    lineHeight: z(compact ? 16 : 19),
     fontWeight: '700' as const,
     color,
     includeFontPadding: false,
@@ -90,7 +101,7 @@ function CardName({
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       style={{
         width: '100%',
-        height: compact ? 18 : 23,
+        height: z(compact ? 18 : 23),
         overflow: 'hidden',
         justifyContent: 'center',
       }}
@@ -99,7 +110,7 @@ function CardName({
         accessible={false}
         maxFontSizeMultiplier={1.2}
         onTextLayout={(e) => setTextWidth(e.nativeEvent.lines[0]?.width ?? 0)}
-        style={[style, { position: 'absolute', width: 2000, opacity: 0 }]}
+        style={[style, { position: 'absolute', width: z(2000), opacity: 0 }]}
       >
         {name}
       </Text>
@@ -441,15 +452,16 @@ function EnhanceFxPulse({
 
 /** T-11-373 강화 단계 알약. */
 function EnhancePill({ level, compact, fx }: { level: number; compact: boolean; fx: EnhanceFx }) {
+  const z = useZ();
   return (
     <View
       testID="card-enhance"
       style={{
-        paddingHorizontal: compact ? 4 : 6,
-        paddingVertical: 1,
-        borderRadius: 999,
+        paddingHorizontal: z(compact ? 4 : 6),
+        paddingVertical: z(1),
+        borderRadius: z(999),
         backgroundColor: fx.stops[Math.floor((fx.stops.length - 1) / 2)],
-        borderWidth: 1,
+        borderWidth: z(1),
         borderColor: '#ffffff88',
       }}
     >
@@ -458,7 +470,7 @@ function EnhancePill({ level, compact, fx }: { level: number; compact: boolean; 
         style={{
           color: fx.badgeInk,
           fontWeight: '800',
-          fontSize: compact ? 8 : 11,
+          fontSize: z(compact ? 8 : 11),
           includeFontPadding: false,
         }}
       >
@@ -483,11 +495,12 @@ function EnhanceBadge({
   mini: boolean;
   fx: EnhanceFx;
 }) {
+  const z = useZ();
   const place = !compact
-    ? { top: 44, left: 44 }
+    ? { top: z(44), left: z(44) }
     : mini
-      ? { top: 50, right: 4 }
-      : { top: 64, left: 0, right: 0, alignItems: 'center' as const };
+      ? { top: z(50), right: z(4) }
+      : { top: z(64), left: 0, right: 0, alignItems: 'center' as const };
   return (
     <View pointerEvents="none" style={{ position: 'absolute', ...place }}>
       <EnhancePill level={level} compact={compact} fx={fx} />
@@ -497,7 +510,8 @@ function EnhanceBadge({
 
 /** T-11-188 잠긴 선수 자물쇠(웹 PlayerCard .card-lock). */
 function LockBadge({ compact }: { compact: boolean }) {
-  const size = compact ? 14 : 22;
+  const z = useZ();
+  const size = z(compact ? 14 : 22);
   return (
     <View
       accessibilityRole="image"
@@ -505,19 +519,19 @@ function LockBadge({ compact }: { compact: boolean }) {
       style={{
         position: 'absolute',
         // 작은 카드는 등번호를 가리지 않게 국기 위 모서리에 둔다.
-        top: compact ? -3 : 30,
-        right: compact ? 1 : 11,
+        top: z(compact ? -3 : 30),
+        right: z(compact ? 1 : 11),
         width: size,
         height: size,
         borderRadius: size / 2,
         backgroundColor: '#000000aa',
-        borderWidth: 1,
+        borderWidth: z(1),
         borderColor: '#ffffff66',
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <Svg width={compact ? 9 : 13} height={compact ? 9 : 13} viewBox="0 0 16 16">
+      <Svg width={z(compact ? 9 : 13)} height={z(compact ? 9 : 13)} viewBox="0 0 16 16">
         <Rect x="3" y="7" width="10" height="7" rx="1.5" fill="#fff" />
         <Path
           d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"
@@ -533,12 +547,13 @@ function LockBadge({ compact }: { compact: boolean }) {
 
 /** T-11-114 카드 시즌 뱃지(웹 PlayerCard .card-season) — 카드 위쪽 가운데. */
 function SeasonBadge({ season, compact }: { season: number; compact: boolean }) {
+  const z = useZ();
   return (
     <View
       pointerEvents="none"
       style={{
         position: 'absolute',
-        top: compact ? 2 : 8,
+        top: z(compact ? 2 : 8),
         left: 0,
         right: 0,
         alignItems: 'center',
@@ -547,11 +562,11 @@ function SeasonBadge({ season, compact }: { season: number; compact: boolean }) 
       <View
         accessibilityLabel={teamSeasonLabel(season)}
         style={{
-          paddingHorizontal: compact ? 3 : 5,
-          paddingVertical: 1,
-          borderRadius: 3,
+          paddingHorizontal: z(compact ? 3 : 5),
+          paddingVertical: z(1),
+          borderRadius: z(3),
           backgroundColor: cardSeasonColor(season),
-          borderWidth: 0.5,
+          borderWidth: z(0.5),
           borderColor: '#ffffff55',
         }}
       >
@@ -559,10 +574,10 @@ function SeasonBadge({ season, compact }: { season: number; compact: boolean }) 
           maxFontSizeMultiplier={1.1}
           style={{
             color: '#fff',
-            fontSize: compact ? 7 : 9,
-            lineHeight: compact ? 9 : 11,
+            fontSize: z(compact ? 7 : 9),
+            lineHeight: z(compact ? 9 : 11),
             fontWeight: '800',
-            letterSpacing: 0.5,
+            letterSpacing: z(0.5),
             includeFontPadding: false,
           }}
         >
@@ -575,6 +590,7 @@ function SeasonBadge({ season, compact }: { season: number; compact: boolean }) 
 
 /** T-11-372 시즌 특별 카드 띠(웹 PlayerCard .card-special) — 작은 카드는 아래쪽에 겹치고, 큰 카드는 맨 아래 줄. */
 function SpecialBadge({ ribbon, compact }: { ribbon: SpecialRibbon; compact: boolean }) {
+  const z = useZ();
   const color = ribbon.color;
   return (
     <View
@@ -583,8 +599,8 @@ function SpecialBadge({ ribbon, compact }: { ribbon: SpecialRibbon; compact: boo
       pointerEvents="none"
       style={
         compact
-          ? { position: 'absolute', bottom: 3, left: 0, right: 0, alignItems: 'center' }
-          : { width: '100%', alignItems: 'center', marginTop: 4 }
+          ? { position: 'absolute', bottom: z(3), left: 0, right: 0, alignItems: 'center' }
+          : { width: '100%', alignItems: 'center', marginTop: z(4) }
       }
     >
       <Text
@@ -593,14 +609,14 @@ function SpecialBadge({ ribbon, compact }: { ribbon: SpecialRibbon; compact: boo
         style={{
           maxWidth: '92%',
           overflow: 'hidden',
-          paddingHorizontal: compact ? 4 : 8,
-          borderRadius: 3,
+          paddingHorizontal: z(compact ? 4 : 8),
+          borderRadius: z(3),
           backgroundColor: color.bg,
           color: color.ink,
-          fontSize: compact ? 7 : 10,
-          lineHeight: compact ? 10 : 15,
+          fontSize: z(compact ? 7 : 10),
+          lineHeight: z(compact ? 10 : 15),
           fontWeight: '800',
-          letterSpacing: 0.3,
+          letterSpacing: z(0.3),
           includeFontPadding: false,
         }}
       >
@@ -616,20 +632,21 @@ const CARD_STATS = {
 } as const;
 
 function CardAttributes({ cell, color }: { cell: PlayerCardData; color: string }) {
+  const z = useZ();
   const order = CARD_STATS[cell.pos === 'GK' ? 'GK' : 'field'];
   const labels = cell.pos === 'GK' ? GK_ABBR : FACE_ABBR;
   const foot = cardFootNote(cell);
   return (
-    <View style={{ width: '100%', marginTop: 8 }}>
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: 4 }}>
+    <View style={{ width: '100%', marginTop: z(8) }}>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', rowGap: z(4) }}>
         {order.map((key) => (
-          <View key={key} style={{ width: '33.333%', height: 34, alignItems: 'center' }}>
+          <View key={key} style={{ width: '33.333%', height: z(34), alignItems: 'center' }}>
             <Text
               maxFontSizeMultiplier={1.15}
               style={{
                 color,
-                fontSize: 10,
-                lineHeight: 12,
+                fontSize: z(10),
+                lineHeight: z(12),
                 fontWeight: '600',
                 includeFontPadding: false,
               }}
@@ -643,8 +660,8 @@ function CardAttributes({ cell, color }: { cell: PlayerCardData; color: string }
               style={{
                 color,
                 fontFamily: DISPLAY[700],
-                fontSize: 19,
-                lineHeight: 22,
+                fontSize: z(19),
+                lineHeight: z(22),
                 includeFontPadding: false,
               }}
             >
@@ -656,7 +673,13 @@ function CardAttributes({ cell, color }: { cell: PlayerCardData; color: string }
       {foot ? (
         <Text
           maxFontSizeMultiplier={1.15}
-          style={{ color, fontSize: 10, lineHeight: 14, textAlign: 'center', marginTop: 4 }}
+          style={{
+            color,
+            fontSize: z(10),
+            lineHeight: z(14),
+            textAlign: 'center',
+            marginTop: z(4),
+          }}
         >
           {foot}
         </Text>
@@ -679,6 +702,7 @@ export function PlayerCard({
   compact = false,
   mini = false,
   animate = true,
+  scale = 1,
 }: {
   cell: PlayerCardData;
   code: string;
@@ -686,7 +710,30 @@ export function PlayerCard({
   /** 이적시장 목록용 — compact에서 이름 줄을 뺀다(이름은 줄 옆에 따로 나온다). */
   mini?: boolean;
   animate?: boolean;
+  /** T-11-755 글씨 · 그림을 이 배율로 그린다(크게 보여 주는 카드). */
+  scale?: number;
 }) {
+  return (
+    <CardScale.Provider value={scale}>
+      <CardBody cell={cell} code={code} compact={compact} mini={mini} animate={animate} />
+    </CardScale.Provider>
+  );
+}
+
+function CardBody({
+  cell,
+  code,
+  compact,
+  mini,
+  animate,
+}: {
+  cell: PlayerCardData;
+  code: string;
+  compact: boolean;
+  mini: boolean;
+  animate: boolean;
+}) {
+  const z = useZ();
   const portrait = useMemo(
     () =>
       !cell.youth && cell.careerId
@@ -700,8 +747,10 @@ export function PlayerCard({
   // T-11-753 등급 틀 그림(Blender 렌더, 위 · 가운데 · 아래).
   const frame = cardFrame(tier);
   const uid = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const [cardWidth, setCardWidth] = useState(compact ? 62 : 100);
-  const shirtWidth = compact ? 25 : Math.min(43, Math.max(24, cardWidth - 56));
+  const [cardWidth, setCardWidth] = useState(z(compact ? 62 : 100));
+  // 그림 크기는 배율 전 너비(cw)로 고르고 배율을 곱한다.
+  const cw = cardWidth / z(1);
+  const shirtWidth = z(compact ? 25 : Math.min(43, Math.max(24, cw - 56)));
   // 자리 OVR은 제 자리가 아닐 때만 — 같으면 같은 숫자가 두 번 보인다. 강화 OVR만큼 높은 것은 +N 배지로 안다(웹 PlayerCard).
   const level = cell.youth ? 0 : (cell.enhance ?? 0);
   const deployed = cell.peak !== undefined && showsPosOvr(cell.peak, cell.rating, level);
@@ -712,15 +761,17 @@ export function PlayerCard({
   const special = ribbon?.color ?? null;
   // T-11-373 강화 단계 효과(등급 색 위에 입힌다).
   const fx = enhanceFx(level);
-  const height = compact
-    ? mini
-      ? 68
-      : 88
-    : CARD_HEIGHT +
-      (deployed ? 31 : 0) +
-      (style ? CARD_STYLE_ROW : 0) +
-      (body ? CARD_BODY_ROW : 0) +
-      (ribbon ? CARD_SPECIAL_ROW : 0);
+  const height = z(
+    compact
+      ? mini
+        ? 68
+        : 88
+      : CARD_HEIGHT +
+          (deployed ? 31 : 0) +
+          (style ? CARD_STYLE_ROW : 0) +
+          (body ? CARD_BODY_ROW : 0) +
+          (ribbon ? CARD_SPECIAL_ROW : 0),
+  );
   // 방패 모양은 틀 그림과 같게 너비 기준으로 잡는다(viewBox 0 0 100 174 좌표).
   const shield = cardShieldPath(cardWidth, height);
   return (
@@ -729,8 +780,8 @@ export function PlayerCard({
       style={{
         width: '100%',
         height,
-        paddingHorizontal: compact ? 5 : 8,
-        paddingTop: compact ? 8 : 22,
+        paddingHorizontal: z(compact ? 5 : 8),
+        paddingTop: z(compact ? 8 : 22),
         alignItems: 'center',
       }}
     >
@@ -783,12 +834,12 @@ export function PlayerCard({
         style={{
           flexDirection: 'row',
           width: '100%',
-          height: compact ? 34 : 72 + (body ? CARD_BODY_ROW : 0),
+          height: z(compact ? 34 : 72 + (body ? CARD_BODY_ROW : 0)),
           alignItems: 'flex-start',
           justifyContent: 'space-between',
         }}
       >
-        <View style={{ alignItems: 'center', width: compact ? 25 : 36 }}>
+        <View style={{ alignItems: 'center', width: z(compact ? 25 : 36) }}>
           <Text
             numberOfLines={1}
             adjustsFontSizeToFit={!compact}
@@ -796,8 +847,8 @@ export function PlayerCard({
             maxFontSizeMultiplier={1.1}
             style={{
               fontFamily: DISPLAY[800],
-              fontSize: compact ? ((cell.peak ?? cell.rating) >= 100 ? 17 : 22) : 32,
-              lineHeight: compact ? 24 : 39,
+              fontSize: z(compact ? ((cell.peak ?? cell.rating) >= 100 ? 17 : 22) : 32),
+              lineHeight: z(compact ? 24 : 39),
               width: '100%',
               textAlign: 'center',
               color: tone.ink,
@@ -811,8 +862,8 @@ export function PlayerCard({
             maxFontSizeMultiplier={1.1}
             style={{
               fontFamily: DISPLAY[700],
-              fontSize: compact ? 9 : 12,
-              lineHeight: compact ? 10 : 15,
+              fontSize: z(compact ? 9 : 12),
+              lineHeight: z(compact ? 10 : 15),
               color: tone.ink,
               includeFontPadding: false,
             }}
@@ -823,7 +874,12 @@ export function PlayerCard({
             <Text
               accessibilityLabel={L.nationAria({ name: tn(country.ko) })}
               maxFontSizeMultiplier={1.1}
-              style={{ fontSize: 18, lineHeight: 18, marginTop: 2, includeFontPadding: false }}
+              style={{
+                fontSize: z(18),
+                lineHeight: z(18),
+                marginTop: z(2),
+                includeFontPadding: false,
+              }}
             >
               {flagOf(country.code)}
             </Text>
@@ -831,7 +887,7 @@ export function PlayerCard({
         </View>
         <View
           style={{
-            marginTop: compact ? 4 : 9,
+            marginTop: z(compact ? 4 : 9),
             alignItems: 'center',
             flex: compact ? undefined : 1,
             minWidth: 0,
@@ -840,15 +896,15 @@ export function PlayerCard({
           {portrait ? (
             <View
               style={{
-                width: compact ? 27 : Math.min(76, Math.max(32, cardWidth - 56)),
-                height: compact ? 24 : 48,
+                width: z(compact ? 27 : Math.min(76, Math.max(32, cw - 56))),
+                height: z(compact ? 24 : 48),
                 alignItems: 'center',
                 justifyContent: 'flex-end',
               }}
             >
               <PixelAvatar
                 spec={portrait}
-                width={compact ? 27 : Math.min(54, Math.max(32, cardWidth - 56))}
+                width={z(compact ? 27 : Math.min(54, Math.max(32, cw - 56)))}
                 portrait
               />
               {cell.number != null ? (
@@ -859,12 +915,12 @@ export function PlayerCard({
                     position: 'absolute',
                     right: 0,
                     bottom: 0,
-                    paddingHorizontal: 2,
-                    borderRadius: 2,
+                    paddingHorizontal: z(2),
+                    borderRadius: z(2),
                     color: tone.light,
                     backgroundColor: tone.ink,
-                    fontSize: compact ? 7 : 10,
-                    lineHeight: compact ? 9 : 12,
+                    fontSize: z(compact ? 7 : 10),
+                    lineHeight: z(compact ? 9 : 12),
                     fontFamily: DISPLAY[700],
                     includeFontPadding: false,
                   }}
@@ -886,14 +942,14 @@ export function PlayerCard({
                 width: '100%',
                 textAlign: 'center',
                 color: tone.ink,
-                fontSize: 9,
-                lineHeight: 13,
-                marginTop: 3,
+                fontSize: z(9),
+                lineHeight: z(13),
+                marginTop: z(3),
                 includeFontPadding: false,
               }}
             >
               LS{' '}
-              <Text style={{ fontFamily: DISPLAY[700], fontSize: 11 }}>
+              <Text style={{ fontFamily: DISPLAY[700], fontSize: z(11) }}>
                 {cell.legendScore.toLocaleString(intlLocale())}
               </Text>
             </Text>
@@ -909,8 +965,8 @@ export function PlayerCard({
                 width: '100%',
                 textAlign: 'center',
                 color: tone.ink,
-                fontSize: 8,
-                lineHeight: 11,
+                fontSize: z(8),
+                lineHeight: z(11),
                 fontWeight: '700',
                 includeFontPadding: false,
               }}
@@ -926,10 +982,10 @@ export function PlayerCard({
           maxFontSizeMultiplier={1.1}
           style={{
             position: 'absolute',
-            top: 11,
-            right: 5,
-            fontSize: 11,
-            lineHeight: 13,
+            top: z(11),
+            right: z(5),
+            fontSize: z(11),
+            lineHeight: z(13),
             includeFontPadding: false,
           }}
         >
@@ -947,11 +1003,11 @@ export function PlayerCard({
         <View
           style={{
             width: '100%',
-            marginTop: compact ? 1 : 3,
-            paddingHorizontal: 1,
+            marginTop: z(compact ? 1 : 3),
+            paddingHorizontal: z(1),
             // 0.5pt 선은 3D 팝업에서 기울면 점선처럼 끊겨 보여 큰 카드는 1pt로 둔다.
-            borderTopWidth: compact ? 0.5 : 1,
-            borderBottomWidth: compact ? 0.5 : 1,
+            borderTopWidth: z(compact ? 0.5 : 1),
+            borderBottomWidth: z(compact ? 0.5 : 1),
             borderColor: tone.line,
           }}
         >
@@ -964,16 +1020,16 @@ export function PlayerCard({
           numberOfLines={1}
           maxFontSizeMultiplier={1.1}
           style={{
-            marginTop: 3,
+            marginTop: z(3),
             maxWidth: '100%',
-            paddingHorizontal: 7,
-            borderWidth: 0.5,
+            paddingHorizontal: z(7),
+            borderWidth: z(0.5),
             borderColor: tone.line,
             borderRadius: RADIUS.pill,
             overflow: 'hidden',
             color: tone.ink,
-            fontSize: 10,
-            lineHeight: 15,
+            fontSize: z(10),
+            lineHeight: z(15),
             fontWeight: '700',
             includeFontPadding: false,
           }}
@@ -982,26 +1038,26 @@ export function PlayerCard({
         </Text>
       ) : null}
       {deployed ? (
-        <View style={{ alignItems: 'center', marginTop: 2 }}>
+        <View style={{ alignItems: 'center', marginTop: z(2) }}>
           <Text
             maxFontSizeMultiplier={1.1}
             style={{
               color: tone.ink,
-              fontSize: compact ? 7.5 : 10,
-              lineHeight: compact ? 9 : 12,
+              fontSize: z(compact ? 7.5 : 10),
+              lineHeight: z(compact ? 9 : 12),
               includeFontPadding: false,
             }}
           >
             {L.posOvrLabel}
           </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: z(2) }}>
             <Text
               maxFontSizeMultiplier={1.1}
               style={{
                 color: tone.ink,
                 fontFamily: DISPLAY[700],
-                fontSize: compact ? 12 : 14,
-                lineHeight: compact ? 12 : 17,
+                fontSize: z(compact ? 12 : 14),
+                lineHeight: z(compact ? 12 : 17),
                 includeFontPadding: false,
               }}
             >

@@ -24,10 +24,10 @@
   let closeButton = $state<HTMLButtonElement>();
   let closing = false;
   // 라커룸 카드와 같은 폭(CARD_W)으로 그려 글자·여백 비율을 같게 두고, 화면에 맞춰 통째로 키운다.
+  // T-11-755 키우기는 CSS zoom이다. transform scale로 키우면 기울이는 동안 작은 그림을 늘려 글씨 · 선수 그림이 흐려진다.
   const CARD_W = 155;
   let zoom = $state(1);
-  let cardH = $state(0);
-  const rest = $derived(`scale(${zoom})`);
+  const rest = 'none';
   // T-11-753 3D 기울기 — 누르거나 마우스를 올린 자리 쪽으로 카드가 눕고, 그 자리에 빛이 맺힌다. 움직임 줄이기면 끈다.
   let tilt = $state<HTMLElement>();
   let rx = $state(0);
@@ -58,7 +58,7 @@
     rx = (0.5 - y) * 2 * MAX_X;
     sx = x * 100;
     sy = y * 100;
-    so = 0.85;
+    so = 0.6;
   }
   function settle() {
     live = false;
@@ -88,15 +88,14 @@
   function fromOrigin(): { transform: string; opacity: number } {
     const a = origin.getBoundingClientRect();
     const b = card!.getBoundingClientRect();
-    return { transform: `translate(${a.left + a.width / 2 - (b.left + b.width / 2)}px,${a.top + a.height / 2 - (b.top + b.height / 2)}px) scale(${a.width / card!.offsetWidth})`, opacity: 0.6 };
+    return { transform: `translate(${a.left + a.width / 2 - (b.left + b.width / 2)}px,${a.top + a.height / 2 - (b.top + b.height / 2)}px) scale(${a.width / b.width})`, opacity: 0.6 };
   }
 
   onMount(() => {
     // body로 옮겨 그라운드의 overflow·쌓임 맥락 밖에서 띄운다.
     const root = card!.closest<HTMLElement>('[data-peek-root]')!;
     document.body.append(root);
-    cardH = card!.offsetHeight;
-    zoom = Math.max(1, Math.min(1.5, (innerWidth - 40) / CARD_W, (innerHeight - 170) / cardH));
+    zoom = Math.max(1, Math.min(1.5, (innerWidth - 40) / CARD_W, (innerHeight - 170) / card!.offsetHeight));
     closeButton?.focus({ preventScroll: true });
     // 확대·여백이 그려진 뒤의 자리에서 출발점을 잰다(그리기 전이라 깜빡이지 않는다).
     void tick().then(() => {
@@ -134,14 +133,14 @@
   <button class="peek-backdrop" tabindex="-1" aria-hidden="true" onclick={close}></button>
   <div class="peek-body" role="dialog" aria-modal="true" aria-label={L.peekAria({ name })} data-player-peek>
     <!-- 라커룸 카드와 같은 내용(최고 OVR·본래 포지션). 이 자리에서의 값은 카드 아래 줄에. -->
-    <div class="peek-card" bind:this={card} style:transform={rest} style:--grow="{(cardH * (zoom - 1)) / 2}px" style:--grow-x="{(CARD_W * (zoom - 1)) / 2}px">
+    <div class="peek-card" bind:this={card}><div class="peek-zoom" style:zoom>
       <div class="peek-3d" class:live class:idle={idle && !live && dur(1) > 0} bind:this={tilt} role="presentation" data-peek-tilt style:--rx="{rx}deg" style:--ry="{ry}deg" style:--shine-x="{sx}%" style:--shine-y="{sy}%" style:--shine-o={so}
         onpointerdown={(e) => { tilt?.setPointerCapture(e.pointerId); lean(e); }} onpointercancel={settle} onpointerup={(e) => { if (e.pointerType !== 'mouse') settle(); }}>
         <!-- 판 두께: 카드 뒤에 같은 방패 모양을 몇 장 겹쳐 기울면 옆면이 보인다. -->
         <span class="peek-edge" style:--z="-2px" aria-hidden="true"></span><span class="peek-edge" style:--z="-4px" aria-hidden="true"></span><span class="peek-edge" style:--z="-6px" aria-hidden="true"></span>
         <div class="peek-lift"><PlayerCard {player} {name} {nation} {season} rating={player.peak} role={detailPosOf(player)} shine /></div>
       </div>
-    </div>
+    </div></div>
     {#if slot != null && fit != null}<p class="peek-slot"><b>{tn(DETAIL_LABEL[slot])}</b>{L.pitchRatingFull({ peak: player.peak, rating, fit })}</p>{/if}
     <div class="peek-actions">
       {#if onenhance && player.cardValue != null}<button class="peek-close peek-share" data-act="player-enhance" onclick={enhance}>{CE.go}</button>{/if}
@@ -157,17 +156,17 @@
   :global(.peek.leaving) .peek-backdrop {opacity:0;transition:opacity .2s;}
   :global(.peek.leaving) .peek-close {opacity:0;}
   .peek-body {position:relative;display:flex;flex-direction:column;align-items:center;gap:14px;}
-  /* 확대는 transform이라 자리를 차지하지 않는다 — 늘어난 만큼 위아래·좌우 여백으로 밀어 준다. */
   /* T-11-753 3D. 원근 · 그림자는 바깥(.peek-card)이 맡는다(filter가 안쪽 3D를 납작하게 만들기 때문). 기울기는 손을 떼면 천천히, 움직이는 동안은 바로 따라온다.
-     카드 뒤 방패(.peek-edge) 세 장이 판 두께, 누르면 카드가 앞으로 뜬다(.peek-lift), 쉬는 동안은 천천히 흔들린다(--sway). */
-  .peek-card {width:155px;margin:var(--grow,0) var(--grow-x,0);transform-origin:center;will-change:transform;perspective:520px;filter:drop-shadow(0 16px 18px #000a);}
+     카드 뒤 방패(.peek-edge) 세 장이 판 두께, 쉬는 동안은 천천히 흔들린다(--sway).
+     T-11-755 누를 때 앞으로 띄우지 않는다(translateZ는 그림을 늘려 흐리게 만든다). will-change도 두지 않는다(처음 그린 해상도에 묶인다). */
+  .peek-card {transform-origin:center;filter:drop-shadow(0 16px 18px #000a);}
+  .peek-zoom {width:155px;perspective:520px;}
   @property --sway {syntax:'<angle>';inherits:false;initial-value:0deg;}
   .peek-3d {--t:.5s cubic-bezier(.2,.8,.3,1);position:relative;transform:rotateX(calc(var(--rx,0deg) + var(--sway) * .4)) rotateY(calc(var(--ry,0deg) + var(--sway)));transform-style:preserve-3d;transition:transform var(--t);touch-action:none;cursor:grab;}
   .peek-3d.live {--t:.08s linear;cursor:grabbing;}
   .peek-3d.idle {animation:peek-sway 4.2s ease-in-out infinite alternate;}
   @keyframes peek-sway {from {--sway:-7deg;} to {--sway:7deg;}}
-  .peek-lift {transform:translateZ(0);transform-style:preserve-3d;transition:transform var(--t);}
-  .peek-3d.live .peek-lift {transform:translateZ(16px);}
+  .peek-lift {transform-style:preserve-3d;}
   .peek-edge {position:absolute;inset:0;transform:translateZ(var(--z));background:linear-gradient(160deg,#6b5326,#1c140a);clip-path:polygon(0 24.2px,15.625% 24.2px,23.958% 9.7px,50% 3.2px,76.042% 9.7px,84.375% 24.2px,100% 24.2px,98.958% calc(100% - 42px),89.583% calc(100% - 22.6px),50% calc(100% - 3.2px),10.417% calc(100% - 22.6px),1.042% calc(100% - 42px));}
   
   .peek-slot {margin:0;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center;color:#fff;font-size:12px;line-height:1.5;opacity:.9;}
@@ -177,5 +176,5 @@
   .peek-share {background:var(--accent);border-color:var(--accent);color:var(--on-accent,#10231a);}
   .peek-close:focus-visible {outline:3px solid var(--accent);outline-offset:3px;}
   @keyframes peek-fade {from {opacity:0;}}
-  @media(prefers-reduced-motion:reduce) { .peek-backdrop,.peek-close {animation:none;} .peek-3d,.peek-lift {transform:none;transition:none;cursor:auto;animation:none;} .peek-edge {display:none;} }
+  @media(prefers-reduced-motion:reduce) { .peek-backdrop,.peek-close {animation:none;} .peek-3d {transform:none;transition:none;cursor:auto;animation:none;} .peek-edge {display:none;} }
 </style>
