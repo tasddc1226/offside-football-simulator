@@ -4,8 +4,6 @@ import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
 import { runBackupStep } from './cron/backup.js';
-import { runSnapshotOffload } from './careerSnapshots.js';
-import { runMainClubBackfill } from './db/repos/mainClub.js';
 import { runDailyTick } from './cron/dailyRunner.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
 import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
@@ -250,18 +248,6 @@ export default {
           })
           .catch(logged('backup'));
       mark('runBackupStep');
-      // T-11-467 이 기능 전에 은퇴한 선수의 주 리그 · 클럽을 조금씩 채운다(다 채우면 멈춘다).
-      await runMainClubBackfill(env.DB)
-        .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'main-club', ...r })))
-        .catch(logged('main-club'));
-      mark('runMainClubBackfill');
-      // T-11-311 이 기능 전에 은퇴한 기록의 상세 스냅샷을 D1에서 R2로 조금씩 옮긴다(다 옮기면 멈춘다).
-      await runSnapshotOffload(env)
-        .then(
-          (r) => r && console.log(JSON.stringify({ level: 'info', job: 'snapshot-offload', ...r })),
-        )
-        .catch(logged('snapshot-offload'));
-      mark('runSnapshotOffload');
       if (env.AUTOMATION_HIDE_DISABLED !== '1')
         await sweepAutomation(env.DB, controller.scheduledTime, true).catch(logged('automation'));
       mark('sweepAutomation');
