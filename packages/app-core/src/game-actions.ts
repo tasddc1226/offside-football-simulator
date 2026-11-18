@@ -69,6 +69,7 @@ import type {
   OfferOption,
   RenewOption,
 } from '@offside/game/types';
+import { eventChips } from './chipValue.js';
 import { markDexSeen } from './dex.js';
 import { clearPhaseReport, keepPhaseReport, pushEvLog, seasonLabel } from './career.js';
 import { scoutHint, seasonTrend, seasonTrendLine } from './scoutHint.js';
@@ -429,7 +430,7 @@ export function createGameActions(host: GameHost) {
         outcome: r.p < 1 ? (r.ok ? L.outcomeOk : L.outcomeFail) : L.outcomeDecided,
         ok: r.ok,
         text: r.text,
-        chips: r.chips,
+        chips: eventChips(r.chips),
         twist: r.twist || null,
         story: r.story && {
           ...r.story,

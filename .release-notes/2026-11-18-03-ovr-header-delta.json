@@ -1,0 +1,30 @@
+{
+  "id": "t-11-756-ovr-header-delta",
+  "title": "OVR 변화가 선수 정보에서 바로 보여요",
+  "items": [
+    "OVR이 오르내리면 선수 정보의 OVR 숫자가 튀고, 옆에 오른 폭(+2)이나 내린 폭(−1)이 잠깐 떠요.",
+    "이벤트 결과 창을 닫으면 그동안 바뀐 OVR을 한 번에 보여 줘요. 결과 창의 OVR 칩은 뺐어요."
+  ],
+  "en": {
+    "title": "OVR changes show right on the player header",
+    "items": [
+      "When OVR goes up or down, the number on the player header pops and the change (+2 or −1) appears next to it for a moment.",
+      "Closing an event result now shows the OVR change all at once. The OVR chip in the result sheet is gone."
+    ]
+  },
+  "ja": {
+    "title": "OVRの変化が選手情報ですぐ分かります",
+    "items": [
+      "OVRが上下すると、選手情報のOVRの数字が弾み、横に変化した分(+2や−1)がしばらく表示されます。",
+      "イベント結果を閉じると、その間のOVRの変化をまとめて表示します。結果画面のOVRチップはなくしました。"
+    ]
+  },
+  "zh": {
+    "title": "OVR 變化直接顯示在球員資訊上",
+    "items": [
+      "OVR 上升或下降時，球員資訊的 OVR 數字會跳動，旁邊短暫顯示變化幅度（+2 或 −1）。",
+      "關閉事件結果後，會一次顯示這段期間的 OVR 變化。結果視窗的 OVR 標籤已移除。"
+    ]
+  },
+  "availability": "web-app"
+}

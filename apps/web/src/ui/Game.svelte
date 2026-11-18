@@ -1,6 +1,7 @@
 <script lang="ts">
   import { tn } from '@offside/game/i18n/names';
   // ui.ts renderGame() 포트 (207~222줄)
+  import { untrack } from 'svelte';
   import { fly } from 'svelte/transition';
   import { Tween } from 'svelte/motion';
   import { posLabel } from '@offside/game/data';
@@ -27,6 +28,8 @@
   import { marketValue } from '@offside/game/season';
   import { fmtValue } from '@offside/app-core/format';
   import { seasonAction } from '@offside/app-core/seasonAction';
+  import { nextOvrShown, ovrDeltaText, OVR_DELTA_MS, type OvrShown } from '@offside/app-core/ovr-delta';
+  import { sheetState } from './sheetState.svelte.js';
   import { gameText as T } from '@offside/app-core/i18n/ko/game';
   import { notePlayerVisit, playerNudge } from '@offside/app-core/player-nudge';
   import { avatarSpec } from '@offside/game/avatar';
@@ -48,7 +51,22 @@
   const s = $derived(appState.G!);
   // OVR 숫자 트윈(T-10-003 goal 3): 훈련·이벤트 결과로 능력치가 바뀔 때마다 즉시 점프하는 대신
   // 짧게 카운트업/다운한다. 감속 모션이면 duration 0으로 즉시 반영(기존 동작과 동일).
-  const ovrTween = Tween.of(() => ovr(s), { duration: dur(420) });
+  // T-11-756 시트(이벤트 결과 · 경기 중계)가 헤더를 덮는 동안은 숫자를 붙잡아 두고, 닫히면 그동안의 변화를 한 번에
+  // 알린다: 숫자가 튀고 옆에 +2 · −1이 잠깐 뜬다. 동작 줄이기면 움직임 없이 글자만 떴다 사라진다.
+  let ovrShown = $state<OvrShown>(untrack(() => nextOvrShown(null, s.cid, ovr(s), false)));
+  let ovrBadge = $state<{ d: number; seq: number } | null>(null);
+  $effect(() => {
+    const next = nextOvrShown(untrack(() => ovrShown), s.cid, ovr(s), sheetState.open);
+    if (next !== untrack(() => ovrShown)) ovrShown = next;
+  });
+  $effect(() => {
+    const { delta: d, seq } = ovrShown;
+    if (!seq) return void (ovrBadge = null);
+    ovrBadge = { d, seq };
+    const id = setTimeout(() => (ovrBadge = null), OVR_DELTA_MS);
+    return () => clearTimeout(id);
+  });
+  const ovrTween = Tween.of(() => ovrShown.n, { duration: dur(420) });
   const L = $derived(leagueOf(s.leagueId));
   const role = $derived(roleOf(s));
   // T-10-100 연봉 옆에 몸값(이적료 기준)을 같이 둔다 — 연봉을 몸값으로 읽지 않게.
@@ -125,7 +143,11 @@
       <div class="name-row"><h1>{s.name}</h1><button class="name-edit" data-act="rename-open" aria-label={RN.entryLabel({ name: s.name })} onclick={() => (renameOpen = true)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /></svg></button></div>
       <div class="meta">{T.age({ n: s.age })} · <ClubBadge club={s.club} size={16} /> {tn(s.club.name)}<br />{tn(L.name)}{contract ? ` · ${contract}` : ''}</div>
     </div>
-    <div class="ovr"><div class="n num">{Math.round(ovrTween.current)}</div><div class="l">OVR</div></div>
+    <div class="ovr">
+      {#key ovrShown.seq}<div class="n num" class:bump={ovrShown.seq > 0}>{Math.round(ovrTween.current)}</div>{/key}
+      <div class="l">OVR</div>
+      {#if ovrBadge}{#key ovrBadge.seq}<span class="ovr-delta {ovrBadge.d > 0 ? 'up' : 'down'}" role="status" aria-label="OVR {ovrDeltaText(ovrBadge.d)}" data-ovr-delta={ovrBadge.d}>{ovrDeltaText(ovrBadge.d)}</span>{/key}{/if}
+    </div>
     <div class="foot">
       <span class="pill role-{role}">{tn(role)}</span>
       {#if s.injury}<span class="pill" style="background:var(--bad);border-color:var(--bad)">{T.injury({ n: s.injury })}</span>{/if}
