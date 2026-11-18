@@ -127,6 +127,9 @@ export function PlayerPeek({
   const { width, height } = useWindowDimensions();
   const CARD_H = cardHeight(player);
   const zoom = Math.max(1, Math.min(1.45, (width - 40) / CARD_W, (height - 220) / CARD_H));
+  // T-11-755 카드는 처음부터 키운 크기로 그린다(PlayerCard scale). transform scale로 키우면 기울일 때 글씨 · 그림이 흐려진다.
+  const W = CARD_W * zoom;
+  const H = CARD_H * zoom;
   const t = useRef(new Animated.Value(motionOK ? 0 : 1)).current;
   const holder = useRef<View>(null);
   const [box, setBox] = useState<PeekOrigin | null>(null);
@@ -138,7 +141,7 @@ export function PlayerPeek({
   const shine = useRef<ShineHandle>(null);
   // 열린 뒤 한 번 좌우로 흔들리는 동작은 손을 대면 멈춘다. 누를 때 키우지 않는다(늘린 그림이 흐려 보인다).
   const sway = useRef<Animated.CompositeAnimation | null>(null);
-  const edge = useMemo(() => cardShieldPath(CARD_W, CARD_H, CARD_W, CARD_H), [CARD_H]);
+  const edge = useMemo(() => cardShieldPath(W, H, W, H), [W, H]);
   const pan = useMemo(() => {
     // locationX는 손가락이 닿은 안쪽 뷰 기준이라(안드로이드) 화면 좌표를 잰 카드 상자(box) 기준으로 바꾼다.
     const lean = (px: number, py: number) => {
@@ -176,9 +179,9 @@ export function PlayerPeek({
     ? {
         dx: origin.x + origin.w / 2 - (box.x + box.w / 2),
         dy: origin.y + origin.h / 2 - (box.y + box.h / 2),
-        scale: origin.w / CARD_W,
+        scale: origin.w / W,
       }
-    : { dx: 0, dy: 0, scale: zoom };
+    : { dx: 0, dy: 0, scale: 1 };
   function close(after?: () => void) {
     if (closing.current) return;
     closing.current = true;
@@ -260,20 +263,20 @@ export function PlayerPeek({
             });
           }}
           style={{
-            width: CARD_W * zoom,
-            height: CARD_H * zoom,
+            width: W,
+            height: H,
             alignItems: 'center',
             justifyContent: 'center',
           }}
         >
           <Animated.View
             style={{
-              width: CARD_W,
+              width: W,
               opacity: box ? 1 : 0,
               transform: [
                 { translateX: t.interpolate({ inputRange: [0, 1], outputRange: [from.dx, 0] }) },
                 { translateY: t.interpolate({ inputRange: [0, 1], outputRange: [from.dy, 0] }) },
-                { scale: t.interpolate({ inputRange: [0, 1], outputRange: [from.scale, zoom] }) },
+                { scale: t.interpolate({ inputRange: [0, 1], outputRange: [from.scale, 1] }) },
               ],
             }}
           >
@@ -283,7 +286,7 @@ export function PlayerPeek({
               {...pan.panHandlers}
               style={{
                 transform: [
-                  { perspective: 520 },
+                  { perspective: 520 * zoom },
                   {
                     rotateY: spin.interpolate({
                       inputRange: [0, 0.7, 1],
@@ -318,19 +321,19 @@ export function PlayerPeek({
                       {
                         translateX: tiltY.interpolate({
                           inputRange: [-1, 1],
-                          outputRange: [11 * k, -11 * k],
+                          outputRange: [11 * k * zoom, -11 * k * zoom],
                         }),
                       },
                       {
                         translateY: tiltX.interpolate({
                           inputRange: [-1, 1],
-                          outputRange: [-9 * k, 9 * k],
+                          outputRange: [-9 * k * zoom, 9 * k * zoom],
                         }),
                       },
                     ],
                   }}
                 >
-                  <Svg width={CARD_W} height={CARD_H}>
+                  <Svg width={W} height={H}>
                     <Path d={edge} fill={k === 1 ? '#5c4416' : k > 0.5 ? '#9a7630' : '#d2ab55'} />
                   </Svg>
                 </Animated.View>
@@ -360,8 +363,9 @@ export function PlayerPeek({
                   youth: false,
                 }}
                 code={player.dpos ?? player.pos}
+                scale={zoom}
               />
-              <CardShine ref={shine} w={CARD_W} h={CARD_H} />
+              <CardShine ref={shine} w={W} h={H} />
             </Animated.View>
           </Animated.View>
         </View>

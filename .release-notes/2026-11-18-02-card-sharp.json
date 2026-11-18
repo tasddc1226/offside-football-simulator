@@ -1,0 +1,20 @@
+{
+  "id": "t-11-755-card-sharp",
+  "title": "선수 카드 선명하게",
+  "items": [
+    "그라운드에서 선수 카드를 눌러 기울일 때 글씨와 선수 그림이 흐려 보이던 문제를 고쳤어요."
+  ],
+  "en": {
+    "title": "Sharper player cards",
+    "items": ["Text and player art no longer look blurry when you tilt a player card on the pitch."]
+  },
+  "ja": {
+    "title": "選手カードをくっきり",
+    "items": ["ピッチで選手カードを傾けたとき、文字や選手の絵がぼやけて見える問題を直しました。"]
+  },
+  "zh": {
+    "title": "球員卡更清晰",
+    "items": ["修正在球場上傾斜球員卡時，文字與球員圖像看起來模糊的問題。"]
+  },
+  "availability": "web-app"
+}
