@@ -135,6 +135,10 @@ export function PlayerPeek({
   const tiltY = useRef(new Animated.Value(0)).current;
   const spin = useRef(new Animated.Value(motionOK ? 0 : 1)).current;
   const shine = useRef<ShineHandle>(null);
+  // 누르는 동안 카드가 앞으로 살짝 뜬다(0 → 1). 열린 뒤 한 번 좌우로 흔들리는 동작은 손을 대면 멈춘다.
+  const lift = useRef(new Animated.Value(0)).current;
+  const sway = useRef<Animated.CompositeAnimation | null>(null);
+  const edge = useMemo(() => cardShieldPath(CARD_W, CARD_H, CARD_W, CARD_H), [CARD_H]);
   const pan = useMemo(() => {
     // locationX는 손가락이 닿은 안쪽 뷰 기준이라(안드로이드) 화면 좌표를 잰 카드 상자(box) 기준으로 바꾼다.
     const lean = (px: number, py: number) => {
@@ -148,21 +152,32 @@ export function PlayerPeek({
     const settle = () => {
       shine.current?.hide();
       Animated.parallel(
-        [tiltX, tiltY].map((v) =>
+        [tiltX, tiltY, lift].map((v) =>
           Animated.spring(v, { toValue: 0, speed: 10, bounciness: 8, useNativeDriver: true }),
         ),
       ).start();
+    };
+    const grab = (px: number, py: number) => {
+      sway.current?.stop();
+      if (motionOK)
+        Animated.spring(lift, {
+          toValue: 1,
+          speed: 18,
+          bounciness: 6,
+          useNativeDriver: true,
+        }).start();
+      lean(px, py);
     };
     return PanResponder.create({
       onStartShouldSetPanResponder: () => motionOK,
       onMoveShouldSetPanResponder: () => motionOK,
       onPanResponderTerminationRequest: () => true,
-      onPanResponderGrant: (e) => lean(e.nativeEvent.pageX, e.nativeEvent.pageY),
+      onPanResponderGrant: (e) => grab(e.nativeEvent.pageX, e.nativeEvent.pageY),
       onPanResponderMove: (e) => lean(e.nativeEvent.pageX, e.nativeEvent.pageY),
       onPanResponderRelease: settle,
       onPanResponderTerminate: settle,
     });
-  }, [motionOK, box, tiltX, tiltY]);
+  }, [motionOK, box, tiltX, tiltY, lift]);
   // 카드가 그라운드 카드 자리·크기에서 출발한다(FLIP). 가운데를 기준으로 커지므로 가운데끼리 잇는다.
   const from = box
     ? {
@@ -231,7 +246,23 @@ export function PlayerPeek({
                   duration: 620,
                   easing: Easing.bezier(0.2, 0.8, 0.3, 1),
                   useNativeDriver: true,
-                }).start();
+                }).start(({ finished }) => {
+                  if (!finished || closing.current) return;
+                  // 한 번만 좌우로 흔든다(무한 반복은 안드로이드 ANR 때문에 두지 않는다, T-11-602).
+                  const step = (toValue: number, duration: number) =>
+                    Animated.timing(tiltY, {
+                      toValue,
+                      duration,
+                      easing: Easing.inOut(Easing.sin),
+                      useNativeDriver: true,
+                    });
+                  sway.current = Animated.sequence([
+                    step(0.3, 700),
+                    step(-0.3, 1200),
+                    step(0, 700),
+                  ]);
+                  sway.current.start();
+                });
               }
             });
           }}
@@ -259,7 +290,8 @@ export function PlayerPeek({
               {...pan.panHandlers}
               style={{
                 transform: [
-                  { perspective: 700 },
+                  { perspective: 520 },
+                  { scale: lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) },
                   {
                     rotateY: spin.interpolate({
                       inputRange: [0, 0.7, 1],
@@ -269,18 +301,48 @@ export function PlayerPeek({
                   {
                     rotateX: tiltX.interpolate({
                       inputRange: [-1, 1],
-                      outputRange: ['-14deg', '14deg'],
+                      outputRange: ['-20deg', '20deg'],
                     }),
                   },
                   {
                     rotateY: tiltY.interpolate({
                       inputRange: [-1, 1],
-                      outputRange: ['-18deg', '18deg'],
+                      outputRange: ['-26deg', '26deg'],
                     }),
                   },
                 ],
               }}
             >
+              {/* 판 두께: 카드 뒤 방패를 기운 반대쪽으로 밀어 옆면처럼 보이게 한다. */}
+              {[0.5, 1].map((k) => (
+                <Animated.View
+                  key={k}
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    transform: [
+                      {
+                        translateX: tiltY.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: [6 * k, -6 * k],
+                        }),
+                      },
+                      {
+                        translateY: tiltX.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: [-5 * k, 5 * k],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  <Svg width={CARD_W} height={CARD_H}>
+                    <Path d={edge} fill={k === 1 ? '#1c140a' : '#4a3a1c'} />
+                  </Svg>
+                </Animated.View>
+              ))}
               <PlayerCard
                 cell={{
                   name,

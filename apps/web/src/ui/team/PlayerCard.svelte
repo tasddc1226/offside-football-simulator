@@ -83,7 +83,7 @@
 </script>
 
 {#snippet card()}
-<div class="player-card" style:--frame-top={frame.top} style:--frame-mid={frame.mid} style:--frame-bot={frame.bot} data-enhance={fx ? level : undefined} style:--fx-line={fxLine} style:--fx-spin={fxSpin} data-fx-spin={fxSpin ? '' : undefined} class:compact class:mini class:youth class:deployed class:special={!!special} data-tier={tier} data-special={special?.kind} style:--special-bg={specialColor?.bg} style:--special-ink={specialColor?.ink} style:--special-glow={specialColor?.glow}>
+<div class="player-card" class:shine style:--frame-top={frame.top} style:--frame-mid={frame.mid} style:--frame-bot={frame.bot} data-enhance={fx ? level : undefined} style:--fx-line={fxLine} style:--fx-spin={fxSpin} data-fx-spin={fxSpin ? '' : undefined} class:compact class:mini class:youth class:deployed class:special={!!special} data-tier={tier} data-special={special?.kind} style:--special-bg={specialColor?.bg} style:--special-ink={specialColor?.ink} style:--special-glow={specialColor?.glow}>
   <div class="card-face">
     {#if fx}<span class="card-fx" aria-hidden="true">{#each fxBits as b (`${b.x}-${b.d}`)}<i style:left="{b.x}%" style:top="{b.y}%" style:--z="{b.z}px" style:animation-delay="{b.d}s"></i>{/each}</span>{/if}
     <div class="card-rating" title="{ratingLabel} {rating}"><b>{rating}</b><span>{role}</span></div>
@@ -140,6 +140,9 @@
   .card-face { --fw:calc(var(--W) - 2 * var(--pad)); position:relative; overflow:hidden; min-height:183px; padding:28px 10px 20px; clip-path:polygon(0 calc(var(--fw) * .15625),15.625% calc(var(--fw) * .15625),23.958% calc(var(--fw) * .0625),50% calc(var(--fw) * .02083),76.042% calc(var(--fw) * .0625),84.375% calc(var(--fw) * .15625),100% calc(var(--fw) * .15625),98.958% calc(100% - var(--fw) * .27083),89.583% calc(100% - var(--fw) * .14583),50% calc(100% - var(--fw) * .02083),10.417% calc(100% - var(--fw) * .14583),1.042% calc(100% - var(--fw) * .27083)); background:var(--frame-top) center top/100% auto no-repeat,var(--frame-bot) center bottom/100% auto no-repeat,var(--frame-mid) center calc(var(--fw) * .4278 - 1px)/100% calc(100% - var(--fw) * .875 + 2px) no-repeat,linear-gradient(165deg,var(--card-base),var(--card-dark)); color:var(--card-ink); }
   /* T-11-753 3D 큰 카드의 빛 반사(방패 안쪽에만). 눌린 자리를 따라 둥근 빛과 무지개 띠가 움직인다. */
   .card-shine {position:absolute;inset:0;z-index:3;pointer-events:none;opacity:var(--shine-o,0);transition:opacity .35s ease-out;mix-blend-mode:overlay;background:radial-gradient(circle at var(--shine-x,50%) var(--shine-y,30%),#ffffffc0,#ffffff00 48%),linear-gradient(115deg,transparent calc(var(--shine-x,50%) - 34%),#ff9ad955 calc(var(--shine-x,50%) - 14%),#8ff3ff66 var(--shine-x,50%),#fff38f55 calc(var(--shine-x,50%) + 14%),transparent calc(var(--shine-x,50%) + 34%));}
+  /* 3D 큰 카드에서 선수 그림 · 숫자가 틀보다 앞에 떠 있는 것처럼 기운 반대쪽으로 조금 밀린다(시차). 기울기 값은 바깥 PlayerPeek이 준다. */
+  .player-card.shine .card-art {transform:translate(calc(var(--ry,0deg) / 1deg * -.32px),calc(var(--rx,0deg) / 1deg * .32px)) scale(1.04);transition:transform var(--t,.5s);}
+  .player-card.shine .card-rating {transform:translate(calc(var(--ry,0deg) / 1deg * -.16px),calc(var(--rx,0deg) / 1deg * .16px));transition:transform var(--t,.5s);}
   .card-rating { position:absolute; top:28px; left:11px; display:flex; flex-direction:column; align-items:center; z-index:1; }
   .card-rating b { font-family:var(--display); font-size:2.3rem; font-weight:800; line-height:.9; }
   .card-rating span { font-family:var(--display); font-size:var(--fs-label); font-weight:700; line-height:1; margin-top:4px; }
