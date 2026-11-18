@@ -4,7 +4,11 @@ import { AppError } from '../errors.js';
 import { logErrorText, safeStack } from '../logError.js';
 import type { AppEnv } from '../env.js';
 import { countable, flushTallies, recordRequest } from '../status/metrics.js';
-import { flushClientErrors, takeClientErrors } from '../status/clientErrors.js';
+import {
+  flushClientErrors,
+  takeClientErrors,
+  takeRateLimitedRequests,
+} from '../status/clientErrors.js';
 
 /** T-2-015: 응답 본문에는 고정 문구만 나가므로(errors.ts) 원문 메시지는 여기서만 남긴다. */
 const MAX_ERROR_MESSAGE_LENGTH = 500;
@@ -77,6 +81,9 @@ function recordStatus(c: Context<AppEnv>, status: number, durationMs: number) {
     console.log(JSON.stringify({ level: 'warn', msg, error: logErrorText(error, 300) }));
   ctx.waitUntil(flushTallies(db, due).catch(warn('status-flush-failed')));
   // T-11-331 앱·웹 오류도 같은 1분 주기에 더한다.
+  const count = takeRateLimitedRequests();
+  if (count)
+    console.log(JSON.stringify({ level: 'info', msg: 'client-errors-rate-limited', count }));
   const errors = takeClientErrors();
   if (errors.length)
     ctx.waitUntil(flushClientErrors(db, errors).catch(warn('client-errors-flush-failed')));
