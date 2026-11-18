@@ -84,11 +84,12 @@ const CardShine = forwardRef<ShineHandle, { w: number; h: number }>(function Car
           id="peek-shine"
           cx={at.x * w}
           cy={at.y * h}
-          r={w * 0.6}
+          r={w * 0.45}
           gradientUnits="userSpaceOnUse"
         >
-          <Stop offset="0" stopColor="#ffffff" stopOpacity={0.42} />
-          <Stop offset="0.45" stopColor="#bff6ff" stopOpacity={0.12} />
+          {/* 진하면 그 자리 글씨 · 선수 그림이 뿌옇게 덮여 보여 옅게 둔다. */}
+          <Stop offset="0" stopColor="#ffffff" stopOpacity={0.18} />
+          <Stop offset="0.45" stopColor="#bff6ff" stopOpacity={0.05} />
           <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
         </RadialGradient>
       </Defs>
@@ -135,8 +136,7 @@ export function PlayerPeek({
   const tiltY = useRef(new Animated.Value(0)).current;
   const spin = useRef(new Animated.Value(motionOK ? 0 : 1)).current;
   const shine = useRef<ShineHandle>(null);
-  // 누르는 동안 카드가 앞으로 살짝 뜬다(0 → 1). 열린 뒤 한 번 좌우로 흔들리는 동작은 손을 대면 멈춘다.
-  const lift = useRef(new Animated.Value(0)).current;
+  // 열린 뒤 한 번 좌우로 흔들리는 동작은 손을 대면 멈춘다. 누를 때 키우지 않는다(늘린 그림이 흐려 보인다).
   const sway = useRef<Animated.CompositeAnimation | null>(null);
   const edge = useMemo(() => cardShieldPath(CARD_W, CARD_H, CARD_W, CARD_H), [CARD_H]);
   const pan = useMemo(() => {
@@ -152,20 +152,13 @@ export function PlayerPeek({
     const settle = () => {
       shine.current?.hide();
       Animated.parallel(
-        [tiltX, tiltY, lift].map((v) =>
+        [tiltX, tiltY].map((v) =>
           Animated.spring(v, { toValue: 0, speed: 10, bounciness: 8, useNativeDriver: true }),
         ),
       ).start();
     };
     const grab = (px: number, py: number) => {
       sway.current?.stop();
-      if (motionOK)
-        Animated.spring(lift, {
-          toValue: 1,
-          speed: 18,
-          bounciness: 6,
-          useNativeDriver: true,
-        }).start();
       lean(px, py);
     };
     return PanResponder.create({
@@ -177,7 +170,7 @@ export function PlayerPeek({
       onPanResponderRelease: settle,
       onPanResponderTerminate: settle,
     });
-  }, [motionOK, box, tiltX, tiltY, lift]);
+  }, [motionOK, box, tiltX, tiltY]);
   // 카드가 그라운드 카드 자리·크기에서 출발한다(FLIP). 가운데를 기준으로 커지므로 가운데끼리 잇는다.
   const from = box
     ? {
@@ -291,7 +284,6 @@ export function PlayerPeek({
               style={{
                 transform: [
                   { perspective: 520 },
-                  { scale: lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) },
                   {
                     rotateY: spin.interpolate({
                       inputRange: [0, 0.7, 1],
@@ -314,7 +306,7 @@ export function PlayerPeek({
               }}
             >
               {/* 판 두께: 카드 뒤 방패를 기운 반대쪽으로 밀어 옆면처럼 보이게 한다. */}
-              {[0.5, 1].map((k) => (
+              {[1, 0.67, 0.34].map((k) => (
                 <Animated.View
                   key={k}
                   pointerEvents="none"
@@ -326,20 +318,20 @@ export function PlayerPeek({
                       {
                         translateX: tiltY.interpolate({
                           inputRange: [-1, 1],
-                          outputRange: [6 * k, -6 * k],
+                          outputRange: [11 * k, -11 * k],
                         }),
                       },
                       {
                         translateY: tiltX.interpolate({
                           inputRange: [-1, 1],
-                          outputRange: [-5 * k, 5 * k],
+                          outputRange: [-9 * k, 9 * k],
                         }),
                       },
                     ],
                   }}
                 >
                   <Svg width={CARD_W} height={CARD_H}>
-                    <Path d={edge} fill={k === 1 ? '#1c140a' : '#4a3a1c'} />
+                    <Path d={edge} fill={k === 1 ? '#5c4416' : k > 0.5 ? '#9a7630' : '#d2ab55'} />
                   </Svg>
                 </Animated.View>
               ))}

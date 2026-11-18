@@ -949,8 +949,9 @@ export function PlayerCard({
             width: '100%',
             marginTop: compact ? 1 : 3,
             paddingHorizontal: 1,
-            borderTopWidth: 0.5,
-            borderBottomWidth: 0.5,
+            // 0.5pt 선은 3D 팝업에서 기울면 점선처럼 끊겨 보여 큰 카드는 1pt로 둔다.
+            borderTopWidth: compact ? 0.5 : 1,
+            borderBottomWidth: compact ? 0.5 : 1,
             borderColor: tone.line,
           }}
         >
