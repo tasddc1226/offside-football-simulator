@@ -1,5 +1,15 @@
-import { useRef, useState } from 'react';
-import { Animated, Easing, Modal, Pressable, View, useWindowDimensions } from 'react-native';
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  Modal,
+  PanResponder,
+  Pressable,
+  View,
+  useWindowDimensions,
+} from 'react-native';
+import Svg, { ClipPath, Defs, G, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import { cardShieldPath } from '@offside/app-core/cardFrame';
 import { useSnapshot } from 'valtio';
 import { DETAIL_LABEL, slotFit } from '@offside/contracts/owner-team';
 import type { DetailPos } from '@offside/contracts/positions';
@@ -40,6 +50,56 @@ const cardHeight = (p: TeamPlayer) =>
   (cardBody(p) ? CARD_BODY_ROW : 0) +
   (specialRibbon(p.specials, p.daily) ? CARD_SPECIAL_ROW : 0);
 
+type ShineHandle = { move: (x: number, y: number) => void; hide: () => void };
+/**
+ * T-11-753 3D 큰 카드의 빛 반사. 방패 모양 안에서만 보이고, 누른 자리(0~1)에 둥근 빛이 맺힌다. 움직일 때마다 이 그림만 다시 그린다
+ * (카드 전체를 다시 그리지 않는다).
+ */
+const CardShine = forwardRef<ShineHandle, { w: number; h: number }>(function CardShine(
+  { w, h },
+  ref,
+) {
+  const [at, setAt] = useState<{ x: number; y: number } | null>(null);
+  useImperativeHandle(
+    ref,
+    () => ({ move: (x, y) => setAt({ x, y }), hide: () => setAt(null) }),
+    [],
+  );
+  const shield = useMemo(() => cardShieldPath(w, h, w, h), [w, h]);
+  if (!at) return null;
+  return (
+    <Svg
+      width={w}
+      height={h}
+      pointerEvents="none"
+      style={{ position: 'absolute', left: 0, top: 0 }}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+    >
+      <Defs>
+        <ClipPath id="peek-shine-clip">
+          <Path d={shield} />
+        </ClipPath>
+        <RadialGradient
+          id="peek-shine"
+          cx={at.x * w}
+          cy={at.y * h}
+          r={w * 0.45}
+          gradientUnits="userSpaceOnUse"
+        >
+          {/* 진하면 그 자리 글씨 · 선수 그림이 뿌옇게 덮여 보여 옅게 둔다. */}
+          <Stop offset="0" stopColor="#ffffff" stopOpacity={0.18} />
+          <Stop offset="0.45" stopColor="#bff6ff" stopOpacity={0.05} />
+          <Stop offset="1" stopColor="#ffffff" stopOpacity={0} />
+        </RadialGradient>
+      </Defs>
+      <G clipPath="url(#peek-shine-clip)">
+        <Rect x={0} y={0} width={w} height={h} fill="url(#peek-shine)" />
+      </G>
+    </Svg>
+  );
+});
+
 /** 그라운드 카드를 누르면 그 자리에서 커져 라커룸 카드를 그대로 확대해 보여 준다. 닫으면 제자리로 돌아간다(웹 PlayerPeek). */
 export function PlayerPeek({
   player,
@@ -71,6 +131,46 @@ export function PlayerPeek({
   const holder = useRef<View>(null);
   const [box, setBox] = useState<PeekOrigin | null>(null);
   const closing = useRef(false);
+  // T-11-753 3D 기울기(-1~1) — 손가락을 댄 자리 쪽으로 카드가 눕는다. 열릴 때는 옆으로 돌아 들어온다(spin 0 → 1).
+  const tiltX = useRef(new Animated.Value(0)).current;
+  const tiltY = useRef(new Animated.Value(0)).current;
+  const spin = useRef(new Animated.Value(motionOK ? 0 : 1)).current;
+  const shine = useRef<ShineHandle>(null);
+  // 열린 뒤 한 번 좌우로 흔들리는 동작은 손을 대면 멈춘다. 누를 때 키우지 않는다(늘린 그림이 흐려 보인다).
+  const sway = useRef<Animated.CompositeAnimation | null>(null);
+  const edge = useMemo(() => cardShieldPath(CARD_W, CARD_H, CARD_W, CARD_H), [CARD_H]);
+  const pan = useMemo(() => {
+    // locationX는 손가락이 닿은 안쪽 뷰 기준이라(안드로이드) 화면 좌표를 잰 카드 상자(box) 기준으로 바꾼다.
+    const lean = (px: number, py: number) => {
+      if (!motionOK || closing.current || !box) return;
+      const x = Math.min(1, Math.max(0, (px - box.x) / box.w));
+      const y = Math.min(1, Math.max(0, (py - box.y) / box.h));
+      tiltY.setValue((x - 0.5) * 2);
+      tiltX.setValue((0.5 - y) * 2);
+      shine.current?.move(x, y);
+    };
+    const settle = () => {
+      shine.current?.hide();
+      Animated.parallel(
+        [tiltX, tiltY].map((v) =>
+          Animated.spring(v, { toValue: 0, speed: 10, bounciness: 8, useNativeDriver: true }),
+        ),
+      ).start();
+    };
+    const grab = (px: number, py: number) => {
+      sway.current?.stop();
+      lean(px, py);
+    };
+    return PanResponder.create({
+      onStartShouldSetPanResponder: () => motionOK,
+      onMoveShouldSetPanResponder: () => motionOK,
+      onPanResponderTerminationRequest: () => true,
+      onPanResponderGrant: (e) => grab(e.nativeEvent.pageX, e.nativeEvent.pageY),
+      onPanResponderMove: (e) => lean(e.nativeEvent.pageX, e.nativeEvent.pageY),
+      onPanResponderRelease: settle,
+      onPanResponderTerminate: settle,
+    });
+  }, [motionOK, box, tiltX, tiltY]);
   // 카드가 그라운드 카드 자리·크기에서 출발한다(FLIP). 가운데를 기준으로 커지므로 가운데끼리 잇는다.
   const from = box
     ? {
@@ -127,13 +227,36 @@ export function PlayerPeek({
             if (box) return;
             holder.current?.measureInWindow((x, y, w, h) => {
               setBox({ x, y, w, h });
-              if (motionOK)
+              if (motionOK) {
                 Animated.spring(t, {
                   toValue: 1,
                   speed: 16,
                   bounciness: 6,
                   useNativeDriver: true,
                 }).start();
+                Animated.timing(spin, {
+                  toValue: 1,
+                  duration: 620,
+                  easing: Easing.bezier(0.2, 0.8, 0.3, 1),
+                  useNativeDriver: true,
+                }).start(({ finished }) => {
+                  if (!finished || closing.current) return;
+                  // 한 번만 좌우로 흔든다(무한 반복은 안드로이드 ANR 때문에 두지 않는다, T-11-602).
+                  const step = (toValue: number, duration: number) =>
+                    Animated.timing(tiltY, {
+                      toValue,
+                      duration,
+                      easing: Easing.inOut(Easing.sin),
+                      useNativeDriver: true,
+                    });
+                  sway.current = Animated.sequence([
+                    step(0.3, 700),
+                    step(-0.3, 1200),
+                    step(0, 700),
+                  ]);
+                  sway.current.start();
+                });
+              }
             });
           }}
           style={{
@@ -155,32 +278,91 @@ export function PlayerPeek({
             }}
           >
             {/* 라커룸 카드와 같은 내용(최고 OVR·본래 포지션). 이 자리에서의 값은 카드 아래 줄에. */}
-            <PlayerCard
-              cell={{
-                name,
-                careerId: player.careerId,
-                look: player.look,
-                nation: player.nation,
-                season: player.season,
-                rating: player.peak,
-                number: player.number,
-                legendScore: player.legendScore,
-                specials: player.specials,
-                daily: player.daily,
-                attrs: player.attrs,
-                attrsEstimated: player.attrsEstimated,
-                height: player.height,
-                weight: player.weight,
-                foot: player.foot,
-                cardValue: player.cardValue,
-                enhance: player.enhance,
-                locked: player.locked,
-                pos: player.pos,
-                type: player.type,
-                youth: false,
+            <Animated.View
+              testID="player-peek-tilt"
+              {...pan.panHandlers}
+              style={{
+                transform: [
+                  { perspective: 520 },
+                  {
+                    rotateY: spin.interpolate({
+                      inputRange: [0, 0.7, 1],
+                      outputRange: ['-95deg', '10deg', '0deg'],
+                    }),
+                  },
+                  {
+                    rotateX: tiltX.interpolate({
+                      inputRange: [-1, 1],
+                      outputRange: ['-20deg', '20deg'],
+                    }),
+                  },
+                  {
+                    rotateY: tiltY.interpolate({
+                      inputRange: [-1, 1],
+                      outputRange: ['-26deg', '26deg'],
+                    }),
+                  },
+                ],
               }}
-              code={player.dpos ?? player.pos}
-            />
+            >
+              {/* 판 두께: 카드 뒤 방패를 기운 반대쪽으로 밀어 옆면처럼 보이게 한다. */}
+              {[1, 0.67, 0.34].map((k) => (
+                <Animated.View
+                  key={k}
+                  pointerEvents="none"
+                  style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    transform: [
+                      {
+                        translateX: tiltY.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: [11 * k, -11 * k],
+                        }),
+                      },
+                      {
+                        translateY: tiltX.interpolate({
+                          inputRange: [-1, 1],
+                          outputRange: [-9 * k, 9 * k],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  <Svg width={CARD_W} height={CARD_H}>
+                    <Path d={edge} fill={k === 1 ? '#5c4416' : k > 0.5 ? '#9a7630' : '#d2ab55'} />
+                  </Svg>
+                </Animated.View>
+              ))}
+              <PlayerCard
+                cell={{
+                  name,
+                  careerId: player.careerId,
+                  look: player.look,
+                  nation: player.nation,
+                  season: player.season,
+                  rating: player.peak,
+                  number: player.number,
+                  legendScore: player.legendScore,
+                  specials: player.specials,
+                  daily: player.daily,
+                  attrs: player.attrs,
+                  attrsEstimated: player.attrsEstimated,
+                  height: player.height,
+                  weight: player.weight,
+                  foot: player.foot,
+                  cardValue: player.cardValue,
+                  enhance: player.enhance,
+                  locked: player.locked,
+                  pos: player.pos,
+                  type: player.type,
+                  youth: false,
+                }}
+                code={player.dpos ?? player.pos}
+              />
+              <CardShine ref={shine} w={CARD_W} h={CARD_H} />
+            </Animated.View>
           </Animated.View>
         </View>
         <Animated.View style={{ alignItems: 'center', gap: 14, opacity: t }}>
