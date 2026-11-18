@@ -155,18 +155,21 @@ export default {
         .catch(logged('team-live'));
       mark('finishStaleLive');
       // T-11-145 오프사이드 컵: 추첨 → 시각이 된 경기 → 진출·보상. 실패하면 다음 5분에 이어서 한다.
+      let cupChanged = false;
       await runCup(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
         .then(async (r) => {
           if (!r) return;
+          cupChanged = true;
           console.log(JSON.stringify({ level: 'info', job: 'cup', steps: r }));
           await publishCupResults(
             env,
             r.filter((x) => x.step === 'advance' && x.round === 'f').map((x) => String(x.cup)),
           );
         })
-        .catch((e: unknown) =>
-          console.error(JSON.stringify({ level: 'error', job: 'cup', error: logErrorText(e) })),
-        );
+        .catch((e: unknown) => {
+          cupChanged = true;
+          logged('cup')(e);
+        });
       mark('runCup');
       // T-11-418b 오프사이드 리그: 배치 안내 → 배치 → 시각이 된 경기 → 알림. 공개 조회는 엣지 캐시가 짧아(30 · 60초) 지우지 않는다.
       await runLeague(createDb(env.DB), new Date(controller.scheduledTime).toISOString())
@@ -199,7 +202,13 @@ export default {
           .catch(logged('league-alert'));
       mark('alertLeagueStalls');
       // T-11-251 다음 회차 만들기 → 접수 시작 알림 → 밀린 단계 슬랙 경보(15분마다).
-      await runCupAutopilot(env, controller.scheduledTime).catch(logged('cup-autopilot'));
+      try {
+        const { created, capped, opened } = await runCupAutopilot(env, controller.scheduledTime);
+        if (created.length || capped.length || opened.length) cupChanged = true;
+      } catch (error) {
+        cupChanged = true;
+        logged('cup-autopilot')(error);
+      }
       mark('runCupAutopilot');
       // T-11-616 새 신고(이름 · 채팅 · 댓글)를 5분 단위로 묶어 운영 알림 채널에 알린다. 실패해도 신고와 다음 단계는 그대로다.
       await alertNewReports(env, controller.scheduledTime)
@@ -207,7 +216,7 @@ export default {
         .catch(logged('report-alert'));
       mark('alertNewReports');
       // A cron round can commit before a later step fails; purge even on a partial run.
-      if (env.PUBLIC_API_ORIGIN)
+      if (cupChanged && env.PUBLIC_API_ORIGIN)
         await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, STALE.cupChanged()).catch((e) =>
           console.log(JSON.stringify({ level: 'error', job: 'cup-cache', error: logErrorText(e) })),
         );

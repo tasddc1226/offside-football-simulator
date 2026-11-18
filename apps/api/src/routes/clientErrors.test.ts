@@ -7,6 +7,7 @@ import {
   resetClientErrorsForTest,
   scrub,
   takeClientErrors,
+  takeRateLimitedRequests,
   topFrame,
 } from '../status/clientErrors.js';
 import { createTestD1, spyDb, type TestD1 } from '../test/d1.js';
@@ -67,6 +68,8 @@ describe('앱·웹 오류 모으기 (T-11-331)', () => {
     });
     expect(res.status).toBe(204);
     expect(keys).toEqual(['192.0.2.1']);
+    expect(takeRateLimitedRequests()).toBe(1);
+    expect(takeRateLimitedRequests()).toBe(0);
     expect(takeClientErrors()).toEqual([]);
   });
 
