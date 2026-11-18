@@ -1,7 +1,7 @@
 import { ClientErrorReportSchema } from '@offside/contracts';
 import type { Hono } from 'hono';
 import type { AppEnv } from '../env.js';
-import { recordClientErrors } from '../status/clientErrors.js';
+import { recordClientErrors, recordRateLimitedRequest } from '../status/clientErrors.js';
 import { readBody } from './shared.js';
 
 // T-11-331 앱·웹 오류 받기. 세션 · DB를 건드리지 않고 isolate 메모리에 세기만 한다(1분 주기에 D1로, logger.ts).
@@ -11,7 +11,10 @@ export function registerClientErrorRoutes(app: Hono<AppEnv>): void {
     const report = readBody(c, ClientErrorReportSchema);
     const source = c.req.header('CF-Connecting-IP') ?? 'unknown';
     const { success } = await c.env.CLIENT_ERROR_LIMITER.limit({ key: source });
-    if (!success) return c.body(null, 204);
+    if (!success) {
+      recordRateLimitedRequest();
+      return c.body(null, 204);
+    }
     const dropped = await recordClientErrors(report, Date.now());
     if (dropped)
       console.log(JSON.stringify({ level: 'warn', msg: 'client-errors-dropped', dropped }));

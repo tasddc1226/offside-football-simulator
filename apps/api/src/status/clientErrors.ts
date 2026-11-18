@@ -143,6 +143,19 @@ export async function flushClientErrors(db: D1Database, rows: ErrorTally[]): Pro
 }
 
 /** 테스트 전용. */
+let rateLimitedRequests = 0;
+
+export function recordRateLimitedRequest(): void {
+  rateLimitedRequests++;
+}
+
+export function takeRateLimitedRequests(): number {
+  const count = rateLimitedRequests;
+  rateLimitedRequests = 0;
+  return count;
+}
+
 export function resetClientErrorsForTest(): void {
+  rateLimitedRequests = 0;
   pending = new Map();
 }
