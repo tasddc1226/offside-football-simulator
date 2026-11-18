@@ -11,9 +11,9 @@ export type ApiResult<T> = { ok: true; data: T } | { ok: false; status: number; 
 const TTL_MS = 60_000;
 const memo = new Map<string, { at: number; p: Promise<ApiResult<unknown>> }>();
 
-async function request<T>(path: string): Promise<ApiResult<T>> {
+async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
-    const res = await fetch(`${API}${path}`, { credentials: 'include' });
+    const res = await fetch(`${API}${path}`, { ...init, credentials: 'include' });
     const body = (await res.json().catch(() => null)) as {
       data?: T;
       error?: { message?: string };
@@ -36,6 +36,16 @@ export function get<T>(path: string): Promise<ApiResult<T>> {
   });
   memo.set(path, entry);
   return entry.p as Promise<ApiResult<T>>;
+}
+
+export async function post<T>(path: string, body: unknown): Promise<ApiResult<T>> {
+  const result = await request<T>(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  memo.delete(path);
+  return result;
 }
 
 export const clearApiCache = () => memo.clear();

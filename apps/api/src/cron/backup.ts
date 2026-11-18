@@ -1,3 +1,4 @@
+import { BACKUP_CONTROL_KEY, BACKUP_LEASE_KEY as LEASE_KEY } from './backupControl.js';
 // T-10-070 D1 → R2 매일 백업(ADR-007). D1 Time Travel(30일)과 별개로, D1 밖에 오래 남는 사본을 둔다.
 // 형식은 `wrangler d1 export`처럼 SQL 텍스트(gzip, Content-Encoding: gzip) — 빈 D1에 그대로 실행한다.
 // `wrangler r2 object get`은 받으면서 풀어 주므로 gunzip이 필요 없다(복구: docs/operations/d1-backup.md).
@@ -13,7 +14,6 @@ const PAGE = 2000;
 export const BACKUP_PAGE_BYTES = 4 * 1024 * 1024;
 /** Yield the primary between pages, without adding seconds to every table. */
 export const BACKUP_PAGE_PAUSE_MS = 20;
-const LEASE_KEY = 'cron:backup:lease';
 /** 한 단계가 쥐는 잠금. 호출이 죽어도 다음 5분 틱이 이어받을 수 있게 짧고, 정상 단계(≤ BACKUP_STEP_MS + 업로드)보다는 길다. */
 const LEASE_MS = 4 * 60_000;
 /** 진행 중인 백업의 위치(표·rowid·조각 번호). 끝나면 지우고 BACKUP_LAST_KEY에 결과를 남긴다. */
@@ -390,10 +390,12 @@ async function claimLease(db: D1Database): Promise<string | null> {
   const lease = JSON.stringify({ token: crypto.randomUUID(), expiresAt: wall + LEASE_MS });
   const claimed = await db
     .prepare(
-      `INSERT INTO app_meta(key,value) VALUES (?1,?2) ON CONFLICT(key) DO UPDATE SET value=excluded.value
+      `INSERT INTO app_meta(key,value) SELECT ?1,?2 WHERE NOT EXISTS (
+         SELECT 1 FROM app_meta WHERE key=?4 AND json_extract(value,'$.pausedUntil') > ?3
+       ) ON CONFLICT(key) DO UPDATE SET value=excluded.value
        WHERE CAST(json_extract(app_meta.value,'$.expiresAt') AS INTEGER) <= ?3 RETURNING value`,
     )
-    .bind(LEASE_KEY, lease, wall)
+    .bind(LEASE_KEY, lease, wall, BACKUP_CONTROL_KEY)
     .first();
   return claimed ? lease : null;
 }

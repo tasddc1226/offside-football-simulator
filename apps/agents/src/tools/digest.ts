@@ -21,15 +21,15 @@ type QueryResult = {
 };
 
 /** Workers 관측 로그 집계(calculations · count, groupBy). 실패는 문자열로 돌려준다. */
-async function logCounts(
-  d: DigestDeps,
+export async function logCounts(
+  d: ScheduleDeps,
   service: string,
   from: number,
   to: number,
   groupBy: string[],
   extra: { key: string; value: string }[] = [],
   limit = 30,
-) {
+): Promise<({ count: number } & Record<string, string | number>)[] | { error: string }> {
   if (!d.cfToken) return { error: 'Cloudflare 토큰 없음' };
   const r = await (d.fetcher ?? fetch)(
     `https://api.cloudflare.com/client/v4/accounts/${d.accountId}/workers/observability/telemetry/query`,
@@ -58,7 +58,7 @@ async function logCounts(
     },
   );
   const data = (await r.json().catch(() => ({ success: false }))) as QueryResult;
-  if (!data.success)
+  if (!data.success || !Array.isArray(data.result?.calculations?.[0]?.aggregates))
     return { error: data.errors?.map((e) => e.message).join('; ') || `HTTP ${r.status}` };
   return (data.result?.calculations?.[0]?.aggregates ?? [])
     .map((a) => ({

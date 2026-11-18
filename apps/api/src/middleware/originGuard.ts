@@ -1,4 +1,4 @@
-import { AUTHORIZATION_HEADER } from '@offside/contracts';
+import { AUTHORIZATION_HEADER, BACKUP_CONTROL_PATH } from '@offside/contracts';
 import { createMiddleware } from 'hono/factory';
 import { AppError } from '../errors.js';
 import { parseAllowedOrigins, type AppEnv, type Bindings } from '../env.js';
@@ -37,7 +37,13 @@ export const originGuard = createMiddleware<AppEnv>(async (c, next) => {
     c.req.path !== WEB_PAY_WEBHOOK_PATH
   ) {
     const origin = c.req.header('Origin');
-    if (!origin || !allowedOriginsFor(c.req.url, c.env).includes(origin)) {
+    const dashboardControl =
+      c.req.method === 'POST' &&
+      c.req.path === BACKUP_CONTROL_PATH &&
+      c.env.ENVIRONMENT === 'production' &&
+      origin &&
+      resolveRequestHostPair(c.req.url, c.env)?.adminOrigin === origin;
+    if (!dashboardControl && (!origin || !allowedOriginsFor(c.req.url, c.env).includes(origin))) {
       throw new AppError({
         code: 'ORIGIN_NOT_ALLOWED',
         message: '이 접속 경로에서는 요청할 수 없어요.',
