@@ -18,8 +18,7 @@ import {
 // T-10-027 서버 최초 기록 · T-10-056 서버 기록. 시즌·은퇴 업로드 때 그 커리어만 다시 판정해 "더 이른 달성"이면
 // 최초 기록 자리를, "더 큰 값"이면 서버 기록 자리를 바꾼다. 판정 규칙이 바뀌거나 처음 배포될 때, 또는 기록을
 // 가진 커리어가 지워졌을 때는 전체 커리어를 다시 훑는다 — 한 요청에 다 읽으면 Workers 무료 플랜 CPU(10ms)를
-// 넘으므로 조각으로 나눠 5분 cron이 시간 한도 안에서 몰아서 훑고(runFirstsRescan), 공개 목록은 캐시가 빌 때 한 조각만
-// 돕는다(진행 위치는 app_meta).
+// 넘으므로 조각으로 나눠 5분 cron이 저장된 위치(app_meta)에서 제한된 수의 조각만 이어서 훑는다.
 // 다시 훑기는 더 이른 달성·더 큰 값만 더한다 — 규칙이 늘어날 때는 BACKFILL_VERSION만 올리면 되지만, 규칙을
 // 좁히거나 없애면 기존 행이 남으므로 마이그레이션으로 해당 행을 지운 뒤 버전을 올린다.
 // T-11-029 기록은 시즌마다 따로 겨룬다 — 커리어는 자기 시즌(service_season, NULL이면 0 = 프리시즌)의 기록만 노린다. 시즌을
@@ -29,8 +28,8 @@ export const BACKFILL_VERSION = '2';
 
 /** 한 조각의 판정이 Workers 무료 플랜 CPU 안에 들도록 작게 잡는다(150명이면 판정만 5–16ms였다). */
 const RESCAN_CHUNK = 40;
-/** cron은 CPU 한도가 넉넉해(wrangler limits.cpu_ms) 한 번에 더 많이 판정한다. */
-const CRON_RESCAN_CHUNK = 100;
+/** 운영 D1에 시즌 조회가 몰리지 않도록 틱별 조각 수도 제한한다. */
+const MAX_RESCAN_CHUNKS_PER_TICK = 8;
 /** D1 바인딩 변수 한도(100) 아래로 IN 목록을 나눈다. */
 const IN_CHUNK = 90;
 
@@ -262,7 +261,7 @@ export async function ensureFirstsBackfilled(db: Db, chunk = RESCAN_CHUNK): Prom
 }
 
 /**
- * T-11-643 5분 cron이 다시 훑기에 쓰는 시간. 기록 보유자가 숨겨지거나 탈퇴할 때마다 전체(약 36만 커리어, 반나절 분량)를 한 번씩
+ * T-11-643 5분 cron이 다시 훑기에 쓰는 시간. 기록 보유자가 숨겨지거나 탈퇴할 때마다 전체(약 36만 커리어)를 한 번씩
  * 다시 봐야 해서 숨김이 잦으면 다시 훑기가 하루 종일 쉬지 않는다. 그동안 다른 무거운 일과 겹치는 틱에서 D1이 "overloaded"로
  * 사용자 요청까지 거절했다(2026-11-05~06). 사용자가 몰리는 KST 19시~다음 날 2시와 백업 조각을 읽은 틱에는 쉰다. 쉬는 동안에도
  * 업로드는 자기 커리어를 바로 판정하므로, 늦어지는 것은 빈 기록 자리를 채우는 일뿐이다.
@@ -277,7 +276,10 @@ export function firstsRescanBudgetMs(nowMs: number, backupRan: boolean): number 
 export async function runFirstsRescan(db: Db, budgetMs = 20_000): Promise<number> {
   const until = Date.now() + budgetMs;
   let chunks = 0;
-  while (Date.now() < until && (await ensureFirstsBackfilled(db, CRON_RESCAN_CHUNK))) chunks++;
+  while (chunks < MAX_RESCAN_CHUNKS_PER_TICK && Date.now() < until) {
+    if (!(await ensureFirstsBackfilled(db))) break;
+    chunks++;
+  }
   return chunks;
 }
 

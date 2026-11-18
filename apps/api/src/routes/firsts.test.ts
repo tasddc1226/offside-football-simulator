@@ -239,6 +239,28 @@ describe('서버 최초 기록 /v1/firsts (T-10-027)', () => {
     expect(await runFirstsRescan(ctx.db, 20_000)).toBeGreaterThan(0);
   });
 
+  it('한 틱에서 320개까지 처리하고 다음 틱에서 남은 기록을 판정한다', async () => {
+    await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody());
+    await ctx.env.DB.prepare(
+      `
+      WITH RECURSIVE seq(n) AS (VALUES(1) UNION ALL SELECT n+1 FROM seq WHERE n<319)
+      INSERT INTO careers(id,profile_id,pos,foot,type,trait,start_year,status,app_version,created_at,updated_at)
+      SELECT 'rescan-' || n,profile_id,pos,foot,type,trait,start_year,status,app_version,created_at,updated_at
+      FROM careers,seq WHERE id=?
+    `,
+    )
+      .bind(A)
+      .run();
+    await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2030`, seasonBody({ goals: 36 }));
+    await ctx.env.DB.prepare("DELETE FROM app_meta WHERE key LIKE 'server_firsts_%'").run();
+    await ctx.env.DB.prepare('DELETE FROM server_firsts').run();
+    expect(await runFirstsRescan(ctx.db)).toBe(8);
+    expect(holderOf(await read(ctx), 'sgoals30')).toBeNull();
+    expect(await runFirstsRescan(ctx.db)).toBe(1);
+    expect(holderOf(await read(ctx), 'sgoals30')?.careerId).toBe(B);
+    expect(await runFirstsRescan(ctx.db)).toBe(0);
+  });
+
   it('T-11-646: 목록 조회는 다시 훑기를 돕지 않는다(피크에도 cron만 훑는다)', async () => {
     await putJson(ctx, cookie, `/v1/careers/${A}/seasons/2030`, seasonBody({ goals: 31 }));
     const db = ctx.env.DB;

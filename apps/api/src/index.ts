@@ -267,7 +267,7 @@ export default {
         logged('infra-health'),
       );
       mark('runInfraHealth');
-      // T-11-156 서버 최초 기록 전체 재계산을 몰아서 훑는다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
+      // T-11-156 서버 최초 기록 전체 재계산을 제한된 조각만큼 이어 간다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
       // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다. 피크와 백업 조각을 읽은 틱에는 쉰다(T-11-643).
       await runFirstsRescan(
         createDb(env.DB),
