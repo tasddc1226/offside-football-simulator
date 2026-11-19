@@ -26,7 +26,7 @@ import {
   enhanceKeepKey,
   enhanceResultKind,
   enhanceResultText,
-  enhanceStatsView,
+  enhanceStatsNow,
   enhanceTitleText,
   enhanceView,
   runEnhanceAuto,
@@ -36,6 +36,7 @@ import { fmtValue } from '@offside/app-core/format';
 import { fundsText } from '@offside/app-core/funds';
 import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
 import { EnhanceFx } from '../../components/EnhanceFx';
+import { goFairness } from '../../game/nav';
 import { EnhanceStage, type EnhanceRoll } from '../../components/EnhanceStage';
 import { TeamDialog } from '../../components/TeamDialog';
 import { prefs } from '../../store';
@@ -67,19 +68,13 @@ export function EnhanceSheet({
   const alive = useRef(true);
   // T-11-679 자동 강화 — 목표 단계 · 쓸 금액을 고르면 서버가 연달아 판정한다. 창을 닫으면 다음 묶음을 보내지 않는다.
   const [autoOpen, setAutoOpen] = useState(false);
-  // T-11-758 실제 결과 보기: 펼칠 때 한 번만 받는다(서버가 6시간에 한 번 집계하고 화면 메모도 그동안 다시 부르지 않는다).
-  const [statsOpen, setStatsOpen] = useState(false);
-  const [statsData, setStatsData] = useState<EnhanceStatsResponse | 'loading' | 'error' | null>(
-    null,
-  );
-  const toggleStats = () => {
-    setStatsOpen(!statsOpen);
-    if (statsOpen || (statsData !== null && statsData !== 'error')) return;
-    setStatsData('loading');
+  // T-11-758 지금 확률의 실제 성공률 한 줄. 창을 열 때 한 번 받고 6시간 메모라 다시 열어도 또 부르지 않는다. 못 받으면 줄만 빠진다.
+  const [statsData, setStatsData] = useState<EnhanceStatsResponse | null>(null);
+  useEffect(() => {
     void fetchEnhanceStats().then((r) => {
-      if (alive.current) setStatsData(r.ok ? r.data : 'error');
+      if (alive.current && r.ok) setStatsData(r.data);
     });
-  };
+  }, []);
   const [target, setTarget] = useState(0);
   const [budgetPick, setBudgetPick] = useState(0);
   const [autoBusy, setAutoBusy] = useState(false);
@@ -115,10 +110,8 @@ export function EnhanceSheet({
   }, []);
 
   const view = info ? enhanceView(info.card, info.rules, info.balance, listed) : null;
-  const stats =
-    statsData && typeof statsData === 'object'
-      ? enhanceStatsView(statsData, view && view.next !== null ? view.rateBp : null)
-      : null;
+  const statsNow =
+    statsData && view && view.next !== null ? enhanceStatsNow(statsData, view.rateBp) : null;
   const targets = info ? enhanceAutoTargets(info.card.level) : [];
   const targetNow = targets.includes(target) ? target : (targets[0] ?? 0);
   const expected = info && targetNow ? enhanceAutoExpected(info.card, targetNow, info.rules) : 0;
@@ -331,6 +324,24 @@ export function EnhanceSheet({
               {view.failText}
             </Txt>
           ) : null}
+          <Txt v="xs" tone="muted">
+            {statsNow ? (
+              <Txt v="xs" tone="muted" testID="enhance-actual">{`${statsNow} `}</Txt>
+            ) : null}
+            <Txt
+              v="xs"
+              tone="muted"
+              style={{ textDecorationLine: 'underline' }}
+              accessibilityRole="link"
+              testID="enhance-odds"
+              onPress={() => {
+                close();
+                goFairness();
+              }}
+            >
+              {`${L.statsMore} ›`}
+            </Txt>
+          </Txt>
           {result && enhanceTitleText(result.titles) ? (
             <Txt bold tone="good" testID="enhance-title">
               {enhanceTitleText(result.titles)}
@@ -457,80 +468,6 @@ export function EnhanceSheet({
               ) : null}
             </View>
           ) : null}
-          <View
-            testID="enhance-stats"
-            style={{ borderWidth: 1, borderColor: c.line, borderRadius: 12, padding: 10, gap: 8 }}
-          >
-            <Btn
-              sm
-              kind="ghost"
-              onPress={toggleStats}
-              accessibilityState={{ expanded: statsOpen }}
-              testID="enhance-stats-toggle"
-            >
-              {`${L.statsTitle} ${statsOpen ? '▲' : '▼'}`}
-            </Btn>
-            {!statsOpen ? null : statsData === 'loading' || statsData === null ? (
-              <Skeleton height={120} />
-            ) : statsData === 'error' ? (
-              <Txt v="sm" tone="muted">
-                {L.statsFail}
-              </Txt>
-            ) : !stats ? (
-              <Txt v="sm" tone="muted">
-                {L.statsEmpty}
-              </Txt>
-            ) : (
-              <>
-                <View style={{ flexDirection: 'row', paddingHorizontal: 6 }}>
-                  {[L.statsShown, L.statsActual, L.statsTries].map((h, i) => (
-                    <Txt
-                      key={h}
-                      v="xs"
-                      tone="muted"
-                      style={{ flex: 1, textAlign: i ? 'right' : 'left' }}
-                    >
-                      {h}
-                    </Txt>
-                  ))}
-                </View>
-                {stats.lines.map((l) => (
-                  <View
-                    key={l.rateBp}
-                    testID={`enhance-stats-row-${l.rateBp}`}
-                    accessibilityLabel={
-                      l.mine ? `${L.statsMine} ${l.shown} ${l.actual} ${l.tries}` : undefined
-                    }
-                    style={{
-                      flexDirection: 'row',
-                      paddingVertical: 5,
-                      paddingHorizontal: 6,
-                      borderRadius: 6,
-                      backgroundColor: l.mine ? c.surface2 : undefined,
-                    }}
-                  >
-                    {[l.shown, l.actual, l.tries].map((v, i) => (
-                      <Txt
-                        key={i}
-                        v="sm"
-                        bold={l.mine}
-                        style={{
-                          flex: 1,
-                          textAlign: i ? 'right' : 'left',
-                          fontVariant: ['tabular-nums'],
-                        }}
-                      >
-                        {v}
-                      </Txt>
-                    ))}
-                  </View>
-                ))}
-                <Txt v="xs" tone="muted">
-                  {stats.note}
-                </Txt>
-              </>
-            )}
-          </View>
           <Txt v="xs" tone="muted">
             {`${L.balance} ${fundsText(info.balance)}`}
           </Txt>

@@ -208,7 +208,7 @@ test('T-11-728 내 구단 메뉴의 카드 강화로 팀 화면 라커룸까지 
   await expect(sheet.locator('[data-enhance-effect]')).toContainText('팀 OVR에 더해져요');
 });
 
-test('T-11-758 실제 결과 보기: 펼칠 때만 받고, 다시 펼치거나 창을 다시 열어도 또 받지 않는다', async ({
+test('T-11-758 강화 창은 지금 확률의 실제 성공률 한 줄만 보여 주고, 표는 확률 도감의 확률과 공정성에서 펼칠 때 보인다', async ({
   page,
 }) => {
   const hits = await stub(page);
@@ -217,23 +217,23 @@ test('T-11-758 실제 결과 보기: 펼칠 때만 받고, 다시 펼치거나 �
   await page.locator('[data-act="team"]').click();
   await page.locator('[data-act="enhance"]').first().click();
   const sheet = page.locator('[data-enhance-sheet]');
-  await expect(sheet.locator('[data-act="enhance-go"]')).toBeEnabled();
-  expect(hits.stats).toBe(0);
+  // +0 카드의 이번 시도 확률(90%)에 모인 실제 결과.
+  await expect(sheet.locator('[data-enhance-actual]')).toContainText('90.3%');
+  await expect(sheet.locator('[data-enhance-actual]')).toContainText('606');
 
-  const stats = sheet.locator('[data-enhance-stats]');
-  await stats.locator('summary').click();
-  // +0 카드의 이번 시도 확률(90%) 줄을 짚는다.
-  const mine = stats.locator('[data-enhance-stats-row="9000"]');
-  await expect(mine).toHaveText('90%90.3%606');
-  await expect(mine).toHaveClass(/mine/);
-  await expect(stats.locator('[data-enhance-stats-row="7200"]')).toHaveText('72%72.6%2,678');
-  await expect(stats).toContainText('3,284');
-
-  await stats.locator('summary').click();
-  await stats.locator('summary').click();
+  // 창을 다시 열어도 또 받지 않는다.
   await sheet.locator('button.close').click();
   await page.locator('[data-act="enhance"]').first().click();
-  await page.locator('[data-enhance-sheet] [data-enhance-stats] summary').click();
-  await expect(page.locator('[data-enhance-stats-row="9000"]')).toBeVisible();
+  await expect(page.locator('[data-enhance-actual]')).toBeVisible();
+  expect(hits.stats).toBe(1);
+
+  // 확률별 표는 확률 도감에 있다. 이미 받은 집계라 다시 부르지 않는다.
+  await page.locator('[data-act="enhance-odds"]').click();
+  await expect(page.locator('#fairness')).toHaveAttribute('open', '');
+  const stats = page.locator('[data-fair-enhance-stats]');
+  await stats.locator('summary').click();
+  await expect(stats.locator('[data-fair-enhance-row="9000"]')).toHaveText('90%90.3%606');
+  await expect(stats.locator('[data-fair-enhance-row="7200"]')).toHaveText('72%72.6%2,678');
+  await expect(stats).toContainText('3,284');
   expect(hits.stats).toBe(1);
 });

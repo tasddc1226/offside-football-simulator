@@ -4,12 +4,13 @@
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { holdAchCheck } from '@offside/app-core/achDirty';
   import { enhanceCard, enhanceCardAuto, fetchEnhanceState, fetchEnhanceStats, type EnhanceResponse, type EnhanceStatsResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
-  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoFinal, enhanceAutoHoldMs, enhanceAutoSummary, enhanceStatsView, enhanceAutoTickMs, enhanceAutoTargets, enhanceEffectText, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
+  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoFinal, enhanceAutoHoldMs, enhanceAutoSummary, enhanceStatsNow, enhanceAutoTickMs, enhanceAutoTargets, enhanceEffectText, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
   import { fmtValue } from '@offside/app-core/format';
   import { fundsText } from '@offside/app-core/funds';
   import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
   import { enhanceSfx } from '@offside/app-core/sfxKind';
   import { buzz, dur } from '../motion.js';
+  import { goFairness } from '../nav.js';
   import { playSfx } from '../sfx.js';
   import { lockScroll } from '../scrollLock.js';
   import Skeleton from '../Skeleton.svelte';
@@ -63,16 +64,15 @@
   const budgetNow = $derived(budgets.list.some((b) => b.value === budgetPick) ? budgetPick : budgets.pick);
   const autoText = $derived(autoRun && !autoBusy ? enhanceAutoSummary(autoRun, autoTarget) : null);
 
-  // T-11-758 실제 결과 보기: 펼칠 때 한 번만 받는다(서버가 6시간에 한 번 집계하고 화면 메모도 그동안 다시 부르지 않는다).
-  let statsData = $state<EnhanceStatsResponse | 'loading' | 'error' | null>(null);
-  const stats = $derived(
-    statsData && typeof statsData === 'object' ? (enhanceStatsView(statsData, view && view.next !== null ? view.rateBp : null) ?? 'empty') : statsData,
-  );
-  async function openStats(open: boolean) {
-    if (!open || (statsData !== null && statsData !== 'error')) return;
-    statsData = 'loading';
-    const r = await fetchEnhanceStats();
-    statsData = r.ok ? r.data : 'error';
+  // T-11-758 지금 확률의 실제 성공률 한 줄. 창을 열 때 한 번 받고 6시간 메모라 다시 열어도 또 부르지 않는다. 못 받으면 줄만 빠진다.
+  let statsData = $state<EnhanceStatsResponse | null>(null);
+  $effect(() => {
+    void fetchEnhanceStats().then((r) => { if (r.ok) statsData = r.data; });
+  });
+  const statsNow = $derived(statsData && view && view.next !== null ? enhanceStatsNow(statsData, view.rateBp) : null);
+  function openOdds() {
+    dialog.close();
+    goFairness();
   }
 
   // T-11-682 자동 강화 연출: 서버가 묶음으로 판정한 시도를 단계 숫자로 차례로 되감아 보여 주고(성공 · 유지 · 하락마다 숫자가 튄다),
@@ -238,6 +238,7 @@
     {#if view.ovrText}<p class="ovr" data-enhance-ovr>{view.ovrText}</p>{/if}
     {#if view.tierText}<p class="muted fs-sm" data-enhance-tier>{view.tierText}</p>{/if}
     {#if view.failText}<p class="muted fs-sm" data-enhance-fail-note>{view.failText}</p>{/if}
+    <p class="muted fs-xs actual">{#if statsNow}<span data-enhance-actual>{statsNow}</span> {/if}<button class="link-btn" onclick={openOdds} data-act="enhance-odds">{L.statsMore} ›</button></p>
     {#if result && enhanceTitleText(result.titles)}<p class="result good" role="status" data-enhance-title>{enhanceTitleText(result.titles)}</p>{/if}
     {#if error}<p class="note" role="alert" data-enhance-error>{error}</p>{/if}
     {#if view.block}<p class="note" data-enhance-block>{view.block}</p>{/if}
@@ -270,28 +271,6 @@
         </div>
       </details>
     {/if}
-    <details class="auto" data-enhance-stats ontoggle={(e) => void openStats(e.currentTarget.open)}>
-      <summary>{L.statsTitle}</summary>
-      <div class="auto-body">
-        {#if stats === 'loading' || stats === null}
-          <Skeleton height={120} />
-        {:else if stats === 'error'}
-          <p class="muted fs-sm" data-enhance-stats-error>{L.statsFail}</p>
-        {:else if stats === 'empty'}
-          <p class="muted fs-sm" data-enhance-stats-empty>{L.statsEmpty}</p>
-        {:else}
-          <table class="odds-table">
-            <thead><tr><th scope="col">{L.statsShown}</th><th scope="col">{L.statsActual}</th><th scope="col">{L.statsTries}</th></tr></thead>
-            <tbody>
-              {#each stats.lines as l (l.rateBp)}
-                <tr class:mine={l.mine} data-enhance-stats-row={l.rateBp} aria-label={l.mine ? L.statsMine : undefined}><th scope="row">{l.shown}</th><td>{l.actual}</td><td>{l.tries}</td></tr>
-              {/each}
-            </tbody>
-          </table>
-          <p class="muted fs-xs">{stats.note}</p>
-        {/if}
-      </div>
-    </details>
     <p class="muted fs-xs foot">
       {L.balance} {fundsText(info.balance)}
     </p>
@@ -359,10 +338,5 @@
   .auto-body select{min-height:44px;color:var(--ink);}
   .auto-body p{margin:0;line-height:1.6;}
   .auto-status{font-weight:600;color:var(--ink);}
-  .odds-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px;}
-  .odds-table th,.odds-table td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line);font-weight:500;}
-  .odds-table th:first-child{text-align:left;}
-  .odds-table thead th{font-size:.72rem;color:var(--muted);}
-  .odds-table tbody th{color:var(--ink);font-size:inherit;}
-  .odds-table tr.mine th,.odds-table tr.mine td{font-weight:700;background:var(--surface-2);}
+  .actual{margin:2px 0 8px;line-height:1.6;}
 </style>

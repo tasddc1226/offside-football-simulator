@@ -77,13 +77,15 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   stopUser: '途中で止めました。',
   autoTargetLow: '目標は今の段階より高くしてください。',
   autoBudgetLow: '使う金額が1回の試行費用より少ないです。',
-  statsTitle: '実際の結果を見る',
+  statsTitle: 'カード強化の実際の結果',
   statsShown: '表示確率',
   statsActual: '実際の成功',
   statsTries: '試行',
   statsNote: (p) =>
-    `直近${p.n}回の強化のサーバー記録です。全オーナーの試行を表示確率ごとにまとめ、1日に数回集計し直します。`,
-  statsMine: 'このカードの今の確率',
+    `直近${p.n}回の強化のサーバー記録です。全オーナーの試行を表示確率ごとにまとめ、1日に数回集計し直します。試行が少ない確率は表に入れません。`,
+  statsNow: (p) => `${p.shown}の試行の実際の成功率は${p.actual}です(${p.tries}回)。`,
+  statsMore: '確率ごとの実際の結果',
+  statsLoading: '記録を読み込み中…',
   statsEmpty: 'まだ記録が少ないです。',
   statsFail: '記録を読み込めませんでした。',
 };

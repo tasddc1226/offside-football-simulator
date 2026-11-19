@@ -9,6 +9,7 @@ import {
   enhanceErrorText,
   enhanceFxBig,
   enhanceAutoHoldMs,
+  enhanceStatsNow,
   enhanceStatsView,
   enhanceFxMs,
   enhanceParticles,
@@ -311,16 +312,21 @@ describe('T-11-758 강화 실제 결과 표', () => {
       { rateBp: 3600, attempts: 7322, success: 2652 },
     ],
   };
-  it('표시 확률 · 실제 성공률 · 시도 수를 문구로 바꾸고, 지금 카드와 같은 확률 줄을 짚는다', () => {
-    const v = enhanceStatsView(data, 3600)!;
+  it('표시 확률 · 실제 성공률 · 시도 수를 표 문구로 바꾸고, 모인 줄이 없으면 표를 만들지 않는다', () => {
+    const v = enhanceStatsView(data)!;
     expect(v.lines).toEqual([
-      { rateBp: 7200, shown: '72%', actual: '72.6%', tries: '2,678', mine: false },
-      { rateBp: 3600, shown: '36%', actual: '36.2%', tries: '7,322', mine: true },
+      { rateBp: 7200, shown: '72%', actual: '72.6%', tries: '2,678' },
+      { rateBp: 3600, shown: '36%', actual: '36.2%', tries: '7,322' },
     ]);
     expect(v.note).toContain('12,345');
+    expect(enhanceStatsView({ ...data, rows: [] })).toBeNull();
   });
-  it('최고 단계 카드는 짚는 줄이 없고, 모인 줄이 없으면 표를 만들지 않는다', () => {
-    expect(enhanceStatsView(data, null)!.lines.every((l) => !l.mine)).toBe(true);
-    expect(enhanceStatsView({ ...data, rows: [] }, 3600)).toBeNull();
+  it('강화 창 한 줄은 지금 확률의 실제 성공률만 말하고, 그 확률의 기록이 없거나 최고 단계면 없다', () => {
+    const now = enhanceStatsNow(data, 3600)!;
+    expect(now).toContain('36%');
+    expect(now).toContain('36.2%');
+    expect(now).toContain('7,322');
+    expect(enhanceStatsNow(data, 9000)).toBeNull();
+    expect(enhanceStatsNow(data, null)).toBeNull();
   });
 });

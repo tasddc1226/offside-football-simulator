@@ -372,30 +372,30 @@ export function enhanceAutoSummary(run: EnhanceAutoRun, target: number) {
   return { done, why };
 }
 
-/** T-11-758 '실제 결과 보기' 표 한 줄. mine은 지금 카드의 이번 시도와 같은 확률인 줄. */
-export type EnhanceStatsLine = {
-  rateBp: number;
-  shown: string;
-  actual: string;
-  tries: string;
-  mine: boolean;
-};
+/** T-11-758 확률 도감 '카드 강화 실제 결과' 표 한 줄. */
+export type EnhanceStatsLine = { rateBp: number; shown: string; actual: string; tries: string };
 export type EnhanceStatsView = { note: string; lines: EnhanceStatsLine[] };
 
-/** T-11-758 서버가 모은 실제 결과를 표로. rateBp는 지금 카드의 성공 확률(만분율, 최고 단계면 null). */
-export function enhanceStatsView(
-  data: EnhanceStatsResponse,
-  rateBp: number | null,
-): EnhanceStatsView | null {
+const statsLine = (r: { rateBp: number; attempts: number; success: number }): EnhanceStatsLine => ({
+  rateBp: r.rateBp,
+  shown: `${r.rateBp / 100}%`,
+  actual: `${((r.success / r.attempts) * 100).toFixed(1)}%`,
+  tries: r.attempts.toLocaleString('en-US'),
+});
+
+/** T-11-758 서버가 모은 실제 결과를 표로(모인 줄이 없으면 null). */
+export function enhanceStatsView(data: EnhanceStatsResponse): EnhanceStatsView | null {
   if (!data.rows.length) return null;
   return {
     note: L.statsNote({ n: data.attempts.toLocaleString('en-US') }),
-    lines: data.rows.map((r) => ({
-      rateBp: r.rateBp,
-      shown: `${r.rateBp / 100}%`,
-      actual: `${((r.success / r.attempts) * 100).toFixed(1)}%`,
-      tries: r.attempts.toLocaleString('en-US'),
-      mine: r.rateBp === rateBp,
-    })),
+    lines: data.rows.map(statsLine),
   };
+}
+
+/** T-11-758 강화 창의 한 줄: 지금 카드의 이번 시도와 같은 확률로 모인 실제 성공률. 그 확률의 기록이 적으면 null. */
+export function enhanceStatsNow(data: EnhanceStatsResponse, rateBp: number | null): string | null {
+  const r = data.rows.find((x) => x.rateBp === rateBp);
+  if (!r) return null;
+  const l = statsLine(r);
+  return L.statsNow({ shown: l.shown, actual: l.actual, tries: l.tries });
 }
