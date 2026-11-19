@@ -752,3 +752,43 @@ export function seasonRecordRewardOf(f: SeasonRecordFacts) {
 
 /** 업적 랭킹 한 페이지의 구단주 수. */
 export const ACH_RANK_PER_PAGE = 20;
+
+/** 한 경기 골 수 분포를 끊는 자리(그 이상은 마지막 칸에 모은다). 서버 경기 시뮬레이션의 골 상한과 같다. */
+export const MATCH_MAX_GOALS = 9;
+
+function goalDist(lambda: number): number[] {
+  const out: number[] = [];
+  let p = Math.exp(-lambda);
+  let left = 1;
+  for (let k = 0; k < MATCH_MAX_GOALS; k++) {
+    out.push(p);
+    left -= p;
+    p *= lambda / (k + 1);
+  }
+  out.push(Math.max(0, left));
+  return out;
+}
+
+/**
+ * T-11-405 두 팀 기대 득점으로 90분 승 · 무 · 패 확률(포아송). 서버의 경기 전 예상과 T-11-760 결과 화면의 '경기 전 예상'이
+ * 같은 계산을 쓴다.
+ */
+export function oddsOfXg(homeXg: number, awayXg: number) {
+  const h = goalDist(homeXg);
+  const a = goalDist(awayXg);
+  let win = 0;
+  let draw = 0;
+  for (let i = 0; i < h.length; i++)
+    for (let j = 0; j < a.length; j++) {
+      const p = h[i]! * a[j]!;
+      if (i > j) win += p;
+      else if (i === j) draw += p;
+    }
+  return { win, draw, loss: Math.max(0, 1 - win - draw) };
+}
+/** 승 · 패 확률을 정수 %로 반올림하고 합이 100이 되게 무승부로 맞춘다. */
+export function oddsPercent(o: { win: number; loss: number }) {
+  const win = Math.round(o.win * 100);
+  const loss = Math.round(o.loss * 100);
+  return { win, draw: Math.max(0, 100 - win - loss), loss };
+}

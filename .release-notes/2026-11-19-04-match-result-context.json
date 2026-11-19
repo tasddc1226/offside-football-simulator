@@ -1,0 +1,30 @@
+{
+  "id": "t-11-760-match-result-context",
+  "title": "랭크 경기 결과에 경기 전 예상과 장면 확률 표시",
+  "items": [
+    "랭크 경기 결과 화면에 경기 전 예상 승 · 무 · 패가 다시 나와요. 예상이 25% 이하였던 승리나 패배에는 얼마나 드문 결과였는지 함께 적어요.",
+    "결정적 장면 줄에 그때 고른 선택지의 확률이 남고, 장면에서 난 골에는 장면 표시가 붙어요. 골 가운데 몇 개가 장면에서 나왔는지도 보여 줘요."
+  ],
+  "en": {
+    "title": "Ranked results now show pre-match odds and moment chances",
+    "items": [
+      "The ranked match result screen shows the pre-match win, draw and loss odds again. A win or loss that was 25% or less likely notes how rare it was.",
+      "Each key moment line keeps the chance of the option you picked, and goals from moments get a Moment tag. The result also shows how many goals came from moments."
+    ]
+  },
+  "ja": {
+    "title": "ランク戦の結果に試合前予想と場面の確率を表示",
+    "items": [
+      "ランク戦の結果画面に試合前の勝ち・引き分け・負けの予想がもう一度表示されます。予想が25%以下だった勝ちや負けには、どれほど珍しい結果だったかを添えます。",
+      "決定的な場面の行にそのとき選んだ選択肢の確率が残り、場面から生まれたゴールには場面マークが付きます。ゴールのうちいくつが場面から生まれたかも表示されます。"
+    ]
+  },
+  "zh": {
+    "title": "排位賽結果顯示賽前預測與場面機率",
+    "items": [
+      "排位賽結果畫面會再次顯示賽前預測的勝・和・負。預測機率在 25% 以下的勝利或落敗，會一併說明這個結果有多罕見。",
+      "關鍵場面的紀錄會保留當時所選選項的機率，來自場面的進球會標上「關鍵」，並顯示進球中有幾個來自關鍵場面。"
+    ]
+  },
+  "availability": "web-app"
+}

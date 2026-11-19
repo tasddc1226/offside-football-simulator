@@ -30,6 +30,12 @@ const ko = {
     `${p.minute}' ${p.name} · ${p.choice} · ${p.ok ? '성공' : '실패'}`,
   recordAuto: '감독에게 맡김',
   recordTitle: '결정적 장면',
+  // T-11-760 결과 화면의 골 출처
+  goalTag: '장면',
+  goalSplit: (p: { total: number; k: number }) =>
+    `골 ${p.total}개 중 ${p.k}개가 결정적 장면에서 나왔어요.`,
+  goalSplitNone: '이 경기 골은 모두 결정적 장면 밖에서 나왔어요.',
+  goalSplitNote: '골의 3분의 2쯤은 장면과 상관없이 두 팀 전력으로 정해져요.',
 
   // 장면(s:<장면 id>)
   's:st-1v1': (p: P) =>

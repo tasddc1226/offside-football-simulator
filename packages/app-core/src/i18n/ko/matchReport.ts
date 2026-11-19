@@ -23,6 +23,12 @@ const ko = {
   dMidDown: (p: { n: string }) => `중원에서 ${p.n} 밀려 상대에게 공을 더 내줬어요.`,
   dDefUp: (p: { n: string }) => `수비벽이 상대 공격보다 ${p.n} 단단해 기회를 적게 내줬어요.`,
   dDefDown: (p: { n: string }) => `수비벽이 상대 공격보다 ${p.n} 약해 기회를 많이 내줬어요.`,
+  // T-11-760 결과 화면의 경기 전 예상
+  oddsLine: (p: { win: number; draw: number; loss: number }) =>
+    `경기 전 예상 승 ${p.win}% · 무 ${p.draw}% · 패 ${p.loss}%`,
+  rareWin: (p: { p: number }) => `이길 확률이 ${p.p}%였던 경기를 잡았어요.`,
+  rareLoss: (p: { p: number; n: number }) =>
+    `질 확률이 ${p.p}%였던 경기예요. 이런 결과는 ${p.n}경기에 1번쯤 나와요.`,
   fix: (p: { pos: string }) => `${p.pos} 바꾸기`,
   fixAria: (p: { pos: string }) => `${p.pos} 자리에 넣을 선수 고르기`,
   // T-11-722 랭크 연패 안내

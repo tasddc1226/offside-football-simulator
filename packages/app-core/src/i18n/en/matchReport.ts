@@ -21,6 +21,10 @@ export const matchReport: Translation<MatchReportMsgs> = {
   dMidDown: (p) => `You trailed in midfield by ${p.n} and gave them more of the ball.`,
   dDefUp: (p) => `Your wall was ${p.n} stronger than their attack and gave up few chances.`,
   dDefDown: (p) => `Your wall was ${p.n} weaker than their attack and gave up many chances.`,
+  oddsLine: (p) => `Before kickoff: win ${p.win}% · draw ${p.draw}% · loss ${p.loss}%`,
+  rareWin: (p) => `You won a match you had a ${p.p}% chance to win.`,
+  rareLoss: (p) =>
+    `You had a ${p.p}% chance to lose this one. A result like this happens about once every ${p.n} matches.`,
   fix: (p) => `Change ${p.pos}`,
   fixAria: (p) => `Pick a player for the ${p.pos} slot`,
   streakTitle: (p) => `${p.n} losses in a row`,

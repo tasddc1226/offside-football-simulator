@@ -24,7 +24,11 @@ import {
   type TeamSynergy,
   synergyApplies,
   toSynergyPlayer,
+  oddsOfXg,
+  MATCH_MAX_GOALS,
 } from '@offside/contracts/owner-team';
+// 경기 전 예상 계산은 결과 화면(app-core)과 같이 쓰려고 contracts로 옮겼다(T-11-760).
+export { oddsOfXg, oddsPercent } from '@offside/contracts/owner-team';
 
 /** 팀에 넣을 수 있는 커리어(구단주 본인의 은퇴 선수). */
 export type LineupCareer = {
@@ -139,7 +143,7 @@ export const SIM = {
   homeAdv: 1.08,
   minXg: 0.2,
   maxXg: 4.5,
-  maxGoals: 9,
+  maxGoals: MATCH_MAX_GOALS,
   assistChance: 0.75,
 } as const;
 
@@ -250,6 +254,8 @@ export type SimEvent = {
   slot: DetailPos;
   scorer: PlayerRef;
   assist: PlayerRef | null;
+  /** T-11-760 장면 경기에서만: 결정적 장면에서 난 골이면 true, 일반 골이면 false. */
+  moment?: boolean;
 };
 export type SimResult = {
   homeGoals: number;
@@ -308,35 +314,6 @@ export function matchSetup(
   };
 }
 
-/** 골 수 분포 — poisson()과 같이 maxGoals에서 자른다(그 위 몫은 maxGoals에 모인다). */
-function goalDist(lambda: number): number[] {
-  const out: number[] = [];
-  let p = Math.exp(-lambda);
-  let left = 1;
-  for (let k = 0; k < SIM.maxGoals; k++) {
-    out.push(p);
-    left -= p;
-    p *= lambda / (k + 1);
-  }
-  out.push(Math.max(0, left));
-  return out;
-}
-
-/** 기대 득점 두 개로 90분 승 · 무 · 패 확률(홈 쪽 기준, 합 1). */
-export function oddsOfXg(homeXg: number, awayXg: number) {
-  const h = goalDist(homeXg);
-  const a = goalDist(awayXg);
-  let win = 0;
-  let draw = 0;
-  for (let i = 0; i < h.length; i++)
-    for (let j = 0; j < a.length; j++) {
-      const p = h[i]! * a[j]!;
-      if (i > j) win += p;
-      else if (i === j) draw += p;
-    }
-  return { win, draw, loss: Math.max(0, 1 - win - draw) };
-}
-
 /**
  * T-11-405 경기 전 예상 — 경기 한 판(simulateMatch)과 같은 줄 힘 · 기대 득점으로 90분 승 · 무 · 패 확률을 계산한다.
  * 난수를 쓰지 않는다. 지금 두 팀 명단 기준이라 명단이 바뀌면 달라진다.
@@ -349,13 +326,6 @@ export function matchOdds(
 ) {
   const { homeXg, awayXg } = matchSetup(home, away, season, opts);
   return { ...oddsOfXg(homeXg, awayXg), homeXg, awayXg };
-}
-
-/** 승 · 패 확률을 정수 %로 반올림하고 합이 100이 되게 무승부로 맞춘다. */
-export function oddsPercent(o: { win: number; loss: number }) {
-  const win = Math.round(o.win * 100);
-  const loss = Math.round(o.loss * 100);
-  return { win, draw: Math.max(0, 100 - win - loss), loss };
 }
 
 /** 골 n개의 분 · 득점자 · 도움을 굴려 events에 더한다. */

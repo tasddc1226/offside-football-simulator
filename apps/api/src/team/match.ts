@@ -130,6 +130,7 @@ export const storedEvent = (e: SimResult['events'][number]): MatchDetail['events
   scorer: e.scorer,
   assist: e.assist,
   slot: e.slot,
+  ...(e.moment === undefined ? {} : { moment: e.moment }),
 });
 
 export function toMatch(
@@ -175,6 +176,7 @@ export function toMatch(
       scorerId: e.side === mine ? e.scorer.careerId : null,
       assistId: e.side === mine ? (e.assist?.careerId ?? null) : null,
       ...(e.slot ? { slot: e.slot } : {}),
+      ...(e.moment === undefined ? {} : { moment: e.moment }),
     })),
     mine,
     ...(d.moments?.length
@@ -212,6 +214,7 @@ export function momentView(
       gain: Math.round(c.gain * 100),
     })),
     ...(m.picked === undefined ? {} : { picked: m.picked, ok: !!m.ok }),
+    ...(m.picked === 'auto' && m.autoPct !== undefined ? { autoPct: m.autoPct } : {}),
   };
 }
 

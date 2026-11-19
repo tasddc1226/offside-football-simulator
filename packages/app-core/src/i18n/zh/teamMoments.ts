@@ -22,6 +22,11 @@ export const teamMoments: Translation<TeamMomentsMsgs> = {
   recordLine: (p) => `${p.minute}' ${p.name} · ${p.choice} · ${p.ok ? '成功' : '失敗'}`,
   recordAuto: '交給總教練',
   recordTitle: '關鍵時刻',
+  // T-11-760
+  goalTag: '關鍵',
+  goalSplit: (p) => `${p.total}個進球中有${p.k}個來自關鍵時刻。`,
+  goalSplitNone: '本場比賽的進球都不是來自關鍵時刻。',
+  goalSplitNote: '大約三分之二的進球與關鍵時刻無關，由兩隊實力決定。',
 
   's:st-1v1': (p) => `${p.name}（${p.pos}）鑽進防線身後，與門將一對一。`,
   's:st-turn': (p) => `${p.name}（${p.pos}）在禁區內背身接球，後衛緊貼在身後。`,

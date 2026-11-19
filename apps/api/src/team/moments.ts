@@ -225,7 +225,12 @@ const goal = (
   slot: scorer.slot,
   scorer: scorer.ref,
   assist: assist?.ref ?? null,
+  moment: true,
 });
+
+/** 감독에게 맡겼을 때 판정 확률(정수 %). */
+export const autoPctOf = (m: Pick<StoredMoment, 'kind' | 'autoPct'>) =>
+  m.autoPct ?? AUTO_PCT[m.kind];
 
 /** 장면 하나를 판정한다(이미 판정했으면 그대로 둔다). choice는 선택지 id 또는 'auto'. 모르는 id면 false. */
 export function resolveMoment(m: StoredMoment, choice: string): boolean {
@@ -259,9 +264,10 @@ export const liveDone = (s: LiveState) => s.moments.every((m) => m.picked !== un
 
 /** 지금까지 정해진 골(일반 골 + 판정한 장면의 골), 분 순서. */
 export function liveEvents(s: LiveState): SimEvent[] {
-  return [...s.base, ...s.moments.flatMap((m) => m.goals ?? [])].sort(
-    (a, b) => a.minute - b.minute,
-  );
+  return [
+    ...s.base.map((e) => ({ ...e, moment: false })),
+    ...s.moments.flatMap((m) => m.goals ?? []),
+  ].sort((a, b) => a.minute - b.minute);
 }
 
 /** 다 판정한 경기를 일반 경기 결과 모양으로. */

@@ -944,6 +944,8 @@ export type StoredEvent = {
   assist: PlayerRef | null;
   /** T-11-387 득점자 자리. 이 기능 전 경기에는 없다. */
   slot?: DetailPos;
+  /** T-11-760 장면 경기의 골 출처(장면 골 true · 일반 골 false). 장면 경기가 아니거나 옛 경기면 없다. */
+  moment?: boolean;
 };
 /** T-11-387 장면 경기에서 화면에 띄운 장면(판정값은 남기지 않는다). */
 export type StoredMomentView = Omit<StoredMoment, 'roll' | 'counterRoll' | 'shown' | 'goals'>;

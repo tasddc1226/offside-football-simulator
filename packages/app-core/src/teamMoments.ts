@@ -59,6 +59,30 @@ export const pickedLabel = (m: TeamMoment, name: NameOf) =>
     ? M.recordAuto
     : say(`c:${m.situation}:${m.picked}`, paramsOf(m, name)) || m.picked;
 
+/** T-11-760 고른(맡긴) 선택지의 판정 확률(정수 %). 아직 안 골랐거나 옛 기록에서 맡긴 장면이면 null. */
+export const pickedPct = (m: TeamMoment): number | null =>
+  !m.picked
+    ? null
+    : m.picked === 'auto'
+      ? (m.autoPct ?? null)
+      : (m.choices.find((c) => c.id === m.picked)?.pct ?? null);
+
+/** T-11-760 결과 기록 줄의 선택지 칸 — 이름과 그때 확률. */
+export const pickedChoice = (m: TeamMoment, name: NameOf) => {
+  const p = pickedPct(m);
+  return p === null ? pickedLabel(m, name) : `${pickedLabel(m, name)} ${p}%`;
+};
+
+/**
+ * T-11-760 이 경기 골 가운데 결정적 장면에서 난 골 수 문장. 골 출처를 남기지 않은 경기(장면 경기가 아니거나 옛 경기)나
+ * 골이 없는 경기면 null.
+ */
+export function momentGoalSummary(m: Pick<TeamMatch, 'events'>): string | null {
+  if (!m.events.length || !m.events.some((e) => e.moment !== undefined)) return null;
+  const k = m.events.filter((e) => e.moment).length;
+  return k ? M.goalSplit({ total: m.events.length, k }) : M.goalSplitNone;
+}
+
 /**
  * 장면 경기의 스코어 · 골 줄 상태. 장면 골이 일반 골 사이에 끼어들므로, 대본의 골 · 하프타임 · 경기 종료 줄을 보여 줄 때
  * 지금 스코어로 문구를 다시 쓴다.

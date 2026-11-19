@@ -22,6 +22,11 @@ export const teamMoments: Translation<TeamMomentsMsgs> = {
   recordLine: (p) => `${p.minute}' ${p.name} · ${p.choice} · ${p.ok ? 'Success' : 'Failed'}`,
   recordAuto: 'Left to the manager',
   recordTitle: 'Key moments',
+  // T-11-760
+  goalTag: 'Moment',
+  goalSplit: (p) => `${p.k} of ${p.total} goals came from key moments.`,
+  goalSplitNone: 'None of the goals in this match came from key moments.',
+  goalSplitNote: 'About two thirds of goals are decided by team strength, not by moments.',
 
   's:st-1v1': (p) =>
     `${p.name} (${p.pos}) slips in behind the defense. One-on-one with the keeper.`,
