@@ -11,7 +11,8 @@
   import { divisionShiftView, type DivisionShift } from '@offside/app-core/teamDivision';
   import TeamReport from './TeamReport.svelte';
   import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
-  import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
+  import { momentGoalSummary, momentTitle, pickedChoice } from '@offside/app-core/teamMoments';
+  import { matchOddsView } from '@offside/app-core/matchReport';
   import { usesRankLadder, type ReportLine } from '@offside/contracts/owner-team';
   import type { StreakHint } from '@offside/app-core/losingStreak';
   import { matchReportText as R } from '@offside/app-core/i18n/ko/matchReport';
@@ -56,6 +57,9 @@
   const goalsOf = (side: 'home' | 'away') => m.events.filter((e) => e.side === side);
   // 연패 안내가 고칠 곳을 가리키면 버튼은 거기 하나만 둔다(리포트의 같은 버튼은 숨긴다).
   const streakFix = $derived(streak?.line && fix ? fix(streak.line) : null);
+  // T-11-760 경기 전 예상과 골 출처 — 결과를 경기 전에 본 숫자와 이어 보게 한다. 친선전은 랭크 결과가 아니라 뺀다.
+  const odds = $derived(m.friendly ? null : matchOddsView(m));
+  const goalSplit = $derived(momentGoalSummary(m));
 </script>
 
 {#snippet scorers(side: 'home' | 'away')}
@@ -68,6 +72,7 @@
           {:else}<b>{eventName(e.scorerId, e.scorer)}</b>{/if}
           {#if e.slot}<small class="tm-slot">{e.slot}</small>{/if}
           <span class="tm-min">{e.minute}'</span>
+          {#if e.moment}<small class="tm-moment-tag" data-moment-goal>{M.goalTag}</small>{/if}
         </span>
         {#if e.assist}
           {#if link(e.assistId)}
@@ -118,6 +123,12 @@
       {#if record}<span class="tm-chip">{L.recordChip({ record })}</span>{/if}
     </p>
   {/if}
+  {#if odds}
+    <div class="tm-odds" class:rare={!!odds.rare} data-match-odds>
+      <span class="fs-sm">{odds.text}</span>
+      {#if odds.rare}<b class="fs-sm" data-match-rare>{odds.rare}</b>{/if}
+    </div>
+  {/if}
   {#if m.moments?.length}
     <div class="tm-moments" data-team-moments>
       <h2 class="eyebrow">{M.recordTitle}</h2>
@@ -125,10 +136,14 @@
         {#each m.moments as x (x.index)}
           <li class:fail={!x.ok}>
             <b>{momentTitle(x)}</b>
-            <span>{M.recordLine({ minute: x.minute, name: `${eventName(x.actor.id, x.actor.name)}(${x.actor.slot})`, choice: pickedLabel(x, eventName), ok: !!x.ok })}</span>
+            <span>{M.recordLine({ minute: x.minute, name: `${eventName(x.actor.id, x.actor.name)}(${x.actor.slot})`, choice: pickedChoice(x, eventName), ok: !!x.ok })}</span>
           </li>
         {/each}
       </ul>
+      {#if goalSplit}
+        <p class="fs-sm tm-goal-split" data-moment-goal-split>{goalSplit}</p>
+        <p class="muted fs-xs tm-goal-split">{M.goalSplitNote}</p>
+      {/if}
     </div>
   {/if}
   {#if moved}
@@ -322,6 +337,27 @@
     background: var(--surface-2);
     box-shadow: inset 3px 0 0 var(--pitch-2);
     font-size: var(--fs-body2);
+  }
+  .tm-odds {
+    display: grid;
+    gap: 2px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-2);
+  }
+  .tm-odds span {
+    color: var(--muted);
+  }
+  .tm-moment-tag {
+    margin-left: 4px;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-size: var(--fs-xs);
+    color: var(--on-pitch);
+    border: 1px solid color-mix(in srgb, var(--on-pitch) 60%, transparent);
+  }
+  .tm-goal-split {
+    margin: 6px 0 0;
   }
   .tm-moments li.fail {
     box-shadow: inset 3px 0 0 var(--line);

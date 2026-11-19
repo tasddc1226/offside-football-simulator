@@ -382,6 +382,8 @@ export const TeamMatchEventSchema = z.strictObject({
   assistId: z.string().nullable(),
   /** T-11-387 득점자 자리. 이 기능 전에 치른 경기에는 없다. */
   slot: DetailPosSchema.optional(),
+  /** T-11-760 장면 경기에서 이 골이 결정적 장면(역습 포함)에서 났으면 true, 일반 골이면 false. 장면 경기가 아니거나 옛 경기면 없다. */
+  moment: z.boolean().optional(),
 });
 export type TeamMatchEvent = z.infer<typeof TeamMatchEventSchema>;
 
@@ -420,6 +422,8 @@ export const TeamMomentSchema = z.strictObject({
   /** 판정한 장면이면 고른 선택지('auto' = 자동 선택)와 결과. */
   picked: z.string().max(32).optional(),
   ok: z.boolean().optional(),
+  /** T-11-760 감독에게 맡긴 장면의 판정 확률(정수 %). 이 기능 전에 맡긴 장면에는 없다. */
+  autoPct: z.number().int().min(0).max(100).optional(),
 });
 export type TeamMoment = z.infer<typeof TeamMomentSchema>;
 

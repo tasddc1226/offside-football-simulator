@@ -3,7 +3,9 @@ import type { TeamMatch } from './api/team.js';
 import { FORMATIONS, YOUTH_OVR, presetLayout } from '@offside/contracts/owner-team';
 import { decisiveLine, weakestLine } from '@offside/contracts/owner-team';
 import type { MatchGame } from '@offside/game/engine';
-import { fixSlot, seasonReportView, teamMatchReport } from './matchReport.js';
+import { fixSlot, matchOddsView, seasonReportView, teamMatchReport } from './matchReport.js';
+import { momentGoalSummary, pickedChoice, pickedPct } from './teamMoments.js';
+import type { TeamMoment } from './api/team.js';
 import { growthDirectionNote, ratingBreakdown } from './ratingReport.js';
 
 type Lines = { atk: number; mid: number; def: number; gk: number };
@@ -173,5 +175,83 @@ describe('T-11-379 성장 방향', () => {
       3,
     );
     expect(growthDirectionNote(gk)).toMatch(/^평점에는 수비 능력치가/);
+  });
+});
+
+describe('T-11-760 결과 화면의 경기 전 예상', () => {
+  it('기대 득점이 없는 옛 경기는 예상이 없다', () => {
+    expect(matchOddsView(match(side(1), side(0)))).toBeNull();
+  });
+
+  it('내 쪽 기대 득점으로 승 · 무 · 패를 다시 계산하고 합은 100이다', () => {
+    const o = matchOddsView(match(side(1, 2.2, even), side(1, 1.5, even)))!;
+    expect(o.win + o.draw + o.loss).toBe(100);
+    expect(o.win).toBeGreaterThan(o.loss);
+    // 받은 경기(away)는 뒤집어 본다.
+    const flip = matchOddsView(match(side(1, 2.2, even), side(1, 1.5, even), 'away'))!;
+    expect(flip.win).toBe(o.loss);
+    expect(flip.rare).toBeNull();
+  });
+
+  it('예상이 25% 이하였던 승리 · 패배만 드물었다고 알려 준다', () => {
+    // 흐에 사례: 기대 득점 4.5 : 1.9, 2 : 3 패배.
+    const loss = matchOddsView(match(side(2, 4.5, even), side(3, 1.9, even)))!;
+    expect(loss.win).toBeGreaterThanOrEqual(75);
+    expect(loss.rare).toBe(
+      `질 확률이 ${loss.loss}%였던 경기예요. 이런 결과는 ${Math.round(100 / loss.loss)}경기에 1번쯤 나와요.`,
+    );
+    const upset = matchOddsView(match(side(1, 1.9, even), side(0, 4.5, even)))!;
+    expect(upset.rare).toBe(`이길 확률이 ${upset.win}%였던 경기를 잡았어요.`);
+    expect(matchOddsView(match(side(2, 4.5, even), side(2, 1.9, even)))!.rare).toBeNull();
+    expect(matchOddsView(match(side(0, 2.2, even), side(1, 1.5, even)))!.rare).toBeNull();
+  });
+});
+
+describe('T-11-760 장면 기록 확률 · 골 출처', () => {
+  const moment = (picked: string, extra: Partial<TeamMoment> = {}): TeamMoment => ({
+    index: 0,
+    minute: 61,
+    kind: 'chance',
+    situation: 'late-run',
+    actor: { name: 'A', id: null, slot: 'CM' },
+    mate: { name: 'B', id: null, slot: 'RW' },
+    opp: { name: 'C', id: null, slot: 'ST' },
+    choices: [
+      { id: 'arrive', pct: 52, mate: false, risk: 20, gain: 0 },
+      { id: 'edge', pct: 62, mate: false, risk: 0, gain: 0 },
+    ],
+    picked,
+    ok: true,
+    ...extra,
+  });
+  const name = (_: string | null, f: string) => f;
+
+  it('고른 선택지는 그 확률을, 맡긴 장면은 남은 판정 확률을 붙인다', () => {
+    expect(pickedPct(moment('edge'))).toBe(62);
+    expect(pickedChoice(moment('edge'), name)).toMatch(/ 62%$/);
+    expect(pickedPct(moment('auto', { autoPct: 41 }))).toBe(41);
+    // 옛 기록의 맡긴 장면은 확률이 없어 이름만 쓴다.
+    expect(pickedPct(moment('auto'))).toBeNull();
+    expect(pickedChoice(moment('auto'), name)).toBe('감독에게 맡김');
+  });
+
+  it('골 출처가 남은 경기만 장면 골 수를 말한다', () => {
+    const ev = (moment?: boolean) => ({
+      minute: 10,
+      side: 'home' as const,
+      scorer: 'A',
+      assist: null,
+      scorerId: null,
+      assistId: null,
+      ...(moment === undefined ? {} : { moment }),
+    });
+    expect(momentGoalSummary({ events: [ev(), ev()] })).toBeNull();
+    expect(momentGoalSummary({ events: [] })).toBeNull();
+    expect(momentGoalSummary({ events: [ev(true), ev(false), ev(false)] })).toBe(
+      '골 3개 중 1개가 결정적 장면에서 나왔어요.',
+    );
+    expect(momentGoalSummary({ events: [ev(false)] })).toBe(
+      '이 경기 골은 모두 결정적 장면 밖에서 나왔어요.',
+    );
   });
 });

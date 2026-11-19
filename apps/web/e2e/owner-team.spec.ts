@@ -495,12 +495,13 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   const final = {
     match: {
       id: 'mat_live',
-      home: side(MY_TEAM, '우리 동네 FC', 1, 9),
-      away: side(RIVAL, '라이벌 FC', 0, -9),
-      events: [goal],
+      // T-11-760 기대 득점으로 경기 전 예상을 다시 계산한다(0.9 : 2.6이면 이길 확률이 낮았던 이변).
+      home: { ...side(MY_TEAM, '우리 동네 FC', 1, 9), xg: 0.9 },
+      away: { ...side(RIVAL, '라이벌 FC', 0, -9), xg: 2.6 },
+      events: [{ ...goal, moment: true }],
       moments: [
         { ...chance, picked: 'round', ok: true },
-        { ...crisis, picked: 'auto', ok: true },
+        { ...crisis, picked: 'auto', ok: true, autoPct: 62 },
       ],
       mine: 'home',
       createdAt: '2026-09-29T03:00:00.000Z',
@@ -593,6 +594,15 @@ test('T-11-387 랭크 경기 중 결정적 장면을 고르면 결과가 중계�
   await expect(moments.locator('li')).toHaveCount(2);
   await expect(moments.locator('li').first()).toContainText('키퍼 제치기');
   await expect(moments.locator('li').nth(1)).toContainText('감독');
+  // T-11-760 장면 줄에 그때 확률(맡긴 장면은 판정 확률), 골에 장면 표시, 경기 전 예상과 이변 한 줄.
+  await expect(moments.locator('li').first()).toContainText('58%');
+  await expect(moments.locator('li').nth(1)).toContainText('62%');
+  await expect(result.locator('[data-moment-goal]')).toHaveText('장면');
+  await expect(result.locator('[data-moment-goal-split]')).toHaveText(
+    '골 1개 중 1개가 결정적 장면에서 나왔어요.',
+  );
+  await expect(result.locator('[data-match-odds]')).toContainText('경기 전 예상 승');
+  await expect(result.locator('[data-match-rare]')).toContainText('이길 확률이');
   await expect(result.locator('[data-rating-change]')).toContainText('내 팀 레이팅 +9');
   await page.clock.resume();
   await expectNoA11yViolations(page);

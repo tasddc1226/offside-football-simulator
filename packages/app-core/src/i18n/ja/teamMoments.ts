@@ -22,6 +22,11 @@ export const teamMoments: Translation<TeamMomentsMsgs> = {
   recordLine: (p) => `${p.minute}分 ${p.name} · ${p.choice} · ${p.ok ? '成功' : '失敗'}`,
   recordAuto: '監督に任せた',
   recordTitle: '決定的な場面',
+  // T-11-760
+  goalTag: '場面',
+  goalSplit: (p) => `${p.total}ゴールのうち${p.k}ゴールが決定的な場面から生まれました。`,
+  goalSplitNone: 'この試合のゴールはすべて決定的な場面の外で生まれました。',
+  goalSplitNote: 'ゴールの約3分の2は場面に関係なく両チームの戦力で決まります。',
 
   's:st-1v1': (p) => `${p.name}(${p.pos})がディフェンスの裏に抜け出しました。キーパーと1対1です。`,
   's:st-turn': (p) =>

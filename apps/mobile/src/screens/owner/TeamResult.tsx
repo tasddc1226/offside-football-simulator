@@ -11,7 +11,8 @@ import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
 import { teamMomentsText as M } from '@offside/app-core/i18n/ko/teamMoments';
 import { matchReportText as R } from '@offside/app-core/i18n/ko/matchReport';
 import type { StreakHint } from '@offside/app-core/losingStreak';
-import { momentTitle, pickedLabel } from '@offside/app-core/teamMoments';
+import { momentGoalSummary, momentTitle, pickedChoice } from '@offside/app-core/teamMoments';
+import { matchOddsView } from '@offside/app-core/matchReport';
 import { recordText, signedNum } from '@offside/app-core/teamText';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
@@ -62,6 +63,9 @@ export function TeamResult({
   const soft = { color: c.onPitch, opacity: 0.72 } as const;
   // 연패 안내가 고칠 곳을 가리키면 버튼은 거기 하나만 둔다(리포트의 같은 버튼은 숨긴다).
   const streakFix = streak?.line && fix ? fix(streak.line) : null;
+  // T-11-760 경기 전 예상과 골 출처(친선전은 랭크 결과가 아니라 예상을 뺀다).
+  const odds = friendly ? null : matchOddsView(m);
+  const goalSplit = momentGoalSummary(m);
   const side = (s: TeamMatch['home'], mine: boolean) => (
     <View style={{ flex: 1, minWidth: 0, gap: 2, alignItems: 'center' }}>
       <TeamLogo logo={s.logo} name={s.name} size={52} decorative />
@@ -130,6 +134,11 @@ export function TeamResult({
                   </Txt>
                 ) : null}
                 <Txt v="sm" style={[soft, { fontFamily: DISPLAY[700] }]}>{`${e.minute}'`}</Txt>
+                {e.moment ? (
+                  <Txt v="xs" style={soft} testID="team-moment-goal">
+                    {M.goalTag}
+                  </Txt>
+                ) : null}
               </View>
               {e.assist ? (
                 linkable(e.assistId) ? (
@@ -258,6 +267,27 @@ export function TeamResult({
           {record ? chip(L.recordChip({ record })) : null}
         </View>
       ) : null}
+      {odds ? (
+        <View
+          testID="team-match-odds"
+          style={{
+            gap: 2,
+            paddingVertical: 8,
+            paddingHorizontal: 10,
+            borderRadius: RADIUS.sm,
+            backgroundColor: c.surface2,
+          }}
+        >
+          <Txt v="sm" tone="muted">
+            {odds.text}
+          </Txt>
+          {odds.rare ? (
+            <Txt v="sm" bold testID="team-match-rare">
+              {odds.rare}
+            </Txt>
+          ) : null}
+        </View>
+      ) : null}
       {m.moments?.length ? (
         <View style={{ gap: 6 }} testID="team-moments">
           <Txt v="eyebrow">{M.recordTitle}</Txt>
@@ -282,12 +312,22 @@ export function TeamResult({
                 {M.recordLine({
                   minute: x.minute,
                   name: `${eventName(x.actor.id, x.actor.name)}(${x.actor.slot})`,
-                  choice: pickedLabel(x, eventName),
+                  choice: pickedChoice(x, eventName),
                   ok: !!x.ok,
                 })}
               </Txt>
             </View>
           ))}
+          {goalSplit ? (
+            <>
+              <Txt v="sm" testID="team-moment-goal-split">
+                {goalSplit}
+              </Txt>
+              <Txt v="xs" tone="muted">
+                {M.goalSplitNote}
+              </Txt>
+            </>
+          ) : null}
         </View>
       ) : null}
       {moved ? (

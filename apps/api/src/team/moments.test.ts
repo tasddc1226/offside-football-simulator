@@ -2,8 +2,10 @@ import { FORMATIONS, type PosGroup } from '@offside/contracts/owner-team';
 import { MOMENT_RULES, SITUATIONS } from '@offside/contracts/team-moments';
 import { describe, expect, it } from 'vitest';
 import {
+  autoPctOf,
   finishMoments,
   liveDone,
+  liveEvents,
   liveResult,
   resolveMoment,
   startLiveMatch,
@@ -218,6 +220,29 @@ describe('resolveMoment', () => {
         resolveMoment(hi, sorted.at(-1)!.id);
         if (lo.ok) expect(hi.ok).toBe(true);
       }
+    }
+  });
+
+  it('T-11-760 마감한 경기의 골은 장면 골(true) · 일반 골(false)로 출처를 남긴다', () => {
+    let both = false;
+    for (let i = 0; i < 100 && !both; i++) {
+      const s = startLiveMatch(`src-${i}`, home, away, SEASON);
+      finishMoments(s);
+      const events = liveEvents(s);
+      expect(events.every((e) => typeof e.moment === 'boolean')).toBe(true);
+      const fromMoments = s.moments.reduce((n, m) => n + (m.goals?.length ?? 0), 0);
+      expect(events.filter((e) => e.moment)).toHaveLength(fromMoments);
+      both = events.some((e) => e.moment) && events.some((e) => !e.moment);
+    }
+    expect(both).toBe(true);
+  });
+
+  it('T-11-760 맡긴 장면의 판정 확률은 autoPctOf와 같다', () => {
+    const s = startLiveMatch('auto-pct', home, away, SEASON);
+    finishMoments(s);
+    for (const m of s.moments) {
+      expect(m.picked).toBe('auto');
+      expect(m.ok).toBe(m.roll < autoPctOf(m));
     }
   });
 

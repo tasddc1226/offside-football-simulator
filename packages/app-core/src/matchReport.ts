@@ -12,6 +12,7 @@ import {
   type DetailPos,
   type ReportLine,
 } from '@offside/contracts/owner-team';
+import { oddsOfXg, oddsPercent } from '@offside/contracts/owner-team';
 import { tn } from '@offside/game/i18n/names';
 import { matchReportText as L } from './i18n/ko/matchReport.js';
 
@@ -90,6 +91,38 @@ export function teamMatchReport(m: TeamMatch): TeamMatchReport | null {
     diagnosis,
     weak: weakestLine(edges),
   };
+}
+
+/** 이 확률(%) 이하로 예상된 결과가 나오면 드물었다고 알려 준다. */
+const RARE_PCT = 25;
+
+export type MatchOddsView = {
+  win: number;
+  draw: number;
+  loss: number;
+  /** '경기 전 예상 승 · 무 · 패' 한 줄. */
+  text: string;
+  /** 예상이 낮았던 결과(이변 · 드문 패배)면 그 설명, 아니면 null. */
+  rare: string | null;
+};
+
+/**
+ * T-11-760 경기 전 예상 — 그 경기에 남은 두 팀 기대 득점으로 90분 승 · 무 · 패 확률을 다시 계산한다(서버의 경기 전 예상과
+ * 같은 계산, 기대 득점이 0.1 단위로 남아 1%p쯤 다를 수 있다). 기대 득점이 없는 옛 경기면 null.
+ */
+export function matchOddsView(m: TeamMatch): MatchOddsView | null {
+  const me = m[m.mine];
+  const opp = m[m.mine === 'home' ? 'away' : 'home'];
+  if (me.xg === undefined || opp.xg === undefined) return null;
+  const o = oddsPercent(oddsOfXg(me.xg, opp.xg));
+  const p = me.goals > opp.goals ? o.win : me.goals < opp.goals ? o.loss : null;
+  const rare =
+    p === null || p > RARE_PCT
+      ? null
+      : me.goals > opp.goals
+        ? L.rareWin({ p })
+        : L.rareLoss({ p, n: Math.round(100 / Math.max(1, p)) });
+  return { ...o, text: L.oddsLine(o), rare };
 }
 
 /**

@@ -21,6 +21,10 @@ export const matchReport: Translation<MatchReportMsgs> = {
   dMidDown: (p) => `中盤で${p.n}押され、相手にボールを多く渡しました。`,
   dDefUp: (p) => `守備壁が相手の攻撃より${p.n}堅く、チャンスをあまり与えませんでした。`,
   dDefDown: (p) => `守備壁が相手の攻撃より${p.n}弱く、チャンスを多く与えました。`,
+  oddsLine: (p) => `試合前の予想 勝 ${p.win}% · 分 ${p.draw}% · 負 ${p.loss}%`,
+  rareWin: (p) => `勝つ確率が${p.p}%だった試合をものにしました。`,
+  rareLoss: (p) =>
+    `負ける確率が${p.p}%だった試合です。こうした結果は${p.n}試合に1回ほど起こります。`,
   fix: (p) => `${p.pos}を替える`,
   fixAria: (p) => `${p.pos}の枠に入れる選手を選ぶ`,
   streakTitle: (p) => `${p.n}連敗中です`,

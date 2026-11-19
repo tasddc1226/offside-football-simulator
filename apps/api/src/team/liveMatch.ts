@@ -29,6 +29,7 @@ import { anonText } from './anon.js';
 import { refreshAfterChange } from './ownerAchievements.js';
 import { matchNotice, momentView, storedEvent, toMatch, type Lineups } from './match.js';
 import {
+  autoPctOf,
   finishMoments,
   liveEvents,
   liveResult,
@@ -91,6 +92,7 @@ export const momentGoals = (p: LivePayload, m: StoredMoment, lang: Lang): TeamMa
       scorerId: e.side === 'home' ? e.scorer.careerId : null,
       assistId: e.side === 'home' ? (e.assist?.careerId ?? null) : null,
       slot: e.slot,
+      moment: true,
     };
   });
 
@@ -103,6 +105,8 @@ const viewOf = (m: StoredMoment): StoredMomentView => ({
   opp: m.opp,
   choices: m.choices,
   ...(m.picked === undefined ? {} : { picked: m.picked, ok: !!m.ok }),
+  // T-11-760 맡긴 장면은 판정에 쓴 확률을 남겨 결과 화면이 보여 준다.
+  ...(m.picked === 'auto' ? { autoPct: autoPctOf(m) } : {}),
 });
 
 /**
