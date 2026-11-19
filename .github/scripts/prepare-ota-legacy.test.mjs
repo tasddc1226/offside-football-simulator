@@ -54,12 +54,11 @@ test('preparation protects dirty work and existing native test environments', ()
 
 test('each lane drops exactly the npm native modules its store build lacks', () => {
   assert.deepEqual(droppedModules('1.1.7', 'ios'), ['expo-tracking-transparency', 'expo-audio']);
-  // T-11-738 1.1.10 전 스토어 빌드는 expo-audio가 없다(T-11-751부터 두 플랫폼 current가 1.1.10).
+  // T-11-738 1.1.10 전 스토어 빌드는 expo-audio가 없다(T-11-751부터 두 플랫폼 current가 1.1.10 이상).
   for (const platform of Object.keys(STORE_BUILDS))
-    assert.deepEqual(
-      droppedModules('current', platform),
-      STORE_BUILDS[platform].version === '1.1.10' ? [] : ['expo-audio'],
-    );
+    assert.deepEqual(droppedModules('current', platform), []);
+  // T-11-759 Android 1.1.10 경로: expo-audio가 있다.
+  assert.deepEqual(droppedModules('1.1.10', 'android'), []);
   assert.deepEqual(droppedModules('1.1.10', 'ios'), []);
   assert.deepEqual(droppedModules('1.1.9', 'ios'), ['expo-audio']);
   // T-11-751 iOS 1.1.8 경로: ATT 모듈은 있고 expo-audio는 없다.
@@ -68,9 +67,10 @@ test('each lane drops exactly the npm native modules its store build lacks', () 
 });
 
 test('lanes for store builds before 1.1.11 install Reanimated without the ANR patch', () => {
-  // T-11-750 패치는 1.1.11 스토어 빌드부터 실린다. 지금 공개된 빌드(1.1.10 이하)는 모두 패치 없이 맞춘다.
-  for (const platform of Object.keys(STORE_BUILDS))
-    assert.deepEqual(droppedPatches('current', platform), ['react-native-reanimated@4.5.1']);
+  // T-11-750 패치는 1.1.11 스토어 빌드부터 실린다. T-11-759부터 Android current는 1.1.11(패치 있음), iOS current는 1.1.10(패치 없음).
+  assert.deepEqual(droppedPatches('current', 'android'), []);
+  assert.deepEqual(droppedPatches('current', 'ios'), ['react-native-reanimated@4.5.1']);
+  assert.deepEqual(droppedPatches('1.1.10', 'android'), ['react-native-reanimated@4.5.1']);
   assert.deepEqual(droppedPatches('1.1.7', 'ios'), ['react-native-reanimated@4.5.1']);
   assert.deepEqual(droppedPatches('1.1.11', 'android'), []);
   const yaml =
@@ -156,7 +156,10 @@ test('the deploy workflow publishes each legacy lane with its own runtime check'
   );
   const job = workflow.split('  app-update:')[1].split('  release-tag:')[0];
   // 경로 목록과 matrix가 같다. 런타임이 없는 플랫폼(예: Android에만 공개된 1.1.9의 iOS)은 matrix에서 뺀다.
-  const names = Object.keys(targets).sort().reverse();
+  // 버전 숫자 순서(새 버전 먼저). 문자열 정렬은 '1.1.10'을 '1.1.7' 뒤에 둔다.
+  const names = Object.keys(targets).sort((a, b) =>
+    b.localeCompare(a, undefined, { numeric: true }),
+  );
   assert.match(job, new RegExp(`target: \\[current, ${names.map((n) => `'${n}'`).join(', ')}\\]`));
   for (const [name, { runtimes }] of Object.entries(targets))
     for (const platform of ['ios', 'android']) {
