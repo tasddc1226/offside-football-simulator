@@ -1,0 +1,1 @@
+CREATE INDEX `market_listings_buyer_status_idx` ON `market_listings` (`buyer_id`,`status`);
