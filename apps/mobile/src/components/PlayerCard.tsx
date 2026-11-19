@@ -763,9 +763,7 @@ function CardBody({
   const fx = enhanceFx(level);
   const height = z(
     compact
-      ? mini
-        ? 68
-        : 88
+      ? (mini ? 68 : 88) + (ribbon ? CARD_SPECIAL_ROW : 0)
       : CARD_HEIGHT +
           (deployed ? 31 : 0) +
           (style ? CARD_STYLE_ROW : 0) +

@@ -94,7 +94,7 @@
   .tm-slot { position:absolute; width:clamp(58px,15%,86px); transform:translate(-50%,-50%); padding:0; border:0; background:none; color:inherit; font:inherit; z-index:1; border-radius:var(--radius-md);pointer-events:auto; }
   .tm-slot[data-slot='0'] {z-index:2;}
   /* 11명이 한 화면에 겹치지 않게 그라운드 안의 카드는 낮게 그린다(라커룸 등 다른 자리의 compact 카드는 그대로). */
-  .tm-slot :global(.compact .card-face) {height:86px;padding:8px 3px 10px;}
+  .tm-slot :global(.compact .card-face) {height:calc(86px + var(--ribbon-space, 0px));padding:8px 3px 10px;}
   .tm-slot :global(.compact .card-art) {height:36px;margin-top:6px;}
   .tm-slot :global(.compact.deployed .card-art) {height:26px;}
   button.tm-slot.peekable {cursor:zoom-in;touch-action:manipulation;}
@@ -111,5 +111,5 @@
   .syn-links {position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;}
   .syn-links line {stroke:var(--accent);stroke-width:2px;stroke-dasharray:6 5;opacity:.55;vector-effect:non-scaling-stroke;}
   .syn-links line.on {stroke-width:3.5px;stroke-dasharray:none;opacity:.95;}
-  @media(max-width:440px) { .tm-slot {width:clamp(50px,16%,64px);} .tm-slot :global(.compact .card-face) {height:72px;padding:6px 2px 8px;} .tm-slot :global(.compact .card-art) {height:26px;margin-top:4px;} .tm-slot :global(.compact.deployed .card-art) {height:26px;} .tm-slot :global(.compact .card-deployment) {position:absolute;z-index:1;left:22px;top:30px;} .tm-slot :global(.compact .card-deployment > span) {display:none;} .tm-slot :global(.compact .card-deployment b) {font-size:10px;line-height:10px;} .tm-slot :global(.compact .card-name) {font-size:10px;margin-top:1px;} .pitch-frame {aspect-ratio:5/8;padding:36px 4px 40px;} .syn-caption {bottom:6px;font-size:11px;} }
+  @media(max-width:440px) { .tm-slot {width:clamp(50px,16%,64px);} .tm-slot :global(.compact .card-face) {height:calc(72px + var(--ribbon-space, 0px));padding:6px 2px 8px;} .tm-slot :global(.compact .card-art) {height:26px;margin-top:4px;} .tm-slot :global(.compact.deployed .card-art) {height:26px;} .tm-slot :global(.compact .card-deployment) {position:absolute;z-index:1;left:22px;top:30px;} .tm-slot :global(.compact .card-deployment > span) {display:none;} .tm-slot :global(.compact .card-deployment b) {font-size:10px;line-height:10px;} .tm-slot :global(.compact .card-name) {font-size:10px;margin-top:1px;} .pitch-frame {aspect-ratio:5/8;padding:36px 4px 40px;} .syn-caption {bottom:6px;font-size:11px;} }
 </style>
