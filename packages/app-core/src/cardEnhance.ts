@@ -13,7 +13,12 @@ import {
   type EnhanceCardState,
   type EnhanceRules,
 } from '@offside/contracts/card-enhance';
-import type { EnhanceAutoBody, EnhanceAutoResponse, EnhanceBody } from '@offside/contracts';
+import type {
+  EnhanceAutoBody,
+  EnhanceAutoResponse,
+  EnhanceBody,
+  EnhanceStatsResponse,
+} from '@offside/contracts';
 import type { ApiResult } from './api/client.js';
 import { fmtValue } from './format.js';
 import { titleLabel } from './ownerTitle.js';
@@ -39,6 +44,8 @@ export type EnhanceView = {
   next: number | null;
   /** 이번 시도 성공 · 유지 · 실패 확률(정수 퍼센트 문구). */
   ratePct: string;
+  /** T-11-758 이번 시도 성공 확률(만분율). 실제 결과 표에서 같은 확률 줄을 짚는다. */
+  rateBp: number;
   keepPct: string;
   downPct: string;
   /** 레전드 · 아이콘 카드의 확률 안내(그 밖에는 null). */
@@ -83,6 +90,7 @@ export function enhanceView(
     level,
     next,
     ratePct: `${rateBp / 100}%`,
+    rateBp,
     keepPct: `${(10_000 - rateBp - downBp) / 100}%`,
     downPct: `${downBp / 100}%`,
     tierText: next === null || tier === 'normal' ? null : tier === 'top' ? L.tierTop : L.tierHigh,
@@ -362,4 +370,32 @@ export function enhanceAutoSummary(run: EnhanceAutoRun, target: number) {
                 ? run.error
                 : null;
   return { done, why };
+}
+
+/** T-11-758 확률 도감 '카드 강화 실제 결과' 표 한 줄. */
+export type EnhanceStatsLine = { rateBp: number; shown: string; actual: string; tries: string };
+export type EnhanceStatsView = { note: string; lines: EnhanceStatsLine[] };
+
+const statsLine = (r: { rateBp: number; attempts: number; success: number }): EnhanceStatsLine => ({
+  rateBp: r.rateBp,
+  shown: `${r.rateBp / 100}%`,
+  actual: `${((r.success / r.attempts) * 100).toFixed(1)}%`,
+  tries: r.attempts.toLocaleString('en-US'),
+});
+
+/** T-11-758 서버가 모은 실제 결과를 표로(모인 줄이 없으면 null). */
+export function enhanceStatsView(data: EnhanceStatsResponse): EnhanceStatsView | null {
+  if (!data.rows.length) return null;
+  return {
+    note: L.statsNote({ n: data.attempts.toLocaleString('en-US') }),
+    lines: data.rows.map(statsLine),
+  };
+}
+
+/** T-11-758 강화 창의 한 줄: 지금 카드의 이번 시도와 같은 확률로 모인 실제 성공률. 그 확률의 기록이 적으면 null. */
+export function enhanceStatsNow(data: EnhanceStatsResponse, rateBp: number | null): string | null {
+  const r = data.rows.find((x) => x.rateBp === rateBp);
+  if (!r) return null;
+  const l = statsLine(r);
+  return L.statsNow({ shown: l.shown, actual: l.actual, tries: l.tries });
 }

@@ -10,6 +10,9 @@ import {
 } from '@offside/app-core/fairness';
 import { kstParts } from '@offside/app-core/boardText';
 import { fairnessText as L } from '@offside/app-core/i18n/ko/fairness';
+import { fetchEnhanceStats } from '@offside/app-core/api/cardEnhance';
+import { enhanceStatsView, type EnhanceStatsView } from '@offside/app-core/cardEnhance';
+import { cardEnhanceText as E } from '@offside/app-core/i18n/ko/cardEnhance';
 import { openBoard } from '../../game/nav';
 import { rem } from '../../theme/type';
 import { useColors } from '../../theme/useColors';
@@ -161,6 +164,47 @@ function History() {
   );
 }
 
+/** T-11-758 카드 강화 실제 결과(표시 확률별 실제 성공률). 펼칠 때만 받고, 서버가 6시간에 한 번 집계하므로 그동안 다시 부르지 않는다. */
+function EnhanceStats() {
+  const [open, setOpen] = useState(false);
+  const [stats, setStats] = useState<EnhanceStatsView | 'empty' | 'error' | null>(null);
+  const toggle = () => {
+    setOpen((v) => !v);
+    if (open || (stats !== null && stats !== 'error')) return;
+    setStats(null);
+    void fetchEnhanceStats().then((r) =>
+      setStats(r.ok ? (enhanceStatsView(r.data) ?? 'empty') : 'error'),
+    );
+  };
+  return (
+    <View style={{ marginTop: 14 }}>
+      <Fold title={E.statsTitle} open={open} onToggle={toggle} testID="fair-enhance-stats">
+        {stats === null ? (
+          <Txt tone="muted" accessibilityLiveRegion="polite" style={line}>
+            {E.statsLoading}
+          </Txt>
+        ) : stats === 'error' ? (
+          <Txt tone="muted" style={line}>
+            {E.statsFail}
+          </Txt>
+        ) : stats === 'empty' ? (
+          <Txt tone="muted" style={line}>
+            {E.statsEmpty}
+          </Txt>
+        ) : (
+          <>
+            <Cells head cells={[E.statsShown, E.statsActual, E.statsTries]} />
+            {stats.lines.map((l) => (
+              <Cells key={l.rateBp} cells={[l.shown, l.actual, l.tries]} />
+            ))}
+            <Note>{stats.note}</Note>
+          </>
+        )}
+      </Fold>
+    </View>
+  );
+}
+
 /** 펼쳤을 때만 그린다. */
 function FairnessBody() {
   const [V, setView] = useState(fairnessView);
@@ -204,6 +248,7 @@ function FairnessBody() {
       {V.enhanceNotes.map((note) => (
         <Note key={note}>{note}</Note>
       ))}
+      <EnhanceStats />
 
       <H3>{L.hiddenTitle}</H3>
       <Terms list={V.hidden} />

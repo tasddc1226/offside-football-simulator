@@ -9,6 +9,8 @@ import {
   enhanceErrorText,
   enhanceFxBig,
   enhanceAutoHoldMs,
+  enhanceStatsNow,
+  enhanceStatsView,
   enhanceFxMs,
   enhanceParticles,
   enhanceResultKind,
@@ -297,5 +299,34 @@ describe('T-11-757 자동 강화 뒤 버튼 막기', () => {
       { success: false, from: 3, to: 3 },
     ])
       expect(enhanceAutoHoldMs(r)).toBeGreaterThan(enhanceFxMs(r));
+  });
+});
+
+describe('T-11-758 강화 실제 결과 표', () => {
+  const data = {
+    generatedAt: '2026-11-19T03:00:00.000Z',
+    attempts: 12_345,
+    since: '2026-11-05T02:12:42.987Z',
+    rows: [
+      { rateBp: 7200, attempts: 2678, success: 1943 },
+      { rateBp: 3600, attempts: 7322, success: 2652 },
+    ],
+  };
+  it('표시 확률 · 실제 성공률 · 시도 수를 표 문구로 바꾸고, 모인 줄이 없으면 표를 만들지 않는다', () => {
+    const v = enhanceStatsView(data)!;
+    expect(v.lines).toEqual([
+      { rateBp: 7200, shown: '72%', actual: '72.6%', tries: '2,678' },
+      { rateBp: 3600, shown: '36%', actual: '36.2%', tries: '7,322' },
+    ]);
+    expect(v.note).toContain('12,345');
+    expect(enhanceStatsView({ ...data, rows: [] })).toBeNull();
+  });
+  it('강화 창 한 줄은 지금 확률의 실제 성공률만 말하고, 그 확률의 기록이 없거나 최고 단계면 없다', () => {
+    const now = enhanceStatsNow(data, 3600)!;
+    expect(now).toContain('36%');
+    expect(now).toContain('36.2%');
+    expect(now).toContain('7,322');
+    expect(enhanceStatsNow(data, 9000)).toBeNull();
+    expect(enhanceStatsNow(data, null)).toBeNull();
   });
 });

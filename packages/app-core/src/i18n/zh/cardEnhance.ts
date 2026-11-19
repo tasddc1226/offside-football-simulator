@@ -71,4 +71,15 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   stopUser: '中途停止。',
   autoTargetLow: '目標必須高於目前階段。',
   autoBudgetLow: '花費上限低於一次嘗試的費用。',
+  statsTitle: '卡片強化的實際結果',
+  statsShown: '顯示機率',
+  statsActual: '實際成功',
+  statsTries: '嘗試',
+  statsNote: (p) =>
+    `最近 ${p.n} 次強化的伺服器紀錄。彙整所有球隊老闆的嘗試並依顯示機率分組，每天重新統計數次。嘗試次數少的機率不列入表中。`,
+  statsNow: (p) => `顯示 ${p.shown} 的嘗試實際成功率為 ${p.actual}（${p.tries} 次）。`,
+  statsMore: '各機率的實際結果',
+  statsLoading: '正在載入紀錄…',
+  statsEmpty: '紀錄還不夠多。',
+  statsFail: '無法載入紀錄。',
 };

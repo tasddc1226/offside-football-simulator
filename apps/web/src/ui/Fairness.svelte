@@ -4,6 +4,9 @@
   import { onMount } from 'svelte';
   import { kstParts } from '@offside/app-core/boardText';
   import { fairnessText as L } from '@offside/app-core/i18n/ko/fairness';
+  import { fetchEnhanceStats } from '@offside/app-core/api/cardEnhance';
+  import { enhanceStatsView, type EnhanceStatsView } from '@offside/app-core/cardEnhance';
+  import { cardEnhanceText as E } from '@offside/app-core/i18n/ko/cardEnhance';
   import { openBoard } from './nav.js';
 
   let { open = false }: { open?: boolean } = $props();
@@ -17,6 +20,15 @@
     if (!(e.currentTarget as HTMLDetailsElement).open) return;
     history = null;
     void loadHistoryRows().then((r) => (history = r));
+  }
+
+  // T-11-758 카드 강화 실제 결과(표시 확률별 실제 성공률). 펼칠 때만 받고, 서버가 6시간에 한 번 집계하므로 그동안 다시 부르지 않는다.
+  let stats = $state<EnhanceStatsView | 'empty' | 'error' | null>(null);
+  function loadStats(e: Event) {
+    if (stats !== null && stats !== 'error') return;
+    if (!(e.currentTarget as HTMLDetailsElement).open) return;
+    stats = null;
+    void fetchEnhanceStats().then((r) => (stats = r.ok ? (enhanceStatsView(r.data) ?? 'empty') : 'error'));
   }
 </script>
 
@@ -76,6 +88,27 @@
     </tbody>
   </table>
   {#each V.enhanceNotes as note (note)}<p class="muted fs-xs fair-note">{note}</p>{/each}
+
+  <details class="fair-history" ontoggle={loadStats} data-fair-enhance-stats>
+    <summary><b>{E.statsTitle}</b></summary>
+    {#if stats === null}
+      <p class="muted fs-sm" aria-live="polite">{E.statsLoading}</p>
+    {:else if stats === 'error'}
+      <p class="muted fs-sm">{E.statsFail}</p>
+    {:else if stats === 'empty'}
+      <p class="muted fs-sm">{E.statsEmpty}</p>
+    {:else}
+      <table>
+        <thead><tr><th>{E.statsShown}</th><th class="n">{E.statsActual}</th><th class="n">{E.statsTries}</th></tr></thead>
+        <tbody>
+          {#each stats.lines as l (l.rateBp)}
+            <tr data-fair-enhance-row={l.rateBp}><td>{l.shown}</td><td class="n">{l.actual}</td><td class="n">{l.tries}</td></tr>
+          {/each}
+        </tbody>
+      </table>
+      <p class="muted fs-xs fair-note">{stats.note}</p>
+    {/if}
+  </details>
 
   <h3 class="fair-h">{L.hiddenTitle}</h3>
   {@render terms(V.hidden)}

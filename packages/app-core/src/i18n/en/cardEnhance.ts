@@ -79,4 +79,16 @@ export const cardEnhance: Translation<CardEnhanceMsgs> = {
   stopUser: 'Stopped partway.',
   autoTargetLow: 'The target must be above the current level.',
   autoBudgetLow: 'The spending limit is below the cost of one attempt.',
+  statsTitle: 'Actual card enhance results',
+  statsShown: 'Shown rate',
+  statsActual: 'Actual success',
+  statsTries: 'Attempts',
+  statsNote: (p) =>
+    `Server records of the latest ${p.n} enhance attempts by all owners, grouped by the rate shown and refreshed a few times a day. Rates with few attempts are left out.`,
+  statsNow: (p) =>
+    `Attempts shown at ${p.shown} actually succeeded ${p.actual} of the time (${p.tries}).`,
+  statsMore: 'Actual results by rate',
+  statsLoading: 'Loading records…',
+  statsEmpty: 'Not enough records yet.',
+  statsFail: "Couldn't load the records.",
 };

@@ -5,7 +5,9 @@ import {
   EnhanceBodySchema,
   EnhanceResponseSchema,
   EnhanceStateResponseSchema,
+  EnhanceStatsResponseSchema,
   IDEMPOTENCY_KEY_HEADER,
+  type EnhanceStatsResponse,
 } from '@offside/contracts';
 import {
   ENHANCE_AUTO_CHUNK,
@@ -43,8 +45,8 @@ import {
   slotIdsOf,
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
-import { purgeEdge } from '../edgeCache.js';
-import { STALE } from '../edgeKeys.js';
+import { edgeCached, purgeEdge } from '../edgeCache.js';
+import { EDGE, STALE } from '../edgeKeys.js';
 import { buildLineup, lineupOvr } from '../team/sim.js';
 import type { Db } from '../db/client.js';
 import { newId } from '../db/ids.js';
@@ -166,7 +168,46 @@ function teamOvrAfter(
   };
 }
 
+// T-11-758 강화 실제 결과. 표시한 확률대로 판정하는지 누구나 볼 수 있게 최근 시도를 표시 확률별로 묶는다. 표 전체가 아니라 가장 최근
+// 10만 줄만 rowid 범위로 읽어 기록이 쌓여도 한 번에 읽는 양이 같다. 누구에게나 같은 응답이라 엣지에 6시간 담고 세션은 읽지 않는다.
+export const ENHANCE_STATS_WINDOW = 100_000;
+/** 이보다 적게 모인 확률은 표에서 뺀다(몇 번 안 되는 줄은 운에 크게 흔들려 오해를 부른다). */
+export const ENHANCE_STATS_MIN = 200;
+const ENHANCE_STATS_TTL = 6 * 60 * 60;
+
+export async function loadEnhanceStats(
+  db: D1Database,
+  now: number,
+  window = ENHANCE_STATS_WINDOW,
+  min = ENHANCE_STATS_MIN,
+): Promise<EnhanceStatsResponse> {
+  const { results } = await db
+    .prepare(
+      `SELECT rate_bp AS rateBp, COUNT(*) AS attempts, SUM(success) AS success, MIN(created_at) AS since
+       FROM card_enhance_log
+       WHERE rowid > (SELECT COALESCE(MAX(rowid), 0) FROM card_enhance_log) - ?1
+       GROUP BY rate_bp ORDER BY rate_bp DESC`,
+    )
+    .bind(window)
+    .all<{ rateBp: number; attempts: number; success: number; since: string }>();
+  return {
+    generatedAt: new Date(now).toISOString(),
+    attempts: results.reduce((n, r) => n + r.attempts, 0),
+    since: results.reduce<string | null>((a, r) => (a === null || r.since < a ? r.since : a), null),
+    rows: results
+      .filter((r) => r.attempts >= min)
+      .map((r) => ({ rateBp: r.rateBp, attempts: r.attempts, success: r.success })),
+  };
+}
+
 export function registerCardEnhanceRoutes(app: Hono<AppEnv>): void {
+  app.get(EDGE.enhanceStats, async (c) => {
+    const data = await edgeCached(c, EDGE.enhanceStats, ENHANCE_STATS_TTL, () =>
+      loadEnhanceStats(c.env.DB, Date.now()),
+    );
+    return ok(c, EnhanceStatsResponseSchema, data, 200, `public, max-age=${ENHANCE_STATS_TTL}`);
+  });
+
   // 강화 창을 열 때만 부른다(그 카드 상태 · 잔액 · 운영 수치).
   app.get('/v1/cards/:careerId/enhance', requireProfile, async (c) => {
     const me = await requireOwner(c);

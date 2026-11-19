@@ -324,6 +324,29 @@ export const EnhanceStateResponseSchema = z.strictObject({
 });
 export type EnhanceStateResponse = z.infer<typeof EnhanceStateResponseSchema>;
 
+/** T-11-758 표시 확률 하나에 모인 실제 결과. */
+export const EnhanceStatsRowSchema = z.strictObject({
+  /** 그때 화면에 보여 준 성공 확률(만분율). */
+  rateBp: z.number().int().min(0).max(10_000),
+  attempts: z.number().int().nonnegative(),
+  success: z.number().int().nonnegative(),
+});
+export type EnhanceStatsRow = z.infer<typeof EnhanceStatsRowSchema>;
+
+/**
+ * T-11-758 GET /v1/card-enhance/stats — 최근 강화 시도를 표시 확률별로 묶은 실제 성공 수. 누구에게나 같은 응답이고 세션을 읽지 않는다.
+ * 시도가 적은 확률은 rows에서 빠지지만 attempts(전체 시도 수)에는 들어 있다.
+ */
+export const EnhanceStatsResponseSchema = z.strictObject({
+  generatedAt: z.string(),
+  attempts: z.number().int().nonnegative(),
+  /** 집계한 시도 가운데 가장 오래된 시각(UTC ISO). 기록이 없으면 null. */
+  since: z.string().nullable(),
+  /** 표시 확률이 높은 순. */
+  rows: z.array(EnhanceStatsRowSchema),
+});
+export type EnhanceStatsResponse = z.infer<typeof EnhanceStatsResponseSchema>;
+
 /**
  * POST /v1/cards/:careerId/enhance — 화면에서 본 단계 · 실패 수 · 비용 · 확률(만분율)을 함께 보낸다. 그 사이 다른 기기에서
  * 강화했거나 운영 수치가 바뀌어 다르면 409(ENHANCE_STALE). 같은 시도의 재시도는 Idempotency-Key를 그대로 보내 한 번만 판정 · 차감한다.

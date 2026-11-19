@@ -1,0 +1,30 @@
+{
+  "id": "t-11-758-enhance-actual-results",
+  "title": "카드 강화 실제 결과 공개",
+  "items": [
+    "확률 도감의 확률과 공정성에 카드 강화 실제 결과가 생겼어요. 모든 구단주의 최근 강화 시도를 표시 확률별로 모아, 화면에 나온 확률과 실제 성공률 · 시도 수를 나란히 보여 줘요.",
+    "강화 창에는 지금 확률로 시도한 기록의 실제 성공률이 한 줄로 나와요."
+  ],
+  "en": {
+    "title": "Actual card enhance results are now public",
+    "items": [
+      "Odds and fairness in the odds guide now shows actual card enhance results. It groups all owners' recent enhance attempts by the rate shown, so you can compare the shown rate with the actual success rate and attempt count.",
+      "The enhance sheet shows one line with the actual success rate of attempts made at the current rate."
+    ]
+  },
+  "ja": {
+    "title": "カード強化の実際の結果を公開",
+    "items": [
+      "確率図鑑の「確率と公正さ」にカード強化の実際の結果が追加されました。全オーナーの直近の強化を表示確率ごとにまとめ、表示された確率と実際の成功率・試行回数を並べて確認できます。",
+      "強化画面には、今の確率で試行した記録の実際の成功率が1行で表示されます。"
+    ]
+  },
+  "zh": {
+    "title": "公開卡片強化的實際結果",
+    "items": [
+      "機率圖鑑的「機率與公平性」新增卡片強化的實際結果。將所有球隊老闆最近的強化嘗試依顯示機率彙整，並列顯示畫面上的機率與實際成功率、嘗試次數。",
+      "強化視窗會以一行顯示以目前機率嘗試的紀錄的實際成功率。"
+    ]
+  },
+  "availability": "web-app"
+}

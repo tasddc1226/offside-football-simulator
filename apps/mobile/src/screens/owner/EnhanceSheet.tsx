@@ -7,8 +7,10 @@ import {
   enhanceCard,
   enhanceCardAuto,
   fetchEnhanceState,
+  fetchEnhanceStats,
   type EnhanceResponse,
   type EnhanceStateResponse,
+  type EnhanceStatsResponse,
 } from '@offside/app-core/api/cardEnhance';
 import {
   ENHANCE_CHARGE_MS,
@@ -24,6 +26,7 @@ import {
   enhanceKeepKey,
   enhanceResultKind,
   enhanceResultText,
+  enhanceStatsNow,
   enhanceTitleText,
   enhanceView,
   runEnhanceAuto,
@@ -33,6 +36,7 @@ import { fmtValue } from '@offside/app-core/format';
 import { fundsText } from '@offside/app-core/funds';
 import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
 import { EnhanceFx } from '../../components/EnhanceFx';
+import { goFairness } from '../../game/nav';
 import { EnhanceStage, type EnhanceRoll } from '../../components/EnhanceStage';
 import { TeamDialog } from '../../components/TeamDialog';
 import { prefs } from '../../store';
@@ -64,6 +68,13 @@ export function EnhanceSheet({
   const alive = useRef(true);
   // T-11-679 자동 강화 — 목표 단계 · 쓸 금액을 고르면 서버가 연달아 판정한다. 창을 닫으면 다음 묶음을 보내지 않는다.
   const [autoOpen, setAutoOpen] = useState(false);
+  // T-11-758 지금 확률의 실제 성공률 한 줄. 창을 열 때 한 번 받고 6시간 메모라 다시 열어도 또 부르지 않는다. 못 받으면 줄만 빠진다.
+  const [statsData, setStatsData] = useState<EnhanceStatsResponse | null>(null);
+  useEffect(() => {
+    void fetchEnhanceStats().then((r) => {
+      if (alive.current && r.ok) setStatsData(r.data);
+    });
+  }, []);
   const [target, setTarget] = useState(0);
   const [budgetPick, setBudgetPick] = useState(0);
   const [autoBusy, setAutoBusy] = useState(false);
@@ -99,6 +110,8 @@ export function EnhanceSheet({
   }, []);
 
   const view = info ? enhanceView(info.card, info.rules, info.balance, listed) : null;
+  const statsNow =
+    statsData && view && view.next !== null ? enhanceStatsNow(statsData, view.rateBp) : null;
   const targets = info ? enhanceAutoTargets(info.card.level) : [];
   const targetNow = targets.includes(target) ? target : (targets[0] ?? 0);
   const expected = info && targetNow ? enhanceAutoExpected(info.card, targetNow, info.rules) : 0;
@@ -311,6 +324,24 @@ export function EnhanceSheet({
               {view.failText}
             </Txt>
           ) : null}
+          <Txt v="xs" tone="muted">
+            {statsNow ? (
+              <Txt v="xs" tone="muted" testID="enhance-actual">{`${statsNow} `}</Txt>
+            ) : null}
+            <Txt
+              v="xs"
+              tone="muted"
+              style={{ textDecorationLine: 'underline' }}
+              accessibilityRole="link"
+              testID="enhance-odds"
+              onPress={() => {
+                close();
+                goFairness();
+              }}
+            >
+              {`${L.statsMore} ›`}
+            </Txt>
+          </Txt>
           {result && enhanceTitleText(result.titles) ? (
             <Txt bold tone="good" testID="enhance-title">
               {enhanceTitleText(result.titles)}
