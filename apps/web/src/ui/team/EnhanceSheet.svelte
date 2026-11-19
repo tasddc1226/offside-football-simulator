@@ -280,7 +280,7 @@
         {:else if stats === 'empty'}
           <p class="muted fs-sm" data-enhance-stats-empty>{L.statsEmpty}</p>
         {:else}
-          <table class="stats">
+          <table class="odds-table">
             <thead><tr><th scope="col">{L.statsShown}</th><th scope="col">{L.statsActual}</th><th scope="col">{L.statsTries}</th></tr></thead>
             <tbody>
               {#each stats.lines as l (l.rateBp)}
@@ -359,9 +359,10 @@
   .auto-body select{min-height:44px;color:var(--ink);}
   .auto-body p{margin:0;line-height:1.6;}
   .auto-status{font-weight:600;color:var(--ink);}
-  .stats{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px;}
-  .stats th,.stats td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line);font-weight:500;}
-  .stats th:first-child{text-align:left;}
-  .stats thead th{font-size:.72rem;color:var(--muted);}
-  .stats tr.mine th,.stats tr.mine td{font-weight:700;background:var(--surface-2);}
+  .odds-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px;}
+  .odds-table th,.odds-table td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line);font-weight:500;}
+  .odds-table th:first-child{text-align:left;}
+  .odds-table thead th{font-size:.72rem;color:var(--muted);}
+  .odds-table tbody th{color:var(--ink);font-size:inherit;}
+  .odds-table tr.mine th,.odds-table tr.mine td{font-weight:700;background:var(--surface-2);}
 </style>
