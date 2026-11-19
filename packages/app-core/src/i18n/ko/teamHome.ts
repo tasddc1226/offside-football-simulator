@@ -44,6 +44,7 @@ const ko = {
   toastCreated: '팀을 만들었어요',
   toastSavedWeb: '변경 사항을 저장했어요',
   toastSavedApp: '편성을 저장했어요',
+  toastSavedNoKeeper: '저장했어요. 골키퍼 자리가 비어 있어 유스 선수가 골문을 지켜요.',
   // 경기 종류 스위치(웹)
   matchKindLabel: '경기 종류',
   modeRanked: '랭크 경기',

@@ -42,6 +42,7 @@ import { loadAnonNames, publishAnonNames, type AnonName } from '@offside/app-cor
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import {
   autoFillSlots,
+  keeperEmpty,
   cupTeamLink,
   cupTeamNote,
   isPreseasonLegacy,
@@ -550,7 +551,14 @@ export default function Team() {
           unchanged ? null : { base: teamDraftBase(r.data.team), value: draftNow.current! },
         );
       setDraftKey(r.data.team.id);
-      toast(created ? L.toastCreated : L.toastSavedApp);
+      // T-11-757 골키퍼 자리만 비운 채 저장했으면 알려 준다(컵 명단을 짜다 리그에 키퍼 없이 나가는 일).
+      toast(
+        keeperEmpty(body.formation, season > 0 ? positions : null, body.slots)
+          ? L.toastSavedNoKeeper
+          : created
+            ? L.toastCreated
+            : L.toastSavedApp,
+      );
       if (created) void askPushAfter('club');
       return unchanged;
     } finally {

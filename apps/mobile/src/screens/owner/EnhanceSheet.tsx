@@ -15,6 +15,7 @@ import {
   enhanceAutoBudgets,
   enhanceAutoExpected,
   enhanceAutoFinal,
+  enhanceAutoHoldMs,
   enhanceAutoSummary,
   enhanceAutoTickMs,
   enhanceAutoTargets,
@@ -74,6 +75,9 @@ export function EnhanceSheet({
   // 결과처럼 전체 화면 연출로 보여 준다(웹 EnhanceSheet.svelte와 같다). 동작 줄이기면 되감기 없이 결과 문구만 남는다.
   const [shown, setShown] = useState<number | null>(null);
   const [roll, setRoll] = useState<EnhanceRoll | null>(null);
+  // T-11-757 자동 강화 결과 연출은 터치를 통과시킨다. 연출을 보며 화면을 누르다 강화가 나가지 않게 잠깐 버튼을 막는다.
+  const [held, setHeld] = useState(false);
+  const holdTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function load() {
     const r = await fetchEnhanceState(careerId);
@@ -90,6 +94,7 @@ export function EnhanceSheet({
     return () => {
       alive.current = false;
       stopRef.current = true;
+      if (holdTimer.current) clearTimeout(holdTimer.current);
     };
   }, []);
 
@@ -105,7 +110,7 @@ export function EnhanceSheet({
   const autoText = autoRun && !autoBusy ? enhanceAutoSummary(autoRun, autoTarget) : null;
 
   async function startAuto() {
-    if (!info || !view?.body || busy || autoBusy || !budgetNow || !targetNow) return;
+    if (!info || !view?.body || busy || autoBusy || held || !budgetNow || !targetNow) return;
     setAutoBusy(true);
     setAutoStopAsked(false);
     stopRef.current = false;
@@ -175,12 +180,18 @@ export function EnhanceSheet({
     setShown(null);
     setRoll(null);
     setInfo((s) => (s ? { ...s, balance: run.balance, card: run.card } : s));
-    if (run.tries) setResult(enhanceAutoFinal(run, from));
+    if (run.tries) {
+      const final = enhanceAutoFinal(run, from);
+      setResult(final);
+      setHeld(true);
+      if (holdTimer.current) clearTimeout(holdTimer.current);
+      holdTimer.current = setTimeout(() => setHeld(false), enhanceAutoHoldMs(final));
+    }
     if (run.stop === 'error') void load();
   }
 
   async function go() {
-    if (!view?.body || busy) return;
+    if (!view?.body || busy || held) return;
     setBusy(true);
     setError(null);
     setResult(null);
@@ -318,7 +329,7 @@ export function EnhanceSheet({
           <Btn
             block
             kind="primary"
-            disabled={busy || autoBusy || !view.body}
+            disabled={busy || autoBusy || held || !view.body}
             onPress={() => void go()}
             testID="enhance-go"
           >
@@ -405,7 +416,7 @@ export function EnhanceSheet({
                     <Btn
                       block
                       kind="primary"
-                      disabled={busy || !view.body || !budgetNow}
+                      disabled={busy || held || !view.body || !budgetNow}
                       onPress={() => void startAuto()}
                       testID="enhance-auto-go"
                     >

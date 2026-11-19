@@ -40,6 +40,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   toastCreated: '球隊已建立',
   toastSavedWeb: '變更已儲存',
   toastSavedApp: '陣容已儲存',
+  toastSavedNoKeeper: '已儲存。門將位置空著，將由青訓球員把守球門。',
   matchKindLabel: '比賽類型',
   modeRanked: '排位賽',
   modeFriends: '好友',

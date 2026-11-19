@@ -109,6 +109,13 @@ export const enhanceFxMs = (r: { success: boolean; from: number; to: number }) =
   return kind === 'success' ? 1300 : kind === 'down' ? 1100 : 800;
 };
 
+/**
+ * T-11-757 자동 강화가 끝난 뒤 강화 버튼을 막아 두는 시간(ms). 결과 연출은 터치를 통과시키므로, 연출을 보며 화면을 누르다
+ * 강화 한 번이 나가 단계가 떨어지지 않게 연출 길이보다 조금 길게 둔다. 손으로 연달아 누르는 강화 한 번에는 쓰지 않는다.
+ */
+export const enhanceAutoHoldMs = (r: { success: boolean; from: number; to: number }) =>
+  enhanceFxMs(r) + 400;
+
 /** 결과 연출 큰 글자. */
 export const enhanceFxLabel = (r: { success: boolean; from: number; to: number }) => {
   const kind = enhanceResultKind(r);

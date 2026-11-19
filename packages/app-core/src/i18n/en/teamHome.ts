@@ -41,6 +41,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   toastCreated: 'Team created',
   toastSavedWeb: 'Changes saved',
   toastSavedApp: 'Lineup saved',
+  toastSavedNoKeeper: 'Saved. The goalkeeper spot is empty, so a youth player will be in goal.',
   matchKindLabel: 'Match type',
   modeRanked: 'Ranked match',
   modeFriends: 'Friends',
