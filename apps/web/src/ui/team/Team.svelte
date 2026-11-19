@@ -412,8 +412,8 @@
     pendingDraft = null;
     restoredDraft = false;
     renaming = false;
-    // T-11-757 골키퍼 자리만 비운 채 저장했으면 알려 준다(컵 명단을 짜다 리그에 키퍼 없이 나가는 일).
-    toast(keeperEmpty(submitted.formation, season > 0 ? previewLayout : null, submitted.slots) ? L.toastSavedNoKeeper : created ? L.toastCreated : L.toastSavedWeb);
+    // T-11-757 골키퍼 자리만 비운 채 저장했으면 알려 준다(컵 명단을 짜다 리그에 키퍼 없이 나가는 일). 팀을 처음 만들 때는 만들기 확인을 그대로 둔다.
+    toast(created ? L.toastCreated : keeperEmpty(submitted.formation, season > 0 ? previewLayout : null, submitted.slots) ? L.toastSavedNoKeeper : L.toastSavedWeb);
     return true;
   }
 

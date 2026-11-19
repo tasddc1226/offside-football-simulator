@@ -551,12 +551,13 @@ export default function Team() {
           unchanged ? null : { base: teamDraftBase(r.data.team), value: draftNow.current! },
         );
       setDraftKey(r.data.team.id);
-      // T-11-757 골키퍼 자리만 비운 채 저장했으면 알려 준다(컵 명단을 짜다 리그에 키퍼 없이 나가는 일).
+      // T-11-757 골키퍼 자리만 비운 채 저장했으면 알려 준다(컵 명단을 짜다 리그에 키퍼 없이 나가는 일). 팀을 처음 만들 때는
+      // 만들기 확인을 그대로 둔다.
       toast(
-        keeperEmpty(body.formation, season > 0 ? positions : null, body.slots)
-          ? L.toastSavedNoKeeper
-          : created
-            ? L.toastCreated
+        created
+          ? L.toastCreated
+          : keeperEmpty(body.formation, season > 0 ? positions : null, body.slots)
+            ? L.toastSavedNoKeeper
             : L.toastSavedApp,
       );
       if (created) void askPushAfter('club');

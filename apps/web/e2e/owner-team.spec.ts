@@ -1719,6 +1719,13 @@ test('지난 시즌 선수도 급여 예산 없이 몇 명이든 선발에 넣�
   await expect(page.locator('#toast')).toContainText('팀을 만들었어요');
   expect(puts).toHaveLength(1);
   for (const p of old) expect(puts[0]!.slots).toContain(p.careerId);
+
+  // T-11-757 팀을 만든 뒤 골키퍼 자리를 비운 채 다시 저장하면 유스 선수가 골문을 지킨다고 알려 준다.
+  expect(puts[0]!.slots[0]).toBeNull();
+  await page.locator('[data-formation="4-4-2"]').click();
+  await page.locator('[data-act="team-save"]').click();
+  await expect(page.locator('#toast')).toContainText('골키퍼 자리가 비어 있어');
+  expect(puts).toHaveLength(2);
 });
 
 // T-11-142 받은 친구 신청 — 구단주 화면을 연 적 있는 브라우저는 시작할 때 한 번 묻고, 하단 '구단주' 탭부터 '친구' 버튼까지 점을
