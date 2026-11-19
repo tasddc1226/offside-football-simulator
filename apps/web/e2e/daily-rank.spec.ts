@@ -188,7 +188,7 @@ test('오늘의 랭킹 1위를 한 선수 카드에는 순위 표식이 붙는�
               careerId: i === 9 ? STRIKER : null,
               name: i === 9 ? '선수' : '유스 선수',
               pos: i === 9 ? 'FW' : null,
-              rating: i === 9 ? 90 : 50,
+              rating: i === 9 ? 80 : 50,
               fit: 1,
             })),
             ovr: 56,
@@ -213,6 +213,7 @@ test('오늘의 랭킹 1위를 한 선수 카드에는 순위 표식이 붙는�
               legendScore: 500,
               cardValue: 543_000,
               daily: 1,
+              enhance: 8,
             },
           ],
           lastManager: null,
@@ -227,5 +228,13 @@ test('오늘의 랭킹 1위를 한 선수 카드에는 순위 표식이 붙는�
   const mark = page.locator('[data-card-special="daily"]').first();
   await expect(mark).toHaveText('데일리 1위');
   await expect(mark).toHaveAttribute('aria-label', '오늘의 랭킹 1위 카드');
+  const card = page.locator('.player-card[data-special="daily"]').first();
+  for (const selector of ['.card-rating b', '.card-deployment b', '.card-enhance']) {
+    const number = card.locator(selector);
+    await expect(number).toBeVisible();
+    const bounds = await number.boundingBox();
+    const ribbon = await mark.boundingBox();
+    expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(ribbon!.y);
+  }
   if (SHOT) await page.screenshot({ path: `${SHOT}/web-daily-card.png` });
 });

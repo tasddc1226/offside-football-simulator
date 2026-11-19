@@ -254,7 +254,8 @@
   .card-attributes dt {font-size:10px;line-height:1.3;font-weight:600;}
   .card-attributes dd {margin:0;font-family:var(--display);font-size:var(--fs-title2);line-height:1.1;font-weight:700;}
   .card-foot { font-size:var(--fs-caption2); text-align:center; margin-top:7px; opacity:.8; }
-  .compact .card-face { min-height:0; height:100px; padding:11px 4px 13px; }
+  .compact.special:not(.mini) { --ribbon-space:20px; }
+  .compact .card-face { min-height:0; height:calc(100px + var(--ribbon-space, 0px)); padding:11px 4px 13px; }
   .compact .card-rating { top:14px; left:7px; }
   .compact .card-rating b { font-size:var(--fs-title1); }
   .compact .card-rating span { font-size:var(--fs-caption2); margin-top:2px; }
@@ -263,7 +264,7 @@
   .compact .shirt-number { font-size:var(--fs-title3); }
   .compact .card-name { font-size:11px; margin-top:3px; }
   .compact.deployed .card-art {height:36px;}
-  @media(max-width:440px) { .compact .card-face { height:88px; padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-season {top:2px;} .compact .card-rating b { font-size:var(--fs-title2); } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:var(--fs-body);} .compact.deployed .card-art {height:24px;} }
+  @media(max-width:440px) { .compact .card-face { height:calc(88px + var(--ribbon-space, 0px)); padding:8px 3px 10px; } .compact .card-rating { left:5px;top:11px; } .compact .card-season {top:2px;} .compact .card-rating b { font-size:var(--fs-title2); } .compact .card-art { height:34px;margin-top:8px; } .compact .shirt-number {font-size:var(--fs-body);} .compact.deployed .card-art {height:24px;} }
   /* 이적시장 목록용 — 이름은 줄 옆에 따로 나오므로 카드에서 뺀다(compact와 같이 쓴다). 높이는 이름 줄만큼 줄인다. */
   .mini .card-face {height:84px;}
   @media(max-width:440px) { .mini .card-face {height:68px;} }
