@@ -1,0 +1,30 @@
+{
+  "id": "t-11-757-enhance-hold-keeper-notice",
+  "title": "자동 강화 뒤 잘못 누르기 막기 · 골키퍼 빈자리 알림",
+  "items": [
+    "자동 강화가 끝나고 결과 연출이 나오는 동안에는 강화 버튼이 잠깐 눌리지 않아요. 화면을 누르다 강화가 한 번 더 나가던 일을 막았어요.",
+    "선수는 넣었는데 골키퍼 자리만 비운 채 팀을 저장하면, 유스 선수가 골문을 지킨다고 바로 알려 줘요."
+  ],
+  "en": {
+    "title": "No accidental upgrade after auto upgrade · empty goalkeeper notice",
+    "items": [
+      "While the result animation plays after an auto upgrade, the upgrade buttons are briefly disabled. This stops an extra upgrade from firing when you tap the screen.",
+      "If you save a team with players but an empty goalkeeper spot, you are told right away that a youth player will be in goal."
+    ]
+  },
+  "ja": {
+    "title": "自動強化後の押し間違い防止・GK空き枠のお知らせ",
+    "items": [
+      "自動強化が終わって結果演出が流れている間は、強化ボタンが少しの間押せなくなります。画面をタップしてもう一度強化してしまうことを防ぎます。",
+      "選手は入れたのにGKの枠だけ空けたままチームを保存すると、ユース選手がゴールを守ることをすぐにお知らせします。"
+    ]
+  },
+  "zh": {
+    "title": "自動強化後防止誤觸・門將空位提醒",
+    "items": [
+      "自動強化結束、播放結果演出期間，強化按鈕會暫時無法點擊，避免點擊畫面時又多強化一次。",
+      "放了球員卻空著門將位置就儲存球隊時，會立即提醒將由青訓球員把守球門。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -40,6 +40,7 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   toastCreated: 'チームを作りました',
   toastSavedWeb: '変更を保存しました',
   toastSavedApp: '編成を保存しました',
+  toastSavedNoKeeper: '保存しました。GKの枠が空いているため、ユース選手がゴールを守ります。',
   matchKindLabel: '試合の種類',
   modeRanked: 'ランクマッチ',
   modeFriends: 'フレンド',

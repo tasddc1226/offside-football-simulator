@@ -160,6 +160,9 @@ test('T-11-679 자동 강화: 목표 · 쓸 금액을 골라 시작하면 이어
   await sheet.locator('[data-act="enhance-auto-go"]').click();
   // 끝나도 자동 강화 칸이 접히지 않고 결과가 보인다.
   await expect(sheet.locator('[data-enhance-auto-result="target"]')).toBeVisible();
+  // T-11-757 결과 연출 동안은 강화 버튼을 막아 화면을 누르다 강화가 나가지 않게 하고, 연출이 끝나면 다시 연다.
+  await expect(sheet.locator('[data-act="enhance-go"]')).toBeDisabled();
+  await expect(sheet.locator('[data-act="enhance-go"]')).toBeEnabled();
   await expect(sheet.locator('[data-enhance-auto-result="target"]')).toContainText(
     '목표 +2에 닿아 멈췄어요.',
   );

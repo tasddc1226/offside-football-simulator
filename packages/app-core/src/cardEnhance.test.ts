@@ -8,6 +8,7 @@ import {
   enhanceAutoTargets,
   enhanceErrorText,
   enhanceFxBig,
+  enhanceAutoHoldMs,
   enhanceFxMs,
   enhanceParticles,
   enhanceResultKind,
@@ -284,5 +285,17 @@ describe('enhanceAutoTickMs', () => {
     expect(enhanceButtonText(5)).toBe('강화 +5');
     expect(enhanceEffectText(0)).toBeNull();
     expect(enhanceEffectText(5)).toBe('지금 자리 실력 · 팀 OVR +5');
+  });
+});
+
+describe('T-11-757 자동 강화 뒤 버튼 막기', () => {
+  it('결과 연출이 끝난 뒤까지 막는다', () => {
+    for (const r of [
+      { success: true, from: 6, to: 8 },
+      { success: true, from: 1, to: 2 },
+      { success: false, from: 5, to: 4 },
+      { success: false, from: 3, to: 3 },
+    ])
+      expect(enhanceAutoHoldMs(r)).toBeGreaterThan(enhanceFxMs(r));
   });
 });

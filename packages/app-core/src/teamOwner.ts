@@ -29,6 +29,7 @@ import {
   nationStyleById,
   TEAM_RULES,
   lineStrength,
+  presetLayout,
   slotRating,
   synergyApplies,
   teamSynergy,
@@ -37,6 +38,7 @@ import {
   type AchGrade,
   type ActiveSynergy,
   type DetailPos,
+  type FormationId,
   type LineStrength,
   type SynergyLines,
   type TeamLayout,
@@ -95,6 +97,19 @@ export function seasonRaisedText(
   return n > 0 ? TH.seasonRaised({ season: name, n }) : TH.seasonRaisedNone({ season: name });
 }
 /** T-11-657 이번 시즌 선수 컵: 편성 슬롯 중 그 팀 시즌보다 앞 시즌 카드 수. */
+/**
+ * T-11-757 선수는 넣었는데 골키퍼 자리만 비운 편성인지. 컵 명단을 짜다가 리그 선발에 키퍼를 빼 둔 채 경기에 나가는 일이 있어
+ * 저장할 때 알려 준다. 선수가 한 명도 없는 빈 팀은 해당하지 않는다.
+ */
+export const keeperEmpty = (
+  formation: FormationId,
+  layout: TeamLayout | null | undefined,
+  slots: readonly (string | null)[],
+): boolean => {
+  const gk = (layout ?? presetLayout(formation)).findIndex((p) => p.slot === 'GK');
+  return gk >= 0 && !slots[gk] && slots.some(Boolean);
+};
+
 export const pastInSlots = (
   slots: readonly (string | null)[],
   byId: ReadonlyMap<string, Pick<TeamPlayer, 'season'>>,

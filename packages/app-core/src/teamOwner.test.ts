@@ -12,6 +12,7 @@ import {
   achTotal,
   synergyRows,
   draftLines,
+  keeperEmpty,
   matchHintOf,
   slotsSynergy,
   synergyChips,
@@ -243,5 +244,46 @@ describe('T-11-571 체력 게이지', () => {
       { left: 2, pct: 6 },
       { left: 1, pct: 9 },
     ]);
+  });
+});
+
+describe('T-11-757 골키퍼 빈자리 알림', () => {
+  const gk = presetLayout('4-3-3').findIndex((p) => p.slot === 'GK');
+  const slots = (fill: (i: number) => string | null) =>
+    Array.from({ length: 11 }, (_, i) => fill(i));
+  it('선수는 있는데 골키퍼 자리만 비었으면 알린다', () => {
+    expect(
+      keeperEmpty(
+        '4-3-3',
+        null,
+        slots((i) => (i === gk ? null : `c${i}`)),
+      ),
+    ).toBe(true);
+  });
+  it('골키퍼가 있거나 선수가 한 명도 없으면 알리지 않는다', () => {
+    expect(
+      keeperEmpty(
+        '4-3-3',
+        null,
+        slots((i) => `c${i}`),
+      ),
+    ).toBe(false);
+    expect(
+      keeperEmpty(
+        '4-3-3',
+        null,
+        slots(() => null),
+      ),
+    ).toBe(false);
+  });
+  it('자리를 옮긴 편성은 그 편성의 골키퍼 자리로 본다', () => {
+    const layout = presetLayout('4-3-3');
+    expect(
+      keeperEmpty(
+        '4-4-2',
+        layout,
+        slots((i) => (i === gk ? null : `c${i}`)),
+      ),
+    ).toBe(true);
   });
 });

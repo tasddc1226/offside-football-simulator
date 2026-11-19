@@ -4,7 +4,7 @@
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { holdAchCheck } from '@offside/app-core/achDirty';
   import { enhanceCard, enhanceCardAuto, fetchEnhanceState, type EnhanceResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
-  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoFinal, enhanceAutoSummary, enhanceAutoTickMs, enhanceAutoTargets, enhanceEffectText, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
+  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoFinal, enhanceAutoHoldMs, enhanceAutoSummary, enhanceAutoTickMs, enhanceAutoTargets, enhanceEffectText, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
   import { fmtValue } from '@offside/app-core/format';
   import { fundsText } from '@offside/app-core/funds';
   import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
@@ -47,6 +47,10 @@
   let target = $state(0);
   let budgetPick = $state(0);
   let autoBusy = $state(false);
+  // T-11-757 자동 강화 결과 연출은 클릭을 통과시킨다. 연출을 보며 화면을 누르다 강화가 나가지 않게 잠깐 버튼을 막는다.
+  let held = $state(false);
+  let holdTimer: ReturnType<typeof setTimeout> | undefined;
+  $effect(() => () => clearTimeout(holdTimer));
   let autoStopAsked = $state(false);
   let autoRun = $state<EnhanceAutoRun | null>(null);
   let autoTarget = $state(0);
@@ -88,7 +92,7 @@
   }
 
   async function startAuto() {
-    if (!info || !view?.body || busy || autoBusy || !budgetNow || !targetNow) return;
+    if (!info || !view?.body || busy || autoBusy || held || !budgetNow || !targetNow) return;
     autoBusy = true;
     autoStopAsked = false;
     error = null;
@@ -128,6 +132,9 @@
     if (run.tries) {
       const final = enhanceAutoFinal(run, from);
       result = final;
+      held = true;
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(() => (held = false), enhanceAutoHoldMs(final));
       if (enhanceResultKind(final) !== 'keep') buzz();
       playSfx(enhanceSfx(enhanceResultKind(final)));
       onresult(careerId, { success: run.card.level > from, from, to: run.card.level, cost: run.spent, balance: run.balance, card: run.card, ...(run.titles.length ? { titles: run.titles } : {}) });
@@ -159,7 +166,7 @@
   });
 
   async function go() {
-    if (!view?.body || busy) return;
+    if (!view?.body || busy || held) return;
     busy = true;
     error = null;
     result = null;
@@ -222,7 +229,7 @@
     {#if result && enhanceTitleText(result.titles)}<p class="result good" role="status" data-enhance-title>{enhanceTitleText(result.titles)}</p>{/if}
     {#if error}<p class="note" role="alert" data-enhance-error>{error}</p>{/if}
     {#if view.block}<p class="note" data-enhance-block>{view.block}</p>{/if}
-    <button class="btn btn-primary btn-block" disabled={busy || autoBusy || !view.body} onclick={go} data-act="enhance-go">{busy ? L.going : L.go}</button>
+    <button class="btn btn-primary btn-block" disabled={busy || autoBusy || held || !view.body} onclick={go} data-act="enhance-go">{busy ? L.going : L.go}</button>
     {#if view.next !== null}
       <details class="auto" data-enhance-auto bind:open={autoOpen}>
         <summary>{L.autoTitle}</summary>
@@ -244,7 +251,7 @@
             <p class="auto-status" role="status" data-enhance-auto-progress>{L.autoRunning({ n: autoRun?.tries ?? 0, spent: fmtValue(autoRun?.spent ?? 0) })}</p>
             <button class="btn btn-block" disabled={autoStopAsked} onclick={() => (autoStopAsked = true)} data-act="enhance-auto-stop">{autoStopAsked ? L.autoStopping : L.autoStop}</button>
           {:else}
-            <button class="btn btn-primary btn-block" disabled={busy || !view.body || !budgetNow} onclick={startAuto} data-act="enhance-auto-go">{L.autoStart}</button>
+            <button class="btn btn-primary btn-block" disabled={busy || held || !view.body || !budgetNow} onclick={startAuto} data-act="enhance-auto-go">{L.autoStart}</button>
           {/if}
           {#if autoText}<p class="auto-status" role="status" data-enhance-auto-result={autoRun?.stop}>{#if autoText.done}{autoText.done}<br />{/if}{autoText.why}</p>{/if}
           {#if !autoBusy && autoRun && enhanceTitleText(autoRun.titles)}<p class="result good" role="status">{enhanceTitleText(autoRun.titles)}</p>{/if}
