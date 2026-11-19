@@ -3,8 +3,8 @@
   // 못한 시도는 같은 멱등 키로 다시 보내 두 번 판정되지 않는다. 결과는 열린 카드(careerId)에만 돌려준다.
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { holdAchCheck } from '@offside/app-core/achDirty';
-  import { enhanceCard, enhanceCardAuto, fetchEnhanceState, type EnhanceResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
-  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoFinal, enhanceAutoHoldMs, enhanceAutoSummary, enhanceAutoTickMs, enhanceAutoTargets, enhanceEffectText, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
+  import { enhanceCard, enhanceCardAuto, fetchEnhanceState, fetchEnhanceStats, type EnhanceResponse, type EnhanceStatsResponse, type EnhanceStateResponse } from '@offside/app-core/api/cardEnhance';
+  import { ENHANCE_CHARGE_MS, enhanceAutoBudgets, enhanceAutoExpected, enhanceAutoFinal, enhanceAutoHoldMs, enhanceAutoSummary, enhanceStatsView, enhanceAutoTickMs, enhanceAutoTargets, enhanceEffectText, enhanceErrorText, enhanceKeepKey, enhanceResultKind, enhanceResultText, enhanceTitleText, enhanceView, runEnhanceAuto, type EnhanceAutoRun } from '@offside/app-core/cardEnhance';
   import { fmtValue } from '@offside/app-core/format';
   import { fundsText } from '@offside/app-core/funds';
   import { cardEnhanceText as L } from '@offside/app-core/i18n/ko/cardEnhance';
@@ -62,6 +62,18 @@
   const budgets = $derived(info && view?.cost ? enhanceAutoBudgets(expected, info.balance, view.cost) : { list: [], pick: 0 });
   const budgetNow = $derived(budgets.list.some((b) => b.value === budgetPick) ? budgetPick : budgets.pick);
   const autoText = $derived(autoRun && !autoBusy ? enhanceAutoSummary(autoRun, autoTarget) : null);
+
+  // T-11-758 실제 결과 보기: 펼칠 때 한 번만 받는다(서버가 6시간에 한 번 집계하고 화면 메모도 그동안 다시 부르지 않는다).
+  let statsData = $state<EnhanceStatsResponse | 'loading' | 'error' | null>(null);
+  const stats = $derived(
+    statsData && typeof statsData === 'object' ? (enhanceStatsView(statsData, view && view.next !== null ? view.rateBp : null) ?? 'empty') : statsData,
+  );
+  async function openStats(open: boolean) {
+    if (!open || (statsData !== null && statsData !== 'error')) return;
+    statsData = 'loading';
+    const r = await fetchEnhanceStats();
+    statsData = r.ok ? r.data : 'error';
+  }
 
   // T-11-682 자동 강화 연출: 서버가 묶음으로 판정한 시도를 단계 숫자로 차례로 되감아 보여 주고(성공 · 유지 · 하락마다 숫자가 튄다),
   // 다 끝나면 시작 단계 → 끝 단계를 강화 한 번 결과처럼 전체 화면 연출로 보여 준다. 동작 줄이기면 되감기 없이 결과 문구만 남는다.
@@ -258,6 +270,28 @@
         </div>
       </details>
     {/if}
+    <details class="auto" data-enhance-stats ontoggle={(e) => void openStats(e.currentTarget.open)}>
+      <summary>{L.statsTitle}</summary>
+      <div class="auto-body">
+        {#if stats === 'loading' || stats === null}
+          <Skeleton height={120} />
+        {:else if stats === 'error'}
+          <p class="muted fs-sm" data-enhance-stats-error>{L.statsFail}</p>
+        {:else if stats === 'empty'}
+          <p class="muted fs-sm" data-enhance-stats-empty>{L.statsEmpty}</p>
+        {:else}
+          <table class="stats">
+            <thead><tr><th scope="col">{L.statsShown}</th><th scope="col">{L.statsActual}</th><th scope="col">{L.statsTries}</th></tr></thead>
+            <tbody>
+              {#each stats.lines as l (l.rateBp)}
+                <tr class:mine={l.mine} data-enhance-stats-row={l.rateBp} aria-label={l.mine ? L.statsMine : undefined}><th scope="row">{l.shown}</th><td>{l.actual}</td><td>{l.tries}</td></tr>
+              {/each}
+            </tbody>
+          </table>
+          <p class="muted fs-xs">{stats.note}</p>
+        {/if}
+      </div>
+    </details>
     <p class="muted fs-xs foot">
       {L.balance} {fundsText(info.balance)}
     </p>
@@ -325,4 +359,9 @@
   .auto-body select{min-height:44px;color:var(--ink);}
   .auto-body p{margin:0;line-height:1.6;}
   .auto-status{font-weight:600;color:var(--ink);}
+  .stats{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;font-size:13px;}
+  .stats th,.stats td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line);font-weight:500;}
+  .stats th:first-child{text-align:left;}
+  .stats thead th{font-size:.72rem;color:var(--muted);}
+  .stats tr.mine th,.stats tr.mine td{font-weight:700;background:var(--surface-2);}
 </style>

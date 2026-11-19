@@ -21,6 +21,7 @@ async function stub(page: Page) {
     state: 0,
     attempt: 0,
     auto: [] as { budget: number; level: number; fails: number }[],
+    stats: 0,
   };
   await page.route(`${API}/**`, async (r) => {
     const path = new URL(r.request().url()).pathname;
@@ -35,6 +36,20 @@ async function stub(page: Page) {
           nickname: '구단주',
         }),
       );
+    if (path === '/v1/card-enhance/stats') {
+      hits.stats++;
+      return r.fulfill(
+        ok({
+          generatedAt: '2026-11-19T03:00:00.000Z',
+          attempts: 3284,
+          since: '2026-11-05T02:12:42.987Z',
+          rows: [
+            { rateBp: 9000, attempts: 606, success: 547 },
+            { rateBp: 7200, attempts: 2678, success: 1943 },
+          ],
+        }),
+      );
+    }
     if (path === '/v1/boards/viewer')
       return r.fulfill(ok({ admin: false, google: true, nickname: '구단주' }));
     if (path === '/v1/owner-team')
@@ -191,4 +206,34 @@ test('T-11-728 내 구단 메뉴의 카드 강화로 팀 화면 라커룸까지 
   await btn.click();
   const sheet = page.locator('[data-enhance-sheet]');
   await expect(sheet.locator('[data-enhance-effect]')).toContainText('팀 OVR에 더해져요');
+});
+
+test('T-11-758 실제 결과 보기: 펼칠 때만 받고, 다시 펼치거나 창을 다시 열어도 또 받지 않는다', async ({
+  page,
+}) => {
+  const hits = await stub(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="team"]').click();
+  await page.locator('[data-act="enhance"]').first().click();
+  const sheet = page.locator('[data-enhance-sheet]');
+  await expect(sheet.locator('[data-act="enhance-go"]')).toBeEnabled();
+  expect(hits.stats).toBe(0);
+
+  const stats = sheet.locator('[data-enhance-stats]');
+  await stats.locator('summary').click();
+  // +0 카드의 이번 시도 확률(90%) 줄을 짚는다.
+  const mine = stats.locator('[data-enhance-stats-row="9000"]');
+  await expect(mine).toHaveText('90%90.3%606');
+  await expect(mine).toHaveClass(/mine/);
+  await expect(stats.locator('[data-enhance-stats-row="7200"]')).toHaveText('72%72.6%2,678');
+  await expect(stats).toContainText('3,284');
+
+  await stats.locator('summary').click();
+  await stats.locator('summary').click();
+  await sheet.locator('button.close').click();
+  await page.locator('[data-act="enhance"]').first().click();
+  await page.locator('[data-enhance-sheet] [data-enhance-stats] summary').click();
+  await expect(page.locator('[data-enhance-stats-row="9000"]')).toBeVisible();
+  expect(hits.stats).toBe(1);
 });

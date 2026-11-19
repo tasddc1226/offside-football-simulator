@@ -9,6 +9,7 @@ import {
   enhanceErrorText,
   enhanceFxBig,
   enhanceAutoHoldMs,
+  enhanceStatsView,
   enhanceFxMs,
   enhanceParticles,
   enhanceResultKind,
@@ -297,5 +298,29 @@ describe('T-11-757 자동 강화 뒤 버튼 막기', () => {
       { success: false, from: 3, to: 3 },
     ])
       expect(enhanceAutoHoldMs(r)).toBeGreaterThan(enhanceFxMs(r));
+  });
+});
+
+describe('T-11-758 강화 실제 결과 표', () => {
+  const data = {
+    generatedAt: '2026-11-19T03:00:00.000Z',
+    attempts: 12_345,
+    since: '2026-11-05T02:12:42.987Z',
+    rows: [
+      { rateBp: 7200, attempts: 2678, success: 1943 },
+      { rateBp: 3600, attempts: 7322, success: 2652 },
+    ],
+  };
+  it('표시 확률 · 실제 성공률 · 시도 수를 문구로 바꾸고, 지금 카드와 같은 확률 줄을 짚는다', () => {
+    const v = enhanceStatsView(data, 3600)!;
+    expect(v.lines).toEqual([
+      { rateBp: 7200, shown: '72%', actual: '72.6%', tries: '2,678', mine: false },
+      { rateBp: 3600, shown: '36%', actual: '36.2%', tries: '7,322', mine: true },
+    ]);
+    expect(v.note).toContain('12,345');
+  });
+  it('최고 단계 카드는 짚는 줄이 없고, 모인 줄이 없으면 표를 만들지 않는다', () => {
+    expect(enhanceStatsView(data, null)!.lines.every((l) => !l.mine)).toBe(true);
+    expect(enhanceStatsView({ ...data, rows: [] }, 3600)).toBeNull();
   });
 });

@@ -8,10 +8,16 @@ import type {
   EnhanceBody,
   EnhanceResponse,
   EnhanceStateResponse,
+  EnhanceStatsResponse,
 } from '@offside/contracts';
-import { apiFetch } from './client.js';
+import { apiFetch, cachedGet } from './client.js';
 
-export type { EnhanceBody, EnhanceResponse, EnhanceStateResponse } from '@offside/contracts';
+export type {
+  EnhanceBody,
+  EnhanceResponse,
+  EnhanceStateResponse,
+  EnhanceStatsResponse,
+} from '@offside/contracts';
 
 export const fetchEnhanceState = (careerId: string) =>
   apiFetch<EnhanceStateResponse>(`/v1/cards/${encodeURIComponent(careerId)}/enhance`);
@@ -32,3 +38,7 @@ export const enhanceCardAuto = (careerId: string, body: EnhanceAutoBody, request
     headers: { [IDEMPOTENCY_KEY_HEADER]: requestKey },
     body: JSON.stringify(body),
   });
+
+/** T-11-758 강화 실제 결과(표시 확률별 성공 수). '실제 결과 보기'를 펼칠 때만 부르고, 서버가 6시간에 한 번 집계하므로 그동안 다시 부르지 않는다. */
+export const fetchEnhanceStats = () =>
+  cachedGet<EnhanceStatsResponse>('/v1/card-enhance/stats', 6 * 60 * 60_000);

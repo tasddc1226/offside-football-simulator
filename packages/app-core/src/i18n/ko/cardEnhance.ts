@@ -78,6 +78,15 @@ const ko = {
   stopUser: '중간에 멈췄어요.',
   autoTargetLow: '목표는 지금 단계보다 높아야 해요.',
   autoBudgetLow: '쓸 금액이 한 번 시도할 비용보다 적어요.',
+  statsTitle: '실제 결과 보기',
+  statsShown: '표시 확률',
+  statsActual: '실제 성공',
+  statsTries: '시도',
+  statsNote: (p: { n: string }) =>
+    `최근 강화 ${p.n}번의 서버 기록이에요. 모든 구단주의 시도를 표시 확률별로 모았고, 하루에 몇 번 새로 집계해요.`,
+  statsMine: '지금 이 카드의 확률',
+  statsEmpty: '아직 모인 기록이 적어요.',
+  statsFail: '기록을 불러오지 못했어요.',
 };
 
 export type CardEnhanceMsgs = typeof ko;

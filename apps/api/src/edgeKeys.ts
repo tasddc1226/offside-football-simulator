@@ -23,6 +23,8 @@ export const EDGE = {
   /** T-11-410 구간 대회 한 개(회차마다 3개). */
   cupById: (id: string) => `/v1/cups/${id}`,
   balance: '/v1/balance',
+  /** T-11-758 강화 실제 결과(표시 확률별 성공 수). 하루에 몇 번만 새로 집계하고 TTL로만 새로 읽는다. */
+  enhanceStats: '/v1/card-enhance/stats',
   /** T-11-141 공개 밸런스 이력. */
   balanceHistory: '/v1/balance/history',
   adminStats: '/v1/admin/stats',
