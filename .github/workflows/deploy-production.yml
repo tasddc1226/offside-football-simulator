@@ -258,10 +258,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [current, '1.1.9', '1.1.8', '1.1.7']
+        target: [current, '1.1.10', '1.1.9', '1.1.8', '1.1.7']
         platform: [ios, android]
         # T-11-751 1.1.9는 Android에만 공개됐다(iOS는 1.1.9를 심사에서 빼고 1.1.8에서 1.1.10으로 바로 가서 iOS 경로가 없다).
         exclude:
+          # T-11-759 1.1.10 경로는 Android 전용이다(iOS current가 아직 1.1.10).
+          - target: '1.1.10'
+            platform: ios
           - target: '1.1.9'
             platform: ios
           # T-11-751 1.1.8은 iOS에만 남아 있다(Android는 1.1.7에서 1.1.9로 갔다).
@@ -306,6 +309,7 @@ jobs:
       # T-11-738 1.1.10은 expo-audio(결과 효과음)를 더했다. 1.1.10보다 옛 스토어 빌드 경로는 모두 그 의존성을 뺀다.
       # T-11-751 Android 1.1.10이 current가 되면서 Android 1.1.9는 1.1.9 경로로 같은 JS를 받는다.
       # T-11-751 iOS 1.1.10이 current가 되면서(11-18 출시) iOS 1.1.8은 1.1.8 경로로 같은 JS를 받는다.
+      # T-11-759 Android 1.1.11이 current가 되면서(11-19 100%) Android 1.1.10은 1.1.10 경로로 같은 JS를 받는다(Reanimated 패치 뺌).
       - name: Prepare reviewed store native compatibility
         if: env.EXPO_TOKEN != ''
         run: node .github/scripts/prepare-ota-legacy.mjs prepare "$OTA_TARGET" "$PLATFORM"

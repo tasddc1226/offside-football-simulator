@@ -28,6 +28,15 @@ export const targets = Object.freeze({
       ios: '6b0fc3a98f174fbdb4e0a6182a0796d1daec4d47', // 1.1.8 iOS build 25 (T-11-698)
     },
   },
+  // T-11-759 Android 1.1.11 became current on 2026-11-19 (100% rollout). Android 1.1.10 keeps receiving current JS through
+  // this lane without the Reanimated patch. iOS 1.1.10 is still current, so this lane has no iOS runtime and the workflow
+  // excludes 1.1.10 / ios.
+  '1.1.10': {
+    source: 'e93fbfa5d95759a09a03b01756070e67eb64121b',
+    runtimes: {
+      android: '5390fc5af2f92099eb176b14882b2989ac98e2a4', // 1.1.10 Android build 31 (T-11-738)
+    },
+  },
   // T-11-751 Android 1.1.10 became current on 2026-11-17. 1.1.9 was public on Android only (iOS 1.1.9 was withdrawn from review and iOS goes 1.1.8 -> 1.1.10),
   // so this lane has no iOS runtime and the workflow excludes 1.1.9 / ios.
   '1.1.9': {
@@ -151,6 +160,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   else if (cmd === 'prepare') prepare(process.cwd(), name, platform);
   else
     throw new Error(
-      'Usage: prepare-ota-legacy.mjs prepare <current|1.1.9|1.1.8|1.1.7> <platform> | check <current|1.1.9|1.1.8|1.1.7> <platform> <fingerprint>',
+      'Usage: prepare-ota-legacy.mjs prepare <current|1.1.10|1.1.9|1.1.8|1.1.7> <platform> | check <current|1.1.10|1.1.9|1.1.8|1.1.7> <platform> <fingerprint>',
     );
 }
