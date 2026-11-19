@@ -679,6 +679,7 @@ export const marketListings = sqliteTable(
     // T-11-425 모든 시즌 카드를 한 시장에서 거래해 목록 · 최근 거래 인덱스에서 시즌을 뺐다.
     index('market_listings_new_idx').on(table.status, table.createdAt),
     index('market_listings_price_idx').on(table.status, table.price, table.createdAt),
+    index('market_listings_buyer_status_idx').on(table.buyerId, table.status),
     index('market_listings_seller_idx').on(table.sellerId, table.status, table.closedAt),
     index('market_listings_buyer_idx').on(table.buyerId, table.closedAt),
     index('market_listings_sold_idx').on(table.status, table.closedAt),
