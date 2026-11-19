@@ -54,7 +54,7 @@ test('preparation protects dirty work and existing native test environments', ()
 
 test('each lane drops exactly the npm native modules its store build lacks', () => {
   assert.deepEqual(droppedModules('1.1.7', 'ios'), ['expo-tracking-transparency', 'expo-audio']);
-  // T-11-738 1.1.10 전 스토어 빌드(iOS 1.1.8 · Android 1.1.9)는 expo-audio가 없다.
+  // T-11-738 1.1.10 전 스토어 빌드는 expo-audio가 없다(T-11-751부터 두 플랫폼 current가 1.1.10).
   for (const platform of Object.keys(STORE_BUILDS))
     assert.deepEqual(
       droppedModules('current', platform),
@@ -62,6 +62,8 @@ test('each lane drops exactly the npm native modules its store build lacks', () 
     );
   assert.deepEqual(droppedModules('1.1.10', 'ios'), []);
   assert.deepEqual(droppedModules('1.1.9', 'ios'), ['expo-audio']);
+  // T-11-751 iOS 1.1.8 경로: ATT 모듈은 있고 expo-audio는 없다.
+  assert.deepEqual(droppedModules('1.1.8', 'ios'), ['expo-audio']);
   assert.throws(() => droppedModules('current', 'web'), /Unknown/);
 });
 

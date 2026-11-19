@@ -258,12 +258,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [current, '1.1.9', '1.1.7']
+        target: [current, '1.1.9', '1.1.8', '1.1.7']
         platform: [ios, android]
         # T-11-751 1.1.9는 Android에만 공개됐다(iOS는 1.1.9를 심사에서 빼고 1.1.8에서 1.1.10으로 바로 가서 iOS 경로가 없다).
         exclude:
           - target: '1.1.9'
             platform: ios
+          # T-11-751 1.1.8은 iOS에만 남아 있다(Android는 1.1.7에서 1.1.9로 갔다).
+          - target: '1.1.8'
+            platform: android
     needs: production-release
     # Preflight computes real production fingerprints without publishing any update.
     if: inputs.mode == 'deploy' || inputs.mode == 'preflight'
@@ -302,6 +305,7 @@ jobs:
       # T-11-698 1.1.8은 expo-tracking-transparency(iOS ATT)를 더했다. 1.1.7 빌드에는 그 의존성을 빼고 같은 JS를 보낸다.
       # T-11-738 1.1.10은 expo-audio(결과 효과음)를 더했다. 1.1.10보다 옛 스토어 빌드 경로는 모두 그 의존성을 뺀다.
       # T-11-751 Android 1.1.10이 current가 되면서 Android 1.1.9는 1.1.9 경로로 같은 JS를 받는다.
+      # T-11-751 iOS 1.1.10이 current가 되면서(11-18 출시) iOS 1.1.8은 1.1.8 경로로 같은 JS를 받는다.
       - name: Prepare reviewed store native compatibility
         if: env.EXPO_TOKEN != ''
         run: node .github/scripts/prepare-ota-legacy.mjs prepare "$OTA_TARGET" "$PLATFORM"
