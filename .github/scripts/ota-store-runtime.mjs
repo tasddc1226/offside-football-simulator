@@ -8,9 +8,9 @@
 // the disposable OTA checkout restores this exact native snapshot and keeps the latest JavaScript.
 export const STORE_BUILDS = Object.freeze({
   ios: {
-    version: '1.1.8',
-    source: '05c79da6d0fd287c7a9bc9f6e7851e85ef2a8af8',
-    runtime: '6b0fc3a98f174fbdb4e0a6182a0796d1daec4d47', // iOS build 25
+    version: '1.1.10',
+    source: 'e93fbfa5d95759a09a03b01756070e67eb64121b',
+    runtime: '9c5b90dbbde46a6fccbd1864269aaeb199fb88e9', // iOS build 36; public since 2026-11-18
   },
   android: {
     version: '1.1.10',
