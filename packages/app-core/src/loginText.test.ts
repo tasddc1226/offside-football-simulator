@@ -11,6 +11,6 @@ describe('loginText', () => {
   });
   it('연결·전환 안내', () => {
     expect(loginDoneText('linked', '구글')).toBe('구글 계정을 연결했어요.');
-    expect(loginDoneText('switched', 'Apple')).toBe('다른 Apple 계정으로 바꿨어요.');
+    expect(loginDoneText('switched', 'Apple')).toBe('쓰던 Apple 계정으로 로그인했어요.');
   });
 });
