@@ -2,6 +2,11 @@ import type { Translation } from '../core';
 import type { HofOwnMsgs } from '../ko/hofOwn';
 
 export const hofOwn: Translation<HofOwnMsgs> = {
+  passNudgeTitle: 'シーズンパスの段階がさらに開きました',
+  passNudgeBody:
+    '今シーズンに引退させた選手が増えました。パスを購入すると、開いた段階までの報酬をまとめて受け取れます。',
+  passNudgeGo: 'シーズンパスを見る',
+  passNudgeClose: '閉じる',
   publishTitle: '全体の殿堂で名前を公開',
   publishBefore: '引退記録は全ユーザーが見る殿堂に載ります。いまは',
   publishNamed: (p) => `「${p.name}」の名前で`,

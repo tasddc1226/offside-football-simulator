@@ -6,13 +6,20 @@ import { proxy } from 'valtio';
 import {
   ErrorCode,
   fetchProducts,
+  isEligibleForIntroOfferIOS,
   finishTransaction,
   getAvailablePurchases,
   requestPurchase,
   type Purchase,
 } from 'expo-iap';
 import type { MembershipResponse } from '@offside/contracts';
-import { memberActive, MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
+import {
+  memberActive,
+  MEMBERSHIP_INTRO_LIVE,
+  MEMBERSHIP_INTRO_OFFER_ID,
+  MEMBERSHIP_PRODUCT_ID,
+} from '@offside/contracts/membership';
+import { pickAndroidOffer, pickIosIntro, type MemberIntro } from '@offside/app-core/memberOffer';
 import { claimMembershipIap } from '@offside/app-core/api/membership';
 import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
 import { membershipText as L } from '@offside/app-core/i18n/ko/membership';
@@ -29,6 +36,8 @@ const isMember = (p: Purchase) => p.productId === MEMBERSHIP_PRODUCT_ID;
 export const membership = proxy({
   /** 스토어가 알려 준 현지 월 가격. 없으면 가입 버튼을 보이지 않는다. */
   price: null as string | null,
+  /** T-11-770e 이 계정이 받는 신규 구독자 첫 달 할인(없으면 null). 화면에 보인 값과 결제에 쓰는 요금제가 같다. */
+  intro: null as MemberIntro | null,
   busy: false,
   restoring: false,
   /** 서버가 마지막으로 돌려준 상태(가입 뒤 화면이 바로 고친다). */
@@ -80,7 +89,9 @@ onStoreError((e) => {
 
 onSessionChanged(() => {
   account = null;
+  offerToken = null;
   membership.price = null;
+  membership.intro = null;
   membership.state = null;
   remember(null);
 });
@@ -92,19 +103,40 @@ export async function syncMembershipStore(state: MembershipResponse) {
   account = state.account ?? null;
   if (!STORE_SUPPORTED || !account || !state.stores.includes(STORE)) {
     membership.price = null;
+    membership.intro = null;
     return;
   }
+  // 첫 달 할인은 화면 스위치가 켜져 있고 서버가 이 구단주에게 보여도 된다고 했을 때만 본다(대조군은 정상가).
+  const introOn = (MEMBERSHIP_INTRO_LIVE || __DEV__) && state.introOffer === true;
   if (!(await connectStore())) return;
   try {
     const products = await fetchProducts({ skus: [MEMBERSHIP_PRODUCT_ID], type: 'subs' });
     const product = products?.find((p) => p.id === MEMBERSHIP_PRODUCT_ID);
-    const offer =
-      product && 'subscriptionOffers' in product ? product.subscriptionOffers?.[0] : undefined;
-    offerToken = offer?.offerTokenAndroid ?? null;
-    membership.price =
-      Platform.OS === 'android' ? (offer?.displayPrice ?? null) : (product?.displayPrice ?? null);
+    if (Platform.OS === 'android') {
+      // 목록의 첫 요금제를 그냥 쓰지 않는다: 월 정상가 요금제와 (켜져 있으면) 정해 둔 ID의 신규 할인만 고른다.
+      const picked = pickAndroidOffer(
+        (product && 'subscriptionOffers' in product ? product.subscriptionOffers : null) ?? [],
+        introOn ? MEMBERSHIP_INTRO_OFFER_ID : null,
+      );
+      offerToken = picked?.token ?? null;
+      membership.price = picked?.price ?? null;
+      membership.intro = picked?.intro ?? null;
+    } else {
+      offerToken = null;
+      membership.price = product?.displayPrice ?? null;
+      const group =
+        product && 'subscriptionGroupIdIOS' in product ? product.subscriptionGroupIdIOS : null;
+      // 자격을 확인하지 못하면 할인을 약속하지 않고 정상가만 보인다.
+      const eligible =
+        introOn && !!group && (await isEligibleForIntroOfferIOS(group).catch(() => false));
+      membership.intro =
+        product && 'introductoryPricePaymentModeIOS' in product
+          ? pickIosIntro(product, eligible)
+          : null;
+    }
   } catch {
     membership.price = null;
+    membership.intro = null;
   }
 }
 

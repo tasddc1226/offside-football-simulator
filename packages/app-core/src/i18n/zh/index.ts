@@ -120,6 +120,7 @@ import { shellInstall } from './shellInstall';
 import { shellInstallGuide } from './shellInstallGuide';
 import { shellLogin } from './shellLogin';
 import { shellMore } from './shellMore';
+import { starterPack } from './starterPack';
 import { teamAch } from './teamAch';
 import { teamCore } from './teamCore';
 import { teamDivision } from './teamDivision';
@@ -255,6 +256,7 @@ export const zh = {
   shellInstallGuide,
   shellLogin,
   shellMore,
+  starterPack,
   teamAch,
   teamCore,
   teamDivision,

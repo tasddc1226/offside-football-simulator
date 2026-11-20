@@ -24,7 +24,7 @@
   import { ownerPlayersText as P } from '@offside/app-core/i18n/ko/ownerPlayers';
   import TeamLogo from './team/TeamLogo.svelte';
   import { loadHOF, localCareerNames } from '@offside/game/hof-store';
-  import { go } from './nav.js';
+  import { go, takeFocus } from './nav.js';
   import { openFriends } from './friendInvite.svelte.js';
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { hallDotLabel, hallSeason } from '@offside/app-core/hallEntry';
@@ -141,6 +141,8 @@
   }
   // T-11-591 웹 결제창에서 돌아오면 결제를 시작한 시즌 패스 · 멤버십 창을 다시 연다.
   if (webPay.reopen === 'pass') openPass();
+  // T-11-770c 은퇴 화면의 시즌 패스 안내로 들어왔으면 패스 창을 연 채로 시작한다(한 번만 읽힌다).
+  if (takeFocus('seasonPass')) openPass();
   else if (webPay.reopen === 'member') openMember();
   webPay.reopen = null;
   const passEntry = passEntryOpen(new Date().toISOString()) || import.meta.env.DEV;

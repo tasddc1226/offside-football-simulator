@@ -1921,6 +1921,36 @@ export const seasonPasses = sqliteTable(
 );
 
 /**
+ * T-11-770d 첫 구매 묶음 원장. 스토어 거래마다 한 줄이라 같은 거래를 다시 보내도 한 번만 준다. 구단주마다 한 번만 팔지만, 스토어가
+ * 서로 다른 유료 거래를 둘 승인한 드문 경우에는 두 줄이 되고 둘 다 지급한다(돈만 받고 끝내지 않는다). version은 그 거래가 받은
+ * 구성의 판, grant_id는 이 줄을 넣은 요청(그 요청만 아이템을 준다), revoked_json은 환불 때 실제로 회수한 장수.
+ */
+export const starterPacks = sqliteTable(
+  'starter_packs',
+  {
+    store: text('store').notNull(),
+    transactionId: text('transaction_id').notNull(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    version: text('version').notNull(),
+    test: integer('test', { mode: 'boolean' }).notNull().default(false),
+    grantId: text('grant_id').notNull(),
+    createdAt: text('created_at').notNull(),
+    purchasedAt: text('purchased_at'),
+    priceMilliunits: integer('price_milliunits'),
+    currency: text('currency'),
+    storefront: text('storefront'),
+    refundedAt: text('refunded_at'),
+    revokedJson: text('revoked_json'),
+  },
+  (table) => [
+    primaryKey({ columns: [table.store, table.transactionId] }),
+    index('starter_packs_profile_idx').on(table.profileId, table.createdAt),
+  ],
+);
+
+/**
  * T-11-152 구단 자금으로 산 아이템 원장(자금이 없어진 내역). 하루 상한을 세고, 운영에서 자금 대조
  * (방출 + 판매 − 영입 − 아이템 구매)에 쓴다.
  */

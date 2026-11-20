@@ -6,6 +6,7 @@
   import Skeleton from '../Skeleton.svelte';
   import type { SeasonPassResponse, SeasonPassSeason } from '@offside/contracts';
   import { claimSeasonPassReward, fetchSeasonPass } from '@offside/app-core/api/seasonPass';
+  import { notePassSeen } from '@offside/app-core/passNudge';
   import { needsOwnerLogin } from '@offside/app-core/market';
   import { rewardText } from '@offside/app-core/attendance-view';
   import {
@@ -33,7 +34,10 @@
   async function load() {
     failed = null;
     const r = await fetchSeasonPass();
-    if (r.ok) pass = r.data;
+    if (r.ok) {
+      pass = r.data;
+      notePassSeen(r.data.seasons[0]);
+    }
     else failed = needsOwnerLogin(r.error) ? 'login' : 'error';
   }
   void load();

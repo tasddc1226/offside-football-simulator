@@ -13,6 +13,10 @@ export const membership: Translation<MembershipMsgs> = {
   perkBadge: 'サポーターバッジ',
   perkBadgeSub: 'マイクラブとフレンド一覧で、名前の横にサポーターバッジが付きます。',
   join: (p) => `月額${p.price}で加入する`,
+  joinIntro: (p) =>
+    p.months === 1 ? `初月${p.price}で加入する` : `最初の${p.months}か月は月額${p.price}で加入する`,
+  introNote: (p) =>
+    `${p.months === 1 ? '初月' : `最初の${p.months}か月`}が過ぎると月額${p.price}で自動更新されます。初めて加入するときに1回だけの価格です。`,
   joinBusy: '決済中…',
   joined: 'メンバーシップに加入しました。',
   active: 'メンバーシップを利用中です',
@@ -42,4 +46,6 @@ export const membership: Translation<MembershipMsgs> = {
   badge: 'サポーター',
   badgeLabel: 'クラブメンバーシップ サポーター',
   back: 'オーナー画面へ',
+  adHint: 'メンバーシップなら広告なしで受け取れます',
+  adHintGo: 'メンバーシップを見る',
 };

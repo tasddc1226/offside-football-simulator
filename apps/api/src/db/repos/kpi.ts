@@ -5,6 +5,7 @@ import {
 } from '@offside/contracts/admin-items';
 import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import { SEASON_PASS_PRICE_KRW } from '@offside/contracts/season-pass';
+import { STARTER_PACK_PRICE_KRW } from '@offside/contracts/starter-pack';
 import {
   KPI_EXTERNAL_METRICS,
   type KpiReport,
@@ -72,6 +73,8 @@ export const D1_METRICS = [
   'ad_free_krw',
   'pass_count',
   'pass_krw',
+  'starter_count',
+  'starter_krw',
   'members_active',
   'members_new',
   'members_renewed',
@@ -187,6 +190,7 @@ export async function collectD1Day(
     retiredStats,
     retiredLegacy,
     elite,
+    starters,
   ] = await d1.batch<Record<string, unknown>>([
     d1
       .prepare(
@@ -307,6 +311,13 @@ export async function collectD1Day(
            WHERE s.created_at >= ?1 AND s.created_at < ?2 AND s.ovr >= ?3 AND s.age <= ?4`,
       )
       .bind(start, end, ELITE_OVR, ELITE_MAX_AGE),
+    // T-11-770d 첫 구매 묶음(그날 산 것 가운데 환불되지 않은 것, 정가 추정).
+    d1
+      .prepare(
+        `SELECT store, count(*) n FROM starter_packs
+           WHERE test = 0 AND refunded_at IS NULL AND created_at >= ?1 AND created_at < ?2 GROUP BY 1`,
+      )
+      .bind(start, end),
   ]);
   const [errors, api] = await ops.batch<Record<string, unknown>>([
     ops
@@ -340,6 +351,10 @@ export async function collectD1Day(
   for (const r of passes!.results) {
     add('pass_count', String(r.store), r.n);
     add('pass_krw', String(r.store), num(r.n) * SEASON_PASS_PRICE_KRW);
+  }
+  for (const r of starters!.results) {
+    add('starter_count', String(r.store), r.n);
+    add('starter_krw', String(r.store), num(r.n) * STARTER_PACK_PRICE_KRW);
   }
   for (const r of members!.results) add('members_active', String(r.store), r.n);
   add('comments', 'all', comments!.results[0]?.n);

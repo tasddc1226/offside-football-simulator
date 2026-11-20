@@ -5,7 +5,9 @@ import { useEffect, useRef } from 'react';
 import { View } from 'react-native';
 import type { CommerceEntry } from '@offside/app-core/commerceStage';
 import { watchMeasuredShown } from '@offside/app-core/offerVisibility';
+import { packUnits } from '@offside/app-core/packCompare';
 import { IAP_PRODUCTS, type OwnerItem } from '@offside/contracts/cup';
+import { intlLocale } from '@offside/contracts/i18n';
 import { iapText as L } from '@offside/app-core/i18n/ko/iap';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
 import {
@@ -70,6 +72,14 @@ export function IapPacks({
       check.current = () => {};
     };
   }, [shown, item, entry]);
+  // T-11-770a 스카우트권 묶음은 같은 통화의 숫자 가격이 모두 있을 때만 장당 가격을 적는다(없으면 총액만).
+  const units =
+    item === 'scout'
+      ? packUnits(
+          packs.map((id) => ({ qty: IAP_PRODUCTS[id].qty, ...iap.amounts[id] })),
+          intlLocale(),
+        )
+      : [];
   const small = { fontSize: rem(FONT.label) };
   const claim = iap.claimLeft ? (
     <View style={{ gap: 6 }} testID="iap-claim-left">
@@ -118,18 +128,27 @@ export function IapPacks({
   return (
     <View ref={box} style={{ gap: 8 }} testID={`iap-${item}`} onLayout={() => check.current()}>
       <Txt v="eyebrow">{L.packsTitle}</Txt>
-      {packs.map((id) => {
+      {packs.map((id, i) => {
         const n = IAP_PRODUCTS[id].qty;
+        const u = units[i];
         return (
-          <Btn
-            key={id}
-            block
-            disabled={!!iap.busy}
-            testID={`iap-buy-${id}`}
-            onPress={() => void buyIapItem(id, entry)}
-          >
-            {iap.busy === id ? L.busy : `${PACK[item]({ n })} · ${iap.prices[id]}`}
-          </Btn>
+          <View key={id} style={{ gap: 4 }}>
+            <Btn
+              block
+              disabled={!!iap.busy}
+              testID={`iap-buy-${id}`}
+              onPress={() => void buyIapItem(id, entry)}
+            >
+              {iap.busy === id ? L.busy : `${PACK[item]({ n })} · ${iap.prices[id]}`}
+            </Btn>
+            {u?.unit ? (
+              <Txt tone="muted" style={small} testID={`iap-unit-${id}`}>
+                {u.lowest
+                  ? `${SL.unit({ price: u.unit })} · ${SL.unitLowest}`
+                  : SL.unit({ price: u.unit })}
+              </Txt>
+            ) : null}
+          </View>
         );
       })}
       {note ? (

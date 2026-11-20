@@ -25,6 +25,7 @@ export const billing = {
   membership: '클럽 멤버십 (월 구독)',
   removeAds: '광고 제거',
   seasonPass: '시즌 패스',
+  starterPack: '첫 구매 묶음',
   items: {
     reroll: '리롤권',
     boost: '잠재력 강화권',

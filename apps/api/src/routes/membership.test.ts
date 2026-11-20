@@ -12,6 +12,7 @@ import { handleAppleNotification } from '../iap/refunds.js';
 import { handleGoogleRtdn } from '../iap/rtdn.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
+import { membershipIntroGroup } from './membership.js';
 
 // Apple 서명 확인 · Google Developer API는 각자의 테스트가 본다. 여기서는 확인 결과를 정해 두고 구독 규칙만 본다.
 const apple = vi.hoisted(() => ({
@@ -94,6 +95,27 @@ describe('T-11-512 클럽 멤버십', () => {
       stores: ['apple'],
       account: me.profileId.replace(/^prf_/, ''),
     });
+  });
+
+  it('T-11-770e 첫 달 할인은 스위치가 켜져 있을 때 대조군이 아닌 구단주에게만 알리고, 같은 구단주는 늘 같은 군이다', async () => {
+    ctx.env.MEMBERSHIP_ENABLED = '1';
+    const owners = [];
+    for (let i = 0; i < 12; i += 1)
+      owners.push(await issueGoogleCookie(ctx, { email: `intro-${i}@example.com` }));
+    for (const o of owners) expect(await state(o.cookie)).not.toHaveProperty('introOffer');
+    ctx.env.MEMBERSHIP_INTRO_ENABLED = '1';
+    let offered = 0;
+    for (const o of owners) {
+      const group = await membershipIntroGroup(o.profileId);
+      expect(await membershipIntroGroup(o.profileId)).toBe(group);
+      const view = await state(o.cookie);
+      expect(view.introOffer === true).toBe(group === 'offer');
+      if (view.introOffer) offered += 1;
+    }
+    expect(offered).toBeGreaterThan(0);
+    // 판매 스위치가 꺼져 있으면 할인도 알리지 않는다.
+    ctx.env.MEMBERSHIP_ENABLED = '0';
+    for (const o of owners) expect(await state(o.cookie)).not.toHaveProperty('introOffer');
   });
 
   it('Apple 구독 거래로 가입하고, 옛 거래를 다시 보내도 기간을 되돌리지 않으며, 다른 구단주는 같은 구독을 쓰지 못한다', async () => {

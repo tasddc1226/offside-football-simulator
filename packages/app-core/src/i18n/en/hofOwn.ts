@@ -2,6 +2,11 @@ import type { Translation } from '../core';
 import type { HofOwnMsgs } from '../ko/hofOwn';
 
 export const hofOwn: Translation<HofOwnMsgs> = {
+  passNudgeTitle: 'More season pass tiers are open',
+  passNudgeBody:
+    'You have retired more players this season. Buy the pass to receive the rewards for every open tier at once.',
+  passNudgeGo: 'View season pass',
+  passNudgeClose: 'Close',
   publishTitle: 'Show your name in the Hall of Fame',
   publishBefore:
     'Retirement records go into the Hall of Fame, which every player can see. Right now your player is listed',

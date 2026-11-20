@@ -20,6 +20,7 @@ import { LoginButtons } from './LoginButtons';
 import { RenameShop } from './RenameShop';
 import { RerollShop } from './RerollShop';
 import { ScoutShop } from './ScoutShop';
+import { StarterPackCard } from './StarterPackCard';
 
 export default function Shop() {
   const cache = useSnapshot(accountCache);
@@ -83,6 +84,7 @@ export default function Shop() {
               </View>
             </Card>
           </Press>
+          <StarterPackCard place="shop" />
           <RerollShop focus={shopFocus} onBought={bought} />
           <BoostShop />
           <RenameShop />

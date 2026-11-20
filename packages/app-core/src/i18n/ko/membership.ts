@@ -14,6 +14,10 @@ const ko = {
   perkBadge: '서포터 뱃지',
   perkBadgeSub: '내 구단과 친구 목록의 이름 옆에 서포터 뱃지가 붙어요.',
   join: (p: { price: string }) => `월 ${p.price}로 가입하기`,
+  joinIntro: (p: { price: string; months: number }) =>
+    p.months === 1 ? `첫 달 ${p.price}에 가입하기` : `첫 ${p.months}개월 월 ${p.price}에 가입하기`,
+  introNote: (p: { price: string; months: number }) =>
+    `${p.months === 1 ? '첫 달' : `첫 ${p.months}개월`}이 지나면 월 ${p.price}로 자동 결제돼요. 처음 구독할 때 한 번만 받는 가격이에요.`,
   joinBusy: '결제 중…',
   joined: '멤버십에 가입했어요',
   active: '멤버십을 이용하고 있어요',
@@ -42,6 +46,8 @@ const ko = {
   badge: '서포터',
   badgeLabel: '클럽 멤버십 서포터',
   back: '구단주 화면으로',
+  adHint: '멤버십이면 광고 없이 받아요',
+  adHintGo: '멤버십 보기',
 };
 
 export type MembershipMsgs = typeof ko;

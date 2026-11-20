@@ -5,6 +5,7 @@ import {
   type AdminRevenue,
 } from '@offside/contracts';
 import { SEASON_PASS_PRODUCT_ID, SEASON_PASS_PRICE_KRW } from '@offside/contracts/season-pass';
+import { STARTER_PACK_PRICE_KRW, STARTER_PACK_PRODUCT_ID } from '@offside/contracts/starter-pack';
 import { MEMBERSHIP_PRODUCT_ID, MEMBERSHIP_PRICE_KRW } from '@offside/contracts/membership';
 import type { Db } from '../client.js';
 
@@ -42,6 +43,12 @@ const PURCHASES = `WITH purchases AS (
     CASE WHEN refunded_at IS NULL THEN ${SEASON_PASS_PRICE_KRW} ELSE 0 END,
     ${SEASON_PASS_PRICE_KRW}
   FROM season_passes WHERE test = 0
+  UNION ALL
+  SELECT store, '${STARTER_PACK_PRODUCT_ID}', profile_id, created_at, refunded_at,
+    CASE WHEN refunded_at IS NULL THEN 1 ELSE 0 END,
+    CASE WHEN refunded_at IS NULL THEN ${STARTER_PACK_PRICE_KRW} ELSE 0 END,
+    ${STARTER_PACK_PRICE_KRW}
+  FROM starter_packs WHERE test = 0
   UNION ALL
   SELECT store, product_id, NULL, created_at,
     CASE WHEN kind = 'refund' THEN created_at END,

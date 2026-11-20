@@ -27,6 +27,7 @@ import { claimReward, prepareReward, rewardOffer } from '../../platform/rewarded
 import type { OwnerItem } from '@offside/contracts/cup';
 import { toast } from '../../game/host';
 import { goRerollShop } from '../../game/nav';
+import { MemberAdHint } from '../../components/MemberAdHint';
 import { alpha, type Colors } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { Btn, Card, Press, Row, Txt } from '../../ui';
@@ -316,6 +317,9 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
                 >
                   {busy ? L.busy : adOffer === 'free' ? AD.attendFree : AD.attendAd}
                 </Btn>
+              ) : null}
+              {canAd && adOffer === 'ad' ? (
+                <MemberAdHint place="attendance" onGo={() => setOpen(false)} />
               ) : null}
               {got ? (
                 <>

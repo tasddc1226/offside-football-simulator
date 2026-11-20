@@ -101,8 +101,12 @@ export type Bindings = {
   IAP_TESTERS?: string;
   /** T-11-511 '1'이면 시즌 패스를 새로 판다(산 패스의 보상은 꺼도 받는다). */
   SEASON_PASS_ENABLED?: string;
+  /** T-11-770d '1'이면 첫 구매 묶음을 새로 판다. 꺼도 이미 승인된 거래는 받는다. */
+  STARTER_PACK_ENABLED?: string;
   /** T-11-512 클럽 멤버십 새 가입을 받는다('1'). 꺼도 이미 가입한 구독의 확인 · 혜택은 그대로다. */
   MEMBERSHIP_ENABLED?: string;
+  /** T-11-770e '1'이면 대조군이 아닌 구단주에게 멤버십 첫 달 할인을 보여도 된다고 알린다. */
+  MEMBERSHIP_INTRO_ENABLED?: string;
   /**
    * T-11-454 웹 결제(엑솔라 Pay Station). `1`이고 프로젝트 id · API 키 · 웹훅 비밀 키가 있어야 웹 상점에 결제가 열린다.
    * 프로젝트 id는 var, 두 키는 secret. XSOLLA_SANDBOX=`1`이면 샌드박스 결제창(테스트 카드)을 쓴다.

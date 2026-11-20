@@ -10,6 +10,8 @@ import type {
   RetiredNumberMiss,
   RetiredNumberResult,
 } from '@offside/contracts';
+import { SEASON_GAUGE } from '@offside/contracts/season-gauge';
+import { notePassRetired } from './passNudge.js';
 import { markAchDirty } from './achDirty.js';
 import { apiAuth, apiBaseUrl, clearApiCache, fetchWithTimeout, noteSession } from './api/client.js';
 import { retiredNumberProgressSynced } from './api/retiredNumberProgress.js';
@@ -283,6 +285,8 @@ async function flushOnce(syncedSeasons: Set<string>): Promise<void> {
     const settled = new Set<string>();
     const conflicts: OutboxItem[] = [];
     let retired = false;
+    // T-11-770c 서버에 올라간 은퇴 가운데 시즌 패스 진행도에 드는 것(끝까지 뛴 커리어) 수.
+    let fullRetired = 0;
     // T-10-045: 한 커리어의 항목은 순서대로만 보낸다. 첫 시즌 PUT이 재시도 대상인데 은퇴를 이어서 보내면
     // 서버에 커리어가 아직 없어 400(CAREER_NOT_FOUND)으로 버려진다 — 그 커리어의 뒤 항목은 다음 회차로 미룬다.
     const blocked = new Set<string>();
@@ -310,6 +314,7 @@ async function flushOnce(syncedSeasons: Set<string>): Promise<void> {
             quarantine(item, { status: 409, code: 'CAREER_OWNER_MISMATCH', at: Date.now() });
         } else if (result === 'ok' && item.kind === 'retirement') {
           retired = true;
+          if (item.body.retireAge >= SEASON_GAUGE.fullAge) fullRetired++;
           clearRetirementRejections(item.careerId);
         } else if (result === 'ok' && item.kind === 'season') syncedSeasons.add(item.careerId);
       }
@@ -322,6 +327,7 @@ async function flushOnce(syncedSeasons: Set<string>): Promise<void> {
     if (conflicts.length) host.onConflict?.(conflicts);
     // 큐에서 뺀 뒤에 알린다 — 받는 쪽이 pendingRetirementIds를 다시 읽어도 이미 빠져 있다.
     if (retired) for (const fn of retiredListeners) fn();
+    if (fullRetired) notePassRetired(fullRetired);
   } catch (err) {
     console.error('[outbox] flush 실패', err);
   }

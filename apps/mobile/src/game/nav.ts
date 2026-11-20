@@ -26,7 +26,15 @@ export function openOwnerHallVisit(teamId: string) {
 // 다른 화면에서 들어올 때 한 칸을 펼쳐 둔다(한 번만 읽힌다). T-11-141 설정 '확률과 공정성' → 확률 도감의 그 칸,
 // T-11-152 후보 화면 '리롤권 상점 가기' → 상점 화면의 리롤권 상점(T-11-567), '프리미엄 스카우트권 보기' → 스카우트권 상점.
 type Focus =
-  'fairness' | 'glossary' | 'rerollShop' | 'scoutShop' | 'types' | 'backup' | 'marketRelease';
+  | 'fairness'
+  | 'glossary'
+  | 'rerollShop'
+  | 'scoutShop'
+  | 'types'
+  | 'backup'
+  | 'marketRelease'
+  | 'membership'
+  | 'seasonPass';
 let pending: Focus | null = null;
 function goFocus(screen: Screen, focus: Focus) {
   go(screen);
@@ -35,6 +43,10 @@ function goFocus(screen: Screen, focus: Focus) {
 export const goFairness = () => goFocus('dex', 'fairness');
 export const goRerollShop = () => goFocus('shop', 'rerollShop');
 export const goScoutShop = () => goFocus('shop', 'scoutShop');
+// T-11-770b 광고를 고르는 자리의 멤버십 안내 → 내 구단 화면의 클럽 멤버십 창.
+export const goMembership = () => goFocus('owner', 'membership');
+// T-11-770c 은퇴 화면의 시즌 패스 안내 → 내 구단 화면의 시즌 패스 창.
+export const goSeasonPass = () => goFocus('owner', 'seasonPass');
 // T-11-442 상점에서 자금이 모자랄 때 '방출하러 가기' → 이적시장의 방출 화면.
 export const goMarketRelease = () => goFocus('market', 'marketRelease');
 // T-11-355 처음 안내 카드 · 설정 → 확률 도감의 선수 유형 도감을 펼친 채로.

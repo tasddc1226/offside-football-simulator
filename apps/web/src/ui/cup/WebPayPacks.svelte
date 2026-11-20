@@ -13,6 +13,8 @@
   import { loadWebPay, startWebPay, webPay, commerceEntry, type WebPayBack } from './webPay.svelte.js';
   import { trackCommerce } from '../../analytics/index.js';
   import { observeOfferView } from '@offside/app-core/offerVisibility';
+  import { packUnits } from '@offside/app-core/packCompare';
+  import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
 
   let { item, note, back = 'owner' }: { item: OwnerItem; note?: string; back?: WebPayBack } = $props();
 
@@ -20,6 +22,10 @@
     webPay.config?.enabled ? (webPay.config.products ?? []).filter((p) => p.item === item) : [],
   );
   const won = (n: number) => n.toLocaleString('ko-KR');
+  // T-11-770a 스카우트권 묶음의 장당 가격(웹 가격은 원화 한 가지라 그대로 나눈다). 묶음이 하나면 적지 않는다.
+  const units = $derived(
+    item === 'scout' ? packUnits(packs.map((p) => ({ qty: p.qty, amount: p.amount, currency: 'KRW' })), 'ko-KR') : [],
+  );
   /** 확인 단계를 연 상품. 누른 묶음 바로 아래에서 무엇을 얼마에 사는지 다시 보여 준다. */
   let chosen = $state<string | null>(null);
   const pick = $derived(packs.find((p) => p.productId === chosen) ?? null);
@@ -61,7 +67,8 @@
 {#if packs.length}
   <div class="wpp" data-web-pay-packs={item} use:offerView>
     <small class="eyebrow">{L.title}</small>
-    {#each packs as p (p.productId)}
+    {#each packs as p, i (p.productId)}
+      {@const u = units[i]}
       <button
         class="btn btn-block"
         disabled={webPay.busy}
@@ -71,6 +78,11 @@
       >
         {L.pack({ item: p.item, n: p.qty })} · {L.price({ won: won(p.amount) })}
       </button>
+      {#if u?.value != null}
+        <p class="muted fs-xs wpp-unit" data-web-pay-unit={p.productId}>
+          {SL.unit({ price: L.price({ won: won(u.value) }) })}{#if u.lowest} · {SL.unitLowest}{/if}
+        </p>
+      {/if}
       {#if pick?.productId === p.productId}
         <div class="wpp-confirm" data-web-pay-confirm={p.productId}>
           <p class="wpp-sum">{L.confirmSum({ pack: L.pack({ item: p.item, n: p.qty }), price: L.price({ won: won(p.amount) }) })}</p>

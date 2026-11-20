@@ -9,6 +9,7 @@ import { DEFAULT_BUNDLE_ID } from '../auth/apple-id-token.js';
 import type { Db } from '../db/client.js';
 import { revokeIapPurchase, type IapRevoke } from '../db/repos/iap.js';
 import { revokeSeasonPass } from '../db/repos/seasonPass.js';
+import { revokeStarterPack } from '../db/repos/starterPack.js';
 import type { Bindings } from '../env.js';
 import { APPLE_ROOT_G3_SHA256, verifyAppleNotification, verifyAppleTransaction } from './apple.js';
 import { listVoidedPurchases } from './google.js';
@@ -114,6 +115,11 @@ export async function handleAppleNotification(
     log('pass-refund', { store: 'apple', tx: String(tx.transactionId).slice(-6) });
     return 'revoked';
   }
+  // T-11-770d 첫 구매 묶음 거래면 그 판의 구성을 가진 만큼 회수한다.
+  if (await revokeStarterPack(db, 'apple', String(tx.transactionId), now)) {
+    log('starter-refund', { store: 'apple', tx: String(tx.transactionId).slice(-6) });
+    return 'revoked';
+  }
   const r = await revokeIapPurchase(db, 'apple', String(tx.transactionId), now);
   log('iap-refund', { store: 'apple', tx: String(tx.transactionId).slice(-6), ...summary(r) });
   return 'revoked';
@@ -143,6 +149,7 @@ export async function syncGoogleVoided(
     await markPurchaseRefund(env.DB, 'google', v.purchaseToken, now);
     // T-11-511 시즌 패스 거래(무효화 목록에 매일 겹쳐 나온다 — 닫는 건 한 번뿐이다).
     if (await revokeSeasonPass(db, 'google', v.purchaseToken, now)) continue;
+    if (await revokeStarterPack(db, 'google', v.purchaseToken, now)) continue;
     const r = await revokeIapPurchase(db, 'google', v.purchaseToken, now);
     if (env.BILLING_ALERTS_ENABLED === '1' && r.found) {
       const row = await env.DB.prepare(

@@ -1,0 +1,24 @@
+{
+  "id": "t-11-770-member-ad-hint",
+  "title": "광고 보상 자리의 멤버십 안내",
+  "items": [
+    "출석 보상 2배와 잠재력 강화의 광고 보기 버튼 아래에서 클럽 멤버십 혜택을 바로 볼 수 있어요."
+  ],
+  "en": {
+    "title": "Membership info next to ad rewards",
+    "items": [
+      "Under the watch-ad buttons for double attendance rewards and potential boosts, you can now see what Club Membership includes."
+    ]
+  },
+  "ja": {
+    "title": "広告報酬のそばにメンバーシップ案内",
+    "items": [
+      "出席報酬2倍と潜在能力強化の広告ボタンの下で、クラブメンバーシップの特典をすぐ確認できます。"
+    ]
+  },
+  "zh": {
+    "title": "廣告獎勵旁的會員說明",
+    "items": ["在簽到獎勵 2 倍與潛力強化的看廣告按鈕下方，可以直接查看俱樂部會員的福利。"]
+  },
+  "availability": "app"
+}

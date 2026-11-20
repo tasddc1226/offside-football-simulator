@@ -15,6 +15,11 @@ export const MembershipResponseSchema = z.strictObject({
   stores: z.array(IapStoreSchema),
   /** 스토어 구매에 붙이는 구단주 표시(stores가 비어 있지 않을 때만). */
   account: z.uuid().optional(),
+  /**
+   * T-11-770e 이 구단주에게 신규 구독자 첫 달 할인을 보여도 되나(서버 스위치가 켜져 있고 대조군이 아닐 때만 true). 실제로 받을 수
+   * 있는지(처음 구독하는지)는 스토어가 정한다.
+   */
+  introOffer: z.boolean().optional(),
 });
 export type MembershipResponse = z.infer<typeof MembershipResponseSchema>;
 
