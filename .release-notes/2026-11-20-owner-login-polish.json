@@ -1,0 +1,30 @@
+{
+  "id": "t-11-791-owner-login-polish",
+  "title": "내 구단 연결 오류 안내 · 로그인 문구",
+  "items": [
+    "서버에 연결하지 못하면 내 구단 화면이 비어 보이던 문제를 고쳤어요. 이제 안내와 다시 시도 버튼이 보여요.",
+    "쓰던 계정으로 다시 로그인했는데 다른 계정으로 바꿨다고 나오던 안내를 바로잡았어요."
+  ],
+  "en": {
+    "title": "My club connection notice and sign-in wording",
+    "items": [
+      "Fixed the My club screen looking empty when the server couldn't be reached. It now shows a notice and a Try again button.",
+      "Fixed the message that said you switched to a different account when you signed back in to your existing one."
+    ]
+  },
+  "ja": {
+    "title": "マイクラブの接続エラー案内・ログインの文言",
+    "items": [
+      "サーバーに接続できないときにマイクラブ画面が空に見える問題を修正しました。案内と再試行ボタンを表示します。",
+      "お使いのアカウントでログインし直したときに、別のアカウントに切り替えたと表示される案内を修正しました。"
+    ]
+  },
+  "zh": {
+    "title": "我的俱樂部連線錯誤提示・登入文字",
+    "items": [
+      "修正了無法連線到伺服器時「我的俱樂部」畫面看起來空白的問題，現在會顯示提示與重試按鈕。",
+      "修正了重新登入原本使用的帳號時，卻顯示已切換到另一個帳號的提示。"
+    ]
+  },
+  "availability": "web-app"
+}

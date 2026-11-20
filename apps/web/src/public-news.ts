@@ -3,6 +3,7 @@ import { parseBody } from '@offside/app-core/boardText';
 import { boardText as D } from '@offside/app-core/i18n/ko/board';
 import { shellText as L } from '@offside/app-core/i18n/ko/shell';
 import { boardLabelText as B } from '@offside/app-core/i18n/ko/boardLabel';
+import { shellInstallText as A } from '@offside/app-core/i18n/ko/shellInstall';
 import { resolveApiBaseUrl } from './api/base-url.js';
 import { NEWS_ID } from './news-id.js';
 
@@ -59,8 +60,9 @@ export async function readNewsIndex(hostname: string): Promise<NewsSummary[]> {
   );
   return pages.flat();
 }
+// T-11-790 메뉴 끝에 앱 소개 페이지(/app/, 언어별 주소)를 둔다.
 const nav = () =>
-  `<nav class="public-news-nav"><a href="/">OFFSIDE</a><a href="/news/">${escape(D.publicNews)}</a><a href="${publicDocPath('/guide/')}">${escape(L.footGuide)}</a><a href="${publicDocPath('/faq/')}">${escape(L.footFaq)}</a><a href="/fairness/">${escape(L.footFairness)}</a></nav>`;
+  `<nav class="public-news-nav"><a href="/">OFFSIDE</a><a href="/news/">${escape(D.publicNews)}</a><a href="${publicDocPath('/guide/')}">${escape(L.footGuide)}</a><a href="${publicDocPath('/faq/')}">${escape(L.footFaq)}</a><a href="/fairness/">${escape(L.footFairness)}</a><a href="${publicDocPath('/app/')}">${escape(A.stripGet)}</a></nav>`;
 const bodyHtml = (body: string) =>
   parseBody(body)
     .map((b) =>

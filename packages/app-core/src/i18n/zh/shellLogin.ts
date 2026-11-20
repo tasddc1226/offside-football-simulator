@@ -12,5 +12,5 @@ export const shellLogin: Translation<ShellLoginMsgs> = {
   failUnavailableApple: '目前無法使用 Apple 登入，請稍後再試。',
   failGenericApple: (p) => `Apple 登入失敗${p.reason ? `（${p.reason}）` : ''}。`,
   linked: (p) => `已連結 ${p.via} 帳號。`,
-  switched: (p) => `已切換到另一個 ${p.via} 帳號。`,
+  switched: (p) => `已登入原本使用的 ${p.via} 帳號。`,
 };

@@ -67,6 +67,44 @@ test('owner profile image preview, save, reload and default restoration at mobil
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
+// T-11-791 프로필 조회가 실패하면 구단주 탭이 제목만 남던 문제. 안내와 다시 시도가 보이고, 다시 시도는 한 번만 묻는다.
+test('owner tab shows a retry card when the profile lookup fails', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('ft_session', '1'));
+  let up = false;
+  let calls = 0;
+  await page.route(`${API}/v1/**`, (r) => r.fulfill(fail(503, 'UNAVAILABLE', 'unavailable')));
+  await page.route(`${API}/v1/profile`, (r) => {
+    calls++;
+    return r.fulfill(
+      up
+        ? ok({
+            id: 'guest-retry',
+            nickname: null,
+            linked: { google: false },
+            googleEmailMasked: null,
+            recoveryCodeIssuedAt: null,
+            createdAt: '2026-01-01T00:00:00.000Z',
+            avatarId: null,
+          })
+        : fail(503, 'UNAVAILABLE', 'unavailable'),
+    );
+  });
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  const error = page.locator('[data-owner-account-error]');
+  await expect(error).toBeVisible();
+  await expect(page.locator('[data-owner-team-locked]')).toHaveCount(0);
+  await expect(page.locator('[data-owner-summary]')).toHaveCount(0);
+
+  up = true;
+  const before = calls;
+  await error.locator('[data-act="owner-account-retry"]').click();
+  await expect(page.locator('[data-owner-team-locked]')).toBeVisible();
+  await expect(error).toHaveCount(0);
+  await expect(page.locator('[data-owner-account-checking]')).toHaveCount(0);
+  expect(calls).toBe(before + 1);
+});
+
 test('owner entry shares one compact read and reentry uses cache', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 780 });
   await page.addInitScript(() => localStorage.setItem('ft_session', '1'));

@@ -21,14 +21,14 @@ import type { TeamView } from '@offside/app-core/state';
 import { num, recordText } from '@offside/app-core/teamText';
 import { fmtValue } from '@offside/app-core/format';
 import { loadHOF, localCareerNames } from '@offside/game/hof-store';
-import { ensureAccount } from '../../game/host';
+import { ensureAccount, refreshAccount } from '../../game/host';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
 import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt, Skeleton } from '../../ui';
-import { useRefresh } from '../../ui/refresh';
+import { useOnPull, useRefresh } from '../../ui/refresh';
 import { OwnerProfileEditor } from './OwnerProfileEditor';
 import { LoginButtons } from './LoginButtons';
 import { loadMyPlayerSummary } from '@offside/app-core/myPlayers';
@@ -42,6 +42,7 @@ import { GradeEmblem } from '../../ui/GradeEmblem';
 import { AdSlot } from '../../components/AdSlot';
 import { ManagerResume } from './ManagerResume';
 import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+import { accountText as A } from '@offside/app-core/i18n/ko/account';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
 import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
 import { CardExchange } from './CardExchange';
@@ -279,6 +280,18 @@ export default function Owner() {
   // 로그인 안 함(익명 프로필이거나 세션 없음). 확인 중·연결 실패는 아니다.
   const guest = acct === null || (!!acct && acct !== 'error' && !isMember(acct));
   const nickname = acct && acct !== 'error' ? acct.nickname : null;
+  // T-11-791 계정 확인에 실패하면 내 팀 · 로그인 입구가 통째로 사라졌다(5분 뒤 조용한 재확인이 실패한 구단주도 같다).
+  // 안내와 다시 시도를 그리고, 요청하는 동안에는 버튼을 막는다.
+  const [retrying, setRetrying] = useState(false);
+  const retryAccount = () => {
+    if (retrying) return;
+    setRetrying(true);
+    return refreshAccount()
+      .catch(() => undefined)
+      .finally(() => setRetrying(false));
+  };
+  // 당겨서 새로고침은 실패 상태일 때만 다시 묻는다(평소에는 5분 메모를 그대로 쓴다).
+  useOnPull(() => (accountCache.value === 'error' ? retryAccount() : undefined));
 
   // 비로그인 구단 가치는 이 기기 기록의 카드 기준가 합(T-11-567 명예관 미리보기를 빼서 로그인하면 묻지 않는다).
   const { tick, track } = useRefresh();
@@ -433,6 +446,31 @@ export default function Owner() {
             />
           </View>
         </Card>
+      ) : null}
+
+      {acct === 'error' ? (
+        <Card gap={12} testID="owner-account-error">
+          <Txt v="h2" accessibilityRole="header">
+            {A.errorTitle}
+          </Txt>
+          <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>
+            {A.errorBody}
+          </Txt>
+          <Btn
+            block
+            testID="owner-account-retry"
+            disabled={retrying}
+            onPress={() => void retryAccount()}
+          >
+            {A.retry}
+          </Btn>
+        </Card>
+      ) : acct === undefined ? (
+        // 확인 중: 프로필 카드 · 내 팀 카드 자리의 뼈대.
+        <>
+          <Skeleton height={132} testID="owner-account-skeleton" />
+          <Skeleton height={168} />
+        </>
       ) : null}
 
       {linked || guest ? <AdSlot place="owner-summary" /> : null}

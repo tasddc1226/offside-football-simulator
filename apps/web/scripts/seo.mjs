@@ -297,10 +297,15 @@ export function createHeaders({ indexingEnabled }) {
   return `/*\n  X-Robots-Tag: noindex, nofollow\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n\n${publicHeaders}\n`;
 }
 
-/** 가이드 묶음의 아래 메뉴. 가이드 · FAQ · 공략 글은 그 언어 주소, 나머지는 한국어 한 벌이다. */
+/** 가이드 묶음의 아래 메뉴. 가이드 · FAQ · 공략 글 · 앱 소개(T-11-790)는 그 언어 주소, 나머지는 한국어 한 벌이다. */
 function guideNav(lang, items) {
   const { prefix, page } = GUIDE_LOCALES[lang];
-  const href = { home: '/', app: '/app/', guide: `${prefix}/guide/`, faq: `${prefix}/faq/` };
+  const href = {
+    home: '/',
+    app: `${prefix}/app/`,
+    guide: `${prefix}/guide/`,
+    faq: `${prefix}/faq/`,
+  };
   const to = (k) => href[k] ?? `/${k}/`;
   return `<nav>${items.map((k) => `<a href="${to(k)}">${page.ui[k]}</a>`).join(' · ')}</nav>`;
 }
