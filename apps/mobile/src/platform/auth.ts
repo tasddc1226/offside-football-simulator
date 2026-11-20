@@ -85,7 +85,14 @@ export async function startGoogleLogin(back: LoginReturn | null, place: LoginPla
       t('fail', 'start');
       return toast(loginOfflineText());
     }
-    const res = await WebBrowser.openAuthSessionAsync(start.data.url, REDIRECT_URL);
+    let res: WebBrowser.WebBrowserAuthSessionResult;
+    try {
+      res = await WebBrowser.openAuthSessionAsync(start.data.url, REDIRECT_URL);
+    } catch {
+      // T-11-796 로그인 창을 열지 못했다(브라우저가 없는 기기, 이미 열린 로그인 창 등). 안내도 끝 이벤트도 없이 끝나던 경우다.
+      t('fail', 'provider');
+      return toast(L.googleFinishFail);
+    }
     if (res.type !== 'success') return t('cancel');
     const q = Linking.parse(res.url).queryParams ?? {};
     const google = typeof q.google === 'string' ? q.google : 'error';

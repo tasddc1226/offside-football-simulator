@@ -13,6 +13,7 @@ import {
   coachDone,
   coachPick,
   coachReplay,
+  coachReplaying,
   coachResume,
   type CoachId,
 } from '@offside/app-core/tutorial';
@@ -28,11 +29,11 @@ import { Txt } from '../ui/Txt';
 
 export const coachState = proxy<{ i: number | null }>({ i: null });
 let started = false;
-// T-11-792 설정의 다시 보기로 연 안내는 단계 계측을 보내지 않는다(처음 온 기기의 안내만 잰다).
-let replaying = false;
+// T-11-792 설정의 다시 보기로 연 안내는 단계 계측을 보내지 않는다(처음 온 기기의 안내만 잰다). T-11-796 표시는 저장값에 있어
+// 다시 보기를 끝내지 않고 앱을 다시 켜도 이어진다.
 const track = (action: 'step' | 'skip' | 'done', i: number | null) => {
   const step = i === null ? undefined : COACH_STEPS[i];
-  if (step && !replaying) trackFunnel({ kind: 'tutorial', action, step: step.id });
+  if (step && !coachReplaying()) trackFunnel({ kind: 'tutorial', action, step: step.id });
 };
 /** 앱을 연 뒤 한 번(저장소가 준비된 뒤) 이어 볼 단계를 읽는다. */
 export function startCoach() {
@@ -43,7 +44,6 @@ export function startCoach() {
 /** 설정의 다시 보기 — 첫 단계(홈의 새 커리어 버튼)부터. */
 export function replayCoach() {
   started = true;
-  replaying = true;
   coachState.i = coachReplay();
 }
 

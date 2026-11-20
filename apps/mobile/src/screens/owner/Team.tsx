@@ -534,10 +534,16 @@ export default function Team() {
       manager: manager.trim(),
       ...(season > 0 ? { layout: positions } : {}),
     };
+    // T-11-796 이번 시즌 팀을 처음 만드는 저장인지(team_create_view와 같은 조건). 프리시즌 · 지난 시즌 팀의 첫 저장은 세지 않는다.
+    const creating = !team && season === current;
     try {
       const r = await saveOwnerTeam(season !== current ? { ...body, season } : body);
       if (!r.ok) {
-        trackFunnel({ kind: 'team_fail', reason: r.error.reason ?? r.error.code, created: !team });
+        trackFunnel({
+          kind: 'team_fail',
+          reason: r.error.reason ?? r.error.code,
+          created: creating,
+        });
         toast(r.error.message);
         // 컵 검사(잠금 · 상한 · 최소 인원)에 걸렸으면 띠를 다시 받는다.
         if (r.error.reason?.startsWith('CUP_')) void cupState.reload(true);
@@ -545,7 +551,7 @@ export default function Team() {
       }
       const unchanged = JSON.stringify(draftNow.current) === snapshot;
       const created = !team;
-      if (created)
+      if (creating)
         trackFunnel({ kind: 'team_done', starters: body.slots.filter((x) => x !== null).length });
       if (unchanged) {
         applyTeam(r.data.team);
