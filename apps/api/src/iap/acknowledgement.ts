@@ -4,7 +4,7 @@ import { GoogleAcknowledgementError } from './google-error.js';
 /** Run only after the grant commits, attached to the route's existing waitUntil. No retries. */
 export async function acknowledgeAfterGrant(
   after: () => Promise<void>,
-  event: BillingAlert & { job: 'iap-ack' | 'pass-ack' },
+  event: BillingAlert & { job: 'iap-ack' | 'pass-ack' | 'starter-ack' },
 ): Promise<void> {
   try {
     await after();

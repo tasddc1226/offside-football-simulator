@@ -3,9 +3,11 @@ import { MEMBERSHIP_PRICE_KRW } from '@offside/contracts/membership';
 import { valueOn } from './kpi.ts';
 import type { KpiView } from './kpi-page.ts';
 
-/** 그날 스토어 매출(정가 추정) = 아이템 + 광고 제거 + 시즌 패스 + 멤버십(새 가입 · 갱신 × 정가). 하나도 없으면 null. */
+/** 그날 스토어 매출(정가 추정) = 아이템 + 광고 제거 + 시즌 패스 + 첫 구매 묶음 + 멤버십(새 가입 · 갱신 × 정가). 하나도 없으면 null. */
 export function storeKrwOn(v: KpiView, day: string) {
-  const parts = ['iap_krw', 'ad_free_krw', 'pass_krw'].map((m) => valueOn(v.idx, day, m));
+  const parts = ['iap_krw', 'ad_free_krw', 'pass_krw', 'starter_krw'].map((m) =>
+    valueOn(v.idx, day, m),
+  );
   const members = ['members_new', 'members_renewed'].map((m) => valueOn(v.idx, day, m));
   if ([...parts, ...members].every((x) => x === null)) return null;
   const sum = (xs: (number | null)[]) => xs.reduce<number>((s, x) => s + (x ?? 0), 0);

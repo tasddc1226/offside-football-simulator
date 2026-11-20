@@ -96,6 +96,8 @@ export type Bindings = {
   IAP_TESTERS?: string;
   /** T-11-511 '1'이면 시즌 패스를 새로 판다(산 패스의 보상은 꺼도 받는다). */
   SEASON_PASS_ENABLED?: string;
+  /** T-11-770d '1'이면 첫 구매 묶음을 새로 판다. 꺼도 이미 승인된 거래는 받는다. */
+  STARTER_PACK_ENABLED?: string;
   /** T-11-512 클럽 멤버십 새 가입을 받는다('1'). 꺼도 이미 가입한 구독의 확인 · 혜택은 그대로다. */
   MEMBERSHIP_ENABLED?: string;
   /**
