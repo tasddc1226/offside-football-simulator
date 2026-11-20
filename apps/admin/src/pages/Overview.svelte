@@ -2,7 +2,10 @@
   // T-11-577 개요: 오늘 확인할 일. 데이터 경보 · 실시간 현황(운영 DB) · 기간 매출 · 광고 제거 가격 판단 · 운영 상태.
   // 추세 차트는 사용자 · 수익 · 게임 화면에 두고 여기서는 겹치지 않게 뺀다.
   import type { AdminRevenue, AdminStats, KpiReport } from '@offside/contracts';
+  import { MEMBERSHIP_PRICE_KRW } from '@offside/contracts/membership';
   import { dimLabel, fmt, indexRows, kstTime, ratio, valueOn } from '../kpi.ts';
+  import { goalWeeks, shortDay } from '../kpi-goals.ts';
+  import { viewOf } from '../kpi-page.ts';
   import { loader } from '../load.svelte.ts';
   import AdFreePrice from '../ui/AdFreePrice.svelte';
   import DataAlerts from '../ui/DataAlerts.svelte';
@@ -15,7 +18,10 @@
   const rev = loader<AdminRevenue>(() => `/v1/admin/revenue?days=${days}`, () => tick);
   // 가격 판단은 기간 선택과 무관하게 30일로 본다(인상 전 기준 구간이 필요하다).
   const rev30 = loader<AdminRevenue>(() => '/v1/admin/revenue?days=30', () => tick);
-  const kpi = loader<KpiReport>(() => '/v1/admin/kpi?days=30', () => tick);
+  // 주간 표(T-11-793)가 지난 주들을 읽도록 90일을 한 번에 받는다. 경보 · 오류 · 가격 판단은 마지막 날과 인상일만 본다.
+  const kpi = loader<KpiReport>(() => '/v1/admin/kpi?days=90', () => tick);
+  const missingText = (m: { store: number; ad: number }) =>
+    [m.store ? `스토어 ${m.store}` : '', m.ad ? `광고 ${m.ad}` : ''].filter(Boolean).join(' · ') || '0';
   // 어제 앱 · 웹 오류 횟수(일일 수집 client_errors, 플랫폼별). 상세는 운영 도구의 오류 화면.
   const errors = $derived.by(() => {
     if (!kpi.r?.ok) return null;
@@ -85,6 +91,48 @@
     {/snippet}
   </Load>
 
+  <Load r={kpi.r} height={320}>
+    {#snippet children(k)}
+      {@const weeks = goalWeeks(viewOf(k))}
+      <section class="panel" data-testid="goal-weeks">
+        <header><h2>60일 목표 주간 기록</h2><span class="hint">월~일 (KST) · 일일 수집 기준 · 최근 주부터</span></header>
+        {#if weeks.length}
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>주</th><th class="num">스토어 매출 (정가 추정)</th><th class="num">광고 수익</th><th class="num">매출 합</th>
+                  <th class="num">멤버십 새 가입</th><th class="num">가입</th><th class="num">빠진 날</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each weeks as w (w.start)}
+                  <tr data-week={w.start} class:open={w.open}>
+                    <td>{shortDay(w.start)} ~ {shortDay(w.end)}{#if w.open}<small>진행 중 · {w.days}일</small>{/if}</td>
+                    <td class="num">{fmt(w.storeKrw, 'krw')}</td>
+                    <td class="num">{fmt(w.adKrw, 'krw')}</td>
+                    <td class="num">{fmt(w.storeKrw === null && w.adKrw === null ? null : (w.storeKrw ?? 0) + (w.adKrw ?? 0), 'krw')}</td>
+                    <td class="num">{fmt(w.membersNew)}</td>
+                    <td class="num">{fmt(w.signups)}</td>
+                    <td class="num">{missingText(w.missing)}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        {:else}
+          <p class="note">아직 모인 주가 없어요.</p>
+        {/if}
+        <p class="note">
+          스토어 매출은 아이템 · 광고 제거 · 시즌 패스 · 첫 구매 묶음에 멤버십 새 가입 · 갱신 수 × 정가 {fmt(MEMBERSHIP_PRICE_KRW, 'krw')}을 더한 추정이에요.
+          첫 달 할인(11월 21일 가입부터)은 반영되지 않아 새 가입이 많은 주는 실제보다 높게 나와요.
+          빠진 날은 지난 날 가운데 값이 없는 날 수예요. 결제가 한 건도 없던 날도 스토어 쪽에 세어져요. 빠진 날이 있는 주와 진행 중인 주는 합이 낮게 보여요.
+          앱 신규 · 구단주 팀 도달률 · 24시간 재접속은 일일 수집에 아직 없어요(수집 전).
+        </p>
+      </section>
+    {/snippet}
+  </Load>
+
   <div class="cols wide">
     <Load r={rev30.r} height={420}>
       {#snippet children(r)}
@@ -146,6 +194,9 @@
   small {
     margin-left: 4px;
     color: var(--muted);
+  }
+  tr.open td {
+    color: var(--text-2);
   }
   .audit {
     list-style: none;
