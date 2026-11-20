@@ -185,6 +185,44 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   expect(calls.slice(0, 2)).toEqual(['profile', 'start']);
 });
 
+// T-11-796 프로필을 받는 사이 로그인 버튼을 다시 눌러도 같은 시도다. 프로필 요청과 시작 계측이 두 번 나가던 것을 막는다.
+test('로그인 버튼을 빠르게 두 번 눌러도 한 번만 시작한다', async ({ page }) => {
+  const calls: string[] = [];
+  let slow = false;
+  await page.route(PROFILE_URL, async (route) => {
+    calls.push('profile');
+    if (slow) await new Promise((resolve) => setTimeout(resolve, 300));
+    await route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+  await page.route(`${API}/v1/auth/google/start`, (route) => {
+    calls.push('start');
+    return route.fulfill({
+      status: 302,
+      headers: { Location: `${new URL(page.url()).origin}/settings?google=linked` },
+    });
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  const login = page.locator('[data-act="google-login"]');
+  await expect(login).toBeVisible();
+  calls.length = 0;
+  slow = true;
+  await login.dblclick();
+  await expect(page.locator('#toast')).toContainText('구글 계정을 연결했어요');
+  // 시작 전에 받은 프로필은 한 번, 시작도 한 번이다(돌아온 뒤의 프로필 조회는 세지 않는다).
+  expect(calls.slice(0, calls.indexOf('start'))).toEqual(['profile']);
+  expect(calls.filter((c) => c === 'start')).toHaveLength(1);
+});
+
 // T-11-204 웹 Apple 로그인도 주소창으로 갔다가 /settings?apple=...로 돌아온다.
 test('Apple로 로그인하면 세션부터 받고 시작해 연결 안내를 띄운다', async ({ page }) => {
   const calls: string[] = [];

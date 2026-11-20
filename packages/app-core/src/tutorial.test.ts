@@ -6,6 +6,7 @@ import {
   coachDone,
   coachPick,
   coachReplay,
+  coachReplaying,
   coachResume,
   playedBefore,
 } from './tutorial.js';
@@ -49,6 +50,42 @@ describe('T-11-473 첫 커리어 따라가기 안내', () => {
     expect(coachResume(true)).toBe(0);
     coachDone();
     expect(coachResume(false)).toBeNull();
+  });
+
+  it('T-11-796 다시 보기 표시는 단계를 넘기고 다시 열어도 이어지고, 끝나면 지워진다', () => {
+    const m = fakeStorage();
+    const saved = () => JSON.parse(m.get('ft_tutorial')!) as unknown;
+    // 처음 온 기기의 안내에는 표시가 없다.
+    expect(coachResume(false)).toBe(0);
+    expect(coachReplaying()).toBe(false);
+    coachAt(2);
+    expect(saved()).toEqual({ i: 2 });
+    coachDone();
+    // 커리어 기록이 없는 기기에서 누른 다시 보기도 표시가 붙는다.
+    expect(coachReplay()).toBe(0);
+    expect(coachReplaying()).toBe(true);
+    expect(saved()).toEqual({ i: 0, replay: true });
+    coachAt(3);
+    expect(saved()).toEqual({ i: 3, replay: true });
+    // 새로고침 · 앱 재실행: 저장값에서 다시 읽는다.
+    expect(coachResume(true)).toBe(3);
+    expect(coachReplaying()).toBe(true);
+    coachDone();
+    expect(coachReplaying()).toBe(false);
+    expect(saved()).toEqual({ i: -1 });
+    // 마지막 단계를 넘겨 끝나도 지워진다.
+    coachReplay();
+    coachAt(COACH_STEPS.length);
+    expect(coachReplaying()).toBe(false);
+    expect(saved()).toEqual({ i: -1 });
+    // 표시 없이 저장된 값(옛 코드가 쓴 값)은 처음 온 기기의 안내로 읽는다.
+    m.set('ft_tutorial', JSON.stringify({ i: 4 }));
+    expect(coachResume(false)).toBe(4);
+    expect(coachReplaying()).toBe(false);
+    // 끝난 값에 표시가 남아 있어도 다시 보기로 보지 않는다.
+    m.set('ft_tutorial', JSON.stringify({ i: -1, replay: true }));
+    expect(coachResume(false)).toBeNull();
+    expect(coachReplaying()).toBe(false);
   });
 
   it('저장소에 적을 수 없으면 띄우지 않는다(매번 처음부터 뜨지 않게)', () => {

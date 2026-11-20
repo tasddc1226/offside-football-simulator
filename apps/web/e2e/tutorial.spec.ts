@@ -70,6 +70,14 @@ test.describe('처음 온 기기', () => {
     await page.locator('[data-act="settings"]').click();
     await page.locator('[data-act="tutorial-replay"]').click();
     await expect(page.locator('.coach-bubble')).toHaveAttribute('data-coach-step', 'new');
+    // T-11-796 다시 보기라는 표시를 함께 적는다(새로고침 뒤에도 단계 계측에서 빼기 위해). 건너뛰면 지워진다.
+    expect(await page.evaluate(() => localStorage.getItem('ft_tutorial'))).toBe(
+      '{"i":0,"replay":true}',
+    );
+    await page.reload();
+    await expect(page.locator('.coach-bubble')).toHaveAttribute('data-coach-step', 'new');
+    await page.locator('[data-act="coach-skip"]').click();
+    expect(await page.evaluate(() => localStorage.getItem('ft_tutorial'))).toBe('{"i":-1}');
   });
 });
 

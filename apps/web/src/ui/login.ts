@@ -83,40 +83,57 @@ function takeLoginPlace(): LoginPlace {
     return 'other';
   }
 }
+/**
+ * T-11-796 시작을 준비하는 중(프로필을 받는 동안)인가. 그 사이 다시 누른 것은 같은 시도라 무시한다 — 시작 이벤트와 프로필
+ * 요청이 두 번 나가던 것을 막는다. 준비가 끝나면(떠나거나 실패하면) 바로 풀어 뒤로 가기로 돌아온 화면에서도 다시 누를 수 있다.
+ */
+let starting = false;
 /** 구글 로그인을 시작한다. 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명
  * 프로필을 만든다. */
 export async function startGoogleLogin(back: LoginReturn | null, place: LoginPlace) {
-  clearOAuthCampaign();
-  track('start', place, 'google');
-  // T-10-115 인앱 브라우저에서는 구글이 로그인을 막는다(403 disallowed_useragent) — 구글로 보내지 않고 안내한다.
-  const inApp = currentInApp();
-  if (inApp) {
-    track('fail', place, 'google', 'inapp');
-    return showInAppLoginNotice(inApp);
+  if (starting) return;
+  starting = true;
+  try {
+    clearOAuthCampaign();
+    track('start', place, 'google');
+    // T-10-115 인앱 브라우저에서는 구글이 로그인을 막는다(403 disallowed_useragent) — 구글로 보내지 않고 안내한다.
+    const inApp = currentInApp();
+    if (inApp) {
+      track('fail', place, 'google', 'inapp');
+      return showInAppLoginNotice(inApp);
+    }
+    rememberLoginReturn(back);
+    const me = await getProfile();
+    if (!me.ok) {
+      track('fail', place, 'google', 'offline');
+      return toast(loginOfflineText());
+    }
+    rememberLoginPlace(place);
+    await prepareAcquisitionOAuth('google', me.data.id);
+    window.location.assign(googleStartUrl());
+  } finally {
+    starting = false;
   }
-  rememberLoginReturn(back);
-  const me = await getProfile();
-  if (!me.ok) {
-    track('fail', place, 'google', 'offline');
-    return toast(loginOfflineText());
-  }
-  rememberLoginPlace(place);
-  await prepareAcquisitionOAuth('google', me.data.id);
-  window.location.assign(googleStartUrl());
 }
 /** T-11-204 Apple 로그인을 시작한다(주소창으로 Apple에 갔다가 /settings?apple=...로 돌아온다). */
 export async function startAppleLogin(back: LoginReturn | null, place: LoginPlace) {
-  clearOAuthCampaign();
-  track('start', place, 'apple');
-  rememberLoginReturn(back);
-  const me = await getProfile();
-  if (!me.ok) {
-    track('fail', place, 'apple', 'offline');
-    return toast(loginOfflineText());
+  if (starting) return;
+  starting = true;
+  try {
+    clearOAuthCampaign();
+    track('start', place, 'apple');
+    rememberLoginReturn(back);
+    const me = await getProfile();
+    if (!me.ok) {
+      track('fail', place, 'apple', 'offline');
+      return toast(loginOfflineText());
+    }
+    rememberLoginPlace(place);
+    await prepareAcquisitionOAuth('apple', me.data.id);
+    window.location.assign(appleStartUrl());
+  } finally {
+    starting = false;
   }
-  rememberLoginPlace(place);
-  await prepareAcquisitionOAuth('apple', me.data.id);
-  window.location.assign(appleStartUrl());
 }
 export function handleOAuthReturn() {
   const url = new URL(window.location.href);

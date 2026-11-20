@@ -9,9 +9,11 @@
  * - team_create_done: 이번 시즌 팀이 없던 상태에서 저장 성공. starters는 채운 선발 자리 수 구간.
  *   서버는 시즌마다 새 팀을 만들게 하므로 team_create_view · team_create_done은 신규 구단주만이 아니라 시즌이 바뀐 뒤의
  *   기존 구단주도 다시 잡힌다(생애 첫 팀이 아니다). 응답에 지난 시즌 팀 유무가 없어 둘을 가르지 않는다.
- * - team_save_fail: 팀 저장을 서버가 거절함. reason은 서버 사유 코드의 허용 목록, mode는 그 시즌 팀이 없던 때의 저장(create)인지 고치기(edit)인지.
+ * - team_save_fail: 팀 저장이 실패함. reason은 서버 거절 사유 코드의 허용 목록이고, 요청이 서버에 닿지 않았거나 응답을 읽지
+ *   못했으면 network다. mode는 이번 시즌 팀이 없던 때의 저장(create)인지 그 밖(edit: 고치기 · 지난 시즌 · 프리시즌 팀)인지.
+ *   T-11-796 create · team_create_done은 team_create_view와 같은 조건(보고 있는 시즌이 이번 시즌)일 때만이다.
  * - tutorial_step · tutorial_skip · tutorial_done: 따라가기 안내의 단계가 실제로 보임(실행마다 단계별 한 번) · 건너뛰기 ·
- *   마지막 단계의 완료. 설정의 다시 보기로 연 안내는 보내지 않는다(부르는 쪽이 거른다).
+ *   마지막 단계의 완료. 설정의 다시 보기로 연 안내는 보내지 않는다(부르는 쪽이 tutorial.coachReplaying으로 거른다).
  */
 import { COACH_STEPS, type CoachId } from './tutorial.js';
 
@@ -59,7 +61,10 @@ export const LOGIN_REASONS = [
 ] as const;
 export type LoginReason = (typeof LOGIN_REASONS)[number];
 
-/** 팀 저장 거절 사유(서버 details.reason). CUP_로 시작하는 컵 검사 사유는 CUP 하나로 묶는다. */
+/**
+ * 팀 저장 실패 사유. 서버 거절(details.reason)은 코드 그대로, CUP_로 시작하는 컵 검사 사유는 CUP 하나로 묶는다.
+ * T-11-796 network는 서버 거절이 아니라 요청이 닿지 않았거나(연결 끊김 · 시간 초과) 응답을 읽지 못한 경우다.
+ */
 export const TEAM_FAIL_REASONS = [
   'RESERVED_NAME',
   'BLOCKED_WORD',
@@ -67,9 +72,12 @@ export const TEAM_FAIL_REASONS = [
   'PLAYER_NOT_ELIGIBLE',
   'SEASON_NOT_OPEN',
   'CUP',
+  'network',
   'other',
 ] as const;
 export type TeamFailReason = (typeof TEAM_FAIL_REASONS)[number];
+/** 서버 답을 받지 못한 실패의 클라이언트 코드(api/transport의 failure 코드). */
+const NO_ANSWER_CODES: readonly unknown[] = ['NETWORK_ERROR', 'INVALID_RESPONSE'];
 
 export type FunnelEvent =
   | {
@@ -92,7 +100,11 @@ const fold = <T extends string>(list: readonly T[], raw: unknown): T =>
 /** 서버 · 클라이언트 실패 사유를 허용 목록으로 접는다. */
 export const loginReason = (raw: unknown): LoginReason => fold(LOGIN_REASONS, raw);
 export const teamFailReason = (raw: unknown): TeamFailReason =>
-  typeof raw === 'string' && raw.startsWith('CUP_') ? 'CUP' : fold(TEAM_FAIL_REASONS, raw);
+  NO_ANSWER_CODES.includes(raw)
+    ? 'network'
+    : typeof raw === 'string' && raw.startsWith('CUP_')
+      ? 'CUP'
+      : fold(TEAM_FAIL_REASONS, raw);
 
 /** 넣을 수 있는 은퇴 선수 수 구간. */
 export const playersBucket = (n: number): string =>

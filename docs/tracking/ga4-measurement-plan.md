@@ -152,7 +152,7 @@ true/false/unknown이다. 후속 생성 정보를 사용자 입력 원문으로 
 | `login_attempt`    | 로그인 버튼을 누른 한 번의 시도와 그 끝          | `place`, `provider`, `outcome`, `reason` | 시도마다 시작 1회 + 끝 1회    |
 | `team_create_view` | 팀이 아직 없는 구단주가 이번 시즌 팀 화면을 받음 | `players`                                | 실행(웹은 탭)마다 한 번       |
 | `team_create_done` | 이번 시즌 팀이 없던 상태에서 저장 성공           | `starters`                               | 저장 성공마다(팀이 없던 때만) |
-| `team_save_fail`   | 팀 저장을 서버가 거절함                          | `reason`, `mode`                         | 거절마다                      |
+| `team_save_fail`   | 팀 저장이 실패함(서버 거절 · 답을 받지 못함)     | `reason`, `mode`                         | 실패마다                      |
 | `tutorial_step`    | 따라가기 안내의 단계 말풍선이 실제로 보임        | `step`                                   | 실행마다 단계별 한 번         |
 | `tutorial_skip`    | 건너뛰기를 누름(`step`은 누른 때의 단계)         | `step`                                   | 누를 때                       |
 | `tutorial_done`    | 마지막 단계에서 완료를 누름                      | `step`(`retire`)                         | 누를 때                       |
@@ -163,8 +163,8 @@ true/false/unknown이다. 후속 생성 정보를 사용자 입력 원문으로 
 | `provider` | `google` · `apple`                                                                                                                                                                                                       |
 | `outcome`  | `start`(누름) · `cancel`(사용자가 닫음) · `fail` · `linked`(지금 프로필에 연결) · `switched`(기존 계정으로 전환)                                                                                                         |
 | `reason`   | 로그인(`fail`일 때만): `session` · `rate_limited` · `unavailable` · `exchange` · `state`(서버 코드), `offline` · `start` · `provider` · `token` · `finish` · `inapp`(클라이언트 단계), `other`                           |
-| `reason`   | 팀 저장: `RESERVED_NAME` · `BLOCKED_WORD` · `DUPLICATE_PLAYER` · `PLAYER_NOT_ELIGIBLE` · `SEASON_NOT_OPEN` · `CUP`(컵 검사 `CUP_*` 묶음) · `other`                                                                       |
-| `mode`     | `create`(팀이 없던 때의 저장) · `edit`                                                                                                                                                                                   |
+| `reason`   | 팀 저장: `RESERVED_NAME` · `BLOCKED_WORD` · `DUPLICATE_PLAYER` · `PLAYER_NOT_ELIGIBLE` · `SEASON_NOT_OPEN` · `CUP`(컵 검사 `CUP_*` 묶음) · `network`(서버 답을 받지 못함) · `other`                                      |
+| `mode`     | `create`(이번 시즌 팀이 없던 때의 저장) · `edit`(그 밖)                                                                                                                                                                  |
 | `players`  | 넣을 수 있는 은퇴 선수 수 구간 `0` · `1_4` · `5_10` · `11_plus`                                                                                                                                                          |
 | `starters` | 채운 선발 자리 수 구간 `0` · `1_5` · `6_10` · `11`                                                                                                                                                                       |
 | `step`     | `new` · `pos` · `focus` · `candidates` · `cands` · `start` · `go` · `choice` · `season` · `retire`(`tutorial.ts`의 순서)                                                                                                 |
@@ -174,17 +174,62 @@ true/false/unknown이다. 후속 생성 정보를 사용자 입력 원문으로 
 - **로그인의 끝:** 앱은 한 흐름 안에서 끝난다. `cancel`은 로그인 창을 닫았거나 서버가 `cancelled`를 돌려준 경우다. 웹은 페이지를
   떠났다 돌아오므로 누른 곳을 탭 저장소(`ft_login_place`)에 적어 두고 돌아와서 읽는다. 값이 없으면 `place=other`다. 웹에서
   로그인 창을 닫고 돌아오지 않으면 끝 이벤트가 없다(`start`만 남는다). 웹 `start`는 페이지 이동 직전이라 일부 유실될 수 있다.
+- **앱 구글 로그인의 예외(Android):** 로그인은 브라우저에서 하고 앱으로 돌아와 마친다. 브라우저에 있는 동안 앱이 종료되면
+  `start`만 남고, 브라우저를 둔 채 앱으로 먼저 돌아오면 `cancel`로 남는다(그 뒤 브라우저에서 로그인을 마쳐도 앱은 받지 못한다).
+  로그인 창을 열지 못한 경우는 `fail` · `provider`다(T-11-796 전에는 `start`만 남았다).
+- **두 번 누름:** 웹은 프로필을 받는 사이 다시 누른 것을 같은 시도로 본다(T-11-796 전에는 `start`가 두 번 잡혔다). 앱은 처음부터
+  진행 중인 시도가 있으면 무시했다.
 - **팀 만들기는 시즌마다 다시 잡힌다:** 서버는 시즌마다 새 팀을 만들게 한다. `team_create_view` · `team_create_done` ·
   `mode=create`는 생애 첫 팀이 아니라 그 시즌 팀이 아직 없는 상태를 센다. 지난 시즌에 팀이 있던 구단주도 시즌이 바뀌면 다시
   잡히므로 시즌 개막 주에는 수치가 크게 오른다. 신규 구단주 깔때기로 읽지 않고, 개막 주를 낀 기간끼리는 추세를 비교하지 않는다.
   신규만 가르려면 서버 응답에 지난 시즌 팀 유무가 있어야 한다(`lastManager`는 감독을 둔 지난 팀만 알려 주는 근사치라 쓰지 않았다).
+- **세 이벤트의 조건은 같다(T-11-796):** `team_create_view` · `team_create_done` · `mode=create`는 모두 보고 있는 시즌이 이번
+  시즌이고 그 팀이 아직 없을 때만이다. 개막 뒤 프리시즌 팀을 처음 저장하는 경우는 `done`을 보내지 않고 실패는 `mode=edit`다
+  (보정 전에는 보임 없이 `done` · `create`가 잡혀 `done`/`view` 비율이 조금 높았다).
+- **`team_save_fail`의 `network`(T-11-796):** 요청이 서버에 닿지 않았거나(연결 끊김 · 시간 초과) 응답을 읽지 못한 실패다. 서버가
+  규칙으로 거절한 것이 아니므로 거절 사유 비율을 볼 때 뺀다. 보정 전에는 `other`에 섞였다. 목록에 없는 서버 사유와 5xx는
+  그대로 `other`다.
 - **구단주 화면의 로그인 카드**는 `place`를 따로 넘기지 않고 기본값 `owner`로 남는다.
 - **연결 성공 수의 정본은 서버**다(감사 로그 `GOOGLE_LINKED` 등). 이 이벤트로 새로 보는 것은 누른 곳과 시작 · 취소 · 실패다.
-- **따라가기 안내:** 처음 온 기기의 안내만 잰다. 설정의 다시 보기로 연 안내는 보내지 않는다(앱은 다시 보기를 누른 실행, 웹은
-  커리어 기록이 있는 기기에서 첫 단계부터 뜬 경우). 건너뛴 사람은 이후 단계가 남지 않는다. `go` 단계는 기존
-  `first_action_complete`와 겹친다. 웹은 단계가 보인 순간 동의 · 태그가 없으면 그 단계는 버린다(앱은 같은 실행에서 동의하면 보낸다).
+- **따라가기 안내:** 처음 온 기기의 안내만 잰다. 설정의 다시 보기로 연 안내는 보내지 않는다. 다시 보기라는 표시를 안내 저장값
+  (`ft_tutorial`의 `replay`)에 함께 두어 새로고침 · 앱 재실행 뒤에 이어지는 다시 보기와 커리어 기록이 없는 기기의 다시 보기도
+  거른다(T-11-796. 보정 전에는 앱은 다시 보기를 누른 실행만, 웹은 커리어 기록이 있는 기기에서 첫 단계부터 뜬 경우만 걸러 뒤
+  단계가 조금 부풀 수 있었다). 건너뛴 사람은 이후 단계가 남지 않는다. `go` 단계는 기존 `first_action_complete`와 겹친다. 웹은
+  단계가 보인 순간 동의가 없으면 그 단계를 버리고, 동의는 있는데 태그를 아직 불러오는 중이면 8개까지 들고 있다 보낸다(앱은 같은
+  실행에서 동의하면 보낸다).
 - **GA4 맞춤 측정기준(이벤트 범위, 등록 뒤 데이터만 나뉜다):** `place`, `provider`, `outcome`, `reason`, `mode`, `players`,
-  `starters`, `step`. 이미 등록된 이름은 다시 만들지 않는다.
+  `starters`, `step`. 이미 등록된 이름은 다시 만들지 않는다. 2026-11-20에 모두 등록했다.
+- **읽을 때의 경계:** 2026-11-20 배포분은 위 T-11-796 보정 전의 조건으로 쌓였다. 보정은 2026-11-21에 나갔으므로 그날부터의
+  데이터로 읽는다.
+
+### 3.4 웹에서 앱 받기 (T-11-092 · T-11-506 · T-11-611 · T-11-790)
+
+웹의 앱 안내가 보이고 눌리는 수를 자리별로 본다(웹 GA4만). 코드는 `apps/web/src/analytics/browser.ts`의 `trackAppConversion` ·
+`trackAppStoreClick`. 매개변수는 아래 값뿐이고 커리어 · 프로필 ID는 싣지 않는다.
+
+| 이벤트                   | 언제                                                   | 매개변수                         |
+| ------------------------ | ------------------------------------------------------ | -------------------------------- |
+| `app_conversion_view`    | 앱 안내가 보임(기준은 아래)                            | `place`, `target`, `destination` |
+| `app_conversion_click`   | 앱 안내의 스토어 버튼을 누름                           | `place`, `target`, `destination` |
+| `app_conversion_dismiss` | 앱 안내를 닫음(`home` · `home_top` · `retire`만)       | `place`, `target`, `destination` |
+| `app_store_click`        | 스토어로 가는 링크를 누름(위 버튼과 그 밖의 링크 모두) | `place`, `store`                 |
+
+| 매개변수      | 값                                                                                                                             |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `place`       | `home`(홈 카드) · `home_top`(휴대폰 홈 맨 위 띠) · `shop`(상점) · `retire`(은퇴 리포트 끝) · `shared`(공유받은 커리어 끝 카드) |
+| `place`       | `app_store_click`만: 위 값에 더해 `sheet`(홈 화면 추가 안내) · `settings`(설정의 앱으로 옮기기)                                |
+| `target`      | 안내가 가리킨 스토어. 보임 · 닫음은 그 기기의 대상(`ios` · `android`, PC는 `both`), 누름은 누른 스토어(`ios` · `android`)      |
+| `destination` | `target`에서 정해지는 값: `ios` → `app_store`, `android` → `closed_test_form`, `both` → `both`                                 |
+| `store`       | 누른 스토어 `ios` · `android`                                                                                                  |
+
+- **보임의 기준:** `home` · `shop` · `retire` · `shared`는 안내가 그려지고 화면에 절반 넘게 들어왔을 때, 그 화면을 열 때마다 한
+  번이다. 화면을 열기만 하고 그 자리까지 내리지 않은 방문은 세지 않는다. `home_top`은 띠가 그려질 때 페이지 방문당 한 번이다
+  (홈 맨 위라 늘 보이고, 홈에 다시 와도 다시 세지 않는다). 그래서 `home_top`의 보임 대비 누름 비율은 다른 자리와 나란히
+  비교하지 않는다.
+- **`shared`(T-11-790):** 공유 링크(`/career/<id>`)로 들어온 휴대폰 방문만이다. PC에는 버튼이 없어 보임도 없다. 2026-11-20부터 쌓인다.
+- **`destination`의 Android 값은 옛 이름이다:** Android는 2026-10-22에 Google Play에 출시됐고 버튼도 Play로 가지만 값은
+  비공개 테스터 모집 때의 `closed_test_form` 그대로다. 과거 데이터와 이어 읽으려고 바꾸지 않았다. Android 수는 `target=android`로 읽는다.
+- **누름 뒤:** 스토어 방문 · 설치는 이 이벤트로 알 수 없다. 스토어 주소에 유입 캠페인을 붙여 스토어 쪽 집계로 본다.
 
 ## 4. 지표·보고서 정의
 
