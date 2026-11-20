@@ -2,6 +2,7 @@ import type { KpiReport } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
 import {
   acqFunnel,
+  adFunnel,
   balanceHealth,
   campaignName,
   formatName,
@@ -113,5 +114,61 @@ describe('T-11-741 밸런스 · 새 기능 · 광고 자리 계산', () => {
       daily: [null, 0.25, null],
     });
     expect(seasonsPerDau(v)).toEqual([null, 3, 2]);
+  });
+});
+
+describe('T-11-761 광고 유입 퍼널', () => {
+  it('Meta 소재 지출과 서버 유입 단계를 같은 utm 나눔으로 잇는다', () => {
+    const jp = 'meta:global_test:jp_reels';
+    const hk = 'meta:global_test:zh_reels';
+    const v = report([
+      // 소재 지출이 없는 날의 방문은 퍼널에서 빠진다(지출과 같은 날들로만 잇는다).
+      row('2026-11-15', 'acq_visits', jp, 999),
+      row('2026-11-16', 'ad_spend_content_krw', jp, 10000),
+      row('2026-11-16', 'ad_impr_content', jp, 2000),
+      row('2026-11-16', 'ad_clicks_content', jp, 100),
+      row('2026-11-16', 'ad_lpv_content', jp, 80),
+      row('2026-11-16', 'acq_visits', jp, 50),
+      row('2026-11-16', 'acq_started', jp, 20),
+      row('2026-11-16', 'acq_retired', jp, 5),
+      row('2026-11-16', 'acq_linked', jp, 2),
+      row('2026-11-16', 'acq_store_clicks', jp, 1),
+      row('2026-11-17', 'ad_spend_content_krw', hk, 5000),
+      row('2026-11-17', 'ad_lpv_content', hk, 10),
+      // 유료가 아닌 유입 · 지출 없는 소재 방문
+      row('2026-11-17', 'acq_visits', 'direct', 300),
+      row('2026-11-17', 'acq_visits', 'meta:global_test:jp_c', 4),
+      row('2026-11-17', 'acq_started', 'meta:global_test:jp_c', 1),
+    ]);
+    const f = adFunnel(v);
+    expect(f.creatives.map((c) => c.dim)).toEqual([jp, hk, 'meta:global_test:jp_c']);
+    expect(f.creatives[0]).toMatchObject({
+      costPerStart: 500,
+      costPerRetired: 2000,
+      startRate: 0.4,
+    });
+    expect(f.creatives[1]).toMatchObject({ started: 0, costPerStart: null });
+    expect(f.spend).toBe(15000);
+    expect(f.steps.map((s) => [s.key, s.value])).toEqual([
+      ['impressions', 2000],
+      ['clicks', 100],
+      ['lpv', 90],
+      ['visits', 54],
+      ['started', 21],
+      ['retired', 5],
+      ['linked', 2],
+    ]);
+    expect(f.steps[0]).toMatchObject({ rate: null, cost: 7500 });
+    expect(f.steps[4]!.rate).toBeCloseTo(21 / 54);
+    expect(f.dailyCostPerStart).toEqual([null, 500, 5000]);
+    expect(f.spendDays).toBe(2);
+    expect(f.storeClicks).toBe(1);
+  });
+
+  it('기록이 없으면 빈 퍼널', () => {
+    const f = adFunnel(report([row('2026-11-16', 'acq_visits', 'direct', 3)]));
+    expect(f.creatives).toEqual([]);
+    expect(f.spendDays).toBe(0);
+    expect(f.steps.every((s) => s.value === 0 && s.cost === null)).toBe(true);
   });
 });

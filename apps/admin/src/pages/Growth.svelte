@@ -3,7 +3,7 @@
   import type { KpiReport } from '@offside/contracts';
   import { dimLabel, fmt, periodSum, valueOn } from '../kpi.ts';
   import { byDim, dimTotals, lastValue, trendOf, viewOf } from '../kpi-page.ts';
-  import { acqFunnel, campaignName } from '../kpi-insights.ts';
+  import { acqFunnel, adFunnel, campaignName } from '../kpi-insights.ts';
   import { loader } from '../load.svelte.ts';
   import Load from '../ui/Load.svelte';
   import Stat from '../ui/Stat.svelte';
@@ -30,6 +30,91 @@
       {@const join = (...xs: string[]) => xs.filter(Boolean).join(' · ')}
       {@const per = (a: number | null, b: number | null, what: string) =>
         a && b ? `${what} ${Math.round(a / b).toLocaleString('ko-KR')}원` : ''}
+      <!-- T-11-761 광고 유입 퍼널: Meta 소재(utm)별 지출 · 랜딩 조회와 서버 방문 · 커리어 시작 · 은퇴 · 로그인 연결을 잇는다. -->
+      {@const af = adFunnel(v)}
+      <h2 class="section-title first">광고 유입 퍼널 (Meta → 게임)</h2>
+      {#if af.creatives.length}
+        {@const started = af.steps.find((x) => x.key === 'started')}
+        {@const retired = af.steps.find((x) => x.key === 'retired')}
+        <div class="stats">
+          <Stat label="소재 지출"
+            value={af.spend}
+            unit="krw"
+            sub={af.spendDays ? `소재별 수집 ${af.spendDays}일 · 아래 단계도 이 날들만` : '소재별 지출 수집 전 · 서버 단계만'}
+          />
+          <Stat label="커리어 시작" value={started?.value ?? null} sub={started?.rate != null ? `서버 방문의 ${fmt(started.rate, 'pct')}` : ''} />
+          <Stat label="시작 1건당" value={started?.cost ?? null} unit="krw" sub="소재 지출 ÷ 커리어 시작" trend={af.dailyCostPerStart} />
+          <Stat label="은퇴 1건당" value={retired?.cost ?? null} unit="krw" sub="한 선수를 은퇴까지 키운 방문" />
+        </div>
+        <div class="cols wide">
+          <section class="panel">
+            <header><h2>단계별 전환</h2><span class="hint">{af.spendDays ? `소재 지출이 있는 ${af.spendDays}일` : `${days}일`} · 방문한 날 기준</span></header>
+            <table class="tbl funnel">
+              <thead><tr><th>단계</th><th class="num">수</th><th class="num">앞 단계 대비</th><th class="num">1건당 지출</th></tr></thead>
+              <tbody>
+                {#each af.steps as st (st.key)}
+                  <tr data-step={st.key}>
+                    <td>{st.label}</td>
+                    <td class="num">{fmt(st.value)}</td>
+                    <td class="num">{st.rate === null ? '—' : fmt(st.rate, 'pct')}</td>
+                    <td class="num">{st.key === 'impressions' ? `${fmt(st.cost, 'krw')} /천 회` : fmt(st.cost, 'krw')}</td>
+                  </tr>
+                {/each}
+                <tr class="side"><td>스토어 클릭</td><td class="num">{fmt(af.storeClicks)}</td><td class="num">—</td><td class="num">—</td></tr>
+              </tbody>
+            </table>
+          </section>
+          <StackedBars
+            title="커리어 시작 (소재별)"
+            days={v.days}
+            series={byDim(v, 'acq_started')
+              .filter((x) => af.creatives.some((c) => c.dim === x.key))
+              .map((x) => ({ ...x, label: campaignName(x.key) }))}
+            empty={ACQ_EMPTY}
+          />
+        </div>
+        <section class="panel">
+          <header><h2>소재별 퍼널</h2><span class="hint">지출 많은 순 · 같은 utm 링크를 쓰는 광고는 한 줄</span></header>
+          <div class="tbl-wrap">
+            <table class="tbl">
+              <thead>
+                <tr>
+                  <th>소재</th><th class="num">지출</th><th class="num">클릭</th><th class="num">랜딩 조회</th><th class="num">서버 방문</th>
+                  <th class="num">커리어 시작</th><th class="num">은퇴</th><th class="num">로그인 연결</th><th class="num">스토어 클릭</th>
+                  <th class="num">시작 1건당</th><th class="num">은퇴 1건당</th>
+                </tr>
+              </thead>
+              <tbody>
+                {#each af.creatives as c (c.dim)}
+                  <tr data-creative={c.dim}>
+                    <td>{c.label}</td>
+                    <td class="num">{fmt(c.spend, 'krw')}</td>
+                    <td class="num">{fmt(c.clicks)}</td>
+                    <td class="num">{fmt(c.lpv)}</td>
+                    <td class="num">{fmt(c.visits)}</td>
+                    <td class="num">{fmt(c.started)}{#if c.startRate !== null} <small>({fmt(c.startRate, 'pct')})</small>{/if}</td>
+                    <td class="num">{fmt(c.retired)}</td>
+                    <td class="num">{fmt(c.linked)}</td>
+                    <td class="num">{fmt(c.storeClicks)}</td>
+                    <td class="num">{fmt(c.costPerStart, 'krw')}</td>
+                    <td class="num">{fmt(c.costPerRetired, 'krw')}</td>
+                  </tr>
+                {/each}
+              </tbody>
+            </table>
+          </div>
+        </section>
+        <p class="note">
+          지출 · 클릭 · 랜딩 조회는 Meta(매일 08:50), 서버 방문부터는 운영 DB(매일 04:00) 값이에요. 서버 방문은 이용 분석에 동의한 방문만 세서
+          랜딩 조회보다 적어요(광고 첫 방문은 소개 페이지를 먼저 거쳐요). 커리어 시작 · 은퇴 · 로그인 연결은 그날 들어온 방문 가운데 이어진 수라
+          사흘 동안 늘어요. 은퇴는 그 방문의 기기 프로필에 은퇴한 선수가 있는지, 로그인 연결은 지금 Google · Apple에 이어져 있는지로 세요.
+          utm 링크가 없는 광고(앱 설치 광고)는 이 표에서 빠지고 위 세트별 지출에만 보여요.
+        </p>
+      {:else}
+        <p class="note">Meta 소재별 수집(매일 08:50)이 처음 돈 뒤부터 보여요. 지난날은 KPI ingest now 실행의 meta_funnel_backfill_days로 채워요.</p>
+      {/if}
+
+      <h2 class="section-title">광고 · 세트</h2>
       <div class="stats">
         <Stat
           label={`${days}일 광고 지출`}
@@ -158,3 +243,12 @@
     {/snippet}
   </Load>
 </div>
+
+<style>
+  .section-title.first {
+    margin-top: 0;
+  }
+  .funnel tr.side td {
+    color: var(--text-2);
+  }
+</style>

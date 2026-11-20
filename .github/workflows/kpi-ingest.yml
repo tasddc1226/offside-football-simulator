@@ -9,6 +9,10 @@ on:
         description: 'AdMob을 그끄제부터 며칠 거꾸로 다시 넣을지(0이면 안 함, 최대 60). 단위 · 형식별 수익을 지난날에 채울 때'
         required: false
         default: '0'
+      meta_funnel_backfill_days:
+        description: 'Meta 유입 퍼널(소재별 지출 · 랜딩 조회)을 그끄제부터 며칠 거꾸로 넣을지(0이면 안 함, 최대 60)'
+        required: false
+        default: '0'
 
 permissions: {}
 
@@ -36,6 +40,20 @@ jobs:
         run: |
           case "$DAYS" in ''|*[!0-9]*) echo "::error::admob_backfill_days는 숫자여야 해요"; exit 1;; esac
           out=$(curl -sS -f -X POST "https://agents.offside-lab.com/internal/run?job=kpi-admob-backfill&days=$DAYS" \
+            -H "Authorization: Bearer $AGENTS_READ_TOKEN")
+          echo "$out" | jq -r '.result[] | [.source, .day, (.rows // "error"), (.error // "")] | @tsv'
+          if echo "$out" | jq -e '[.result[] | select(.error)] | length > 0' >/dev/null; then
+            echo "::warning::일부 날이 실패했어요(위 표의 error)"
+          fi
+      # T-11-761 Meta 유입 퍼널 거꾸로 채우기(입력이 0보다 클 때만).
+      - name: Backfill Meta funnel
+        if: ${{ inputs.meta_funnel_backfill_days != '' && inputs.meta_funnel_backfill_days != '0' }}
+        env:
+          AGENTS_READ_TOKEN: ${{ secrets.AGENTS_READ_TOKEN }}
+          DAYS: ${{ inputs.meta_funnel_backfill_days }}
+        run: |
+          case "$DAYS" in ''|*[!0-9]*) echo "::error::meta_funnel_backfill_days는 숫자여야 해요"; exit 1;; esac
+          out=$(curl -sS -f -X POST "https://agents.offside-lab.com/internal/run?job=kpi-meta-backfill&days=$DAYS" \
             -H "Authorization: Bearer $AGENTS_READ_TOKEN")
           echo "$out" | jq -r '.result[] | [.source, .day, (.rows // "error"), (.error // "")] | @tsv'
           if echo "$out" | jq -e '[.result[] | select(.error)] | length > 0' >/dev/null; then

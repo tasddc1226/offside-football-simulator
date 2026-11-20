@@ -97,6 +97,8 @@ export const D1_METRICS = [
   'acq_visits',
   'acq_started',
   'acq_store_clicks',
+  'acq_retired',
+  'acq_linked',
   'webpay_orders',
   'webpay_paid',
   'webpay_canceled',
@@ -478,8 +480,13 @@ export async function collectFlowDay(d1: D1Database, day: string): Promise<KpiRo
       .bind(start, end),
     d1
       .prepare(
-        `SELECT campaign, count(*) visits, count(started_at) started, count(store_clicked_at) clicks
-           FROM acquisition_sessions WHERE received_at >= ?1 AND received_at < ?2 GROUP BY campaign`,
+        // T-11-761 은퇴: 그 방문의 프로필에 은퇴한 커리어가 하나라도 있는가(careers_profile_id_idx). 로그인 연결: 그 프로필이
+        // 지금 Google · Apple 계정에 이어져 있는가(방문 뒤 연결도 센다). 다시 쓰는 사흘 동안 늦게 은퇴 · 연결한 것이 채워진다.
+        `SELECT s.campaign, count(*) visits, count(s.started_at) started, count(s.store_clicked_at) clicks,
+                count(CASE WHEN p.google_sub IS NOT NULL OR p.apple_sub IS NOT NULL THEN 1 END) linked,
+                coalesce(sum(EXISTS (SELECT 1 FROM careers c WHERE c.profile_id = s.profile_id AND c.status = 'retired')), 0) retired
+           FROM acquisition_sessions s LEFT JOIN profiles p ON p.id = s.profile_id
+          WHERE s.received_at >= ?1 AND s.received_at < ?2 GROUP BY s.campaign`,
       )
       .bind(start, end),
     d1
@@ -506,6 +513,8 @@ export async function collectFlowDay(d1: D1Database, day: string): Promise<KpiRo
     sum('acq_visits', dim, r.visits);
     sum('acq_started', dim, r.started);
     sum('acq_store_clicks', dim, r.clicks);
+    sum('acq_retired', dim, r.retired);
+    sum('acq_linked', dim, r.linked);
   }
   for (const r of pay!.results) {
     const dim = dimOf(

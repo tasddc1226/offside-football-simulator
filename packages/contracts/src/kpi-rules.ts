@@ -50,6 +50,12 @@ export const KPI_EXTERNAL_METRICS = {
     'ad_spend_country_krw',
     'ad_installs_country',
     'ad_clicks_country',
+    // T-11-761 유입 퍼널: 세트별 랜딩 조회와 utm 소재별(서버 acq_* 나눔과 같은 이름) 지출 · 노출 · 클릭 · 랜딩 조회.
+    'ad_lpv',
+    'ad_spend_content_krw',
+    'ad_impr_content',
+    'ad_clicks_content',
+    'ad_lpv_content',
   ],
   store: ['store_rating', 'store_reviews_new', 'store_review_stars', 'store_installs'],
   social: ['followers'],

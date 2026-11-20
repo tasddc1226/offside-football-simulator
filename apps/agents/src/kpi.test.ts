@@ -38,6 +38,68 @@ describe('운영 지표 수집 (T-11-572)', () => {
               },
             ],
           });
+        // T-11-761 유입 퍼널: 광고별 성과 → 광고 링크(utm) 묶음.
+        if (url.includes('level=ad&'))
+          return Response.json({
+            data: [
+              {
+                ad_id: '11',
+                adset_id: '9',
+                adset_name: 'JP 18-44',
+                spend: '1000',
+                impressions: '100',
+                clicks: '10',
+                actions: [{ action_type: 'landing_page_view', value: '7' }],
+              },
+              {
+                ad_id: '12',
+                adset_id: '9',
+                adset_name: 'JP 18-44',
+                spend: '500',
+                impressions: '50',
+                clicks: '5',
+                actions: [{ action_type: 'landing_page_view', value: '3' }],
+              },
+              {
+                ad_id: '13',
+                adset_id: '8',
+                adset_name: 'JP App',
+                spend: '200',
+                impressions: '20',
+                clicks: '2',
+              },
+            ],
+          });
+        if (url.includes('?ids='))
+          return Response.json({
+            '11': {
+              creative: {
+                asset_feed_spec: {
+                  link_urls: [
+                    {
+                      website_url:
+                        'https://offside-lab.com/?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=jp_reels',
+                    },
+                  ],
+                },
+              },
+            },
+            '12': {
+              creative: {
+                object_story_spec: {
+                  video_data: { call_to_action: { value: { link: 'https://offside-lab.com/' } } },
+                },
+                url_tags: 'utm_source=meta&utm_campaign=global_test&utm_content=JP_Reels',
+              },
+            },
+            '13': {
+              creative: {
+                object_story_spec: {
+                  link_data: { link: 'http://play.google.com/store/apps/details?id=x' },
+                },
+              },
+            },
+          });
         if (call++ === 1) return Response.json({ error: { message: 'rate' } }, { status: 400 });
         return Response.json({
           data: [
@@ -71,10 +133,27 @@ describe('운영 지표 수집 (T-11-572)', () => {
     expect(out.map((x) => [x.day, x.rows ?? 'error'])).toEqual([
       ['2026-10-28', 4],
       ['2026-10-28', 3],
+      ['2026-10-28', 6],
       ['2026-10-27', 'error'],
       ['2026-10-27', 3],
+      ['2026-10-27', 6],
     ]);
-    expect(posts).toHaveLength(3);
+    expect(posts).toHaveLength(5);
+    // 같은 utm(대소문자 · url_tags 포함)은 한 소재로 합치고, utm이 없는 앱 설치 광고는 소재 지표에서 빠진다.
+    const funnel = posts[2]!.rows;
+    expect(funnel).toContainEqual({
+      metric: 'ad_spend_content_krw',
+      dim: 'meta:global_test:jp_reels',
+      value: 1500,
+    });
+    expect(funnel).toContainEqual({
+      metric: 'ad_lpv_content',
+      dim: 'meta:global_test:jp_reels',
+      value: 10,
+    });
+    expect(funnel).toContainEqual({ metric: 'ad_lpv', dim: 'jp_18-44', value: 10 });
+    expect(funnel).toContainEqual({ metric: 'ad_lpv', dim: 'jp_app', value: 0 });
+    expect(funnel.filter((r) => r.metric === 'ad_spend_content_krw')).toHaveLength(1);
     expect(posts[1]!.rows).toContainEqual({ metric: 'ad_installs_country', dim: 'jp', value: 12 });
     expect(posts[0]!.source).toBe('meta');
     expect(posts[0]!.rows).toContainEqual({

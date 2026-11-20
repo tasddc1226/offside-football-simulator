@@ -194,3 +194,119 @@ export const seasonsPerDau = (v: KpiView) =>
     const dau = valueOn(v.idx, d, 'dau') ?? valueOn(v.idx, d, 'active');
     return n === null || !dau ? null : n / dau;
   });
+
+// T-11-761 광고 유입 퍼널: Meta 광고(지출 · 노출 · 클릭 · 랜딩 조회, 에이전트 수집)와 서버 유입 단계(방문 · 커리어 시작 · 은퇴 ·
+// 로그인 연결 · 스토어 클릭, 일일 수집)를 같은 utm 소재 나눔('meta:global_test:jp_reels')으로 잇는다.
+
+/** 퍼널에 넣을 유료 출처(utm_source). */
+const PAID_SOURCES = ['meta'];
+const isPaid = (dim: string) => PAID_SOURCES.includes(dim.split(':')[0] ?? '');
+
+export type AdCreativeFunnel = {
+  dim: string;
+  label: string;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  lpv: number;
+  visits: number;
+  started: number;
+  retired: number;
+  linked: number;
+  storeClicks: number;
+  /** 커리어 시작 1건당 지출. 지출이나 시작이 없으면 null. */
+  costPerStart: number | null;
+  costPerRetired: number | null;
+  /** 서버 방문 가운데 커리어를 시작한 비율. */
+  startRate: number | null;
+};
+
+export type AdFunnelStep = {
+  key: string;
+  label: string;
+  value: number;
+  /** 바로 앞 단계 대비. 첫 단계는 null. */
+  rate: number | null;
+  /** 이 단계 1건당 지출. */
+  cost: number | null;
+};
+
+const per = (a: number, b: number) => (a && b ? a / b : null);
+
+export function adFunnel(v: KpiView) {
+  const dims = new Set(
+    v.report.rows
+      .filter(
+        (r) => (r.metric === 'ad_spend_content_krw' || r.metric === 'acq_visits') && isPaid(r.dim),
+      )
+      .map((r) => r.dim),
+  );
+  const paidDims = [...dims];
+  // 지출과 서버 단계를 같은 날들로만 잇는다. 소재 지출이 들어온 날이 있으면 그날들만, 하나도 없으면 기간 전체(서버 단계만 보인다).
+  const spendDays = v.days.filter(
+    (d) => valueOn(v.idx, d, 'ad_spend_content_krw', paidDims) !== null,
+  );
+  const span = spendDays.length ? spendDays : v.days;
+  const total = (metric: string, dim: string) =>
+    span.reduce((s, d) => s + (valueOn(v.idx, d, metric, [dim]) ?? 0), 0);
+  const creatives: AdCreativeFunnel[] = [...dims]
+    .map((dim) => {
+      const spend = total('ad_spend_content_krw', dim);
+      const visits = total('acq_visits', dim);
+      const started = total('acq_started', dim);
+      const retired = total('acq_retired', dim);
+      return {
+        dim,
+        label: campaignName(dim),
+        spend,
+        impressions: total('ad_impr_content', dim),
+        clicks: total('ad_clicks_content', dim),
+        lpv: total('ad_lpv_content', dim),
+        visits,
+        started,
+        retired,
+        linked: total('acq_linked', dim),
+        storeClicks: total('acq_store_clicks', dim),
+        costPerStart: per(spend, started),
+        costPerRetired: per(spend, retired),
+        startRate: per(started, visits),
+      };
+    })
+    .filter((c) => c.spend > 0 || c.visits > 0)
+    .sort((a, b) => b.spend - a.spend || b.visits - a.visits);
+
+  const sum = (k: keyof AdCreativeFunnel) => creatives.reduce((s, c) => s + (c[k] as number), 0);
+  const spend = sum('spend');
+  const raw: [string, string, number][] = [
+    ['impressions', '노출', sum('impressions')],
+    ['clicks', '클릭', sum('clicks')],
+    ['lpv', '랜딩 페이지 조회', sum('lpv')],
+    ['visits', '서버 방문', sum('visits')],
+    ['started', '커리어 시작', sum('started')],
+    ['retired', '은퇴까지', sum('retired')],
+    ['linked', '로그인 연결', sum('linked')],
+  ];
+  const steps: AdFunnelStep[] = raw.map(([key, label, value], i) => ({
+    key,
+    label,
+    value,
+    rate: i ? per(value, raw[i - 1]![2]) : null,
+    cost: key === 'impressions' ? per(spend * 1000, value) : per(spend, value),
+  }));
+
+  // 날짜별 커리어 시작당 지출(그날 소재 지출 ÷ 그날 방문에서 이어진 시작). 지출이 없는 날은 null.
+  const dailyCostPerStart = v.days.map((d) => {
+    const s = valueOn(v.idx, d, 'ad_spend_content_krw', paidDims);
+    const st = valueOn(v.idx, d, 'acq_started', paidDims);
+    return s && st ? s / st : null;
+  });
+  return {
+    spend,
+    storeClicks: sum('storeClicks'),
+    steps,
+    creatives,
+    dailyCostPerStart,
+    /** 퍼널을 센 날 수(소재 지출이 들어온 날). 0이면 지출 없이 기간 전체 서버 단계만 셌다. */
+    spendDays: spendDays.length,
+  };
+}

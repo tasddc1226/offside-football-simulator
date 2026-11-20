@@ -30,7 +30,7 @@
     { id: 'overview', label: '개요', icon: 'home', desc: '오늘 상황과 기간 매출을 한눈에', page: Overview },
     { id: 'users', label: '사용자', icon: 'users', desc: '구단주 · 접속 · 가입', page: Users },
     { id: 'revenue', label: '수익', icon: 'revenue', desc: '아이템 · 광고 제거 · 시즌 패스 · 멤버십', page: Revenue },
-    { id: 'growth', label: '그로스', icon: 'growth', desc: '광고 지출 · 설치 · 유입', page: Growth },
+    { id: 'growth', label: '그로스', icon: 'growth', desc: '광고 유입 퍼널 · 지출 · 설치', page: Growth },
     { id: 'game', label: '게임 · 커뮤니티', icon: 'game', desc: '커리어 · 은퇴 · 게시판', page: Game },
     { id: 'items', label: '아이템', icon: 'ticket', desc: '남은 장수 · 하루 사용 · 구단 자금 흐름', page: Items },
     { id: 'season', label: '시즌 · 대회', icon: 'trophy', desc: '오프사이드 리그 · 컵 · 시즌 패스', page: Season },

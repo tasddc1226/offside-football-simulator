@@ -1,6 +1,6 @@
 // ADR-015 에이전트 Worker. 디스코드 게이트웨이(bridge.ts)가 받은 글과 버튼(discordRoutes.ts)을 역할 스레드 객체에 넘기고, 주기 작업을 돌린다.
 import { refreshSocialToken } from './social.ts';
-import { runAdmobBackfill, runKpiIngest } from './kpi.ts';
+import { runAdmobBackfill, runKpiIngest, runMetaFunnelBackfill } from './kpi.ts';
 import { enabled, type Env } from './env.ts';
 import { kstDay, ledger } from './ledger.ts';
 import { collect, triagePrompt, type DcCursor, type Reaction } from './reactions.ts';
@@ -216,6 +216,15 @@ async function internalRun(req: Request, url: URL, env: Env): Promise<Response> 
   if (job === 'kpi-admob-backfill')
     return Response.json({
       result: await runAdmobBackfill(env, Date.now(), Number(url.searchParams.get('days') ?? 0)),
+    });
+  // T-11-761 Meta 유입 퍼널 지표를 그끄제부터 days일 거꾸로 넣는다(kpi-ingest.yml 수동 실행의 meta_funnel_backfill_days).
+  if (job === 'kpi-meta-backfill')
+    return Response.json({
+      result: await runMetaFunnelBackfill(
+        env,
+        Date.now(),
+        Number(url.searchParams.get('days') ?? 0),
+      ),
     });
   // 고객 문의: dry=1이면 커서를 옮기지 않고 새 문의 수만 돌려준다.
   if (job === 'support')
