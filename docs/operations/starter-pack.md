@@ -30,6 +30,8 @@
 
 ## 출시 순서
 
+2026-11-20 App Store · Play에 상품을 등록하고 App Store 심사를 넣었다. T-11-775가 3 · 4번 스위치를 켠다(App Store 승인 뒤 머지 · 배포).
+
 1. App Store Connect · Play 콘솔에 소모성 상품 `com.offsidelab.app.starter_v1`을 3,300원(한국 기준)으로 만들고 심사를 받는다.
 2. 마이그레이션 `0174_starter_packs.sql`이 든 배포를 낸다(새 표 하나라 큰 표를 건드리지 않는다. preflight를 먼저 돌린다).
 3. 서버 변수 `STARTER_PACK_ENABLED=1`을 켠다. 꺼져 있으면 GET이 `off`를 준다.
