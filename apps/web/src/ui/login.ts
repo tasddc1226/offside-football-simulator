@@ -90,11 +90,20 @@ function takeLoginPlace(): LoginPlace {
 let starting = false;
 /** 떠나기 시작한 뒤에도 막아 두는 시간. 새 화면의 응답이 올 때까지 지금 화면이 남아 다시 눌릴 수 있다. */
 const LEAVE_HOLD_MS = 4000;
-/** 로그인 화면으로 떠난다. 이동이 취소됐거나(시간이 지나면) 뒤로 가기로 이 화면에 돌아오면 다시 누를 수 있게 푼다. */
+/**
+ * 로그인 화면으로 떠난다. 이동이 취소됐거나(시간이 지나면) 뒤로 가기로 이 화면에 돌아오면 다시 누를 수 있게 푼다.
+ * T-11-797 풀 때 이 시도가 건 타이머와 리스너를 함께 걷는다 — 남아 있으면 다음 시도의 가드를 일찍 푼다.
+ */
 function leave(url: string) {
-  const release = () => (starting = false);
-  setTimeout(release, LEAVE_HOLD_MS);
-  addEventListener('pageshow', release, { once: true });
+  const release = (e?: PageTransitionEvent) => {
+    // 첫 로드의 pageshow(persisted=false)는 돌아온 것이 아니다. 그때는 타이머가 푼다.
+    if (e && !e.persisted) return;
+    clearTimeout(timer);
+    removeEventListener('pageshow', release);
+    starting = false;
+  };
+  const timer = setTimeout(() => release(), LEAVE_HOLD_MS);
+  addEventListener('pageshow', release);
   window.location.assign(url);
 }
 /** 구글 로그인을 시작한다. 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명

@@ -133,6 +133,17 @@ describe('T-11-473 첫 커리어 따라가기 안내', () => {
     m.set('ft_tutorial', JSON.stringify({ i: 0 }));
     expect(coachResume(false)).toBe(0);
     expect(coachReplaying()).toBe(false);
+    // 첫 단계를 지난 값은 커리어 기록이 있어도 첫 안내다(커리어를 시작한 처음 온 사람이 새로고침 · 재실행한 경우).
+    m.set('ft_tutorial', JSON.stringify({ i: 6 }));
+    expect(coachResume(true)).toBe(6);
+    expect(coachReplaying()).toBe(false);
+    // 표시 없이 다시 보기로 읽은 값에서 다시 보기를 또 눌러도 다시 보기다(이번 실행이 이미 다시 보기다).
+    m.set('ft_tutorial', JSON.stringify({ i: 0 }));
+    expect(coachResume(true)).toBe(0);
+    coachReplay();
+    expect(coachReplaying()).toBe(true);
+    expect(JSON.parse(m.get('ft_tutorial')!)).toEqual({ i: 0, replay: true });
+    coachDone();
   });
 
   it('저장소에 적을 수 없으면 띄우지 않는다(매번 처음부터 뜨지 않게)', () => {
