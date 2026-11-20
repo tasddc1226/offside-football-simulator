@@ -1,3 +1,5 @@
+import { markingScene } from '../../followup-copy.js';
+import { gFollowup as F } from './gFollowup';
 // 이벤트 중국어(번체) 문구 — 정의 모듈의 이벤트 id → 문구(events-data.ts EventText).
 import { gMoments as M } from './gMoments';
 import type { EventText } from '../../events-data';
@@ -114,7 +116,12 @@ export const events_positional: Record<string, EventText> = {
   // ── 後衛 ──
   'df-marking': {
     title: '盯防金靴熱門',
-    text: () => '下一個對手擁有聯賽射手榜第一的前鋒。總教練說：「90分鐘，像影子一樣黏住他。」',
+    text: (s) =>
+      markingScene(
+        s,
+        '下一個對手擁有聯賽射手榜第一的前鋒。總教練說：「90分鐘，像影子一樣黏住他。」',
+        F,
+      ),
     choices: [
       {
         label: '貼身盯人',

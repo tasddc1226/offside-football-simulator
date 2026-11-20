@@ -1,3 +1,5 @@
+import { markingScene } from './followup-copy.js';
+import { gFollowupText as F } from './i18n/ko/gFollowup.js';
 import { bookFreekick, bookMarkingRematch, bookPivotReview } from './career-followups.js';
 import { BASE_DETAIL } from '@offside/contracts/positions';
 // ───────── 포지션 전용 이벤트: 공격수 · 미드필더 · 수비수 · 골키퍼 ─────────
@@ -333,8 +335,12 @@ export const POSITIONAL_EVENTS: EventDef[] = [
     title: '득점 1위 전담 마크',
     w: 3,
     cond: (s) => posIs('DF')(s) && inGame(s),
-    text: () =>
-      '이번 상대는 리그 득점 1위 공격수를 보유한 팀입니다. 감독이 말합니다. "90분 동안 그림자처럼 붙어라."',
+    text: (s) =>
+      markingScene(
+        s,
+        '이번 상대는 리그 득점 1위 공격수를 보유한 팀입니다. 감독이 말합니다. "90분 동안 그림자처럼 붙어라."',
+        F,
+      ),
     choices: [
       {
         label: '타이트하게 대인 마크한다',

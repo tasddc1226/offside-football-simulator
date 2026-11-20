@@ -46,3 +46,9 @@ const endings = {
 };
 export const formerAwayMilestone = (club: string, ending: keyof typeof endings) =>
   `${club} 원정 · ${endings[ending]}`;
+
+export const markingAbsence = (club: string, rd: number, injured: boolean) =>
+  `${rd}R ${club} 재대결 · ${injured ? '부상 결장' : '미출전'}`;
+
+export const markingOpener = (club: string, rd: number, approach: 'man' | 'zone') =>
+  `${rd}R ${club} 전담 마크 · ${approach === 'man' ? '대인 수비' : '지역 수비'}`;

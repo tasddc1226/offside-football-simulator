@@ -12,6 +12,7 @@ export const gFollowup: Translation<typeof gFollowupText> = {
   push: 'Move up to receive the forward pass',
   pushOk:
     'The returning midfielder fires a pass into you. One touch on your back foot takes you beyond the opposing midfielder.',
+  markFixture: (p) => `Round ${p.rd} against ${p.club}. ${p.body}`,
   markTitle: 'The top scorer returns',
   markMan:
     'The striker you shadowed last time drifts to the touchline. A winger sprints into the space he leaves.',
