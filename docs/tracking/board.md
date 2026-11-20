@@ -1,6 +1,6 @@
 # 진행 보드
 
-- T-11-779: 상품 안내 계측. 은퇴 뒤 시즌 패스 안내 카드(웹 · 앱, place `pass_retired`)와 광고 자리의 멤버십 안내 줄(앱, `member_attendance` · `member_boost`)이 GA4 `offer_hint_view`(실행마다 곳별 한 번) · `offer_hint_click`(`step` open · go) · `offer_hint_close`를 보냄. 화면 · 문구는 그대로. 검토 중.
+- T-11-779: 상품 안내 계측. 은퇴 뒤 시즌 패스 안내 카드(웹 · 앱, place `pass_retired`)와 광고 자리의 멤버십 안내 줄(앱, `member_attendance` · `member_boost`)이 GA4 `offer_hint_view`(실행마다 곳별 한 번) · `offer_hint_click`(`step` open · go) · `offer_hint_close`를 보냄. 화면 · 문구는 그대로. 검토 중 (#1238).
 
 - T-11-774: 멤버십 첫 달 할인 실험 집계. 일일 수집이 실험 대상(2026-11-21 뒤 앱 스토어 첫 구독)을 스토어 · 군별로 세어 `member_intro`(가입 · 자동 갱신 끔 · 둘째 달 대상 · 둘째 달 결제)에 넣고, 운영 대시보드 매출 탭에 표로 보임. 완료 (#1233, 2026-11-20 배포).
 
