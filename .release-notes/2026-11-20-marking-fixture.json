@@ -1,0 +1,27 @@
+{
+  "id": "t-11-771-marking-fixture",
+  "title": "득점 1위와 다시 만나는 날",
+  "items": [
+    "수비수가 득점 선두 구단과 맞붙으면 상대와 라운드를 기억해요. 같은 구단을 다시 만난 경기에서 뛰면 지난 수비 방식을 떠올리고, 결장하면 그날의 라운드와 사유가 커리어 여정에 남아요."
+  ],
+  "en": {
+    "title": "Facing the league’s top scorer again",
+    "items": [
+      "Mark a top scorer and your career remembers the club and round. Play in the next meeting to revisit your marking choice. Miss it and your journey records the round and whether you were injured or did not play."
+    ]
+  },
+  "ja": {
+    "title": "得点王との再戦",
+    "items": [
+      "得点首位の相手をマークしたクラブと節を記録します。次の対戦に出場すれば前回の守り方が反映され、欠場ならその節と理由がキャリアの歩みに残ります。"
+    ]
+  },
+  "zh": {
+    "title": "再次遇上射手王",
+    "items": [
+      "盯防射手榜榜首時，會記下對方球會和輪次。下次交手有上陣，就能接續上次的防守選擇；若因傷缺陣或未獲上場，生涯歷程會留下紀錄。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

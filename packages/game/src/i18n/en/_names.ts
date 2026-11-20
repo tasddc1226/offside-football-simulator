@@ -681,6 +681,16 @@ const host = (tn: (ko: string) => string, ko: string | undefined) =>
   ko ? ` (${HOST[ko] ?? tn(ko)})` : '';
 
 const patterns: NamePattern[] = [
+  [
+    /^(\d+)R (.+) 전담 마크 · (대인 수비|지역 수비)$/,
+    (m, tn) =>
+      `Round ${m[1]} vs ${tn(m[2]!)} · ${m[3] === '대인 수비' ? 'Man marking' : 'Zonal marking'}`,
+  ],
+  [
+    /^(\d+)R (.+) 재대결 · (부상 결장|미출전)$/,
+    (m, tn) =>
+      `Round ${m[1]} vs ${tn(m[2]!)} · ${m[3] === '부상 결장' ? 'Injured' : 'Did not play'}`,
+  ],
   [/^(.+) 원정 · (.+)$/, (m, tn) => `Away at ${tn(m[1]!)} · ${tn(m[2]!)}`],
   // 로그 시각 라벨 `2026 프리시즌`
   [/^(\d{4}) (프리시즌|전반기|후반기|시즌 종료)$/, (m) => `${m[1]} ${PHASE[m[2]!]}`],

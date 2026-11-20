@@ -1,3 +1,5 @@
+import type { MatchGame } from './match.js';
+import { checkMarkingFixture, firstMarkingGame } from './marking-fixture.js';
 import { ATTR_KEYS, type AttrKey, type Pos } from './data.js';
 import { wOf } from './attributes.js';
 import { ri, pick, chance, rnd, weightedIndex } from './rng.js';
@@ -118,14 +120,16 @@ export const EVENT_RULES = {
 const EV_COOLDOWN = EVENT_RULES.cooldown;
 export const isSafe = (ev: EventDef, c: Choice): boolean =>
   !c.fail && ev.choices.some((x) => !!x.fail);
-export function rollEvent(s: GameState): string | null {
+export function rollEvent(s: GameState, games: readonly MatchGame[] = []): string | null {
   // 정의 모듈은 event-registry.ts가 EVENTS에 채운다. 그 import가 빠지면 이벤트가 조용히 하나도 안 나오므로 바로 알린다.
   if (!EVENTS.length)
     throw new Error('EVENTS가 비어 있다 — game/event-registry.js를 import해야 한다');
+  checkMarkingFixture(s, games);
   const t = turnNo(s);
   s.chains = s.chains || [];
   for (const c of s.chains.filter((c) => c.until < t)) {
     const e = eventById(c.id);
+    if (c.id === 'df-marking-rematch') delete s.markingFixture;
     if (e && e.story) endStory(s, e.story, e.expireEnding || '흐지부지 끝난 이야기');
   }
   s.chains = s.chains.filter((c) => c.until >= t);
@@ -139,17 +143,23 @@ export function rollEvent(s: GameState): string | null {
   // 대입식의 값(원본 객체)이 아니라 다시 읽은 값을 쓴다 — s가 Svelte $state 프록시면 원본에 쓴 값이 반영되지 않을 수 있다.
   if (!s.flags.evSeen) s.flags.evSeen = {};
   const seen = s.flags.evSeen;
-  const pool = EVENTS.filter(
+  let pool = EVENTS.filter(
     (e) =>
       !e.chain &&
       e.cond(s) &&
       s.flags.lastEvent !== e.id &&
       !(seen[e.id] && t - seen[e.id]!.t < EV_COOLDOWN),
   );
+  let marking: ReturnType<typeof firstMarkingGame>;
+  if (s.pos === 'DF' && pool.some((e) => e.id === 'df-marking')) {
+    if (!s.chains.some((c) => c.id === 'df-marking-rematch')) marking = firstMarkingGame(s, games);
+    if (!marking) pool = pool.filter((e) => e.id !== 'df-marking');
+  }
   if (!pool.length) return null;
   const weightOf = (e: EventDef) =>
     (e.w * eventWeight(e.id)) / (1 + (seen[e.id] ? seen[e.id]!.n : 0));
   const ev = pool[Math.max(0, weightedIndex(pool, weightOf))]!;
+  if (ev.id === 'df-marking' && marking) s.markingFixture = marking;
   s.flags.lastEvent = ev.id;
   seen[ev.id] = { t, n: (seen[ev.id] ? seen[ev.id]!.n : 0) + 1 };
   return ev.id;

@@ -10,6 +10,8 @@ const ko = {
   push: '한 줄 올라가 전진 패스를 받는다',
   pushOk:
     '돌아온 6번이 찔러 준 공을 반대 발로 받았습니다. 한 번의 터치로 상대 미드필더를 등졌습니다.',
+  markFixture: (p: { rd: number; club: string; body: string }) =>
+    `${p.rd}라운드 · ${p.club}전. ${p.body}`,
   markTitle: '득점왕과의 재대결',
   markMan:
     '지난번에 바짝 붙었던 공격수가 이번엔 터치라인까지 빠집니다. 그가 비운 중앙으로 윙어가 뛰어듭니다.',

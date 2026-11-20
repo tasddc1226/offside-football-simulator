@@ -471,6 +471,15 @@ export interface GameState {
   injury: number;
   log: LogEntry[];
   pending: Pending | null;
+  /** Present only for a marking story tied to a real league fixture. */
+  markingFixture?: {
+    opponent: string;
+    club: string;
+    league: string;
+    year: number;
+    round: number;
+    returnRound?: number;
+  };
   flags: Flags;
   peak: number;
   /** T-10-092 최고 OVR을 찍은 시즌 말의 능력치(구단주 팀의 자리별 실력). 옛 저장본엔 없다 — 은퇴 때 지금 능력치로 추정한다. */

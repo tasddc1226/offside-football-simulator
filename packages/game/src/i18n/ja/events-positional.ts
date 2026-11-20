@@ -1,3 +1,5 @@
+import { markingScene } from '../../followup-copy.js';
+import { gFollowup as F } from './gFollowup';
 // イベント日本語文言 — 定義モジュールのイベント id → 文言(events-data.ts EventText).
 import { gMoments as M } from './gMoments';
 import type { EventText } from '../../events-data';
@@ -118,8 +120,12 @@ export const events_positional: Record<string, EventText> = {
   // ── ディフェンダー ──
   'df-marking': {
     title: '得点王候補のマンマーク',
-    text: () =>
-      '今度の相手はリーグ得点ランキング1位のFWを擁するチーム。監督が言う。「90分間、影のように張りつけ」',
+    text: (s) =>
+      markingScene(
+        s,
+        '今度の相手はリーグ得点ランキング1位のFWを擁するチーム。監督が言う。「90分間、影のように張りつけ」',
+        F,
+      ),
     choices: [
       {
         label: 'タイトにマンマークする',

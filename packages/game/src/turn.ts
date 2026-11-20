@@ -51,7 +51,7 @@ export function playPhase(s: GameState, mo?: MomentHooks): PhaseResult {
   comp.forEach((c) => log(s, c.t, c.k));
   const nt = natWindow(s);
   const after = snapshot(s);
-  const ev = rollEvent(s);
+  const ev = rollEvent(s, block?.games);
   // 칭호 판정은 이벤트 추첨 뒤에 한다 — 칭호 인기 보상이 이벤트 조건(인기 N 이상)을 바꿔 RNG 흐름이 달라지지 않게.
   const titles = checkTitles(s);
   if (block) {

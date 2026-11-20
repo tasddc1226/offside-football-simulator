@@ -20,6 +20,7 @@ export function loadSave(raw: GameState | null): { G: GameState; newCid: boolean
 /** 저장본을 제자리에서 고치고 활성 RNG를 저장된 시드로 되돌린다. newCid: 커리어 ID를 이번에 새로 만들었는지
  * (부른 쪽이 바로 저장해야 한다 — 안 그러면 다음 부팅 때 또 다른 ID가 생겨 서버 기록과 어긋난다). */
 export function migrateSave(G: GameState): { newCid: boolean } {
+  // Older marking reservations and pending choices use the timed path; never invent a past opponent.
   // formerAway is an additive pending variant. Earlier saves keep their pending decision and journey as-is.
   // Position expansion is additive: preserve legacy FB/W and the original eight-role peakProfile.
   // New team slots read the corresponding base role; never guess a saved player's left/right side.
