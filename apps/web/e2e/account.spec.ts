@@ -185,6 +185,51 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   expect(calls.slice(0, 2)).toEqual(['profile', 'start']);
 });
 
+// T-11-796 로그인을 시작하는 동안 버튼을 다시 눌러도 같은 시도다. 프로필 요청과 시작 계측이 두 번 나가던 것을 막는다.
+test('로그인 버튼을 여러 번 눌러도 한 번만 시작한다', async ({ page }) => {
+  const calls: string[] = [];
+  let slow = false;
+  let whileLeaving: string[] | null = null;
+  await page.route(PROFILE_URL, async (route) => {
+    calls.push('profile');
+    if (slow) await new Promise((resolve) => setTimeout(resolve, 300));
+    await route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+  await page.route(`${API}/v1/auth/google/start`, async (route) => {
+    calls.push('start');
+    const back = `${new URL(page.url()).origin}/settings?google=linked`;
+    // 로그인 화면의 응답이 늦게 오면 그동안 지금 화면이 남아 다시 눌릴 수 있다. 떠나기 전까지 나간 요청을 적어 둔다.
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    whileLeaving ??= [...calls];
+    await route.fulfill({ status: 302, headers: { Location: back } });
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  const login = page.locator('[data-act="google-login"]');
+  await expect(login).toBeVisible();
+  calls.length = 0;
+  slow = true;
+  // 떠나는 중에도 누른다. Playwright의 click은 진행 중인 이동이 끝나기를 기다리므로 페이지 안에서 예약해 둔다.
+  await login.evaluate((el) => {
+    for (const ms of [900, 1500]) setTimeout(() => (el as HTMLElement).click(), ms);
+  });
+  // 프로필을 받는 사이에 두 번 누른다.
+  await login.dblclick();
+  await expect(page.locator('#toast')).toContainText('구글 계정을 연결했어요');
+  // 떠나기 전까지 나간 요청은 프로필 한 번과 시작 한 번뿐이다.
+  expect(whileLeaving).toEqual(['profile', 'start']);
+  expect(calls.filter((c) => c === 'start')).toHaveLength(1);
+});
+
 // T-11-204 웹 Apple 로그인도 주소창으로 갔다가 /settings?apple=...로 돌아온다.
 test('Apple로 로그인하면 세션부터 받고 시작해 연결 안내를 띄운다', async ({ page }) => {
   const calls: string[] = [];

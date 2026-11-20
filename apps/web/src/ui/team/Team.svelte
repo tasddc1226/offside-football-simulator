@@ -388,6 +388,8 @@
     const sequence = loadSequence;
     const submitted = JSON.parse(JSON.stringify(draftValue())) as ReturnType<typeof draftValue>;
     saving = true;
+    // T-11-796 이번 시즌 팀을 처음 만드는 저장인지(team_create_view와 같은 조건). 프리시즌 · 지난 시즌 팀의 첫 저장은 세지 않는다.
+    const creating = !team && season === current;
     const r = await saveOwnerTeam({
       ...submitted, name: submitted.name.trim(), manager: submitted.manager.trim(),
       ...(season > 0 ? { layout: previewLayout } : {}),
@@ -395,7 +397,7 @@
     });
     saving = false;
     if (!r.ok) {
-      trackFunnel({ kind: 'team_fail', reason: r.error.reason ?? r.error.code, created: !team });
+      trackFunnel({ kind: 'team_fail', reason: r.error.reason ?? r.error.code, created: creating });
       toast(r.error.message);
       // 컵 검사에 걸렸으면(잠금 · 상한 · 최소 인원) 띠를 다시 받는다. 서버는 사유를 details.reason에 담는다.
       if (r.error.reason?.startsWith('CUP_')) void loadCupBand(season);
@@ -403,7 +405,7 @@
     }
     if (sequence !== loadSequence) { if (key) writeTeamDraft(key, null); return false; }
     const created = !team;
-    if (created) trackFunnel({ kind: 'team_done', starters: submitted.slots.filter((x) => x !== null).length });
+    if (creating) trackFunnel({ kind: 'team_done', starters: submitted.slots.filter((x) => x !== null).length });
     const unchanged = JSON.stringify(submitted) === JSON.stringify(draftValue());
     if (!unchanged) {
       team = r.data.team;
