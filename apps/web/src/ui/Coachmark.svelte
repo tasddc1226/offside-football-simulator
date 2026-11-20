@@ -3,12 +3,13 @@
   // 밝게 남기고 나머지를 어둡게 덮은 뒤 말풍선을 띄운다. 덮개는 누름을 그대로 아래로 넘기므로(pointer-events: none) 사용자는 평소처럼
   // 화면을 쓰고, 'tap' 단계는 비춘 자리를 누르면 넘어간다. 시트가 열려 있으면 시트 안의 자리만 비춘다.
   import { onDestroy } from 'svelte';
-  import { COACH_STEPS, bubbleAt, coachAt, coachDone, coachPick, type CoachId } from '@offside/app-core/tutorial';
+  import { COACH_STEPS, bubbleAt, coachAt, coachDone, coachPick, playedBefore, type CoachId } from '@offside/app-core/tutorial';
   import { FOCUS_PICK } from '@offside/game/data';
   import { tutorialText as T } from '@offside/app-core/i18n/ko/tutorial';
   import { coach } from './coach.svelte.js';
   import { sheetState } from './sheetState.svelte.js';
   import { motionOK } from './motion.js';
+  import { trackFunnel } from '../analytics/index.js';
 
   const PAD = 6;
   let idx = $state<number | null>(null);
@@ -18,6 +19,13 @@
   let vw = $state(innerWidth);
   let vh = $state(innerHeight);
   let scrolledFor = -1;
+  // T-11-792 단계 계측. 처음 온 기기의 안내만 잰다. 커리어를 해 본 기기에서 첫 단계부터 뜨면 설정의 다시 보기라 보내지 않는다.
+  const replay = coach.i === 0 && playedBefore();
+  let tracked = -1;
+  function track(action: 'step' | 'skip' | 'done', i: number | null) {
+    const s = i === null ? undefined : COACH_STEPS[i];
+    if (s && !replay) trackFunnel({ kind: 'tutorial', action, step: s.id });
+  }
   let raf = 0;
 
   const step = $derived(idx === null ? null : COACH_STEPS[idx]!);
@@ -77,6 +85,10 @@
     const el = i === null ? null : targetOf(COACH_STEPS[i]!.target);
     if (i === null || !el) return void (rect = null);
     const r = el.getBoundingClientRect();
+    if (tracked !== i) {
+      tracked = i;
+      track('step', i);
+    }
     // 처음 비출 때 화면 밖이면 가운데로 데려온다(한 단계에 한 번 — 사용자가 스크롤하면 따라간다).
     if (scrolledFor !== i) {
       scrolledFor = i;
@@ -90,11 +102,13 @@
 
   function next() {
     if (idx === null) return;
-    if (idx + 1 >= COACH_STEPS.length) return skip();
+    if (idx + 1 >= COACH_STEPS.length) return finish('done');
     coach.i = idx + 1;
     coachAt(idx + 1);
   }
-  function skip() {
+  const skip = () => finish('skip');
+  function finish(action: 'skip' | 'done') {
+    track(action, idx);
     coachDone();
     coach.i = null;
   }

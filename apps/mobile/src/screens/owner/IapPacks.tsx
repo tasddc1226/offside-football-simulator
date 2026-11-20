@@ -120,7 +120,7 @@ export function IapPacks({
           <Txt tone="muted" style={small}>
             {L.loginHint}
           </Txt>
-          {login ? <LoginButtons /> : null}
+          {login ? <LoginButtons place="packs" /> : null}
         </View>
       );
     return claim;

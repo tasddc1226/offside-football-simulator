@@ -7,6 +7,7 @@ import { onClubSignal, setClubAccountKey } from '@offside/app-core/clubSignals';
 import type { AccountKey } from '@offside/app-core/retireExpMetrics';
 import type { ShareOutcome } from '@offside/app-core/shareMeasurement';
 import type { CommerceObservation } from '@offside/app-core/commerceStage';
+import type { FunnelEvent } from '@offside/app-core/funnelEvents';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';
@@ -36,6 +37,7 @@ export function initializeAnalytics(initialScreen: string, restoredCareerId: str
       attachRetireExp(m);
       m.initializeAnalytics(screen, restoredCareerId);
       for (const result of pending.splice(0)) m.trackOperation(result);
+      for (const e of early.splice(0)) m.trackFunnel(e);
     })
     .catch(() => {});
 }
@@ -50,6 +52,15 @@ export const analytics = {
   play: (s: Career, firstAction = false) => adapter?.analytics.play(s, firstAction),
   firstSeason: (s: Career) => adapter?.analytics.firstSeason(s),
   retire: (s: Career) => adapter?.analytics.retire(s),
+};
+/**
+ * T-11-792 로그인 시도 · 이번 시즌 팀 저장 · 따라가기 안내 단계(@offside/app-core/funnelEvents, 앱과 같은 이벤트).
+ * 로그인에서 돌아온 직후처럼 어댑터가 오기 전 것은 몇 개만 들고 있다가 넘긴다(동의 · 허용 목록은 어댑터가 본다).
+ */
+const early: FunnelEvent[] = [];
+export const trackFunnel = (e: FunnelEvent) => {
+  if (adapter) adapter.trackFunnel(e);
+  else if (early.length < 8) early.push(e);
 };
 /** T-11-668 커리어 링크 공유 시도와 결과(의미는 @offside/app-core/shareMeasurement). */
 export const trackShare = (o: ShareOutcome) => adapter?.trackShare(o);

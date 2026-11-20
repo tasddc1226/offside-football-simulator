@@ -9,6 +9,7 @@ import {
 } from './analytics-model.js';
 import { createTracker } from './analytics-tracker.js';
 import { COMMERCE_EVENT, commerceParams, type CommerceObservation } from './commerceStage.js';
+import { funnelParams, type FunnelEvent } from './funnelEvents.js';
 import { createRetireExpMetrics } from './retireExpMetrics.js';
 import { shareEventParams, type ShareOutcome } from './shareMeasurement.js';
 import type { Progress } from './player-metrics.js';
@@ -90,6 +91,7 @@ export function createNativeAnalytics(io: IO) {
   const pushSeen = new Set<string>();
   const askSeen = new Set<PushAskPlace>();
   const rewardSeen = new Set<RewardPlace>();
+  const funnelSeen = new Set<string>();
   const listeners = new Set<() => void>();
   const allowed = () => io.enabled() && consent === 'granted' && ready;
   // Serialized SDK access; stale sends are dropped when the user withdraws consent.
@@ -283,6 +285,23 @@ export function createNativeAnalytics(io: IO) {
         send(name, params);
       } catch {
         /* 계측은 공유 동작에 영향을 주지 않는다. */
+      }
+    },
+    /**
+     * T-11-792 로그인 시도 · 이번 시즌 팀 저장 · 따라가기 안내 단계(웹 trackFunnel과 같은 이벤트, 값은 funnelEvents의 허용 목록).
+     * once가 붙은 이벤트(팀 화면 보임 · 안내 단계 보임)는 실행마다 한 번만 보낸다.
+     */
+    funnel(e: FunnelEvent) {
+      try {
+        const x = funnelParams(e);
+        if (!x) return;
+        if (x.once) {
+          if (!allowed() || funnelSeen.has(x.once)) return;
+          funnelSeen.add(x.once);
+        }
+        send(x.name, x.params);
+      } catch {
+        /* 계측은 로그인 · 팀 저장 · 안내에 영향을 주지 않는다. */
       }
     },
     retireExp,

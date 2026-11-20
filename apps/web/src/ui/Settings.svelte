@@ -86,7 +86,7 @@
   <!-- T-11-567 계정(로그인 · 연동 · 로그아웃 · 탈퇴)과 운영 도구 입구는 내 구단 화면에서 설정 맨 위로 옮겼다. -->
   <section class="card settings-card" id="account-slot" aria-label={OL.accountSection}>
     <Account />
-    {#if guest}<LoginButtons />{/if}
+    {#if guest}<LoginButtons place="settings" />{/if}
     {#if admin}
       <button class="settings-row settings-trigger settings-admin" data-act="admin" onclick={() => (appState.screen = 'admin')}>
         <span class="settings-label"><strong>{OL.adminTools}</strong></span>

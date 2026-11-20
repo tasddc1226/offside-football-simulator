@@ -803,12 +803,12 @@ export default function Chat() {
               </Txt>
               <GoogleLoginButton
                 testID="chat-login"
-                onPress={() => void startGoogleLogin({ chat: true })}
+                onPress={() => void startGoogleLogin({ chat: true }, 'chat')}
               />
               {apple ? (
                 <AppleLoginButton
                   testID="chat-login-apple"
-                  onPress={() => void startAppleLogin({ chat: true })}
+                  onPress={() => void startAppleLogin({ chat: true }, 'chat')}
                 />
               ) : null}
             </View>

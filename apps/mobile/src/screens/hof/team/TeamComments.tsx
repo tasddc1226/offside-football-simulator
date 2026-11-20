@@ -297,11 +297,14 @@ export function TeamComments({ teamId }: { teamId: string }) {
           <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
             {apple ? LB.loginGateApple : LB.loginGate}
           </Txt>
-          <GoogleLoginButton testID="comment-login" onPress={() => void startGoogleLogin(back())} />
+          <GoogleLoginButton
+            testID="comment-login"
+            onPress={() => void startGoogleLogin(back(), 'team_comments')}
+          />
           {apple ? (
             <AppleLoginButton
               testID="comment-login-apple"
-              onPress={() => void startAppleLogin(back())}
+              onPress={() => void startAppleLogin(back(), 'team_comments')}
             />
           ) : null}
         </View>

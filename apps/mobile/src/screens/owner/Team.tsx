@@ -66,6 +66,7 @@ import { coachBreakdown, coachLineBonus } from '@offside/app-core/managerCard';
 import { accountCache, appState, prefs } from '../../store';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { askPushAfter } from '../../platform/pushAsk';
+import { trackFunnel } from '../../analytics';
 import { useColors } from '../../theme/useColors';
 import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
@@ -464,6 +465,9 @@ export default function Team() {
       return;
     }
     setNeedLogin(false);
+    // T-11-792 이번 시즌 팀이 아직 없는 구단주가 팀 화면을 받았다(실행마다 한 번, 시즌이 바뀌면 기존 구단주도 다시 잡힌다).
+    if (!d.team && d.season === d.current)
+      trackFunnel({ kind: 'team_view', players: d.players.length });
     applyTeam(d.team, d.lastManager);
     setDivisionNotice(
       d.team && teamEditableIn(d.season, d.current) && d.season === d.current
@@ -533,6 +537,7 @@ export default function Team() {
     try {
       const r = await saveOwnerTeam(season !== current ? { ...body, season } : body);
       if (!r.ok) {
+        trackFunnel({ kind: 'team_fail', reason: r.error.reason ?? r.error.code, created: !team });
         toast(r.error.message);
         // 컵 검사(잠금 · 상한 · 최소 인원)에 걸렸으면 띠를 다시 받는다.
         if (r.error.reason?.startsWith('CUP_')) void cupState.reload(true);
@@ -540,6 +545,8 @@ export default function Team() {
       }
       const unchanged = JSON.stringify(draftNow.current) === snapshot;
       const created = !team;
+      if (created)
+        trackFunnel({ kind: 'team_done', starters: body.slots.filter((x) => x !== null).length });
       if (unchanged) {
         applyTeam(r.data.team);
         setRenaming(false);
@@ -717,7 +724,7 @@ export default function Team() {
           {L.myTeam}
         </Txt>
         <Txt tone="muted">{L.loginOnly}</Txt>
-        <LoginButtons block={false} />
+        <LoginButtons place="team" block={false} />
       </Card>
     );
   } else if (view === 'achievements') {

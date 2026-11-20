@@ -409,3 +409,96 @@ describe('T-11-731 rewarded ad funnel', () => {
     expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
   });
 });
+
+describe('T-11-792 login, season team and tutorial funnel', () => {
+  it('sends nothing without consent', async () => {
+    const h = setup({ initial: 'denied' });
+    await h.a.settled();
+    h.a.funnel({ kind: 'login', outcome: 'start', place: 'owner', provider: 'google' });
+    h.a.funnel({ kind: 'team_view', players: 3 });
+    h.a.funnel({ kind: 'team_done', starters: 11 });
+    h.a.funnel({ kind: 'team_fail', reason: 'BLOCKED_WORD', created: true });
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    await h.a.settled();
+    expect(h.events).toEqual([]);
+  });
+  it('sends allowlisted values only and folds unknown reasons', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.funnel({ kind: 'login', outcome: 'start', place: 'retire', provider: 'apple' });
+    h.a.funnel({ kind: 'login', outcome: 'cancel', place: 'retire', provider: 'apple' });
+    h.a.funnel({
+      kind: 'login',
+      outcome: 'fail',
+      place: 'home',
+      provider: 'google',
+      reason: 'PRIVATE server text',
+    });
+    h.a.funnel({
+      kind: 'login',
+      outcome: 'fail',
+      place: 'home',
+      provider: 'google',
+      reason: 'rate_limited',
+    });
+    // 성공에는 reason을 싣지 않는다.
+    h.a.funnel({
+      kind: 'login',
+      outcome: 'linked',
+      place: 'settings',
+      provider: 'google',
+      reason: 'session',
+    });
+    h.a.funnel({ kind: 'login', outcome: 'start', place: 'PRIVATE' as never, provider: 'google' });
+    h.a.funnel({ kind: 'login', outcome: 'start', place: 'owner', provider: 'PRIVATE' as never });
+    h.a.funnel({ kind: 'team_fail', reason: 'CUP_LOCKED', created: false });
+    h.a.funnel({ kind: 'team_fail', reason: 'PRIVATE team name', created: true });
+    h.a.funnel({ kind: 'team_done', starters: 7 });
+    h.a.funnel({ kind: 'tutorial', action: 'skip', step: 'pos' });
+    h.a.funnel({ kind: 'tutorial', action: 'done', step: 'PRIVATE' as never });
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name !== 'screen_view');
+    const strip = ({ measurement_version: _m, app_version: _a, ...rest }: Params) => rest;
+    expect(events.map((e) => [e.name, strip(e.params)])).toEqual([
+      ['login_attempt', { place: 'retire', provider: 'apple', outcome: 'start' }],
+      ['login_attempt', { place: 'retire', provider: 'apple', outcome: 'cancel' }],
+      ['login_attempt', { place: 'home', provider: 'google', outcome: 'fail', reason: 'other' }],
+      [
+        'login_attempt',
+        { place: 'home', provider: 'google', outcome: 'fail', reason: 'rate_limited' },
+      ],
+      ['login_attempt', { place: 'settings', provider: 'google', outcome: 'linked' }],
+      ['team_save_fail', { reason: 'CUP', mode: 'edit' }],
+      ['team_save_fail', { reason: 'other', mode: 'create' }],
+      ['team_create_done', { starters: '6_10' }],
+      ['tutorial_skip', { step: 'pos' }],
+    ]);
+    expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
+  });
+  it('sends the team view and each tutorial step once per run', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.funnel({ kind: 'team_view', players: 0 });
+    h.a.funnel({ kind: 'team_view', players: 12 });
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'pos' });
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name !== 'screen_view');
+    expect(events.map((e) => [e.name, e.params.players ?? e.params.step])).toEqual([
+      ['team_create_view', '0'],
+      ['tutorial_step', 'new'],
+      ['tutorial_step', 'pos'],
+    ]);
+  });
+  it('keeps a step that was shown before consent for the first send after consent', async () => {
+    const h = setup({ initial: 'unknown' });
+    await h.a.settled();
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    h.a.setConsent('granted');
+    await h.a.settled();
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    await h.a.settled();
+    expect(h.events.filter((e) => e.name === 'tutorial_step')).toHaveLength(1);
+  });
+});

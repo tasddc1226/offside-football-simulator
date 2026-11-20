@@ -65,7 +65,7 @@
   {:else if guest}
     <section class="card" data-shop-guest>
       <p class="muted">{L.shopLoginNeeded}</p>
-      <LoginButtons back={null} />
+      <LoginButtons back={null} place="shop" />
     </section>
   {/if}
 </div>

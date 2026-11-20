@@ -127,7 +127,7 @@
       {#if att?.member}<p class="fs-sm good" data-attendance-member>{L.memberBonus}</p>{/if}
       {#if !att}
         <p class="ha-lead fs-sm">{L.guestLead(boardTotal())}</p>
-        <LoginButtons back={{ home: true }} act="attendance-google-login" />
+        <LoginButtons back={{ home: true }} act="attendance-google-login" place="home" />
       {:else if att.checkedIn}
         <p class="ha-done fs-sm" data-attendance-done>{L.checked}</p>
         {#if got}

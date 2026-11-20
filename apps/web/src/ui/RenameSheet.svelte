@@ -84,7 +84,7 @@
     <h2>{L.title}</h2>
     {#if have === null}
       <p class="fs-sm">{L.guest}</p>
-      <LoginButtons act="rename-google-login" />
+      <LoginButtons act="rename-google-login" place="rename" />
     {:else}
       <p class="muted fs-sm">{L.lead}</p>
       <label class="rn-field">

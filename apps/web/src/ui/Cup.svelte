@@ -205,7 +205,7 @@
           <section class="card stack cup-login" data-cup-login>
             <h2>{L.predictionLoginTitle}</h2>
             <p class="muted fs-sm" data-cup-login-note>{L.loginCardNote}</p>
-            <LoginButtons act="cup-login-google" back={{cup:true}} />
+            <LoginButtons act="cup-login-google" back={{cup:true}} place="cup" />
           </section>
         {/if}
         <section class="card stack" style="gap:12px" aria-label={L.secMine} data-cup-hero data-cup-phase={data.phase}>

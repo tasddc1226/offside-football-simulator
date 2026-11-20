@@ -290,7 +290,7 @@
   {#if loginNeeded}
     <section class="card mg-col">
       <p class="muted">{M.loginNeeded}</p>
-      <LoginButtons back={null} />
+      <LoginButtons back={null} place="manager" />
     </section>
   {:else if failed && !data}
     <section class="card mg-col">
