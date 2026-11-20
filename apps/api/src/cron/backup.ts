@@ -92,8 +92,8 @@ export type BackupState = {
   passRows?: number;
   sealRows?: number;
   sealed?: boolean;
-  /** 고유 인덱스를 마감 행 앞에 이미 썼다(끝에서 다시 쓰지 않는다). */
-  uniq?: boolean;
+  /** 마감 행 앞에 이미 쓴 고유 인덱스 이름(끝에서 다시 쓰지 않는다). 그 뒤 생긴 인덱스는 끝에서 쓴다. */
+  uniq?: string[];
   /** 마감 단계에서 이어진 D1 오류 횟수. */
   sealFails?: number;
   /** 올린 조각의 크기와 SHA-256(번호 순). */
@@ -442,17 +442,24 @@ async function exportStep(
         for (let i = 0; i < tuples.length; i += per) {
           const part = tuples.slice(i, i + per);
           const where = part.map(() => `(${key.map((c) => `${q(c)} = ?`).join(' AND ')})`);
-          const page = await db
-            .prepare(
-              `SELECT * FROM ${q(name)} WHERE ${where.join(' OR ')} ORDER BY rowid LIMIT ${REFETCH_ROWS}`,
-            )
-            .bind(...part.flat())
-            .raw<unknown[]>({ columnNames: true });
-          const [names, ...data] = page as [string[], ...unknown[][]];
-          if (!data.length) continue;
-          const insert = `INSERT OR REPLACE INTO ${q(name)} (${names.map(q).join(', ')}) VALUES `;
-          for (const r of data) await write(`${insert}(${r.map(literal).join(', ')});\n`);
-          written += data.length;
+          // 키 하나에 행이 많을 수 있다(구단주의 끝난 감독 커리어). 잘리지 않게 rowid로 끝까지 넘긴다 —
+          // 밀려난 옛 사본은 그 키에서 가장 최근 행이라 앞에서 자르면 정작 그 행이 빠진다.
+          for (let last = 0; ;) {
+            const page = await db
+              .prepare(
+                `SELECT rowid AS __rowid, * FROM ${q(name)} WHERE (${where.join(' OR ')}) AND rowid > ? ORDER BY rowid LIMIT ${REFETCH_ROWS}`,
+              )
+              .bind(...part.flat(), last)
+              .raw<unknown[]>({ columnNames: true });
+            const [names, ...data] = page as [string[], ...unknown[][]];
+            if (!data.length) break;
+            const insert = `INSERT OR REPLACE INTO ${q(name)} (${names.slice(1).map(q).join(', ')}) VALUES `;
+            for (const r of data)
+              await write(`${insert}(${r.slice(1).map(literal).join(', ')});\n`);
+            written += data.length;
+            last = Number(data[data.length - 1]![0]);
+            if (data.length < REFETCH_ROWS) break;
+          }
         }
       }
       next.rows += written;
@@ -494,8 +501,12 @@ async function exportStep(
       next.after = 0;
       // 고유 인덱스는 마감 행보다 먼저 만든다. 그래야 INSERT OR REPLACE가 같은 고유 키의 옛 사본을 밀어낸다
       // (인덱스가 없으면 둘 다 남아 끝의 CREATE UNIQUE INDEX에서 복원이 멈춘다).
-      for (const s of schema) if (isUniqueIndex(s)) await write(`${s.sql};\n`);
-      next.uniq = true;
+      next.uniq = [];
+      for (const s of schema) {
+        if (!isUniqueIndex(s)) continue;
+        await write(`${s.sql};\n`);
+        next.uniq.push(s.name);
+      }
     }
     // 마감: 복사하는 동안 새로 생긴 행(rowid > 기억해 둔 값)만 다시 읽는다. 표 순서는 복사 때와 같아(참조되는 표 먼저)
     // 부모를 바꿔 넣을 때 딸려 지워지는 자식(cascade)은 그 뒤에 다시 들어온다.
@@ -525,12 +536,12 @@ async function exportStep(
             next.rows += data.length;
             next.passRows! += data.length;
             next.sealRows! += data.length;
-            hwm[name] = Number(data[data.length - 1]![0]);
             await refetch(
               name,
               cols.slice(1),
               data.map((r) => r.slice(1)),
             );
+            hwm[name] = Number(data[data.length - 1]![0]);
             candidates = data.length < candidates ? data.length : Math.min(PAGE, candidates * 2);
             await new Promise<void>((resolve) => setTimeout(resolve, BACKUP_PAGE_PAUSE_MS));
             if (Date.now() >= deadline || compressed() >= chunkBytes) return;
@@ -585,12 +596,12 @@ async function exportStep(
               await write(`${insert}(${cols.map((c) => literal(r[c])).join(', ')});\n`);
             next.rows += rows.length;
             next.sealRows! += rows.length;
-            hwm[name] = Math.max(hwm[name]!, Number(rows[rows.length - 1]!.__rowid));
             await refetch(
               name,
               cols,
               rows.map((r) => cols.map((c) => r[c])),
             );
+            hwm[name] = Math.max(hwm[name]!, Number(rows[rows.length - 1]!.__rowid));
           }
         }
         next.sealed = !overflow;
@@ -612,7 +623,7 @@ async function exportStep(
     }
     // 인덱스·트리거는 데이터를 넣은 뒤에 만든다(넣는 동안 인덱스를 고치지 않게).
     for (const s of schema)
-      if (s.type !== 'table' && !(next.uniq && isUniqueIndex(s))) await write(`${s.sql};\n`);
+      if (s.type !== 'table' && !next.uniq?.includes(s.name)) await write(`${s.sql};\n`);
     done = true;
   });
   next.chunk++;

@@ -422,6 +422,10 @@ describe('T-10-070 D1 → R2 백업', () => {
         );
         expect(state?.phase).toBe('copy');
         // 복사한 뒤: l1을 닫고 같은 카드를 다시 올린다. 작은 표는 5배로 커진다.
+        // 같은 카드의 닫힌 매물을 한 번에 읽는 양(400)보다 많이 쌓아 둔다 — 밀려난 l1은 그 키에서 최근 행이다.
+        await run(
+          "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 450) INSERT INTO seal_listings SELECT 'h' || i, 'c1', 'sold' FROM n",
+        );
         await run("UPDATE seal_listings SET status = 'sold' WHERE id = 'l1'");
         await run("INSERT INTO seal_listings VALUES ('l1b', 'c1', 'open')");
         await run(
@@ -440,12 +444,16 @@ describe('T-10-070 D1 → R2 백업', () => {
         try {
           expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
           expect(
-            db.prepare("SELECT id, status FROM seal_listings WHERE card = 'c1' ORDER BY id").all(),
+            db
+              .prepare(
+                "SELECT id, status FROM seal_listings WHERE card = 'c1' AND id LIKE 'l%' ORDER BY id",
+              )
+              .all(),
           ).toEqual([
             { id: 'l1', status: 'sold' },
             { id: 'l1b', status: 'open' },
           ]);
-          expect(db.prepare('SELECT count(*) AS n FROM seal_listings').get()).toEqual({ n: 261 });
+          expect(db.prepare('SELECT count(*) AS n FROM seal_listings').get()).toEqual({ n: 711 });
           expect(db.prepare('SELECT count(*) AS n FROM seal_small').get()).toEqual({ n: 600 });
         } finally {
           db.close();
