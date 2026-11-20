@@ -1,0 +1,34 @@
+{
+  "id": "t-11-790-public-app-links",
+  "title": "공개 페이지와 공유 화면에서 앱 받기",
+  "items": [
+    "휴대폰으로 공유받은 커리어를 보면 맨 아래에서 앱을 바로 받을 수 있어요.",
+    "웹의 공개 명예의 전당과 소식 페이지 메뉴에 앱 받기가 생겼어요.",
+    "영어 · 일본어 · 중국어 가이드의 앱 받기가 같은 언어의 소개 페이지로 열려요."
+  ],
+  "en": {
+    "title": "Get the app from public pages and shared careers",
+    "items": [
+      "When you open a shared career on your phone, you can get the app right from the bottom of the page.",
+      "The public Hall of Fame and news pages on the web now have a Get the app link in the menu.",
+      "Get the app in the English, Japanese, and Chinese guides now opens the app page in the same language."
+    ]
+  },
+  "ja": {
+    "title": "公開ページと共有画面からアプリを入手",
+    "items": [
+      "共有されたキャリアをスマートフォンで開くと、いちばん下からアプリをすぐ入手できます。",
+      "ウェブの公開殿堂とお知らせページのメニューに「アプリを入手」を追加しました。",
+      "英語・日本語・中国語ガイドの「アプリを入手」が同じ言語の紹介ページを開くようになりました。"
+    ]
+  },
+  "zh": {
+    "title": "從公開頁面與分享畫面下載 App",
+    "items": [
+      "用手機打開分享的生涯時，可以在最下方直接下載 App。",
+      "網頁版公開名人堂與公告頁面的選單新增了「下載 App」。",
+      "英文、日文、中文指南的「下載 App」現在會開啟相同語言的介紹頁。"
+    ]
+  },
+  "availability": "web"
+}
