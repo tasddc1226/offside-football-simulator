@@ -1,4 +1,4 @@
-// T-11-782 60일 목표 주간 표. 일일 수집(kpi_daily) 값을 KST 월~일 주로 묶는다. 날짜 문자열은 이미 KST 날짜다.
+// T-11-793 60일 목표 주간 표. 일일 수집(kpi_daily) 값을 KST 월~일 주로 묶는다. 날짜 문자열은 이미 KST 날짜다.
 import { valueOn } from './kpi.ts';
 import { storeKrwOn } from './kpi-money.ts';
 import type { KpiView } from './kpi-page.ts';

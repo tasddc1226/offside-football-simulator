@@ -18,7 +18,7 @@
   const rev = loader<AdminRevenue>(() => `/v1/admin/revenue?days=${days}`, () => tick);
   // 가격 판단은 기간 선택과 무관하게 30일로 본다(인상 전 기준 구간이 필요하다).
   const rev30 = loader<AdminRevenue>(() => '/v1/admin/revenue?days=30', () => tick);
-  // 주간 표(T-11-782)가 지난 주들을 읽도록 90일을 한 번에 받는다. 경보 · 오류 · 가격 판단은 마지막 날과 인상일만 본다.
+  // 주간 표(T-11-793)가 지난 주들을 읽도록 90일을 한 번에 받는다. 경보 · 오류 · 가격 판단은 마지막 날과 인상일만 본다.
   const kpi = loader<KpiReport>(() => '/v1/admin/kpi?days=90', () => tick);
   const missingText = (m: { store: number; ad: number }) =>
     [m.store ? `스토어 ${m.store}` : '', m.ad ? `광고 ${m.ad}` : ''].filter(Boolean).join(' · ') || '0';

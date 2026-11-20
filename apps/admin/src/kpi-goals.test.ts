@@ -18,7 +18,7 @@ const r = (day: string, metric: string, dim: string, value: number) => ({
   value,
 });
 
-describe('T-11-782 60일 목표 주간 표', () => {
+describe('T-11-793 60일 목표 주간 표', () => {
   it('주는 월요일에 시작한다', () => {
     expect(weekStart('2026-11-16')).toBe('2026-11-16');
     expect(weekStart('2026-11-22')).toBe('2026-11-16');
