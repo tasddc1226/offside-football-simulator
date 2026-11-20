@@ -155,7 +155,7 @@ function fontHref(body, lang) {
 // 소개 페이지를 본 기기는 표시(offside_lp_seen)를 남겨 게임 셸이 광고 유입을 다시 이 페이지로 보내지 않게 한다(index.html).
 const OS_SCRIPT = `(()=>{const d=document.documentElement,u=navigator.userAgent;d.dataset.os=/iPhone|iPad|iPod/.test(u)||(/Macintosh/.test(u)&&navigator.maxTouchPoints>1)?'ios':/Android/.test(u)?'android':'other';try{localStorage.setItem('offside_lp_seen','1')}catch(e){}})();`;
 const SCRIPT = `(()=>{const q=new URLSearchParams(location.search);
-if(q.get('utm_source')){const keep=['utm_source','utm_medium','utm_campaign','utm_content'];
+if(q.get('utm_source')){const keep=['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
 for(const a of document.querySelectorAll('[data-web],[data-store]')){const url=new URL(a.href);
 for(const k of keep){if(a.hasAttribute('data-web'))url.searchParams.delete(k);const v=q.get(k);if(v)url.searchParams.set(k,v)}a.href=url.pathname+url.search}}
 const dock=document.querySelector('.dock'),hero=document.querySelector('.hero .ctas'),end=document.querySelector('.last .ctas');

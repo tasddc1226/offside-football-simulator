@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ACQUISITION_CONSENT_VERSION as version } from '@offside/contracts/acquisition';
 import { createTestD1, linkGoogle, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie, deleteProfile } from '../test/http.js';
@@ -25,6 +25,91 @@ describe('optional first-party acquisition and authoritative transactions', () =
       body: { version, revision, ...body },
     });
   };
+  it('T-11-769 sends one Meta conversion on the first start with consented meta, no profile identifiers', async () => {
+    ctx.env.META_PIXEL_ID = '931060609804225';
+    ctx.env.META_CAPI_TOKEN = 'capi-token';
+    const graph: { url: string; body: Record<string, unknown> }[] = [];
+    const real = globalThis.fetch;
+    const spy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input instanceof Request ? input.url : input);
+      if (!url.startsWith('https://graph.facebook.com')) return real(input, init);
+      graph.push({ url, body: JSON.parse(String(init?.body)) });
+      return Response.json({ events_received: 1 });
+    });
+    try {
+      const a = await issueCookie(ctx);
+      await post(a.cookie, { action: 'grant' });
+      const sessionId = crypto.randomUUID();
+      const placed = `${campaign}&utm_term=ig-instagram_reels`;
+      const eventId = crypto.randomUUID();
+      const meta = {
+        eventId,
+        fbc: 'fb.1.1763600000000.AbC-12',
+        fbp: 'fb.1.1763600000000.42',
+        name: 'x',
+      };
+      expect(
+        (await post(a.cookie, { action: 'session', sessionId, campaign: placed })).status,
+      ).toBe(204);
+      expect(
+        (await post(a.cookie, { action: 'start', sessionId, campaign: placed, meta })).status,
+      ).toBe(204);
+      // 같은 세션의 시작을 다시 받아도(재시도) 한 번만 보낸다.
+      expect(
+        (await post(a.cookie, { action: 'start', sessionId, campaign: placed, meta })).status,
+      ).toBe(204);
+      // meta 칸이 없거나 모양이 틀리면 보내지 않고 방문 기록만 남긴다.
+      const other = crypto.randomUUID();
+      expect(
+        (
+          await post(a.cookie, {
+            action: 'start',
+            sessionId: other,
+            campaign,
+            meta: { eventId: 'nope' },
+          })
+        ).status,
+      ).toBe(204);
+      await vi.waitFor(() => expect(graph).toHaveLength(1));
+      await new Promise((r) => setTimeout(r, 20));
+      expect(graph).toHaveLength(1);
+      expect(graph[0]!.url).toBe('https://graph.facebook.com/v21.0/931060609804225/events');
+      const event = (graph[0]!.body.data as Record<string, unknown>[])[0]!;
+      expect(event).toMatchObject({
+        event_name: 'CompleteRegistration',
+        event_id: eventId,
+        action_source: 'website',
+        custom_data: { content_name: 'career_start' },
+      });
+      const user = event.user_data as Record<string, unknown>;
+      expect(user.fbc).toBe(meta.fbc);
+      expect(user.fbp).toBe(meta.fbp);
+      expect(user.external_id).toBeUndefined();
+      expect(JSON.stringify(graph[0]!.body)).not.toContain(a.profileId);
+      const row = await ctx.env.DB.prepare('SELECT campaign FROM acquisition_sessions WHERE id=?')
+        .bind(sessionId)
+        .first<{ campaign: string }>();
+      expect(row?.campaign).toBe(placed);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+  it('T-11-769 sends nothing without a Conversions API token', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch');
+    try {
+      const a = await issueCookie(ctx);
+      await post(a.cookie, { action: 'grant' });
+      const sessionId = crypto.randomUUID();
+      const meta = { eventId: crypto.randomUUID() };
+      expect((await post(a.cookie, { action: 'start', sessionId, campaign, meta })).status).toBe(
+        204,
+      );
+      await new Promise((r) => setTimeout(r, 20));
+      expect(spy.mock.calls.some(([u]) => String(u).includes('graph.facebook.com'))).toBe(false);
+    } finally {
+      spy.mockRestore();
+    }
+  });
   it('rejects a delayed grant after withdrawal, including the first-ever grant and another device', async () => {
     const a = await issueGoogleCookie(ctx);
     const raw = (revision: string | null) =>

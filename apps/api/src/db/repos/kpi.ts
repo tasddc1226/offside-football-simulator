@@ -12,6 +12,7 @@ import {
   type KpiSource,
 } from '@offside/contracts';
 import { DAY_MS, KST_MS } from '@offside/contracts/kst';
+import { termPlatform } from '@offside/contracts/acquisition';
 
 // T-11-572 운영 지표 대시보드. 일일 cron `kpi` 단계가 운영 D1에서 KST 하루치를 모아 kpi_daily에 넣고,
 // 대시보드(admin.offside-lab.com)는 GET /v1/admin/kpi로 이 표만 읽는다. 모든 집계는 시각 인덱스 범위 한 날만 읽는다.
@@ -99,6 +100,8 @@ export const D1_METRICS = [
   'acq_store_clicks',
   'acq_retired',
   'acq_linked',
+  'acq_visits_place',
+  'acq_started_place',
   'webpay_orders',
   'webpay_paid',
   'webpay_canceled',
@@ -458,6 +461,14 @@ const FUND_DAY_SQL = `WITH RECURSIVE ${ID_BOUND('owner_fund_ledger', 'lo', '?1')
   FROM owner_fund_ledger
   WHERE id >= (SELECT a FROM lo WHERE a >= b) AND id < (SELECT a FROM hi WHERE a >= b) GROUP BY kind`;
 
+/** T-11-769 utm_term(메타 동적 값 site_source_name-placement)이 붙은 방문의 'meta:ig' 꼴 나눔. 없으면 null. */
+export function placeDim(raw: unknown) {
+  const q = new URLSearchParams(String(raw ?? '').replace(/^\?/, ''));
+  const platform = termPlatform(q.get('utm_term'));
+  const source = q.get('utm_source');
+  return platform && source ? dimOf(`${source}:${platform}`, 'etc') : null;
+}
+
 /** 'utm_source=meta&utm_campaign=x&utm_content=jp_a' → 'meta:x:jp_a'(없는 칸은 -). 캠페인 없는 방문은 direct. */
 export function campaignDim(raw: unknown) {
   const q = new URLSearchParams(String(raw ?? '').replace(/^\?/, ''));
@@ -515,6 +526,11 @@ export async function collectFlowDay(d1: D1Database, day: string): Promise<KpiRo
     sum('acq_store_clicks', dim, r.clicks);
     sum('acq_retired', dim, r.retired);
     sum('acq_linked', dim, r.linked);
+    const place = placeDim(r.campaign);
+    if (place) {
+      sum('acq_visits_place', place, r.visits);
+      sum('acq_started_place', place, r.started);
+    }
   }
   for (const r of pay!.results) {
     const dim = dimOf(
