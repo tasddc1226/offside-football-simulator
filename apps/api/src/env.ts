@@ -8,7 +8,7 @@ export type Bindings = {
   SCHEDULE_DASHBOARD?: { snapshot(): Promise<unknown> };
   CLIENT_ERROR_LIMITER: RateLimit;
   ACQUISITION_ENABLED?: string;
-  /** T-11-765 메타 전환 API: 픽셀 ID(공개 값)와 이벤트 보내기 토큰(비밀). 둘 다 있어야 보낸다. */
+  /** T-11-769 메타 전환 API: 픽셀 ID(공개 값)와 이벤트 보내기 토큰(비밀). 둘 다 있어야 보낸다. */
   META_PIXEL_ID?: string;
   META_CAPI_TOKEN?: string;
   /** 이벤트 관리자 '테스트 이벤트' 코드. 있으면 실제 집계 대신 테스트 탭으로 간다. */

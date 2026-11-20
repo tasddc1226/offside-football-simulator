@@ -25,7 +25,7 @@ describe('optional first-party acquisition and authoritative transactions', () =
       body: { version, revision, ...body },
     });
   };
-  it('T-11-765 sends one Meta conversion on the first start with consented meta, no profile identifiers', async () => {
+  it('T-11-769 sends one Meta conversion on the first start with consented meta, no profile identifiers', async () => {
     ctx.env.META_PIXEL_ID = '931060609804225';
     ctx.env.META_CAPI_TOKEN = 'capi-token';
     const graph: { url: string; body: Record<string, unknown> }[] = [];
@@ -94,7 +94,7 @@ describe('optional first-party acquisition and authoritative transactions', () =
       spy.mockRestore();
     }
   });
-  it('T-11-765 sends nothing without a Conversions API token', async () => {
+  it('T-11-769 sends nothing without a Conversions API token', async () => {
     const spy = vi.spyOn(globalThis, 'fetch');
     try {
       const a = await issueCookie(ctx);

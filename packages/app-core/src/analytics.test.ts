@@ -69,7 +69,7 @@ describe('privacy allowlists', () => {
       ),
     ).toBe('?utm_campaign=season1_launch');
   });
-  it('T-11-765 keeps a Meta placement term only with an allowlisted source', () => {
+  it('T-11-769 keeps a Meta placement term only with an allowlisted source', () => {
     const base =
       '?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=jp_reels_v2';
     expect(

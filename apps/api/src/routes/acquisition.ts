@@ -119,7 +119,7 @@ export function registerAcquisitionRoutes(app: Hono<AppEnv>) {
         cutoff,
       )
       .first<{ id: string; started_at: string | null }>();
-    // T-11-765 이 세션에서 커리어 시작을 처음 받은 순간에만 메타 전환 API로 보낸다(같은 요청을 다시 보내도 한 번).
+    // T-11-769 이 세션에서 커리어 시작을 처음 받은 순간에만 메타 전환 API로 보낸다(같은 요청을 다시 보내도 한 번).
     const meta = body.action === 'start' ? parseMetaStart(body.meta) : null;
     if (result && meta && result.started_at === now) sendMetaStart(c, meta, { at: now });
     return c.body(null, result ? 204 : 409);

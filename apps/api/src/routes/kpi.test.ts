@@ -331,7 +331,7 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     // T-11-761 은퇴(프로필에 은퇴 커리어가 있다 · 위 ret1 · ret2) · 로그인 연결(운영자 프로필은 Google에 이어져 있다).
     expect(value(r, yesterday!, 'acq_retired', 'meta:-:jp_a')).toBe(3);
     expect(value(r, yesterday!, 'acq_linked', 'meta:-:jp_a')).toBe(3);
-    // T-11-765 utm_term 앞부분(플랫폼)별 방문 · 시작. utm_term이 없는 방문은 세지 않는다.
+    // T-11-769 utm_term 앞부분(플랫폼)별 방문 · 시작. utm_term이 없는 방문은 세지 않는다.
     expect(value(r, yesterday!, 'acq_visits_place', 'meta:an')).toBe(1);
     expect(value(r, yesterday!, 'acq_started_place', 'meta:an')).toBe(1);
     expect(value(r, yesterday!, 'acq_visits_place', 'meta:ig')).toBeUndefined();

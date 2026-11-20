@@ -290,7 +290,7 @@ export async function metaFunnelRows(
     add('ad_clicks_content', dim, Number(a.clicks) || 0);
     add('ad_lpv_content', dim, lpv);
   }
-  // T-11-765 게재 플랫폼별 지출 · 랜딩 조회. 나눔은 광고 링크 utm_term의 앞부분({{site_source_name}})과 같게 'meta:ig' 꼴로 맞춘다.
+  // T-11-769 게재 플랫폼별 지출 · 랜딩 조회. 나눔은 광고 링크 utm_term의 앞부분({{site_source_name}})과 같게 'meta:ig' 꼴로 맞춘다.
   const p = new URL(`${META_GRAPH}/act_${env.META_AD_ACCOUNT_ID}/insights`);
   p.searchParams.set('level', 'account');
   p.searchParams.set('fields', 'spend,actions');

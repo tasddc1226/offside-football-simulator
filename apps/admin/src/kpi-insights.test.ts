@@ -173,7 +173,7 @@ describe('T-11-761 광고 유입 퍼널', () => {
     expect(f.platforms).toEqual({ rows: [], days: 0, hasServer: false });
   });
 
-  it('T-11-765 게재 플랫폼별 지출과 utm_term 서버 방문 · 시작을 잇는다', () => {
+  it('T-11-769 게재 플랫폼별 지출과 utm_term 서버 방문 · 시작을 잇는다', () => {
     const v = report([
       row('2026-11-16', 'ad_spend_platform_krw', 'meta:an', 6000),
       row('2026-11-16', 'ad_spend_platform_krw', 'meta:ig', 4000),

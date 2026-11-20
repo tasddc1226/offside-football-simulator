@@ -91,7 +91,7 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
     // T-11-726 X 글(x_post) · 프로필 링크(x_bio).
     'x_post',
     'x_bio',
-    // T-11-765 메타 광고마다 다른 값(같은 utm을 여러 광고가 나눠 쓰면 소재별 커리어 시작을 가를 수 없다).
+    // T-11-769 메타 광고마다 다른 값(같은 utm을 여러 광고가 나눠 쓰면 소재별 커리어 시작을 가를 수 없다).
     // 국가 + 소재 + 판. 새 광고를 만들 때 여기에 먼저 더해 배포한 뒤 광고 링크에 붙인다(append-only: 앱 스토어 캠페인 토큰이 순서를 쓴다).
     'jp_reels_v2',
     'jp_story_v3',
@@ -100,7 +100,7 @@ export const CAMPAIGNS: Record<string, readonly string[]> = {
   ],
 };
 /**
- * T-11-765 메타 동적 값 `utm_term={{site_source_name}}-{{placement}}`(예: ig-instagram_reels, an-an).
+ * T-11-769 메타 동적 값 `utm_term={{site_source_name}}-{{placement}}`(예: ig-instagram_reels, an-an).
  * 값이 광고 플랫폼이 정하는 것이라 목록 대신 모양만 본다. 소문자로 맞추고, 치환되지 않은 `{{…}}`는 버린다.
  */
 const TERM = /^[a-z0-9_.-]{1,64}$/;

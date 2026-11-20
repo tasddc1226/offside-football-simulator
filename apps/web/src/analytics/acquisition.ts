@@ -274,7 +274,7 @@ export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promis
 }
 export function recordAcquisition(
   action: 'session' | 'start' | 'store_click',
-  // T-11-765 첫 커리어 시작의 메타 이벤트 ID · 쿠키(광고 측정에 동의했을 때만). 서버가 전환 API로 다시 보낸다.
+  // T-11-769 첫 커리어 시작의 메타 이벤트 ID · 쿠키(광고 측정에 동의했을 때만). 서버가 전환 API로 다시 보낸다.
   meta: MetaStart | null = null,
 ) {
   if (!acquisitionEnabled() || !acquisitionGranted()) return;

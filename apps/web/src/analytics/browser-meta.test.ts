@@ -258,7 +258,7 @@ describe('Meta FirstSeason은 시즌 1에서만', () => {
     expect(gaEvents()).toContain('career_start');
   });
 
-  it('T-11-765 첫 커리어 시작만 표준 이벤트로 보내고 같은 이벤트 ID를 서버에 넘긴다', async () => {
+  it('T-11-769 첫 커리어 시작만 표준 이벤트로 보내고 같은 이벤트 ID를 서버에 넘긴다', async () => {
     setConsentStorage('accepted');
     const { analytics } = await boot();
     analytics.start(career(0, 'career-a'), null);
@@ -277,7 +277,7 @@ describe('Meta FirstSeason은 시즌 1에서만', () => {
     expect(count(metaEvents(), 'CareerStart')).toBe(2);
   });
 
-  it('T-11-765 광고 측정에 동의하지 않았으면 표준 이벤트도 이벤트 ID도 없다', async () => {
+  it('T-11-769 광고 측정에 동의하지 않았으면 표준 이벤트도 이벤트 ID도 없다', async () => {
     setConsentStorage('analytics-only');
     const { analytics } = await boot();
     analytics.start(career(0, 'career-a'), null);

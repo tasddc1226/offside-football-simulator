@@ -331,7 +331,7 @@ export type AdPlatformRow = {
   costPerStart: number | null;
 };
 /**
- * T-11-765 게재 플랫폼별 지출(Meta) ↔ 서버 방문 · 커리어 시작(광고 링크 utm_term 앞부분). 플랫폼 지출이 들어온 날만 센다.
+ * T-11-769 게재 플랫폼별 지출(Meta) ↔ 서버 방문 · 커리어 시작(광고 링크 utm_term 앞부분). 플랫폼 지출이 들어온 날만 센다.
  * 광고 링크에 utm_term을 붙이기 전 방문은 서버 쪽 칸이 0이다(hasServer로 알린다).
  */
 export function adPlatforms(v: KpiView) {

@@ -38,7 +38,7 @@ describe('운영 지표 수집 (T-11-572)', () => {
               },
             ],
           });
-        // T-11-765 게재 플랫폼별 지출 · 랜딩 조회.
+        // T-11-769 게재 플랫폼별 지출 · 랜딩 조회.
         if (url.includes('breakdowns=publisher_platform'))
           return Response.json({
             data: [

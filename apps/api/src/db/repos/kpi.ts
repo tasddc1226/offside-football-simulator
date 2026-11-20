@@ -461,7 +461,7 @@ const FUND_DAY_SQL = `WITH RECURSIVE ${ID_BOUND('owner_fund_ledger', 'lo', '?1')
   FROM owner_fund_ledger
   WHERE id >= (SELECT a FROM lo WHERE a >= b) AND id < (SELECT a FROM hi WHERE a >= b) GROUP BY kind`;
 
-/** T-11-765 utm_term(메타 동적 값 site_source_name-placement)이 붙은 방문의 'meta:ig' 꼴 나눔. 없으면 null. */
+/** T-11-769 utm_term(메타 동적 값 site_source_name-placement)이 붙은 방문의 'meta:ig' 꼴 나눔. 없으면 null. */
 export function placeDim(raw: unknown) {
   const q = new URLSearchParams(String(raw ?? '').replace(/^\?/, ''));
   const platform = termPlatform(q.get('utm_term'));
