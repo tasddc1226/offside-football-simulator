@@ -50,14 +50,20 @@ function start() {
   loadGame();
   // T-10-116 이어 할 세이브가 있으면 브라우저에 '영구 저장'을 요청한다(새 커리어는 첫 저장 때, helpers.save).
   if (appState.G) keepStorage();
+  // T-11-795 첫 화면을 그린 때. 로그인 · 결제에서 돌아온 안내(토스트)는 이 뒤에 띄운다. 영어 · 일본어 · 중국어는 사전을 받은
+  // 뒤에 그리므로, 먼저 띄우면 문구가 한국어로 굳고 토스트가 아직 없어 보이는 시간도 줄어든다.
+  let markDrawn = () => {};
+  const drawn = new Promise<void>((resolve) => (markDrawn = resolve));
   // OAuth 복귀는 세이브를 읽은 뒤에 처리한다 — 돌아갈 곳이 로컬 명예의 전당 선수일 수 있고, loadGame이
   // 옛 은퇴 선수에 커리어 id를 붙인다(ft_hof).
   // 구글 · Apple 로그인에서 돌아온 경우에만 로그인 코드를 불러온다(첫 화면 번들 예산).
   if (/[?&](google|apple)=/.test(location.search))
-    void import('./ui/login.js').then((m) => m.handleOAuthReturn());
+    void Promise.all([import('./ui/login.js'), drawn]).then(([m]) => m.handleOAuthReturn());
   // T-11-454 엑솔라 결제창에서 돌아온 경우에만 웹 결제 코드를 불러온다.
   if (/[?&]webpay=/.test(location.search))
-    void import('./ui/cup/webPay.svelte.js').then((m) => m.handleWebPayReturn());
+    void Promise.all([import('./ui/cup/webPay.svelte.js'), drawn]).then(([m]) =>
+      m.handleWebPayReturn(),
+    );
   routeSharedCareer();
   // T-11-098 친구 초대 링크(`/invite/코드`, 옛 `/?friend=코드`)로 들어왔으면 친구 화면을 연다.
   routeFriendInvite();
@@ -115,14 +121,22 @@ function start() {
   // T-11-102 한국어는 바로 그린다(셸 hydrate·LCP 그대로). 영어는 사전을 받은 뒤 그린다.
   // T-11-106 처음 상태의 무작위 선수 이름은 사전보다 먼저 지어져 한국어다 — 영어면 다시 짓는다.
   // 지난 커리어에서 이어 쓰는 이름은 사용자가 고른 값이라 그대로 둔다.
+  // 그리다 실패해도 복귀 처리(주소 정리 · 돌아갈 화면)는 이어지게 한다.
+  const draw = () => {
+    try {
+      render();
+    } finally {
+      markDrawn();
+    }
+  };
   const locale = bootLocale();
-  if (locale === 'ko') render();
+  if (locale === 'ko') draw();
   else
     void applyLocale(locale)
       .then(() => {
         if (!savedDraftIdentity()) appState.C.name = randomName();
       })
-      .finally(render);
+      .finally(draw);
 
   // T-10-010: 클럽 커스텀을 계정과 맞춘다. 세션이 있었던 기기만 — 첫 방문자는 로컬 모드 그대로다(T-10-037).
   if (hasSessionHint()) {
