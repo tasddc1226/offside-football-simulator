@@ -413,7 +413,7 @@ export const trackCommerce = (o: CommerceObservation) => {
 };
 
 /**
- * T-11-781 로그인 시도 · 첫 팀 저장 · 따라가기 안내 단계(funnelEvents의 허용 목록 값만). 동의했지만 태그를 아직 불러오는 중이면
+ * T-11-781 로그인 시도 · 이번 시즌 팀 저장 · 따라가기 안내 단계(funnelEvents의 허용 목록 값만). 동의했지만 태그를 아직 불러오는 중이면
  * (로그인에서 돌아온 직후) 몇 개만 들고 있다가 보낸다. once가 붙은 이벤트는 이 탭에서 한 번만 보낸다.
  */
 const funnelEarly: FunnelEvent[] = [];

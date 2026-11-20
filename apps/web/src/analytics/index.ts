@@ -54,7 +54,7 @@ export const analytics = {
   retire: (s: Career) => adapter?.analytics.retire(s),
 };
 /**
- * T-11-781 로그인 시도 · 첫 팀 저장 · 따라가기 안내 단계(@offside/app-core/funnelEvents, 앱과 같은 이벤트).
+ * T-11-781 로그인 시도 · 이번 시즌 팀 저장 · 따라가기 안내 단계(@offside/app-core/funnelEvents, 앱과 같은 이벤트).
  * 로그인에서 돌아온 직후처럼 어댑터가 오기 전 것은 몇 개만 들고 있다가 넘긴다(동의 · 허용 목록은 어댑터가 본다).
  */
 const early: FunnelEvent[] = [];

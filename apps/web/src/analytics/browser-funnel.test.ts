@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { CONSENT_KEY } from '@offside/app-core/analytics-model';
 import type { FunnelEvent } from '@offside/app-core/funnelEvents';
 
-// T-11-781 로그인 시도 · 첫 팀 저장 · 따라가기 안내 단계의 웹 어댑터. 실제 browser.ts · index.ts를 쓰고 gtag 큐 · 스크립트 삽입 ·
+// T-11-781 로그인 시도 · 이번 시즌 팀 저장 · 따라가기 안내 단계의 웹 어댑터. 실제 browser.ts · index.ts를 쓰고 gtag 큐 · 스크립트 삽입 ·
 // fetch는 스텁으로 막는다(실제 GA4 전송 없음). 동의 없이는 보내지 않고, 허용 목록 값만 나가는지 본다.
 vi.mock('./acquisition.js', () => ({
   recordAcquisition: vi.fn(),
@@ -61,7 +61,7 @@ const tagReady = () =>
   });
 const start: FunnelEvent = { kind: 'login', outcome: 'start', place: 'retire', provider: 'google' };
 
-describe('web login, first team and tutorial funnel', () => {
+describe('web login, season team and tutorial funnel', () => {
   beforeEach(() => {
     vi.resetModules();
     vi.stubEnv('VITE_GA4_MEASUREMENT_ID', 'G-TEST123');

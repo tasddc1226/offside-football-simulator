@@ -410,7 +410,7 @@ describe('T-11-731 rewarded ad funnel', () => {
   });
 });
 
-describe('T-11-781 login, first team and tutorial funnel', () => {
+describe('T-11-781 login, season team and tutorial funnel', () => {
   it('sends nothing without consent', async () => {
     const h = setup({ initial: 'denied' });
     await h.a.settled();

@@ -306,7 +306,7 @@
     enhanceOpen = !!r.data.enhanceOpen;
     fatigue = r.data.fatigue ?? null;
     needLogin = false;
-    // T-11-781 팀이 아직 없는 구단주가 이번 시즌 팀 화면을 받았다(탭마다 한 번).
+    // T-11-781 이번 시즌 팀이 아직 없는 구단주가 팀 화면을 받았다(탭마다 한 번, 시즌이 바뀌면 기존 구단주도 다시 잡힌다).
     if (!r.data.team && season === current) trackFunnel({ kind: 'team_view', players: players.length });
     applyTeam(r.data.team);
     divisionNotice =
