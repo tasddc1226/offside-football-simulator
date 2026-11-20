@@ -41,10 +41,11 @@ export const COACH_STEPS: readonly CoachStep[] = [
 
 const KEY = 'ft_tutorial';
 /**
- * 저장값: 다음에 보일 단계 번호, 끝났으면 -1. replay는 설정의 다시 보기로 연 안내라는 표시다(T-11-796). 옛 코드는 i만 읽고
- * 쓰므로 표시가 없는 값 · 표시를 지운 값과도 그대로 맞는다.
+ * 저장값: 다음에 보일 단계 번호, 끝났으면 -1. replay는 설정의 다시 보기로 연 안내라는 표시다(T-11-796). true면 다시 보기,
+ * false면 첫 안내를 끝내기 전에 처음부터 다시 본 것(다시 보기가 아니다)이다. 옛 코드는 i만 읽고 쓰므로 표시가 없는 값 · 표시를
+ * 지운 값과도 그대로 맞는다.
  */
-type Saved = { i: number; replay?: true };
+type Saved = { i: number; replay?: boolean };
 /** 이번 실행의 안내가 다시 보기인가. coachResume이 저장값에서 읽어 두고, 끝나면(coachDone) 지운다. */
 let replaying = false;
 
@@ -61,7 +62,9 @@ export function coachResume(played: boolean = playedBefore()): number | null {
   replaying = false;
   if (v && typeof v.i === 'number') {
     const on = v.i >= 0 && v.i < COACH_STEPS.length;
-    replaying = on && v.replay === true;
+    // 표시가 아예 없는데 커리어를 해 본 기기가 첫 단계에 서 있으면 다시 보기다(표시를 적기 전에 누른 다시 보기 · 옛 코드가 쓴 값).
+    // 처음 온 기기는 커리어를 시작할 때쯤이면 첫 단계를 지나 있다.
+    replaying = on && (v.replay === true || (v.replay === undefined && v.i === 0 && played));
     return on ? v.i : null;
   }
   const i = played ? -1 : 0;
@@ -81,16 +84,28 @@ export function coachDone(): void {
   saveKey(KEY, { i: -1 });
 }
 
-/** 설정의 다시 보기 — 처음 단계부터. 저장소에 적지 못해도 이번 실행에서는 보인다. */
+/**
+ * 설정의 다시 보기 — 처음 단계부터. 저장소에 적지 못해도 이번 실행에서는 보인다.
+ * 첫 안내를 끝내기 전에 누른 것은 다시 보기로 치지 않는다(표시를 붙이지 않는다). 남은 단계는 처음 보는 것이라 계측에 남아야 한다.
+ */
 export function coachReplay(): number {
-  replaying = true;
-  saveKey(KEY, { i: 0, replay: true });
+  const v = loadKey<Saved>(KEY);
+  const firstRun =
+    !replaying &&
+    !!v &&
+    typeof v.i === 'number' &&
+    v.i >= 0 &&
+    v.i < COACH_STEPS.length &&
+    v.replay !== true;
+  replaying = !firstRun;
+  saveKey(KEY, { i: 0, replay: replaying });
   return 0;
 }
 
 /**
  * T-11-796 지금 안내가 설정의 다시 보기로 연 것인가. 단계 계측(T-11-792)은 처음 온 기기의 안내만 재므로 부르는 쪽이 이 값으로
  * 거른다. 표시를 저장값에 함께 두어 새로고침 · 앱 재실행 뒤에 이어지는 다시 보기도, 커리어 기록이 없는 기기의 다시 보기도 가른다.
+ * 첫 안내를 끝낸 뒤(건너뛰기 · 완료)에 누른 다시 보기만 해당한다.
  */
 export const coachReplaying = (): boolean => replaying;
 

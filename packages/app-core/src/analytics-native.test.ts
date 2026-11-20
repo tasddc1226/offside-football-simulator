@@ -456,6 +456,11 @@ describe('T-11-792 login, season team and tutorial funnel', () => {
     // T-11-796 서버 답을 받지 못한 실패(연결 끊김 · 읽지 못한 응답)는 서버 거절과 따로 센다.
     h.a.funnel({ kind: 'team_fail', reason: 'NETWORK_ERROR', created: true });
     h.a.funnel({ kind: 'team_fail', reason: 'INVALID_RESPONSE', created: false });
+    // 팀 저장이 실제로 내는 사유는 그대로 남고, 조회에서만 나오는 사유는 목록 밖이다.
+    h.a.funnel({ kind: 'team_fail', reason: 'SEASON_CLOSED', created: true });
+    h.a.funnel({ kind: 'team_fail', reason: 'LEAGUE_LINEUP_LOCKED', created: false });
+    h.a.funnel({ kind: 'team_fail', reason: 'COACH_NOT_ELIGIBLE', created: false });
+    h.a.funnel({ kind: 'team_fail', reason: 'SEASON_NOT_OPEN', created: false });
     h.a.funnel({ kind: 'team_done', starters: 7 });
     h.a.funnel({ kind: 'tutorial', action: 'skip', step: 'pos' });
     h.a.funnel({ kind: 'tutorial', action: 'done', step: 'PRIVATE' as never });
@@ -475,6 +480,10 @@ describe('T-11-792 login, season team and tutorial funnel', () => {
       ['team_save_fail', { reason: 'other', mode: 'create' }],
       ['team_save_fail', { reason: 'network', mode: 'create' }],
       ['team_save_fail', { reason: 'network', mode: 'edit' }],
+      ['team_save_fail', { reason: 'SEASON_CLOSED', mode: 'create' }],
+      ['team_save_fail', { reason: 'LEAGUE_LINEUP_LOCKED', mode: 'edit' }],
+      ['team_save_fail', { reason: 'COACH_NOT_ELIGIBLE', mode: 'edit' }],
+      ['team_save_fail', { reason: 'other', mode: 'edit' }],
       ['team_create_done', { starters: '6_10' }],
       ['tutorial_skip', { step: 'pos' }],
     ]);

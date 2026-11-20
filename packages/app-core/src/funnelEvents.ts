@@ -64,13 +64,18 @@ export type LoginReason = (typeof LOGIN_REASONS)[number];
 /**
  * 팀 저장 실패 사유. 서버 거절(details.reason)은 코드 그대로, CUP_로 시작하는 컵 검사 사유는 CUP 하나로 묶는다.
  * T-11-796 network는 서버 거절이 아니라 요청이 닿지 않았거나(연결 끊김 · 시간 초과) 응답을 읽지 못한 경우다.
+ * 목록은 팀 저장(PUT /v1/owner-team)이 실제로 내는 사유다(apps/api team/saveOwnerTeam · competitionLineup). T-11-792의 목록에 있던
+ * SEASON_NOT_OPEN은 조회(?season=)에서만 나오는 값이라 뺐고, 저장이 내는 SEASON_CLOSED(휴식기 · 지난 시즌) ·
+ * COACH_NOT_ELIGIBLE(감독 칸) · LEAGUE_LINEUP_LOCKED(리그 경기 앞뒤 명단 잠금)를 넣었다.
  */
 export const TEAM_FAIL_REASONS = [
   'RESERVED_NAME',
   'BLOCKED_WORD',
   'DUPLICATE_PLAYER',
   'PLAYER_NOT_ELIGIBLE',
-  'SEASON_NOT_OPEN',
+  'COACH_NOT_ELIGIBLE',
+  'SEASON_CLOSED',
+  'LEAGUE_LINEUP_LOCKED',
   'CUP',
   'network',
   'other',

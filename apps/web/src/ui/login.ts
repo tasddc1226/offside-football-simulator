@@ -84,15 +84,25 @@ function takeLoginPlace(): LoginPlace {
   }
 }
 /**
- * T-11-796 시작을 준비하는 중(프로필을 받는 동안)인가. 그 사이 다시 누른 것은 같은 시도라 무시한다 — 시작 이벤트와 프로필
- * 요청이 두 번 나가던 것을 막는다. 준비가 끝나면(떠나거나 실패하면) 바로 풀어 뒤로 가기로 돌아온 화면에서도 다시 누를 수 있다.
+ * T-11-796 로그인을 시작하는 중인가. 그 사이 다시 누른 것은 같은 시도라 무시한다 — 시작 이벤트와 프로필 요청이 두 번 나가던
+ * 것을 막는다. 준비하다 실패하면 바로 풀고, 로그인 화면으로 떠나기 시작했으면 leave가 잠깐 더 막는다.
  */
 let starting = false;
+/** 떠나기 시작한 뒤에도 막아 두는 시간. 새 화면의 응답이 올 때까지 지금 화면이 남아 다시 눌릴 수 있다. */
+const LEAVE_HOLD_MS = 4000;
+/** 로그인 화면으로 떠난다. 이동이 취소됐거나(시간이 지나면) 뒤로 가기로 이 화면에 돌아오면 다시 누를 수 있게 푼다. */
+function leave(url: string) {
+  const release = () => (starting = false);
+  setTimeout(release, LEAVE_HOLD_MS);
+  addEventListener('pageshow', release, { once: true });
+  window.location.assign(url);
+}
 /** 구글 로그인을 시작한다. 로그인은 프로필 세션이 있어야 시작된다 — 없으면 GET /v1/profile이 익명
  * 프로필을 만든다. */
 export async function startGoogleLogin(back: LoginReturn | null, place: LoginPlace) {
   if (starting) return;
   starting = true;
+  let leaving = false;
   try {
     clearOAuthCampaign();
     track('start', place, 'google');
@@ -110,15 +120,17 @@ export async function startGoogleLogin(back: LoginReturn | null, place: LoginPla
     }
     rememberLoginPlace(place);
     await prepareAcquisitionOAuth('google', me.data.id);
-    window.location.assign(googleStartUrl());
+    leaving = true;
+    leave(googleStartUrl());
   } finally {
-    starting = false;
+    if (!leaving) starting = false;
   }
 }
 /** T-11-204 Apple 로그인을 시작한다(주소창으로 Apple에 갔다가 /settings?apple=...로 돌아온다). */
 export async function startAppleLogin(back: LoginReturn | null, place: LoginPlace) {
   if (starting) return;
   starting = true;
+  let leaving = false;
   try {
     clearOAuthCampaign();
     track('start', place, 'apple');
@@ -130,9 +142,10 @@ export async function startAppleLogin(back: LoginReturn | null, place: LoginPlac
     }
     rememberLoginPlace(place);
     await prepareAcquisitionOAuth('apple', me.data.id);
-    window.location.assign(appleStartUrl());
+    leaving = true;
+    leave(appleStartUrl());
   } finally {
-    starting = false;
+    if (!leaving) starting = false;
   }
 }
 export function handleOAuthReturn() {
