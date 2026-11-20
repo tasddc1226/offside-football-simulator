@@ -14,11 +14,11 @@ export const MEMBERSHIP_LIVE = true;
  */
 export const MEMBERSHIP_IOS_LIVE = true;
 /**
- * T-11-770e 신규 구독자 첫 달 할인(기획 T-11-747 R3B)을 화면에 보이는지. 스토어 콘솔에 할인을 만들고 서버
+ * T-11-770e 신규 구독자 첫 달 할인(기획 T-11-747 R3B)을 화면에 보이는지. T-11-772에서 켰다(한국 기준 첫 달 2,900원). 스토어 콘솔에 할인을 만들고 서버
  * MEMBERSHIP_INTRO_ENABLED를 켠 뒤에 true로 바꾼다. false면 스토어에 할인 요금제가 있어도 Android는 정상가 요금제로만 판다.
  * (iOS는 스토어가 자격 있는 계정에 할인을 자동으로 적용하므로, App Store Connect의 할인은 이 값을 켜는 배포와 같이 연다.)
  */
-export const MEMBERSHIP_INTRO_LIVE = false;
+export const MEMBERSHIP_INTRO_LIVE = true;
 /** Play 콘솔에서 월 기본 요금제에 만드는 신규 구독자 할인의 ID. 이 ID가 아닌 할인은 앱이 쓰지 않는다. */
 export const MEMBERSHIP_INTRO_OFFER_ID = 'intro-1m';
 /** 할인을 보이지 않는 대조군 비율(%). 프로필로 고정 배정한다(서버 membershipIntroGroup). */

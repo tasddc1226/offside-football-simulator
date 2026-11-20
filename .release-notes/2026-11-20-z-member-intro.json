@@ -1,0 +1,26 @@
+{
+  "id": "t-11-772-member-intro",
+  "title": "클럽 멤버십 첫 달 할인",
+  "items": [
+    "클럽 멤버십을 처음 구독하면 첫 달을 할인 가격으로 시작할 수 있어요. 할인 가격과 그 뒤 매달 결제되는 가격은 가입 버튼과 스토어 결제창에 나와요."
+  ],
+  "en": {
+    "title": "Club Membership first-month discount",
+    "items": [
+      "First-time Club Membership subscribers can start with a discounted first month. The discounted price and the monthly price after it are shown on the join button and the store payment sheet."
+    ]
+  },
+  "ja": {
+    "title": "クラブメンバーシップの初月割引",
+    "items": [
+      "クラブメンバーシップに初めて加入すると、初月を割引価格で始められます。割引価格とその後の月額は、加入ボタンとストアの決済画面に表示されます。"
+    ]
+  },
+  "zh": {
+    "title": "俱樂部會員首月優惠",
+    "items": [
+      "首次訂閱俱樂部會員，首月可用優惠價開始。優惠價與之後每月的價格會顯示在加入按鈕與商店付款畫面。"
+    ]
+  },
+  "availability": "app"
+}
