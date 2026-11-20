@@ -66,4 +66,13 @@ export const gMoments: Translation<typeof gMomentsText> = {
     'After the match, you pointed to the sky and kissed your black armband. The photo made the front page the next day.',
   coachDedicateFail:
     'Your legs felt heavy. You were subbed off midway through the second half and sat on the bench touching your black armband.',
+  linkTitle: 'Link-up training for a number nine',
+  linkText:
+    'The coach pauses the footage of your assist. There was space ahead after you laid the ball off. Out on the pitch, the coach marks the spot. “What else could you do from here?”',
+  linkLayoff: 'Shield the ball and lay it off first time',
+  linkLayoffResult:
+    'You hold off the defender and cushion the pass into your teammate’s path. The coach claps as the ball reaches their feet.',
+  linkRun: 'Lay it off and run into the box',
+  linkRunResult:
+    'You slip behind the defender as soon as you release the ball. When the return pass comes, you side-foot it into the corner.',
 };

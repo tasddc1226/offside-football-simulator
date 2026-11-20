@@ -62,4 +62,13 @@ export const gMoments: Translation<typeof gMomentsText> = {
   coachDedicateOk:
     '試合後、空を指さして黒い喪章に口づけしました。その写真が翌日の一面を飾りました。',
   coachDedicateFail: '体が重く感じました。後半半ばに交代し、ベンチで黒い喪章を触り続けました。',
+  linkTitle: '背番号9の連係練習',
+  linkText:
+    'コーチがアシストの映像を止めた。ボールを落とした先にスペースがある。練習場で同じ位置に印を置いて聞く。「ここから何ができる？」',
+  linkLayoff: '背負って受け、ワンタッチで落とす',
+  linkLayoffResult:
+    '背中で相手を抑え、味方の足元にボールを落とした。パスが届くとコーチが手をたたいた。',
+  linkRun: 'パスを出してゴール前に走り込む',
+  linkRunResult:
+    'パスを出した瞬間に相手の背後へ走った。リターンパスをインサイドでゴールの隅に流し込んだ。',
 };

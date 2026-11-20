@@ -396,6 +396,14 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       ok: ['attr+', 'trust+', 'morale+'],
     },
   ],
+  'fw-link-drill': [
+    {
+      ok: ['attr+'],
+    },
+    {
+      ok: ['attr+'],
+    },
+  ],
   'fw-one-on-one': [
     {
       ok: ['fame+', 'morale+'],

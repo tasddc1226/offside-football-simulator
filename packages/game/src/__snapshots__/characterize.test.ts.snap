@@ -101,8 +101,8 @@ exports[`게임 특성화 (T-11-044) > simBlock — 리그 구간 경기 결과 
 
 exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격자와 선택 결과 1`] = `
 {
-  "events": 98,
-  "reached": 89,
+  "events": 99,
+  "reached": 90,
   "table": {
     "ad": "782 d567cd3227e5295f",
     "ag-release": "6 c4c21ba4ba1effb5",
@@ -135,7 +135,8 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "final": "14 8ba8ff101f59b96c",
     "fw-chase": "146 45363792064aa1af",
     "fw-cross": "146 ad6728dff847ccbb",
-    "fw-drought": "1 215f34a41db3f0d4",
+    "fw-drought": "1 6684c9612f4a79bc",
+    "fw-link-drill": "240 c29424bed8254206",
     "fw-one-on-one": "146 04f873b00463e102",
     "fw-target": "192 3a0bead0c88e8824",
     "gk-cross": "99 edf6f06468b13506",

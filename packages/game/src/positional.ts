@@ -1,5 +1,7 @@
 import { BASE_DETAIL } from '@offside/contracts/positions';
 // ───────── 포지션 전용 이벤트: 공격수 · 미드필더 · 수비수 · 골키퍼 ─────────
+import { gMomentsText as M } from './i18n/ko/gMoments.js';
+import { schedule } from './story.js';
 import { clamp } from './rng.js';
 import { addStat, addAttr, pkWin, leagueOf, roleOf } from './engine.js';
 import { ovr } from './attributes.js';
@@ -48,12 +50,33 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         ok: {
           text: '골 대신 도움이 쌓였습니다. 감독은 "이타적인 9번"이라고 칭찬했습니다.',
           fx: (s) => {
+            schedule(s, 'fw-link-drill', 0);
             s.season.assists++;
             addAttr(s, 'pas', 1);
             addStat(s, 'trust', 1.5);
             addStat(s, 'morale', 4);
           },
         },
+      },
+    ],
+  },
+  {
+    id: 'fw-link-drill',
+    chain: true,
+    w: 0,
+    get title() {
+      return M.linkTitle;
+    },
+    cond: (s) => s.pos === 'FW' && !s.injury,
+    text: () => M.linkText,
+    choices: [
+      {
+        label: () => M.linkLayoff,
+        ok: { text: () => M.linkLayoffResult, fx: (s) => addAttr(s, 'pas', 1) },
+      },
+      {
+        label: () => M.linkRun,
+        ok: { text: () => M.linkRunResult, fx: (s) => addAttr(s, 'sho', 1) },
       },
     ],
   },

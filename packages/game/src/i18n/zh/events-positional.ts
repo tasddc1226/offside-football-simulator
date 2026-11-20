@@ -1,4 +1,5 @@
 // 이벤트 중국어(번체) 문구 — 정의 모듈의 이벤트 id → 문구(events-data.ts EventText).
+import { gMoments as M } from './gMoments';
 import type { EventText } from '../../events-data';
 
 export const events_positional: Record<string, EventText> = {
@@ -17,6 +18,14 @@ export const events_positional: Record<string, EventText> = {
         label: '放下得失心，成全隊友',
         ok: '進球換成了助攻一筆筆累積。總教練稱讚你是「無私的9號」。',
       },
+    ],
+  },
+  'fw-link-drill': {
+    title: M.linkTitle,
+    text: () => M.linkText,
+    choices: [
+      { label: M.linkLayoff, ok: M.linkLayoffResult },
+      { label: M.linkRun, ok: M.linkRunResult },
     ],
   },
   'fw-one-on-one': {

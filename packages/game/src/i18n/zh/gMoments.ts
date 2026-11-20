@@ -47,4 +47,11 @@ export const gMoments: Translation<typeof gMomentsText> = {
   coachDedicateLabel: '把這場比賽獻給教練',
   coachDedicateOk: '賽後指向天空，親吻黑色臂章。那張照片登上了隔天的頭版。',
   coachDedicateFail: '身體很沉重。下半場中段被換下，坐在板凳上不停摸著黑色臂章。',
+  linkTitle: '九號球員的配合訓練',
+  linkText:
+    '教練把影片停在你送出助攻的那一刻。傳球後，前方留著一片空檔。教練在訓練場上標出相同的位置，問你：「接下來還能怎麼跑？」',
+  linkLayoff: '背身護球，一腳回做',
+  linkLayoffResult: '你用身體擋住後衛，一腳把球送到隊友腳前。球一到位，教練便拍手叫好。',
+  linkRun: '回做後跑進禁區',
+  linkRunResult: '球一離腳，你就繞到後衛身後，用腳內側把隊友傳回來的球推進球門死角。',
 };
