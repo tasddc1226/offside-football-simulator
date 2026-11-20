@@ -20,6 +20,7 @@ import {
   ownerItems,
   seasonPasses,
 } from '../db/schema.js';
+import { getAdminStats } from '../db/repos/admin.js';
 import { kstWindow } from '../db/repos/revenue.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { flushEdge, installFakeEdgeCache } from '../test/edgeCache.js';
@@ -477,7 +478,7 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
       const admin = await makeAdmin();
       const user = await issueCookie(ctx);
       const origin = 'http://localhost';
-      for (const path of ['/v1/admin/funds', '/v1/admin/automation?hours=3']) {
+      for (const path of ['/v1/admin/funds', '/v1/admin/automation?hours=3', '/v1/admin/stats']) {
         expect((await call('GET', path, { cookie: admin.cookie })).status).toBe(200);
         await flushEdge();
         const key = [...edge.store.keys()].find((k) => k === `${origin}${path}`);
@@ -542,6 +543,33 @@ describe('운영 도구 /v1/admin (T-10-016)', () => {
     expect(s.daily.at(-1)).toMatchObject({ profiles: 2, careers: 2, retired: 1 });
     expect(s.daily.slice(0, -1).every((d) => d.profiles === 0)).toBe(true);
     expect(s.balance).toBeNull();
+  });
+
+  it('같은 KST 날짜에서도 최근 7일 경계 시각부터 생성·은퇴를 센다', async () => {
+    const user = await googleUser('팬');
+    const timestamps = ['2026-11-12T13:54:59.999Z', '2026-11-12T13:55:00.000Z'];
+    for (const [i, at] of timestamps.entries()) {
+      await ctx.db.insert(careers).values({
+        profileId: user.profileId,
+        id: `boundary-${i}`,
+        pos: 'FW',
+        foot: '오른발',
+        type: 'poacher',
+        trait: 'late',
+        startYear: 2026,
+        appVersion: 'test',
+        status: 'retired',
+        createdAt: at,
+        updatedAt: at,
+        retiredAt: at,
+      });
+    }
+    const stats = await getAdminStats(ctx.db, new Date('2026-11-19T13:55:00.000Z'));
+    expect(stats.careers).toMatchObject({ new7d: 1, retired7d: 1 });
+    expect(stats.daily.find((row) => row.day === '2026-11-12')).toMatchObject({
+      careers: 2,
+      retired: 2,
+    });
   });
 
   it('KST 날짜 경계: UTC 15:00 이후는 다음 날이다', () => {

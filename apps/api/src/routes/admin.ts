@@ -37,6 +37,7 @@ import {
 } from '@offside/contracts';
 import type { Hono } from 'hono';
 import { requireAdmin } from '../auth/admin.js';
+import { createDb } from '../db/client.js';
 import { getAdminStats, listRecentComments, purgeCommentsBy } from '../db/repos/admin.js';
 import { listOpenNameReports, resolveNameReports } from '../db/repos/nameReports.js';
 import { getActiveBalance } from '../db/repos/balance.js';
@@ -100,7 +101,13 @@ export function registerAdminRoutes(app: Hono<AppEnv>): void {
     await requireAdmin(c);
     const db = getDb(c);
     const [stats, active] = await Promise.all([
-      edgeCached(c, EDGE.adminStats, STATS_TTL, () => getAdminStats(db, new Date())),
+      edgeCached(c, EDGE.adminStats, STATS_TTL, () => {
+        const statsDb =
+          c.env.D1_READ_SESSIONS_DISABLED === '1'
+            ? db
+            : createDb(c.env.DB.withSession('first-unconstrained'));
+        return getAdminStats(statsDb, new Date());
+      }),
       getActiveBalance(db),
     ]);
     const data = {
