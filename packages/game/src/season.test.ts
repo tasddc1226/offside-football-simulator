@@ -354,10 +354,35 @@ describe('T-11-257 임대', () => {
     expect(m2.options.some((o) => o.kind === 'offer' && o.clubId === parent.id && !o.loan)).toBe(
       false,
     );
+    const bought = structuredClone(s);
+    acceptOption(bought, buy!, m2.options);
+    expect(bought.chains?.some((c) => c.id === 'loan-return-talk')).toBeFalsy();
     acceptOption(s, back!, m2.options);
     expect(s.club.id).toBe(parent.id);
     expect(s.loan).toBeUndefined();
     expect(s.trust).toBe(2);
+    const { playPhase } = await import('./turn.js');
+    const { resolveChoice } = await import('./event-runner.js');
+    const { loadSave } = await import('./save.js');
+    expect(playPhase(s).ev).toBe('loan-return-talk');
+    for (const [i, id] of ['loan-review-starts', 'loan-review-minutes'].entries()) {
+      const copy = structuredClone(s);
+      resolveChoice(copy, 'loan-return-talk', i);
+      const loaded = loadSave(JSON.parse(JSON.stringify(copy)))!.G;
+      expect(playPhase(loaded).ev).toBe(id);
+      const stat = i === 0 ? 'starts' : 'mins';
+      const target = i === 0 ? 5 : 450;
+      loaded.season[stat] = target - 1;
+      const miss = structuredClone(loaded);
+      const trust = miss.trust;
+      resolveChoice(miss, id, 0);
+      expect(miss.trust).toBe(trust);
+      loaded.season[stat] = target;
+      loaded.trust = 0;
+      resolveChoice(loaded, id, 0);
+      expect(loaded.trust).toBeGreaterThan(0);
+      expect(loaded.chains?.some((c) => c.id === id)).toBe(false);
+    }
   });
   it('요청하지 않았거나 임대 중에 입대 기한이 오면 임대 제의가 없다', async () => {
     const { s, loanEligible } = await setup();

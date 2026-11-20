@@ -1,6 +1,17 @@
 import type { Translation } from '@offside/contracts/i18n';
 import type { gMomentsText } from '../ko/gMoments';
 export const gMoments: Translation<typeof gMomentsText> = {
+  letterTitle: 'A young fan’s first match',
+  letterShirt:
+    'A photo slips out of the envelope. The kid is wearing the shirt you gave them, the sleeves rolled up twice. “My first match is on Saturday. Were you nervous before yours?”',
+  letterBall:
+    'A photo of a scuffed football is taped to the letter. An arrow points to your faded autograph. “I practised with this ball. My first match is on Saturday!”',
+  letterCheer: 'Tell them I was nervous on my debut too',
+  letterTip: 'Share a tip for receiving the first pass',
+  letterCheerResult:
+    '“I was nervous too. I’ll be cheering for you on Saturday.” You fold the letter and write their name on the envelope.',
+  letterTipResult:
+    'You sketch two teammates and draw an arrow between them. “Look up before the ball reaches you. Find a teammate first.”',
   kidTitle: 'A young fan asks for an autograph',
   kidText: (p) =>
     `On your way to the team bus after the match, a young fan holds out a pen. "${p.name}, can I have your autograph?"`,
@@ -9,7 +20,7 @@ export const gMoments: Translation<typeof gMomentsText> = {
     'The kid jumped up and down holding your shirt. A video from the crowd spread on social media the next day.',
   kidSignLabel: 'Sign for them despite being exhausted',
   kidSignResult:
-    'You signed for every kid in the line before boarding the bus. Your legs were heavy, but your mood was light.',
+    'You signed for every kid in line. As you boarded the bus, the last one waved with your signed ball tucked under one arm.',
 
   wcTitle: 'Left out of the World Championship squad',
   wcText:
@@ -32,6 +43,16 @@ export const gMoments: Translation<typeof gMomentsText> = {
   legendIgnoreLabel: 'Ignore it',
   legendIgnoreResult:
     'You went to training without a word. A few days later, the story had moved on.',
+
+  backpassTitle: 'Facing the backpass again',
+  backpassText:
+    'Back in training, a defender rolls the ball towards your goal. It is the same pass that slipped under your foot. The coach sends a striker to press you.',
+  backpassKick: 'Hit a long pass to the far fullback',
+  backpassKickResult:
+    'You look up before the press arrives. The ball drops into the path of the fullback on the far side.',
+  backpassMove: 'Move wide of the goal to offer an outlet',
+  backpassMoveResult:
+    'You point to the space outside the post. The defender plays it there and you receive the ball side-on, with the goal clear behind you.',
 
   hatTitle: 'Hat-trick and Man of the Match',
   hatText:
@@ -66,4 +87,13 @@ export const gMoments: Translation<typeof gMomentsText> = {
     'After the match, you pointed to the sky and kissed your black armband. The photo made the front page the next day.',
   coachDedicateFail:
     'Your legs felt heavy. You were subbed off midway through the second half and sat on the bench touching your black armband.',
+  linkTitle: 'Link-up training for a number nine',
+  linkText:
+    'The coach pauses the footage of your assist. There was space ahead after you laid the ball off. Out on the pitch, the coach marks the spot. “What else could you do from here?”',
+  linkLayoff: 'Shield the ball and lay it off first time',
+  linkLayoffResult:
+    'You hold off the defender and cushion the pass into your teammate’s path. The coach claps as the ball reaches their feet.',
+  linkRun: 'Lay it off and run into the box',
+  linkRunResult:
+    'You slip behind the defender as soon as you release the ball. When the return pass comes, you side-foot it into the corner.',
 };

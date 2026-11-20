@@ -1,0 +1,25 @@
+{
+  "id": "t-11-765-link-drill",
+  "title": "9번의 연계 훈련",
+  "items": [
+    "공격수가 골 가뭄 속에서 동료의 득점을 도우면, 다음 훈련에서 그 장면을 다시 만나 패스나 슈팅을 연습할 수 있어요."
+  ],
+  "en": {
+    "title": "Link-up training for a number nine",
+    "items": [
+      "Set up a teammate during a goal drought and the coach will revisit your assist in training. Work on your passing or your finishing."
+    ]
+  },
+  "ja": {
+    "title": "背番号9の連係練習",
+    "items": [
+      "ゴール日照りの中で味方の得点をアシストすると、練習でその場面を再現し、パスかシュートを磨けます。"
+    ]
+  },
+  "zh": {
+    "title": "九號球員的配合訓練",
+    "items": ["前鋒在進球荒中助攻隊友得分後，可以在訓練場重演當時的配合，磨練傳球或射門。"]
+  },
+  "availability": "web-app",
+  "balance": true
+}

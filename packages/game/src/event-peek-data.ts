@@ -396,6 +396,14 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       ok: ['attr+', 'trust+', 'morale+'],
     },
   ],
+  'fw-link-drill': [
+    {
+      ok: ['attr+'],
+    },
+    {
+      ok: ['attr+'],
+    },
+  ],
   'fw-one-on-one': [
     {
       ok: ['fame+', 'morale+'],
@@ -491,6 +499,14 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
     },
     {
       ok: ['morale+', 'cond+', 'trust-'],
+    },
+  ],
+  'gk-backpass': [
+    {
+      ok: ['attr+'],
+    },
+    {
+      ok: ['attr+'],
     },
   ],
   'gk-sweeper': [
@@ -730,7 +746,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'vet-recovery': [
     {
-      ok: ['cond+', 'money-'],
+      ok: ['cond+', 'money-', 'morale+'],
     },
     {
       ok: ['cond+', 'trust+'],
@@ -865,6 +881,38 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
     },
     {
       ok: ['cond+', 'trust-'],
+    },
+  ],
+  'mf-pivot-return': [
+    {
+      ok: ['attr+'],
+    },
+    {
+      ok: ['attr+'],
+    },
+  ],
+  'df-marking-rematch': [
+    {
+      ok: ['attr+'],
+    },
+    {
+      ok: ['attr+'],
+    },
+  ],
+  'mf-read-freekick': [
+    {
+      ok: ['attr+'],
+    },
+    {
+      ok: ['attr+'],
+    },
+  ],
+  'academy-invitation': [
+    {
+      ok: ['morale+'],
+    },
+    {
+      ok: ['fame+'],
     },
   ],
 };

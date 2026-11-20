@@ -25,6 +25,7 @@ export default (guideCopy) => {
       'Season flow, training and self-investment',
       [
         'A season runs through pre-season, first half and second half. In each phase you pick a training direction (attribute training, rest and recovery, personal coach, media activity). Match results are then calculated at once, and appearances, goals, assists, ratings and league position are recorded.',
+        'After you give a young fan your shirt or sign their ball, a letter arrives ahead of their first match. Your gift is in the photo, and your reply earns a story ending and a title.',
         guideCopy.investment,
         'The Season tab shows the current year and national tournaments over the next four years. Before choosing an event option, you can close it temporarily, check other information and return to the same event. Seasons started after this update use the same league records for goal and assist rankings and season-end awards; existing seasons adopt this next season. Korea receives a dedicated Asian Games strength bonus that does not apply to the Olympics.',
         guideCopy.ratingParts,
@@ -68,8 +69,10 @@ export default (guideCopy) => {
       [
         guideCopy.transferPreview,
         guideCopy.loan,
+        'The second league meeting with your previous club in the season after a move is your first trip back. Answer the pre-match interview and choose a celebration if you score. The moment stays in your career journey.',
         'When the season ends, you decide your next destination from staying, renewing or transfer offers. Depending on your results and reputation, offers also arrive from overseas leagues, and each offer shows its evaluation factors and playing-time conditions. Contract length does not guarantee playing time.',
         'With one year left on your contract, the club may propose an early extension (up to age 37). You can also decline and stay on your current terms, or transfer to another club. From age 38 to 40, your club does not offer a renewal when your contract ends, so you need a transfer offer from another club to keep playing, and you retire if none comes. From age 41 you only receive one-year contracts, and renewal depends on last season’s performance.',
+        'After returning from loan, promise your manager five league starts or 450 league minutes. At midseason, review what you actually achieved.',
       ],
     ],
     [

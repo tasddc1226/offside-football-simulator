@@ -1,0 +1,31 @@
+{
+  "id": "t-11-767-career-followups",
+  "title": "이전 선택이 돌아오는 다섯 장면",
+  "items": [
+    "주전 6번이 복귀하면 중원에서 맡을 역할을 상의해요. 득점 1위와 재대결하거나 상대에게 읽힌 프리킥 사인을 바꿀 수도 있어요.",
+    "은사의 유소년 팀을 방문하고, 대표팀 명단 탈락 뒤에는 감독의 전화에 답해요. 소집을 거부했던 선수는 다시 경쟁할지 직접 정해요."
+  ],
+  "en": {
+    "title": "Five moments shaped by your earlier choices",
+    "items": [
+      "Discuss your role when the holding midfielder returns, face the top scorer again or change a free kick the opposition has read.",
+      "Visit your late coach’s academy or take a call after missing the national squad. If you refused call-ups, decide whether to return to selection."
+    ]
+  },
+  "ja": {
+    "title": "あの日の選択がつなぐ五つの場面",
+    "items": [
+      "主力ボランチの復帰後に役割を相談し、得点王との再戦や、読まれたFKのサインにも対応できます。",
+      "恩師の育成チームへの訪問や、代表落選後の監督からの電話も。招集を辞退した選手は再び競うか自分で決められます。"
+    ]
+  },
+  "zh": {
+    "title": "從先前選擇延伸的五個場景",
+    "items": [
+      "主力防守中場歸隊後可討論角色，後衛有機會再遇射手王，也能在自由球暗號被識破時改變戰術。",
+      "拜訪恩師的青訓隊，或在國家隊落選後接到教練來電。曾拒絕徵召的球員可以決定是否重新競爭。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

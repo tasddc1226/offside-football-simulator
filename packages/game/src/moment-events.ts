@@ -1,5 +1,7 @@
 // ───────── 커리어 장면 이벤트 ─────────
 // 사인 요청·월드컵 명단 탈락·대표팀 레전드의 비판·해트트릭·파파라치·은사의 별세. 문구는 i18n/ko/gMoments.ts.
+import { bookAcademyVisit, bookSquadCall } from './career-followups.js';
+import { startFanLetter } from './fan-letter.js';
 import { clamp } from './rng.js';
 import { isPro, addStat } from './engine.js';
 import { natRefusing } from './national.js';
@@ -24,6 +26,7 @@ export const MOMENT_EVENTS: EventDef[] = [
         ok: {
           text: () => L.kidShirtResult,
           fx: (s) => {
+            startFanLetter(s, 'shirt');
             addStat(s, 'fame', 4);
             addStat(s, 'morale', 1);
           },
@@ -34,6 +37,7 @@ export const MOMENT_EVENTS: EventDef[] = [
         ok: {
           text: () => L.kidSignResult,
           fx: (s) => {
+            startFanLetter(s, 'ball');
             addStat(s, 'morale', 7);
             addStat(s, 'fame', 1);
             addStat(s, 'cond', -3);
@@ -65,6 +69,7 @@ export const MOMENT_EVENTS: EventDef[] = [
           text: () => L.wcQuitResult,
           fx: (s) => {
             // 이번 시즌과 다음 시즌 A대표팀 소집·대회 명단에서 빠진다(다음 월드컵 예선 해에 돌아온다).
+            bookSquadCall(s, 'refused');
             s.flags.natQuit = s.year + 1;
             s.nat.captain = false;
             addStat(s, 'fame', 4);
@@ -77,6 +82,7 @@ export const MOMENT_EVENTS: EventDef[] = [
         ok: {
           text: () => L.wcCalmResult,
           fx: (s) => {
+            bookSquadCall(s, 'calm');
             addStat(s, 'morale', 2);
             addStat(s, 'trust', 1);
           },
@@ -214,6 +220,7 @@ export const MOMENT_EVENTS: EventDef[] = [
         ok: {
           text: () => L.coachFuneralResult,
           fx: (s) => {
+            bookAcademyVisit(s, 'photo');
             s.flags.coachFarewell = true;
             s.injury = Math.max(s.injury, 1);
             addStat(s, 'morale', 8);
@@ -227,6 +234,7 @@ export const MOMENT_EVENTS: EventDef[] = [
         ok: {
           text: () => L.coachDedicateOk,
           fx: (s) => {
+            bookAcademyVisit(s, 'armband');
             s.flags.coachFarewell = true;
             addStat(s, 'fame', 5);
             addStat(s, 'morale', 6);
@@ -236,6 +244,7 @@ export const MOMENT_EVENTS: EventDef[] = [
         fail: {
           text: () => L.coachDedicateFail,
           fx: (s) => {
+            bookAcademyVisit(s, 'armband');
             s.flags.coachFarewell = true;
             addStat(s, 'morale', -6);
           },

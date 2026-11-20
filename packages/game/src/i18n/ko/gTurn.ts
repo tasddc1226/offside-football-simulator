@@ -35,3 +35,14 @@ const ko = {
 };
 export type GTurnMsgs = typeof ko;
 export const gTurnText = ns('gTurn', ko);
+
+// Stable, human-readable milestone text for saves and public career snapshots.
+const endings = {
+  hands: '득점 후 두 손을 들었다',
+  run: '득점 후 원정석으로 달려갔다',
+  assist: '동료의 골을 도왔다',
+  played: '팬들에게 박수를 보냈다',
+  bench: '옛 동료들과 인사를 나눴다',
+};
+export const formerAwayMilestone = (club: string, ending: keyof typeof endings) =>
+  `${club} 원정 · ${endings[ending]}`;

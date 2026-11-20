@@ -14,6 +14,7 @@ import { gDating } from './gDating';
 import { gDex } from './gDex';
 import { gDexGroups } from './gDexGroups';
 import { gFanfeed } from './gFanfeed';
+import { gFollowup } from './gFollowup';
 import { gGkLabel } from './gGkLabel';
 import { gLegacy } from './gLegacy';
 import { gLegend } from './gLegend';
@@ -55,6 +56,7 @@ export const zh = {
   gDex,
   gDexGroups,
   gFanfeed,
+  gFollowup,
   gGkLabel,
   gLegacy,
   gLegend,
