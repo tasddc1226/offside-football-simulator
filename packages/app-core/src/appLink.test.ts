@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseAppLink } from './appLink.js';
+import { isAuthReturnLink, parseAppLink } from './appLink.js';
 
 const UUID = '0f8a3b52-6c1d-4e0a-9b7e-1a2b3c4d5e6f';
 
@@ -30,5 +30,25 @@ describe('T-11-622 앱 바로 열기 링크', () => {
       '/',
     ])
       expect(parseAppLink(raw), raw).toBeNull();
+  });
+});
+
+describe('T-11-794 로그인 복귀 주소', () => {
+  it('로그인 복귀 주소만 가려낸다', () => {
+    for (const raw of [
+      'offside://auth?google=ok&ticket=abc',
+      'offside://auth?google=error&reason=cancelled',
+      'offside://auth',
+      'OFFSIDE://auth/?apple=ok',
+    ])
+      expect(isAuthReturnLink(raw), raw).toBe(true);
+    for (const raw of [
+      'offside://authx?google=ok',
+      'offside://notifications/1',
+      'https://offside-lab.com/auth?google=ok',
+      '/auth',
+      '/',
+    ])
+      expect(isAuthReturnLink(raw), raw).toBe(false);
   });
 });
