@@ -1,0 +1,24 @@
+{
+  "id": "t-11-794-android-login-return",
+  "title": "Android 로그인 뒤 화면 오류 수정",
+  "items": [
+    "Android에서 구글 로그인을 마치고 돌아올 때 영어로 된 오류 화면이 앱을 가리던 문제를 고쳤어요."
+  ],
+  "en": {
+    "title": "Fixed the screen shown after signing in on Android",
+    "items": [
+      "Fixed an error screen that covered the app when you came back from signing in with Google on Android."
+    ]
+  },
+  "ja": {
+    "title": "Androidでログイン後に表示される画面の不具合を修正",
+    "items": [
+      "AndroidでGoogleログインを終えて戻ったとき、エラー画面がアプリを覆ってしまう問題を修正しました。"
+    ]
+  },
+  "zh": {
+    "title": "修正 Android 登入後的畫面問題",
+    "items": ["修正了在 Android 完成 Google 登入並返回時，錯誤畫面蓋住 App 的問題。"]
+  },
+  "availability": "app"
+}
