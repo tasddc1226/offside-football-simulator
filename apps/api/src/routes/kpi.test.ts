@@ -8,11 +8,13 @@ import { clientErrors } from '../db/opsSchema.js';
 import { billingAlerts, iapPurchases, memberships } from '../db/schema.js';
 import {
   KPI_BACKFILL_DAYS,
+  collectD1Day,
   kstDayRange,
   kstPastDays,
   runKpiDaily,
   type KpiDailyResult,
 } from '../db/repos/kpi.js';
+import { MEMBER_INTRO_START, membershipIntroGroup } from '../iap/memberIntro.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, callJson, issueAdminCookie, issueCookie } from '../test/http.js';
 
@@ -95,6 +97,7 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     });
     // T-11-577 멤버십 흐름: 어제 새로 가입(자동 갱신 끔) · 어제 갱신 알림 · 어제 끝난 묶음.
     const later = new Date(at + 20 * 86_400_000).toISOString();
+    const fresh = await issueCookie(ctx);
     await ctx.db.insert(memberships).values([
       {
         store: 'apple',
@@ -113,6 +116,16 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
         autoRenew: false,
         verifiedAt: mid,
         createdAt: new Date(Date.parse(mid) - 30 * 86_400_000).toISOString(),
+      },
+      // T-11-774 어제 처음 구독한 다른 구단주(실험 대상). 위 관리자는 앞선 구독이 있어 대상이 아니다.
+      {
+        store: 'google',
+        chainId: 'c3',
+        profileId: fresh.profileId,
+        until: later,
+        autoRenew: true,
+        verifiedAt: mid,
+        createdAt: mid,
       },
     ]);
     await ctx.db.insert(billingAlerts).values({
@@ -291,6 +304,15 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     expect(value(r, yesterday!, 'members_expired', 'google')).toBe(1);
     expect(value(r, yesterday!, 'members_autorenew_off', 'apple')).toBe(1);
     expect(value(r, yesterday!, 'members_autorenew_off', 'google')).toBeUndefined();
+    // T-11-774 첫 달 할인 실험: 시작 뒤 앱 스토어에서 처음 구독한 묶음만 군별로 센다(앞선 구독이 있는 관리자는 빠진다).
+    const introGroup = await membershipIntroGroup(fresh.profileId);
+    const introNew = [`google_offer_new`, `google_control_new`].map((d) =>
+      value(r, yesterday!, 'member_intro', d),
+    );
+    if (mid >= MEMBER_INTRO_START)
+      expect(introNew).toEqual(introGroup === 'offer' ? [1, undefined] : [undefined, 1]);
+    else expect(introNew).toEqual([undefined, undefined]);
+    expect(value(r, yesterday!, 'member_intro', `google_${introGroup}_off`)).toBeUndefined();
     expect(value(r, yesterday!, 'client_errors', 'android')).toBe(7);
     expect(value(r, yesterday!, 'items_held', 'boost')).toBe(12);
     expect(value(r, yesterday!, 'items_holders', 'boost')).toBe(1);
@@ -374,6 +396,51 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
       .first<{ d: string }>();
     expect(count!.d).toBe(kstPastDays(at, KPI_BACKFILL_DAYS).at(-1));
   }, 40_000);
+
+  it('T-11-774 첫 달 할인 실험 대상을 군별로 센다(시작 뒤 앱 스토어 첫 구독만)', async () => {
+    const day = '2026-12-01';
+    const { start, end } = kstDayRange(day);
+    const at = (ms: number) => new Date(Date.parse(start) + ms).toISOString();
+    const until = new Date(Date.parse(end) + 20 * 86_400_000).toISOString();
+    const [first, returning, web, before] = await Promise.all(
+      [1, 2, 3, 4].map(() => issueCookie(ctx)),
+    );
+    const row = (
+      store: 'apple' | 'google' | 'xsolla',
+      chainId: string,
+      profileId: string,
+      createdAt: string,
+    ) => ({
+      store,
+      chainId,
+      profileId,
+      until,
+      autoRenew: store === 'apple' ? false : null,
+      verifiedAt: createdAt,
+      createdAt,
+    });
+    await ctx.db.insert(memberships).values([
+      row('apple', 'i1', first!.profileId, at(3_600_000)),
+      // 앞선 구독이 있으면 신규 할인 대상이 아니다.
+      row('google', 'i2', returning!.profileId, at(-40 * 86_400_000)),
+      row('google', 'i3', returning!.profileId, at(3_600_000)),
+      // 웹 이용권 · 실험 시작 전 가입은 세지 않는다.
+      row('xsolla', 'i4', web!.profileId, at(3_600_000)),
+      row('apple', 'i5', before!.profileId, '2026-11-20T10:00:00.000Z'),
+    ]);
+    const rows = (await collectD1Day(env.DB, day, true, env.OPS_DB)).filter(
+      (r) => r.metric === 'member_intro',
+    );
+    const group = await membershipIntroGroup(first!.profileId);
+    expect(rows.sort((a, b) => a.dim.localeCompare(b.dim))).toEqual([
+      { metric: 'member_intro', dim: `apple_${group}_new`, value: 1 },
+      { metric: 'member_intro', dim: `apple_${group}_off`, value: 1 },
+    ]);
+    // 지난 날을 다시 쓸 때는 지금 상태를 넣지 않는다.
+    expect(
+      (await collectD1Day(env.DB, day, false, env.OPS_DB)).some((r) => r.metric === 'member_intro'),
+    ).toBe(false);
+  });
 
   it('T-11-693 서버 상태 · 라운지 채팅 · 컵 참가를 하루치로 넣고, 채팅방이 답하지 못해도 나머지는 쓴다', async () => {
     const admin = await issueAdminCookie(ctx);

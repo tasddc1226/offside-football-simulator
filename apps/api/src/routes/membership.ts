@@ -3,7 +3,7 @@ import {
   MembershipResponseSchema,
   type MembershipResponse,
 } from '@offside/contracts';
-import { MEMBERSHIP_INTRO_CONTROL_PCT, memberActive } from '@offside/contracts/membership';
+import { memberActive } from '@offside/contracts/membership';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
@@ -11,6 +11,7 @@ import { bindMembership, membershipOf } from '../db/repos/memberships.js';
 import { waitUntil } from '../edgeCache.js';
 import { getDb, type AppEnv, type Bindings } from '../env.js';
 import { AppError } from '../errors.js';
+import { membershipIntroGroup } from '../iap/memberIntro.js';
 import { verifyMembershipClaim, type MembershipRejection } from '../iap/membership.js';
 import { iapAccount, iapStores } from '../iap/verify.js';
 import { requireProfile } from '../middleware/requireProfile.js';
@@ -34,17 +35,6 @@ const reject = (r: MembershipRejection) => conflictError(cupKo(REJECT[r][0]), RE
 /** 새로 가입받는지: 스위치가 켜져 있고 이 구단주가 살 수 있는 스토어가 있을 때. 이미 가입한 구독의 확인은 스위치와 상관없다. */
 const storesFor = (env: Bindings, profileId: string) =>
   env.MEMBERSHIP_ENABLED === '1' ? iapStores(env, profileId) : [];
-
-/**
- * T-11-770e 첫 달 할인 실험의 군. SHA-256('member_intro_v1:' + 프로필 id)의 첫 두 바이트 % 100이 대조군 비율보다 작으면 대조군
- * (할인을 보이지 않는다). 프로필로 고정이라 다시 들어와도 같다. 분석도 같은 식으로 나눈다.
- */
-export async function membershipIntroGroup(profileId: string): Promise<'control' | 'offer'> {
-  const bytes = new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`member_intro_v1:${profileId}`)),
-  );
-  return ((bytes[0]! << 8) | bytes[1]!) % 100 < MEMBERSHIP_INTRO_CONTROL_PCT ? 'control' : 'offer';
-}
 
 async function memberView(env: Bindings, db: Db, profileId: string): Promise<MembershipResponse> {
   const row = await membershipOf(db, profileId);

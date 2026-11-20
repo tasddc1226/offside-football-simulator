@@ -43,23 +43,24 @@ ADMIN_EMAILS가 여러 개여도 Access 정책이 1명만 통과시킨다. 대�
 전날 KST 하루 `[D 00:00, D+1 00:00) KST`를 인덱스 범위로만 읽는다. 단계 하나가 끝나면 `kpi_daily`에 `INSERT … ON CONFLICT DO UPDATE`.
 늦게 들어온 기록(환불 등)을 반영하려고 **최근 3일을 매일 다시 쓴다**.
 
-| metric                  | dim                          | 원천 · 정의                                                                                                      |
-| ----------------------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `signups`               | `all` · `linked`             | `profiles.created_at` 그날(삭제 제외), linked = 구글/애플 연결                                                   |
-| `active`                | `web` · `app` · `all`        | `sessions.last_seen_at` 그날인 서로 다른 프로필(채널별). 다음 날 다시 오면 빠지는 근사치(수집 04:00이라 4시간분) |
-| `careers_new`           | `all`                        | `careers.created_at` 그날                                                                                        |
-| `careers_retired`       | `all`                        | `careers.retired_at` 그날                                                                                        |
-| `iap_count` · `iap_krw` | `ios` · `android` · `xsolla` | `iap_purchases`(테스트 제외) × 정가(`IAP_PRICE_KRW`), 매출 화면과 같은 기준                                      |
-| `ad_free_count`         | `ios` · `android`            | 스토어 알림(`billing_alerts`) 구매 − 환불                                                                        |
-| `pass_count`            | `all`                        | `season_passes` 그날 구매                                                                                        |
-| `members_active`        | `all`                        | 그날 끝 시각에 유효한 `memberships`                                                                              |
-| `comments` · `chat`     | `all`                        | 게시판 댓글 · 라운지 메시지 수                                                                                   |
-| `members_new`           | 스토어                       | T-11-577 `memberships.created_at` 그날(구독 묶음이 처음 생긴 날)                                                 |
-| `members_renewed`       | 스토어                       | T-11-577 `billing_alerts` kind `renewal` · 멤버십 상품 그날                                                      |
-| `members_expired`       | 스토어                       | T-11-577 `memberships.until` 그날(지금 끝난 묶음, 다시 결제하면 날이 옮겨 간다)                                  |
-| `members_autorenew_off` | 스토어                       | T-11-577 어제 끝에 유효하고 `auto_renew = 0`(지금 상태라 어제만, `active`처럼)                                   |
-| `client_errors`         | 플랫폼                       | T-11-577 `client_errors.count` 그날 합                                                                           |
-| `cup_entries`           | `all`                        | 컵 참가 수(접수 기간 날만)                                                                                       |
+| metric                  | dim                          | 원천 · 정의                                                                                                                                                 |
+| ----------------------- | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `signups`               | `all` · `linked`             | `profiles.created_at` 그날(삭제 제외), linked = 구글/애플 연결                                                                                              |
+| `active`                | `web` · `app` · `all`        | `sessions.last_seen_at` 그날인 서로 다른 프로필(채널별). 다음 날 다시 오면 빠지는 근사치(수집 04:00이라 4시간분)                                            |
+| `careers_new`           | `all`                        | `careers.created_at` 그날                                                                                                                                   |
+| `careers_retired`       | `all`                        | `careers.retired_at` 그날                                                                                                                                   |
+| `iap_count` · `iap_krw` | `ios` · `android` · `xsolla` | `iap_purchases`(테스트 제외) × 정가(`IAP_PRICE_KRW`), 매출 화면과 같은 기준                                                                                 |
+| `ad_free_count`         | `ios` · `android`            | 스토어 알림(`billing_alerts`) 구매 − 환불                                                                                                                   |
+| `pass_count`            | `all`                        | `season_passes` 그날 구매                                                                                                                                   |
+| `members_active`        | `all`                        | 그날 끝 시각에 유효한 `memberships`                                                                                                                         |
+| `comments` · `chat`     | `all`                        | 게시판 댓글 · 라운지 메시지 수                                                                                                                              |
+| `members_new`           | 스토어                       | T-11-577 `memberships.created_at` 그날(구독 묶음이 처음 생긴 날)                                                                                            |
+| `members_renewed`       | 스토어                       | T-11-577 `billing_alerts` kind `renewal` · 멤버십 상품 그날                                                                                                 |
+| `members_expired`       | 스토어                       | T-11-577 `memberships.until` 그날(지금 끝난 묶음, 다시 결제하면 날이 옮겨 간다)                                                                             |
+| `members_autorenew_off` | 스토어                       | T-11-577 어제 끝에 유효하고 `auto_renew = 0`(지금 상태라 어제만, `active`처럼)                                                                              |
+| `member_intro`          | `스토어_군_항목`             | T-11-774 첫 달 할인 실험 대상(2026-11-21 뒤 앱 스토어 첫 구독)의 지금까지 합. apple · google × offer · control × new · off · due · kept(지금 상태라 어제만) |
+| `client_errors`         | 플랫폼                       | T-11-577 `client_errors.count` 그날 합                                                                                                                      |
+| `cup_entries`           | `all`                        | 컵 참가 수(접수 기간 날만)                                                                                                                                  |
 
 ### 2단계 — 외부 (에이전트 Worker → API)
 
