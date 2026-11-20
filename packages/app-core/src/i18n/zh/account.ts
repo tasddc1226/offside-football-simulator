@@ -9,7 +9,7 @@ export const account: Translation<AccountMsgs> = {
   retry: '重試',
   guestTitle: '尚未登入',
   guestBody:
-    '遊戲進度只會儲存在這台裝置。登入後，就能用退休球員組隊，並在其他裝置查看球員紀錄與俱樂部名稱。',
+    '遊戲進度只會儲存在這台裝置。登入後，就能用退役球員組隊，並在其他裝置查看球員紀錄與俱樂部名稱。',
   logout: '登出',
   cancel: '取消',
   logoutTitle: '要登出嗎？',
