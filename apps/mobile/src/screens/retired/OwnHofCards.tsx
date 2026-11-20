@@ -8,6 +8,7 @@ import { Txt } from '../../ui/Txt';
 import { View } from 'react-native';
 import { KeepLoginCard } from './KeepLoginCard';
 import { PassNudgeCard } from './PassNudgeCard';
+import { StarterNudge } from './StarterNudge';
 import { PublishCard } from './PublishCard';
 import { ShareImageCard } from './ShareImageCard';
 import { TitlePickCard } from './TitlePickCard';
@@ -25,6 +26,7 @@ export function OwnHofCards({ v }: { v: LegendView }) {
       {eligible ? <PublishCard key={h.id} h={h} /> : null}
       <ShareImageCard v={v} />
       <PassNudgeCard />
+      {eligible ? <StarterNudge /> : null}
       {eligible ? (
         <KeepLoginCard id={h.id!} />
       ) : (

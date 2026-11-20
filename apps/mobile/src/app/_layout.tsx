@@ -20,6 +20,7 @@ import { syncAdFree } from '../platform/adFree';
 import { askTracking } from '../platform/tracking';
 import { recoverIapItems } from '../platform/iapItems';
 import { recoverSeasonPass } from '../platform/seasonPass';
+import { recoverStarterPack } from '../platform/starterPack';
 import { recoverMembership } from '../platform/membership';
 import { useColors, useIsDark } from '../theme/useColors';
 import { useSnapshot } from 'valtio';
@@ -56,6 +57,7 @@ export default function RootLayout() {
     void syncAdFree();
     void recoverIapItems();
     void recoverSeasonPass();
+    void recoverStarterPack();
     void recoverMembership();
   }, [show]);
   useEffect(() => {
