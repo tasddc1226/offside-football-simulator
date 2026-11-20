@@ -14,6 +14,7 @@ import {
 import type { SeasonPassResponse } from '@offside/contracts';
 import { SEASON_PASS_PRODUCT_ID } from '@offside/contracts/season-pass';
 import { claimSeasonPassIap } from '@offside/app-core/api/seasonPass';
+import { clearPassNudge } from '@offside/app-core/passNudge';
 import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
 import { seasonPassText as L } from '@offside/app-core/i18n/ko/seasonPass';
 import { toast } from '../game/host';
@@ -62,6 +63,7 @@ onStoreError((e) => {
 });
 
 onSessionChanged(() => {
+  clearPassNudge();
   account = null;
   seasonPassStore.price = null;
   seasonPassStore.pass = null;

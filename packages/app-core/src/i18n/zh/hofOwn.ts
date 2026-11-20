@@ -2,6 +2,10 @@ import type { Translation } from '../core';
 import type { HofOwnMsgs } from '../ko/hofOwn';
 
 export const hofOwn: Translation<HofOwnMsgs> = {
+  passNudgeTitle: '賽季通行證又開放了新階段',
+  passNudgeBody: '本賽季退役的球員增加了。購買通行證即可一次領取已開放階段的獎勵。',
+  passNudgeGo: '查看賽季通行證',
+  passNudgeClose: '關閉',
   publishTitle: '在全體名人堂公開名字',
   publishBefore: '退役紀錄會登上所有玩家都看得到的名人堂。目前是',
   publishNamed: (p) => `以「${p.name}」的名字`,

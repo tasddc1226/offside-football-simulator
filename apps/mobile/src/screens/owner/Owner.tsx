@@ -270,7 +270,7 @@ export default function Owner() {
   const [admin, setAdmin] = useState(false);
   // T-11-374 카드 과제 창.
   const [exchangeOpen, setExchangeOpen] = useState(false);
-  const [passOpen, setPassOpen] = useState(false);
+  const [passOpen, setPassOpen] = useState(() => takeFocus('seasonPass'));
   // T-11-770b 광고 자리의 멤버십 안내로 들어왔으면 멤버십 창을 연 채로 시작한다(한 번만 읽힌다).
   const [memberOpen, setMemberOpen] = useState(() => takeFocus('membership'));
   const linked = !!acct && acct !== 'error' && isMember(acct);

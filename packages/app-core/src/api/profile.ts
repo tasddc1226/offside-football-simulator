@@ -1,9 +1,12 @@
+import { clearPassNudge } from '../passNudge.js';
 import { apiFetch, apiBaseUrl, type ApiResult, type Profile } from './transport.js';
 
 export function unlinkGoogle(): Promise<ApiResult<undefined>> {
   return apiFetch('/v1/auth/google/unlink', { method: 'POST' });
 }
 export function logout(): Promise<ApiResult<undefined>> {
+  // T-11-770c 앞 계정의 시즌 패스 안내 상태를 다음 계정에 보이지 않는다.
+  clearPassNudge();
   return apiFetch('/v1/auth/logout', { method: 'POST' });
 }
 export function startProfileDeletion(): Promise<

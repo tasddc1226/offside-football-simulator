@@ -5,6 +5,7 @@ import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
 import type { SeasonPassResponse, SeasonPassSeason } from '@offside/contracts';
 import { claimSeasonPassReward, fetchSeasonPass } from '@offside/app-core/api/seasonPass';
+import { notePassSeen } from '@offside/app-core/passNudge';
 import { rewardText } from '@offside/app-core/attendance-view';
 import { RADIUS } from '@offside/app-core/design-tokens';
 import { needsOwnerLogin } from '@offside/app-core/market';
@@ -170,6 +171,7 @@ export function SeasonPass({ onClose }: { onClose: () => void }) {
     const r = await fetchSeasonPass();
     if (!r.ok) return setStatus(needsOwnerLogin(r.error) ? 'login' : 'error');
     setPass(r.data);
+    notePassSeen(r.data.seasons[0]);
     setStatus('ready');
     void syncSeasonPassStore(r.data);
   }, []);
@@ -178,7 +180,10 @@ export function SeasonPass({ onClose }: { onClose: () => void }) {
   }, [load]);
   // 결제가 끝나 서버가 패스를 열면 그 상태로 바꾼다.
   useEffect(() => {
-    if (store.pass) setPass(seasonPassStore.pass);
+    if (store.pass) {
+      setPass(seasonPassStore.pass);
+      notePassSeen(seasonPassStore.pass?.seasons[0]);
+    }
   }, [store.pass]);
 
   const claim = async (s: SeasonPassSeason) => {

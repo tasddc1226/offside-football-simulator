@@ -3,6 +3,11 @@
 import { ns } from '../core';
 
 const ko = {
+  passNudgeTitle: '시즌 패스 단계가 더 열렸어요',
+  passNudgeBody:
+    '이번 시즌에 은퇴시킨 선수가 늘었어요. 패스를 사면 열린 단계까지의 보상을 한 번에 받아요.',
+  passNudgeGo: '시즌 패스 보기',
+  passNudgeClose: '닫기',
   publishTitle: '전체 명예의 전당 이름 공개',
   publishBefore: '은퇴 기록은 모든 유저가 보는 명예의 전당에 올라가요. 지금은',
   publishNamed: (p: { name: string }) => `"${p.name}" 이름으로`,

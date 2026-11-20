@@ -5,6 +5,7 @@
   import type { LegendView } from './state.svelte.js';
   import PublishCard from './PublishCard.svelte';
   import KeepLoginCard from './KeepLoginCard.svelte';
+  import PassNudgeCard from './PassNudgeCard.svelte';
   import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 
   // 은퇴 리포트와 같은 v를 받는다(공유 이미지가 리포트와 같은 값을 그리게). v.own이 있을 때만 그린다.
@@ -17,6 +18,7 @@
 {#await import('./titles/TitlePickCard.svelte') then { default: TitlePickCard }}<TitlePickCard {h} />{/await}
 {#if isHofEligible(h.age)}<PublishCard {h} />{/if}
 {#await import('./share/ShareImageCard.svelte') then { default: ShareImageCard }}<ShareImageCard {v} />{/await}
+<PassNudgeCard />
 {#if isHofEligible(h.age)}
   <KeepLoginCard id={h.id!} />
 {:else}
