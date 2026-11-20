@@ -2,6 +2,7 @@ import type { Translation } from '../core';
 import type { GameMsgs } from '../ko/game';
 
 export const game: Translation<GameMsgs> = {
+  formerAway: '首次作客老東家',
   menuLabel: '遊戲選單',
   tabSeason: '賽季',
   tabPlayer: '球員',

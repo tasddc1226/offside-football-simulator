@@ -11,7 +11,15 @@ export interface StoryDef {
   name: string;
   total: number;
 }
+// Story and ending labels are immutable save keys.
+export const FAN_LETTER_NAMES = {
+  story: '관중석에서 온 편지', // i18n-ignore immutable storyLog save key, localized via tn
+  cheer: '데뷔전을 응원하는 사람', // i18n-ignore immutable storyLog save key, localized via tn
+  tip: '편지에 그린 첫 패스', // i18n-ignore immutable storyLog save key, localized via tn
+} as const;
+
 export const STORIES: Record<string, StoryDef> = {
+  fanLetter: { name: FAN_LETTER_NAMES.story, total: 2 },
   rival: { name: '평생의 라이벌', total: 3 },
   rehab: { name: '재활의 시간', total: 3 },
   scandal: { name: '스캔들', total: 3 },

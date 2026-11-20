@@ -2,6 +2,7 @@
 import { ns } from '../core';
 
 const ko = {
+  formerAway: '친정팀 첫 원정',
   menuLabel: '게임 메뉴',
   tabSeason: '시즌',
   tabPlayer: '선수',

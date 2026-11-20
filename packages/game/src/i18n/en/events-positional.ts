@@ -1,4 +1,5 @@
 // 이벤트 영어 문구 — 정의 모듈의 이벤트 id → 문구(events-data.ts EventText).
+import { gMoments as M } from './gMoments';
 import type { EventText } from '../../events-data';
 
 export const events_positional: Record<string, EventText> = {
@@ -17,6 +18,14 @@ export const events_positional: Record<string, EventText> = {
         label: 'Drop the greed and set up teammates',
         ok: 'The assists pile up instead of goals. The manager calls you an unselfish number 9.',
       },
+    ],
+  },
+  'fw-link-drill': {
+    title: M.linkTitle,
+    text: () => M.linkText,
+    choices: [
+      { label: M.linkLayoff, ok: M.linkLayoffResult },
+      { label: M.linkRun, ok: M.linkRunResult },
     ],
   },
   'fw-one-on-one': {
@@ -188,6 +197,14 @@ export const events_positional: Record<string, EventText> = {
         label: 'Ask the manager for a match off',
         ok: 'You rest for a match and clear your head. Your hold on the number one shirt wobbles a little.',
       },
+    ],
+  },
+  'gk-backpass': {
+    title: M.backpassTitle,
+    text: () => M.backpassText,
+    choices: [
+      { label: M.backpassKick, ok: M.backpassKickResult },
+      { label: M.backpassMove, ok: M.backpassMoveResult },
     ],
   },
   'gk-sweeper': {

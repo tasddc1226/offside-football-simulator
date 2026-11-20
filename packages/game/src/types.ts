@@ -356,9 +356,22 @@ export interface MarketResult {
 
 /** 화면이 이어서 열어야 하는 결정(이벤트·시즌 결산·이적 시장). 저장에 남아 새로고침해도 같은 시트로 돌아온다.
  * market의 res(시즌 결산 결과)·m(이적 옵션)은 한 번 계산하면 저장해 두고 다시 굴리지 않는다. */
+export type AfterPhase =
+  { type: 'event'; id: string; then?: 'seasonEnd' | null } | { type: 'seasonEnd' };
+
+export type ReturnReply = 'respect' | 'fans' | 'later';
+export type ReturnResult = 'goal' | 'assist' | 'played' | 'bench';
+
 export type Pending =
-  | { type: 'event'; id: string; then?: 'seasonEnd' | null }
-  | { type: 'seasonEnd' }
+  | {
+      type: 'formerAway';
+      clubId: string;
+      rd: number;
+      reply: ReturnReply;
+      result: ReturnResult;
+      next: AfterPhase | null;
+    }
+  | AfterPhase
   | { type: 'market'; res: SeasonEndResult | null; m: MarketResult | null };
 
 /** T-11-191 도트 선수 꾸미기 항목(look.ts LOOK_ITEMS). */

@@ -1,4 +1,5 @@
 // イベント日本語文言 — 定義モジュールのイベント id → 文言(events-data.ts EventText).
+import { gMoments as M } from './gMoments';
 import type { EventText } from '../../events-data';
 
 export const events_positional: Record<string, EventText> = {
@@ -17,6 +18,14 @@ export const events_positional: Record<string, EventText> = {
         label: '欲を捨てて味方を生かす',
         ok: 'ゴールの代わりにアシストが積み重なった。監督は「献身的な9番」と称えた。',
       },
+    ],
+  },
+  'fw-link-drill': {
+    title: M.linkTitle,
+    text: () => M.linkText,
+    choices: [
+      { label: M.linkLayoff, ok: M.linkLayoffResult },
+      { label: M.linkRun, ok: M.linkRunResult },
     ],
   },
   'fw-one-on-one': {
@@ -188,6 +197,14 @@ export const events_positional: Record<string, EventText> = {
         label: '監督に1試合の休養を願い出る',
         ok: '1試合休んで気持ちを整理した。正GKの座は少し揺らいでいる。',
       },
+    ],
+  },
+  'gk-backpass': {
+    title: M.backpassTitle,
+    text: () => M.backpassText,
+    choices: [
+      { label: M.backpassKick, ok: M.backpassKickResult },
+      { label: M.backpassMove, ok: M.backpassMoveResult },
     ],
   },
   'gk-sweeper': {

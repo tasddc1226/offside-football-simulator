@@ -1,7 +1,11 @@
 // 이벤트 중국어(번체) 문구(events-data.ts EventText) — 이벤트 id → 문구. 정의 모듈별 파일을 묶는다.
+import { followupTexts } from '../../followup-copy';
+import { gFollowup } from './gFollowup';
 import { gDating as D } from './gDating';
+import { loanReturnTexts } from '../../loan-return';
 import { gLoan as N } from './gLoan';
 import { gLife as F } from './gLife';
+import { fanLetterTranslations } from '../../fan-letter';
 import { gMoments as M } from './gMoments';
 import type { EventText } from '../../events-data';
 import { events_base } from './events-base';
@@ -22,6 +26,8 @@ export const events: Record<string, EventText> = {
       { label: D.pitchLabel, ok: D.pitchResult },
     ],
   },
+  ...followupTexts(gFollowup),
+  ...loanReturnTexts(N),
   'loan-talk': {
     title: N.title,
     text: () => N.text,
@@ -47,6 +53,7 @@ export const events: Record<string, EventText> = {
       { label: F.wagsDeclineLabel, ok: F.wagsDeclineResult },
     ],
   },
+  ...fanLetterTranslations(M),
   'kid-autograph': {
     title: M.kidTitle,
     text: (s) => M.kidText({ name: s.name }),

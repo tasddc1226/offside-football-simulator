@@ -350,3 +350,5 @@ export async function playBlock(
     void c.ui.tick().then(() => c.ui.focusFirstButton?.());
   });
 }
+
+export { formerAwayFixture, askFormerAway, afterFormerAway } from './former-away.js';
