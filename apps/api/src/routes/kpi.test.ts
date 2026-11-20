@@ -326,6 +326,9 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     expect(value(r, yesterday!, 'acq_visits', 'meta:-:jp_a')).toBe(2);
     expect(value(r, yesterday!, 'acq_started', 'meta:-:jp_a')).toBe(1);
     expect(value(r, yesterday!, 'acq_store_clicks', 'meta:-:jp_a')).toBe(1);
+    // T-11-761 은퇴(프로필에 은퇴 커리어가 있다 · 위 ret1 · ret2) · 로그인 연결(운영자 프로필은 Google에 이어져 있다).
+    expect(value(r, yesterday!, 'acq_retired', 'meta:-:jp_a')).toBe(2);
+    expect(value(r, yesterday!, 'acq_linked', 'meta:-:jp_a')).toBe(2);
     expect(value(r, yesterday!, 'acq_visits', 'direct')).toBe(1);
     expect(value(r, yesterday!, 'acq_visits', 'x:-:-')).toBeUndefined();
     expect(value(r, yesterday!, 'webpay_orders', 'reroll_40')).toBe(3);

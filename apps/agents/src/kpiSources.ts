@@ -148,6 +148,130 @@ export async function metaCountryRows(
   return rows;
 }
 
+/** 지표 나눔 이름(서버 규칙 [a-z0-9_:.-]{1,64}). 한글만 있는 이름은 fallback(id)을 쓴다. */
+export function dimName(name: string, fallback: string) {
+  const slug = name
+    .toLowerCase()
+    .replace(/[^a-z0-9_:.-]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .slice(0, 64);
+  return slug || fallback.replace(/[^a-z0-9_:.-]/gi, '').slice(0, 64) || 'unknown';
+}
+
+type MetaAction = { action_type: string; value: string };
+const lpvOf = (actions?: MetaAction[]) =>
+  (actions ?? [])
+    .filter((x) => x.action_type === 'landing_page_view')
+    .reduce((n, x) => n + Number(x.value), 0);
+
+/** 광고 링크의 utm 출처 · 캠페인 · 소재를 서버 유입 나눔(campaignDim, 'meta:global_test:jp_reels')과 같은 모양으로. utm이 없으면 null. */
+export function utmDim(url: string, tags = ''): string | null {
+  let q: URLSearchParams;
+  try {
+    q = new URL(url).searchParams;
+  } catch {
+    q = new URLSearchParams();
+  }
+  for (const [k, v] of new URLSearchParams(tags.replace(/^\?/, ''))) if (!q.has(k)) q.set(k, v);
+  const parts = ['utm_source', 'utm_campaign', 'utm_content'].map((k) => q.get(k) ?? '');
+  if (!parts.some(Boolean)) return null;
+  return (
+    parts
+      .map((x) => x || '-')
+      .join(':')
+      .toLowerCase()
+      .replace(/[^a-z0-9_:.-]/g, '_')
+      .slice(0, 64) || null
+  );
+}
+
+type MetaCreative = {
+  url_tags?: string;
+  asset_feed_spec?: { link_urls?: { website_url?: string }[] };
+  object_story_spec?: {
+    link_data?: { link?: string };
+    video_data?: { call_to_action?: { value?: { link?: string } } };
+  };
+};
+const creativeUrl = (c?: MetaCreative) =>
+  c?.asset_feed_spec?.link_urls?.[0]?.website_url ??
+  c?.object_story_spec?.link_data?.link ??
+  c?.object_story_spec?.video_data?.call_to_action?.value?.link ??
+  '';
+
+/**
+ * T-11-761 광고 유입 퍼널: 세트별 랜딩 페이지 조회(ad_lpv)와, 광고 링크의 utm 소재별 지출 · 노출 · 클릭 · 랜딩 조회.
+ * 소재 나눔은 서버 유입 단계(acq_*)와 같은 이름이라 운영 대시보드가 지출과 커리어 시작을 소재마다 잇는다.
+ * 같은 utm을 쓰는 광고는 합친다. utm이 없는 광고(앱 설치 광고 등)는 소재 지표에서 빠진다.
+ */
+export async function metaFunnelRows(
+  env: Env,
+  day: string,
+  fetcher: Fetch = fetch,
+): Promise<Row[]> {
+  const auth = { headers: { Authorization: `Bearer ${env.META_ADS_ACCESS_TOKEN}` } };
+  const u = new URL(`${META_GRAPH}/act_${env.META_AD_ACCOUNT_ID}/insights`);
+  u.searchParams.set('level', 'ad');
+  u.searchParams.set('fields', 'ad_id,adset_id,adset_name,spend,impressions,clicks,actions');
+  u.searchParams.set('time_range', JSON.stringify({ since: day, until: day }));
+  u.searchParams.set('limit', '200');
+  const r = await fetcher(u.toString(), auth);
+  const data = (await r.json().catch(() => ({}))) as {
+    data?: {
+      ad_id: string;
+      adset_id: string;
+      adset_name?: string;
+      spend?: string;
+      impressions?: string;
+      clicks?: string;
+      actions?: MetaAction[];
+    }[];
+    error?: { message?: string };
+  };
+  if (!r.ok || data.error)
+    throw new Error(`Meta funnel ${r.status} ${data.error?.message ?? ''}`.trim());
+  const ads = (data.data ?? []).filter((a) => /^\d+$/.test(a.ad_id ?? ''));
+  if (!ads.length) return [];
+  const creatives = new Map<string, MetaCreative | undefined>();
+  for (let i = 0; i < ads.length; i += 50) {
+    const ids = ads.slice(i, i + 50).map((a) => a.ad_id);
+    const c = new URL(`${META_GRAPH}/`);
+    c.searchParams.set('ids', ids.join(','));
+    c.searchParams.set(
+      'fields',
+      'creative{url_tags,asset_feed_spec{link_urls},object_story_spec{link_data{link},video_data{call_to_action}}}',
+    );
+    const cr = await fetcher(c.toString(), auth);
+    const got = (await cr.json().catch(() => ({}))) as Record<
+      string,
+      { creative?: MetaCreative }
+    > & {
+      error?: { message?: string };
+    };
+    if (!cr.ok || got.error)
+      throw new Error(`Meta creatives ${cr.status} ${got.error?.message ?? ''}`.trim());
+    for (const id of ids) creatives.set(id, got[id]?.creative);
+  }
+  const rows: Row[] = [];
+  const add = (metric: string, dim: string, value: number) => {
+    const hit = rows.find((x) => x.metric === metric && x.dim === dim);
+    if (hit) hit.value += value;
+    else rows.push({ metric, dim, value });
+  };
+  for (const a of ads) {
+    const lpv = lpvOf(a.actions);
+    add('ad_lpv', dimName(a.adset_name ?? '', a.adset_id), lpv);
+    const c = creatives.get(a.ad_id);
+    const dim = utmDim(creativeUrl(c), c?.url_tags);
+    if (!dim) continue;
+    add('ad_spend_content_krw', dim, Number(a.spend) || 0);
+    add('ad_impr_content', dim, Number(a.impressions) || 0);
+    add('ad_clicks_content', dim, Number(a.clicks) || 0);
+    add('ad_lpv_content', dim, lpv);
+  }
+  return rows;
+}
+
 /** 그날(KST) 새 리뷰 수와 평균 별점(스토어별). 최근 100개(Play는 최근 7일)만 보므로 하루 100개를 넘으면 모자란다. */
 export async function reviewRows(
   env: Env,

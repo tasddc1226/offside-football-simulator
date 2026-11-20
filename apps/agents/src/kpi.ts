@@ -10,7 +10,9 @@ import {
   ascInstallRows,
   ascSalesReady,
   ga4RetentionBatches,
+  dimName,
   metaCountryRows,
+  metaFunnelRows,
   playInstallRows,
   playInstallsReady,
   reviewRows,
@@ -45,15 +47,7 @@ export const kpiReady = (env: Env) => !!(env.API_BASE && env.KPI_INGEST_TOKEN);
 export const kstDayAgo = (at: number, n: number) =>
   new Date(Math.floor((at + KST_MS) / DAY_MS) * DAY_MS - n * DAY_MS).toISOString().slice(0, 10);
 
-/** 지표 나눔 이름(서버 규칙 [a-z0-9_:.-]{1,64}). 한글만 있는 이름은 fallback(id)을 쓴다. */
-export function dimName(name: string, fallback: string) {
-  const slug = name
-    .toLowerCase()
-    .replace(/[^a-z0-9_:.-]+/g, '_')
-    .replace(/^_+|_+$/g, '')
-    .slice(0, 64);
-  return slug || fallback.replace(/[^a-z0-9_:.-]/gi, '').slice(0, 64) || 'unknown';
-}
+export { dimName } from './kpiSources.ts';
 
 const PLATFORM: Record<string, string> = { web: 'web', ios: 'ios', android: 'android' };
 
@@ -165,6 +159,8 @@ export async function runKpiIngest(env: Env, at: number, fetcher: Fetch = fetch)
   if (env.META_ADS_ACCESS_TOKEN && env.META_AD_ACCOUNT_ID) {
     tasks.push(['meta', one((d) => metaRows(env, d, fetcher))]);
     tasks.push(['meta', one((d) => metaCountryRows(env, d, fetcher))]);
+    // T-11-761 세트별 랜딩 조회 · utm 소재별 지출(유입 퍼널). 따로 넣어 실패해도 위 지표는 그대로다.
+    tasks.push(['meta', one((d) => metaFunnelRows(env, d, fetcher))]);
   }
   if (reviewsReady(env))
     tasks.push(['store', one((d) => reviewRows(env, d, storeApi(env, fetcher)))]);
@@ -245,6 +241,32 @@ export async function runAdmobBackfill(env: Env, at: number, days: number, fetch
       out.push({ source: 'admob', day, rows: rows.length });
     } catch (e) {
       out.push({ source: 'admob', day, error: String(e).slice(0, 200) });
+    }
+  }
+  return out;
+}
+
+/** T-11-761 Meta 유입 퍼널 지표(세트별 랜딩 조회 · utm 소재별)를 거꾸로 채울 최대 날 수. */
+export const META_FUNNEL_BACKFILL_MAX_DAYS = 60;
+
+/** T-11-761 Meta 유입 퍼널 지표를 그끄제부터 days일 거꾸로 넣는다(새로 더한 지표를 지난날에도 채운다). 여러 번 돌려도 같다. */
+export async function runMetaFunnelBackfill(
+  env: Env,
+  at: number,
+  days: number,
+  fetcher: Fetch = fetch,
+) {
+  if (!kpiReady(env) || !env.META_ADS_ACCESS_TOKEN || !env.META_AD_ACCOUNT_ID) return [];
+  const n = Math.min(Math.max(Math.trunc(days) || 0, 0), META_FUNNEL_BACKFILL_MAX_DAYS);
+  const out: { source: string; day: string; rows?: number; error?: string }[] = [];
+  for (let i = 3; i < 3 + n; i += 1) {
+    const day = kstDayAgo(at, i);
+    try {
+      const rows = await metaFunnelRows(env, day, fetcher);
+      if (rows.length) await ingest(env, day, 'meta', rows, fetcher);
+      out.push({ source: 'meta', day, rows: rows.length });
+    } catch (e) {
+      out.push({ source: 'meta', day, error: String(e).slice(0, 200) });
     }
   }
   return out;
