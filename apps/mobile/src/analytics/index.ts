@@ -72,6 +72,8 @@ export const trackCommerce: typeof nativeAnalytics.commerce = (o, alive) =>
   nativeAnalytics.commerce(o, alive);
 /** T-11-676 은퇴 커리어 공유 시도와 결과(@offside/app-core/shareMeasurement, 웹과 같은 이벤트). */
 export const trackShare: typeof nativeAnalytics.share = (o) => nativeAnalytics.share(o);
+/** T-11-781 로그인 시도 · 첫 팀 저장 · 따라가기 안내 단계(@offside/app-core/funnelEvents, 웹과 같은 이벤트). */
+export const trackFunnel: typeof nativeAnalytics.funnel = (e) => nativeAnalytics.funnel(e);
 /** 이용 분석 동의가 바뀔 때(구매 퍼널이 진행 중 시도 · 서버 확인 중 표를 버린다). */
 export const onAnalyticsConsent = (fn: () => void) => nativeAnalytics.onConsent(fn);
 /** T-11-669 지금 계정 키(원래 ID가 아니라 profileKey). null = 계정 없음, undefined = 확인 중 · 연결 실패. */

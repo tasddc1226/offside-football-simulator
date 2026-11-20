@@ -260,7 +260,7 @@
 {#snippet guestPane(v: MarketView)}
   <div class="mk-guest" data-market-guest={v}>
     <p>{marketGuestText(v)}</p>
-    <LoginButtons act="market-guest-login" back={{ market: true }} />
+    <LoginButtons act="market-guest-login" back={{ market: true }} place="market" />
   </div>
 {/snippet}
 
@@ -620,7 +620,7 @@
       {#if error}<p class="mk-err" role="alert">{error}</p>{/if}
       <div class="mk-actions mk-foot" class:pair={own}>
         {#if !me}
-          <LoginButtons act="market-login" back={{ market: true }} />
+          <LoginButtons act="market-login" back={{ market: true }} place="market" />
         {:else if own}
           <button class="btn" data-act="listing-lounge-share" onclick={() => void shareToLounge({ kind: 'player', careerId: buying!.card.careerId })}>{LC.sharePlayerAct}</button>
           <button class="btn" disabled={busy} onclick={() => run(() => cancelListing(buying!.id), MARKET_TOAST.unlisted)}>{L.unlist}</button>

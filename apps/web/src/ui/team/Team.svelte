@@ -3,6 +3,7 @@
   import { createTeamMatches } from './teamMatches.svelte.js';
   import { projectTeamDraft } from '@offside/app-core/teamDraftView';
   import LoginButtons from '../LoginButtons.svelte';
+  import { trackFunnel } from '../../analytics/index.js';
   import { takeTeamSeason } from '@offside/app-core/teamOwner';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import { needsOwnerLogin } from '@offside/app-core/market';
@@ -305,6 +306,8 @@
     enhanceOpen = !!r.data.enhanceOpen;
     fatigue = r.data.fatigue ?? null;
     needLogin = false;
+    // T-11-781 팀이 아직 없는 구단주가 이번 시즌 팀 화면을 받았다(탭마다 한 번).
+    if (!r.data.team && season === current) trackFunnel({ kind: 'team_view', players: players.length });
     applyTeam(r.data.team);
     divisionNotice =
       editable && team && season === current ? (takeDivisionChange(season, team.division)?.text ?? null) : null;
@@ -392,6 +395,7 @@
     });
     saving = false;
     if (!r.ok) {
+      trackFunnel({ kind: 'team_fail', reason: r.error.reason ?? r.error.code, created: !team });
       toast(r.error.message);
       // 컵 검사에 걸렸으면(잠금 · 상한 · 최소 인원) 띠를 다시 받는다. 서버는 사유를 details.reason에 담는다.
       if (r.error.reason?.startsWith('CUP_')) void loadCupBand(season);
@@ -399,6 +403,7 @@
     }
     if (sequence !== loadSequence) { if (key) writeTeamDraft(key, null); return false; }
     const created = !team;
+    if (created) trackFunnel({ kind: 'team_done', starters: submitted.slots.filter((x) => x !== null).length });
     const unchanged = JSON.stringify(submitted) === JSON.stringify(draftValue());
     if (!unchanged) {
       team = r.data.team;
@@ -490,7 +495,7 @@
         <div class="eyebrow">My team</div>
         <h1>{L.myTeam}</h1>
         <p class="muted">{L.loginOnly}</p>
-        <LoginButtons back={null} />
+        <LoginButtons back={null} place="team" />
       </section>
     {:else if view === 'achievements'}
       <TeamAchievements ach={records.state.ach} status={records.state.achStatus} newIds={records.state.achNewIds} bind:cat={records.state.achCat} load={(s) => void records.loadAchievements(s)} onrank={openAchRanking} />

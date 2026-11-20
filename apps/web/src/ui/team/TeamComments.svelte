@@ -151,7 +151,7 @@
   {:else if !viewer.google}
     <div class="comment-gate" data-comment-gate="login">
       <p class="muted">{LB.loginGate}</p>
-      <LoginButtons act="comment-login" back={{ team: teamId }} />
+      <LoginButtons act="comment-login" back={{ team: teamId }} place="team_comments" />
     </div>
   {:else if !viewer.nickname}
     <div class="comment-gate" data-comment-gate="nickname">

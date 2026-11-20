@@ -216,7 +216,7 @@ export default function Settings() {
           <Account />
           {guest ? (
             <View style={{ marginTop: 12 }}>
-              <LoginButtons />
+              <LoginButtons place="settings" />
             </View>
           ) : null}
           {admin ? (

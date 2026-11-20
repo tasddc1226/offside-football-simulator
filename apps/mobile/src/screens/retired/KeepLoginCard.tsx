@@ -36,12 +36,12 @@ export function KeepLoginCard({ id }: { id: string }) {
       </Txt>
       <GoogleLoginButton
         testID="share-login"
-        onPress={() => void startGoogleLogin({ career: id })}
+        onPress={() => void startGoogleLogin({ career: id }, 'retire')}
       />
       {apple ? (
         <AppleLoginButton
           testID="share-login-apple"
-          onPress={() => void startAppleLogin({ career: id })}
+          onPress={() => void startAppleLogin({ career: id }, 'retire')}
         />
       ) : null}
     </Card>

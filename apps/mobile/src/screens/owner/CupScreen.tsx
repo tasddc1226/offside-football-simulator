@@ -818,7 +818,7 @@ function CupBody({
             {L.loginCardNote}
           </Txt>
           {/* T-11-443 iOS에서는 Apple 로그인도 함께(다른 로그인 카드와 같은 LoginButtons). */}
-          <LoginButtons back={{ cup: true }} />
+          <LoginButtons place="cup" back={{ cup: true }} />
         </Card>
       ) : null}
       <CupCard
