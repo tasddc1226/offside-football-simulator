@@ -12,7 +12,7 @@ import { handleAppleNotification } from '../iap/refunds.js';
 import { handleGoogleRtdn } from '../iap/rtdn.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
-import { membershipIntroGroup } from './membership.js';
+import { membershipIntroGroup } from '../iap/memberIntro.js';
 
 // Apple 서명 확인 · Google Developer API는 각자의 테스트가 본다. 여기서는 확인 결과를 정해 두고 구독 규칙만 본다.
 const apple = vi.hoisted(() => ({
