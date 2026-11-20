@@ -7,6 +7,7 @@ import { onClubSignal, setClubAccountKey } from '@offside/app-core/clubSignals';
 import type { AccountKey } from '@offside/app-core/retireExpMetrics';
 import type { ShareOutcome } from '@offside/app-core/shareMeasurement';
 import type { CommerceObservation } from '@offside/app-core/commerceStage';
+import type { OfferHintAction, OfferHintPlace, OfferHintStep } from '@offside/app-core/offerHint';
 export { enabled } from './config.js';
 let adapter: typeof import('./browser.js') | undefined;
 let screen = 'home';
@@ -98,6 +99,13 @@ export const trackAppConversion = (
 export type PartnerPopupAction = 'view' | 'click' | 'close' | 'hide_today';
 export const trackPartnerPopup = (action: PartnerPopupAction, variant: 'a' | 'b') =>
   adapter?.trackPartnerPopup(action, variant);
+
+/** T-11-779 상품 안내(은퇴 뒤 시즌 패스 안내 카드) 보임 · 누름 · 닫음. 어댑터 · 동의 전이면 버린다. */
+export const trackOfferHint = (
+  action: OfferHintAction,
+  place: OfferHintPlace,
+  step?: OfferHintStep,
+) => adapter?.trackOfferHint(action, place, step);
 
 /** T-11-669 은퇴 화면 실험 계측. 노출은 이용 분석이 준비될 때까지 보류하고(어댑터 · 동의 · 태그), 노출이 나가기 전의
  * 장면 · 다음 행동 클릭은 보내지 않는다(되돌려 보내지 않음). 계정 키는 원래 ID가 아니라 profileKey다. */

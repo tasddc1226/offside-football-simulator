@@ -409,3 +409,34 @@ describe('T-11-731 rewarded ad funnel', () => {
     expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
   });
 });
+
+describe('T-11-779 offer hint events', () => {
+  it('sends one view per place per run and nothing without consent', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.offerHint('view', 'pass_retired');
+    h.a.offerHint('view', 'pass_retired');
+    h.a.offerHint('click', 'pass_retired', 'go');
+    h.a.offerHint('view', 'member_attendance');
+    h.a.offerHint('click', 'member_attendance', 'open');
+    h.a.offerHint('close', 'member_attendance');
+    h.a.offerHint('view', 'PRIVATE' as never);
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name.startsWith('offer_hint_'));
+    expect(events.map((e) => [e.name, e.params.place, e.params.step])).toEqual([
+      ['offer_hint_view', 'pass_retired', undefined],
+      ['offer_hint_click', 'pass_retired', 'go'],
+      ['offer_hint_view', 'member_attendance', undefined],
+      ['offer_hint_click', 'member_attendance', 'open'],
+      ['offer_hint_close', 'member_attendance', undefined],
+    ]);
+    expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
+
+    const denied = setup({ initial: 'denied' });
+    await denied.a.settled();
+    denied.a.offerHint('view', 'member_boost');
+    denied.a.offerHint('click', 'member_boost', 'go');
+    await denied.a.settled();
+    expect(denied.events.filter((e) => e.name.startsWith('offer_hint_'))).toEqual([]);
+  });
+});

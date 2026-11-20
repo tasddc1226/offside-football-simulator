@@ -9,6 +9,7 @@ import {
 } from './analytics-model.js';
 import { createTracker } from './analytics-tracker.js';
 import { COMMERCE_EVENT, commerceParams, type CommerceObservation } from './commerceStage.js';
+import { createOfferHint } from './offerHint.js';
 import { createRetireExpMetrics } from './retireExpMetrics.js';
 import { shareEventParams, type ShareOutcome } from './shareMeasurement.js';
 import type { Progress } from './player-metrics.js';
@@ -152,6 +153,7 @@ export function createNativeAnalytics(io: IO) {
     account: () => io.retireAccountKey?.(),
     needAccount: () => io.retireNeedAccount?.(),
   });
+  const offerHint = createOfferHint({ allowed: () => allowed() && screen !== 'admin', send });
   const makeTracker = (id: string | null) =>
     createTracker({ allowed, read: io.readLedger, write: io.writeLedger, now: io.now, send }, id);
   return {
@@ -267,6 +269,8 @@ export function createNativeAnalytics(io: IO) {
       }
       send('reward_ad_' + action, { place });
     },
+    /** T-11-779 상품 안내 보임 · 누름 · 닫음(offerHint, 웹 trackOfferHint와 같은 이벤트). view는 실행마다 곳별로 한 번만 보낸다. */
+    offerHint,
     /** 강화권 · 스카우트권 구매 퍼널(commerceStage). 보내는 순간의 이용 분석 동의만 본다. 쌓아 두거나 다시 보내지 않는다. */
     commerce(o: CommerceObservation, alive?: () => boolean) {
       try {

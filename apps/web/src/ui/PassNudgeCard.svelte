@@ -6,18 +6,30 @@
   import { onPassNudge, takePassNudge } from '@offside/app-core/passNudge';
   import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
   import { passEntryOpen } from '@offside/contracts/season-pass';
+  import { trackOfferHint } from '../analytics/index.js';
   import { goSeasonPass } from './nav.js';
 
   let shown = $state(false);
   onMount(() => {
     if (!passEntryOpen(new Date().toISOString())) return;
     const check = () => {
-      if (takePassNudge() !== null) shown = true;
+      if (takePassNudge() === null) return;
+      shown = true;
+      trackOfferHint('view', 'pass_retired');
     };
     check();
     // 이 은퇴가 서버에 올라간 뒤에 기준을 넘길 수 있어, 올라갈 때 한 번 더 본다.
     return onPassNudge(check);
   });
+  // T-11-779 보임 · 누름 · 닫음 계측(화면 · 이동은 그대로).
+  const go = () => {
+    trackOfferHint('click', 'pass_retired', 'go');
+    goSeasonPass();
+  };
+  const close = () => {
+    trackOfferHint('close', 'pass_retired');
+    shown = false;
+  };
 </script>
 
 {#if shown}
@@ -25,8 +37,8 @@
     <div><div class="eyebrow">Season pass</div><h2>{L.passNudgeTitle}</h2></div>
     <p class="muted fs-sm">{L.passNudgeBody}</p>
     <div class="row" style="gap:8px">
-      <button class="btn btn-primary" onclick={goSeasonPass} data-act="pass-nudge-go">{L.passNudgeGo}</button>
-      <button class="btn" onclick={() => (shown = false)} data-act="pass-nudge-close">{L.passNudgeClose}</button>
+      <button class="btn btn-primary" onclick={go} data-act="pass-nudge-go">{L.passNudgeGo}</button>
+      <button class="btn" onclick={close} data-act="pass-nudge-close">{L.passNudgeClose}</button>
     </div>
   </section>
 {/if}
