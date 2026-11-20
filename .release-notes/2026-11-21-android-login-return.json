@@ -18,9 +18,7 @@
   },
   "zh": {
     "title": "修正 Android 登入後的畫面問題",
-    "items": [
-      "修正了在 Android 完成 Google 登入並返回時，錯誤畫面蓋住 App 的問題。"
-    ]
+    "items": ["修正了在 Android 完成 Google 登入並返回時，錯誤畫面蓋住 App 的問題。"]
   },
   "availability": "app"
 }
