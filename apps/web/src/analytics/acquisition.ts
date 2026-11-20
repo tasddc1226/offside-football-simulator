@@ -9,6 +9,7 @@ import {
 import { CONSENT_KEY } from '@offside/app-core/analytics-model';
 import { entryCampaign as landing } from './entry-campaign.js';
 import { consentByDefault } from '../consent-region.js';
+import type { MetaStart } from './meta.js';
 import {
   clearOAuthCampaign,
   oauthMeasurementAllowed,
@@ -271,7 +272,11 @@ export async function setAcquisitionConsent(value: 'granted' | 'denied'): Promis
     return false;
   }
 }
-export function recordAcquisition(action: 'session' | 'start' | 'store_click') {
+export function recordAcquisition(
+  action: 'session' | 'start' | 'store_click',
+  // T-11-765 첫 커리어 시작의 메타 이벤트 ID · 쿠키(광고 측정에 동의했을 때만). 서버가 전환 API로 다시 보낸다.
+  meta: MetaStart | null = null,
+) {
   if (!acquisitionEnabled() || !acquisitionGranted()) return;
   const generation = epoch;
   queue = queue.then(async () => {
@@ -305,6 +310,7 @@ export function recordAcquisition(action: 'session' | 'start' | 'store_click') {
         profileId: session.profile,
         sessionId: session.id,
         campaign: session.campaign,
+        ...(action === 'start' && meta ? { meta } : {}),
       });
       if (res.ok) {
         session.sent = [...(session.sent ?? []), action];

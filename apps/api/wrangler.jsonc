@@ -209,6 +209,7 @@
       "vars": {
         "ENVIRONMENT": "production",
         "PUBLIC_API_ORIGIN": "https://api.offside-lab.com",
+        "META_PIXEL_ID": "931060609804225",
         "NEWS_PUSH_ENABLED": "1",
         "BILLING_ALERTS_ENABLED": "1",
         "GOOGLE_RTDN_AUDIENCE": "https://api.offside-lab.com/v1/iap/google/notifications",

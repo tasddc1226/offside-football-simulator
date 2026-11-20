@@ -210,7 +210,7 @@ describe('Meta FirstSeason은 시즌 1에서만', () => {
     analytics.start(s0, null);
     expect(count(metaEvents(), 'CareerStart')).toBe(1);
     expect(gaEvents()).toContain('career_start');
-    expect(acq.record).toHaveBeenCalledWith('start');
+    expect(acq.record).toHaveBeenCalledWith('start', { eventId: expect.any(String) });
 
     analytics.complete({ cid: s0.cid, year: s0.year!, phase: 1, matches: 5 });
     for (const n of [1, 2]) analytics.firstSeason(career(n));
@@ -256,5 +256,32 @@ describe('Meta FirstSeason은 시즌 1에서만', () => {
     analytics.start(career(0, 'career-c'), null);
     expect(metaEvents().at(-1)).toBe('CareerStart');
     expect(gaEvents()).toContain('career_start');
+  });
+
+  it('T-11-765 첫 커리어 시작만 표준 이벤트로 보내고 같은 이벤트 ID를 서버에 넘긴다', async () => {
+    setConsentStorage('accepted');
+    const { analytics } = await boot();
+    analytics.start(career(0, 'career-a'), null);
+    analytics.start(career(0, 'career-b'), null);
+    const standard = win.fbq.mock.calls.filter(
+      (c) => c[0] === 'track' && c[1] === 'CompleteRegistration',
+    );
+    expect(standard).toHaveLength(1);
+    const eventId = (standard[0]![3] as { eventID: string }).eventID;
+    expect(eventId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(acq.record.mock.calls).toEqual([
+      ['start', { eventId }],
+      ['start', null],
+    ]);
+    // 맞춤 이벤트는 그대로 매번 보낸다(기존 보고 유지).
+    expect(count(metaEvents(), 'CareerStart')).toBe(2);
+  });
+
+  it('T-11-765 광고 측정에 동의하지 않았으면 표준 이벤트도 이벤트 ID도 없다', async () => {
+    setConsentStorage('analytics-only');
+    const { analytics } = await boot();
+    analytics.start(career(0, 'career-a'), null);
+    expect(win.fbq.mock.calls.some((c) => c[1] === 'CompleteRegistration')).toBe(false);
+    expect(acq.record.mock.calls).toEqual([['start', null]]);
   });
 });

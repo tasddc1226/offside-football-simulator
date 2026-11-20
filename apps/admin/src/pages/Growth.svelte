@@ -104,6 +104,40 @@
             </table>
           </div>
         </section>
+        {#if af.platforms.rows.length}
+          <section class="panel">
+            <header>
+              <h2>게재 플랫폼별</h2>
+              <span class="hint">플랫폼 지출이 들어온 {af.platforms.days}일 · 서버 칸은 광고 링크의 utm_term으로 세요</span>
+            </header>
+            <div class="tbl-wrap">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>플랫폼</th><th class="num">지출</th><th class="num">비중</th><th class="num">랜딩 조회</th>
+                    <th class="num">서버 방문</th><th class="num">커리어 시작</th><th class="num">시작 1건당</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {#each af.platforms.rows as p (p.dim)}
+                    <tr data-platform={p.dim}>
+                      <td>{p.label}</td>
+                      <td class="num">{fmt(p.spend, 'krw')}</td>
+                      <td class="num">{fmt(p.share, 'pct')}</td>
+                      <td class="num">{fmt(p.lpv)}</td>
+                      <td class="num">{af.platforms.hasServer ? fmt(p.visits) : '—'}</td>
+                      <td class="num">{af.platforms.hasServer ? fmt(p.started) : '—'}</td>
+                      <td class="num">{af.platforms.hasServer ? fmt(p.costPerStart, 'krw') : '—'}</td>
+                    </tr>
+                  {/each}
+                </tbody>
+              </table>
+            </div>
+            {#if !af.platforms.hasServer}
+              <p class="note">광고 링크에 utm_term=&#123;&#123;site_source_name&#125;&#125;-&#123;&#123;placement&#125;&#125;를 붙인 뒤부터 서버 방문 · 시작이 플랫폼별로 보여요.</p>
+            {/if}
+          </section>
+        {/if}
         <p class="note">
           지출 · 클릭 · 랜딩 조회는 Meta(매일 08:50), 서버 방문부터는 운영 DB(매일 04:00) 값이에요. 서버 방문은 이용 분석에 동의한 방문만 세서
           랜딩 조회보다 적어요(광고 첫 방문은 소개 페이지를 먼저 거쳐요). 커리어 시작 · 은퇴 · 로그인 연결은 그날 들어온 방문 가운데 이어진 수라

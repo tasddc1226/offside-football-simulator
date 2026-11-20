@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { termPlatform } from '@offside/contracts/acquisition';
 import {
   campaignQuery,
   emptyLedger,
@@ -67,6 +68,20 @@ describe('privacy allowlists', () => {
         `https://offside-lab.com/?utm_campaign=season1_launch&utm_content=s1_unknown&player=PRIVATE`,
       ),
     ).toBe('?utm_campaign=season1_launch');
+  });
+  it('T-11-765 keeps a Meta placement term only with an allowlisted source', () => {
+    const base =
+      '?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=jp_reels_v2';
+    expect(
+      campaignQuery(`https://offside-lab.com/${base}&utm_term=IG-Instagram_Reels&fbclid=PRIVATE`),
+    ).toBe(`${base}&utm_term=ig-instagram_reels`);
+    // 치환되지 않은 동적 값 · 이상한 글자는 버린다.
+    expect(campaignQuery(`https://offside-lab.com/${base}&utm_term={{placement}}`)).toBe(base);
+    expect(campaignQuery(`https://offside-lab.com/${base}&utm_term=a%20b`)).toBe(base);
+    // 출처 없이 utm_term만 있는 방문은 캠페인으로 치지 않는다.
+    expect(campaignQuery('https://offside-lab.com/?utm_term=an-an')).toBe('');
+    expect(termPlatform('ig-instagram_reels')).toBe('ig');
+    expect(termPlatform('{{x}}')).toBe('');
   });
   it('keeps the amachuggu partner popup campaign', () => {
     for (const content of ['bs_a', 'bs_b', 'home_popup_a', 'home_popup_b']) {

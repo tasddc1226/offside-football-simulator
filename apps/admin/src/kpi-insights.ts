@@ -308,5 +308,61 @@ export function adFunnel(v: KpiView) {
     dailyCostPerStart,
     /** 퍼널을 센 날 수(소재 지출이 들어온 날). 0이면 지출 없이 기간 전체 서버 단계만 셌다. */
     spendDays: spendDays.length,
+    platforms: adPlatforms(v),
+  };
+}
+
+const PLATFORM_NAMES: Record<string, string> = {
+  ig: 'Instagram',
+  fb: 'Facebook',
+  an: 'Audience Network',
+  msg: 'Messenger',
+  th: 'Threads',
+  wa: 'WhatsApp',
+};
+export type AdPlatformRow = {
+  dim: string;
+  label: string;
+  spend: number;
+  share: number | null;
+  lpv: number;
+  visits: number;
+  started: number;
+  costPerStart: number | null;
+};
+/**
+ * T-11-765 게재 플랫폼별 지출(Meta) ↔ 서버 방문 · 커리어 시작(광고 링크 utm_term 앞부분). 플랫폼 지출이 들어온 날만 센다.
+ * 광고 링크에 utm_term을 붙이기 전 방문은 서버 쪽 칸이 0이다(hasServer로 알린다).
+ */
+export function adPlatforms(v: KpiView) {
+  const pick = (m: string) =>
+    v.report.rows.filter((r) => r.metric === m && isPaid(r.dim)).map((r) => r.dim);
+  const dims = [...new Set([...pick('ad_spend_platform_krw'), ...pick('acq_visits_place')])];
+  const days = v.days.filter((d) => valueOn(v.idx, d, 'ad_spend_platform_krw', dims) !== null);
+  const total = (metric: string, dim: string) =>
+    days.reduce((s, d) => s + (valueOn(v.idx, d, metric, [dim]) ?? 0), 0);
+  const rows = dims.map((dim) => {
+    const spend = total('ad_spend_platform_krw', dim);
+    const started = total('acq_started_place', dim);
+    const key = dim.split(':')[1] ?? dim;
+    return {
+      dim,
+      label: PLATFORM_NAMES[key] ?? key,
+      spend,
+      share: null as number | null,
+      lpv: total('ad_lpv_platform', dim),
+      visits: total('acq_visits_place', dim),
+      started,
+      costPerStart: per(spend, started),
+    };
+  });
+  const all = rows.reduce((s, r) => s + r.spend, 0);
+  for (const r of rows) r.share = per(r.spend, all);
+  return {
+    rows: rows
+      .filter((r) => r.spend > 0 || r.visits > 0)
+      .sort((a, b) => b.spend - a.spend || b.visits - a.visits) as AdPlatformRow[],
+    days: days.length,
+    hasServer: rows.some((r) => r.visits > 0),
   };
 }

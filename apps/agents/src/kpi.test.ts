@@ -38,6 +38,18 @@ describe('운영 지표 수집 (T-11-572)', () => {
               },
             ],
           });
+        // T-11-765 게재 플랫폼별 지출 · 랜딩 조회.
+        if (url.includes('breakdowns=publisher_platform'))
+          return Response.json({
+            data: [
+              {
+                publisher_platform: 'instagram',
+                spend: '1200',
+                actions: [{ action_type: 'landing_page_view', value: '9' }],
+              },
+              { publisher_platform: 'audience_network', spend: '500' },
+            ],
+          });
         // T-11-761 유입 퍼널: 광고별 성과 → 광고 링크(utm) 묶음.
         if (url.includes('level=ad&'))
           return Response.json({
@@ -138,10 +150,10 @@ describe('운영 지표 수집 (T-11-572)', () => {
     expect(out.map((x) => [x.day, x.rows ?? 'error'])).toEqual([
       ['2026-10-28', 4],
       ['2026-10-28', 3],
-      ['2026-10-28', 6],
+      ['2026-10-28', 10],
       ['2026-10-27', 'error'],
       ['2026-10-27', 3],
-      ['2026-10-27', 6],
+      ['2026-10-27', 10],
     ]);
     expect(posts).toHaveLength(5);
     // 같은 utm(대소문자 · url_tags 포함)은 한 소재로 합치고, utm이 없는 앱 설치 광고는 소재 지표에서 빠진다.
@@ -159,6 +171,10 @@ describe('운영 지표 수집 (T-11-572)', () => {
     expect(funnel).toContainEqual({ metric: 'ad_lpv', dim: 'jp_18-44', value: 10 });
     expect(funnel).toContainEqual({ metric: 'ad_lpv', dim: 'jp_app', value: 0 });
     expect(funnel.filter((r) => r.metric === 'ad_spend_content_krw')).toHaveLength(1);
+    expect(funnel).toContainEqual({ metric: 'ad_spend_platform_krw', dim: 'meta:ig', value: 1200 });
+    expect(funnel).toContainEqual({ metric: 'ad_lpv_platform', dim: 'meta:ig', value: 9 });
+    expect(funnel).toContainEqual({ metric: 'ad_spend_platform_krw', dim: 'meta:an', value: 500 });
+    expect(funnel).toContainEqual({ metric: 'ad_lpv_platform', dim: 'meta:an', value: 0 });
     expect(posts[1]!.rows).toContainEqual({ metric: 'ad_installs_country', dim: 'jp', value: 12 });
     expect(posts[0]!.source).toBe('meta');
     expect(posts[0]!.rows).toContainEqual({

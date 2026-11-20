@@ -104,3 +104,36 @@ export function trackMeta(event: 'CareerStart' | 'FirstSeason' | 'AppStoreClick'
   if (!allowed() || !loaded) return;
   fbq('trackCustom', event);
 }
+
+// T-11-765 첫 커리어 시작을 메타 표준 이벤트(CompleteRegistration)로도 보낸다. 맞춤 이벤트(CareerStart)는 맞춤 전환을 따로
+// 만들지 않으면 광고 관리자 보고 · 최적화에 쓰이지 않는다. 이 브라우저에서 한 번만 보내고, 서버(전환 API)가 같은 이벤트 ID로
+// 다시 보내 메타가 하나로 합친다(광고 차단 · 앱 안 브라우저에서 픽셀이 빠져도 서버 쪽이 남는다).
+const START_KEY = 'offside_meta_start_v1';
+function cookie(name: string) {
+  const hit = document.cookie
+    .split(';')
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${name}=`));
+  return hit ? decodeURIComponent(hit.slice(name.length + 1)) : undefined;
+}
+export type MetaStart = { eventId: string; fbc?: string; fbp?: string };
+
+/** 광고 측정에 동의했고 이 브라우저의 첫 커리어 시작이면 픽셀로 보내고, 서버에 넘길 이벤트 ID · 쿠키를 돌려준다. */
+export function trackMetaStart(): MetaStart | null {
+  if (!allowed()) return null;
+  try {
+    if (localStorage.getItem(START_KEY)) return null;
+    localStorage.setItem(START_KEY, '1');
+  } catch {
+    return null;
+  }
+  const eventId = crypto.randomUUID();
+  if (loaded)
+    fbq('track', 'CompleteRegistration', { content_name: 'career_start' }, { eventID: eventId });
+  const out: MetaStart = { eventId };
+  const fbc = cookie('_fbc');
+  const fbp = cookie('_fbp');
+  if (fbc) out.fbc = fbc;
+  if (fbp) out.fbp = fbp;
+  return out;
+}

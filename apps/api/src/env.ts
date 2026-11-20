@@ -8,6 +8,11 @@ export type Bindings = {
   SCHEDULE_DASHBOARD?: { snapshot(): Promise<unknown> };
   CLIENT_ERROR_LIMITER: RateLimit;
   ACQUISITION_ENABLED?: string;
+  /** T-11-765 메타 전환 API: 픽셀 ID(공개 값)와 이벤트 보내기 토큰(비밀). 둘 다 있어야 보낸다. */
+  META_PIXEL_ID?: string;
+  META_CAPI_TOKEN?: string;
+  /** 이벤트 관리자 '테스트 이벤트' 코드. 있으면 실제 집계 대신 테스트 탭으로 간다. */
+  META_CAPI_TEST_CODE?: string;
   /** All app push sends and receipt checks execute in Queue consumers. */
   PUSH_QUEUE?: Queue<import('./push/queuePublish.js').PushWork>;
   CLUB_STRENGTH_ENABLED?: string;

@@ -290,8 +290,37 @@ export async function metaFunnelRows(
     add('ad_clicks_content', dim, Number(a.clicks) || 0);
     add('ad_lpv_content', dim, lpv);
   }
+  // T-11-765 게재 플랫폼별 지출 · 랜딩 조회. 나눔은 광고 링크 utm_term의 앞부분({{site_source_name}})과 같게 'meta:ig' 꼴로 맞춘다.
+  const p = new URL(`${META_GRAPH}/act_${env.META_AD_ACCOUNT_ID}/insights`);
+  p.searchParams.set('level', 'account');
+  p.searchParams.set('fields', 'spend,actions');
+  p.searchParams.set('breakdowns', 'publisher_platform');
+  p.searchParams.set('time_range', JSON.stringify({ since: day, until: day }));
+  p.searchParams.set('limit', '50');
+  const pr = await fetcher(p.toString(), auth);
+  const pd = (await pr.json().catch(() => ({}))) as {
+    data?: { publisher_platform?: string; spend?: string; actions?: MetaAction[] }[];
+    error?: { message?: string };
+  };
+  if (!pr.ok || pd.error)
+    throw new Error(`Meta platforms ${pr.status} ${pd.error?.message ?? ''}`.trim());
+  for (const r of pd.data ?? []) {
+    const short =
+      PLATFORM_SOURCE[r.publisher_platform ?? ''] ?? dimName(r.publisher_platform ?? '', 'etc');
+    add('ad_spend_platform_krw', `meta:${short}`, Number(r.spend) || 0);
+    add('ad_lpv_platform', `meta:${short}`, lpvOf(r.actions));
+  }
   return rows;
 }
+/** 인사이트의 publisher_platform → 광고 링크 동적 값 {{site_source_name}}. */
+const PLATFORM_SOURCE: Record<string, string> = {
+  facebook: 'fb',
+  instagram: 'ig',
+  audience_network: 'an',
+  messenger: 'msg',
+  threads: 'th',
+  whatsapp: 'wa',
+};
 
 /** 그날(KST) 새 리뷰 수와 평균 별점(스토어별). 최근 100개(Play는 최근 7일)만 보므로 하루 100개를 넘으면 모자란다. */
 export async function reviewRows(

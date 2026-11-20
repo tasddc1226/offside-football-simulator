@@ -214,6 +214,7 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     await env.DB.batch([
       acq('acq1', '?utm_source=meta&utm_medium=paid&utm_content=jp_a', mid, true, true),
       acq('acq2', '?utm_source=meta&utm_medium=social&utm_content=jp_a', mid, false, false),
+      acq('acq5', '?utm_source=meta&utm_content=jp_a&utm_term=an-an', mid, true, false),
       acq('acq3', '', mid, true, false),
       acq('acq4', '?utm_source=x', twoDaysAgo, true, true),
       order('wp1', 'reroll_40', 'PAID', 0, mid),
@@ -323,12 +324,17 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     expect(value(r, yesterday!, 'seasons_played', 'all')).toBe(3);
     expect(value(r, yesterday!, 'seasons_played', 'careers')).toBe(2);
     // 매체(medium)는 나눔에서 빠져 같은 소스 · 소재로 합친다.
-    expect(value(r, yesterday!, 'acq_visits', 'meta:-:jp_a')).toBe(2);
-    expect(value(r, yesterday!, 'acq_started', 'meta:-:jp_a')).toBe(1);
+    // utm_term(게재 위치)도 나눔에서 빠진다(acq5).
+    expect(value(r, yesterday!, 'acq_visits', 'meta:-:jp_a')).toBe(3);
+    expect(value(r, yesterday!, 'acq_started', 'meta:-:jp_a')).toBe(2);
     expect(value(r, yesterday!, 'acq_store_clicks', 'meta:-:jp_a')).toBe(1);
     // T-11-761 은퇴(프로필에 은퇴 커리어가 있다 · 위 ret1 · ret2) · 로그인 연결(운영자 프로필은 Google에 이어져 있다).
-    expect(value(r, yesterday!, 'acq_retired', 'meta:-:jp_a')).toBe(2);
-    expect(value(r, yesterday!, 'acq_linked', 'meta:-:jp_a')).toBe(2);
+    expect(value(r, yesterday!, 'acq_retired', 'meta:-:jp_a')).toBe(3);
+    expect(value(r, yesterday!, 'acq_linked', 'meta:-:jp_a')).toBe(3);
+    // T-11-765 utm_term 앞부분(플랫폼)별 방문 · 시작. utm_term이 없는 방문은 세지 않는다.
+    expect(value(r, yesterday!, 'acq_visits_place', 'meta:an')).toBe(1);
+    expect(value(r, yesterday!, 'acq_started_place', 'meta:an')).toBe(1);
+    expect(value(r, yesterday!, 'acq_visits_place', 'meta:ig')).toBeUndefined();
     expect(value(r, yesterday!, 'acq_visits', 'direct')).toBe(1);
     expect(value(r, yesterday!, 'acq_visits', 'x:-:-')).toBeUndefined();
     expect(value(r, yesterday!, 'webpay_orders', 'reroll_40')).toBe(3);
