@@ -43,7 +43,11 @@ SQL 원문·복원 DB는 Actions artifact에 올리지 않으며 workflow 종료
 
 ## 감시 상태
 
-- `cron:backup:last`의 새 생성 결과에는 `consistency: live-copy`, `restoreVerified: false`가 붙는다.
+- `cron:backup:last`의 새 생성 결과에는 `consistency: sealed`(T-11-777 마감 완료) 또는 `live-copy`, `restoreVerified: false`가 붙는다.
+- T-11-777부터 매일 백업을 복원해 보는 워크플로가 통과하면 `d1-manifests/production/last-verified.json`을 올리고,
+  `backupRecovery`는 이 표시가 10일 안이면 `verified`(`source: live-copy`)로 본다. 아래 native export 표시와 둘 중 하나만
+  신선해도 된다. 그래서 query-blocking export는 달마다 찍지 않아도 되고, 한 시점 사본이 따로 필요할 때(큰 마이그레이션 전 등)만
+  정비 시간에 찍는다. 절차는 [매일 백업 문서](d1-backup.md#복원-검증-t-11-777).
 - `cron:infra-health:last.backupRecovery`는 운영 포인터·manifest 해시·출처·시각을 확인한다.
 - 검증 자료 없음/오류는 `backup-recovery-unverified`, snapshot 시작 시각이 35일 초과면 `backup-recovery-stale` 이슈다.
 - 여기서 35일은 검증된 R2 사본의 신선도 기준이다(T-11-686, 이전 30시간). export가 운영 DB 요청을 막아 매일 찍을 수 없으므로

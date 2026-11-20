@@ -20,18 +20,61 @@ D1 Time Travel(30일 시점 복구)과 별개로, D1 밖(R2)에 SQL 사본을 �
 
 - 위치: R2 버킷의 `d1/<ENVIRONMENT>/<YYYY-MM-DD>/0001.sql.gz`, `0002.sql.gz`, … (T-11-274, 조각 번호 순).
   날짜는 UTC 19:00(KST 04:00)에 하루가 시작하는 백업 날이다. 2026-10-13까지는 `d1/<ENVIRONMENT>/<YYYY-MM-DD>.sql.gz` 한 파일.
-- 형식: `wrangler d1 export`와 같은 SQL 텍스트를 gzip — 표 생성 → 데이터(`INSERT`) → 인덱스 순. 표는 외래 키
+- 형식: `wrangler d1 export`와 같은 SQL 텍스트를 gzip — 표 생성 → 데이터(`INSERT`) → 마감 행(`INSERT OR REPLACE`, 아래 "마감") → 인덱스 순.
+  조각에는 `Content-Encoding`을 붙이지 않는다(T-11-777). 받은 파일은 gzip 그대로라 저장한 바이트의 해시를 다시 확인할 수 있다.
+  2026-11 이전 조각은 `Content-Encoding: gzip`이라 `wrangler r2 object get`이 풀어서 준다. 복원 도구는 두 형식을 다 읽는다. 표는 외래 키
   참조 순서로 쓴다. 조각마다 완전한 gzip이고 경계는 늘 행 경계라, 번호 순으로 이어 실행하면 한 파일과 같다(첫 조각이
   머리글·표 생성, 마지막 조각이 인덱스·트리거).
 - 진행: 5분 cron이 매 틱 `src/cron/backup.ts`의 `runBackupStep`을 부른다. UTC 19:00 뒤 첫 틱이 그날 백업을 시작하고,
   틱마다 45초(`BACKUP_STEP_MS`) 또는 압축 24MiB(`BACKUP_CHUNK_BYTES`)만큼 읽어 조각 하나를 `put`하고 다음 위치(표·rowid·
   조각 번호)를 `app_meta`의 `cron:backup:state`에 적는다. 끝나면 `cron:backup:last`에 결과(접두사 `key`, `chunks`, `rows`,
   `bytes`, `steps`, `startedAt`·`finishedAt`)를 남기고 상태를 지운다. 운영 4.3GB 기준 조각 25~~35개·1~~3시간이 든다.
+- 조각 목록: 끝나면 `d1-manifests/<ENVIRONMENT>/<YYYY-MM-DD>.json`과 `latest.json`에 조각별 크기·SHA-256, 행 수, 마감 결과를 남긴다.
+  복원 검증이 D1을 읽지 않고 이 파일만으로 조각을 받는다. 보존 기준은 조각과 같다.
 - 이어받기: 조각을 올린 뒤에만 위치를 바꾼다. 호출이 중간에 죽으면 다음 틱이 같은 번호 조각을 다시 만들어 같은 키에
   덮어쓴다. 잠금(`cron:backup:lease`)은 4분이라 죽은 호출 뒤 다음 틱이 바로 잇는다.
 - 보존: 매일 백업은 30일, 매달 1일 백업은 계속(코드에서 지운다 — 버킷 수명 주기 규칙으로 옮길 수도 있지만 정책을
   레포에 두려고 코드로 했다).
 - 워커에 `BACKUP` R2 바인딩이 없으면 백업만 건너뛴다(정리는 돈다).
+
+### 마감 (T-11-777)
+
+복사가 1~~3시간 걸리는 동안에도 게임은 계속 쓴다. 먼저 복사한 표(부모)에 그 뒤 생긴 행은 빠지고, 나중에 복사한 표(자식)는
+그 행을 가리켜 복원한 DB의 외래 키가 깨졌다(2026-11-02 복원에서 1,711건). 마감은 이 틈을 메운다.
+
+1. 복사 단계에서 표마다 마지막으로 내보낸 rowid와 행 수를 `cron:backup:state`에 적는다.
+2. 전체 복사가 끝나면 표마다 그보다 큰 rowid만 다시 읽어 `INSERT OR REPLACE`로 덧붙인다(참조되는 표 먼저). 한 바퀴에서 읽은
+   행이 200개를 넘으면 한 바퀴 더 돈다(최대 4바퀴). 새 행이 있는 표는 `max(rowid)` 한 번으로 고른다.
+3. 마지막 한 번은 `db.batch()`(한 트랜잭션)로 모든 표를 같은 시점에 읽는다. 표마다 50행까지이고, 넘치면 한 바퀴 더 돈다.
+   복사 때 200행 이하였던 표는 이때 통째로 다시 읽는다. rowid는 끝 행이 지워지면 다시 쓰여서(잠금 행을 매 틱 지우고 넣는
+   `app_meta`) 2번만으로는 새 행을 놓칠 수 있기 때문이다.
+4. 결과의 `consistency`가 `sealed`면 마감까지 끝난 사본이다. 바퀴 수를 다 쓰고도 넘치면 `live-copy`로 남는다.
+
+마감한 사본은 **외래 키가 맞는 사본이지 한 시점 사본이 아니다.** 큰 표에서 제자리 수정(`UPDATE`)된 값은 복사한 때의 값이고,
+복사 뒤 지워진 행은 남아 있다. 큰 표의 끝 행이 지워진 직후 같은 rowid로 들어온 새 행은 놓칠 수 있다. 한 시점이 필요한
+복구(잘못된 마이그레이션 · 버그)는 Time Travel이 맡는다.
+
+마감 행이 앞 조각의 행을 바꿔 넣으므로 **조각을 운영 D1에 하나씩 바로 넣지 않는다.** D1은 외래 키를 늘 강제해서 부모를 바꿔
+넣을 때 먼저 넣은 자식이 딸려 지워지고, 조각 사이에서는 자식이 부모보다 먼저 온다. 복원은 로컬 SQLite에 한 트랜잭션으로
+넣은 뒤(`restore-backup.py`, 외래 키 강제 끔 → 끝에서 검사) 그 DB에서 다시 내보내 D1에 넣는다.
+
+### 복원 검증 (T-11-777)
+
+워크플로 `D1 backup restore verification`(`.github/workflows/d1-backup-verify.yml`)이 매일 KST 10:30에 돈다. 운영 D1은 읽지 않는다.
+
+1. `d1-manifests/production/latest.json`을 읽고 조각을 받아 크기와 SHA-256을 조각 목록과 대조한다.
+2. 새 SQLite에 복원해 `integrity_check`, `foreign_key_check` 0건, 표 수, 행 수(조각 목록의 행 수에서 마감 행 수를 뺀 값 이상)를 본다.
+3. 모두 통과하면 `d1-manifests/production/last-verified.json`을 올린다. 하나라도 실패하면 올리지 않고 워크플로가 실패한다.
+
+시간별 점검(`cron:infra-health:last.backupRecovery`)은 이 표시가 10일 안이면 `verified`(`source: live-copy`)로 본다. 공식 export
+스냅샷(35일) 표시와 둘 중 하나만 신선해도 된다. 받은 조각과 복원한 DB는 운영 자료라 Actions artifact로 올리지 않고 끝나면 지운다.
+
+수동 실행은 `day`(비우면 최신)와 `publish`를 고른다. 로컬에서는 Cloudflare 토큰(R2 읽기)이 있을 때:
+
+```bash
+umask 077
+node tooling/scripts/verify-live-copy.mjs --env production --output "$PRIVATE_DIR/verify"   # --publish 없이는 표시를 올리지 않는다
+```
 
 ### 조회 부하 제어 (T-11-247)
 
@@ -47,7 +90,7 @@ D1 Time Travel(30일 시점 복구)과 별개로, D1 밖(R2)에 SQL 사본을 �
   못하면 4분 뒤 만료된다(T-11-274, 전에는 20분).
 - T-11-274 이전에는 한 호출이 SQL gzip 한 파일을 R2 멀티파트로 올렸다. DB가 4.3GB가 되자 15분 상한을 넘겨 백업과
   뒤 단계가 함께 죽어(아래 장애 기록 10-14), 조각 이어받기로 바꿨다. 전체 백업은 여러 틱에 걸친 라이브 사본이라
-  시점 일관성은 전과 같이 없다(일관 복구는 Time Travel).
+  시점 일관성은 전과 같이 없다(일관 복구는 Time Travel). 외래 키는 T-11-777 마감이 맞춘다.
 
 ### 배포 후 확인
 
@@ -82,8 +125,9 @@ live-copy와 새 `d1-snapshots/production/`의 검증된 공식 export를 구별
 검사 결과를 바꾸기 위해 고아 행을 삭제하지 않는다.
 
 Time Travel은 같은 DB를 제자리에서 덮어쓴다. 운영 DB에서 훈련하지 않으며 다른 DB로 복제할 수 있다고 가정하지 않는다.
-공식 export도 실행 중 요청을 차단하므로 정비 시간 합의 뒤 명시적으로 실행한다. 현재 자동 live-copy 작업은
-그대로 보존하고, 생성 기록을 `consistency: live-copy`, `restoreVerified: false`로 표시한다.
+공식 export도 실행 중 요청을 차단하므로 정비 시간 합의 뒤 명시적으로 실행한다. 자동 매일 백업의 생성 기록은
+`consistency: sealed`(마감 완료) 또는 `live-copy`, `restoreVerified: false`로 표시한다. 복원 검증 결과는 생성 기록이 아니라
+R2의 `d1-manifests/production/last-verified.json`에 남는다(위 "복원 검증").
 
 ## 장애 기록
 

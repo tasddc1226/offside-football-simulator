@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 import { gunzipSync } from 'node:zlib';
 import { unstable_splitSqlQuery as splitSqlQuery } from 'wrangler';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -11,6 +13,8 @@ import {
   backupToR2,
   chunkKey,
   fixedParts,
+  latestManifestKey,
+  manifestKey,
   runBackupStep,
   type BackupResult,
   type BackupState,
@@ -50,7 +54,8 @@ async function dumpOf(bucket: R2Bucket, prefix: string): Promise<{ sql: string; 
   let sql = '';
   for (const key of keys) {
     const obj = await bucket.get(key);
-    expect(obj!.httpMetadata?.contentEncoding).toBe('gzip');
+    // T-11-777 저장한 바이트 그대로 받게 Content-Encoding을 붙이지 않는다.
+    expect(obj!.httpMetadata?.contentEncoding).toBeUndefined();
     sql += gunzipText(await obj!.arrayBuffer());
   }
   return { sql, chunks: keys.length };
@@ -299,7 +304,10 @@ describe('T-10-070 D1 → R2 백업', () => {
       s
         .split('\n')
         .filter(
-          (l) => !l.startsWith('-- offside D1 backup') && !l.startsWith('INSERT INTO "app_meta"'),
+          (l) =>
+            !l.startsWith('-- offside D1 backup') &&
+            !l.startsWith('INSERT INTO "app_meta"') &&
+            !l.startsWith('INSERT OR REPLACE INTO "app_meta"'),
         )
         .join('\n');
     expect(body(sql)).toBe(body((await dumpOf(bucket(), whole.key)).sql));
@@ -343,6 +351,127 @@ describe('T-10-070 D1 → R2 백업', () => {
     expect(redo).toMatchObject({ chunk: 2 });
     expect(await bucket().head(chunkKey(before!.key, 2))).not.toBeNull();
     await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+  });
+
+  // T-11-777 복사가 여러 틱에 걸치는 동안 새로 생긴 부모 행이 빠지면 복원한 DB의 외래 키가 깨진다.
+  describe('T-11-777 마감', () => {
+    /** 조각을 이어 새 SQLite에 한 트랜잭션으로 넣는다(주간 복원 검증과 같은 방식, 외래 키 강제 없음). */
+    const restore = (sql: string) => {
+      const db = new DatabaseSync(':memory:');
+      db.exec(`BEGIN;\n${sql}\nCOMMIT;`);
+      return db;
+    };
+    const career = (id: string, profile: string) =>
+      run(
+        "INSERT INTO careers (id, profile_id, pos, foot, type, trait, start_year, status, app_version, created_at, updated_at) VALUES (?1, ?2, 'FW', '오른발', 'poacher', 'late', 2026, 'active', '1.0.0', '2026-09-28', '2026-09-28')",
+        id,
+        profile,
+      );
+    const stepUntil = async (env: string, stop: (s: BackupState | null) => boolean) => {
+      for (let i = 0; i < 800; i++) {
+        const r = await runBackupStep(ctx.env.DB, bucket(), env, NOW + i * 300_000, { stepMs: 0 });
+        const state = await meta<BackupState>(BACKUP_STATE_KEY);
+        if (r?.done || stop(state)) return state;
+      }
+      throw new Error('backup did not reach the expected position');
+    };
+
+    it('복사 뒤에 생긴 부모 행과 다시 넣은 행을 덧붙여 복원한 DB의 외래 키가 맞는다', async () => {
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+      await run("INSERT INTO app_meta(key,value) VALUES ('seal:replaced','\"old\"')");
+      // profiles(부모)는 지나고 careers(자식)는 아직인 위치에서 멈춘다.
+      const at = (s: BackupState, t: string) => s.tables.indexOf(t);
+      const state = await stepUntil(
+        'seal',
+        (s) => !!s && s.table > at(s, 'profiles') && s.table <= at(s, 'careers'),
+      );
+      expect(state?.phase).toBe('copy');
+      await run(
+        "INSERT INTO profiles (id, settings_json, created_at, last_seen_at) VALUES ('prf_seal', '{}', ?1, ?1)",
+        ago(HOUR),
+      );
+      await career('car_seal', 'prf_seal');
+      // app_meta를 지난 뒤 지우고 다시 넣으면 rowid가 바뀐다 — 앞 조각의 옛 행과 키가 겹친다.
+      await stepUntil('seal', (s) => !!s && (s.phase === 'seal' || s.table > at(s, 'app_meta')));
+      await run("INSERT OR REPLACE INTO app_meta(key,value) VALUES ('seal:replaced','\"new\"')");
+      await stepUntil('seal', () => false);
+      const last = (await meta<BackupResult>(BACKUP_LAST_KEY))!;
+      expect(last).toMatchObject({ consistency: 'sealed', restoreVerified: false });
+      expect(last.seal!.rows).toBeGreaterThanOrEqual(2);
+
+      const { sql } = await dumpOf(bucket(), last.key);
+      expect(sql).toMatch(/^INSERT OR REPLACE INTO "profiles" .*'prf_seal'/m);
+      // 인덱스는 마감 행 뒤에 만든다.
+      expect(sql.lastIndexOf('INSERT OR REPLACE INTO')).toBeLessThan(sql.indexOf('CREATE INDEX'));
+      const db = restore(sql);
+      try {
+        expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+        expect(db.prepare('PRAGMA integrity_check').all()).toEqual([{ integrity_check: 'ok' }]);
+        expect(db.prepare("SELECT profile_id FROM careers WHERE id='car_seal'").get()).toEqual({
+          profile_id: 'prf_seal',
+        });
+        expect(db.prepare("SELECT value FROM app_meta WHERE key='seal:replaced'").all()).toEqual([
+          { value: '"new"' },
+        ]);
+      } finally {
+        db.close();
+      }
+
+      // 조각 목록: 번호 순 조각의 크기와 해시가 R2 객체와 같다.
+      const manifest = await (await bucket().get(manifestKey('seal', last.day)))!.json<{
+        format: string;
+        consistency: string;
+        rows: number;
+        chunks: { object: string; bytes: number; sha256: string }[];
+      }>();
+      expect(manifest).toMatchObject({
+        format: 'offside-d1-live-copy-v1',
+        consistency: 'sealed',
+        rows: last.rows,
+      });
+      expect(manifest.chunks).toHaveLength(last.chunks);
+      for (const chunk of manifest.chunks) {
+        const body = new Uint8Array(
+          await (await bucket().get(last.key + chunk.object))!.arrayBuffer(),
+        );
+        expect(body.byteLength).toBe(chunk.bytes);
+        expect(createHash('sha256').update(body).digest('hex')).toBe(chunk.sha256);
+      }
+      expect(await (await bucket().get(latestManifestKey('seal')))!.json()).toEqual(manifest);
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%' OR key='seal:replaced'");
+      await run("DELETE FROM careers WHERE id='car_seal'");
+      await run("DELETE FROM profiles WHERE id='prf_seal'");
+    });
+
+    it('마감 전에 시작한 백업(위치 기록 없음)은 마감 없이 live-copy로 끝난다', async () => {
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+      await runBackupStep(ctx.env.DB, bucket(), 'legacy', NOW, { stepMs: 0 });
+      await run(
+        "UPDATE app_meta SET value=json_remove(value,'$.hwm','$.phase','$.objects') WHERE key=?1",
+        BACKUP_STATE_KEY,
+      );
+      await stepUntil('legacy', () => false);
+      const last = (await meta<BackupResult>(BACKUP_LAST_KEY))!;
+      expect(last.consistency).toBe('live-copy');
+      expect(last).not.toHaveProperty('seal');
+      expect(await bucket().head(manifestKey('legacy', last.day))).toBeNull();
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+    });
+
+    it('30일 지난 조각 목록도 지우고 latest와 매달 1일 목록은 남긴다', async () => {
+      for (const day of ['2026-08-01', '2026-08-15'])
+        await bucket().put(manifestKey('prune', day), '{}');
+      const r = await backupToR2(ctx.env.DB, bucket(), 'prune', NOW);
+      expect(r.pruned).toBe(1);
+      const keys = (await bucket().list({ prefix: 'd1-manifests/prune/' })).objects.map(
+        (o) => o.key,
+      );
+      expect(keys.sort()).toEqual([
+        manifestKey('prune', '2026-08-01'),
+        manifestKey('prune', r.day),
+        latestManifestKey('prune'),
+      ]);
+    });
   });
 
   it('R2 바인딩이 없어도 정리·보관 단계는 돈다(백업은 5분 cron 몫)', async () => {
