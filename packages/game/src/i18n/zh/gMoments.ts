@@ -1,12 +1,22 @@
 import type { Translation } from '@offside/contracts/i18n';
 import type { gMomentsText } from '../ko/gMoments';
 export const gMoments: Translation<typeof gMomentsText> = {
+  letterTitle: '小球迷的第一場比賽',
+  letterShirt:
+    '一張照片從信封裡滑了出來。孩子穿著你當初送的球衣，袖子折了兩折。「星期六是我的第一場比賽。你第一次上場也會緊張嗎？」',
+  letterBall:
+    '信上貼著一張舊足球的照片。孩子畫了一個箭頭，指向你褪色的簽名。「我一直用這顆球練習。星期六我要第一次上場了！」',
+  letterCheer: '告訴孩子我初次上場也很緊張',
+  letterTip: '寫下接第一腳傳球的訣竅',
+  letterCheerResult:
+    '「我也很緊張。星期六我會喊著你的名字為你加油。」你把信摺好，在信封上寫下孩子的名字。',
+  letterTipResult: '你在紙上畫出兩名隊友，用箭頭連起來。「球來之前先抬頭，看看隊友在哪裡。」',
   kidTitle: '小球迷的簽名請求',
   kidText: (p) => `賽後走向巴士的路上，一個小球迷遞出筆大喊：「${p.name}選手，請幫我簽名！」`,
   kidShirtLabel: '脫下身上的球衣送給他',
   kidShirtResult: '拿到球衣的孩子當場高興得跳起來。旁人拍下的影片隔天在社群上瘋傳。',
   kidSignLabel: '拖著疲憊的身體幫忙簽名',
-  kidSignResult: '替排隊的孩子們一一簽完名才上巴士。最後一個孩子抱著簽名球朝你揮手。',
+  kidSignResult: '你替排隊的孩子一一簽名才上了巴士。隊伍最後的孩子抱著你簽名的足球，向你揮手。',
 
   wcTitle: '落選世界冠軍賽名單',
   wcText: '去年夏天的世界冠軍賽最終名單上沒有你的名字。新賽季前的記者會上，記者問你的感想。',
@@ -23,6 +33,14 @@ export const gMoments: Translation<typeof gMomentsText> = {
   legendReplyFail: '反擊演變成筆戰。之後只要比賽表現不好，那篇貼文就會被翻出來鞭。',
   legendIgnoreLabel: '不予理會',
   legendIgnoreResult: '一句話也沒說，照常去訓練。幾天後話題就轉移了。',
+
+  backpassTitle: '再接一次回傳球',
+  backpassText:
+    '回到訓練場，後衛把地滾球傳向門前。上次就是這種回傳從你腳下溜了過去。教練示意前鋒上來逼搶。',
+  backpassKick: '長傳給另一側的邊後衛',
+  backpassKickResult: '你在前鋒逼近前抬起頭，將球送到另一側邊後衛前插的路線上。',
+  backpassMove: '移到球門側邊接應',
+  backpassMoveResult: '你指向門柱外側的空檔。後衛把球傳到那裡，你側身接球，球門已經不在身後了。',
 
   hatTitle: '帽子戲法與MOM',
   hatText: '上演帽子戲法，獲選全場最佳球員（MOM）。記者把麥克風遞給捧著獎盃的你。',
@@ -47,4 +65,11 @@ export const gMoments: Translation<typeof gMomentsText> = {
   coachDedicateLabel: '把這場比賽獻給教練',
   coachDedicateOk: '賽後指向天空，親吻黑色臂章。那張照片登上了隔天的頭版。',
   coachDedicateFail: '身體很沉重。下半場中段被換下，坐在板凳上不停摸著黑色臂章。',
+  linkTitle: '九號球員的配合訓練',
+  linkText:
+    '教練把影片停在你送出助攻的那一刻。傳球後，前方留著一片空檔。教練在訓練場上標出相同的位置，問你：「接下來還能怎麼跑？」',
+  linkLayoff: '背身護球，一腳回做',
+  linkLayoffResult: '你用身體擋住後衛，一腳把球送到隊友腳前。球一到位，教練便拍手叫好。',
+  linkRun: '回做後跑進禁區',
+  linkRunResult: '球一離腳，你就繞到後衛身後，用腳內側把隊友傳回來的球推進球門死角。',
 };

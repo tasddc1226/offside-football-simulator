@@ -1,0 +1,27 @@
+{
+  "id": "t-11-764-fan-letter",
+  "title": "꼬마 팬의 첫 경기",
+  "items": [
+    "꼬마 팬에게 유니폼을 건네거나 공에 사인해 주면, 훗날 첫 경기를 앞둔 아이에게서 편지가 와요. 그날의 선물이 사진에 등장하고 내 답장은 이야기 결말과 칭호로 남아요."
+  ],
+  "en": {
+    "title": "A young fan’s first match",
+    "items": [
+      "After you give a young fan your shirt or sign their ball, a letter arrives ahead of their first match. Your gift is in the photo, and your reply earns a story ending and a title."
+    ]
+  },
+  "ja": {
+    "title": "小さなファンの初試合",
+    "items": [
+      "ユニフォームをあげたりボールにサインしたりすると、後日その子から初試合を前に手紙が届きます。写真にはあの日の贈り物が写り、返事が物語の結末と称号になります。"
+    ]
+  },
+  "zh": {
+    "title": "小球迷的第一場比賽",
+    "items": [
+      "送球衣給小球迷或替足球簽名後，孩子會在初次出賽前寄信給你。照片裡是當天的禮物，你的回信會留下故事結局與稱號。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

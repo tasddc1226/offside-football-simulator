@@ -3,6 +3,7 @@
 // 여정(miles)·수상(awards)은 그대로 "그때 일어난 일" 로그로 남고, 칭호는 그 로그와 통산 기록을 읽어
 // 파생되는 "지금 나를 부르는 이름"이다. 판정은 전부 순수 함수 — 시드 RNG를 절대 호출하지 않는다(결정성).
 // 획득한 순간만 s.titles에 {id, year}로 적어 두고(획득 연도·새 칭호 연출용), 획득하면 등급만큼 인기가 오른다.
+import { FAN_LETTER_NAMES } from './story.js';
 import { completeKinds } from './collection.js';
 import { WALL_OF_HONOR_TITLE_ID } from '@offside/contracts/hof-rules';
 import { LEAGUES } from './data.js';
@@ -134,6 +135,8 @@ const clubs = (s: GameState) =>
 
 /** 스토리 결말 → 칭호. [스토리 key, 결말(storyLog.ending과 같은 문자열), 칭호 id]. 기한 만료 결말('흐지부지…')은 뺀다. */
 const STORY_ENDINGS: [string, string, string][] = [
+  ['fanLetter', FAN_LETTER_NAMES.cheer, 'st_fan_cheer'],
+  ['fanLetter', FAN_LETTER_NAMES.tip, 'st_fan_tip'],
   ['rival', '끝내 넘어선 벽', 'st_rival_wall'],
   ['rival', '라이벌에서 동료로', 'st_rival_mate'],
   ['rival', '어색한 휴전', 'st_rival_truce'],

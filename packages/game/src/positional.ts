@@ -1,5 +1,8 @@
+import { bookFreekick, bookMarkingRematch, bookPivotReview } from './career-followups.js';
 import { BASE_DETAIL } from '@offside/contracts/positions';
 // ───────── 포지션 전용 이벤트: 공격수 · 미드필더 · 수비수 · 골키퍼 ─────────
+import { gMomentsText as M } from './i18n/ko/gMoments.js';
+import { schedule } from './story.js';
 import { clamp } from './rng.js';
 import { addStat, addAttr, pkWin, leagueOf, roleOf } from './engine.js';
 import { ovr } from './attributes.js';
@@ -48,12 +51,33 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         ok: {
           text: '골 대신 도움이 쌓였습니다. 감독은 "이타적인 9번"이라고 칭찬했습니다.',
           fx: (s) => {
+            schedule(s, 'fw-link-drill', 0);
             s.season.assists++;
             addAttr(s, 'pas', 1);
             addStat(s, 'trust', 1.5);
             addStat(s, 'morale', 4);
           },
         },
+      },
+    ],
+  },
+  {
+    id: 'fw-link-drill',
+    chain: true,
+    w: 0,
+    get title() {
+      return M.linkTitle;
+    },
+    cond: (s) => s.pos === 'FW' && !s.injury,
+    text: () => M.linkText,
+    choices: [
+      {
+        label: () => M.linkLayoff,
+        ok: { text: () => M.linkLayoffResult, fx: (s) => addAttr(s, 'pas', 1) },
+      },
+      {
+        label: () => M.linkRun,
+        ok: { text: () => M.linkRunResult, fx: (s) => addAttr(s, 'sho', 1) },
       },
     ],
   },
@@ -189,12 +213,19 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         ok: {
           text: '훈련장에서 수십 번 맞춘 세트피스가 그대로 골로 이어졌습니다. 어시스트!',
           fx: (s) => {
+            bookFreekick(s);
             s.season.assists++;
             addStat(s, 'trust', 1.5);
             addStat(s, 'morale', 5);
           },
         },
-        fail: { text: '타이밍이 어긋나 공을 뺏겼습니다.', fx: (s) => addStat(s, 'trust', -0.5) },
+        fail: {
+          text: '타이밍이 어긋나 공을 뺏겼습니다.',
+          fx: (s) => {
+            bookFreekick(s);
+            addStat(s, 'trust', -0.5);
+          },
+        },
       },
     ],
   },
@@ -212,6 +243,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         ok: {
           text: '볼 탈취와 전개를 동시에 해냈습니다. "중원의 청소부"라는 별명이 붙었습니다.',
           fx: (s) => {
+            bookPivotReview(s, true);
             addAttr(s, 'def', 3);
             addAttr(s, 'pas', 1);
             addStat(s, 'trust', 2);
@@ -220,6 +252,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         fail: {
           text: '수비 위치 선정이 어색했습니다. 뒷공간을 연달아 내주며 공격 리듬까지 잃었습니다.',
           fx: (s) => {
+            bookPivotReview(s, false);
             addStat(s, 'morale', -6);
             addStat(s, 'trust', -0.5);
           },
@@ -310,6 +343,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
           text: '득점 1위를 슈팅 0개로 묶었습니다. 무실점 승리!',
           fx: (s) => {
             s.season.cs++;
+            bookMarkingRematch(s, 'man');
             pkWin(s);
             addStat(s, 'fame', 5);
             addStat(s, 'trust', 2);
@@ -319,6 +353,7 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         fail: {
           text: '한순간 등을 내줬습니다. 그 한 번에 실점했습니다.',
           fx: (s) => {
+            bookMarkingRematch(s, 'man');
             addStat(s, 'morale', -8);
             addStat(s, 'trust', -1);
           },
@@ -331,12 +366,16 @@ export const POSITIONAL_EVENTS: EventDef[] = [
           text: '공간을 먼저 차지하자 상대 에이스가 고립됐습니다.',
           fx: (s) => {
             s.season.cs++;
+            bookMarkingRematch(s, 'zone');
             addStat(s, 'trust', 1);
           },
         },
         fail: {
           text: '라인 사이로 스루패스가 들어왔습니다. 실점.',
-          fx: (s) => addStat(s, 'morale', -5),
+          fx: (s) => {
+            bookMarkingRematch(s, 'zone');
+            addStat(s, 'morale', -5);
+          },
         },
       },
     ],
@@ -496,11 +535,32 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         ok: {
           text: '한 경기 쉬며 멘탈을 정리했습니다. 넘버원 자리는 조금 흔들립니다.',
           fx: (s) => {
+            schedule(s, 'gk-backpass', 0);
             addStat(s, 'morale', 8);
             addStat(s, 'cond', 8);
             addStat(s, 'trust', -0.5);
           },
         },
+      },
+    ],
+  },
+  {
+    id: 'gk-backpass',
+    chain: true,
+    w: 0,
+    get title() {
+      return M.backpassTitle;
+    },
+    cond: (s) => s.pos === 'GK' && !s.injury,
+    text: () => M.backpassText,
+    choices: [
+      {
+        label: () => M.backpassKick,
+        ok: { text: () => M.backpassKickResult, fx: (s) => addAttr(s, 'pas', 1) },
+      },
+      {
+        label: () => M.backpassMove,
+        ok: { text: () => M.backpassMoveResult, fx: (s) => addAttr(s, 'dri', 1) },
       },
     ],
   },

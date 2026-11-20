@@ -1,0 +1,26 @@
+{
+  "id": "career-first-former-club-away",
+  "title": "친정팀 첫 원정",
+  "items": [
+    "이적 다음 시즌, 리그에서 친정팀을 다시 만나면 경기 전 인터뷰에 답해요. 골을 넣으면 세리머니를 고르고 그날의 장면은 커리어 여정에 남아요."
+  ],
+  "en": {
+    "title": "First trip back",
+    "items": [
+      "Face your former club in the league the season after a move. Answer the pre-match interview, choose how to celebrate if you score, and keep the moment in your career journey."
+    ]
+  },
+  "ja": {
+    "title": "古巣への初遠征",
+    "items": [
+      "移籍翌シーズンにリーグで古巣を訪れると、試合前の取材に答えます。得点したら喜び方を選べ、その日の一幕がキャリアの歩みに残ります。"
+    ]
+  },
+  "zh": {
+    "title": "首次作客老東家",
+    "items": [
+      "轉隊後的下一個賽季，在聯賽作客老東家時接受賽前訪問。進球後可選擇慶祝方式，當天的片段會留在生涯歷程中。"
+    ]
+  },
+  "availability": "web-app"
+}

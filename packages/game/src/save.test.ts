@@ -26,6 +26,22 @@ function legacy(edit: (g: Record<string, unknown>) => void = () => {}): GameStat
 }
 
 describe('migrateSave (T-10-046)', () => {
+  it('keeps a return-leg choice and its queued event across a save round trip', () => {
+    const s = current();
+    const next = { type: 'event', id: 'press', then: 'seasonEnd' } as const;
+    s.pending = next;
+    expect(loadSave(structuredClone(s))!.G.pending).toEqual(next);
+    s.pending = {
+      type: 'formerAway',
+      rd: 22,
+      clubId: 'pl-3',
+      reply: 'respect',
+      result: 'goal',
+      next,
+    };
+    expect(loadSave(JSON.parse(JSON.stringify(s)))!.G.pending).toEqual(s.pending);
+  });
+
   it('이전 시즌에 기록 순위를 소급 생성하지 않고 새 순위 시즌은 보존한다', () => {
     const old = current();
     delete old.season.scoringVersion;

@@ -1,0 +1,25 @@
+{
+  "id": "t-11-766-keeper-backpass",
+  "title": "다시 받는 백패스",
+  "items": [
+    "골키퍼가 백패스 실수 뒤 한 경기 휴식을 요청하면, 복귀 훈련에서 같은 장면을 다시 만나 킥이나 위치 선정을 연습할 수 있어요."
+  ],
+  "en": {
+    "title": "Facing the backpass again",
+    "items": [
+      "Ask for a match off after a backpass error and you can revisit the play in training to work on kicking or positioning."
+    ]
+  },
+  "ja": {
+    "title": "もう一度、あのバックパス",
+    "items": [
+      "バックパスのミスで1試合の休養を申し出ると、復帰後の練習で同じ場面を再現し、キックかポジショニングを磨けます。"
+    ]
+  },
+  "zh": {
+    "title": "再接一次回傳球",
+    "items": ["門將處理回傳失誤後若申請休息一場，可在復訓時重演該次回傳，練習踢球或站位。"]
+  },
+  "availability": "web-app",
+  "balance": true
+}

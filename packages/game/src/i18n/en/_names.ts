@@ -681,6 +681,7 @@ const host = (tn: (ko: string) => string, ko: string | undefined) =>
   ko ? ` (${HOST[ko] ?? tn(ko)})` : '';
 
 const patterns: NamePattern[] = [
+  [/^(.+) 원정 · (.+)$/, (m, tn) => `Away at ${tn(m[1]!)} · ${tn(m[2]!)}`],
   // 로그 시각 라벨 `2026 프리시즌`
   [/^(\d{4}) (프리시즌|전반기|후반기|시즌 종료)$/, (m) => `${m[1]} ${PHASE[m[2]!]}`],
   // 대표팀 대회 이름 `2026 FIFA 월드컵 (미국·캐나다·멕시코)`
@@ -750,6 +751,15 @@ const patterns: NamePattern[] = [
 export const names: NameTable = {
   exact: {
     ...nations,
+    '득점 후 두 손을 들었다': 'Raised both hands after scoring',
+    '득점 후 원정석으로 달려갔다': 'Ran to the away end after scoring',
+    '동료의 골을 도왔다': 'Set up a teammate’s goal',
+    '팬들에게 박수를 보냈다': 'Applauded the fans',
+    '옛 동료들과 인사를 나눴다': 'Caught up with former teammates',
+    '관중석에서 온 편지': 'A letter from the stands',
+    '데뷔전을 응원하는 사람': 'In your corner on debut',
+    '편지에 그린 첫 패스': 'The first pass, on paper',
+
     ...confeds,
     ...LEAGUE,
     ...CLUB,

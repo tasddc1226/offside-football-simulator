@@ -1,6 +1,17 @@
 import type { Translation } from '@offside/contracts/i18n';
 import type { gMomentsText } from '../ko/gMoments';
 export const gMoments: Translation<typeof gMomentsText> = {
+  letterTitle: '小さなファンの初試合',
+  letterShirt:
+    '封筒から写真が一枚こぼれました。あの子が、あなたのあげたユニフォームの袖を二回折って着ています。「土曜日は僕の初試合です。選手も最初は緊張しましたか？」',
+  letterBall:
+    '手紙には使い込んだボールの写真が貼ってあります。薄くなったあなたのサインを、手描きの矢印が指しています。「このボールで練習しました。土曜日は初試合です！」',
+  letterCheer: '自分もデビュー戦では緊張したと返す',
+  letterTip: '最初のパスを受けるコツを書く',
+  letterCheerResult:
+    '「僕も緊張したよ。土曜日は君の名前を呼んで応援するよ」。手紙を折り、封筒にその子の名前を書きました。',
+  letterTipResult:
+    '紙に味方を二人描き、矢印で結びました。「ボールが来る前に顔を上げて。まず味方がどこにいるか見てごらん」',
   kidTitle: '子どもファンのサイン',
   kidText: (p) =>
     `試合後、バスへ向かう途中で子どものファンがペンを差し出します。「${p.name}選手、サインください！」`,
@@ -9,7 +20,7 @@ export const gMoments: Translation<typeof gMomentsText> = {
     'ユニフォームを受け取った子がその場で跳びはねました。近くで撮られた動画が翌日SNSで広まりました。',
   kidSignLabel: '疲れた体でサインをする',
   kidSignResult:
-    '並んだ子どもたち一人ひとりにサインしてバスに乗りました。脚は重くても気分は軽くなりました。',
+    '並んでいた子どもたち全員にサインをしてバスに乗りました。最後の子がサイン入りのボールを抱えて手を振っていました。',
 
   wcTitle: 'ワールドチャンピオンシップメンバー落選',
   wcText:
@@ -31,6 +42,16 @@ export const gMoments: Translation<typeof gMomentsText> = {
     '反論が言い争いに発展しました。次の試合で不調な場面が出るたびに、その投稿が掘り返されます。',
   legendIgnoreLabel: '相手にしない',
   legendIgnoreResult: '何も言わずに練習へ向かいました。数日後、話題は別のところへ移りました。',
+
+  backpassTitle: 'もう一度、あのバックパス',
+  backpassText:
+    '復帰後の練習で、DFがゴール前へボールを転がします。足元をすり抜けたあのバックパスです。コーチの合図でFWがプレスに来ます。',
+  backpassKick: '逆サイドのサイドバックへ大きく蹴る',
+  backpassKickResult:
+    '相手が詰める前に顔を上げました。逆サイドを駆け上がる味方の足元にボールが落ちました。',
+  backpassMove: 'ゴール脇に動いてパスコースを作る',
+  backpassMoveResult:
+    'ポストの外側を指さしました。DFがそこへ転がすと、ゴールに背を向けずに受けられました。',
 
   hatTitle: 'ハットトリックとMOM',
   hatText:
@@ -62,4 +83,13 @@ export const gMoments: Translation<typeof gMomentsText> = {
   coachDedicateOk:
     '試合後、空を指さして黒い喪章に口づけしました。その写真が翌日の一面を飾りました。',
   coachDedicateFail: '体が重く感じました。後半半ばに交代し、ベンチで黒い喪章を触り続けました。',
+  linkTitle: '背番号9の連係練習',
+  linkText:
+    'コーチがアシストの映像を止めた。ボールを落とした先にスペースがある。練習場で同じ位置に印を置いて聞く。「ここから何ができる？」',
+  linkLayoff: '背負って受け、ワンタッチで落とす',
+  linkLayoffResult:
+    '背中で相手を抑え、味方の足元にボールを落とした。パスが届くとコーチが手をたたいた。',
+  linkRun: 'パスを出してゴール前に走り込む',
+  linkRunResult:
+    'パスを出した瞬間に相手の背後へ走った。リターンパスをインサイドでゴールの隅に流し込んだ。',
 };
