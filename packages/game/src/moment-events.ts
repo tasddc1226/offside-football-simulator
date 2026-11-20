@@ -1,5 +1,6 @@
 // ───────── 커리어 장면 이벤트 ─────────
 // 사인 요청·월드컵 명단 탈락·대표팀 레전드의 비판·해트트릭·파파라치·은사의 별세. 문구는 i18n/ko/gMoments.ts.
+import { startFanLetter } from './fan-letter.js';
 import { clamp } from './rng.js';
 import { isPro, addStat } from './engine.js';
 import { natRefusing } from './national.js';
@@ -24,6 +25,7 @@ export const MOMENT_EVENTS: EventDef[] = [
         ok: {
           text: () => L.kidShirtResult,
           fx: (s) => {
+            startFanLetter(s, 'shirt');
             addStat(s, 'fame', 4);
             addStat(s, 'morale', 1);
           },
@@ -34,6 +36,7 @@ export const MOMENT_EVENTS: EventDef[] = [
         ok: {
           text: () => L.kidSignResult,
           fx: (s) => {
+            startFanLetter(s, 'ball');
             addStat(s, 'morale', 7);
             addStat(s, 'fame', 1);
             addStat(s, 'cond', -3);

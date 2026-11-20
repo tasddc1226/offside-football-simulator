@@ -730,7 +730,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'vet-recovery': [
     {
-      ok: ['cond+', 'money-'],
+      ok: ['cond+', 'money-', 'morale+'],
     },
     {
       ok: ['cond+', 'trust+'],

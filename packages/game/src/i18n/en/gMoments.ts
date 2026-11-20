@@ -1,6 +1,17 @@
 import type { Translation } from '@offside/contracts/i18n';
 import type { gMomentsText } from '../ko/gMoments';
 export const gMoments: Translation<typeof gMomentsText> = {
+  letterTitle: 'A young fan’s first match',
+  letterShirt:
+    'A photo slips out of the envelope. The kid is wearing the shirt you gave them, the sleeves rolled up twice. “My first match is on Saturday. Were you nervous before yours?”',
+  letterBall:
+    'A photo of a scuffed football is taped to the letter. An arrow points to your faded autograph. “I practised with this ball. My first match is on Saturday!”',
+  letterCheer: 'Tell them I was nervous on my debut too',
+  letterTip: 'Share a tip for receiving the first pass',
+  letterCheerResult:
+    '“I was nervous too. I’ll be cheering for you on Saturday.” You fold the letter and write their name on the envelope.',
+  letterTipResult:
+    'You sketch two teammates and draw an arrow between them. “Look up before the ball reaches you. Find a teammate first.”',
   kidTitle: 'A young fan asks for an autograph',
   kidText: (p) =>
     `On your way to the team bus after the match, a young fan holds out a pen. "${p.name}, can I have your autograph?"`,
@@ -9,7 +20,7 @@ export const gMoments: Translation<typeof gMomentsText> = {
     'The kid jumped up and down holding your shirt. A video from the crowd spread on social media the next day.',
   kidSignLabel: 'Sign for them despite being exhausted',
   kidSignResult:
-    'You signed for every kid in the line before boarding the bus. Your legs were heavy, but your mood was light.',
+    'You signed for every kid in line. As you boarded the bus, the last one waved with your signed ball tucked under one arm.',
 
   wcTitle: 'Left out of the World Championship squad',
   wcText:

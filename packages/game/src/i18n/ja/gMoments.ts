@@ -1,6 +1,17 @@
 import type { Translation } from '@offside/contracts/i18n';
 import type { gMomentsText } from '../ko/gMoments';
 export const gMoments: Translation<typeof gMomentsText> = {
+  letterTitle: '小さなファンの初試合',
+  letterShirt:
+    '封筒から写真が一枚こぼれました。あの子が、あなたのあげたユニフォームの袖を二回折って着ています。「土曜日は僕の初試合です。選手も最初は緊張しましたか？」',
+  letterBall:
+    '手紙には使い込んだボールの写真が貼ってあります。薄くなったあなたのサインを、手描きの矢印が指しています。「このボールで練習しました。土曜日は初試合です！」',
+  letterCheer: '自分もデビュー戦では緊張したと返す',
+  letterTip: '最初のパスを受けるコツを書く',
+  letterCheerResult:
+    '「僕も緊張したよ。土曜日は君の名前を呼んで応援するよ」。手紙を折り、封筒にその子の名前を書きました。',
+  letterTipResult:
+    '紙に味方を二人描き、矢印で結びました。「ボールが来る前に顔を上げて。まず味方がどこにいるか見てごらん」',
   kidTitle: '子どもファンのサイン',
   kidText: (p) =>
     `試合後、バスへ向かう途中で子どものファンがペンを差し出します。「${p.name}選手、サインください！」`,
@@ -9,7 +20,7 @@ export const gMoments: Translation<typeof gMomentsText> = {
     'ユニフォームを受け取った子がその場で跳びはねました。近くで撮られた動画が翌日SNSで広まりました。',
   kidSignLabel: '疲れた体でサインをする',
   kidSignResult:
-    '並んだ子どもたち一人ひとりにサインしてバスに乗りました。脚は重くても気分は軽くなりました。',
+    '並んでいた子どもたち全員にサインをしてバスに乗りました。最後の子がサイン入りのボールを抱えて手を振っていました。',
 
   wcTitle: 'ワールドチャンピオンシップメンバー落選',
   wcText:

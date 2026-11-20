@@ -7,6 +7,7 @@
 // 바꾸며 배포 번들의 실제 순서를 그대로 옮겼다(번들은 military가 든 청크가 먼저 실행된다). 병역 이벤트는
 // chain이라 추첨 풀에 들지 않아 Node(시뮬레이터)와 순서가 달랐어도 결과는 같았다. 순서는
 // event-registry.test.ts가 고정한다 — 새 이벤트는 해당 목록 끝에 붙인다.
+import { FAN_LETTERS } from './fan-letter.js';
 import { DATING_EVENT } from './dating-event.js';
 import { EVENTS } from './events-data.js';
 import { MILITARY_EVENTS } from './military.js';
@@ -28,6 +29,7 @@ EVENTS.push(
   ...POSITIONAL_EVENTS,
   DATING_EVENT,
   ...MOMENT_EVENTS,
+  ...FAN_LETTERS,
   ...LIFE_EVENTS,
   LOAN_EVENT,
   ...VARIETY_EVENTS,

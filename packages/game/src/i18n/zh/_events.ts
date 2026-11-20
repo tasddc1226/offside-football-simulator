@@ -2,6 +2,7 @@
 import { gDating as D } from './gDating';
 import { gLoan as N } from './gLoan';
 import { gLife as F } from './gLife';
+import { fanLetterTranslations } from '../../fan-letter';
 import { gMoments as M } from './gMoments';
 import type { EventText } from '../../events-data';
 import { events_base } from './events-base';
@@ -47,6 +48,7 @@ export const events: Record<string, EventText> = {
       { label: F.wagsDeclineLabel, ok: F.wagsDeclineResult },
     ],
   },
+  ...fanLetterTranslations(M),
   'kid-autograph': {
     title: M.kidTitle,
     text: (s) => M.kidText({ name: s.name }),

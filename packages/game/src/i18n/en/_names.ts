@@ -750,6 +750,10 @@ const patterns: NamePattern[] = [
 export const names: NameTable = {
   exact: {
     ...nations,
+    '관중석에서 온 편지': 'A letter from the stands',
+    '데뷔전을 응원하는 사람': 'In your corner on debut',
+    '편지에 그린 첫 패스': 'The first pass, on paper',
+
     ...confeds,
     ...LEAGUE,
     ...CLUB,

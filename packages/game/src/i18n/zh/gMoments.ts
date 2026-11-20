@@ -1,12 +1,22 @@
 import type { Translation } from '@offside/contracts/i18n';
 import type { gMomentsText } from '../ko/gMoments';
 export const gMoments: Translation<typeof gMomentsText> = {
+  letterTitle: '小球迷的第一場比賽',
+  letterShirt:
+    '一張照片從信封裡滑了出來。孩子穿著你當初送的球衣，袖子折了兩折。「星期六是我的第一場比賽。你第一次上場也會緊張嗎？」',
+  letterBall:
+    '信上貼著一張舊足球的照片。孩子畫了一個箭頭，指向你褪色的簽名。「我一直用這顆球練習。星期六我要第一次上場了！」',
+  letterCheer: '告訴孩子我初次上場也很緊張',
+  letterTip: '寫下接第一腳傳球的訣竅',
+  letterCheerResult:
+    '「我也很緊張。星期六我會喊著你的名字為你加油。」你把信摺好，在信封上寫下孩子的名字。',
+  letterTipResult: '你在紙上畫出兩名隊友，用箭頭連起來。「球來之前先抬頭，看看隊友在哪裡。」',
   kidTitle: '小球迷的簽名請求',
   kidText: (p) => `賽後走向巴士的路上，一個小球迷遞出筆大喊：「${p.name}選手，請幫我簽名！」`,
   kidShirtLabel: '脫下身上的球衣送給他',
   kidShirtResult: '拿到球衣的孩子當場高興得跳起來。旁人拍下的影片隔天在社群上瘋傳。',
   kidSignLabel: '拖著疲憊的身體幫忙簽名',
-  kidSignResult: '替排隊的孩子們一一簽完名才上巴士。最後一個孩子抱著簽名球朝你揮手。',
+  kidSignResult: '你替排隊的孩子一一簽名才上了巴士。隊伍最後的孩子抱著你簽名的足球，向你揮手。',
 
   wcTitle: '落選世界冠軍賽名單',
   wcText: '去年夏天的世界冠軍賽最終名單上沒有你的名字。新賽季前的記者會上，記者問你的感想。',
