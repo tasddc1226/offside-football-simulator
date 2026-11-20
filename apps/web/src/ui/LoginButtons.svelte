@@ -11,7 +11,7 @@
     /** 구글 버튼의 data-act. Apple 버튼은 'apple-'를 앞에 붙인다. */
     act?: string;
     block?: boolean;
-    /** T-11-781 이 버튼이 있는 곳(로그인 시도 계측). 안 넘기면 구단주 화면의 로그인 카드다. */
+    /** T-11-792 이 버튼이 있는 곳(로그인 시도 계측). 안 넘기면 구단주 화면의 로그인 카드다. */
     place?: LoginPlace;
   } = $props();
 </script>

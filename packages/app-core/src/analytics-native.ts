@@ -288,7 +288,7 @@ export function createNativeAnalytics(io: IO) {
       }
     },
     /**
-     * T-11-781 로그인 시도 · 이번 시즌 팀 저장 · 따라가기 안내 단계(웹 trackFunnel과 같은 이벤트, 값은 funnelEvents의 허용 목록).
+     * T-11-792 로그인 시도 · 이번 시즌 팀 저장 · 따라가기 안내 단계(웹 trackFunnel과 같은 이벤트, 값은 funnelEvents의 허용 목록).
      * once가 붙은 이벤트(팀 화면 보임 · 안내 단계 보임)는 실행마다 한 번만 보낸다.
      */
     funnel(e: FunnelEvent) {

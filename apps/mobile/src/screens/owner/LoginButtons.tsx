@@ -15,7 +15,7 @@ export function LoginButtons({
   block?: boolean;
   /** 로그인을 마치고 돌아갈 곳(없으면 구단주 화면). */
   back?: LoginReturn | null;
-  /** T-11-781 이 버튼이 있는 곳(로그인 시도 계측). 안 넘기면 구단주 화면의 로그인 카드다. */
+  /** T-11-792 이 버튼이 있는 곳(로그인 시도 계측). 안 넘기면 구단주 화면의 로그인 카드다. */
   place?: LoginPlace;
   /** 로그인 시도가 끝나면(성공·취소 모두) 부른다. */
   onDone?: () => void;

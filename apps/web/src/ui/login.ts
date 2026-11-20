@@ -58,7 +58,7 @@ function takeLoginReturn(): LoginReturn | null {
     return null;
   }
 }
-// T-11-781 로그인 시도 계측. 로그인하러 페이지를 떠났다 돌아오므로 누른 곳을 탭 저장소에 적어 두고 돌아와서 읽는다.
+// T-11-792 로그인 시도 계측. 로그인하러 페이지를 떠났다 돌아오므로 누른 곳을 탭 저장소에 적어 두고 돌아와서 읽는다.
 const LOGIN_PLACE_KEY = 'ft_login_place';
 const track = (
   outcome: LoginOutcome,
@@ -124,7 +124,7 @@ export function handleOAuthReturn() {
   const google = url.searchParams.get('google') ?? apple;
   if (!google) return;
   const reason = url.searchParams.get('reason');
-  // T-11-781 주소의 결과 값은 정해진 넷만 읽는다(그 밖은 실패). 취소는 실패와 따로 센다.
+  // T-11-792 주소의 결과 값은 정해진 넷만 읽는다(그 밖은 실패). 취소는 실패와 따로 센다.
   track(
     google === 'linked' || google === 'switched'
       ? google

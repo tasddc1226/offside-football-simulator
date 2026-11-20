@@ -56,7 +56,7 @@ function randomToken(): string {
 
 let busy = false;
 
-/** T-11-781 로그인 시도 계측. 누른 곳 · 제공자 · 결과만 보낸다(서버 사유는 funnelEvents가 허용 목록으로 접는다). */
+/** T-11-792 로그인 시도 계측. 누른 곳 · 제공자 · 결과만 보낸다(서버 사유는 funnelEvents가 허용 목록으로 접는다). */
 const track =
   (place: LoginPlace, provider: LoginProvider) => (outcome: LoginOutcome, reason?: unknown) =>
     trackFunnel({ kind: 'login', outcome, place, provider, reason });

@@ -28,7 +28,7 @@ import { Txt } from '../ui/Txt';
 
 export const coachState = proxy<{ i: number | null }>({ i: null });
 let started = false;
-// T-11-781 설정의 다시 보기로 연 안내는 단계 계측을 보내지 않는다(처음 온 기기의 안내만 잰다).
+// T-11-792 설정의 다시 보기로 연 안내는 단계 계측을 보내지 않는다(처음 온 기기의 안내만 잰다).
 let replaying = false;
 const track = (action: 'step' | 'skip' | 'done', i: number | null) => {
   const step = i === null ? undefined : COACH_STEPS[i];

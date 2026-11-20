@@ -19,7 +19,7 @@
   let vw = $state(innerWidth);
   let vh = $state(innerHeight);
   let scrolledFor = -1;
-  // T-11-781 단계 계측. 처음 온 기기의 안내만 잰다. 커리어를 해 본 기기에서 첫 단계부터 뜨면 설정의 다시 보기라 보내지 않는다.
+  // T-11-792 단계 계측. 처음 온 기기의 안내만 잰다. 커리어를 해 본 기기에서 첫 단계부터 뜨면 설정의 다시 보기라 보내지 않는다.
   const replay = coach.i === 0 && playedBefore();
   let tracked = -1;
   function track(action: 'step' | 'skip' | 'done', i: number | null) {
