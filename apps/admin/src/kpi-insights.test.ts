@@ -170,5 +170,29 @@ describe('T-11-761 광고 유입 퍼널', () => {
     expect(f.creatives).toEqual([]);
     expect(f.spendDays).toBe(0);
     expect(f.steps.every((s) => s.value === 0 && s.cost === null)).toBe(true);
+    expect(f.platforms).toEqual({ rows: [], days: 0, hasServer: false });
+  });
+
+  it('T-11-769 게재 플랫폼별 지출과 utm_term 서버 방문 · 시작을 잇는다', () => {
+    const v = report([
+      row('2026-11-16', 'ad_spend_platform_krw', 'meta:an', 6000),
+      row('2026-11-16', 'ad_spend_platform_krw', 'meta:ig', 4000),
+      row('2026-11-16', 'ad_lpv_platform', 'meta:ig', 30),
+      row('2026-11-16', 'acq_visits_place', 'meta:ig', 20),
+      row('2026-11-16', 'acq_started_place', 'meta:ig', 8),
+      row('2026-11-16', 'acq_visits_place', 'meta:an', 10),
+      row('2026-11-16', 'acq_started_place', 'meta:an', 2),
+      // 플랫폼 지출이 없는 날의 서버 방문은 빠진다.
+      row('2026-11-17', 'acq_visits_place', 'meta:ig', 99),
+    ]);
+    const p = adFunnel(v).platforms;
+    expect(p.days).toBe(1);
+    expect(p.hasServer).toBe(true);
+    expect(
+      p.rows.map((r) => [r.label, r.spend, r.share, r.visits, r.started, r.costPerStart]),
+    ).toEqual([
+      ['Audience Network', 6000, 0.6, 10, 2, 3000],
+      ['Instagram', 4000, 0.4, 20, 8, 500],
+    ]);
   });
 });

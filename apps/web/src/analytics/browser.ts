@@ -25,6 +25,7 @@ import {
   metaEnabled,
   setAdConsent,
   trackMeta,
+  trackMetaStart,
 } from './meta.js';
 import { consentByDefault } from '../consent-region.js';
 import {
@@ -350,7 +351,7 @@ export const analytics = {
       /* cohort origin stays unknown */
     }
     tracker?.start(s, previous);
-    recordAcquisition('start');
+    recordAcquisition('start', trackMetaStart());
     trackMeta('CareerStart');
     const { cid } = s;
     const year = s.year;

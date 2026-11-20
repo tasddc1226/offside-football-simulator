@@ -9,6 +9,7 @@ import { getDb, type AppEnv } from '../env.js';
 import { requireProfile, getSessionOrThrow } from '../middleware/requireProfile.js';
 import { enforceLimit, clientIp, nowIso } from './shared.js';
 import { acquisitionReport } from '../db/repos/acquisition.js';
+import { parseMetaStart, sendMetaStart } from '../metaCapi.js';
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 export function registerAcquisitionRoutes(app: Hono<AppEnv>) {
@@ -106,7 +107,7 @@ export function registerAcquisitionRoutes(app: Hono<AppEnv>) {
       WHERE acquisition_sessions.profile_id=excluded.profile_id AND acquisition_sessions.campaign=excluded.campaign
         AND acquisition_sessions.received_at>=?7
         AND EXISTS(SELECT 1 FROM acquisition_consents WHERE profile_id=?5 AND version=?6)
-      RETURNING id`,
+      RETURNING id, started_at`,
       )
       .bind(
         body.sessionId,
@@ -117,7 +118,10 @@ export function registerAcquisitionRoutes(app: Hono<AppEnv>) {
         ACQUISITION_CONSENT_VERSION,
         cutoff,
       )
-      .first();
+      .first<{ id: string; started_at: string | null }>();
+    // T-11-769 이 세션에서 커리어 시작을 처음 받은 순간에만 메타 전환 API로 보낸다(같은 요청을 다시 보내도 한 번).
+    const meta = body.action === 'start' ? parseMetaStart(body.meta) : null;
+    if (result && meta && result.started_at === now) sendMetaStart(c, meta, { at: now });
     return c.body(null, result ? 204 : 409);
   });
   app.get('/v1/admin/acquisition', async (c) => {

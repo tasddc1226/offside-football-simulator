@@ -56,6 +56,8 @@ export const KPI_EXTERNAL_METRICS = {
     'ad_impr_content',
     'ad_clicks_content',
     'ad_lpv_content',
+    'ad_spend_platform_krw',
+    'ad_lpv_platform',
   ],
   store: ['store_rating', 'store_reviews_new', 'store_review_stars', 'store_installs'],
   social: ['followers'],
