@@ -24,7 +24,7 @@ import { loadHOF, localCareerNames } from '@offside/game/hof-store';
 import { ensureAccount } from '../../game/host';
 import { accountCache, appState } from '../../store';
 import { isMember } from '@offside/app-core/account';
-import { go } from '../../game/nav';
+import { go, takeFocus } from '../../game/nav';
 import { useColors } from '../../theme/useColors';
 import { rem } from '../../theme/type';
 import { Btn, Card, Pill, Press, Row, Screen, Topbar, Txt, Skeleton } from '../../ui';
@@ -271,7 +271,8 @@ export default function Owner() {
   // T-11-374 카드 과제 창.
   const [exchangeOpen, setExchangeOpen] = useState(false);
   const [passOpen, setPassOpen] = useState(false);
-  const [memberOpen, setMemberOpen] = useState(false);
+  // T-11-770b 광고 자리의 멤버십 안내로 들어왔으면 멤버십 창을 연 채로 시작한다(한 번만 읽힌다).
+  const [memberOpen, setMemberOpen] = useState(() => takeFocus('membership'));
   const linked = !!acct && acct !== 'error' && isMember(acct);
   // T-10-103 비로그인으로 확인됐고 이 기기에 은퇴한 선수도 없으면 빈 '내 선수'를 숨긴다(확인 중·연결 실패면 그대로 둔다).
   const [localCount] = useState(() => loadHOF().length);

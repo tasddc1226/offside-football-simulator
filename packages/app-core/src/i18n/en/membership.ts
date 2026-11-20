@@ -43,4 +43,6 @@ export const membership: Translation<MembershipMsgs> = {
   badge: 'Supporter',
   badgeLabel: 'Club membership supporter',
   back: 'Back to owner',
+  adHint: 'Members get this without ads',
+  adHintGo: 'See membership',
 };

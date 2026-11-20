@@ -40,4 +40,6 @@ export const membership: Translation<MembershipMsgs> = {
   badge: '支持者',
   badgeLabel: '俱樂部會員 支持者',
   back: '回到球隊老闆頁面',
+  adHint: '加入會員就不用看廣告',
+  adHintGo: '查看會員',
 };

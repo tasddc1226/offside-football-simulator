@@ -42,6 +42,8 @@ const ko = {
   badge: '서포터',
   badgeLabel: '클럽 멤버십 서포터',
   back: '구단주 화면으로',
+  adHint: '멤버십이면 광고 없이 받아요',
+  adHintGo: '멤버십 보기',
 };
 
 export type MembershipMsgs = typeof ko;

@@ -42,4 +42,6 @@ export const membership: Translation<MembershipMsgs> = {
   badge: 'サポーター',
   badgeLabel: 'クラブメンバーシップ サポーター',
   back: 'オーナー画面へ',
+  adHint: 'メンバーシップなら広告なしで受け取れます',
+  adHintGo: 'メンバーシップを見る',
 };

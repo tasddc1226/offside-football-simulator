@@ -28,6 +28,7 @@ import { NATION_EN } from '@offside/contracts/nations-en';
 import { fmtValue } from '@offside/app-core/format';
 import { retireAsk, save } from '../../game/host';
 import { BoostFx } from '../../components/BoostFx';
+import { MemberAdHint } from '../../components/MemberAdHint';
 import { TermHelp } from '../../components/TermHelp';
 import { AuctionCard } from './AuctionCard';
 import { appState } from '../../store';
@@ -258,6 +259,7 @@ function BoostCard({ s }: { s: GameState }) {
               {adBusy ? B.adLoading : v.label!}
             </Btn>
           ) : null}
+          {boostAd ? <MemberAdHint place="boost" /> : null}
           {club.offer ? (
             <Btn disabled={adBusy} testID="boost-club-btn" onPress={() => void onClubBoost()}>
               {B.clubBoost({ price: fundsText(club.offer.price), chance: v.chance })}
