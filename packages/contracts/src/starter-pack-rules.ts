@@ -21,7 +21,7 @@ export const STARTER_PACK_PRICE_KRW = 3300;
  * 화면에 입구를 보이는지. 스토어 상품 승인 · 서버 STARTER_PACK_ENABLED · 실기기 결제 확인이 끝나면 true로 바꿔 연다(false면
  * 개발 빌드에서만 보인다). 판매 자체는 서버가 정한다.
  */
-export const STARTER_PACK_LIVE = false;
+export const STARTER_PACK_LIVE = true;
 /** 대조군 비율(%). 자격이 되는 구단주 가운데 이만큼은 묶음을 보지 않는다(프로필마다 고정, 전체 결제 기여액 비교용). */
 export const STARTER_PACK_CONTROL_PCT = 20;
 /** 이 나이 이상에 은퇴한 선수가 한 명은 있어야 보인다(끝까지 뛴 커리어). */
