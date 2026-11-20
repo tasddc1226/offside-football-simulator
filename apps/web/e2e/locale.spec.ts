@@ -26,6 +26,8 @@ test('언어: 영어 브라우저는 영어로 시작하고, 설정에서 한국
     page.waitForEvent('load'),
     page.locator('[data-setting="lang"]').selectOption('en'),
   ]);
+  // 영어는 사전을 받은 뒤에 화면을 연결한다. 새로고침 직후 누르면 반응하지 않을 수 있어 화면 언어 적용을 기다린다.
+  await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await page.locator('.main-nav [data-act="settings"]').click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Settings');
 });

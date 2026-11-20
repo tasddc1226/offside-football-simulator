@@ -230,6 +230,62 @@ test('로그인 버튼을 여러 번 눌러도 한 번만 시작한다', async (
   expect(calls.filter((c) => c === 'start')).toHaveLength(1);
 });
 
+// T-11-797 떠난 뒤의 가드는 그 시도가 건 예약으로만 풀린다. 첫 로드의 pageshow나 이전 시도의 타이머가 다음 시도를 일찍 풀면
+// 떠나는 중의 누름이 다시 시작 계측과 프로필 요청을 만든다.
+test('떠난 뒤의 로그인 가드는 뒤로 가기 복귀에서만 바로 풀리고, 이전 시도의 예약이 다음 시도를 풀지 않는다', async ({
+  page,
+}) => {
+  const calls: string[] = [];
+  await page.route(PROFILE_URL, (route) => {
+    calls.push('profile');
+    return route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+  // 204면 브라우저가 지금 문서에 그대로 남는다(이동이 취소된 것과 같다).
+  await page.route(`${API}/v1/auth/google/start`, (route) => {
+    calls.push('start');
+    return route.fulfill({ status: 204 });
+  });
+  const starts = () => calls.filter((c) => c === 'start').length;
+  const pageshow = (persisted: boolean) =>
+    page.evaluate(
+      (p) => void window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: p })),
+      persisted,
+    );
+
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  const login = page.locator('[data-act="google-login"]');
+  await expect(login).toBeVisible();
+  calls.length = 0;
+  // 첫 시도(0초): 떠나기 시작한다. 이 시도의 타이머는 4초에 끝난다.
+  await login.click();
+  await expect.poll(starts).toBe(1);
+  // 첫 로드의 pageshow(돌아온 것이 아님)는 가드를 풀지 않는다.
+  await pageshow(false);
+  await login.click();
+  await page.waitForTimeout(400);
+  expect(starts()).toBe(1);
+  // 뒤로 가기로 돌아오면(3초쯤) 바로 풀린다 → 두 번째 시도. 이 시도는 7초쯤까지 막아야 한다.
+  await page.waitForTimeout(2500);
+  await pageshow(true);
+  await login.click();
+  await expect.poll(starts).toBe(2);
+  // 첫 시도의 4초가 지나도 두 번째 시도의 가드는 그대로다.
+  await page.waitForTimeout(1500);
+  await login.click();
+  await page.waitForTimeout(400);
+  expect(starts()).toBe(2);
+  expect(calls.filter((c) => c === 'profile')).toHaveLength(2);
+});
+
 // T-11-204 웹 Apple 로그인도 주소창으로 갔다가 /settings?apple=...로 돌아온다.
 test('Apple로 로그인하면 세션부터 받고 시작해 연결 안내를 띄운다', async ({ page }) => {
   const calls: string[] = [];
