@@ -23,6 +23,8 @@ const ko = {
   shopSubHave: (p: { n: number }) =>
     `가진 프리미엄 스카우트권 ${p.n}장 · 선수 만들기 후보 단계에서 써요`,
   shopNote: '결제는 스토어 계정으로 하고, 이 구단주 계정에 들어와요.',
+  unit: (p: { price: string }) => `장당 ${p.price}`,
+  unitLowest: '장당 가격이 가장 낮아요',
   shopGo: '프리미엄 스카우트권 보기',
   shopWeb: '프리미엄 스카우트권은 앱에서 살 수 있어요.',
   oddsShow: '확률 보기',

@@ -21,6 +21,8 @@ export const scout: Translation<ScoutMsgs> = {
   shopSub: '在建立球員的候選階段使用',
   shopSubHave: (p) => `持有高級球探券 ${p.n} 張 · 在建立球員的候選階段使用`,
   shopNote: '以商店帳號付款，物品會發送到這個球隊老闆帳號。',
+  unit: (p) => `每張 ${p.price}`,
+  unitLowest: '每張價格最低',
   shopGo: '查看高級球探券',
   shopWeb: '高級球探券可在 App 中購買。',
   oddsShow: '查看機率',

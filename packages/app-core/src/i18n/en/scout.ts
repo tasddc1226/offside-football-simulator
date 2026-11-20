@@ -22,6 +22,8 @@ export const scout: Translation<ScoutMsgs> = {
   shopSub: 'Use them when picking a new player',
   shopSubHave: (p) => `You have ${p.n} · use them when picking a new player`,
   shopNote: 'You pay with your store account, and the tickets go to this owner account.',
+  unit: (p) => `${p.price} per ticket`,
+  unitLowest: 'Lowest price per ticket',
   shopGo: 'See premium scout tickets',
   shopWeb: 'Premium scout tickets can be bought in the app.',
   oddsShow: 'Show odds',

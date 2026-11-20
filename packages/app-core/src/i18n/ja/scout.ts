@@ -22,6 +22,8 @@ export const scout: Translation<ScoutMsgs> = {
   shopSub: '選手作成の候補選びで使います',
   shopSubHave: (p) => `所持プレミアムスカウト券${p.n}枚 · 選手作成の候補選びで使います`,
   shopNote: '支払いはストアのアカウントで行い、このオーナーアカウントに入ります。',
+  unit: (p) => `1枚あたり${p.price}`,
+  unitLowest: '1枚あたりの価格がいちばん安いです',
   shopGo: 'プレミアムスカウト券を見る',
   shopWeb: 'プレミアムスカウト券はアプリで購入できます。',
   oddsShow: '確率を見る',

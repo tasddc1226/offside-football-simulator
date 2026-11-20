@@ -54,6 +54,8 @@ export const iapItems = proxy({
   checking: false,
   /** 스토어가 알려 준 현지 가격. 못 받은 상품은 없다. */
   prices: {} as Partial<Record<IapProductId, string>>,
+  /** 스토어가 알려 준 숫자 가격과 통화(T-11-770a 장당 가격 비교). 표시는 prices를 쓰고, 이 값은 같은 통화끼리 나누는 데만 쓴다. */
+  amounts: {} as Partial<Record<IapProductId, { amount: number; currency: string }>>,
   /** 결제 중인 상품. */
   busy: null as IapProductId | null,
   /** 서버가 마지막으로 알려 준 장수. 받은 뒤 화면이 바로 고친다. */
@@ -187,8 +189,15 @@ export async function syncIapItems(): Promise<boolean> {
       getAvailablePurchases(),
     ]);
     const prices: Partial<Record<IapProductId, string>> = {};
-    for (const p of products ?? []) if (isOurs(p.id)) prices[p.id] = p.displayPrice;
+    const amounts: typeof iapItems.amounts = {};
+    for (const p of products ?? []) {
+      if (!isOurs(p.id)) continue;
+      prices[p.id] = p.displayPrice;
+      if (typeof p.price === 'number' && p.currency)
+        amounts[p.id] = { amount: p.price, currency: p.currency };
+    }
     iapItems.prices = prices;
+    iapItems.amounts = amounts;
     iapItems.open = Object.keys(prices).length > 0;
     // 서버는 파는데 스토어가 가격을 하나도 주지 않았으면 스토어 쪽 문제로 보고 다시 물을 수 있게 한다.
     iapItems.status = iapItems.open ? 'ready' : 'failed';
