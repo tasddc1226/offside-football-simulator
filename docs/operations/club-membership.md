@@ -27,3 +27,14 @@
 4. `MEMBERSHIP_LIVE`(contracts)를 `true`로 바꿔 웹 · 앱 구단주 화면에 입구를 연다. 같은 PR에서 공개 가이드(`apps/web/scripts/seo.mjs` GUIDE_SECTIONS) · FAQ에 멤버십을 더한다. 앱의 구독 결제는 네이티브 변경이 없어 OTA로 나가지만, Apple 첫 구독 심사에는 이 화면이 든 빌드가 필요하다.
 
 `MEMBERSHIP_LIVE`가 false인 동안 입구는 개발 빌드(`import.meta.env.DEV`, `__DEV__`)에서만 보인다. iOS 앱은 `MEMBERSHIP_IOS_LIVE`도 true여야 입구가 보인다(T-11-516). App Store 구독 심사가 끝나기 전에는 가입 버튼이 없어서 iOS만 닫아 두고, 승인되면 true로 바꿔 운영 배포(OTA)로 연다. 2026-10-29 1.1.5 출시 뒤 true로 열었다(T-11-566).
+
+## 신규 구독자 첫 달 할인 (T-11-770e, 기획 T-11-747 R3B)
+
+코드는 들어가 있고 꺼져 있다. 스토어에 할인을 만들기 전에는 아무것도 달라지지 않는다.
+
+- Android는 요금제 목록의 첫 번째를 쓰지 않고 월 정상가 요금제(가격 단계가 '매달 끝없이' 하나)를 골라 판다(`packages/app-core/src/memberOffer.ts`). 월 정상가 요금제가 둘 이상이면 가입 버튼을 닫는다. 월 기본 요금제는 하나만 둔다.
+- 할인은 Play 콘솔에서 월 기본 요금제에 ID `intro-1m`(신규 구독자 대상, 1개월 할인가 → 정상가)으로 만든다. 앱은 이 ID만 쓰고, '할인가 몇 달 → 정상가와 같은 값' 두 단계가 아니면 정상가로 판다. 무료 체험은 지원하지 않는다.
+- iOS는 App Store Connect의 introductory offer(매달 결제, 1개월)를 쓴다. 자격은 StoreKit(`isEligibleForIntroOfferIOS`)로 확인한다. iOS는 자격 있는 계정에 스토어가 할인을 자동으로 적용하므로 대조군을 둘 수 없다. 앱의 대조군은 화면에 할인을 보이지 않을 뿐 결제는 할인가로 된다. iOS는 전후 비교로만 본다.
+- 켜는 순서: 스토어 할인 등록 → 서버 변수 `MEMBERSHIP_INTRO_ENABLED=1` → `MEMBERSHIP_INTRO_LIVE`(contracts) `true`로 운영 배포. iOS 할인은 이 배포와 같은 날 연다(먼저 열면 화면 안내 없이 할인가로 결제된다).
+- 대조군은 `SHA-256('member_intro_v1:' + 프로필 id)`의 첫 두 바이트 % 100이 20 미만인 구단주다. 서버가 `introOffer`를 주지 않아 Android에서는 정상가 요금제로 판다.
+- 이전 구독자 윈백(첫 달 2,200원)과 가격 순서 · 홍보 시점을 먼저 정한다. 윈백 재가입은 이 실험의 신규 가입에 넣지 않는다. 판단은 첫 정상가 갱신을 포함한 D35로 한다.
