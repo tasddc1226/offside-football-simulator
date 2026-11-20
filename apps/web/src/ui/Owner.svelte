@@ -183,7 +183,7 @@
       </dl>
     </section>
   {:else if accountCache.value === 'error'}
-    <!-- T-11-780 계정 확인에 실패하면 내 팀 · 로그인 입구가 통째로 사라졌다(5분 뒤 조용한 재확인이 실패한 구단주도 같다).
+    <!-- T-11-791 계정 확인에 실패하면 내 팀 · 로그인 입구가 통째로 사라졌다(5분 뒤 조용한 재확인이 실패한 구단주도 같다).
          다시 시도는 확인 중(뼈대)으로 돌린 뒤 한 번만 묻는다. -->
     <section class="card owner-team" aria-label={A.errorTitle} data-owner-account-error>
       <h2>{A.errorTitle}</h2>

@@ -280,7 +280,7 @@ export default function Owner() {
   // 로그인 안 함(익명 프로필이거나 세션 없음). 확인 중·연결 실패는 아니다.
   const guest = acct === null || (!!acct && acct !== 'error' && !isMember(acct));
   const nickname = acct && acct !== 'error' ? acct.nickname : null;
-  // T-11-780 계정 확인에 실패하면 내 팀 · 로그인 입구가 통째로 사라졌다(5분 뒤 조용한 재확인이 실패한 구단주도 같다).
+  // T-11-791 계정 확인에 실패하면 내 팀 · 로그인 입구가 통째로 사라졌다(5분 뒤 조용한 재확인이 실패한 구단주도 같다).
   // 안내와 다시 시도를 그리고, 요청하는 동안에는 버튼을 막는다.
   const [retrying, setRetrying] = useState(false);
   const retryAccount = () => {

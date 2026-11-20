@@ -67,7 +67,7 @@ test('owner profile image preview, save, reload and default restoration at mobil
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
-// T-11-780 프로필 조회가 실패하면 구단주 탭이 제목만 남던 문제. 안내와 다시 시도가 보이고, 다시 시도는 한 번만 묻는다.
+// T-11-791 프로필 조회가 실패하면 구단주 탭이 제목만 남던 문제. 안내와 다시 시도가 보이고, 다시 시도는 한 번만 묻는다.
 test('owner tab shows a retry card when the profile lookup fails', async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem('ft_session', '1'));
   let up = false;
