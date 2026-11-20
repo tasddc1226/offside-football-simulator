@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+import { DatabaseSync } from 'node:sqlite';
 import { gunzipSync } from 'node:zlib';
 import { unstable_splitSqlQuery as splitSqlQuery } from 'wrangler';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -11,6 +13,9 @@ import {
   backupToR2,
   chunkKey,
   fixedParts,
+  latestManifestKey,
+  manifestKey,
+  partialUniqueKeys,
   runBackupStep,
   type BackupResult,
   type BackupState,
@@ -50,7 +55,8 @@ async function dumpOf(bucket: R2Bucket, prefix: string): Promise<{ sql: string; 
   let sql = '';
   for (const key of keys) {
     const obj = await bucket.get(key);
-    expect(obj!.httpMetadata?.contentEncoding).toBe('gzip');
+    // T-11-777 저장한 바이트 그대로 받게 Content-Encoding을 붙이지 않는다.
+    expect(obj!.httpMetadata?.contentEncoding).toBeUndefined();
     sql += gunzipText(await obj!.arrayBuffer());
   }
   return { sql, chunks: keys.length };
@@ -299,7 +305,10 @@ describe('T-10-070 D1 → R2 백업', () => {
       s
         .split('\n')
         .filter(
-          (l) => !l.startsWith('-- offside D1 backup') && !l.startsWith('INSERT INTO "app_meta"'),
+          (l) =>
+            !l.startsWith('-- offside D1 backup') &&
+            !l.startsWith('INSERT INTO "app_meta"') &&
+            !l.startsWith('INSERT OR REPLACE INTO "app_meta"'),
         )
         .join('\n');
     expect(body(sql)).toBe(body((await dumpOf(bucket(), whole.key)).sql));
@@ -343,6 +352,214 @@ describe('T-10-070 D1 → R2 백업', () => {
     expect(redo).toMatchObject({ chunk: 2 });
     expect(await bucket().head(chunkKey(before!.key, 2))).not.toBeNull();
     await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+  });
+
+  // T-11-777 복사가 여러 틱에 걸치는 동안 새로 생긴 부모 행이 빠지면 복원한 DB의 외래 키가 깨진다.
+  describe('T-11-777 마감', () => {
+    /** 조각을 이어 새 SQLite에 한 트랜잭션으로 넣는다(주간 복원 검증과 같은 방식, 외래 키 강제 없음). */
+    const restore = (sql: string) => {
+      const db = new DatabaseSync(':memory:');
+      db.exec(`BEGIN;\n${sql}\nCOMMIT;`);
+      return db;
+    };
+    const career = (id: string, profile: string) =>
+      run(
+        "INSERT INTO careers (id, profile_id, pos, foot, type, trait, start_year, status, app_version, created_at, updated_at) VALUES (?1, ?2, 'FW', '오른발', 'poacher', 'late', 2026, 'active', '1.0.0', '2026-09-28', '2026-09-28')",
+        id,
+        profile,
+      );
+    const stepUntil = async (env: string, stop: (s: BackupState | null) => boolean) => {
+      for (let i = 0; i < 800; i++) {
+        const r = await runBackupStep(ctx.env.DB, bucket(), env, NOW + i * 300_000, { stepMs: 0 });
+        const state = await meta<BackupState>(BACKUP_STATE_KEY);
+        if (r?.done || stop(state)) return state;
+      }
+      throw new Error('backup did not reach the expected position');
+    };
+
+    it('조건부 고유 인덱스의 열을 스키마에서 읽는다(운영 스키마의 두 인덱스 포함)', async () => {
+      const { results } = await ctx.env.DB.prepare(
+        "SELECT type, name, sql FROM sqlite_master WHERE sql IS NOT NULL AND type = 'index'",
+      ).all<{ type: string; name: string; sql: string }>();
+      const keys = partialUniqueKeys(results);
+      expect(keys.get('market_listings')).toEqual([['career_id']]);
+      expect(keys.get('manager_careers')).toEqual([['profile_id']]);
+      // 조건 없는 고유 인덱스 · 식 인덱스 · 일반 인덱스는 대상이 아니다.
+      expect(
+        partialUniqueKeys([
+          { type: 'index', name: 'a', sql: 'CREATE UNIQUE INDEX a ON t (x)' },
+          { type: 'index', name: 'b', sql: 'CREATE UNIQUE INDEX b ON t (lower(x)) WHERE y = 1' },
+          { type: 'index', name: 'c', sql: 'CREATE INDEX c ON t (x) WHERE y = 1' },
+          { type: 'index', name: 'd', sql: 'CREATE UNIQUE INDEX d ON "t" ("x", y DESC) WHERE z' },
+        ]),
+      ).toEqual(new Map([['t', [['x', 'y']]]]));
+    });
+
+    it('조건부 고유 키가 겹치는 새 행과 옛 사본, 복사 뒤 커진 작은 표도 복원된다', async () => {
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+      // 큰 표(200행 초과)라 마지막에 통째로 다시 읽지 않는다 — 닫힌 매물의 옛 사본이 'open'으로 남는 경우다.
+      await run(
+        'CREATE TABLE seal_listings (id TEXT PRIMARY KEY, card TEXT NOT NULL, status TEXT NOT NULL)',
+      );
+      await run(
+        "CREATE UNIQUE INDEX seal_listings_open_unique ON seal_listings (`card`) WHERE status = 'open'",
+      );
+      await run(
+        "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 260) INSERT INTO seal_listings SELECT 'l' || i, 'c' || i, 'open' FROM n",
+      );
+      await run('CREATE TABLE seal_small (id INTEGER PRIMARY KEY, v TEXT)');
+      await run(
+        "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 100) INSERT INTO seal_small SELECT i, 'a' FROM n",
+      );
+      try {
+        const at = (st: BackupState, t: string) => st.tables.indexOf(t);
+        // 두 표의 마지막 행까지 복사한 위치에서 멈춘다(표가 끝 순서라 표 번호가 넘어가기 전이다).
+        const copied = (st: BackupState, t: string, top: number) =>
+          st.table > at(st, t) || (st.table === at(st, t) && st.after >= top);
+        const state = await stepUntil(
+          'sealu',
+          (st) => !!st && copied(st, 'seal_listings', 260) && copied(st, 'seal_small', 100),
+        );
+        expect(state?.phase).toBe('copy');
+        // 복사한 뒤: l1을 닫고 같은 카드를 다시 올린다. 작은 표는 5배로 커진다.
+        // 같은 카드의 닫힌 매물을 한 번에 읽는 양(400)보다 많이 쌓아 둔다 — 밀려난 l1은 그 키에서 최근 행이다.
+        await run(
+          "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 450) INSERT INTO seal_listings SELECT 'h' || i, 'c1', 'sold' FROM n",
+        );
+        await run("UPDATE seal_listings SET status = 'sold' WHERE id = 'l1'");
+        await run("INSERT INTO seal_listings VALUES ('l1b', 'c1', 'open')");
+        await run(
+          "WITH RECURSIVE n(i) AS (SELECT 101 UNION ALL SELECT i + 1 FROM n WHERE i < 600) INSERT INTO seal_small SELECT i, 'b' FROM n",
+        );
+        await stepUntil('sealu', () => false);
+        const last = (await meta<BackupResult>(BACKUP_LAST_KEY))!;
+        expect(last.consistency).toBe('sealed');
+        const { sql } = await dumpOf(bucket(), last.key);
+        // 고유 인덱스는 마감 행보다 먼저, 한 번만 만든다.
+        expect(sql.match(/CREATE UNIQUE INDEX seal_listings_open_unique/g)).toHaveLength(1);
+        expect(sql.indexOf('CREATE UNIQUE INDEX seal_listings_open_unique')).toBeLessThan(
+          sql.indexOf('INSERT OR REPLACE INTO "seal_listings"'),
+        );
+        const db = restore(sql);
+        try {
+          expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+          expect(
+            db
+              .prepare(
+                "SELECT id, status FROM seal_listings WHERE card = 'c1' AND id LIKE 'l%' ORDER BY id",
+              )
+              .all(),
+          ).toEqual([
+            { id: 'l1', status: 'sold' },
+            { id: 'l1b', status: 'open' },
+          ]);
+          expect(db.prepare('SELECT count(*) AS n FROM seal_listings').get()).toEqual({ n: 711 });
+          expect(db.prepare('SELECT count(*) AS n FROM seal_small').get()).toEqual({ n: 600 });
+        } finally {
+          db.close();
+        }
+      } finally {
+        await run('DROP TABLE seal_listings');
+        await run('DROP TABLE seal_small');
+      }
+    });
+
+    it('복사 뒤에 생긴 부모 행과 다시 넣은 행을 덧붙여 복원한 DB의 외래 키가 맞는다', async () => {
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+      await run("INSERT INTO app_meta(key,value) VALUES ('seal:replaced','\"old\"')");
+      // profiles(부모)는 지나고 careers(자식)는 아직인 위치에서 멈춘다.
+      const at = (s: BackupState, t: string) => s.tables.indexOf(t);
+      const state = await stepUntil(
+        'seal',
+        (s) => !!s && s.table > at(s, 'profiles') && s.table <= at(s, 'careers'),
+      );
+      expect(state?.phase).toBe('copy');
+      await run(
+        "INSERT INTO profiles (id, settings_json, created_at, last_seen_at) VALUES ('prf_seal', '{}', ?1, ?1)",
+        ago(HOUR),
+      );
+      await career('car_seal', 'prf_seal');
+      // app_meta를 지난 뒤 지우고 다시 넣으면 rowid가 바뀐다 — 앞 조각의 옛 행과 키가 겹친다.
+      await stepUntil('seal', (s) => !!s && (s.phase === 'seal' || s.table > at(s, 'app_meta')));
+      await run("INSERT OR REPLACE INTO app_meta(key,value) VALUES ('seal:replaced','\"new\"')");
+      await stepUntil('seal', () => false);
+      const last = (await meta<BackupResult>(BACKUP_LAST_KEY))!;
+      expect(last).toMatchObject({ consistency: 'sealed', restoreVerified: false });
+      expect(last.seal!.rows).toBeGreaterThanOrEqual(2);
+
+      const { sql } = await dumpOf(bucket(), last.key);
+      expect(sql).toMatch(/^INSERT OR REPLACE INTO "profiles" .*'prf_seal'/m);
+      // 인덱스는 마감 행 뒤에 만든다.
+      expect(sql.lastIndexOf('INSERT OR REPLACE INTO')).toBeLessThan(sql.indexOf('CREATE INDEX'));
+      const db = restore(sql);
+      try {
+        expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+        expect(db.prepare('PRAGMA integrity_check').all()).toEqual([{ integrity_check: 'ok' }]);
+        expect(db.prepare("SELECT profile_id FROM careers WHERE id='car_seal'").get()).toEqual({
+          profile_id: 'prf_seal',
+        });
+        expect(db.prepare("SELECT value FROM app_meta WHERE key='seal:replaced'").all()).toEqual([
+          { value: '"new"' },
+        ]);
+      } finally {
+        db.close();
+      }
+
+      // 조각 목록: 번호 순 조각의 크기와 해시가 R2 객체와 같다.
+      const manifest = await (await bucket().get(manifestKey('seal', last.day)))!.json<{
+        format: string;
+        consistency: string;
+        rows: number;
+        chunks: { object: string; bytes: number; sha256: string }[];
+      }>();
+      expect(manifest).toMatchObject({
+        format: 'offside-d1-live-copy-v1',
+        consistency: 'sealed',
+        rows: last.rows,
+      });
+      expect(manifest.chunks).toHaveLength(last.chunks);
+      for (const chunk of manifest.chunks) {
+        const body = new Uint8Array(
+          await (await bucket().get(last.key + chunk.object))!.arrayBuffer(),
+        );
+        expect(body.byteLength).toBe(chunk.bytes);
+        expect(createHash('sha256').update(body).digest('hex')).toBe(chunk.sha256);
+      }
+      expect(await (await bucket().get(latestManifestKey('seal')))!.json()).toEqual(manifest);
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%' OR key='seal:replaced'");
+      await run("DELETE FROM careers WHERE id='car_seal'");
+      await run("DELETE FROM profiles WHERE id='prf_seal'");
+    });
+
+    it('마감 전에 시작한 백업(위치 기록 없음)은 마감 없이 live-copy로 끝난다', async () => {
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+      await runBackupStep(ctx.env.DB, bucket(), 'legacy', NOW, { stepMs: 0 });
+      await run(
+        "UPDATE app_meta SET value=json_remove(value,'$.hwm','$.phase','$.objects') WHERE key=?1",
+        BACKUP_STATE_KEY,
+      );
+      await stepUntil('legacy', () => false);
+      const last = (await meta<BackupResult>(BACKUP_LAST_KEY))!;
+      expect(last.consistency).toBe('live-copy');
+      expect(last).not.toHaveProperty('seal');
+      expect(await bucket().head(manifestKey('legacy', last.day))).toBeNull();
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+    });
+
+    it('30일 지난 조각 목록도 지우고 latest와 매달 1일 목록은 남긴다', async () => {
+      for (const day of ['2026-08-01', '2026-08-15'])
+        await bucket().put(manifestKey('prune', day), '{}');
+      const r = await backupToR2(ctx.env.DB, bucket(), 'prune', NOW);
+      expect(r.pruned).toBe(1);
+      const keys = (await bucket().list({ prefix: 'd1-manifests/prune/' })).objects.map(
+        (o) => o.key,
+      );
+      expect(keys.sort()).toEqual([
+        manifestKey('prune', '2026-08-01'),
+        manifestKey('prune', r.day),
+        latestManifestKey('prune'),
+      ]);
+    });
   });
 
   it('R2 바인딩이 없어도 정리·보관 단계는 돈다(백업은 5분 cron 몫)', async () => {

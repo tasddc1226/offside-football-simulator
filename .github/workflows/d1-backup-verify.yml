@@ -1,0 +1,66 @@
+name: D1 backup restore verification
+
+# T-11-777 매일 백업(R2 d1/production/<day>/)을 받아 새 SQLite에 복원해 무결성·외래 키·표/행 수를 검사한다.
+# 운영 D1은 읽지 않는다(R2 객체만 읽고, 통과하면 검증 표시 하나를 쓴다). 백업은 KST 04:00에 시작해 몇 시간 걸리므로
+# KST 10:30(UTC 01:30)에 돈다. 절차는 docs/operations/d1-backup.md.
+on:
+  schedule:
+    - cron: '30 1 * * *'
+  workflow_dispatch:
+    inputs:
+      day:
+        description: 'Backup day (YYYY-MM-DD, UTC 19:00 boundary). Empty = latest completed backup'
+        type: string
+        required: false
+      publish:
+        description: Publish the verification marker when every check passes
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: d1-backup-verify
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      DAY: ${{ inputs.day }}
+      PUBLISH: ${{ github.event_name == 'schedule' || inputs.publish }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      # 조각(압축)과 복원한 DB가 함께 들어갈 자리를 낸다(5GB DB 기준 10GB 안팎).
+      - name: Free runner disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h "$RUNNER_TEMP" | tail -1
+      - name: Download, restore and check the backup
+        run: |
+          umask 077
+          case "$DAY" in
+            '') DAY_ARGS=() ;;
+            [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) DAY_ARGS=(--day "$DAY") ;;
+            *) echo 'Invalid day'; exit 1 ;;
+          esac
+          PUBLISH_ARGS=()
+          if [ "$PUBLISH" = 'true' ]; then PUBLISH_ARGS=(--publish); fi
+          node tooling/scripts/verify-live-copy.mjs --env production \
+            --output "$RUNNER_TEMP/offside-backup-verify-$GITHUB_RUN_ID" \
+            "${DAY_ARGS[@]}" "${PUBLISH_ARGS[@]}"
+      # SQL and the restored DB contain production data: never upload them as Actions artifacts.
+      - name: Remove private task files
+        if: always()
+        run: rm -rf -- "$RUNNER_TEMP/offside-backup-verify-$GITHUB_RUN_ID"
