@@ -3,7 +3,7 @@ import {
   MembershipResponseSchema,
   type MembershipResponse,
 } from '@offside/contracts';
-import { memberActive } from '@offside/contracts/membership';
+import { MEMBERSHIP_INTRO_CONTROL_PCT, memberActive } from '@offside/contracts/membership';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
@@ -35,6 +35,17 @@ const reject = (r: MembershipRejection) => conflictError(cupKo(REJECT[r][0]), RE
 const storesFor = (env: Bindings, profileId: string) =>
   env.MEMBERSHIP_ENABLED === '1' ? iapStores(env, profileId) : [];
 
+/**
+ * T-11-770e 첫 달 할인 실험의 군. SHA-256('member_intro_v1:' + 프로필 id)의 첫 두 바이트 % 100이 대조군 비율보다 작으면 대조군
+ * (할인을 보이지 않는다). 프로필로 고정이라 다시 들어와도 같다. 분석도 같은 식으로 나눈다.
+ */
+export async function membershipIntroGroup(profileId: string): Promise<'control' | 'offer'> {
+  const bytes = new Uint8Array(
+    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`member_intro_v1:${profileId}`)),
+  );
+  return ((bytes[0]! << 8) | bytes[1]!) % 100 < MEMBERSHIP_INTRO_CONTROL_PCT ? 'control' : 'offer';
+}
+
 async function memberView(env: Bindings, db: Db, profileId: string): Promise<MembershipResponse> {
   const row = await membershipOf(db, profileId);
   const stores = storesFor(env, profileId);
@@ -46,6 +57,11 @@ async function memberView(env: Bindings, db: Db, profileId: string): Promise<Mem
     store: row?.store === 'apple' || row?.store === 'google' ? row.store : null,
     stores,
     ...(stores.length ? { account: iapAccount(profileId) } : {}),
+    ...(stores.length &&
+    env.MEMBERSHIP_INTRO_ENABLED === '1' &&
+    (await membershipIntroGroup(profileId)) === 'offer'
+      ? { introOffer: true }
+      : {}),
   };
 }
 

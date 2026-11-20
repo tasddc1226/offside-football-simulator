@@ -13,6 +13,12 @@ export const membership: Translation<MembershipMsgs> = {
   perkBadge: 'Supporter badge',
   perkBadgeSub: 'A supporter badge appears next to your name on your club and in friend lists.',
   join: (p) => `Join for ${p.price}/month`,
+  joinIntro: (p) =>
+    p.months === 1
+      ? `Join for ${p.price} the first month`
+      : `Join for ${p.price}/month for ${p.months} months`,
+  introNote: (p) =>
+    `After ${p.months === 1 ? 'the first month' : `the first ${p.months} months`} it renews at ${p.price}/month. This price is for first-time subscribers, once.`,
   joinBusy: 'Processing…',
   joined: 'You joined the club membership.',
   active: 'Your membership is active',

@@ -122,8 +122,17 @@ export function Membership({ onClose }: { onClose: () => void }) {
                       disabled={s.busy}
                       onPress={() => void joinMembership()}
                     >
-                      {s.busy ? L.joinBusy : L.join({ price: s.price })}
+                      {s.busy
+                        ? L.joinBusy
+                        : s.intro
+                          ? L.joinIntro(s.intro)
+                          : L.join({ price: s.price })}
                     </Btn>
+                    {s.intro ? (
+                      <Txt testID="member-intro-note" style={{ fontSize: rem(0.8125) }}>
+                        {L.introNote({ price: s.price, months: s.intro.months })}
+                      </Txt>
+                    ) : null}
                     <Txt tone="muted" style={{ fontSize: rem(0.75) }}>
                       {L.renewNote}
                     </Txt>

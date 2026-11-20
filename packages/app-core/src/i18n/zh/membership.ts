@@ -13,6 +13,10 @@ export const membership: Translation<MembershipMsgs> = {
   perkBadge: '支持者徽章',
   perkBadgeSub: '在我的俱樂部和好友列表中，名字旁會顯示支持者徽章。',
   join: (p) => `每月${p.price}加入`,
+  joinIntro: (p) =>
+    p.months === 1 ? `首月${p.price}加入` : `前 ${p.months} 個月每月${p.price}加入`,
+  introNote: (p) =>
+    `${p.months === 1 ? '首月' : `前 ${p.months} 個月`}結束後，每月以${p.price}自動續訂。此價格僅限首次訂閱，只有一次。`,
   joinBusy: '付款中…',
   joined: '已加入會員',
   active: '正在使用會員',
