@@ -23,24 +23,41 @@
   const os = osOf(navigator.userAgent);
   let storeHref = $state<string | undefined>();
   let inPlace = $state(false);
+  let storeEl: HTMLElement | undefined = $state();
   let viewed = false;
 
   async function load() {
     v = null;
     v = await loadSharedLegend(appState.sharedCareer!);
-    // 보임은 리포트가 열렸을 때 한 번만 센다(다시 시도해도 다시 세지 않는다).
-    if (os !== 'other' && typeof v === 'object' && !viewed) {
-      viewed = true;
-      trackAppConversion('view', 'shared', os);
-    }
   }
   onMount(() => {
     void load();
     if (os === 'other') return;
-    void import('./appStore.js').then(({ storeUrl, opensInPlace }) => {
-      storeHref = storeUrl(os);
-      inPlace = opensInPlace(storeHref);
-    });
+    // 청크를 못 받으면 버튼을 그리지 않는다(보임도 세지 않는다).
+    import('./appStore.js').then(
+      ({ storeUrl, opensInPlace }) => {
+        storeHref = storeUrl(os);
+        inPlace = opensInPlace(storeHref);
+      },
+      () => {},
+    );
+  });
+  // 보임은 은퇴 끝 카드(AppConversion)와 같은 기준으로 센다. 버튼이 그려지고 화면에 절반 넘게 들어왔을 때 한 번이다.
+  // 리포트가 열리기만 하고 끝까지 내리지 않은 방문은 세지 않아야 place=retire와 클릭률을 나란히 볼 수 있다.
+  $effect(() => {
+    if (!storeEl || viewed || os === 'other') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!viewed && entries.some((entry) => entry.isIntersecting && entry.intersectionRatio >= 0.5)) {
+          viewed = true;
+          trackAppConversion('view', 'shared', os);
+          observer.disconnect();
+        }
+      },
+      { threshold: 0.5 },
+    );
+    observer.observe(storeEl);
+    return () => observer.disconnect();
   });
   function storeClick() {
     if (os === 'other') return;
@@ -82,7 +99,7 @@
           <p class="muted fs-sm">{L.turnBodyWeb}</p>
           <button class="btn btn-primary btn-block" data-act="shared-start" onclick={leave}>{cta}</button>
           {#if storeHref}
-            <a class="btn btn-block" data-act="shared-app-store" data-store={os} href={storeHref} target={inPlace ? undefined : '_blank'} rel="noopener noreferrer" onclick={storeClick}>{A.stripGet}</a>
+            <a bind:this={storeEl} class="btn btn-block" data-act="shared-app-store" data-store={os} href={storeHref} target={inPlace ? undefined : '_blank'} rel="noopener noreferrer" onclick={storeClick}>{A.stripGet}</a>
           {/if}
         </section>
       {/snippet}
