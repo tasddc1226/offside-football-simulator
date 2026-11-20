@@ -1,6 +1,18 @@
+import { tn } from './i18n/names.js';
+import { clubById } from './clubs.js';
 import type { EventText } from './events-data.js';
 import type { gFollowupText } from './i18n/ko/gFollowup.js';
 import type { GameState } from './types.js';
+
+export function markingScene(s: GameState, body: string, copy: typeof gFollowupText) {
+  const f = s.markingFixture;
+  if (!f) return body;
+  return copy.markFixture({
+    rd: f.returnRound ?? f.round,
+    club: tn(clubById(f.opponent)?.name ?? f.opponent),
+    body,
+  });
+}
 
 export function followupTexts(c: typeof gFollowupText) {
   const refused = (s: GameState) => s.flags.squadCallReply === 'refused';
@@ -19,7 +31,7 @@ export function followupTexts(c: typeof gFollowupText) {
       get title() {
         return c.markTitle;
       },
-      text: (s) => (s.flags.markApproach === 'man' ? c.markMan : c.markZone),
+      text: (s) => markingScene(s, s.flags.markApproach === 'man' ? c.markMan : c.markZone, c),
       choices: [
         { label: () => c.follow, ok: () => c.followOk },
         { label: () => c.hand, ok: () => c.handOk },

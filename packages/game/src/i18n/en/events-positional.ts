@@ -1,3 +1,5 @@
+import { markingScene } from '../../followup-copy.js';
+import { gFollowup as F } from './gFollowup';
 // 이벤트 영어 문구 — 정의 모듈의 이벤트 id → 문구(events-data.ts EventText).
 import { gMoments as M } from './gMoments';
 import type { EventText } from '../../events-data';
@@ -119,8 +121,12 @@ export const events_positional: Record<string, EventText> = {
   // ── Defenders ──
   'df-marking': {
     title: 'Marking the top scorer',
-    text: () =>
-      'This week\'s opponents have the league\'s top scorer. The manager says, "Stick to him like a shadow for 90 minutes."',
+    text: (s) =>
+      markingScene(
+        s,
+        'This week\'s opponents have the league\'s top scorer. The manager says, "Stick to him like a shadow for 90 minutes."',
+        F,
+      ),
     choices: [
       {
         label: 'Mark him tightly, man to man',

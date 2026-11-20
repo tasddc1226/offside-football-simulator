@@ -1,3 +1,4 @@
+import { recordFirstMarking } from './marking-fixture.js';
 import { followupTexts } from './followup-copy.js';
 import { gFollowupText } from './i18n/ko/gFollowup.js';
 import { natRefusing } from './national.js';
@@ -14,7 +15,9 @@ export function bookMarkingRematch(s: GameState, approach: 'man' | 'zone') {
   s.flags.markClub = s.club.id;
   s.flags.markLeague = s.leagueId;
   s.flags.markApproach = approach;
-  schedule(s, 'df-marking-rematch', 1, 3);
+  // Older pending openers have no match identity. Honour their original timed follow-up.
+  if (s.markingFixture) recordFirstMarking(s, approach);
+  else schedule(s, 'df-marking-rematch', 1, 3);
 }
 export function bookFreekick(s: GameState) {
   s.flags.freekickClub = s.club.id;
@@ -64,12 +67,17 @@ export const CAREER_FOLLOWUPS = [
     'df-marking-rematch',
     (s) =>
       s.pos === 'DF' &&
-      s.phase > 0 &&
-      !s.injury &&
+      (s.markingFixture ? s.markingFixture.returnRound !== undefined : s.phase > 0 && !s.injury) &&
       s.flags.markClub === s.club.id &&
       s.flags.markLeague === s.leagueId,
-    (s) => addAttr(s, 'pac', 1),
-    (s) => addAttr(s, 'def', 1),
+    (s) => {
+      addAttr(s, 'pac', 1);
+      delete s.markingFixture;
+    },
+    (s) => {
+      addAttr(s, 'def', 1);
+      delete s.markingFixture;
+    },
   ),
   followup(
     'mf-read-freekick',

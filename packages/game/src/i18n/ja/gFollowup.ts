@@ -10,6 +10,7 @@ export const gFollowup: Translation<typeof gFollowupText> = {
   pairOk: '相棒がボールに出た瞬間、その背後を埋めました。監督が今の距離を覚えておけと言います。',
   push: '一列上がって縦パスを受ける',
   pushOk: '復帰した6番の縦パスを奥の足で受け、ワンタッチで相手MFの背後に出ました。',
+  markFixture: (p) => `第${p.rd}節、${p.club}戦。${p.body}`,
   markTitle: '得点王との再戦',
   markMan: '前回密着した相手FWがタッチラインまで流れ、その空間にウイングが飛び込みます。',
   markZone:

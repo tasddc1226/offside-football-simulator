@@ -8,6 +8,7 @@ export const gFollowup: Translation<typeof gFollowupText> = {
   pairOk: '搭檔上前搶球，你補上他身後的空間。教練要你記住這個距離。',
   push: '往前站一線接應直傳',
   pushOk: '你用遠側腳接下搭檔送來的直傳，一個觸球就把對方中場甩在身後。',
+  markFixture: (p) => `第 ${p.rd} 輪對上${p.club}。${p.body}`,
   markTitle: '再遇射手王',
   markMan: '上回你緊盯的前鋒拉到邊線，邊鋒趁機切入他讓出的中路。',
   markZone: '你上回守住中路。這次前鋒拉邊、邊鋒內切，想趁你們交接盯防時找出空隙。',
