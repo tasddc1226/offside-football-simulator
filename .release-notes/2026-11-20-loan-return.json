@@ -1,0 +1,27 @@
+{
+  "id": "t-11-763-loan-return",
+  "title": "임대 복귀 첫 면담",
+  "items": [
+    "임대 복귀 후 원소속팀 감독과 전반기 목표를 정해요. 리그 선발 5경기와 출전 450분 중 하나를 고르면 전반기가 끝날 때 실제 기록을 함께 돌아봐요."
+  ],
+  "en": {
+    "title": "Back from loan",
+    "items": [
+      "After returning from loan, promise your manager five league starts or 450 league minutes. At midseason, review what you actually achieved."
+    ]
+  },
+  "ja": {
+    "title": "レンタル復帰の面談",
+    "items": [
+      "レンタル復帰時に監督とリーグ戦先発5試合か出場450分を約束し、前半戦終了後の面談で実際の記録を振り返ります。"
+    ]
+  },
+  "zh": {
+    "title": "租借歸隊後的面談",
+    "items": [
+      "租借歸隊後，可向總教練承諾聯賽先發 5 場或上場 450 分鐘，並在上半季結束時一起檢視實際紀錄。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

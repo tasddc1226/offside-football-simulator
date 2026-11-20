@@ -1,5 +1,6 @@
 // ───────── 시즌 종료 · 이적 시장 · 은퇴 · 저장 ─────────
 import { CLUBS, clubRef, sameClub, type Club } from './data.js';
+import { bookLoanMeeting, LOAN_RETURN_ID } from './loan-return.js';
 import { lookCode } from './look-code.js';
 import { BAL, leagueOpen } from './balance.js';
 import { notePeakProfile, ovr, peakProfileOf } from './attributes.js';
@@ -639,9 +640,11 @@ export function acceptOption(
   if (opt.kind === 'renew' && !canAcceptRenewal(s, opt)) return null;
   noteMarket(s, opt, options);
   if (isMilOption(opt)) return acceptMilitary(s, opt);
+  const returnedFromLoan =
+    !!s.loan && (opt.kind === 'stay' || opt.kind === 'renew') && opt.loanBack;
   if (s.loan) {
     // 임대를 마친 시장: 복귀(잔류·재계약)는 원소속 구단으로, 다른 선택은 원소속 구단을 떠난다.
-    if ((opt.kind === 'stay' || opt.kind === 'renew') && opt.loanBack) endLoan(s, loanWentWell(s));
+    if (returnedFromLoan) endLoan(s, loanWentWell(s));
     else s.loan = undefined;
   }
   if (opt.kind === 'offer' && opt.loan === 'out') startLoan(s, opt);
@@ -708,6 +711,7 @@ export function acceptOption(
   }
   s.season = newSeason(s);
   s.phase = 0;
+  if (returnedFromLoan) bookLoanMeeting(s, LOAN_RETURN_ID);
   return null;
 }
 
