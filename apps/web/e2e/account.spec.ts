@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { API, fail, ok } from './helpers.js';
 
 const PROFILE_URL = `${API}/v1/profile`;
@@ -272,6 +272,94 @@ test('Apple 로그인을 쓸 수 없으면 Apple 안내를 띄운다', async ({ 
 test('세션 없이 로그인 시작에서 돌아오면 다시 누르라고 알린다', async ({ page }) => {
   await page.goto('/settings?google=error&reason=session');
   await expect(page.locator('#toast')).toContainText('다시 눌러 주세요');
+});
+
+// T-11-795 영어 · 일본어 · 번체 중국어 화면에서 로그인 · 결제 복귀 안내가 한국어로 뜨던 문제. 복귀 코드는 작아서 언어 사전보다
+// 거의 늘 먼저 도착했고, 그때 부른 토스트 문구가 한국어로 굳었다. 청크 하나만 늦춰 도착 순서를 고정하고 본다.
+// 빌드 산출물의 청크(/assets/*.js)를 골라 늦추므로 개발 서버(E2E_DEV)에서는 돌리지 않는다.
+async function delayChunk(page: Page, marker: string): Promise<() => number> {
+  let delayed = 0;
+  await page.route('**/assets/*.js', async (route) => {
+    const response = await route.fetch();
+    const body = await response.text();
+    if (body.includes(marker)) {
+      delayed += 1;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+    await route.fulfill({ response, body });
+  });
+  return () => delayed;
+}
+/** 아직 처리 중인 청크 요청이 테스트가 끝난 뒤 오류로 바뀌지 않게 가로채기를 걷는다. */
+const stopDelaying = (page: Page) => page.unrouteAll({ behavior: 'ignoreErrors' });
+
+test.describe('복귀 안내의 언어', () => {
+  test.skip(process.env.E2E_DEV === '1', '빌드 산출물의 청크를 늦춰서 보는 사례');
+
+  for (const c of [
+    {
+      locale: 'en-US',
+      marker: 'Signed in to your existing',
+      toast: 'Signed in to your existing Google account.',
+      title: 'My club',
+    },
+    {
+      locale: 'ja-JP',
+      marker: 'アカウントでログインしました',
+      toast: 'お使いのGoogleアカウントでログインしました。',
+      title: 'マイクラブ',
+    },
+    {
+      locale: 'zh-TW',
+      marker: '已登入原本使用的',
+      toast: '已登入原本使用的 Google 帳號。',
+      title: '我的俱樂部',
+    },
+  ]) {
+    test.describe(`로그인 (${c.locale})`, () => {
+      test.use({ locale: c.locale });
+
+      test('사전보다 로그인 복귀 코드가 먼저 와도 그 언어로 뜬다', async ({ page }) => {
+        const delayed = await delayChunk(page, c.marker);
+        await page.goto('/settings?google=switched');
+        const toast = page.locator('#toast');
+        await expect(toast).toHaveText(c.toast);
+        await expect(toast).toBeVisible();
+        // 사전 청크를 실제로 늦췄는지(표식이 번들에서 사라지면 이 사례가 아무것도 고정하지 못한다).
+        expect(delayed()).toBeGreaterThan(0);
+        await expect(page).toHaveURL(/\/$/);
+        await expect(page.locator('h1')).toHaveText(c.title);
+        await stopDelaying(page);
+      });
+    });
+  }
+
+  test.describe('영어 화면의 다른 순서 · 결제', () => {
+    test.use({ locale: 'en-US' });
+
+    test('로그인 복귀 코드가 사전보다 늦게 와도(그린 뒤 처리) 영어로 뜬다', async ({ page }) => {
+      // 로그인 코드(ui/login.ts)에만 있는 저장 키 이름으로 그 청크를 고른다.
+      const delayed = await delayChunk(page, 'ft_login_place');
+      await page.goto('/settings?google=linked');
+      const toast = page.locator('#toast');
+      await expect(toast).toHaveText('Google account linked.');
+      await expect(toast).toBeVisible();
+      expect(delayed()).toBeGreaterThan(0);
+      await expect(page).toHaveURL(/\/$/);
+      await expect(page.locator('h1')).toHaveText('My club');
+      await stopDelaying(page);
+    });
+
+    test('결제창에서 돌아온 확인 안내도 영어로 뜬다', async ({ page }) => {
+      const delayed = await delayChunk(page, 'Confirming payment');
+      await page.goto(`/?webpay=wp_${'a'.repeat(32)}`);
+      const toast = page.locator('#toast');
+      await expect(toast).toHaveText('Confirming payment…');
+      await expect(toast).toBeVisible();
+      expect(delayed()).toBeGreaterThan(0);
+      await stopDelaying(page);
+    });
+  });
 });
 
 test('계정 카드에서 댓글 닉네임을 정하고 바꾼다 (T-10-028)', async ({ page }) => {

@@ -1,0 +1,24 @@
+{
+  "id": "t-11-795-return-notice-language",
+  "title": "로그인 · 결제 뒤 안내 언어 수정",
+  "items": [
+    "영어 · 일본어 · 중국어로 웹을 쓸 때 로그인이나 결제를 마치고 돌아오면 안내가 한국어로 뜨던 문제를 고쳤어요."
+  ],
+  "en": {
+    "title": "Fixed the language of notices after signing in or paying",
+    "items": [
+      "Fixed notices showing in Korean when you came back to the web version after signing in or paying."
+    ]
+  },
+  "ja": {
+    "title": "ログイン・決済後の案内の言語を修正",
+    "items": [
+      "Web版でログインや決済を終えて戻ったとき、案内が韓国語で表示される問題を修正しました。"
+    ]
+  },
+  "zh": {
+    "title": "修正登入・付款後提示的語言",
+    "items": ["修正了在網頁版完成登入或付款並返回時，提示以韓文顯示的問題。"]
+  },
+  "availability": "web"
+}
