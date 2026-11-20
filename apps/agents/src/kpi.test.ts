@@ -70,35 +70,40 @@ describe('운영 지표 수집 (T-11-572)', () => {
               },
             ],
           });
-        if (url.includes('?ids='))
+        if (url.includes('/ads?'))
           return Response.json({
-            '11': {
-              creative: {
-                asset_feed_spec: {
-                  link_urls: [
-                    {
-                      website_url:
-                        'https://offside-lab.com/?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=jp_reels',
-                    },
-                  ],
+            data: [
+              {
+                id: '11',
+                creative: {
+                  asset_feed_spec: {
+                    link_urls: [
+                      {
+                        website_url:
+                          'https://offside-lab.com/?utm_source=meta&utm_medium=paid&utm_campaign=global_test&utm_content=jp_reels',
+                      },
+                    ],
+                  },
                 },
               },
-            },
-            '12': {
-              creative: {
-                object_story_spec: {
-                  video_data: { call_to_action: { value: { link: 'https://offside-lab.com/' } } },
-                },
-                url_tags: 'utm_source=meta&utm_campaign=global_test&utm_content=JP_Reels',
-              },
-            },
-            '13': {
-              creative: {
-                object_story_spec: {
-                  link_data: { link: 'http://play.google.com/store/apps/details?id=x' },
+              {
+                id: '12',
+                creative: {
+                  object_story_spec: {
+                    video_data: { call_to_action: { value: { link: 'https://offside-lab.com/' } } },
+                  },
+                  url_tags: 'utm_source=meta&utm_campaign=global_test&utm_content=JP_Reels',
                 },
               },
-            },
+              {
+                id: '13',
+                creative: {
+                  object_story_spec: {
+                    link_data: { link: 'http://play.google.com/store/apps/details?id=x' },
+                  },
+                },
+              },
+            ],
           });
         if (call++ === 1) return Response.json({ error: { message: 'rate' } }, { status: 400 });
         return Response.json({

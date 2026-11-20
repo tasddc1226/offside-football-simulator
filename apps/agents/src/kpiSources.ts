@@ -193,6 +193,21 @@ type MetaCreative = {
     video_data?: { call_to_action?: { value?: { link?: string } } };
   };
 };
+/** ads 목록은 기본으로 보관 · 삭제된 광고를 빼므로 지난날 지출이 있던 광고를 찾으려면 상태를 모두 건다. */
+const AD_STATUSES = [
+  'ACTIVE',
+  'PAUSED',
+  'DELETED',
+  'PENDING_REVIEW',
+  'DISAPPROVED',
+  'PREAPPROVED',
+  'PENDING_BILLING_INFO',
+  'CAMPAIGN_PAUSED',
+  'ARCHIVED',
+  'ADSET_PAUSED',
+  'IN_PROCESS',
+  'WITH_ISSUES',
+];
 const creativeUrl = (c?: MetaCreative) =>
   c?.asset_feed_spec?.link_urls?.[0]?.website_url ??
   c?.object_story_spec?.link_data?.link ??
@@ -235,22 +250,28 @@ export async function metaFunnelRows(
   const creatives = new Map<string, MetaCreative | undefined>();
   for (let i = 0; i < ads.length; i += 50) {
     const ids = ads.slice(i, i + 50).map((a) => a.ad_id);
-    const c = new URL(`${META_GRAPH}/`);
-    c.searchParams.set('ids', ids.join(','));
+    // `?ids=` 묶음 조회는 Graph v26부터 막혔다. 광고 계정의 ads 목록을 id로 걸러 읽는다(보관 · 삭제된 광고도 포함).
+    const c = new URL(`${META_GRAPH}/act_${env.META_AD_ACCOUNT_ID}/ads`);
     c.searchParams.set(
       'fields',
-      'creative{url_tags,asset_feed_spec{link_urls},object_story_spec{link_data{link},video_data{call_to_action}}}',
+      'id,creative{url_tags,asset_feed_spec{link_urls},object_story_spec{link_data{link},video_data{call_to_action}}}',
     );
+    c.searchParams.set(
+      'filtering',
+      JSON.stringify([
+        { field: 'id', operator: 'IN', value: ids },
+        { field: 'effective_status', operator: 'IN', value: AD_STATUSES },
+      ]),
+    );
+    c.searchParams.set('limit', String(ids.length));
     const cr = await fetcher(c.toString(), auth);
-    const got = (await cr.json().catch(() => ({}))) as Record<
-      string,
-      { creative?: MetaCreative }
-    > & {
+    const got = (await cr.json().catch(() => ({}))) as {
+      data?: { id: string; creative?: MetaCreative }[];
       error?: { message?: string };
     };
     if (!cr.ok || got.error)
       throw new Error(`Meta creatives ${cr.status} ${got.error?.message ?? ''}`.trim());
-    for (const id of ids) creatives.set(id, got[id]?.creative);
+    for (const ad of got.data ?? []) creatives.set(ad.id, ad.creative);
   }
   const rows: Row[] = [];
   const add = (metric: string, dim: string, value: number) => {
