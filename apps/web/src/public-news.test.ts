@@ -68,7 +68,7 @@ describe('public news responses', () => {
       expect.objectContaining({ credentials: 'omit', redirect: 'manual' }),
     );
   });
-  it('T-11-779 links the app landing page from the menu on the list and article pages', async () => {
+  it('T-11-790 links the app landing page from the menu on the list and article pages', async () => {
     mock();
     for (const path of ['/news/', `/news/${id}/`]) {
       const html = await (await get(path)).text();

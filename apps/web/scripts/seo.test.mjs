@@ -362,7 +362,7 @@ test('T-11-588 가이드 · FAQ 본문은 네 언어가 같은 구조이고 다�
       STATIC_PAGES[`${prefix}/guide/`],
       new RegExp(`href="${prefix}/guide/${articles[0].slug}/"`),
     );
-    // T-11-779 아래 메뉴의 앱 받기도 그 언어의 소개 페이지로 간다(한국어 /app/으로 보내지 않는다).
+    // T-11-790 아래 메뉴의 앱 받기도 그 언어의 소개 페이지로 간다(한국어 /app/으로 보내지 않는다).
     assert.equal(LANDING_LOCALES[lang].path, `${prefix}/app/`);
     for (const path of paths) {
       assert.match(STATIC_PAGES[path], new RegExp(`href="${prefix}/app/"`), path);

@@ -297,7 +297,7 @@ export function createHeaders({ indexingEnabled }) {
   return `/*\n  X-Robots-Tag: noindex, nofollow\n\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n  X-Content-Type-Options: nosniff\n\n${publicHeaders}\n`;
 }
 
-/** 가이드 묶음의 아래 메뉴. 가이드 · FAQ · 공략 글 · 앱 소개(T-11-779)는 그 언어 주소, 나머지는 한국어 한 벌이다. */
+/** 가이드 묶음의 아래 메뉴. 가이드 · FAQ · 공략 글 · 앱 소개(T-11-790)는 그 언어 주소, 나머지는 한국어 한 벌이다. */
 function guideNav(lang, items) {
   const { prefix, page } = GUIDE_LOCALES[lang];
   const href = {

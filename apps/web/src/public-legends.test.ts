@@ -128,7 +128,7 @@ describe('T-11-231 명예의 전당 공개 페이지', () => {
     expect(html).toContain('<link rel="canonical" href="https://offside-lab.com/legends/">');
   });
 
-  it('T-11-779 메뉴와 페이지 끝에 앱 소개 페이지 링크가 있다', async () => {
+  it('T-11-790 메뉴와 페이지 끝에 앱 소개 페이지 링크가 있다', async () => {
     stubCache();
     stubApi();
     for (const path of ['/legends/', '/legends/rank/goals/', `/legends/p/${ID}/`]) {

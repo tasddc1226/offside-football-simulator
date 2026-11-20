@@ -167,7 +167,7 @@ const valueOf = (e: PublicHofEntry, sort: Sort): string => {
   }
 };
 
-// T-11-779 앱 소개 페이지로 가는 링크. 소개 페이지는 언어마다 주소가 있다(/en/app/ 등).
+// T-11-790 앱 소개 페이지로 가는 링크. 소개 페이지는 언어마다 주소가 있다(/en/app/ 등).
 const appLink = () => `<a href="${publicDocPath('/app/')}">${escape(A.stripGet)}</a>`;
 const nav = () =>
   `<nav class="public-news-nav"><a href="/">OFFSIDE</a><a href="${legendsPath.hub}">${escape(L.hubTitle)}</a><a href="${publicDocPath('/guide/')}">${escape(S.footGuide)}</a><a href="${publicDocPath('/faq/')}">${escape(S.footFaq)}</a><a href="/news/">${escape(D.publicNews)}</a>${appLink()}</nav>`;

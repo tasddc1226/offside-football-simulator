@@ -81,13 +81,13 @@ export function commerceContext(): () => boolean {
   const key = accountKeyNow();
   return () => epoch === commerceEpoch && accountKeyNow() === key;
 }
-/** T-11-092 앱 스토어 링크를 누른 곳(T-11-449 어느 스토어인지도 남긴다). T-11-779 shared: 공유받은 커리어 화면. */
+/** T-11-092 앱 스토어 링크를 누른 곳(T-11-449 어느 스토어인지도 남긴다). T-11-790 shared: 공유받은 커리어 화면. */
 export type AppStorePlace =
   'home' | 'home_top' | 'retire' | 'sheet' | 'settings' | 'shop' | 'shared';
 export const trackAppStoreClick = (place: AppStorePlace, store: AppStoreOs) =>
   adapter?.trackAppStoreClick(place, store);
 
-/** T-11-506 home_top: 휴대폰 웹 홈 맨 위 한 줄 띠. T-11-611 retire: 은퇴 리포트 끝. T-11-779 shared: 공유받은 커리어 끝 카드. */
+/** T-11-506 home_top: 휴대폰 웹 홈 맨 위 한 줄 띠. T-11-611 retire: 은퇴 리포트 끝. T-11-790 shared: 공유받은 커리어 끝 카드. */
 export type AppConversionPlace = 'home' | 'home_top' | 'shop' | 'retire' | 'shared';
 export const trackAppConversion = (
   action: 'view' | 'click' | 'dismiss',

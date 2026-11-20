@@ -18,7 +18,7 @@
   import { osOf } from './inapp.js';
 
   let v = $state<LegendView | 'missing' | 'error' | null>(null);
-  // T-11-779 휴대폰이면 끝 카드에 그 기기의 스토어로 가는 보조 버튼을 둔다. 스토어 주소(유입 캠페인 포함)는 지연 청크에서 채우고,
+  // T-11-790 휴대폰이면 끝 카드에 그 기기의 스토어로 가는 보조 버튼을 둔다. 스토어 주소(유입 캠페인 포함)는 지연 청크에서 채우고,
   // 주소가 준비돼야 버튼을 그린다. 공유 링크의 career_share 캠페인이 스토어 주소에 실려 공유로 생긴 설치를 구분한다.
   const os = osOf(navigator.userAgent);
   let storeHref = $state<string | undefined>();

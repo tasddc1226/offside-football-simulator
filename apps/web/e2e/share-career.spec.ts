@@ -342,7 +342,7 @@ test('T-11-439 공유받은 화면은 맨 위에도 시작 버튼이 있고, 공
   await expect(page.locator('[data-act="next-candidates"]').first()).toBeVisible();
 });
 
-test.describe('T-11-779 공유받은 화면의 앱 받기', () => {
+test.describe('T-11-790 공유받은 화면의 앱 받기', () => {
   const ID = '0d000000-0000-4000-8000-000000000779';
   const stubShared = (page: Page) =>
     page.route(new RegExp(`/v1/hof/${ID}$`), (r) =>
