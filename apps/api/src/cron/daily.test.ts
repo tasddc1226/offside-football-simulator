@@ -15,6 +15,7 @@ import {
   fixedParts,
   latestManifestKey,
   manifestKey,
+  partialUniqueKeys,
   runBackupStep,
   type BackupResult,
   type BackupState,
@@ -375,6 +376,85 @@ describe('T-10-070 D1 → R2 백업', () => {
       }
       throw new Error('backup did not reach the expected position');
     };
+
+    it('조건부 고유 인덱스의 열을 스키마에서 읽는다(운영 스키마의 두 인덱스 포함)', async () => {
+      const { results } = await ctx.env.DB.prepare(
+        "SELECT type, name, sql FROM sqlite_master WHERE sql IS NOT NULL AND type = 'index'",
+      ).all<{ type: string; name: string; sql: string }>();
+      const keys = partialUniqueKeys(results);
+      expect(keys.get('market_listings')).toEqual([['career_id']]);
+      expect(keys.get('manager_careers')).toEqual([['profile_id']]);
+      // 조건 없는 고유 인덱스 · 식 인덱스 · 일반 인덱스는 대상이 아니다.
+      expect(
+        partialUniqueKeys([
+          { type: 'index', name: 'a', sql: 'CREATE UNIQUE INDEX a ON t (x)' },
+          { type: 'index', name: 'b', sql: 'CREATE UNIQUE INDEX b ON t (lower(x)) WHERE y = 1' },
+          { type: 'index', name: 'c', sql: 'CREATE INDEX c ON t (x) WHERE y = 1' },
+          { type: 'index', name: 'd', sql: 'CREATE UNIQUE INDEX d ON "t" ("x", y DESC) WHERE z' },
+        ]),
+      ).toEqual(new Map([['t', [['x', 'y']]]]));
+    });
+
+    it('조건부 고유 키가 겹치는 새 행과 옛 사본, 복사 뒤 커진 작은 표도 복원된다', async () => {
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+      // 큰 표(200행 초과)라 마지막에 통째로 다시 읽지 않는다 — 닫힌 매물의 옛 사본이 'open'으로 남는 경우다.
+      await run(
+        'CREATE TABLE seal_listings (id TEXT PRIMARY KEY, card TEXT NOT NULL, status TEXT NOT NULL)',
+      );
+      await run(
+        "CREATE UNIQUE INDEX seal_listings_open_unique ON seal_listings (`card`) WHERE status = 'open'",
+      );
+      await run(
+        "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 260) INSERT INTO seal_listings SELECT 'l' || i, 'c' || i, 'open' FROM n",
+      );
+      await run('CREATE TABLE seal_small (id INTEGER PRIMARY KEY, v TEXT)');
+      await run(
+        "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 100) INSERT INTO seal_small SELECT i, 'a' FROM n",
+      );
+      try {
+        const at = (st: BackupState, t: string) => st.tables.indexOf(t);
+        // 두 표의 마지막 행까지 복사한 위치에서 멈춘다(표가 끝 순서라 표 번호가 넘어가기 전이다).
+        const copied = (st: BackupState, t: string, top: number) =>
+          st.table > at(st, t) || (st.table === at(st, t) && st.after >= top);
+        const state = await stepUntil(
+          'sealu',
+          (st) => !!st && copied(st, 'seal_listings', 260) && copied(st, 'seal_small', 100),
+        );
+        expect(state?.phase).toBe('copy');
+        // 복사한 뒤: l1을 닫고 같은 카드를 다시 올린다. 작은 표는 5배로 커진다.
+        await run("UPDATE seal_listings SET status = 'sold' WHERE id = 'l1'");
+        await run("INSERT INTO seal_listings VALUES ('l1b', 'c1', 'open')");
+        await run(
+          "WITH RECURSIVE n(i) AS (SELECT 101 UNION ALL SELECT i + 1 FROM n WHERE i < 600) INSERT INTO seal_small SELECT i, 'b' FROM n",
+        );
+        await stepUntil('sealu', () => false);
+        const last = (await meta<BackupResult>(BACKUP_LAST_KEY))!;
+        expect(last.consistency).toBe('sealed');
+        const { sql } = await dumpOf(bucket(), last.key);
+        // 고유 인덱스는 마감 행보다 먼저, 한 번만 만든다.
+        expect(sql.match(/CREATE UNIQUE INDEX seal_listings_open_unique/g)).toHaveLength(1);
+        expect(sql.indexOf('CREATE UNIQUE INDEX seal_listings_open_unique')).toBeLessThan(
+          sql.indexOf('INSERT OR REPLACE INTO "seal_listings"'),
+        );
+        const db = restore(sql);
+        try {
+          expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+          expect(
+            db.prepare("SELECT id, status FROM seal_listings WHERE card = 'c1' ORDER BY id").all(),
+          ).toEqual([
+            { id: 'l1', status: 'sold' },
+            { id: 'l1b', status: 'open' },
+          ]);
+          expect(db.prepare('SELECT count(*) AS n FROM seal_listings').get()).toEqual({ n: 261 });
+          expect(db.prepare('SELECT count(*) AS n FROM seal_small').get()).toEqual({ n: 600 });
+        } finally {
+          db.close();
+        }
+      } finally {
+        await run('DROP TABLE seal_listings');
+        await run('DROP TABLE seal_small');
+      }
+    });
 
     it('복사 뒤에 생긴 부모 행과 다시 넣은 행을 덧붙여 복원한 DB의 외래 키가 맞는다', async () => {
       await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");

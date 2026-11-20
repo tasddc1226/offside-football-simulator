@@ -134,8 +134,9 @@ export async function verifyLiveCopy(
     chunks: manifest.chunks.length,
     tables: manifest.tables,
     rows: manifest.rows,
-    // 마감 행은 앞 조각의 행을 바꿔 넣을 수 있다 — 복원한 행 수는 그만큼까지 적을 수 있다.
-    minRows: manifest.rows - (manifest.seal?.rows ?? 0),
+    // 마감 행은 앞 조각의 행을 바꿔 넣는다. 한 줄이 기본 키가 같은 행과 고유 키가 같은 행을 함께 밀어낼 수 있어
+    // 복원한 행 수는 마감 행 수의 두 배까지 적을 수 있다.
+    minRows: Math.max(0, manifest.rows - 2 * (manifest.seal?.rows ?? 0)),
   });
   const passed =
     restored.integrityOk === true &&

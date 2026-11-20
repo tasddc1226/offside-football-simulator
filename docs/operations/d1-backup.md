@@ -48,10 +48,18 @@ D1 Time Travel(30일 시점 복구)과 별개로, D1 밖(R2)에 SQL 사본을 �
 3. 마지막 한 번은 `db.batch()`(한 트랜잭션)로 모든 표를 같은 시점에 읽는다. 표마다 50행까지이고, 넘치면 한 바퀴 더 돈다.
    복사 때 200행 이하였던 표는 이때 통째로 다시 읽는다. rowid는 끝 행이 지워지면 다시 쓰여서(잠금 행을 매 틱 지우고 넣는
    `app_meta`) 2번만으로는 새 행을 놓칠 수 있기 때문이다.
-4. 결과의 `consistency`가 `sealed`면 마감까지 끝난 사본이다. 바퀴 수를 다 쓰고도 넘치면 `live-copy`로 남는다.
+4. 고유 인덱스는 마감 행보다 먼저 만든다. 그래야 `INSERT OR REPLACE`가 같은 고유 키의 옛 사본을 밀어낸다(끝에서 만들면 둘 다
+   남아 `CREATE UNIQUE INDEX`에서 복원이 멈춘다). 조건이 붙은 고유 인덱스(열린 매물 `market_listings_open_card_unique`,
+   진행 중 감독 `manager_careers_active_unique`)는 마감 행과 키가 같은 행을 지금 값으로 다시 내보낸다. 복사한 뒤 닫힌 매물의
+   옛 사본이 밀려난 다음 닫힌 상태로 되돌아온다. 일반 인덱스 · 트리거는 전처럼 끝에서 만든다.
+5. 마감 단계에서 D1 오류가 3번 이어지면 마감을 포기하고 `live-copy`로 끝낸다(`backup_seal_failed` 로그). 마감 때문에 그날 백업이
+   없어지지는 않는다.
+6. 결과의 `consistency`가 `sealed`면 마감까지 끝난 사본이다. 바퀴 수를 다 쓰고도 넘치면 `live-copy`로 남는다.
 
 마감한 사본은 **외래 키가 맞는 사본이지 한 시점 사본이 아니다.** 큰 표에서 제자리 수정(`UPDATE`)된 값은 복사한 때의 값이고,
-복사 뒤 지워진 행은 남아 있다. 큰 표의 끝 행이 지워진 직후 같은 rowid로 들어온 새 행은 놓칠 수 있다. 한 시점이 필요한
+복사 뒤 지워진 행은 남아 있다. 큰 표의 끝 행이 지워진 직후 같은 rowid로 들어온 새 행은 놓칠 수 있다. 조건 없는 고유 키의 값이
+바뀐 옛 행(닉네임을 바꾼 프로필)과 그 값을 새로 쓴 행이 겹치면 옛 행이 밀려나 그 자식의 외래 키가 깨질 수 있다. 이런 날은 복원
+검증이 실패로 알린다. 한 시점이 필요한
 복구(잘못된 마이그레이션 · 버그)는 Time Travel이 맡는다.
 
 마감 행이 앞 조각의 행을 바꿔 넣으므로 **조각을 운영 D1에 하나씩 바로 넣지 않는다.** D1은 외래 키를 늘 강제해서 부모를 바꿔
@@ -63,7 +71,7 @@ D1 Time Travel(30일 시점 복구)과 별개로, D1 밖(R2)에 SQL 사본을 �
 워크플로 `D1 backup restore verification`(`.github/workflows/d1-backup-verify.yml`)이 매일 KST 10:30에 돈다. 운영 D1은 읽지 않는다.
 
 1. `d1-manifests/production/latest.json`을 읽고 조각을 받아 크기와 SHA-256을 조각 목록과 대조한다.
-2. 새 SQLite에 복원해 `integrity_check`, `foreign_key_check` 0건, 표 수, 행 수(조각 목록의 행 수에서 마감 행 수를 뺀 값 이상)를 본다.
+2. 새 SQLite에 복원해 `integrity_check`, `foreign_key_check` 0건, 표 수, 행 수(조각 목록의 행 수에서 마감 행 수의 두 배를 뺀 값 이상)를 본다.
 3. 모두 통과하면 `d1-manifests/production/last-verified.json`을 올린다. 하나라도 실패하면 올리지 않고 워크플로가 실패한다.
 
 시간별 점검(`cron:infra-health:last.backupRecovery`)은 이 표시가 10일 안이면 `verified`(`source: live-copy`)로 본다. 공식 export

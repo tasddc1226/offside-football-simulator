@@ -92,6 +92,10 @@ export type BackupState = {
   passRows?: number;
   sealRows?: number;
   sealed?: boolean;
+  /** 고유 인덱스를 마감 행 앞에 이미 썼다(끝에서 다시 쓰지 않는다). */
+  uniq?: boolean;
+  /** 마감 단계에서 이어진 D1 오류 횟수. */
+  sealFails?: number;
   /** 올린 조각의 크기와 SHA-256(번호 순). */
   objects?: { bytes: number; sha256: string }[];
 };
@@ -348,6 +352,36 @@ const sha256Hex = async (blob: Blob) =>
     .map((v) => v.toString(16).padStart(2, '0'))
     .join('');
 
+const isUniqueIndex = (s: SchemaRow) =>
+  s.type === 'index' && /^\s*CREATE\s+UNIQUE\s+INDEX/i.test(s.sql);
+
+/**
+ * 조건이 붙은 고유 인덱스(`... ON 표 (열, …) WHERE …`)의 열 목록을 표별로 모은다. 식 인덱스는 뺀다.
+ * 조건을 벗어난 옛 행(예: 닫힌 매물)과 같은 키의 새 행(다시 올린 매물)이 함께 있을 수 있는 인덱스다.
+ */
+export function partialUniqueKeys(schema: SchemaRow[]): Map<string, string[][]> {
+  const out = new Map<string, string[][]>();
+  for (const s of schema) {
+    if (!isUniqueIndex(s)) continue;
+    const m = /\sON\s+[`"[]?(\w+)[`"\]]?\s*\(([^()]*)\)\s*WHERE\s/i.exec(s.sql);
+    if (!m) continue;
+    const cols = m[2]!.split(',').map((c) =>
+      c
+        .trim()
+        .replace(/\s+(ASC|DESC)$/i, '')
+        .replace(/^[`"[]|[`"\]]$/g, ''),
+    );
+    if (!cols.length || cols.length > 4 || !cols.every((c) => /^\w+$/.test(c))) continue;
+    out.set(m[1]!, [...(out.get(m[1]!) ?? []), cols]);
+  }
+  return out;
+}
+
+/** 마감 단계에서 D1 오류가 이만큼 이어지면 마감을 포기하고 live-copy로 끝낸다(백업 자체는 남긴다). */
+export const SEAL_MAX_FAILS = 3;
+const REFETCH_PARAMS = 60;
+const REFETCH_ROWS = 400;
+
 type StepOptions = {
   /** D1 읽기를 멈추는 벽시계 예산(ms). 기본 BACKUP_STEP_MS. */
   stepMs?: number;
@@ -384,6 +418,47 @@ async function exportStep(
       }
     }
     const sealable = (name: string) => tableSql.has(name) && next.hwm?.[name] !== undefined;
+    const partial = partialUniqueKeys(schema);
+    /**
+     * 마감 행과 조건부 고유 키가 같은 행을 지금 값으로 다시 내보낸다. 마감 행이 들어가며 밀어낸 옛 사본(복사한 뒤
+     * 제자리에서 조건을 벗어난 행)이 지금 값으로 되돌아온다. 마감 행 뒤에 써야 한다.
+     */
+    const refetch = async (name: string, cols: string[], rows: unknown[][]): Promise<number> => {
+      let written = 0;
+      for (const key of partial.get(name) ?? []) {
+        const at = key.map((c) => cols.indexOf(c));
+        if (at.some((i) => i < 0)) continue;
+        const seen = new Set<string>();
+        const tuples: (string | number)[][] = [];
+        for (const r of rows) {
+          const tuple = at.map((i) => r[i]);
+          if (!tuple.every((v) => typeof v === 'string' || typeof v === 'number')) continue;
+          const id = JSON.stringify(tuple);
+          if (seen.has(id)) continue;
+          seen.add(id);
+          tuples.push(tuple as (string | number)[]);
+        }
+        const per = Math.max(1, Math.floor(REFETCH_PARAMS / key.length));
+        for (let i = 0; i < tuples.length; i += per) {
+          const part = tuples.slice(i, i + per);
+          const where = part.map(() => `(${key.map((c) => `${q(c)} = ?`).join(' AND ')})`);
+          const page = await db
+            .prepare(
+              `SELECT * FROM ${q(name)} WHERE ${where.join(' OR ')} ORDER BY rowid LIMIT ${REFETCH_ROWS}`,
+            )
+            .bind(...part.flat())
+            .raw<unknown[]>({ columnNames: true });
+          const [names, ...data] = page as [string[], ...unknown[][]];
+          if (!data.length) continue;
+          const insert = `INSERT OR REPLACE INTO ${q(name)} (${names.map(q).join(', ')}) VALUES `;
+          for (const r of data) await write(`${insert}(${r.map(literal).join(', ')});\n`);
+          written += data.length;
+        }
+      }
+      next.rows += written;
+      next.sealRows = (next.sealRows ?? 0) + written;
+      return written;
+    };
     for (; next.phase !== 'seal' && next.table < next.tables.length; next.table++, next.after = 0) {
       const name = next.tables[next.table]!;
       // 백업이 도는 사이 마이그레이션으로 사라진 표는 건너뛴다(만든 문장도 첫 조각 때 기준이다).
@@ -417,87 +492,127 @@ async function exportStep(
       next.sealRows = 0;
       next.table = 0;
       next.after = 0;
+      // 고유 인덱스는 마감 행보다 먼저 만든다. 그래야 INSERT OR REPLACE가 같은 고유 키의 옛 사본을 밀어낸다
+      // (인덱스가 없으면 둘 다 남아 끝의 CREATE UNIQUE INDEX에서 복원이 멈춘다).
+      for (const s of schema) if (isUniqueIndex(s)) await write(`${s.sql};\n`);
+      next.uniq = true;
     }
     // 마감: 복사하는 동안 새로 생긴 행(rowid > 기억해 둔 값)만 다시 읽는다. 표 순서는 복사 때와 같아(참조되는 표 먼저)
     // 부모를 바꿔 넣을 때 딸려 지워지는 자식(cascade)은 그 뒤에 다시 들어온다.
-    while (next.phase === 'seal' && next.hwm) {
-      const hwm = next.hwm;
-      const names = next.tables.filter(sealable);
-      // 새 행이 있는 표만 고른다. max(rowid)는 B-tree 끝만 읽는다.
-      const tops = names.length
-        ? await db.batch<{ m: number | null }>(
-            names.map((n) => db.prepare(`SELECT max(rowid) AS m FROM ${q(n)}`)),
-          )
-        : [];
-      const dirty = new Set(names.filter((n, i) => (tops[i]!.results[0]?.m ?? 0) > hwm[n]!));
-      for (; next.table < next.tables.length; next.table++) {
-        const name = next.tables[next.table]!;
-        if (!dirty.has(name)) continue;
-        const size = await sizeExpr(db, name);
-        let candidates = 64;
-        for (;;) {
-          const { cols, data } = await readPage(db, name, size, hwm[name]!, candidates);
-          if (data.length === 0) break;
-          next.pages++;
-          const insert = `INSERT OR REPLACE INTO ${q(name)} (${cols.slice(1).map(q).join(', ')}) VALUES `;
-          for (const r of data) await write(`${insert}(${r.slice(1).map(literal).join(', ')});\n`);
-          next.rows += data.length;
-          next.passRows! += data.length;
-          next.sealRows! += data.length;
-          hwm[name] = Number(data[data.length - 1]![0]);
-          candidates = data.length < candidates ? data.length : Math.min(PAGE, candidates * 2);
-          await new Promise<void>((resolve) => setTimeout(resolve, BACKUP_PAGE_PAUSE_MS));
-          if (Date.now() >= deadline || compressed() >= chunkBytes) return;
+    try {
+      while (next.phase === 'seal' && next.hwm && next.sealed === undefined) {
+        const hwm = next.hwm;
+        const names = next.tables.filter(sealable);
+        // 새 행이 있는 표만 고른다. max(rowid)는 B-tree 끝만 읽는다.
+        const tops = names.length
+          ? await db.batch<{ m: number | null }>(
+              names.map((n) => db.prepare(`SELECT max(rowid) AS m FROM ${q(n)}`)),
+            )
+          : [];
+        const dirty = new Set(names.filter((n, i) => (tops[i]!.results[0]?.m ?? 0) > hwm[n]!));
+        for (; next.table < next.tables.length; next.table++) {
+          const name = next.tables[next.table]!;
+          if (!dirty.has(name)) continue;
+          const size = await sizeExpr(db, name);
+          let candidates = 64;
+          for (;;) {
+            const { cols, data } = await readPage(db, name, size, hwm[name]!, candidates);
+            if (data.length === 0) break;
+            next.pages++;
+            const insert = `INSERT OR REPLACE INTO ${q(name)} (${cols.slice(1).map(q).join(', ')}) VALUES `;
+            for (const r of data)
+              await write(`${insert}(${r.slice(1).map(literal).join(', ')});\n`);
+            next.rows += data.length;
+            next.passRows! += data.length;
+            next.sealRows! += data.length;
+            hwm[name] = Number(data[data.length - 1]![0]);
+            await refetch(
+              name,
+              cols.slice(1),
+              data.map((r) => r.slice(1)),
+            );
+            candidates = data.length < candidates ? data.length : Math.min(PAGE, candidates * 2);
+            await new Promise<void>((resolve) => setTimeout(resolve, BACKUP_PAGE_PAUSE_MS));
+            if (Date.now() >= deadline || compressed() >= chunkBytes) return;
+          }
         }
-      }
-      const again = () => {
-        next.pass!++;
-        next.passRows = 0;
-        next.table = 0;
-      };
-      if (next.passRows! > SEAL_SETTLED_ROWS && next.pass! < SEAL_MAX_PASSES) {
-        again();
-        if (Date.now() >= deadline) return;
-        continue;
-      }
-      // 마지막: 한 트랜잭션(batch)으로 모든 표의 남은 새 행을 같은 시점에 읽는다. 작은 표는 통째로 읽는다.
-      const small = (n: string) => (next.counts?.[n] ?? Infinity) <= SEAL_SMALL_ROWS;
-      const cap = (n: string) => (small(n) ? SEAL_SMALL_ROWS * 2 : SEAL_FINAL_ROWS);
-      const tail = names.length
-        ? await db.batch<Record<string, unknown>>(
-            names.map((n) =>
-              db
-                .prepare(
-                  `SELECT rowid AS __rowid, * FROM ${q(n)} WHERE rowid > ?1 ORDER BY rowid LIMIT ${cap(n) + 1}`,
-                )
-                .bind(small(n) ? 0 : hwm[n]!),
-            ),
-          )
-        : [];
-      const overflow = names.some((n, i) => tail[i]!.results.length > cap(n));
-      if (overflow && next.pass! < SEAL_MAX_PASSES) {
-        again();
-        if (Date.now() >= deadline) return;
-        continue;
-      }
-      if (!overflow) {
-        for (const [i, name] of names.entries()) {
-          const rows = tail[i]!.results;
-          if (!rows.length) continue;
-          const cols = Object.keys(rows[0]!).filter((c) => c !== '__rowid');
-          const insert = `INSERT OR REPLACE INTO ${q(name)} (${cols.map(q).join(', ')}) VALUES `;
-          for (const r of rows)
-            await write(`${insert}(${cols.map((c) => literal(r[c])).join(', ')});\n`);
-          next.rows += rows.length;
-          next.sealRows! += rows.length;
-          hwm[name] = Math.max(hwm[name]!, Number(rows[rows.length - 1]!.__rowid));
+        const again = () => {
+          next.pass!++;
+          next.passRows = 0;
+          next.table = 0;
+        };
+        if (next.passRows! > SEAL_SETTLED_ROWS && next.pass! < SEAL_MAX_PASSES) {
+          again();
+          if (Date.now() >= deadline) return;
+          continue;
         }
+        // 마지막: 한 트랜잭션(batch)으로 모든 표의 남은 새 행을 같은 시점에 읽는다. 작은 표는 통째로 읽는다.
+        const small = (n: string) => (next.counts?.[n] ?? Infinity) <= SEAL_SMALL_ROWS;
+        const cap = (n: string) => (small(n) ? SEAL_SMALL_ROWS * 2 : SEAL_FINAL_ROWS);
+        const tail = names.length
+          ? await db.batch<Record<string, unknown>>(
+              names.map((n) =>
+                db
+                  .prepare(
+                    `SELECT rowid AS __rowid, * FROM ${q(n)} WHERE rowid > ?1 ORDER BY rowid LIMIT ${cap(n) + 1}`,
+                  )
+                  .bind(small(n) ? 0 : hwm[n]!),
+              ),
+            )
+          : [];
+        // 복사 때 작던 표가 그 사이 커졌으면 통째로 읽지 않는다. 큰 표로 바꿔(새 행만) 한 번 더 돈다 — 바퀴 수는 쓰지 않는다.
+        const grown = names.filter((n, i) => small(n) && tail[i]!.results.length > cap(n));
+        if (grown.length && next.counts) {
+          for (const n of grown) delete next.counts[n];
+          next.passRows = 0;
+          next.table = 0;
+          if (Date.now() >= deadline) return;
+          continue;
+        }
+        const overflow = names.some((n, i) => tail[i]!.results.length > cap(n));
+        if (overflow && next.pass! < SEAL_MAX_PASSES) {
+          again();
+          if (Date.now() >= deadline) return;
+          continue;
+        }
+        if (!overflow) {
+          for (const [i, name] of names.entries()) {
+            const rows = tail[i]!.results;
+            if (!rows.length) continue;
+            const cols = Object.keys(rows[0]!).filter((c) => c !== '__rowid');
+            const insert = `INSERT OR REPLACE INTO ${q(name)} (${cols.map(q).join(', ')}) VALUES `;
+            for (const r of rows)
+              await write(`${insert}(${cols.map((c) => literal(r[c])).join(', ')});\n`);
+            next.rows += rows.length;
+            next.sealRows! += rows.length;
+            hwm[name] = Math.max(hwm[name]!, Number(rows[rows.length - 1]!.__rowid));
+            await refetch(
+              name,
+              cols,
+              rows.map((r) => cols.map((c) => r[c])),
+            );
+          }
+        }
+        next.sealed = !overflow;
+        break;
       }
-      next.sealed = !overflow;
-      break;
+    } catch (e) {
+      // 마감 중 D1 오류. 지금까지 쓴 줄은 온전하니 조각을 닫고 다음 틱에 잇는다. 계속 실패하면 마감을 포기한다 —
+      // 마감 때문에 그날 백업이 통째로 없어지면 안 된다.
+      next.sealFails = (next.sealFails ?? 0) + 1;
+      console.warn(
+        JSON.stringify({
+          event: 'backup_seal_failed',
+          fails: next.sealFails,
+          error: String(e).slice(0, 200),
+        }),
+      );
+      if (next.sealFails < SEAL_MAX_FAILS) return;
+      next.sealed = false;
     }
     // 인덱스·트리거는 데이터를 넣은 뒤에 만든다(넣는 동안 인덱스를 고치지 않게).
-    for (const s of schema) if (s.type !== 'table') await write(`${s.sql};\n`);
+    for (const s of schema)
+      if (s.type !== 'table' && !(next.uniq && isUniqueIndex(s))) await write(`${s.sql};\n`);
     done = true;
   });
   next.chunk++;
