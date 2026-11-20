@@ -68,6 +68,7 @@ export default (guideCopy) => {
       [
         guideCopy.transferPreview,
         guideCopy.loan,
+        'The second league meeting with your previous club in the season after a move is your first trip back. Answer the pre-match interview and choose a celebration if you score. The moment stays in your career journey.',
         'When the season ends, you decide your next destination from staying, renewing or transfer offers. Depending on your results and reputation, offers also arrive from overseas leagues, and each offer shows its evaluation factors and playing-time conditions. Contract length does not guarantee playing time.',
         'With one year left on your contract, the club may propose an early extension (up to age 37). You can also decline and stay on your current terms, or transfer to another club. From age 38 to 40, your club does not offer a renewal when your contract ends, so you need a transfer offer from another club to keep playing, and you retire if none comes. From age 41 you only receive one-year contracts, and renewal depends on last season’s performance.',
       ],

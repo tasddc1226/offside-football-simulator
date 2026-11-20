@@ -2,6 +2,7 @@ import type { Translation } from '../core';
 import type { GameMsgs } from '../ko/game';
 
 export const game: Translation<GameMsgs> = {
+  formerAway: '古巣への初遠征',
   menuLabel: 'ゲームメニュー',
   tabSeason: 'シーズン',
   tabPlayer: '選手',

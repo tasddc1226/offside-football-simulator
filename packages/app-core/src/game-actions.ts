@@ -58,6 +58,7 @@ import { pickFanLines } from '@offside/game/fanfeed';
 import { chLabel } from '@offside/game/records';
 import { titleView } from '@offside/game/titles';
 import type {
+  AfterPhase,
   CareerRecord,
   Choice,
   EventDef,
@@ -155,6 +156,10 @@ export function createGameActions(host: GameHost) {
     try {
       const s = appState.G,
         ph = s.phase;
+      const km = ph > 0 ? await import('./keyMoments.js') : null;
+      const visit = km?.formerAwayFixture(s);
+      const reply = visit && km ? await km.askFormerAway(sheet, visit) : null;
+      if (visit && !reply) return;
       const before = snapshot(s);
       const rankBefore = teamRank(s);
       // T-10-046: 한 구간의 게임 로직(훈련 → 경기 → 대회 → A매치 → 이벤트 추첨 → 칭호)은 game/turn.ts가 진행한다.
@@ -162,8 +167,6 @@ export function createGameActions(host: GameHost) {
       // T-11-390 결정적 장면을 고르면 구간 전 상태 · 난수로 되돌려 다시 진행한다(고르기 전 결과도 먼저 저장해 둔다).
       const pre = JSON.stringify(s);
       const rngPre = getActiveRng().getState().seed;
-      // 장면 판정 · 문구는 첫 화면 청크에 넣지 않는다(리그 구간을 진행할 때 불러온다).
-      const km = ph > 0 ? await import('./keyMoments.js') : null;
       // T-11-426 설정에서 끄면 장면을 열지 않는다(결과는 감독에게 맡겼을 때와 같다).
       const moOn = keyMomentsOn();
       let r: PhaseResult;
@@ -231,11 +234,12 @@ export function createGameActions(host: GameHost) {
       const settle = (x: PhaseResult) => {
         // 부상 소식은 로그 문장이 아니라 엔진이 알려 주는 신호로 기록한다(언어가 달라도 같다).
         if (x.block?.injured) s.flags.injuredYear = s.year;
-        s.pending = x.ev
+        const next: AfterPhase | null = x.ev
           ? { type: 'event', id: x.ev, then: s.phase > LAST_PHASE ? 'seasonEnd' : null }
           : s.phase > LAST_PHASE
             ? { type: 'seasonEnd' }
             : null;
+        s.pending = visit && reply && km ? km.afterFormerAway(visit, reply, x.block, next) : next;
         host.save();
         // T-11-438 저장은 중계 전에 끝나므로, 중계 도중 앱을 끄면 리포트도 함께 남겨 다음 실행 때 보여 준다(세이브와 따로 둔다).
         keepPhaseReport(s.cid, reportOf(x, lines(x).rows));
@@ -286,6 +290,7 @@ export function createGameActions(host: GameHost) {
       clearPhaseReport();
       appState.tab = 'season';
       host.scrollTop(true);
+      if (s.pending?.type === 'formerAway') nextPending();
     } finally {
       advancing = false;
     }
@@ -296,6 +301,13 @@ export function createGameActions(host: GameHost) {
     if (!s) return;
     const p = s.pending;
     if (!p) return backToSeason();
+    if (p.type === 'formerAway') {
+      void import('./former-away.js').then(({ showFormerAway }) => {
+        if (appState.G === s && s.pending === p)
+          showFormerAway(sheet, s, p, host.save, backToSeason);
+      });
+      return;
+    }
     if (p.type === 'event') return showEvent(p.id);
     if (p.type === 'seasonEnd') {
       if (sheet.state.busy) return;
