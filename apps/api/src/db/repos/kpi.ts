@@ -14,6 +14,12 @@ import {
 } from '@offside/contracts';
 import { DAY_MS, KST_MS } from '@offside/contracts/kst';
 import { termPlatform } from '@offside/contracts/acquisition';
+import {
+  MEMBER_INTRO_START,
+  MEMBER_INTRO_STATS,
+  memberIntroCohort,
+  type MemberIntroRow,
+} from '../../iap/memberIntro.js';
 
 // T-11-572 운영 지표 대시보드. 일일 cron `kpi` 단계가 운영 D1에서 KST 하루치를 모아 kpi_daily에 넣고,
 // 대시보드(admin.offside-lab.com)는 GET /v1/admin/kpi로 이 표만 읽는다. 모든 집계는 시각 인덱스 범위 한 날만 읽는다.
@@ -46,10 +52,13 @@ const num = (v: unknown) => Number(v ?? 0);
  * 운영 D1 지표 이름. `active` · `members_autorenew_off`는 지금 상태라 그날 바로 다음(어제)만 셀 수 있어 다시 쓰기 · 거꾸로 채우기에서 뺀다.
  * T-11-577 멤버십 흐름: 새 가입(구독 묶음이 처음 생긴 날) · 갱신(스토어 갱신 알림) · 만료(지금 끝난 묶음의 끝난 날, 다시 결제하면 날이 옮겨 간다).
  * `client_errors`는 그날 앱 · 웹 오류 횟수(플랫폼별).
+ * T-11-774 `member_intro`: 첫 달 할인 실험 대상(시작 뒤 앱 스토어에서 처음 구독)의 지금까지 합. 차원은 `스토어_군_항목`
+ * (apple · google × offer · control × new 가입 · off 자동 갱신 끔 · due 둘째 달 결제일 지남 · kept 둘째 달 결제).
  */
 export const D1_SNAPSHOT_METRICS = [
   'active',
   'members_autorenew_off',
+  'member_intro',
   'push_devices',
   'db_size_mb',
   'items_held',
@@ -191,6 +200,7 @@ export async function collectD1Day(
     retiredLegacy,
     elite,
     starters,
+    introCohort,
   ] = await d1.batch<Record<string, unknown>>([
     d1
       .prepare(
@@ -318,6 +328,16 @@ export async function collectD1Day(
            WHERE test = 0 AND refunded_at IS NULL AND created_at >= ?1 AND created_at < ?2 GROUP BY 1`,
       )
       .bind(start, end),
+    // T-11-774 첫 달 할인 실험 대상: 시작 뒤 앱 스토어에서 처음 구독한 묶음(멤버십 표는 수백 줄, 앞선 구독은 프로필 인덱스로 본다).
+    d1
+      .prepare(
+        `SELECT m.store, m.profile_id, m.created_at, m.until, m.auto_renew FROM memberships m
+           WHERE m.test = 0 AND m.store IN ('apple', 'google') AND m.created_at >= ?1 AND m.created_at < ?2
+             AND NOT EXISTS (SELECT 1 FROM memberships p WHERE p.profile_id = m.profile_id
+               AND p.store IN ('apple', 'google') AND p.created_at < m.created_at)
+           LIMIT 5000`,
+      )
+      .bind(MEMBER_INTRO_START, end),
   ]);
   const [errors, api] = await ops.batch<Record<string, unknown>>([
     ops
@@ -398,6 +418,15 @@ export async function collectD1Day(
     add('api_avg_ms', 'all', Math.round(num(a?.ms) / num(a?.requests)));
   }
   if (withActive) {
+    const cohort = await memberIntroCohort(
+      introCohort!.results as unknown as MemberIntroRow[],
+      Date.parse(end),
+    );
+    for (const store of ['apple', 'google'] as const)
+      for (const group of ['offer', 'control'] as const)
+        for (const stat of MEMBER_INTRO_STATS)
+          if (cohort[store][group][stat])
+            add('member_intro', `${store}_${group}_${stat}`, cohort[store][group][stat]);
     for (const r of devices!.results)
       add('push_devices', `${dimOf(r.platform, 'unknown')}:${dimOf(r.permission, 'unknown')}`, r.n);
     // D1이 쿼리마다 돌려주는 파일 크기. 로컬 · 테스트 D1은 값이 없어 건너뛴다.

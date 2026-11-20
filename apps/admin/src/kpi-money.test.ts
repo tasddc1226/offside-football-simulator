@@ -1,6 +1,6 @@
 import type { KpiReport } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
-import { monetization, storeKrwOn } from './kpi-money.ts';
+import { memberIntro, monetization, storeKrwOn } from './kpi-money.ts';
 import { viewOf } from './kpi-page.ts';
 
 const view = (rows: KpiReport['rows']) =>
@@ -44,5 +44,44 @@ describe('T-11-739 사용자당 매출 · 결제 전환', () => {
       arppu: 60000 / 25,
       days: 2,
     });
+  });
+});
+
+describe('T-11-774 멤버십 첫 달 할인 실험', () => {
+  it('값이 있는 가장 최근 날의 합을 스토어 · 군별로 읽고, 대조군 가입은 인원 비율로 맞춘다', () => {
+    const v = view([
+      r('2026-11-15', 'member_intro', 'google_offer_new', 1),
+      r('2026-11-16', 'member_intro', 'google_offer_new', 12),
+      r('2026-11-16', 'member_intro', 'google_offer_off', 3),
+      r('2026-11-16', 'member_intro', 'google_offer_due', 4),
+      r('2026-11-16', 'member_intro', 'google_offer_kept', 3),
+      r('2026-11-16', 'member_intro', 'google_control_new', 2),
+      r('2026-11-16', 'member_intro', 'apple_offer_new', 30),
+    ]);
+    const m = memberIntro(v)!;
+    expect(m.day).toBe('2026-11-16');
+    expect(m.groups.map((g) => `${g.store}_${g.key}`)).toEqual([
+      'google_offer',
+      'google_control',
+      'apple_offer',
+      'apple_control',
+    ]);
+    expect(m.groups[0]).toEqual({
+      store: 'google',
+      key: 'offer',
+      joined: 12,
+      joinedScaled: 12,
+      off: 3,
+      due: 4,
+      kept: 3,
+      keptRate: 0.75,
+    });
+    expect(m.groups[1]).toMatchObject({ joined: 2, joinedScaled: 8, keptRate: null });
+    expect(m.groups[2]).toMatchObject({ joined: 30 });
+    expect(m.groups[3]).toMatchObject({ joined: 0, joinedScaled: 0 });
+  });
+
+  it('수집된 날이 없으면 null', () => {
+    expect(memberIntro(view([r('2026-11-15', 'members_new', 'apple', 1)]))).toBeNull();
   });
 });

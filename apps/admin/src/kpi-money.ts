@@ -1,5 +1,5 @@
 // T-11-739 사용자당 매출 · 결제 전환. 모두 일일 수집(kpi_daily) 값으로 계산한다.
-import { MEMBERSHIP_PRICE_KRW } from '@offside/contracts/membership';
+import { MEMBERSHIP_INTRO_CONTROL_PCT, MEMBERSHIP_PRICE_KRW } from '@offside/contracts/membership';
 import { valueOn } from './kpi.ts';
 import type { KpiView } from './kpi-page.ts';
 
@@ -74,4 +74,48 @@ export function monetization(v: KpiView): Monetization {
       days,
     },
   };
+}
+
+export type MemberIntroGroup = {
+  store: 'google' | 'apple';
+  key: 'offer' | 'control';
+  /** 실험 시작 뒤 그 스토어에서 처음 구독한 사람. */
+  joined: number;
+  /** 두 군의 인원 비율(80:20)을 맞춘 가입 수. 할인군은 그대로, 대조군은 4배. */
+  joinedScaled: number;
+  /** 자동 갱신을 끈 가입. */
+  off: number;
+  /** 둘째 달 결제일이 지난 가입 · 그중 둘째 달을 결제한 가입. */
+  due: number;
+  kept: number;
+  keptRate: number | null;
+};
+
+/**
+ * T-11-774 멤버십 첫 달 할인 실험. `member_intro`는 지금까지의 합이라 기간 안에서 값이 있는 가장 최근 날을 읽는다.
+ * 아직 수집된 날이 없으면 null. Android가 먼저다(대조군이 정상가로 결제하는 쪽).
+ */
+export function memberIntro(v: KpiView): { day: string; groups: MemberIntroGroup[] } | null {
+  const day = v.days.findLast((d) => valueOn(v.idx, d, 'member_intro') !== null);
+  if (!day) return null;
+  const at = (dim: string) => valueOn(v.idx, day, 'member_intro', [dim]) ?? 0;
+  const scale = (100 - MEMBERSHIP_INTRO_CONTROL_PCT) / MEMBERSHIP_INTRO_CONTROL_PCT;
+  const groups = (['google', 'apple'] as const).flatMap((store) =>
+    (['offer', 'control'] as const).map((key) => {
+      const joined = at(`${store}_${key}_new`);
+      const due = at(`${store}_${key}_due`);
+      const kept = at(`${store}_${key}_kept`);
+      return {
+        store,
+        key,
+        joined,
+        joinedScaled: key === 'control' ? joined * scale : joined,
+        off: at(`${store}_${key}_off`),
+        due,
+        kept,
+        keptRate: due ? kept / due : null,
+      };
+    }),
+  );
+  return { day, groups };
 }

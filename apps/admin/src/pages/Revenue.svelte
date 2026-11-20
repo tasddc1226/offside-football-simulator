@@ -4,7 +4,7 @@
   import { dimLabel, fmt, KPI_EMPTY, metricSeries, nonEmpty, periodSum, productLabel, valueOn } from '../kpi.ts';
   import { byDim, dimTotals, periodTotal, trendOf, viewOf } from '../kpi-page.ts';
   import { formatName, placementName, placementTotals, webPayFunnel } from '../kpi-insights.ts';
-  import { monetization } from '../kpi-money.ts';
+  import { memberIntro, monetization } from '../kpi-money.ts';
   import { loader } from '../load.svelte.ts';
   import AdFreePrice from '../ui/AdFreePrice.svelte';
   import HBars from '../ui/HBars.svelte';
@@ -277,6 +277,43 @@
         <StackedBars title="멤버십 만료 (스토어별)" days={v.days} series={byDim(v, 'members_expired')} empty={MEMBER_EMPTY} />
         <StackedBars title="멤버십 구독 중 (스토어별)" days={v.days} series={byDim(v, 'members_active')} empty={KPI_EMPTY} />
       </div>
+
+      {@const intro = memberIntro(v)}
+      <section class="panel" data-testid="member-intro">
+        <header><h2>첫 달 할인 실험</h2><span class="hint">{intro ? `${intro.day}까지 합` : '11월 21일 가입부터'} · 앱 스토어에서 처음 구독한 사람</span></header>
+        {#if intro}
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th>스토어</th><th>군</th><th class="num">가입</th><th class="num">가입 (인원 맞춤)</th><th class="num">자동 갱신 끔</th>
+                <th class="num">둘째 달 대상</th><th class="num">둘째 달 결제</th><th class="num">유지율</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each intro.groups as g (`${g.store}_${g.key}`)}
+                <tr data-group={`${g.store}_${g.key}`}>
+                  <td>{g.store === 'google' ? 'Android' : 'iOS'}</td>
+                  <td>{g.key === 'offer' ? '할인 안내 (80%)' : g.store === 'google' ? '정상가 (20%)' : '안내 없음 (20%)'}</td>
+                  <td class="num">{fmt(g.joined)}</td>
+                  <td class="num">{fmt(g.joinedScaled)}</td>
+                  <td class="num">{fmt(g.off)}</td>
+                  <td class="num">{fmt(g.due)}</td>
+                  <td class="num">{fmt(g.kept)}</td>
+                  <td class="num">{g.keptRate === null ? '—' : fmt(g.keptRate, 'pct')}</td>
+                </tr>
+              {/each}
+            </tbody>
+          </table>
+        {:else}
+          <p class="note">아직 실험 대상 가입이 없어요.</p>
+        {/if}
+        <p class="note">
+          구단주의 20%에게는 할인을 보이지 않아요. Android는 이 20%가 정상가로 결제해 가격 효과를 볼 수 있어요.
+          iOS는 스토어가 할인을 자동으로 적용해 20%도 할인가로 결제하고, 화면의 할인 문구만 달라요.
+          인원 맞춤은 20% 군 가입에 4를 곱한 값이에요. 할인 안내 군 가입이 이보다 많으면 할인이 가입을 늘린 거예요.
+          둘째 달 대상은 가입한 지 35일이 지난 사람이고, 구독 기간이 45일을 넘으면 둘째 달을 결제한 것으로 세요.
+        </p>
+      </section>
     {/snippet}
   </Load>
 </div>
