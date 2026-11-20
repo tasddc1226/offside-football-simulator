@@ -493,6 +493,14 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
       ok: ['morale+', 'cond+', 'trust-'],
     },
   ],
+  'gk-backpass': [
+    {
+      ok: ['attr+'],
+    },
+    {
+      ok: ['attr+'],
+    },
+  ],
   'gk-sweeper': [
     {
       ok: ['attr+', 'trust+'],
@@ -808,7 +816,7 @@ export const EVENT_PEEK: Readonly<Record<string, readonly ChoicePeek[]>> = {
   ],
   'ballon-gala': [
     {
-      ok: ['cond-', 'fame+', 'morale+'],
+      ok: ['fame+', 'cond-', 'morale+'],
     },
     {
       ok: ['trust+', 'cond+'],

@@ -32,6 +32,16 @@ const ko = {
   legendIgnoreLabel: '대꾸하지 않는다',
   legendIgnoreResult: '아무 말 없이 훈련에 나섰습니다. 며칠 뒤 화제는 다른 곳으로 넘어갔습니다.',
 
+  backpassTitle: '다시 받는 백패스',
+  backpassText:
+    '복귀 훈련에서 수비수가 골문 앞으로 땅볼을 굴립니다. 지난번에 발밑으로 빠뜨린 바로 그 백패스입니다. 코치가 공격수에게 압박을 붙입니다.',
+  backpassKick: '반대쪽 풀백에게 길게 찬다',
+  backpassKickResult:
+    '압박이 들어오기 전에 고개를 들었습니다. 반대쪽 풀백이 달려가는 길로 공이 떨어졌습니다.',
+  backpassMove: '골문 옆으로 나와 패스 길을 연다',
+  backpassMoveResult:
+    '골포스트 옆 빈 공간을 가리켰습니다. 수비수가 그쪽으로 공을 주자 골문을 등지지 않고 받아낼 수 있었습니다.',
+
   hatTitle: '해트트릭과 MOM',
   hatText:
     '해트트릭을 기록하고 경기 최우수 선수(MOM)로 뽑혔습니다. 트로피를 든 당신에게 기자가 마이크를 내밉니다.',

@@ -33,6 +33,16 @@ export const gMoments: Translation<typeof gMomentsText> = {
   legendIgnoreResult:
     'You went to training without a word. A few days later, the story had moved on.',
 
+  backpassTitle: 'Facing the backpass again',
+  backpassText:
+    'Back in training, a defender rolls the ball towards your goal. It is the same pass that slipped under your foot. The coach sends a striker to press you.',
+  backpassKick: 'Hit a long pass to the far fullback',
+  backpassKickResult:
+    'You look up before the press arrives. The ball drops into the path of the fullback on the far side.',
+  backpassMove: 'Move wide of the goal to offer an outlet',
+  backpassMoveResult:
+    'You point to the space outside the post. The defender plays it there and you receive the ball side-on, with the goal clear behind you.',
+
   hatTitle: 'Hat-trick and Man of the Match',
   hatText:
     'You scored a hat-trick and were named Man of the Match. A reporter holds out a microphone as you lift the trophy.',

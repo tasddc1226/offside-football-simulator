@@ -1,5 +1,7 @@
 import { BASE_DETAIL } from '@offside/contracts/positions';
 // ───────── 포지션 전용 이벤트: 공격수 · 미드필더 · 수비수 · 골키퍼 ─────────
+import { gMomentsText as M } from './i18n/ko/gMoments.js';
+import { schedule } from './story.js';
 import { clamp } from './rng.js';
 import { addStat, addAttr, pkWin, leagueOf, roleOf } from './engine.js';
 import { ovr } from './attributes.js';
@@ -496,11 +498,32 @@ export const POSITIONAL_EVENTS: EventDef[] = [
         ok: {
           text: '한 경기 쉬며 멘탈을 정리했습니다. 넘버원 자리는 조금 흔들립니다.',
           fx: (s) => {
+            schedule(s, 'gk-backpass', 0);
             addStat(s, 'morale', 8);
             addStat(s, 'cond', 8);
             addStat(s, 'trust', -0.5);
           },
         },
+      },
+    ],
+  },
+  {
+    id: 'gk-backpass',
+    chain: true,
+    w: 0,
+    get title() {
+      return M.backpassTitle;
+    },
+    cond: (s) => s.pos === 'GK' && !s.injury,
+    text: () => M.backpassText,
+    choices: [
+      {
+        label: () => M.backpassKick,
+        ok: { text: () => M.backpassKickResult, fx: (s) => addAttr(s, 'pas', 1) },
+      },
+      {
+        label: () => M.backpassMove,
+        ok: { text: () => M.backpassMoveResult, fx: (s) => addAttr(s, 'dri', 1) },
       },
     ],
   },

@@ -24,6 +24,14 @@ export const gMoments: Translation<typeof gMomentsText> = {
   legendIgnoreLabel: '不予理會',
   legendIgnoreResult: '一句話也沒說，照常去訓練。幾天後話題就轉移了。',
 
+  backpassTitle: '再接一次回傳球',
+  backpassText:
+    '回到訓練場，後衛把地滾球傳向門前。上次就是這種回傳從你腳下溜了過去。教練示意前鋒上來逼搶。',
+  backpassKick: '長傳給另一側的邊後衛',
+  backpassKickResult: '你在前鋒逼近前抬起頭，將球送到另一側邊後衛前插的路線上。',
+  backpassMove: '移到球門側邊接應',
+  backpassMoveResult: '你指向門柱外側的空檔。後衛把球傳到那裡，你側身接球，球門已經不在身後了。',
+
   hatTitle: '帽子戲法與MOM',
   hatText: '上演帽子戲法，獲選全場最佳球員（MOM）。記者把麥克風遞給捧著獎盃的你。',
   hatTeamLabel: '把功勞歸給隊友',

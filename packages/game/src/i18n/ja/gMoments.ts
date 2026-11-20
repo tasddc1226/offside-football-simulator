@@ -32,6 +32,16 @@ export const gMoments: Translation<typeof gMomentsText> = {
   legendIgnoreLabel: '相手にしない',
   legendIgnoreResult: '何も言わずに練習へ向かいました。数日後、話題は別のところへ移りました。',
 
+  backpassTitle: 'もう一度、あのバックパス',
+  backpassText:
+    '復帰後の練習で、DFがゴール前へボールを転がします。足元をすり抜けたあのバックパスです。コーチの合図でFWがプレスに来ます。',
+  backpassKick: '逆サイドのサイドバックへ大きく蹴る',
+  backpassKickResult:
+    '相手が詰める前に顔を上げました。逆サイドを駆け上がる味方の足元にボールが落ちました。',
+  backpassMove: 'ゴール脇に動いてパスコースを作る',
+  backpassMoveResult:
+    'ポストの外側を指さしました。DFがそこへ転がすと、ゴールに背を向けずに受けられました。',
+
   hatTitle: 'ハットトリックとMOM',
   hatText:
     'ハットトリックを決め、マン・オブ・ザ・マッチに選ばれました。トロフィーを掲げたあなたに記者がマイクを向けます。',
