@@ -9,6 +9,7 @@ import { hofText as H } from '@offside/app-core/i18n/ko/hof';
 import { publicLegendsText as L } from '@offside/app-core/i18n/ko/publicLegends';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { boardText as D } from '@offside/app-core/i18n/ko/board';
+import { shellInstallText as A } from '@offside/app-core/i18n/ko/shellInstall';
 import { resolveApiBaseUrl } from './api/base-url.js';
 
 export const LEGENDS_SORTS = [
@@ -166,8 +167,10 @@ const valueOf = (e: PublicHofEntry, sort: Sort): string => {
   }
 };
 
+// T-11-779 앱 소개 페이지로 가는 링크. 소개 페이지는 언어마다 주소가 있다(/en/app/ 등).
+const appLink = () => `<a href="${publicDocPath('/app/')}">${escape(A.stripGet)}</a>`;
 const nav = () =>
-  `<nav class="public-news-nav"><a href="/">OFFSIDE</a><a href="${legendsPath.hub}">${escape(L.hubTitle)}</a><a href="${publicDocPath('/guide/')}">${escape(S.footGuide)}</a><a href="${publicDocPath('/faq/')}">${escape(S.footFaq)}</a><a href="/news/">${escape(D.publicNews)}</a></nav>`;
+  `<nav class="public-news-nav"><a href="/">OFFSIDE</a><a href="${legendsPath.hub}">${escape(L.hubTitle)}</a><a href="${publicDocPath('/guide/')}">${escape(S.footGuide)}</a><a href="${publicDocPath('/faq/')}">${escape(S.footFaq)}</a><a href="/news/">${escape(D.publicNews)}</a>${appLink()}</nav>`;
 
 function table(entries: PublicHofEntry[], sort: Sort, offset = 0) {
   const rows = entries
@@ -183,7 +186,7 @@ const linkLists = () =>
   `<section class="os-panel"><h2>${escape(L.rankingsTitle)}</h2><ul class="legends-links">${LEGENDS_SORTS.map((s) => `<li><a href="${legendsPath.rank(s)}">${escape(L.rankTitle({ sort: sortLabel(s) }))}</a></li>`).join('')}</ul><h2>${escape(L.positionsTitle)}</h2><ul class="legends-links">${POSITIONS.map((p) => `<li><a href="${legendsPath.pos(p)}">${escape(L.posTitle({ pos: posLabel(p) }))}</a></li>`).join('')}</ul></section>`;
 
 const outro = () =>
-  `<p><a href="/">${escape(L.startCareer)}</a> · <a href="${legendsPath.hub}">${escape(L.backToHub)}</a></p>`;
+  `<p><a href="/">${escape(L.startCareer)}</a> · ${appLink()} · <a href="${legendsPath.hub}">${escape(L.backToHub)}</a></p>`;
 
 type Page = { title: string; description: string; content: string; indexable: boolean };
 

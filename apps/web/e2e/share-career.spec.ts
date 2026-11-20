@@ -341,3 +341,67 @@ test('T-11-439 공유받은 화면은 맨 위에도 시작 버튼이 있고, 공
   await expect(page).toHaveURL(/\/$/);
   await expect(page.locator('[data-act="next-candidates"]').first()).toBeVisible();
 });
+
+test.describe('T-11-779 공유받은 화면의 앱 받기', () => {
+  const ID = '0d000000-0000-4000-8000-000000000779';
+  const stubShared = (page: Page) =>
+    page.route(new RegExp(`/v1/hof/${ID}$`), (r) =>
+      r.fulfill(
+        json({
+          data: {
+            entry: {
+              id: ID,
+              name: null,
+              pos: 'FW',
+              number: 9,
+              retireAge: 34,
+              peak: 86,
+              legendScore: 500,
+              apps: 300,
+              goals: 150,
+              assists: 70,
+              trophies: 3,
+              awards: 1,
+              caps: 0,
+              ballon: 0,
+              lastClub: '맨체스터 스카이블루',
+              retiredAt: '2026-09-26T00:00:00.000Z',
+              hasDetail: false,
+              title: null,
+            },
+            snapshot: null,
+          },
+        }),
+      ),
+    );
+
+  test.describe('휴대폰', () => {
+    test.use({
+      userAgent:
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36',
+    });
+    test('끝 카드의 시작 버튼 아래에 그 기기의 스토어로 가는 버튼이 있고, 공유 캠페인이 실린다', async ({
+      page,
+    }) => {
+      await stubShared(page);
+      await page.goto(
+        `/career/${ID}?utm_source=offside_app&utm_medium=share&utm_campaign=career_share`,
+      );
+      const store = page.locator('[data-act="shared-app-store"]');
+      await expect(store).toHaveText('앱 받기');
+      await expect(store).toHaveAttribute('data-store', 'android');
+      const href = (await store.getAttribute('href'))!;
+      expect(href).toContain('play.google.com/store/apps/details');
+      expect(decodeURIComponent(href)).toContain('utm_campaign=career_share');
+      // 주 버튼은 그대로 웹에서 시작하기다.
+      await expect(page.locator('[data-act="shared-start"]')).toHaveText('나도 커리어 시작하기 →');
+    });
+  });
+
+  test('PC에서는 앱 받기 버튼을 두지 않는다', async ({ page }) => {
+    await stubShared(page);
+    await page.goto(`/career/${ID}`);
+    await expect(page.locator('[data-act="shared-start"]')).toBeVisible();
+    await expect(page.locator('[data-act="shared-app-store"]')).toHaveCount(0);
+  });
+});

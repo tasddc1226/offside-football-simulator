@@ -68,6 +68,15 @@ describe('public news responses', () => {
       expect.objectContaining({ credentials: 'omit', redirect: 'manual' }),
     );
   });
+  it('T-11-779 links the app landing page from the menu on the list and article pages', async () => {
+    mock();
+    for (const path of ['/news/', `/news/${id}/`]) {
+      const html = await (await get(path)).text();
+      expect(html, path).toMatch(
+        /<nav class="public-news-nav">.*<a href="\/app\/">앱 받기<\/a><\/nav>/,
+      );
+    }
+  });
   it('sends malformed game deep links home and keeps valid ones in the app shell', async () => {
     const bad = await get('/?news=%3Cscript%3E&board=release');
     expect(bad.status).toBe(302);

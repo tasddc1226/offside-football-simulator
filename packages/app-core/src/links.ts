@@ -8,8 +8,11 @@ export const IOS_APP_STORE_URL = `https://apps.apple.com/kr/app/id${IOS_APP_ID}`
 // 같은 스토어 주소가 apps/api/src/routes/appVersion.ts(업데이트 안내) · apps/mobile/src/platform/review.ts(리뷰)에도 있다.
 export const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.offsidelab.app';
 
-/** T-11-588 게임 가이드 · FAQ는 언어마다 주소가 있다(/en/guide/ 등, apps/web/scripts/seo.mjs GUIDE_LOCALES). 다른 공개 문서는 한국어 한 벌. */
-export const publicDocPath = (path: '/guide/' | '/faq/', lang = getLocale()) =>
+/**
+ * T-11-588 게임 가이드 · FAQ는 언어마다 주소가 있다(/en/guide/ 등, apps/web/scripts/seo.mjs GUIDE_LOCALES). 다른 공개 문서는 한국어 한 벌.
+ * T-11-779 앱 소개 페이지(/app/, apps/web/scripts/landing.mjs LANDING_LOCALES)도 언어마다 주소가 있다.
+ */
+export const publicDocPath = (path: '/guide/' | '/faq/' | '/app/', lang = getLocale()) =>
   lang === 'ko' ? path : `/${lang}${path}`;
 
 /**
