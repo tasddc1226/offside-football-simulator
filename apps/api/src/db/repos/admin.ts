@@ -38,7 +38,7 @@ export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats,
   const t7 = new Date(now.getTime() - 7 * DAY_MS).toISOString();
   const { days, startIso } = kstDays(now, DAILY_DAYS);
 
-  const [p, cs, c7, r7, b, dailyProfiles, dailyCareers, dailyRetired, audit] = await db.batch([
+  const [p, cs, b, dailyProfiles, dailyCareers, dailyRetired, audit] = await db.batch([
     db
       .select({
         total: count('total'),
@@ -50,20 +50,11 @@ export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats,
       })
       .from(profiles)
       .where(isNull(profiles.deletedAt)),
-    // T-11-490 커리어(약 26만 행)는 표를 통째로 훑으면 1.5초 동안 D1 줄을 막는다 — 상태별 수는 상태 인덱스만,
-    // 최근 7일은 생성 · 은퇴 시각 인덱스 범위로 읽는다(합 0.2초).
+    // 상태별 수는 상태 인덱스에서 읽고, 최근 7일 수는 아래 14일 추이와 같은 행에서 센다.
     db
       .select({ status: careers.status, n: count('n') })
       .from(careers)
       .groupBy(careers.status),
-    db
-      .select({ n: count('n') })
-      .from(careers)
-      .where(sql`${careers.createdAt} >= ${t7}`),
-    db
-      .select({ n: count('n') })
-      .from(careers)
-      .where(and(eq(careers.status, 'retired'), sql`${careers.retiredAt} >= ${t7}`)),
     db
       .select({
         posts: sql<number>`(SELECT count(*) FROM board_posts WHERE deleted_at IS NULL)`.as('posts'),
@@ -78,12 +69,20 @@ export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats,
       .where(sql`${profiles.createdAt} >= ${startIso}`)
       .groupBy(sql`1`),
     db
-      .select({ day: kstDaySql(careers.createdAt), n: count('n') })
+      .select({
+        day: kstDaySql(careers.createdAt),
+        n: count('n'),
+        recent: since(careers.createdAt, t7, 'recent'),
+      })
       .from(careers)
       .where(sql`${careers.createdAt} >= ${startIso}`)
       .groupBy(sql`1`),
     db
-      .select({ day: kstDaySql(careers.retiredAt), n: count('n') })
+      .select({
+        day: kstDaySql(careers.retiredAt),
+        n: count('n'),
+        recent: since(careers.retiredAt, t7, 'recent'),
+      })
       .from(careers)
       .where(and(eq(careers.status, 'retired'), sql`${careers.retiredAt} >= ${startIso}`))
       .groupBy(sql`1`),
@@ -109,8 +108,8 @@ export async function getAdminStats(db: Db, now: Date): Promise<Omit<AdminStats,
       total: byStatus.active + byStatus.retired,
       active: byStatus.active,
       retired: byStatus.retired,
-      new7d: n(c7[0]?.n),
-      retired7d: n(r7[0]?.n),
+      new7d: dailyCareers.reduce((sum, row) => sum + n(row.recent), 0),
+      retired7d: dailyRetired.reduce((sum, row) => sum + n(row.recent), 0),
     },
     board: num(b[0]),
     daily: days.map((day) => ({
