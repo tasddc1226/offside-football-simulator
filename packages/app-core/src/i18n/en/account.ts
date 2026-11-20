@@ -10,7 +10,7 @@ export const account: Translation<AccountMsgs> = {
   retry: 'Try again',
   guestTitle: "You're not logged in",
   guestBody:
-    'Your progress is saved only on this device. Log in to see your player records and club name on other devices.',
+    'Your progress is saved only on this device. Log in to build a team from your retired players and see your player records and club name on other devices.',
   logout: 'Log out',
   cancel: 'Cancel',
   logoutTitle: 'Log out?',

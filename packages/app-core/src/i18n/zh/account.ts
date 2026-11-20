@@ -8,7 +8,8 @@ export const account: Translation<AccountMsgs> = {
   errorBody: '無法連線到伺服器，無法確認登入狀態。遊戲可以繼續，進度會儲存在這台裝置。',
   retry: '重試',
   guestTitle: '尚未登入',
-  guestBody: '遊戲進度只會儲存在這台裝置。登入後，就能在其他裝置查看球員紀錄與俱樂部名稱。',
+  guestBody:
+    '遊戲進度只會儲存在這台裝置。登入後，就能用退休球員組隊，並在其他裝置查看球員紀錄與俱樂部名稱。',
   logout: '登出',
   cancel: '取消',
   logoutTitle: '要登出嗎？',

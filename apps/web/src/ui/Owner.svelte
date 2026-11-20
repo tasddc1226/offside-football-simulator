@@ -16,7 +16,7 @@
   import { fmtValue } from '@offside/app-core/format';
   import { appState, type TeamView } from './state.svelte.js';
   import { onMount } from 'svelte';
-  import { accountCache, ensureAccount } from './account-state.svelte.js';
+  import { accountCache, ensureAccount, loadAccount } from './account-state.svelte.js';
   import { isMember } from '@offside/app-core/account';
   import ClubValueInfo from './owner/ClubValueInfo.svelte';
   import OwnerProfileEditor from './owner/OwnerProfileEditor.svelte';
@@ -29,6 +29,7 @@
   import { myTeamTarget, ownerDotLabel } from '@offside/app-core/ownerDots';
   import { hallDotLabel, hallSeason } from '@offside/app-core/hallEntry';
   import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
+  import { accountText as A } from '@offside/app-core/i18n/ko/account';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
   import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
   import { seasonPassText as SP } from '@offside/app-core/i18n/ko/seasonPass';
@@ -181,6 +182,20 @@
         {#if linked}<div class="owner-funds" data-owner-funds><dt>{L.statFunds}<span class="owner-funds-go" aria-hidden="true">›</span></dt><dd>{funds}</dd><button class="tap-cover" data-act="funds-history" aria-label={F.openAria} onclick={() => go('funds')}></button></div>{/if}
       </dl>
     </section>
+  {:else if accountCache.value === 'error'}
+    <!-- T-11-780 계정 확인에 실패하면 내 팀 · 로그인 입구가 통째로 사라졌다(5분 뒤 조용한 재확인이 실패한 구단주도 같다).
+         다시 시도는 확인 중(뼈대)으로 돌린 뒤 한 번만 묻는다. -->
+    <section class="card owner-team" aria-label={A.errorTitle} data-owner-account-error>
+      <h2>{A.errorTitle}</h2>
+      <p class="muted fs-sm">{A.errorBody}</p>
+      <button class="btn btn-block" data-act="owner-account-retry" onclick={() => void loadAccount()}>{A.retry}</button>
+    </section>
+  {:else}
+    <!-- 확인 중: 프로필 카드 · 내 팀 카드 자리의 뼈대. -->
+    <div class="owner-checking" data-owner-account-checking>
+      <Skeleton height={132} />
+      <Skeleton height={168} />
+    </div>
   {/if}
 
   <!-- T-11-338 진행 중인 감독 커리어가 있으면 맨 위에서 이어 한다. -->
@@ -297,6 +312,7 @@
 
 <style>
   .hub-section-title {margin:8px 2px 0;font-size:var(--fs-body);}
+  .owner-checking {display:flex;flex-direction:column;gap:12px;}
     .owner-founder {margin-left:6px;vertical-align:middle;}
   .owner-hub {
     display: flex;
