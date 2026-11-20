@@ -32,6 +32,25 @@ describe('pickAndroidOffer', () => {
       intro: { price: '₩2,900', months: 1 },
     });
   });
+  it('한 달 1회 결제 할인(반복 없음)은 횟수가 0으로 와도 첫 달 할인으로 읽는다', () => {
+    for (const count of [0, 1]) {
+      const once = offer('intro-1m', [phase('₩2,900', 3, count), phase('₩4,900', 1)]);
+      expect(pickAndroidOffer([base, once], 'intro-1m')).toEqual({
+        token: 'tok-intro-1m',
+        price: '₩4,900',
+        intro: { price: '₩2,900', months: 1 },
+      });
+    }
+  });
+  it('반복 결제 할인은 횟수만큼의 달로 읽고, 횟수가 없으면 정상가로 판다', () => {
+    const two = offer('intro-1m', [phase('₩2,900', 2, 2), phase('₩4,900', 1)]);
+    expect(pickAndroidOffer([base, two], 'intro-1m')?.intro).toEqual({
+      price: '₩2,900',
+      months: 2,
+    });
+    const zero = offer('intro-1m', [phase('₩2,900', 2, 0), phase('₩4,900', 1)]);
+    expect(pickAndroidOffer([base, zero], 'intro-1m')?.intro).toBeNull();
+  });
   it('할인 요금제가 없으면(자격 없음) 정상가로 판다', () => {
     expect(pickAndroidOffer([base], 'intro-1m')?.token).toBe('tok-base');
   });
