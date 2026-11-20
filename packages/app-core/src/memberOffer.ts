@@ -2,9 +2,10 @@
 // 가격 단계(첫 달 할인 → 그 뒤 정상가)를 같은 요금제에서 뽑는다. 화면에 보인 가격과 결제에 쓰는 토큰이 어긋나지 않게 한 곳에서
 // 정한다. 목록의 첫 번째나 가장 싼 것을 그냥 고르지 않는다. 확실하지 않으면 정상가만 보이거나(할인 숨김) 팔지 않는다(null).
 
-/** Play 가격 단계의 반복 방식: 1 = 끝없이 반복(정상가), 2 = 정해진 횟수만 반복(첫 달 할인), 3 = 반복 없음. */
+/** Play 가격 단계의 반복 방식: 1 = 끝없이 반복(정상가), 2 = 정해진 횟수만 반복(여러 달 할인), 3 = 반복 없음(한 달 1회 결제). */
 const INFINITE = 1;
 const FINITE = 2;
+const ONCE = 3;
 const MONTH = 'P1M';
 
 export interface OfferPhase {
@@ -40,7 +41,7 @@ const monthlyForever = (p: OfferPhase | undefined) =>
 /**
  * Android: 월 정상가 요금제(가격 단계가 '매달 끝없이' 하나뿐인 것)를 찾고, `introId`를 주면 그 ID의 신규 할인 요금제를 먼저 본다.
  * Play는 이 계정이 받을 수 있는 요금제만 돌려주므로, 할인 요금제가 목록에 있으면 자격이 있는 것이다. 할인 요금제는 '몇 달 할인가
- * → 그 뒤 정상가와 같은 값' 두 단계일 때만 쓴다. 모양이 다르면 정상가로 판다.
+ * → 그 뒤 정상가와 같은 값' 두 단계일 때만 쓴다(할인 단계는 한 달 1회 결제이거나 매달 반복 결제 N회). 모양이 다르면 정상가로 판다.
  */
 export function pickAndroidOffer(
   offers: readonly OfferLike[],
@@ -59,13 +60,19 @@ export function pickAndroidOffer(
   if (!introId) return base;
   const offer = usable.find((o) => o.id === introId);
   const [first, last, ...rest] = offer ? phases(offer) : [];
+  // 첫 달만 할인은 Play 콘솔에서 '1회 결제' 한 달(반복 없음)로 만든다. '할인된 반복 결제'는 2회부터라 두 달 이상일 때만 온다.
+  const months =
+    first?.recurrenceMode === ONCE
+      ? 1
+      : first?.recurrenceMode === FINITE
+        ? first.billingCycleCount
+        : 0;
   if (
     !offer ||
     rest.length ||
     !first ||
-    first.recurrenceMode !== FINITE ||
     first.billingPeriod !== MONTH ||
-    first.billingCycleCount < 1 ||
+    months < 1 ||
     !(Number(first.priceAmountMicros) > 0) ||
     !monthlyForever(last) ||
     last!.formattedPrice !== price
@@ -74,7 +81,7 @@ export function pickAndroidOffer(
   return {
     token: offer.offerTokenAndroid!,
     price,
-    intro: { price: first.formattedPrice, months: first.billingCycleCount },
+    intro: { price: first.formattedPrice, months },
   };
 }
 
