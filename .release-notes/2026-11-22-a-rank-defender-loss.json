@@ -1,0 +1,30 @@
+{
+  "id": "t-11-807-rank-defender-loss",
+  "title": "시즌 3부터 도전받은 경기에서 질 때 RP가 더 깎여요",
+  "items": [
+    "서비스 시즌 3부터 랭크 경기에서 도전받은 팀이 지면 원래 감점의 4분의 3을 잃어요. 시즌 2까지는 절반이었어요.",
+    "도전받은 경기에서 비기면 지금처럼 RP를 잃지 않아요. 시즌 2 순위와 RP는 바뀌지 않아요."
+  ],
+  "en": {
+    "title": "From season 3, losing a match you were challenged to costs more RP",
+    "items": [
+      "From service season 3, a team that loses a ranked match it was challenged to loses three quarters of the usual RP. Through season 2 it was half.",
+      "A draw in a match you were challenged to still never costs RP. Season 2 rankings and RP do not change."
+    ]
+  },
+  "ja": {
+    "title": "シーズン3から、挑戦を受けた試合で負けたときのRPの減りが大きくなります",
+    "items": [
+      "サービスシーズン3から、ランク戦で挑戦を受けたチームが負けると、通常の減点の4分の3を失います。シーズン2までは半分でした。",
+      "挑戦を受けた試合で引き分けた場合は、これまでどおりRPは減りません。シーズン2の順位とRPは変わりません。"
+    ]
+  },
+  "zh": {
+    "title": "賽季 3 起，被挑戰的比賽落敗時 RP 扣得更多",
+    "items": [
+      "從服務賽季 3 起，排位賽中被挑戰的球隊落敗時，會扣除原本扣分的四分之三。到賽季 2 為止是一半。",
+      "被挑戰的比賽和局時，仍和現在一樣不會扣 RP。賽季 2 的排名與 RP 不會改變。"
+    ]
+  },
+  "availability": "web-app"
+}

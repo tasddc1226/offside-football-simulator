@@ -52,6 +52,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMax: '最高售價（基準價倍數）',
   cupAtkK: '盃賽戰力差反映',
   rankAtkK: '排位賽戰力差反映',
+  rankDefLoss: '排位賽被挑戰方落敗扣分',
   leagueFatigue: '聯賽體力',
   leagueHomeAdv: '聯賽主場優勢',
   teamMatchRechargeMin: '排名賽恢復間隔（分鐘）',
