@@ -12,6 +12,7 @@ import { applySeasonSchedule, closeSeasonSchedule } from '@offside/contracts/ser
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cupKo, cupText } from '../cupText.js';
+import { createDb } from '../db/client.js';
 import {
   balanceVersions,
   cards,
@@ -20,10 +21,12 @@ import {
   ownerTeams,
   profiles,
 } from '../db/schema.js';
+import { eligibleMap, playableCount, type CareerLite } from '../db/repos/ownerTeams.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, callJson, issueAdminCookie, issueGoogleCookie } from '../test/http.js';
 import { leagueHonorsOf, runLeague } from './league.js';
+import { buildLineup, filledCount } from './sim.js';
 
 // T-11-418b 오프사이드 리그 2차: 배치 · 경기 · 기권 · 알림 · 명단 잠금 · 순위표 API.
 
@@ -484,6 +487,106 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
     ]);
   });
 
+  it('T-11-801 1시간 전 알림은 경기 때처럼 실제 선발을 센다: 8명 미만은 기권패 경고, 8~10명은 유스 안내, 11명은 잠금 안내만', async () => {
+    // 배치 때는 모두 8명 이상이다. 배치 뒤 카드가 팔리거나 감독이 되면 저장된 filled는 그대로인데 실제 선발은 준다.
+    const full = await entrant(11);
+    const nine = await entrant(9);
+    const eight = await entrant(8);
+    const soldOne = await entrant(11); // 1장 팔림 → 실제 10명(저장 11)
+    const soldFour = await entrant(11); // 4장 팔림 → 실제 7명(저장 11)
+    const short = await entrant(8); // 1장 팔림 → 실제 7명(저장 8)
+    const coach = await entrant(9); // 2장이 감독 카드 → 실제 7명(저장 9)
+    const last = await entrant(8); // 1장 팔림 → 실제 7명, 이미 기권 2번
+    expect(await run(L.drawAt)).toMatchObject({ step: 'draw', placed: 8, leagues: 1 });
+    await drain(at(L.drawAt, 60_000));
+    const cardsOf = (p: { profileId: string }, n: number) =>
+      ctx.db.select().from(cards).where(eq(cards.ownerId, p.profileId)).limit(n);
+    for (const [from, n] of [
+      [soldOne, 1],
+      [soldFour, 4],
+      [short, 1],
+      [last, 1],
+    ] as const)
+      for (const c of await cardsOf(from, n))
+        await ctx.db
+          .update(cards)
+          .set({ ownerId: full.profileId })
+          .where(eq(cards.careerId, c.careerId));
+    for (const c of await cardsOf(coach, 2))
+      await ctx.db.update(cards).set({ manager: true }).where(eq(cards.careerId, c.careerId));
+    await ctx.db.update(leagueEntries).set({ forfeits: 2 }).where(eqEntry(last.profileId));
+    const stored = await ctx.db
+      .select({ p: ownerTeams.profileId, filled: ownerTeams.filled })
+      .from(ownerTeams)
+      .where(eqProfile(soldFour.profileId));
+    expect(stored[0]?.filled).toBe(11);
+
+    // 1라운드 네 경기를 한 시각(13:00)에 모아 8팀에 한 번에 알린다. 읽는 쿼리를 센다.
+    await ctx.env.DB.prepare('UPDATE league_matches SET at = ? WHERE season = 2 AND round = 1')
+      .bind(L.rounds[0]!)
+      .run();
+    const traced = async (now: string) => {
+      const seen: string[] = [];
+      // D1 바인딩은 spyOn이 걸리지 않아 감싼 D1로 cron을 돌린다(queryPerformance.test.ts와 같은 방식).
+      const DB = new Proxy(ctx.env.DB, {
+        get(target, key) {
+          if (key === 'prepare')
+            return (q: string) => {
+              seen.push(q);
+              return target.prepare(q);
+            };
+          const value = Reflect.get(target, key) as unknown;
+          return typeof value === 'function' ? value.bind(target) : value;
+        },
+      });
+      const r = await runLeague(createDb(DB), now);
+      return { r, seen, reads: seen.filter((q) => /^\s*(select|with)\b/i.test(q)).length };
+    };
+    const eightTeams = await traced(at(L.rounds[0]!, -115 * 60_000));
+    expect(eightTeams.r).toEqual({ season: 2, step: 'lineup', n: 8 });
+    const body = async (p: { profileId: string }) =>
+      (await notices(p.profileId)).find((x) => x.k === 'league:2:lineup:r1')?.body;
+    const lock = { round: 1, time: '13:00', lock: '12:00' };
+    expect(await body(full)).toBe(cupKo('leagueLineupBody', lock));
+    expect(await body(nine)).toBe(cupKo('leagueLineupShortBody', { ...lock, filled: 9 }));
+    expect(await body(eight)).toBe(cupKo('leagueLineupShortBody', { ...lock, filled: 8 }));
+    expect(await body(soldOne)).toBe(cupKo('leagueLineupShortBody', { ...lock, filled: 10 }));
+    const warn =
+      '선발이 7명이라 이대로면 13:00에 열리는 1라운드 경기는 0:3 기권패예요. 12:00에 명단이 잠기기 전에 선발을 8명 이상 채워 주세요.';
+    for (const p of [soldFour, short, coach])
+      expect(await body(p)).toBe(
+        `${warn} 이번에 기권하면 1/3번이 되고, 2번 더 기권하면 남은 경기는 모두 0:3 패예요.`,
+      );
+    expect(await body(last)).toBe(
+      `${warn} 이번에 기권하면 3번째라 남은 경기는 모두 0:3 패가 돼요. 보상도 없고 다음에 신청하면 맨 아래 부에서 시작해요.`,
+    );
+    // 팀 수와 상관없이 쿼리 한 번으로 선발 카드까지 읽고, 경기는 시각 인덱스 · 팀 · 카드 · 커리어는 기본키로 찾는다.
+    const sides = eightTeams.seen.filter((q) => q.includes('json_group_array'));
+    expect(sides).toHaveLength(1);
+    const plan = await ctx.env.DB.prepare(`EXPLAIN QUERY PLAN ${sides[0]!}`)
+      .bind(2, L.rounds[0]!)
+      .all<{ detail: string }>();
+    const detail = plan.results.map((p) => p.detail).join('\n');
+    expect(detail).toMatch(/SEARCH c USING INDEX sqlite_autoindex_cards_1 \(career_id=\?\)/);
+    expect(detail).toMatch(/SEARCH t USING INDEX sqlite_autoindex_owner_teams_1 \(id=\?\)/);
+    expect(detail).toMatch(/league_matches_season_at_idx/);
+    expect(detail).not.toMatch(/SCAN (c|t|k|league_matches)\b/);
+
+    // 경기 때 판정과 같다: 경고를 받은 네 팀만 0:3 기권패이고, 기권 3번째인 팀은 남은 경기가 모두 기권패로 바뀐다.
+    await drain(at(L.rounds[0]!, DAY_END));
+    const after = await ctx.db.select().from(leagueEntries);
+    const of = (p: { profileId: string }) => after.find((e) => e.profileId === p.profileId)!;
+    for (const p of [soldFour, short, coach])
+      expect(of(p)).toMatchObject({ status: 'active', forfeits: 1 });
+    expect(of(last)).toMatchObject({ status: 'forfeited', forfeits: 3 });
+    for (const p of [full, nine, eight, soldOne]) expect(of(p).forfeits).toBe(0);
+
+    // 2팀만 나가는 시각도 읽는 쿼리 수가 같다(참가 팀 수에 비례하지 않는다).
+    const twoTeams = await traced(at(L.rounds[1]!, -115 * 60_000));
+    expect(twoTeams.r).toMatchObject({ season: 2, step: 'lineup' });
+    expect(twoTeams.reads).toBe(eightTeams.reads);
+  }, 60_000);
+
   it('7팀이 안 되면 리그를 열지 않고 모두에게 알린다', async () => {
     const few = [];
     for (let i = 0; i < 5; i++) few.push(await entrant(8));
@@ -734,6 +837,73 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
 const eqProfile = (p: string) => eq(ownerTeams.profileId, p);
 const eqEntry = (p: string) => eq(leagueEntries.profileId, p);
 
+describe('T-11-801 실제 선발 수', () => {
+  it('playableCount는 경기 선발(buildLineup → filledCount)과 같은 수를 센다', () => {
+    const owner = 'p1';
+    const row = (id: string, o: Partial<CareerLite> = {}): CareerLite => ({
+      id,
+      ownerId: owner,
+      manager: false,
+      enhance: 0,
+      pos: 'FW',
+      nation: null,
+      dpos: null,
+      peak: 80,
+      peakProfile: null,
+      cardAttrsJson: null,
+      height: null,
+      weight: null,
+      legendScore: 0,
+      number: 9,
+      publicName: null,
+      look: null,
+      type: null,
+      foot: null,
+      mainLeague: null,
+      mainClub: null,
+      raiserId: owner,
+      serviceSeason: 2,
+      hidden: 0,
+      lastClubId: null,
+      caps: null,
+      ballon: null,
+      rn: null,
+      specialsJson: '[]',
+      ...o,
+    });
+    const rows = [
+      row('mine1'),
+      row('mine2'),
+      row('mine3'),
+      row('mine4'),
+      row('old', { serviceSeason: 1 }),
+      row('sold', { ownerId: 'p2' }),
+      row('coach', { manager: true }),
+      row('later', { serviceSeason: 3 }),
+      row('hidden', { hidden: 1 }),
+    ];
+    // 지워진 카드(gone) · 빈 자리는 유스, 같은 카드 두 자리는 둘 다 세고, 12번째 칸은 선발 밖이다.
+    const slots = [
+      'mine1',
+      'sold',
+      'coach',
+      'later',
+      'hidden',
+      'gone',
+      null,
+      'mine2',
+      'mine2',
+      'old',
+      'mine3',
+      'mine4',
+    ];
+    const lineup = buildLineup('4-3-3', slots, eligibleMap(rows, owner, 2, true));
+    const team = { profileId: owner, slotsJson: JSON.stringify(slots) };
+    expect(playableCount(team, new Map(rows.map((r) => [r.id, r])), 2)).toBe(filledCount(lineup));
+    expect(filledCount(lineup)).toBe(5);
+  });
+});
+
 describe('T-11-640 리그 우승 기록', () => {
   let ctx: TestD1;
   beforeEach(async () => {
@@ -814,5 +984,29 @@ describe('T-11-430 리그 알림 문구', () => {
     });
     expect(cupText(short, 'ja')).toContain('スタメンが10/11人');
     expect(cupText(cupKo('leagueLineupTitle'), 'en')).toBe('Your league lineup locks in 1 hour');
+  });
+
+  it('T-11-801 기권패 경고(남은 기권 횟수 · 마지막 기권)를 영어 · 일본어 · 중국어로 옮긴다', () => {
+    const vars = { filled: 7, time: '16:00', round: 3, lock: '15:00', min: 8, limit: 3 };
+    const warn = cupKo('leagueLineupForfeitBody', { ...vars, n: 1, left: 2 });
+    expect(warn).toBe(
+      '선발이 7명이라 이대로면 16:00에 열리는 3라운드 경기는 0:3 기권패예요. 15:00에 명단이 잠기기 전에 선발을 8명 이상 채워 주세요. 이번에 기권하면 1/3번이 되고, 2번 더 기권하면 남은 경기는 모두 0:3 패예요.',
+    );
+    expect(cupText(warn, 'en')).toBe(
+      'Your starting XI has only 7 players, so your Round 3 match at 16:00 will be a 0:3 forfeit as it stands. Get at least 8 players in before your lineup locks at 15:00. Forfeiting would put you at 1/3, and 2 more means every remaining match is a 0:3 loss.',
+    );
+    expect(cupText(warn, 'ja')).toContain('スタメンが7人なので');
+    expect(cupText(warn, 'ja')).toContain('不戦敗になると棄権1/3回になり、あと2回');
+    expect(cupText(warn, 'zh')).toContain('先發只有 7 人');
+    expect(cupText(warn, 'zh')).toContain('累計 1/3 次，再棄權 2 次');
+    const last = cupKo('leagueLineupLastBody', vars);
+    expect(cupText(last, 'en')).toBe(
+      'Your starting XI has only 7 players, so your Round 3 match at 16:00 will be a 0:3 forfeit as it stands. Get at least 8 players in before your lineup locks at 15:00. Forfeiting would put you at 3/3, so every remaining match becomes a 0:3 loss. There is no reward and your next entry starts in the bottom tier.',
+    );
+    expect(cupText(last, 'ja')).toContain('一番下の部から始まります');
+    expect(cupText(last, 'zh')).toContain('下次報名將從最低級開始');
+    // 문장을 —로 잇지 않는다.
+    for (const lang of ['ko', 'en', 'ja', 'zh'] as const)
+      for (const s of [warn, last]) expect(cupText(s, lang)).not.toContain('—');
   });
 });
