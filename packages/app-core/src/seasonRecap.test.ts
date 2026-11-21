@@ -1,5 +1,7 @@
 import type { OwnerHonor, SeasonRecap } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
+import { setLocale } from './i18n/core.js';
+import { en } from './i18n/en/index.js';
 import {
   honorViews,
   PHOTO_MAX,
@@ -12,6 +14,7 @@ import {
   recapHeadline,
   recapHighlights,
   recapNumbers,
+  recapTeamRankLine,
   recapTeamSummary,
   recapTierBars,
   signed,
@@ -44,6 +47,15 @@ describe('T-11-128 시즌 결산 문구', () => {
       [0, 'pioneer', '은퇴 선수 3명', 'bronze'],
     ]);
     expect(views.at(-1)?.title).toBe('프리시즌 개척자');
+  });
+
+  it('T-11-800 팀 휘장 이름은 시즌 1까지 팀 레이팅, 시즌 2부터 팀 RP', () => {
+    const [s2, s1] = honorViews([
+      honor({ kind: 'team', band: 10, rank: 4, season: 1 }),
+      honor({ kind: 'team', band: 1, rank: 1, season: 2 }),
+    ]);
+    expect([s2?.season, s2?.title, s2?.chip]).toEqual([2, '팀 RP', '팀 RP 1위']);
+    expect([s1?.season, s1?.title, s1?.chip]).toEqual([1, '팀 레이팅', '팀 레이팅 TOP 10']);
   });
 
   it('순위가 없으면 순위 밖, 기준 날짜는 마감 전날(한국 시각)', () => {
@@ -162,6 +174,38 @@ describe('T-11-128 시즌 결산 문구', () => {
       expect(recapTeamSummary(team)).toEqual({ played: 46, winRate: 67, goalDiff: 34 });
       expect(recapTeamSummary({ ...team, goalsAgainst: null }).goalDiff).toBeNull();
       expect([signed(34), signed(-3), signed(0)]).toEqual(['+34', '-3', '0']);
+    });
+
+    it('T-11-800 팀 순위 줄 · 자랑거리 · 공유 카드 순위는 시즌 1까지 레이팅, 시즌 2부터 RP', () => {
+      const s1 = recap({ season: 1 });
+      const s2 = recap({ season: 2 });
+      expect(recapRanks(s1).map((r) => r.label)).toEqual(['팀 레이팅', '업적 랭킹', '명예의 전당']);
+      expect(recapRanks(s2).map((r) => r.label)).toEqual(['팀 RP', '업적 랭킹', '명예의 전당']);
+      expect(recapHighlights(s1)).toContain('팀 레이팅 5위');
+      expect(recapHighlights(s2)).toEqual([
+        '명예의 전당 1위',
+        '발롱도르 2회',
+        '아이콘 카드 1장',
+        '팀 RP 5위',
+        '영구결번 2개',
+        '7연승',
+      ]);
+      expect(recapTeamRankLine(1, team)).toBe('레이팅 순위 5위 / 233 · 상위 3%');
+      expect(recapTeamRankLine(2, team)).toBe('RP 순위 5위 / 233 · 상위 3%');
+    });
+
+    it('T-11-800 순위 밖 팀은 공유 카드 순위 줄에 순위를 두 번 쓰지 않는다', () => {
+      // 전에는 '레이팅 순위 순위 밖' · 'Rating rank Unranked'였다(로그인하지 않은 구단주의 팀은 순위가 없다).
+      const out = { ...team, rank: null };
+      expect(recapTeamRankLine(1, out)).toBe('레이팅 · 순위 밖');
+      expect(recapTeamRankLine(2, out)).toBe('RP · 순위 밖');
+      setLocale('en', en);
+      try {
+        expect(recapTeamRankLine(1, out)).toBe('Rating · Unranked');
+        expect(recapTeamRankLine(2, out)).toBe('RP · Unranked');
+      } finally {
+        setLocale('ko');
+      }
     });
   });
 });

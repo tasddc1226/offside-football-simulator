@@ -14,6 +14,7 @@ import type { StreakHint } from '@offside/app-core/losingStreak';
 import { momentGoalSummary, momentTitle, pickedChoice } from '@offside/app-core/teamMoments';
 import { matchOddsView } from '@offside/app-core/matchReport';
 import { recordText, signedNum } from '@offside/app-core/teamText';
+import { friendlySeason, teamScoreLabel } from '@offside/app-core/teamScore';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { TeamReport } from './TeamReport';
@@ -24,6 +25,7 @@ import { divisionShiftView, type DivisionShift } from '@offside/app-core/teamDiv
 export function TeamResult({
   m,
   team,
+  nowSeason,
   shift = null,
   streak = null,
   eventName,
@@ -37,6 +39,8 @@ export function TeamResult({
 }: {
   m: TeamMatch;
   team: OwnerTeam | null;
+  /** T-11-800 지금 시즌 — 보고 있는 팀이 아닌 팀으로 치른 친선전 칩의 팀 점수 이름(친구 탭 안내 줄과 같은 기준, 웹 TeamResult nowSeason). */
+  nowSeason: number;
   /** T-11-375 방금 치른 경기의 디비전 전후(기록에서 연 경기는 null). */
   shift?: DivisionShift | null;
   /** T-11-722 랭크 연패 안내 — 방금 마감한 내가 건 랭크 경기에만 온다(웹 TeamResult streak). */
@@ -253,7 +257,7 @@ export function TeamResult({
       </View>
       {friendly ? (
         <View style={{ flexDirection: 'row' }} testID="team-friendly-label">
-          {chip(L.friendlyNote)}
+          {chip(teamScoreLabel(friendlySeason(m, team, nowSeason), L, 'friendlyNote'))}
         </View>
       ) : gain != null || record ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

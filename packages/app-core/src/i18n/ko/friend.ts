@@ -19,6 +19,9 @@ const ko = {
   title: '친구',
   info: (p: { left: number; per: number }) =>
     `친선전은 레이팅과 전적에 들어가지 않아요. 오늘 남은 친선전 ${p.left}/${p.per}`,
+  /** T-11-800 시즌 2부터(teamScore.ts가 지금 시즌으로 고른다). */
+  infoRp: (p: { left: number; per: number }) =>
+    `친선전은 RP와 전적에 들어가지 않아요. 오늘 남은 친선전 ${p.left}/${p.per}`,
   needTeam: '이번 시즌 팀을 만들면 친구와 친선전을 할 수 있어요.',
   loadFailWeb: '친구 목록을 불러오지 못했어요.',
   loadFailApp: '친구를 불러오지 못했어요.',

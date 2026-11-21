@@ -152,6 +152,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   againLeft: (p) => `今日はあと${p.n}試合です`,
   againNone: '今日の試合はすべて終わりました',
   friendlyNote: '親善試合ではレーティングは変わりません。',
+  friendlyNoteRp: '親善試合ではRPは変わりません。',
   scoreAria: (p) => `${p.h}対${p.a}`,
   shareTitle: 'SNSシェア画像',
   shareLeadWeb: '今見ている編成を1枚にまとめました。',

@@ -13,6 +13,7 @@
   import { createCupPredictionController, emptyCupPredictions, type CupPredictionContext } from '@offside/app-core/cupPredictions';
   import { cupFolds, rememberCupFolds, type CupScheduleTab } from '@offside/app-core/cupFolds';
   import { divisionCapLabel, divisionLabel } from '@offside/app-core/cupDivision';
+  import { teamScoreLabel } from '@offside/app-core/teamScore';
   import Topbar from './Topbar.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
   import TeamLogo from './team/TeamLogo.svelte';
@@ -261,7 +262,7 @@
             <li>{L.rulePoints}</li>
             <li>{L.ruleKnockout}</li>
             <li>{L.ruleDaily({ time: matchTime })}</li>
-            <li>{L.ruleLock({ time: lockTime })}</li>
+            <li>{teamScoreLabel(data.cup.season, L, 'ruleLock')({ time: lockTime })}</li>
             <li>{L.ruleForfeit}</li>
             {#if data.divisions}<li data-cup-rule-divisions>{L.ruleDivisions}</li><li>{L.ruleDivisionMove}</li>{/if}
           </ul>

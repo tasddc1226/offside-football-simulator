@@ -41,6 +41,7 @@ import {
   signed,
   type HonorView,
 } from '@offside/app-core/seasonRecap';
+import { teamScoreLabel } from '@offside/app-core/teamScore';
 import { num, recordText } from '@offside/app-core/teamText';
 import { POS } from '@offside/game/data';
 import { useCountUp } from '../../components/CountUp';
@@ -944,7 +945,11 @@ function TeamSection({ recap }: { recap: Recap }) {
               testID="recap-stat-record"
             />
             <Stat label={L.winRate} value={`${sum.winRate}%`} testID="recap-stat-win-rate" />
-            <Stat label={L.rating} value={num(t.rating)} testID="recap-stat-rating" />
+            <Stat
+              label={teamScoreLabel(recap.season, L, 'rating')}
+              value={num(t.rating)}
+              testID="recap-stat-rating"
+            />
             <Stat label={L.goals} value={num(t.goalsFor)} testID="recap-stat-team-goals" />
             {t.goalsAgainst !== null ? (
               <Stat

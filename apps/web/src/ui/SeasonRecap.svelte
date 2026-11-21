@@ -30,6 +30,7 @@
     signed,
   } from '@offside/app-core/seasonRecap';
   import { teamSeasonLabel } from '@offside/app-core/seasonName';
+  import { teamScoreLabel } from '@offside/app-core/teamScore';
   import { detailPosOf } from '@offside/contracts/positions';
   import { cardTier, playerName } from '@offside/app-core/format';
   import { num, recordText } from '@offside/app-core/teamText';
@@ -291,7 +292,7 @@
         <dl class="recap-stats three">
           {@render stat(O.statRecord, recordText({ w: t.wins, d: t.draws, l: t.losses }), 'record')}
           {@render stat(L.winRate, `${sum.winRate}%`, 'win-rate')}
-          {@render stat(L.rating, num(t.rating), 'rating')}
+          {@render stat(teamScoreLabel(recap.season, L, 'rating'), num(t.rating), 'rating')}
           {@render stat(L.goals, num(t.goalsFor), 'goals')}
           {#if t.goalsAgainst !== null}{@render stat(L.goalsAgainst, num(t.goalsAgainst), 'goals-against')}{/if}
           {#if sum.goalDiff !== null}{@render stat(L.goalDiff, signed(sum.goalDiff), 'goal-diff')}{/if}

@@ -164,7 +164,7 @@ export default (guideCopy) => {
     [
       'Friends and friendlies',
       [
-        'Owners can become friends through a friend request on a team profile, a friend code or an invite link. You can play up to 10 friendlies a day against a friend’s team. Friendlies do not count toward rating, record or achievements, and only your head-to-head record against that friend is kept.',
+        'Owners can become friends through a friend request on a team profile, a friend code or an invite link. You can play up to 10 friendlies a day against a friend’s team. Friendlies do not count toward RP, record or achievements, and only your head-to-head record against that friend is kept.',
         'Friend invite event: when an owner who has not yet retired any player sends a friend request using a friend’s invite link or friend code, it is recorded as an invite. When that owner finishes a player career through to retirement, both of you receive 3 player reroll tickets and 1 premium scout ticket. A person can be invited only once, and the inviter’s reward is limited to 10 times. You can see invite progress on the Friends screen.',
       ],
     ],

@@ -11,6 +11,7 @@ import {
 import { divisionLabel } from './cupDivision.js';
 import { ownerProfileText as L } from './i18n/ko/ownerProfile.js';
 import { teamSeasonLabel } from './seasonName.js';
+import { teamScoreLabel } from './teamScore.js';
 
 export {
   parseHonorTitle,
@@ -31,9 +32,10 @@ export function titleLabel(id: string | null | undefined): string | null {
   if (honor) {
     const season = teamSeasonLabel(honor.season);
     if (honor.band === null) return L.titleHonorFirst({ season });
+    // T-11-800 팀 배지 이름은 배지 시즌의 팀 점수(시즌 1 '팀 레이팅' · 시즌 2부터 '팀 RP'). 칭호 id는 그대로다.
     const name = {
       achievements: L.titleHonorAchievements,
-      team: L.titleHonorTeam,
+      team: teamScoreLabel(honor.season, L, 'titleHonorTeam'),
       hof: L.titleHonorHof,
     }[honor.kind as 'achievements' | 'team' | 'hof'];
     return L.titleHonorRank({

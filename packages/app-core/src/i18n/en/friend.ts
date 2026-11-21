@@ -13,6 +13,7 @@ export const friend: Translation<FriendMsgs> = {
   reqAccepted: 'Friends',
   title: 'Friends',
   info: (p) => `Friendlies don't affect your rating or record. Left today: ${p.left}/${p.per}`,
+  infoRp: (p) => `Friendlies don't affect your RP or record. Left today: ${p.left}/${p.per}`,
   needTeam: 'Build a team this season to play friendlies with friends.',
   loadFailWeb: "Couldn't load your friends list.",
   loadFailApp: "Couldn't load your friends.",
