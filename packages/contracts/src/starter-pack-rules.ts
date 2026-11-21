@@ -2,16 +2,22 @@
 // 세 가지 아이템을 한 번에 준다(T-11-806부터 결제 이력 · 은퇴 선수 · 대조군 조건 없음). 서버(자격 · 지급)와 화면(안내)이 같은 값을 쓰게 한 곳에 둔다. zod 없는 서브패스(`@offside/contracts/starter-pack`).
 import type { AttendanceReward } from './attendance-rules.js';
 
-/** App Store Connect · Play Console에 같은 ID로 만드는 소모성 상품. 구성을 바꾸면 새 ID · 새 판(version)을 만든다. */
+/**
+ * App Store Connect · Play Console에 같은 ID로 만드는 소모성 상품. 지급 구성은 서버가 정하므로 구성을 바꾸면 새 판(version)을 만들고
+ * 스토어 설명을 고친다. 이미 팔린 판이 있는데 구성이 크게 바뀌면 새 ID를 검토한다.
+ */
 export const STARTER_PACK_PRODUCT_ID = 'com.offsidelab.app.starter_v1';
 /** 구성의 판. 거래 원장에 같이 적어, 나중에 구성이 바뀌어도 그 거래가 받은 것을 안다. */
-export const STARTER_PACK_VERSION = 'v1';
+export const STARTER_PACK_VERSION = 'v2';
 /**
  * 판마다의 구성. 시즌 패스 1단계(스카우트 2 · 강화 10 · 리롤 10, 9,900원)보다 원당 스카우트권이 많지 않게 스카우트는 1장으로
  * 둔다. 카드 강화 시도 · 보호 · 구단 자금은 넣지 않는다.
  */
 export const STARTER_PACK_ITEMS: Record<string, AttendanceReward> = {
   v1: { scout: 1, boost: 5, reroll: 5 },
+  // T-11-808 v1은 상점 기본 묶음 장당 가격(스카우트 1,100 · 강화 220 · 리롤 220)으로 정확히 3,300원이라 할인이 없었다. 장당 스카우트
+  // 수는 그대로 두고 강화 · 리롤만 늘려 상점가 약 5,500원어치(약 40% 할인). v1은 한 건도 팔리지 않아 같은 상품 ID로 판만 올린다.
+  v2: { scout: 1, boost: 10, reroll: 10 },
 };
 export const starterPackItems = (version: string = STARTER_PACK_VERSION): AttendanceReward =>
   STARTER_PACK_ITEMS[version] ?? {};
