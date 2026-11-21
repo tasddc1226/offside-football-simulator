@@ -17,7 +17,7 @@ import { prefs } from '../store';
 import { useColors } from '../theme/useColors';
 import { Btn, Txt } from '../ui';
 /** 모달이 닫히는 움직임보다 조금 길게 — 닫히는 중에 다음 모달을 열면 iOS가 띄우지 못한다. */
-const DISMISS_MS = 450;
+export const DISMISS_MS = 450;
 
 export function TeamDialog({
   title,
