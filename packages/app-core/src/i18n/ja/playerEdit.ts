@@ -22,6 +22,7 @@ export const playerEdit: Translation<PlayerEditMsgs> = {
   ovrMove: (p) =>
     `OVR ${p.from} → ${p.to}。2つの役割のうち高いほうでOVRを測る選手なので、体格で変わります。`,
   bodyPlayed: 'これまでに伸びた能力値はそのままで、体格の補正だけを動かします。',
+  bodyWaiting: '待っている選択があるため、今は体格を直せません。名前・利き足は直せます。',
   bodyNone: '体格を入れる前に作った選手なので、体格は直せません。',
   preview: '変わる詳細能力値',
   previewNone: '変わる詳細能力値はありません。',

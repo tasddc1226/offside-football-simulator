@@ -10,6 +10,7 @@ import { playPhase } from './turn.js';
 import { createRng, getActiveRng, pick, ri, setActiveRng } from './rng.js';
 import {
   bodyEditable,
+  bodyWaiting,
   editPlayerInfo,
   firstSeasonEditOpen,
   playerEditError,
@@ -58,11 +59,16 @@ function setupOf(i: number, r: () => number): Setup {
   return { seed: 0x804 + i * 7919, pos, type, ...(dpos && { dpos }) };
 }
 
-function make(o: Setup, body: Body | undefined, foot: GameState['foot'] = '오른발'): GameState {
+function make(
+  o: Setup,
+  body: Body | undefined,
+  foot: GameState['foot'] = '오른발',
+  name = 'EDIT',
+): GameState {
   setActiveRng(createRng(o.seed));
   const s = newGame(
     {
-      name: 'EDIT',
+      name,
       number: 9,
       pos: o.pos,
       dpos: o.dpos,
@@ -121,14 +127,16 @@ describe('첫 시즌 선수 정보 고치기 (T-11-804)', () => {
       if (o.type === 'target') targets++;
       const A = randomBody(r);
       const B = randomBody(r);
-      const edited = make(o, A);
+      // 이름도 함께 고친다 — 커리어 첫 소식(gameStart)의 이름까지 처음부터 그 이름으로 만든 선수와 같아야 한다(strip이 log를 본다).
+      const edited = make(o, A, '오른발', 'BEFORE');
       const role = roleChoices(edited)[0]!;
       const ovrBefore = ovrRole(edited, role);
       const rngBefore = getActiveRng().getState();
-      expect(editPlayerInfo(edited, { body: B, foot: '왼발' })).toBe(true);
+      expect(editPlayerInfo(edited, { body: B, foot: '왼발', name: 'AFTER' })).toBe(true);
       // 고치기는 RNG를 쓰지 않는다.
       expect(getActiveRng().getState()).toEqual(rngBefore);
-      const fresh = make(o, B, '왼발');
+      const fresh = make(o, B, '왼발', 'AFTER');
+      expect(edited.log).toEqual(fresh.log);
       const skip = new Set([...clampedKeys(make(o, A)), ...clampedKeys(fresh)]);
       const keep = (x: Record<string, number>) =>
         Object.fromEntries(Object.entries(x).filter(([k]) => !skip.has(k)));
@@ -191,17 +199,21 @@ describe('첫 시즌 선수 정보 고치기 (T-11-804)', () => {
           Object.keys(x.sub).map((k) => [k, x.sub[k]! - (x.seasonStartSub[k] ?? 0)]),
         );
       const before = growth(s);
-      const o0 = ovr(s);
+      const role = roleChoices(s)[0]!;
+      const single = roleChoices(s).length === 1;
+      const o0 = ovrRole(s, role);
       const rngBefore = getActiveRng().getState();
-      editPlayerInfo(s, { body: randomBody(r) });
+      expect(editPlayerInfo(s, { body: randomBody(r) })).toBe(true);
       expect(getActiveRng().getState()).toEqual(rngBefore);
       const after = growth(s);
-      // 보정이 하한 5에 걸린 칸만 빼고, 시즌 동안 오른 양은 0.1 반올림 안에서 같다.
-      const ks = Object.keys(before).filter((k) => s.sub[k]! > 5 && s.seasonStartSub[k]! > 5);
-      for (const k of ks) expect(Math.abs(after[k]! - before[k]!)).toBeLessThanOrEqual(0.2 + 1e-9);
-      // 기본 역할이 하나인 선수는 지금 OVR도 같다.
-      if (o.type !== 'target' && !(o.dpos === 'LM' || o.dpos === 'RM'))
-        expect(Math.abs(ovr(s) - o0)).toBeLessThanOrEqual(1);
+      // 보정이 상하한(5 · 99)에 걸린 칸만 빼고, 시즌 동안 오른 양은 부동소수 오차 안에서 같다(sub와 seasonStartSub에 같은
+      // 선형 보정이 들어간다).
+      const free = (v: number) => v > 5 + 1e-9 && v < 99 - 1e-9;
+      const ks = Object.keys(before).filter((k) => free(s.sub[k]!) && free(s.seasonStartSub[k]!));
+      for (const k of ks) expect(Math.abs(after[k]! - before[k]!)).toBeLessThan(1e-9);
+      // 기본 역할 OVR 실수값은 고치기 전과 같다(역할이 하나인 선수는 표시 OVR도 같다).
+      expect(Math.abs(ovrRole(s, role) - o0)).toBeLessThan(1e-9);
+      if (single) expect(ovr(s)).toBe(Math.round(o0));
     }
   });
 
@@ -243,6 +255,33 @@ describe('첫 시즌 선수 정보 고치기 (T-11-804)', () => {
     expect(playerEditError(s, { foot: '발' as GameState['foot'] })).toBe('foot');
     expect(editPlayerInfo(s, { name: '바뀜', body: { h: 150, w: 60 } })).toBe(false);
     expect(JSON.stringify(s)).toBe(snap);
+  });
+
+  it('선택을 기다리는 동안에는 체격만 막고 이름 · 주발은 고친다', () => {
+    const s = make(setupOf(4, lcg(77)), { h: 180, w: 74 });
+    s.pending = { type: 'event', id: 'x' };
+    expect(bodyEditable(s)).toBe(false);
+    expect(bodyWaiting(s)).toBe(true);
+    const snap = JSON.stringify(s);
+    expect(playerEditError(s, { body: { h: 190, w: 80 } })).toBe('body');
+    expect(editPlayerInfo(s, { body: { h: 190, w: 80 } })).toBe(false);
+    expect(JSON.stringify(s)).toBe(snap);
+    expect(editPlayerInfo(s, { name: '기다림', foot: '왼발' })).toBe(true);
+    expect(s.body).toEqual({ h: 180, w: 74 });
+    s.pending = null;
+    expect(bodyEditable(s)).toBe(true);
+    expect(bodyWaiting(s)).toBe(false);
+  });
+
+  it('이름을 고치면 커리어 첫 소식의 이름도 바뀌고, 다른 소식은 그대로다', () => {
+    const o = setupOf(6, lcg(88));
+    const s = make(o, { h: 180, w: 74 }, '오른발', '처음');
+    playPhases(s, 2);
+    const others = s.log.slice(0, -1).map((e) => e.text);
+    expect(s.log.at(-1)!.text).toContain('처음');
+    editPlayerInfo(s, { name: '나중' });
+    expect(s.log.at(-1)!.text).toBe(make(o, { h: 180, w: 74 }, '오른발', '나중').log.at(-1)!.text);
+    expect(s.log.slice(0, -1).map((e) => e.text)).toEqual(others);
   });
 
   it('체격 입력 전에 만든 선수는 이름 · 주발만 고친다', () => {

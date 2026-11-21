@@ -11,6 +11,7 @@ import {
   applyPlayerEdit,
   bodyEditable,
   bodyMessage,
+  bodyWaiting,
   bodyPreview,
   playerEditDraft,
   playerEditInput,
@@ -56,7 +57,8 @@ export function PlayerEditSheet({ close }: { close: () => void }) {
     const g = appState.G;
     if (!g) return;
     const d = playerEditDraft(g, { name, h, w, foot });
-    if (!d.ok) return setMessage(d.message);
+    // 체격 오류는 체격 칸 아래 안내가 이미 보여 준다(알림으로 한 번 더 읽지 않는다).
+    if (!d.ok) return setMessage(d.field === 'body' ? '' : d.message);
     if (!d.changed) return setMessage(L.same);
     if (applyPlayerEdit(g, d.edit)) save();
     toast(L.done);
@@ -81,7 +83,10 @@ export function PlayerEditSheet({ close }: { close: () => void }) {
           spellCheck={false}
           returnKeyType="done"
           value={name}
-          onChangeText={setName}
+          onChangeText={(v) => {
+            setName(v);
+            setMessage('');
+          }}
           onFocus={revealFocusedInput}
           style={input}
         />
@@ -93,7 +98,14 @@ export function PlayerEditSheet({ close }: { close: () => void }) {
         <Seg>
           {FEET.map((f) => (
             <SegCell key={f} cols={3} testID={`pe-foot-${f}`}>
-              <Opt selected={foot === f} onPress={() => setFoot(f)} style={{ flex: 1 }}>
+              <Opt
+                selected={foot === f}
+                onPress={() => {
+                  setFoot(f);
+                  setMessage('');
+                }}
+                style={{ flex: 1 }}
+              >
                 <Txt bold>{C.foot({ v: f })}</Txt>
               </Opt>
             </SegCell>
@@ -114,7 +126,10 @@ export function PlayerEditSheet({ close }: { close: () => void }) {
                 value={h}
                 fallback={start.h ?? 0}
                 invalid={!!bodyMsg}
-                onChange={setH}
+                onChange={(v) => {
+                  setH(v);
+                  setMessage('');
+                }}
               />
               <BodyInput
                 testID="pe-weight"
@@ -123,7 +138,10 @@ export function PlayerEditSheet({ close }: { close: () => void }) {
                 value={w}
                 fallback={start.w ?? 0}
                 invalid={!!bodyMsg}
-                onChange={setW}
+                onChange={(v) => {
+                  setW(v);
+                  setMessage('');
+                }}
               />
             </View>
             <Txt
@@ -157,7 +175,7 @@ export function PlayerEditSheet({ close }: { close: () => void }) {
           </>
         ) : (
           <Txt v="sm" tone="muted" testID="pe-body-none">
-            {L.bodyNone}
+            {bodyWaiting(s) ? L.bodyWaiting : L.bodyNone}
           </Txt>
         )}
       </Field>

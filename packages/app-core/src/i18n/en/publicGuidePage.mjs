@@ -10,7 +10,7 @@ export default (guideCopy) => {
     [
       'Creating a player',
       [
-        'You choose a name, shirt number, nationality, position (FW·MF·DF·GK) and detailed position, strong foot, focus attributes and growth trait (early developer, late bloomer and so on). Three candidates with the same total attributes then appear, and you start your final high school year with one of them. Height and weight only shift the initial distribution of detailed attributes slightly, and starting OVR stays the same. Name, strong foot, height and weight can be changed for free on the Player tab until the first season review.',
+        'You choose a name, shirt number, nationality, position (FW·MF·DF·GK) and detailed position, strong foot, focus attributes and growth trait (early developer, late bloomer and so on). Three candidates with the same total attributes then appear, and you start your final high school year with one of them. Height and weight only shift the initial distribution of detailed attributes slightly, and starting OVR stays the same. Name, preferred foot, height and weight can be changed for free on the Player tab until the first season review.',
         'Your player type (Poacher, Speedster, Stopper, Attacking fullback and so on) is decided by the combination of the two focus attributes you pick along with your position, and it does not change during the career. You can see which focus combination becomes which type, and which spots and team synergies each type fits, on the player creation screen and in the Player type guide in the Odds guide.',
         'The true potential is revealed at retirement. In the app, you can watch a rewarded ad at the candidate step to see the initial potential grade range of the three candidates. Signed-in owners can use club funds instead of an ad, on the web and in the app. You then raise your player by following current attributes and growth records.',
       ],
@@ -193,8 +193,8 @@ export default (guideCopy) => {
     [
       'Editing player info in the first season',
       [
-        'Before the first season review, you can change the name, strong foot, height and weight for free with Edit on the Player tab (or the pencil next to the name). There is no limit, and you do not need to sign in. After the first season review, the name can only be changed with a player rename ticket, and foot and build can no longer be changed.',
-        'Changing build only moves the detailed-attribute adjustment made at creation, and the starting OVR stays the same. If you change it before the first match, the player is the same as one created with that build from the start. If you change it after matches, the growth so far is kept. Strong foot does not affect growth, matches or events in the career. It is only used for strong-foot fit when the player card is placed at full-back or winger in club matches.',
+        'Before the first season review, you can change the name, preferred foot, height and weight for free with Edit on the Player tab (or the pencil next to the name). There is no limit, and you do not need to sign in. After the first season review, the name can only be changed with a player rename ticket, and foot and build can no longer be changed.',
+        'Changing build only moves the detailed-attribute adjustment made at creation. OVR usually stays the same, but a few types whose OVR uses the higher of two roles may change slightly with build. If you change it before the first match, the player is almost the same as one created with that build from the start. If you change it after matches, the growth so far is kept. Build cannot be changed while a choice such as an event is waiting. Preferred foot does not affect growth, matches or events in the career. It is only used for strong-foot fit when the player card is placed at full-back or winger in club matches.',
       ],
     ],
     [
@@ -290,7 +290,7 @@ export default (guideCopy) => {
       'When you create a player, they raise or lower detailed attributes such as heading, jumping, strength, acceleration and agility slightly. Starting OVR is then readjusted, so starting OVR is the same even with a different build. They have no effect on growth, matches or events after creation. Until the first season review, you can change height and weight on the Player tab.',
     ],
     [
-      'What does strong foot affect?',
+      'What does preferred foot affect?',
       'It does not affect growth, matches or events in the career. In club matches, strong-foot fit gives a small boost when a player card at full-back uses the same-side foot, or at winger the opposite-side foot. Two-footed players get half of it. You can change the foot on the Player tab until the first season review, and not after that.',
     ],
     ['Do the first three candidates change if I refresh?', guideCopy.candidateRefresh],

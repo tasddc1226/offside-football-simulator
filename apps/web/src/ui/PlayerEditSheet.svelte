@@ -11,6 +11,7 @@
     bodyEditable,
     bodyMessage,
     bodyPreview,
+    bodyWaiting,
     playerEditDraft,
     playerEditInput,
   } from '@offside/app-core/player-edit-view';
@@ -40,7 +41,8 @@
     e.preventDefault();
     const d = playerEditDraft(s, { name, h, w, foot });
     if (!d.ok) {
-      message = d.message;
+      // 체격 오류는 체격 칸 아래 안내가 이미 보여 준다(알림으로 한 번 더 읽지 않는다).
+      message = d.field === 'body' ? '' : d.message;
       return;
     }
     if (!d.changed) {
@@ -57,17 +59,17 @@
   <form class="pe" data-player-edit onsubmit={submit}>
     <h2>{L.title}</h2>
     <p class="muted fs-sm">{L.lead}</p>
-    <label class="pe-field">
-      <span class="fs-sm">{L.name}</span>
-      <input type="text" maxlength={PLAYER_NAME_MAX} autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" bind:value={name} aria-describedby="pe-name-rule" data-pe-name />
+    <div class="pe-field">
+      <label class="fs-sm" for="pe-name">{L.name}</label>
+      <input id="pe-name" type="text" maxlength={PLAYER_NAME_MAX} autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" bind:value={name} oninput={() => (message = '')} aria-describedby="pe-name-rule" data-pe-name />
       <small id="pe-name-rule" class="muted">{L.nameRule({ max: PLAYER_NAME_MAX })}</small>
-    </label>
+    </div>
 
     <fieldset class="pe-field">
       <legend class="fs-sm">{L.foot}</legend>
       <div class="pe-opts" role="group" aria-label={L.foot}>
         {#each FEET as f (f)}
-          <button type="button" class="opt" data-pe-foot={f} aria-pressed={foot === f} onclick={() => (foot = f)}><b>{C.foot({ v: f })}</b></button>
+          <button type="button" class="opt" data-pe-foot={f} aria-pressed={foot === f} onclick={() => ((foot = f), (message = ''))}><b>{C.foot({ v: f })}</b></button>
         {/each}
       </div>
       <small class="muted" data-pe-foot-note>{L.footNote}</small>
@@ -79,11 +81,11 @@
         <div class="pe-body">
           <label>
             <span class="fs-sm">{L.height}</span>
-            <span class="pe-unit"><input type="number" inputmode="numeric" min={LIM.height.min} max={LIM.height.max} value={h ?? ''} oninput={(e) => (h = num(e.currentTarget.value))} aria-invalid={!!bodyMsg} aria-describedby="pe-body-note" data-pe-height /> cm</span>
+            <span class="pe-unit"><input type="number" inputmode="numeric" min={LIM.height.min} max={LIM.height.max} value={h ?? ''} oninput={(e) => ((h = num(e.currentTarget.value)), (message = ''))} aria-invalid={!!bodyMsg} aria-describedby="pe-body-note" data-pe-height /> cm</span>
           </label>
           <label>
             <span class="fs-sm">{L.weight}</span>
-            <span class="pe-unit"><input type="number" inputmode="numeric" min={LIM.weight.min} max={LIM.weight.max} value={w ?? ''} oninput={(e) => (w = num(e.currentTarget.value))} aria-invalid={!!bodyMsg} aria-describedby="pe-body-note" data-pe-weight /> kg</span>
+            <span class="pe-unit"><input type="number" inputmode="numeric" min={LIM.weight.min} max={LIM.weight.max} value={w ?? ''} oninput={(e) => ((w = num(e.currentTarget.value)), (message = ''))} aria-invalid={!!bodyMsg} aria-describedby="pe-body-note" data-pe-weight /> kg</span>
           </label>
         </div>
         <p id="pe-body-note" class="fs-sm" class:muted={!bodyMsg} class:pe-err={!!bodyMsg} aria-live="polite" data-pe-body-note>
@@ -100,7 +102,7 @@
           </div>
         {/if}
       {:else}
-        <p class="muted fs-sm" data-pe-body-none>{L.bodyNone}</p>
+        <p class="muted fs-sm" data-pe-body-none>{bodyWaiting(s) ? L.bodyWaiting : L.bodyNone}</p>
       {/if}
     </fieldset>
 

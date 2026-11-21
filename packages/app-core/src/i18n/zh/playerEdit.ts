@@ -21,6 +21,7 @@ export const playerEdit: Translation<PlayerEditMsgs> = {
   bodyNote: 'OVR 不變，只會調整細項能力值的分布。',
   ovrMove: (p) => `OVR ${p.from} → ${p.to}。這名球員的 OVR 取兩種角色中較高者，會隨體格改變。`,
   bodyPlayed: '目前為止成長的能力值保持不變，只調整體格修正。',
+  bodyWaiting: '目前有等待中的選擇，暫時無法修改體格。名字和慣用腳仍可修改。',
   bodyNone: '這名球員是在加入體格功能前建立的，無法修改體格。',
   preview: '會變動的細項能力值',
   previewNone: '沒有會變動的細項能力值。',

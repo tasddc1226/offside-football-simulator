@@ -10,6 +10,7 @@ import {
   applyPlayerEdit,
   bodyMessage,
   bodyPreview,
+  bodyWaiting,
   playerEditDraft,
   playerEditInput,
 } from './player-edit-view';
@@ -141,5 +142,14 @@ describe('T-11-804 첫 시즌 선수 정보 고치기 화면 규칙', () => {
     const d = playerEditDraft(s, { ...playerEditInput(s), h: null, w: null, foot: '양발' });
     expect(d).toEqual({ ok: true, edit: { foot: '양발' }, changed: true });
     expect(bodyPreview(s, { h: 190, w: 80 })).toBeNull();
+  });
+
+  it('선택을 기다리는 동안에는 체격을 빼고 이름 · 주발만 싣는다', () => {
+    const s = game(10);
+    s.pending = { type: 'event', id: 'x' };
+    expect(bodyWaiting(s)).toBe(true);
+    const d = playerEditDraft(s, { ...playerEditInput(s), h: 199, w: 90, foot: '왼발' });
+    expect(d).toEqual({ ok: true, edit: { foot: '왼발' }, changed: true });
+    expect(bodyPreview(s, { h: 199, w: 90 })).toBeNull();
   });
 });

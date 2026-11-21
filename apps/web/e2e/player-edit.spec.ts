@@ -19,8 +19,8 @@ test('첫 시즌 선수 정보 고치기: 후보 화면에 주발 · 체격을 �
   await page.locator('[data-act="next-candidates"]').click();
   // '기본값으로 후보 보기'로 와도 주발 · 체격을 보고 시작한다.
   const candBody = page.locator('[data-cand-body]');
-  await expect(candBody).toContainText('주발 · 체격');
-  await expect(candBody).toContainText(/오른발 · \d{3}cm\/\d{2,3}kg/);
+  await expect(candBody).toContainText('주발과 체격');
+  await expect(candBody).toContainText(/오른발 · \d{3}cm · \d{2,3}kg/);
   await expect(candBody).toContainText('첫 시즌 동안 선수 탭에서 고칠 수 있어요.');
   await page.locator('[data-cand="0"]').click();
   await page.locator('[data-act="start"]').click();
@@ -53,6 +53,10 @@ test('첫 시즌 선수 정보 고치기: 후보 화면에 주발 · 체격을 �
   await expect(dialog.locator('[data-pe-body-note]')).toHaveText(
     '키는 160~200cm 사이로 넣어 주세요.',
   );
+  // 입력을 바꾸면 지난 알림은 지운다. 체격 오류는 체격 칸 아래 안내로만 보이고 알림으로 한 번 더 읽지 않는다.
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
+  await dialog.locator('[data-act="player-edit-save"]').click();
+  await expect(dialog.getByRole('alert')).toHaveCount(0);
   // 키를 키우면 헤딩이 오르는 미리보기와 OVR 그대로 안내가 보인다.
   await dialog.locator('[data-pe-height]').fill('195');
   await dialog.locator('[data-pe-weight]').fill('88');

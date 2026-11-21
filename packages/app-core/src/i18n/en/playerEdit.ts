@@ -22,6 +22,8 @@ export const playerEdit: Translation<PlayerEditMsgs> = {
   ovrMove: (p) =>
     `OVR ${p.from} → ${p.to}. This player's OVR uses the higher of two roles, so build can change it.`,
   bodyPlayed: 'Growth so far stays. Only the build adjustment moves.',
+  bodyWaiting:
+    "A choice is waiting, so build can't be changed right now. You can still change name and preferred foot.",
   bodyNone: 'This player was created before build was added, so build cannot be changed.',
   preview: 'Detailed attributes that change',
   previewNone: 'No detailed attributes change.',

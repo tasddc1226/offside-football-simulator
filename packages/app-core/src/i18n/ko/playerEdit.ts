@@ -24,6 +24,7 @@ const ko = {
   ovrMove: (p: { from: number; to: number }) =>
     `OVR ${p.from} → ${p.to}. 두 역할 중 높은 쪽으로 OVR을 재는 선수라 체격에 따라 달라져요.`,
   bodyPlayed: '지금까지 오른 능력치는 그대로 두고 체격 보정만 옮겨요.',
+  bodyWaiting: '기다리는 선택이 있어 지금은 체격을 고칠 수 없어요. 이름 · 주발은 고칠 수 있어요.',
   bodyNone: '체격을 넣기 전에 만든 선수라 체격은 고칠 수 없어요.',
   preview: '바뀌는 세부 능력치',
   previewNone: '바뀌는 세부 능력치가 없어요.',

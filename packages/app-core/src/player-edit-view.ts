@@ -8,6 +8,7 @@ import { CAREER_NAMES_KEY } from '@offside/game/hof-store';
 import {
   FEET,
   bodyEditable,
+  bodyWaiting,
   editPlayerInfo,
   firstSeasonEditOpen,
   shownBody,
@@ -17,7 +18,7 @@ import { loadKey, saveKey } from '@offside/game/storage';
 import type { Foot, GameState } from '@offside/game/types';
 import { playerEditText as L } from './i18n/ko/playerEdit';
 
-export { FEET, PLAYER_NAME_MAX, bodyEditable, firstSeasonEditOpen, shownBody };
+export { FEET, PLAYER_NAME_MAX, bodyEditable, bodyWaiting, firstSeasonEditOpen, shownBody };
 
 export interface PlayerEditInput {
   name: string;

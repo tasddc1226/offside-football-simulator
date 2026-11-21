@@ -17,6 +17,10 @@ import {
   roleChoices,
   syncFace,
 } from './attributes.js';
+import { posLabel } from './data.js';
+import { gTurnText as M } from './i18n/ko/gTurn.js';
+import { tnBase as tn } from './i18n/names.js';
+import { nationOf } from './nation.js';
 import { clamp } from './rng.js';
 import type { Foot, GameState } from './types.js';
 
@@ -26,9 +30,19 @@ export const FEET: readonly Foot[] = ['오른발', '왼발', '양발']; // i18n-
 export const firstSeasonEditOpen = (s: Pick<GameState, 'career' | 'retired'>): boolean =>
   !s.retired && s.career.length === 0;
 
-/** 체격을 고칠 수 있나(체격 입력 기능 전에 만든 선수는 체격이 없어 처음 입력은 하지 않는다 — 결정 로그 T-10-096). */
-export const bodyEditable = (s: Pick<GameState, 'career' | 'retired' | 'body'>): boolean =>
-  firstSeasonEditOpen(s) && !!s.body;
+/**
+ * 체격을 고칠 수 있나(체격 입력 기능 전에 만든 선수는 체격이 없어 처음 입력은 하지 않는다 — 결정 로그 T-10-096). 이벤트 · 이적
+ * 선택을 기다리는 동안(pending)에도 막는다 — 체격은 세부 능력치 분포를 옮기므로, 선택지를 보고 성공 확률에 맞춰 체격을 바꾸는
+ * 우회를 막는다(결정 로그 T-11-804).
+ */
+export const bodyEditable = (
+  s: Pick<GameState, 'career' | 'retired' | 'body'> & { pending?: GameState['pending'] },
+): boolean => firstSeasonEditOpen(s) && !!s.body && !s.pending;
+
+/** 체격이 있는데 선택을 기다리는 중이라 지금만 못 고치나(화면 안내용). */
+export const bodyWaiting = (
+  s: Pick<GameState, 'career' | 'retired' | 'body'> & { pending?: GameState['pending'] },
+): boolean => firstSeasonEditOpen(s) && !!s.body && !!s.pending;
 
 export interface PlayerEdit {
   name?: string | undefined;
@@ -47,7 +61,7 @@ export function playerEditError(
     if (!n || n.length > PLAYER_NAME_MAX) return 'name';
   }
   if (e.foot !== undefined && !FEET.includes(e.foot)) return 'foot';
-  if (e.body !== undefined && (!s.body || bodyError(e.body) !== null)) return 'body';
+  if (e.body !== undefined && (!bodyEditable(s) || bodyError(e.body) !== null)) return 'body';
   return null;
 }
 
@@ -74,6 +88,22 @@ function moveBody(
   return out;
 }
 
+/** 커리어 첫 소식(gameStart '… {이름}, 등번호 N번으로 축구 커리어를 시작합니다.')이 옛 이름 그대로면 새 이름으로 다시 쓴다. */
+function startLine(s: GameState, name: string): string {
+  return M.gameStart({
+    nation: s.nation ? tn(nationOf(s).ko) : '',
+    club: tn(s.club.name),
+    pos: posLabel(s),
+    name,
+    number: s.number,
+  });
+}
+function renameStartLog(s: GameState, prev: string) {
+  // 소식은 새것이 앞이라 첫 소식은 맨 끝이다. 만들 때와 언어 · 구단이 달라 문장이 다르면 건드리지 않는다.
+  const first = s.log[s.log.length - 1];
+  if (first && first.text === startLine(s, prev)) first.text = startLine(s, s.name);
+}
+
 /**
  * 첫 시즌 선수 정보를 고친다. 바뀐 게 있으면 true(부른 쪽이 세이브를 쓴다). 고칠 수 없는 입력이면 아무것도 바꾸지 않고 false.
  */
@@ -81,7 +111,9 @@ export function editPlayerInfo(s: GameState, e: PlayerEdit): boolean {
   if (playerEditError(s, e)) return false;
   let changed = false;
   if (e.name !== undefined && e.name.trim() !== s.name) {
+    const prev = s.name;
     s.name = e.name.trim();
+    renameStartLog(s, prev);
     changed = true;
   }
   if (e.foot !== undefined && e.foot !== s.foot) {

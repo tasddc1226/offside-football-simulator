@@ -1167,7 +1167,8 @@ export default function Create() {
                 );
               })}
             </CoachTarget>
-            {/* T-11-804 '기본값으로 후보 보기'로 오면 주발 · 체격을 못 보고 시작하기 쉬워 후보 바로 아래에 보인다(웹과 같은 자리). */}
+            {/* T-11-804 '기본값으로 후보 보기'로 오면 주발 · 체격을 못 보고 시작하기 쉬워 후보 바로 아래에 보인다(웹과 같은 자리).
+                웹은 낮은 화면에서 후보를 고른 뒤 이 줄을 접지만, 앱은 ScrollView라 접지 않는다(일부러 둔 차이). */}
             <Txt v="sm" tone="muted" testID="cand-body">
               <Txt v="sm" bold>
                 {L.candBodyLabel}
