@@ -1019,6 +1019,7 @@ export default function Team() {
         {oppTab === 'friends' ? (
           <TeamFriends
             friends={friends}
+            season={current ?? season}
             onPlayed={(m) => showFriendly(m, true)}
             onOpen={(m) => showFriendly(m, false)}
             onPreseason={() => {
@@ -1099,6 +1100,7 @@ export default function Team() {
       <TeamResult
         m={result}
         team={team}
+        nowSeason={current ?? season}
         shift={divisionShift}
         streak={streakHint}
         eventName={eventName}

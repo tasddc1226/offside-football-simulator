@@ -28,6 +28,7 @@
     preseasonTeamLine,
   } from '@offside/app-core/friendText';
   import { friendText as L } from '@offside/app-core/i18n/ko/friend';
+  import { teamScoreLabel } from '@offside/app-core/teamScore';
   import { toast } from '../helpers.js';
   import { copyText } from '../inapp-open.js';
   import LoadState, { type LoadStatus } from '../LoadState.svelte';
@@ -38,10 +39,13 @@
   import TeamMatchRow from './TeamMatchRow.svelte';
 
   let {
+    season,
     onplayed,
     onopen,
     onpreseason,
   }: {
+    /** T-11-800 친선전을 치르는 시즌(지금 시즌) — 안내 줄의 팀 점수 이름(시즌 2부터 RP). */
+    season: number;
     /** 친선전을 치렀다 — 결과(중계)를 연다. */
     onplayed: (m: TeamMatch, matchesLeft: number) => void;
     /** 최근 친선전 한 경기를 연다. */
@@ -163,7 +167,7 @@
     <div class="eyebrow">Friends</div>
     <h1>{L.title}</h1>
     {#if data}
-      <p class="muted fs-sm">{L.info({ left: data.matchesLeft, per: data.matchesPerDay })}</p>
+      <p class="muted fs-sm">{teamScoreLabel(season, L, 'info')({ left: data.matchesLeft, per: data.matchesPerDay })}</p>
       {#if !data.canPlay}<p class="muted fs-sm" data-friends-hint>{L.needTeam}</p>{/if}
       {#if data.canPlayPreseason === false}
         <div class="fr-legacy" data-friends-preseason-hint>

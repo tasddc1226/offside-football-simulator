@@ -13,6 +13,7 @@ export const friend: Translation<FriendMsgs> = {
   reqAccepted: '好友',
   title: '好友',
   info: (p) => `友誼賽不計入積分與戰績。今日剩餘友誼賽 ${p.left}/${p.per}`,
+  infoRp: (p) => `友誼賽不計入 RP 與戰績。今日剩餘友誼賽 ${p.left}/${p.per}`,
   needTeam: '建立本賽季的球隊後，就能和好友進行友誼賽。',
   loadFailWeb: '無法載入好友列表。',
   loadFailApp: '無法載入好友。',

@@ -13,6 +13,7 @@ export const friend: Translation<FriendMsgs> = {
   reqAccepted: 'フレンド',
   title: 'フレンド',
   info: (p) => `親善試合はレーティングと戦績に含まれません。今日の残り親善試合 ${p.left}/${p.per}`,
+  infoRp: (p) => `親善試合はRPと戦績に含まれません。今日の残り親善試合 ${p.left}/${p.per}`,
   needTeam: '今シーズンのチームを作ると、フレンドと親善試合ができます。',
   loadFailWeb: 'フレンドリストを読み込めませんでした。',
   loadFailApp: 'フレンドを読み込めませんでした。',

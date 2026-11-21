@@ -124,6 +124,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   categoryHonor: '紀錄徽章',
   titleHonorAchievements: '成就',
   titleHonorTeam: '球隊積分',
+  titleHonorTeamRp: '球隊 RP',
   titleHonorHof: '名人堂',
   titleHonorFirstPlace: '第 1 名',
   titleHonorTop: (p: { band: number }) => `TOP ${p.band}`,

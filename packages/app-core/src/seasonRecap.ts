@@ -6,6 +6,7 @@ import { intlLocale } from './i18n/core.js';
 import { seasonRecapText as L } from './i18n/ko/seasonRecap.js';
 import { teamSeasonLabel } from './seasonName.js';
 import { divisionName, divisionTier } from './teamDivision.js';
+import { teamScoreLabel } from './teamScore.js';
 import { num } from './teamText.js';
 
 /** 휘장 보여 줄 순서(작은 값이 먼저). */
@@ -38,7 +39,8 @@ const TITLE: Record<OwnerHonor['kind'], (season: number) => string> = {
   pioneer: (s) =>
     s === 0 ? L.honorPioneerPreseason : L.honorPioneer({ season: teamSeasonLabel(s) }),
   achievements: () => L.honorAchievements,
-  team: () => L.honorTeam,
+  // T-11-800 팀 휘장은 그 시즌 팀 점수 이름(시즌 1 '팀 레이팅' · 시즌 2부터 '팀 RP'). 저장값 kind는 'team' 그대로.
+  team: (s) => teamScoreLabel(s, L, 'honorTeam'),
   hof: () => L.honorHof,
   'retired-number': () => L.honorRetiredNumber,
   'wall-of-honor': () => L.honorWallOfHonor,
@@ -201,7 +203,12 @@ export type RecapRank = {
 export function recapRanks(r: SeasonRecap): RecapRank[] {
   const rows: Omit<RecapRank, 'pct' | 'hot' | 'meter'>[] = [];
   if (r.team)
-    rows.push({ key: 'team', label: L.honorTeam, rank: r.team.rank, total: r.team.ranked });
+    rows.push({
+      key: 'team',
+      label: teamScoreLabel(r.season, L, 'honorTeam'),
+      rank: r.team.rank,
+      total: r.team.ranked,
+    });
   if (r.achievements)
     rows.push({
       key: 'ach',
@@ -227,6 +234,18 @@ export function rankLine(rank: number | null, total: number): string {
   const pct = topPercent(rank, total);
   return `${rankText(rank, total)}${pct === null ? '' : ` · ${L.topPct({ pct })}`}`;
 }
+
+/**
+ * 공유 카드 팀 칸의 순위 줄 — '레이팅 순위 3위 / 1,818 · 상위 1%', 시즌 2부터 'RP 순위 …'(T-11-800). 순위가 없으면 '순위'를
+ * 두 번 쓰지 않게 '레이팅 · 순위 밖' · 'RP · 순위 밖'으로 쓴다.
+ */
+export const recapTeamRankLine = (
+  season: number,
+  t: Pick<NonNullable<SeasonRecap['team']>, 'rank' | 'ranked'>,
+): string =>
+  t.rank === null
+    ? `${teamScoreLabel(season, L, 'rating')} · ${L.unranked}`
+    : `${teamScoreLabel(season, L, 'teamRank')} ${rankLine(t.rank, t.ranked)}`;
 
 /** 공유 카드 숫자 칸(세 칸씩 두 줄) — 은퇴 선수 수는 한 줄 요약에 있어 빼고, A매치보다 발롱도르가 먼저. */
 export const recapShareCells = (r: SeasonRecap): RecapNumber[] =>
@@ -254,7 +273,8 @@ export function recapHighlights(r: SeasonRecap): string[] {
   if (r.hofRank !== null && r.hofRank <= 100) out.push(L.hlHof({ rank: num(r.hofRank) }));
   if (s && s.ballon > 0) out.push(L.hlBallon({ n: s.ballon }));
   if (s && s.tiers.icon > 0) out.push(L.hlIcon({ n: s.tiers.icon }));
-  if (r.team?.rank != null && r.team.rank <= 50) out.push(L.hlTeamRank({ rank: num(r.team.rank) }));
+  if (r.team?.rank != null && r.team.rank <= 50)
+    out.push(teamScoreLabel(r.season, L, 'hlTeamRank')({ rank: num(r.team.rank) }));
   if (r.firsts > 0) out.push(L.hlFirsts({ n: r.firsts }));
   if (r.retiredNumbers > 0) out.push(L.hlRetiredNumbers({ n: r.retiredNumbers }));
   if (r.team && r.team.bestStreak >= 3) out.push(L.hlStreak({ n: r.team.bestStreak }));
