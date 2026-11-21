@@ -19,6 +19,26 @@ const kstTime = (iso: string) => {
   return `${p.day} ${p.time}`;
 };
 
+/** 운영 탭의 버튼 · 필터 글자(웹 · 앱이 같은 글자를 쓴다). */
+export const VOICE_UI = {
+  refresh: '새로고침',
+  statusLabel: '상태',
+  kindLabel: '종류',
+  open: '열린 것',
+  all: '전체',
+  onlyProfile: '이 프로필만',
+  profileFiltering: ' 프로필의 의견만 보는 중',
+  clearProfile: '전체 보기',
+  resolve: '처리',
+  reopen: '다시 열기',
+  resolved: '처리함',
+  more: '더 보기',
+  copied: '프로필 id를 복사했어요',
+} as const;
+export const voiceCopyLabel = (id: string) => `프로필 id ${voiceProfileShort(id)} 복사`;
+export const voiceResolveAllLabel = (n: number) =>
+  `보이는 열린 의견 모두 처리(${n.toLocaleString()})`;
+
 export const VOICE_NOTE = '본문의 메일 · 전화번호 · 복구 코드는 저장할 때 가렸어요.';
 export const VOICE_LOAD_FAIL = '의견을 불러오지 못했어요.';
 export const voiceOpenCount = (n: number) => `열린 의견 ${n.toLocaleString()}`;

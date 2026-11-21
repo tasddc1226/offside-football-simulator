@@ -11,11 +11,14 @@
     VOICE_LOAD_FAIL,
     VOICE_NOTE,
     VOICE_TAB,
+    VOICE_UI,
     voiceConfirmAll,
+    voiceCopyLabel,
     voiceEmpty,
     voiceMeta,
     voiceOpenCount,
     voiceProfileShort,
+    voiceResolveAllLabel,
     voiceResolvedToast,
   } from '@offside/app-core/admin/voices';
   import { VOICE_KINDS, type VoiceKind } from '@offside/contracts/voice';
@@ -90,7 +93,7 @@
   }
   function copyId(v: AdminVoice) {
     void navigator.clipboard?.writeText(v.profileId).then(
-      () => toast(`${voiceProfileShort(v.profileId)} 복사했어요`),
+      () => toast(VOICE_UI.copied),
       () => toast(v.profileId),
     );
   }
@@ -102,36 +105,36 @@
       <h2 style="margin:0">{VOICE_TAB}</h2>
       {#if status === 'ready'}<span class="pill warn num" data-voice-open={list.open}>{voiceOpenCount(list.open)}</span>{/if}
     </div>
-    <button class="icon-btn" data-act="voices-refresh" onclick={() => load()}>새로고침</button>
+    <button class="icon-btn" data-act="voices-refresh" onclick={() => load()}>{VOICE_UI.refresh}</button>
   </div>
-  <div class="row" style="gap:6px" role="group" aria-label="상태">
-    <button class="icon-btn" aria-pressed={view === 'open'} data-voice-view="open" onclick={() => setView('open')}>열린 것</button>
-    <button class="icon-btn" aria-pressed={view === 'all'} data-voice-view="all" onclick={() => setView('all')}>전체</button>
+  <div class="row" style="gap:6px" role="group" aria-label={VOICE_UI.statusLabel}>
+    <button class="icon-btn" aria-pressed={view === 'open'} data-voice-view="open" onclick={() => setView('open')}>{VOICE_UI.open}</button>
+    <button class="icon-btn" aria-pressed={view === 'all'} data-voice-view="all" onclick={() => setView('all')}>{VOICE_UI.all}</button>
   </div>
-  <div class="row" style="gap:6px" role="group" aria-label="종류">
-    <button class="icon-btn" aria-pressed={kind === null} data-voice-filter="" onclick={() => setKind(null)}>전체</button>
+  <div class="row" style="gap:6px" role="group" aria-label={VOICE_UI.kindLabel}>
+    <button class="icon-btn" aria-pressed={kind === null} data-voice-filter="" onclick={() => setKind(null)}>{VOICE_UI.all}</button>
     {#each VOICE_KINDS as k (k)}
       <button class="icon-btn" aria-pressed={kind === k} data-voice-filter={k} onclick={() => setKind(k)}>{VOICE_KIND_NAME[k]}</button>
     {/each}
   </div>
   {#if profile}
     <div class="row voice-filter" style="gap:8px" data-voice-profile={profile}>
-      <span><b class="num">{voiceProfileShort(profile)}</b> 프로필의 의견만 보는 중</span>
-      <button class="icon-btn" data-act="voice-clear-profile" onclick={() => filterBy(null)}>전체 보기</button>
+      <span><b class="num">{voiceProfileShort(profile)}</b>{VOICE_UI.profileFiltering}</span>
+      <button class="icon-btn" data-act="voice-clear-profile" onclick={() => filterBy(null)}>{VOICE_UI.clearProfile}</button>
     </div>
   {/if}
   <p class="muted fs-xs" style="margin:0">{VOICE_NOTE}</p>
 
   <LoadState {status} failText={VOICE_LOAD_FAIL} retry={load}>
     {#if openShown.length}
-      <button class="icon-btn self-start" data-act="voices-resolve-all" disabled={busy} onclick={resolveAll}>보이는 열린 의견 모두 처리</button>
+      <button class="icon-btn self-start" data-act="voices-resolve-all" disabled={busy} onclick={resolveAll}>{voiceResolveAllLabel(openShown.length)}</button>
     {/if}
     <ul class="admin-voices">
       {#each list.items as v (v.id)}
         <li data-admin-voice={v.id} data-resolved={v.resolvedAt ? '1' : '0'}>
           <div class="row" style="gap:6px">
             <span class="pill" class:warn={v.kind === 'bug'}>{VOICE_KIND_NAME[v.kind]}</span>
-            {#if v.resolvedAt}<span class="pill good">처리함</span>{/if}
+            {#if v.resolvedAt}<span class="pill good">{VOICE_UI.resolved}</span>{/if}
           </div>
           <p lang={tr.translated(v.id) ? getLocale() : v.lang}>{tr.text(v.id, v.body)}</p>
           {#if canTranslate(v.body)}
@@ -139,12 +142,12 @@
           {/if}
           <span class="muted fs-xs" data-voice-meta>{voiceMeta(v)}</span>
           <div class="row" style="gap:6px">
-            <button class="icon-btn num" data-act="voice-copy-profile" title="프로필 id 복사" onclick={() => copyId(v)}>{voiceProfileShort(v.profileId)}</button>
-            {#if !profile}<button class="icon-btn" data-act="voice-filter-profile" onclick={() => filterBy(v.profileId)}>이 프로필만</button>{/if}
+            <button class="icon-btn num" data-act="voice-copy-profile" title={voiceCopyLabel(v.profileId)} aria-label={voiceCopyLabel(v.profileId)} onclick={() => copyId(v)}>{voiceProfileShort(v.profileId)}</button>
+            {#if !profile}<button class="icon-btn" data-act="voice-filter-profile" onclick={() => filterBy(v.profileId)}>{VOICE_UI.onlyProfile}</button>{/if}
             {#if v.resolvedAt}
-              <button class="icon-btn" data-act="voice-reopen" disabled={busy} onclick={() => resolve([v.id], false)}>다시 열기</button>
+              <button class="icon-btn" data-act="voice-reopen" disabled={busy} onclick={() => resolve([v.id], false)}>{VOICE_UI.reopen}</button>
             {:else}
-              <button class="icon-btn" data-act="voice-resolve" disabled={busy} onclick={() => resolve([v.id], true)}>처리</button>
+              <button class="icon-btn" data-act="voice-resolve" disabled={busy} onclick={() => resolve([v.id], true)}>{VOICE_UI.resolve}</button>
             {/if}
           </div>
         </li>
@@ -152,7 +155,7 @@
         <li class="muted" data-voice-empty>{voiceEmpty(view)}</li>
       {/each}
     </ul>
-    {#if list.hasMore}<button class="icon-btn" data-act="voices-more" onclick={() => load(true)}>더 보기</button>{/if}
+    {#if list.hasMore}<button class="icon-btn" data-act="voices-more" onclick={() => load(true)}>{VOICE_UI.more}</button>{/if}
   </LoadState>
 </div>
 

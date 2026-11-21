@@ -1,6 +1,13 @@
 import type { AdminVoice, AdminVoiceList } from '@offside/contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { applyVoiceResolve, resolveVoicesAll, voiceMeta, voiceProfileShort } from './voices.js';
+import {
+  applyVoiceResolve,
+  resolveVoicesAll,
+  voiceCopyLabel,
+  voiceMeta,
+  voiceProfileShort,
+  voiceResolveAllLabel,
+} from './voices.js';
 
 const voice = (over: Partial<AdminVoice> = {}): AdminVoice => ({
   id: 'vox_1',
@@ -29,6 +36,8 @@ describe('T-11-802 운영 도구 유저 의견', () => {
       voiceMeta(voice({ platform: 'web', device: null, screen: null, lang: 'ko', linked: false })),
     ).toBe('26.11.21 09:00 · 웹 · 1.1.7 (45) · abcd1234 · 한국어 · 익명');
     expect(voiceProfileShort(voice().profileId)).toBe('0f3a9c1e');
+    expect(voiceCopyLabel(voice().profileId)).toBe('프로필 id 0f3a9c1e 복사');
+    expect(voiceResolveAllLabel(1200)).toBe('보이는 열린 의견 모두 처리(1,200)');
   });
 
   it('처리하면 열린 목록에서는 그 행을 빼고, 전체 목록에서는 처리 시각만 바꾼다', () => {

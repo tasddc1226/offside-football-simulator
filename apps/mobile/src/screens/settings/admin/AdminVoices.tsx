@@ -11,13 +11,16 @@ import {
   VOICE_LOAD_FAIL,
   VOICE_NOTE,
   VOICE_TAB,
+  VOICE_UI,
   applyVoiceResolve,
   resolveVoicesAll,
   voiceConfirmAll,
+  voiceCopyLabel,
   voiceEmpty,
   voiceMeta,
   voiceOpenCount,
   voiceProfileShort,
+  voiceResolveAllLabel,
   voiceResolvedToast,
 } from '@offside/app-core/admin/voices';
 import { VOICE_KINDS, type VoiceKind } from '@offside/contracts/voice';
@@ -88,13 +91,13 @@ export default function AdminVoices() {
   async function resolveAllVisible() {
     const ids = (list?.items ?? []).filter((v) => !v.resolvedAt).map((v) => v.id);
     if (!ids.length) return;
-    if (!(await confirmAsync(voiceConfirmAll(ids.length), undefined, '처리'))) return;
+    if (!(await confirmAsync(voiceConfirmAll(ids.length), undefined, VOICE_UI.resolve))) return;
     await resolve(ids, true);
   }
 
   async function copyProfile(v: AdminVoice) {
     await Clipboard.setStringAsync(v.profileId);
-    toast('프로필 id를 복사했어요');
+    toast(VOICE_UI.copied);
   }
 
   const openVisible = (list?.items ?? []).filter((v) => !v.resolvedAt).length;
@@ -120,31 +123,31 @@ export default function AdminVoices() {
           ) : null}
         </View>
         <Btn sm testID="voice-refresh" onPress={() => void fetchList(filter)}>
-          새로고침
+          {VOICE_UI.refresh}
         </Btn>
       </View>
       <Txt v="xs" tone="muted">
         {VOICE_NOTE}
       </Txt>
 
-      <Seg cols={2} label="상태">
+      <Seg cols={2} label={VOICE_UI.statusLabel}>
         {(['open', 'all'] as const).map((s) => (
           <TabOpt
             key={s}
             tight
-            title={s === 'open' ? '열린 것' : '전체'}
+            title={s === 'open' ? VOICE_UI.open : VOICE_UI.all}
             selected={filter.status === s}
             testID={`voice-status-${s}`}
             onPress={() => filter.status !== s && refilter({ status: s })}
           />
         ))}
       </Seg>
-      <Seg cols={4} label="종류">
+      <Seg cols={4} label={VOICE_UI.kindLabel}>
         {[null, ...VOICE_KINDS].map((k) => (
           <TabOpt
             key={k ?? 'all'}
             tight
-            title={k ? VOICE_KIND_NAME[k] : '전체'}
+            title={k ? VOICE_KIND_NAME[k] : VOICE_UI.all}
             selected={filter.kind === k}
             testID={`voice-filter-${k ?? 'all'}`}
             onPress={() => filter.kind !== k && refilter({ kind: k })}
@@ -167,10 +170,10 @@ export default function AdminVoices() {
         >
           <Txt style={{ flex: 1 }}>
             <Txt bold>{voiceProfileShort(filter.profile)}</Txt>
-            {' 프로필의 의견만 보는 중'}
+            {VOICE_UI.profileFiltering}
           </Txt>
           <Btn sm testID="voice-clear-profile" onPress={() => refilter({ profile: null })}>
-            전체 보기
+            {VOICE_UI.clearProfile}
           </Btn>
         </View>
       ) : null}
@@ -183,7 +186,7 @@ export default function AdminVoices() {
             disabled={busy}
             onPress={() => void resolveAllVisible()}
           >
-            {`보이는 열린 의견 모두 처리(${openVisible})`}
+            {voiceResolveAllLabel(openVisible)}
           </Btn>
         ) : null}
         <View>
@@ -205,7 +208,7 @@ export default function AdminVoices() {
                   <Pill tone={v.kind === 'bug' ? 'warn' : undefined}>
                     {VOICE_KIND_NAME[v.kind as VoiceKind] ?? v.kind}
                   </Pill>
-                  {v.resolvedAt ? <Pill tone="good">처리함</Pill> : null}
+                  {v.resolvedAt ? <Pill tone="good">{VOICE_UI.resolved}</Pill> : null}
                 </View>
                 <Txt selectable>{tr.text(v.id, v.body)}</Txt>
                 {tr.button(v.id, v.body)}
@@ -216,7 +219,7 @@ export default function AdminVoices() {
                   <Btn
                     sm
                     testID="voice-copy-profile"
-                    accessibilityLabel={`프로필 id ${voiceProfileShort(v.profileId)} 복사`}
+                    accessibilityLabel={voiceCopyLabel(v.profileId)}
                     onPress={() => void copyProfile(v)}
                   >
                     {voiceProfileShort(v.profileId)}
@@ -227,7 +230,7 @@ export default function AdminVoices() {
                       testID="voice-filter-profile"
                       onPress={() => refilter({ profile: v.profileId })}
                     >
-                      이 프로필만
+                      {VOICE_UI.onlyProfile}
                     </Btn>
                   ) : null}
                   <Btn
@@ -236,7 +239,7 @@ export default function AdminVoices() {
                     disabled={busy}
                     onPress={() => void resolve([v.id], !v.resolvedAt)}
                   >
-                    {v.resolvedAt ? '다시 열기' : '처리'}
+                    {v.resolvedAt ? VOICE_UI.reopen : VOICE_UI.resolve}
                   </Btn>
                 </View>
               </View>
@@ -247,7 +250,7 @@ export default function AdminVoices() {
         </View>
         {list?.hasMore ? (
           <Btn sm testID="voice-more" onPress={() => void fetchList(filter, true)}>
-            더 보기
+            {VOICE_UI.more}
           </Btn>
         ) : null}
       </LoadState>
