@@ -23,6 +23,8 @@ export type Bindings = {
   API_FOOTBALL_KEY?: string;
   /** Emergency pause for automatic moderation; manual restore remains available. */
   AUTOMATION_HIDE_DISABLED?: string;
+  /** T-11-802 '1'이면 게임 안 의견 보내기(POST /v1/voices)를 세션 · DB를 읽기 전에 503으로 막는다. 운영 목록은 그대로다. */
+  VOICE_DISABLED?: string;
   /** 공지·릴리즈 노트 하루 첫 게시 자동 푸시. 운영에만 켠다. */
   NEWS_PUSH_ENABLED?: string;
   /** 현재 앱 세션의 등록 기기만 테스트. 기본 off. 자동 발송과 별개다. */

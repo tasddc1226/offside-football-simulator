@@ -133,6 +133,7 @@ import { title } from './title';
 import { titleTag } from './titleTag';
 import { translate } from './translate';
 import { tutorial } from './tutorial';
+import { voice } from './voice';
 import { webPay } from './webPay';
 
 export const ja = {
@@ -269,5 +270,6 @@ export const ja = {
   titleTag,
   translate,
   tutorial,
+  voice,
   webPay,
 };

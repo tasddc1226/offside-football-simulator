@@ -32,6 +32,8 @@ export const SENSITIVE_COLUMNS: Readonly<Record<string, readonly string[]>> = {
   board_blocks: ['nickname'],
   chat_reports: ['nickname'],
   report_feed: ['label'],
+  // T-11-802 의견 보내기: 방침에 '운영자만 봅니다'라고 적었으니 원문과 원문 해시는 에이전트가 읽지 않는다(건수 · 종류 집계는 된다).
+  user_voices: ['body', 'body_key'],
 };
 
 /**

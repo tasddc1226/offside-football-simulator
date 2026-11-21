@@ -366,7 +366,7 @@ export default (guideCopy) => {
     ],
     [
       '問題が発生しました。',
-      '<a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a>まで、利用環境と問題が発生した画面をお送りください。',
+      '設定の「ご意見を送る」から、問題が起きた画面と状況を短くお送りください。アプリのバージョンと端末の種類が一緒に送られます。返信が必要な場合は <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a> まで、利用環境と問題が発生した画面をお送りください。',
     ],
     [
       'カード強化に失敗するとカードはなくなりますか？',

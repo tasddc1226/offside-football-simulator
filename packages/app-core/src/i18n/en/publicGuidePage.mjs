@@ -369,7 +369,7 @@ export default (guideCopy) => {
     ],
     [
       'I have a problem.',
-      'Please send your environment and the screen where the problem happened to <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a>.',
+      'Use \'Send feedback\' in Settings to send a short note about the screen and what happened. Your app version and device type are sent with it. If you need a reply, send your environment and the screen where the problem happened to <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a>.',
     ],
     [
       'Can I lose a card if an enhancement fails?',

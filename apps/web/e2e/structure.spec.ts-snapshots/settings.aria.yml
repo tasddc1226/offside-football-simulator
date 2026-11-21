@@ -18,6 +18,7 @@
         - text: Help
         - heading "도움말" [level=2]
         - navigation "도움말":
+            - button "의견 보내기"
             - button "홈 화면에 추가하기"
             - link "게임 가이드":
                 - /url: /guide/
