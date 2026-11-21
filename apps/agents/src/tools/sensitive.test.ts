@@ -85,6 +85,7 @@ describe('readOnlySql 개인 정보 열', () => {
       'SELECT chain_id FROM memberships',
       'SELECT label FROM report_feed',
       'SELECT count(*) FROM profiles WHERE email IS NOT NULL',
+      'SELECT count(*) FROM profiles WHERE google_sub IS NOT NULL',
       "SELECT id FROM profiles WHERE email LIKE 'a%'",
       'SELECT substr(email, 1, 2) FROM profiles',
     ])
@@ -103,6 +104,17 @@ describe('readOnlySql 개인 정보 열', () => {
       'SELECT c.body, p.nickname FROM board_comments c JOIN profiles p ON p.id = c.profile_id',
       'SELECT main.profiles.email FROM main.profiles',
       'SELECT /* x */ email -- y\n FROM profiles',
+      // 작은따옴표 '표'는 SQLite가 식별자로 받는다. 식별자 따옴표 안의 '로 문자열 경계를 흐려도 막는다.
+      "SELECT email FROM 'profiles'",
+      "SELECT x.email FROM 'profiles' x",
+      "SELECT * FROM 'profiles'",
+      `SELECT 1 AS "a'", email, 2 AS "'b" FROM profiles`,
+      `SELECT email AS "'" FROM profiles AS "'"`,
+      `SELECT 1 AS "'", *, 2 AS "'" FROM profiles`,
+      "SELECT email AS [x'] FROM profiles AS [y']",
+      "SELECT 1 AS `a'`, email, 2 AS `'b` FROM profiles",
+      "SELECT email AS `'` FROM profiles AS `'`",
+      "SELECT 1 AS `'`, *, 2 AS `'` FROM profiles",
     ])
       expect(() => readOnlySql(bad), bad).toThrow(/개인 정보|열 이름/);
   });
@@ -120,6 +132,18 @@ describe('readOnlySql 개인 정보 열', () => {
       expect(() => readOnlySql(bad), bad).toThrow(/열 이름/);
   });
 
+  it('profiles 거절에는 로그인 연결 수를 셀 열을 알려 준다', () => {
+    expect(() => readOnlySql('SELECT count(*) FROM profiles WHERE google_sub IS NOT NULL')).toThrow(
+      /linked_at/,
+    );
+  });
+
+  it('문자열에 막힌 열 이름이 들어가도 막는다(받아들인 과잉 차단)', () => {
+    expect(() =>
+      readOnlySql("SELECT body FROM board_comments WHERE body LIKE '%nickname%'"),
+    ).toThrow(/개인 정보/);
+  });
+
   it('보통 집계 · 조사 쿼리는 통과한다', () => {
     for (const ok of [
       "SELECT count(*) AS n FROM profiles WHERE created_at >= '2026-11-20'",
@@ -132,13 +156,14 @@ describe('readOnlySql 개인 정보 열', () => {
       "SELECT name, sql FROM sqlite_master WHERE type='table' AND name = 'profiles'",
       "SELECT key, value FROM app_meta WHERE key LIKE 'backup%'",
       "SELECT id FROM owner_teams WHERE name = 'email'",
+      'SELECT count(*) FROM profiles WHERE linked_at IS NOT NULL OR apple_linked_at IS NOT NULL',
     ])
       expect(() => readOnlySql(ok), ok).not.toThrow();
   });
 });
 
 describe('Cloudflare MCP D1 막기', () => {
-  it('D1을 적은 호출은 서버에 보내지 않는다', async () => {
+  it('D1 데이터 경로는 서버에 보내지 않고 D1 분석은 보낸다', async () => {
     const sent: string[] = [];
     const fetcher = (async (_u: string, init: RequestInit) => {
       const msg = JSON.parse(String(init.body)) as { method: string };
@@ -159,13 +184,17 @@ describe('Cloudflare MCP D1 막기', () => {
       'cloudflare.request({ path: `/accounts/a/d1/database/x/query`, body: { sql: "SELECT 1" } })',
       'api.d1.database.query({ sql: "SELECT email FROM profiles" })',
       "fetch('/accounts/a/D1/database')",
-      'graphql: d1AnalyticsAdaptiveGroups',
+      'cloudflare.request({ path: "/accounts/a/d1/database/x/raw" })',
+      'cloudflare.request({ path: "/accounts/a/d1/database/x/export" })',
     ])
       await expect(exec!.run({ code }), code).rejects.toThrow(/d1_query/);
     expect(sent).not.toContain('tools/call');
-    expect(
-      await exec!.run({ code: 'cloudflare.request({ path: "/accounts/12d1f/workers/scripts" })' }),
-    ).toBe('ok');
-    expect(sent).toContain('tools/call');
+    for (const code of [
+      'cloudflare.request({ path: "/accounts/12d1f/workers/scripts" })',
+      'graphql: d1AnalyticsAdaptiveGroups { sum { queryBatchTimeMs readQueries rowsRead rowsWritten } }',
+      'cloudflare.request({ path: "/accounts/a/workers/scripts/x-d1c4-y" })',
+    ])
+      expect(await exec!.run({ code }), code).toBe('ok');
+    expect(sent.filter((m) => m === 'tools/call')).toHaveLength(3);
   });
 });
