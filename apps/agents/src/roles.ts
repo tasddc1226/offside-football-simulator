@@ -67,6 +67,16 @@ export const modelFor = (kind: Task['kind']): Model =>
       ? MODELS.sonnet
       : MODELS.opus;
 
+/**
+ * Cloudflare MCP로 D1 데이터(게임 DB · 운영 기록 DB)를 읽지 않는다. `/d1/database/…` 경로와 SDK의 `d1.database`를 막고,
+ * 장애 조사에 쓰는 D1 분석 GraphQL(`d1AnalyticsAdaptiveGroups` 등)은 통과시킨다. 글자를 이어 붙이면 빠져나가므로 근본
+ * 대책은 CF_MCP_TOKEN을 D1 권한 없이(Account Analytics만) 다시 발급하는 것이다(decision-log 2026-11-21).
+ */
+export const CF_MCP_DENY = {
+  pattern: /d1\W{0,3}database/i,
+  message: 'Cloudflare 도구로는 D1 데이터를 조회하지 않아요. 게임 DB는 d1_query로 봐요',
+};
+
 export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
   const model = modelFor(task.kind);
   const gh = repoReadToken(env);
@@ -186,8 +196,16 @@ export function roleSpec(env: Env, role: Role, task: Task): RoleSpec {
     maxTurns:
       task.kind === 'alert' || task.kind === 'report' ? 8 : task.kind === 'verify' ? 12 : 20,
     // Cloudflare API MCP(읽기 권한만 있는 토큰): Workers 로그 · 분석 · 설정 조회.
+    // T-11-803 D1 데이터는 이 길로 열 제한 없이 읽히므로 D1 데이터 경로는 막는다. 게임 DB는 d1_query로만 본다.
     mcpServers: env.CF_MCP_TOKEN
-      ? [{ name: 'cloudflare', url: 'https://mcp.cloudflare.com/mcp', token: env.CF_MCP_TOKEN }]
+      ? [
+          {
+            name: 'cloudflare',
+            url: 'https://mcp.cloudflare.com/mcp',
+            token: env.CF_MCP_TOKEN,
+            deny: CF_MCP_DENY,
+          },
+        ]
       : [],
     prompt: (t) =>
       t.kind === 'handoff'

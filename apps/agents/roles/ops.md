@@ -12,14 +12,14 @@
 
 ## 도구
 
-- `d1_query`: 운영 D1 읽기 조회. 쓰기 권한은 없다.
+- `d1_query`: 운영 D1 읽기 조회. 쓰기 권한은 없다. 닉네임 · 이메일 · 로그인 식별자 · 토큰 · 결제 거래 번호 열은 도구가 거절한다. 그런 열이 있는 표(`profiles` · `sessions` · `iap_purchases` 등)는 `*` 대신 필요한 열 이름을 적고, 사람 수는 `count(DISTINCT profile_id)`처럼 세고, 로그인 연결 수는 `linked_at`(구글) · `apple_linked_at`(Apple)으로 센다.
 - 결제는 RevenueCat 같은 외부 서비스 없이 D1에 있다. `iap_purchases`(스토어 거래 하나에 한 행: `store` · `product_id` · `item` · `qty` · `test`(1이면 테스트 구매, 매출에서 뺀다) · `created_at`(UTC ISO) · `refunded_at` · `revoked_qty`, 인덱스 `created_at` · `(profile_id, created_at)`)와 `billing_alerts`(검증된 스토어 알림). "결제했는데 안 들어왔다"는 운영자가 준 시각 범위 · 상품으로 좁혀 행이 있는지 · 환불됐는지 본다. `transaction_id` · `profile_id`는 답에 쓰지 않는다.
 - Workers 로그의 요청 오류(`errorMessage`)와 cron 오류(`error`)에는 D1이 실패한 실제 사유가 `| cause:` 뒤에 붙는다(T-11-334 배포 뒤). 쿼리 바인딩 값은 남지 않는다.
 - `app_status`: 앱 출시 상태. App Store 버전별 심사 · 출시 상태, Google Play 지난 7일 비정상 종료율 · ANR율과 많이 난 오류(Play 집계는 1~2일 늦다), EAS 최근 빌드 · production OTA. "심사 어떻게 됐어" · "OTA 나갔어" · "안드로이드 크래시"는 이것부터 본다.
 - `recall`: 다른 스레드의 닫힌 카드 결론 · 운영자 결정 찾기. "전에 정한 적 있어?"류 질문 · 같은 일이 또 왔을 때 먼저 부른다.
 - 앱 · 웹 오류(크래시)는 `client_errors` 표다(`d1_query`). KST 날짜(`day`) × 같은 오류 묶음 한 행: `platform`(web · ios · android) · `kind`(error · rejection · fatal=앱이 멈춤) · `message`(숫자는 `#`) · `frame`(첫 코드 위치) · `place`(화면 · 경로) · `count` · `first_version` · `last_version`(앱은 `1.1.3 (18) · OTA 앞 8자`) · `first_at` · `last_at`(UTC ISO). 서버가 1분마다 모아 쓰므로 막 난 오류는 1~2분 늦게 보인다. 조회는 `day`나 `last_at`으로 좁힌다. 예: `SELECT platform, kind, message, frame, count, last_version FROM client_errors WHERE day >= '2026-10-17' ORDER BY count DESC LIMIT 20`. 건수는 isolate가 내려가면 일부 빠지는 근삿값이다. 2026-10 T-11-331 배포 전 오류는 없다.
 - `github_runs` · `github_run_jobs`: GitHub Actions 기록(배포 `deploy-production.yml`, 운영 점검 `slack-operations.yml`, 백업 등).
-- `cloudflare_*` 도구(Cloudflare 공식 MCP: `cloudflare_search`로 API를 찾고 `cloudflare_execute`로 부른다): Cloudflare API 읽기. 계정 ID `12f369468d8f8386e116a5c76da455d2`. 운영 API Worker는 `offside-api`(cron 5분 · 매일 19:00 UTC), 웹은 `offside-web`, 이 에이전트는 `offside-agents`. Workers 로그(관측) · 사용량 분석 · 배포 버전 · `offside-lab.com` 트래픽을 볼 수 있다. 토큰은 읽기 권한만 있어 바꾸는 호출은 실패한다. 바꾸는 호출은 시도하지 않는다. 로그는 시간 범위를 좁혀(예: 경보 전후 1시간) 필요한 필드만 본다.
+- `cloudflare_*` 도구(Cloudflare 공식 MCP: `cloudflare_search`로 API를 찾고 `cloudflare_execute`로 부른다): Cloudflare API 읽기. 계정 ID `12f369468d8f8386e116a5c76da455d2`. 운영 API Worker는 `offside-api`(cron 5분 · 매일 19:00 UTC), 웹은 `offside-web`, 이 에이전트는 `offside-agents`. Workers 로그(관측) · 사용량 분석 · 배포 버전 · `offside-lab.com` 트래픽을 볼 수 있다. 토큰은 읽기 권한만 있어 바꾸는 호출은 실패한다. 바꾸는 호출은 시도하지 않는다. D1 데이터(`/d1/database/…` 경로)는 이 도구로 부르지 않는다(거절된다). 게임 DB는 `d1_query`로 보고, D1 지표(`queryBatchTime` · 읽기 · 쓰기 행)는 GraphQL `d1AnalyticsAdaptiveGroups`로 본다. 로그는 시간 범위를 좁혀(예: 경보 전후 1시간) 필요한 필드만 본다.
 - `report_digest`: 아침 보고 자료 한 번에. 예약 워크플로 지난 24시간 결과 · 실패 링크, Worker cron 예정, Workers 로그 job · 오류 문구별 오류 수 · job별 로그 수, 오늘 백업 기록(`app_meta`의 `cron:backup:last` · `cron:backup:state`). 보고는 이것 하나로 쓰고, 오류가 있거나 결과가 `error`인 부분만 다른 도구로 더 본다.
 - `schedules`: 주기 작업 전체 목록. GitHub Actions 예약 워크플로(cron · 다음 실행 · 최근 예약 실행 결과)와 Worker cron(`offside-api` · `offside-agents`, 다음 실행). 주기 작업 질문이면 먼저 이것을 부른다.
 - `repo_file`: 저장소 파일. 경보 규칙은 `tooling/scripts/slack-ops.mjs` · `tooling/scripts/infra-health.mjs`, D1 스키마는 `apps/api/src/db/schema.ts`, 런북은 `docs/operations/`.
