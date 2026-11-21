@@ -40,6 +40,10 @@
   import { getLocale, LOCALE_NAMES, LOCALES, type Locale } from '@offside/app-core/i18n/core';
   import { changeLocale } from './locale.js';
   import { getTextSize, setTextSize, TEXT_SIZES, type TextSize } from '@offside/app-core/textSize';
+  import { voiceText as VT } from '@offside/app-core/i18n/ko/voice';
+  // T-11-802 의견 보내기 시트(지연 청크). 열 때 요청이 없고, 닫으면 입구 버튼으로 초점을 돌린다.
+  let voiceOpen = $state(false);
+  let voiceBtn = $state<HTMLButtonElement | null>(null);
   let textSize = $state(getTextSize());
   const textSizeLabel = (size: TextSize) => ({ small: L.textSizeSmall, standard: L.textSizeStandard, large: L.textSizeLarge, extraLarge: L.textSizeExtraLarge })[size];
   let sfx = $state(sfxEnabled());
@@ -213,6 +217,7 @@
     <div class="eyebrow">Help</div>
     <h2 id="settings-help">{L.help}</h2>
     <nav class="card settings-links" aria-label={L.help}>
+      <button data-act="voice" bind:this={voiceBtn} onclick={() => (voiceOpen = true)}>{VT.entry} <span aria-hidden="true">›</span></button>
       <button data-act="install-guide" onclick={() => showInstallGuide()}>{L.installGuide} <span aria-hidden="true">›</span></button>
       <a href={publicDocPath('/guide/')}>{L.guide} <span aria-hidden="true">›</span></a>
       <a href={publicDocPath('/faq/')}>{L.faq} <span aria-hidden="true">›</span></a>
@@ -237,6 +242,8 @@
 
   <SiteFooter />
 </div>
+
+{#if voiceOpen}{#await import('./VoiceSheet.svelte') then { default: VoiceSheet }}<VoiceSheet screen="settings" onclose={() => ((voiceOpen = false), voiceBtn?.focus())} />{/await}{/if}
 
 <style>
   .settings-admin {margin-top:12px;padding-top:12px;border-top:1px solid var(--line);}
