@@ -54,6 +54,7 @@ import {
   type SeasonEndResult,
 } from '@offside/game/season';
 import { saveKey } from '@offside/game/storage';
+import { nextSeasonTraining } from '@offside/game/training';
 import { pickFanLines } from '@offside/game/fanfeed';
 import { chLabel } from '@offside/game/records';
 import { titleView } from '@offside/game/titles';
@@ -808,7 +809,9 @@ export function createGameActions(host: GameHost) {
     if (r?.ok !== undefined) logEntry.ok = r.ok;
     pushEvLog(G, logEntry);
     if (r) {
-      G.training = 'rest';
+      // T-11-798 병역으로 확정되면 지금처럼 휴식으로 시작한다. 시장이 다시 열리면(상무 불합격 · 현역 뒤) 아직 떠나지 않았으니
+      // 그대로 두고, 다시 고를 때 정한다.
+      if (!r.reopen) G.training = 'rest';
       if (r.reopen) {
         G.pending = { type: 'market', res: null, m: market(G) };
         host.save();
@@ -844,7 +847,8 @@ export function createGameActions(host: GameHost) {
       return false;
     }
     G.pending = null;
-    G.training = 'rest';
+    // T-11-798 고른 능력치 훈련은 새 시즌에도 이어 간다(개인 코치 · 미디어 활동만 휴식으로).
+    G.training = nextSeasonTraining(G.training);
     host.save();
     host.analytics.play(G);
     return true;
