@@ -191,6 +191,12 @@ export default (guideCopy) => {
       ],
     ],
     [
+      'Starter pack',
+      [
+        'A pack that signed-in owners can buy once per account in the app (₩3,300). It gives 1 premium scout ticket, 5 potential boost tickets and 5 reroll tickets at once. It appears at the top of the app shop and on the retirement screen of a player who played to 35 or older, and you can buy it even if you have paid before. Once bought it no longer appears, and it cannot be bought on the web. If the payment is refunded, the items are taken back as far as you still have them.',
+      ],
+    ],
+    [
       'Editing player info in the first season',
       [
         'Before the first season review, you can change the name, preferred foot, height and weight for free with Edit on the Player tab (or the pencil next to the name). There is no limit, and you do not need to sign in. After the first season review, the name can only be changed with a player rename ticket, and foot and build can no longer be changed.',

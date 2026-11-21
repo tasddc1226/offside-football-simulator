@@ -46,7 +46,7 @@ const STAGE: Record<string, string> = {
 /** 상품 이름(리롤권 40장 · 광고 제거). 모르는 상품은 id 그대로. */
 export function productName(productId: string) {
   if (productId === SEASON_PASS_PRODUCT_ID) return '시즌 패스';
-  if (productId === STARTER_PACK_PRODUCT_ID) return '첫 구매 묶음';
+  if (productId === STARTER_PACK_PRODUCT_ID) return '스타터팩';
   if (productId === MEMBERSHIP_PRODUCT_ID) return '클럽 멤버십';
   if (productId === REMOVE_ADS_PRODUCT) return '광고 제거';
   const p = iapProduct(productId);

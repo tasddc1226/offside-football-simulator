@@ -1,5 +1,5 @@
-// T-11-770d 첫 구매 묶음(기획 T-11-747 R2). 실결제 이력이 없는 구단주가 한 번만 사는 소모성 묶음으로, 세 가지 아이템을 한 번에
-// 준다. 서버(자격 · 지급)와 화면(안내)이 같은 값을 쓰게 한 곳에 둔다. zod 없는 서브패스(`@offside/contracts/starter-pack`).
+// T-11-770d 스타터팩(기획 T-11-747 R2, T-11-806 전 이름 첫 구매 묶음). 로그인한 구단주가 계정마다 한 번 사는 소모성 묶음으로,
+// 세 가지 아이템을 한 번에 준다(T-11-806부터 결제 이력 · 은퇴 선수 · 대조군 조건 없음). 서버(자격 · 지급)와 화면(안내)이 같은 값을 쓰게 한 곳에 둔다. zod 없는 서브패스(`@offside/contracts/starter-pack`).
 import type { AttendanceReward } from './attendance-rules.js';
 
 /** App Store Connect · Play Console에 같은 ID로 만드는 소모성 상품. 구성을 바꾸면 새 ID · 새 판(version)을 만든다. */
@@ -21,8 +21,4 @@ export const STARTER_PACK_PRICE_KRW = 3300;
  * 화면에 입구를 보이는지. 스토어 상품 승인 · 서버 STARTER_PACK_ENABLED · 실기기 결제 확인이 끝나면 true로 바꿔 연다(false면
  * 개발 빌드에서만 보인다). 판매 자체는 서버가 정한다.
  */
-export const STARTER_PACK_LIVE = false;
-/** 대조군 비율(%). 자격이 되는 구단주 가운데 이만큼은 묶음을 보지 않는다(프로필마다 고정, 전체 결제 기여액 비교용). */
-export const STARTER_PACK_CONTROL_PCT = 20;
-/** 이 나이 이상에 은퇴한 선수가 한 명은 있어야 보인다(끝까지 뛴 커리어). */
-export const STARTER_PACK_RETIRE_AGE = 35;
+export const STARTER_PACK_LIVE = true;

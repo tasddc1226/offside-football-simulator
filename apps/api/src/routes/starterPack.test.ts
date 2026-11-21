@@ -6,12 +6,11 @@ import {
 } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDb } from '../db/client.js';
-import { starterControl } from '../db/repos/starterPack.js';
 import { handleAppleNotification } from '../iap/refunds.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
 
-// Apple 서명 확인 자체는 iap/apple.test.ts가 본다. 여기서는 확인 결과를 정해 두고 첫 구매 묶음 규칙만 본다.
+// Apple 서명 확인 자체는 iap/apple.test.ts가 본다. 여기서는 확인 결과를 정해 두고 스타터팩 규칙만 본다.
 const appleTx = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
 const appleNote = vi.hoisted(() => ({ current: null as Record<string, unknown> | null }));
 vi.mock('../iap/apple.js', async (orig) => ({
@@ -26,9 +25,8 @@ const ItemsRes = successEnvelope(OwnerItemsResponseSchema);
 const STARTER = 'com.offsidelab.app.starter_v1';
 const NOW = '2026-11-20T00:00:00.000Z';
 
-describe('T-11-770d 첫 구매 묶음', () => {
+describe('T-11-770d · T-11-806 스타터팩', () => {
   let ctx: TestD1;
-  let seq = 0;
   beforeEach(async () => {
     ctx = await createTestD1();
     appleTx.current = null;
@@ -55,36 +53,15 @@ describe('T-11-770d 첫 구매 묶음', () => {
     environment: 'Production',
     appAccountToken: profileId.replace(/^prf_/, ''),
   });
-  const retire = async (profileId: string, age = 36) => {
-    await ctx.env.DB.prepare(
-      `INSERT INTO careers(id, profile_id, pos, foot, type, trait, start_year, status, app_version, created_at, updated_at,
-         retired_at, retire_age, service_season)
-       VALUES (?, ?, 'FW', 'right', 'late', 'star', 2026, 'retired', 'test', ?, ?, ?, ?, 2)`,
-    )
-      .bind(`c${++seq}`, profileId, NOW, NOW, NOW, age)
-      .run();
-  };
-  /** 대조군이 아닌(또는 대조군인) 로그인 구단주를 만든다. 군은 프로필 id로 정해져 맞는 쪽이 나올 때까지 새로 만든다. */
-  const owner = async (control = false) => {
-    for (let i = 0; i < 200; i++) {
-      const me = await issueGoogleCookie(ctx);
-      if ((await starterControl(me.profileId)) === control) return me;
-    }
-    throw new Error('군을 맞추지 못했다');
-  };
+  const owner = () => issueGoogleCookie(ctx);
 
   it('로그인하지 않은 프로필은 묶음을 보지 못한다', async () => {
     const guest = await issueCookie(ctx);
     expect((await call('GET', '/v1/starter-pack', { cookie: guest.cookie })).status).toBe(403);
   });
 
-  it('끝까지 뛴 은퇴 선수가 있고 결제 이력이 없으면 살 수 있다', async () => {
+  it('T-11-806 로그인한 구단주는 은퇴 선수가 없어도 살 수 있다', async () => {
     const me = await owner();
-    expect(await state(me.cookie)).toMatchObject({ state: 'ineligible', stores: [] });
-    // 35세 미만 은퇴는 세지 않는다.
-    await retire(me.profileId, 30);
-    expect((await state(me.cookie)).state).toBe('ineligible');
-    await retire(me.profileId);
     expect(await state(me.cookie)).toEqual({
       state: 'eligible',
       version: 'v1',
@@ -96,15 +73,8 @@ describe('T-11-770d 첫 구매 묶음', () => {
 
   it('판매 스위치가 꺼져 있으면 팔지 않는다', async () => {
     const me = await owner();
-    await retire(me.profileId);
     ctx.env.STARTER_PACK_ENABLED = '0';
     expect(await state(me.cookie)).toMatchObject({ state: 'off', stores: [] });
-  });
-
-  it('대조군에게는 보이지 않는다', async () => {
-    const me = await owner(true);
-    await retire(me.profileId);
-    expect((await state(me.cookie)).state).toBe('ineligible');
   });
 
   it.each([
@@ -138,33 +108,14 @@ describe('T-11-770d 첫 구매 묶음', () => {
       `INSERT INTO iap_ad_free_purchases (store, transaction_id, profile_id, product_id, test, created_at)
        VALUES ('apple', 't1', ?, 'com.offsidelab.app.remove_ads', 0, ?)`,
     ],
-  ])('%s 결제 이력이 있으면 대상이 아니다', async (_name, sql) => {
+  ])('T-11-806 %s 결제 이력이 있어도 살 수 있다', async (_name, sql) => {
     const me = await owner();
-    await retire(me.profileId);
-    expect((await state(me.cookie)).state).toBe('eligible');
     await ctx.env.DB.prepare(sql).bind(me.profileId, NOW).run();
-    expect((await state(me.cookie)).state).toBe('ineligible');
-  });
-
-  it('시험 결제 · 결제창만 연 웹 주문은 결제 이력으로 세지 않는다', async () => {
-    const me = await owner();
-    await retire(me.profileId);
-    await ctx.env.DB.batch([
-      ctx.env.DB.prepare(
-        `INSERT INTO iap_purchases (store, transaction_id, profile_id, product_id, item, qty, test, created_at)
-         VALUES ('apple', 't1', ?, 'com.offsidelab.app.boost_3', 'boost', 3, 1, ?)`,
-      ).bind(me.profileId, NOW),
-      ctx.env.DB.prepare(
-        `INSERT INTO web_pay_orders (order_id, profile_id, product_id, xsolla_order_id, status, test, created_at)
-         VALUES ('o1', ?, 'com.offsidelab.app.boost_3', 'x1', 'READY', 0, ?)`,
-      ).bind(me.profileId, NOW),
-    ]);
     expect((await state(me.cookie)).state).toBe('eligible');
   });
 
   it('사면 세 가지 아이템을 한 번에 받고, 같은 거래를 다시 보내도 한 번만 받는다', async () => {
     const me = await owner();
-    await retire(me.profileId);
     appleTx.current = appleFor(me.profileId, 'tx1');
     const first = BuyRes.parse(await (await buy(me.cookie)).json()).data;
     expect(first.have).toEqual({ reroll: 5, boost: 5, scout: 1, rename: 0 });
@@ -180,7 +131,6 @@ describe('T-11-770d 첫 구매 묶음', () => {
 
   it('같은 거래를 동시에 보내도 한 번만 준다', async () => {
     const me = await owner();
-    await retire(me.profileId);
     appleTx.current = appleFor(me.profileId, 'tx1');
     const rs = await Promise.all([buy(me.cookie), buy(me.cookie), buy(me.cookie)]);
     expect(rs.map((r) => r.status)).toEqual([200, 200, 200]);
@@ -189,7 +139,6 @@ describe('T-11-770d 첫 구매 묶음', () => {
 
   it('스토어가 서로 다른 유료 거래를 둘 승인했으면 둘 다 주고, 자격은 다시 열리지 않는다', async () => {
     const me = await owner();
-    await retire(me.profileId);
     appleTx.current = appleFor(me.profileId, 'tx1');
     await buy(me.cookie);
     appleTx.current = appleFor(me.profileId, 'tx2');
@@ -200,7 +149,6 @@ describe('T-11-770d 첫 구매 묶음', () => {
 
   it('판매를 닫은 뒤에도 승인된 거래는 준다', async () => {
     const me = await owner();
-    await retire(me.profileId);
     ctx.env.STARTER_PACK_ENABLED = '0';
     appleTx.current = appleFor(me.profileId, 'tx1');
     expect((await buy(me.cookie)).status).toBe(200);
@@ -228,7 +176,6 @@ describe('T-11-770d 첫 구매 묶음', () => {
 
   it('환불되면 가진 만큼만 아이템별로 회수하고, 같은 알림이 다시 와도 한 번만 처리한다', async () => {
     const me = await owner();
-    await retire(me.profileId);
     appleTx.current = appleFor(me.profileId, 'tx1');
     await buy(me.cookie);
     // 강화권 3장을 쓴 뒤라 2장만 남았고, 다른 길로 받은 리롤권이 2장 더 있다.
@@ -263,7 +210,6 @@ describe('T-11-770d 첫 구매 묶음', () => {
 
   it('환불 알림이 먼저 온 거래는 줄만 남기고 주지 않는다', async () => {
     const me = await owner();
-    await retire(me.profileId);
     await ctx.env.DB.prepare(
       `INSERT INTO iap_refund_markers (store, transaction_id, refunded_at) VALUES ('apple', 'tx1', ?)`,
     )
