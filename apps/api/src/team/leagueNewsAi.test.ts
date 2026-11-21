@@ -156,10 +156,7 @@ describe('AI 기자 출력 검사 (T-11-658)', () => {
       [art('[T2] 승리', '**[T2]**가 이겼습니다. 정말 놀라운 결과였습니다.'), 'markup'],
       [art('[T2] '.repeat(12), '[T2]가 이겼습니다. 정말 놀라운 결과였습니다.'), 'head-length'],
       [
-        art(
-          '오프사이드 리그 1부 [T2]의 반란',
-          '[T2]가 [T1]를 2-1로 꺾었습니다. 모두가 놀랐습니다.',
-        ),
+        art('오프사이드의 기적, [T2]의 반란', '[T2]가 [T1]를 2-1로 꺾었습니다. 모두가 놀랐습니다.'),
         'head-where',
       ],
       [art('[T2]의 대역전승', '[T2]가 [T1]를 2-1로 꺾었습니다. 모두가 놀랐습니다.'), 'claim'],
@@ -184,6 +181,38 @@ describe('AI 기자 출력 검사 (T-11-658)', () => {
     ).toEqual({
       head: '바다 시티 stun 하늘 FC',
       body: '바다 시티 beat 하늘 FC 2-1 despite a 7-point OVR gap.',
+    });
+  });
+
+  it('T-11-805 헤드라인에 붙은 대회 구절은 잘라 내고 쓴다', () => {
+    const body = '오프사이드 리그 1부 1리그 4라운드에서 [T2]가 [T1]를 2-1로 꺾었습니다.';
+    // 11-21 운영 모델(gemma-4-26b)이 실제로 낸 헤드라인 모양.
+    const cases: [string, string][] = [
+      [
+        '[T2] 오프사이드 리그 1부에서 [T1] 상대로 이변의 승리',
+        '바다 시티, 하늘 FC 상대로 이변의 승리',
+      ],
+      ['오프사이드 리그 1부 1리그 4라운드 [T2]의 반란', '바다 시티의 반란'],
+      ['[T2], 오프사이드 리그 1부서 [T1] 제압', '바다 시티, 하늘 FC 제압'],
+    ];
+    for (const [head, want] of cases)
+      expect(checkArticle(art(head, body), upset, 'ko')).toEqual({
+        head: want,
+        body: '오프사이드 리그 1부 1리그 4라운드에서 바다 시티가 하늘 FC를 2-1로 꺾었습니다.',
+      });
+    expect(
+      checkArticle(
+        art(
+          '[T2]、オフサイドリーグ 1部で[T1]を撃破',
+          '[P1]が88分に決勝点を決め、[T2]が2-1で勝ちました。',
+        ),
+        late,
+        'ja',
+      ),
+    ).toMatchObject({ head: '바다 시티、하늘 FCを撃破' });
+    // 구절을 잘라 너무 짧아지면 버린다.
+    expect(inspectArticle(art('오프사이드 리그 1부 승리', body), upset, 'ko')).toEqual({
+      reason: 'head-length',
     });
   });
 
