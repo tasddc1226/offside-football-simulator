@@ -39,8 +39,11 @@ export type CupDivision = (typeof CUP_DIVISIONS)[number];
 export const CUP_DIVISIONS_FROM = 3;
 /** 마감 때 이보다 적은 구간은 바로 윗 구간에 합친다. */
 export const CUP_DIVISION_MIN = 8;
-/** 구간 대회 회차가 다음 시즌으로 넘어가면 개막 며칠 뒤에 접수를 여는가(팀 OVR 분포가 생긴 뒤 상한을 정한다). */
-export const CUP_SEASON_OPEN_DAYS = 2;
+/**
+ * 구간 대회 회차가 다음 시즌으로 넘어가면 개막 며칠 뒤에 접수를 여는가(팀 OVR 분포가 생긴 뒤 상한을 정한다).
+ * T-11-799 2 → 3: 제5회부터 이번 시즌 선수만 나가므로, 새 시즌 첫 대회 전에 그 시즌 선수를 모을 시간을 하루 더 둔다.
+ */
+export const CUP_SEASON_OPEN_DAYS = 3;
 /** 상한을 정할 시즌 팀이 모자랄 때 쓰는 기본 상한(주니어 · 시니어). */
 export const CUP_DIVISION_FALLBACK_CAPS: readonly number[] = [80, 88];
 /**

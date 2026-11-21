@@ -1,0 +1,26 @@
+{
+  "id": "t-11-799-cup-season-open-3days",
+  "title": "새 시즌 첫 컵은 개막 3일 뒤에 열려요",
+  "items": [
+    "서비스 시즌이 바뀐 뒤 첫 오프사이드 컵의 접수를 개막 2일 뒤에서 3일 뒤 21시 10분(한국 시간)으로 늦췄어요. 그 시즌에 키우거나 영입한 선수로 컵 명단을 꾸릴 시간이 하루 늘어요. 시즌 3 첫 컵부터 적용돼요."
+  ],
+  "en": {
+    "title": "A new season's first cup opens three days in",
+    "items": [
+      "Registration for the first Offside Cup after a service season changes now opens at 21:10 KST three days after the season starts, instead of two. You get one more day to build a cup squad from players you raised or signed that season. This starts with the first cup of Season 3."
+    ]
+  },
+  "ja": {
+    "title": "新シーズン最初のカップは開幕3日後に",
+    "items": [
+      "サービスシーズンが変わったあと最初のオフサイドカップの受付を、開幕2日後から3日後の21時10分(韓国時間)に遅らせました。そのシーズンに育てた選手や獲得した選手でカップのメンバーをそろえる時間が1日増えます。シーズン3最初のカップから適用されます。"
+    ]
+  },
+  "zh": {
+    "title": "賽季更替後的盃賽改在開幕 3 天後開放報名",
+    "items": [
+      "服務賽季更替後的下一屆 OFFSIDE 盃，報名時間從開幕 2 天後延到 3 天後的 21 點 10 分（韓國時間）。用該賽季培養或簽下的球員組成盃賽名單的時間多了一天。從賽季 3 開幕後的盃賽開始適用。"
+    ]
+  },
+  "availability": "web-app"
+}
