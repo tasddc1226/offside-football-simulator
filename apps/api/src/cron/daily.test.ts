@@ -103,6 +103,10 @@ describe('T-10-070 매일 정리', () => {
     const tr = `INSERT INTO translations (key, text, created_at) VALUES (?1, 't', ?2)`;
     await run(tr, 'tr_old', ago(31 * DAY));
     await run(tr, 'tr_new', ago(29 * DAY));
+    // T-11-802 게임 안 의견은 180일.
+    const vox = `INSERT INTO user_voices (id, profile_id, kind, body, body_key, platform, app_version, lang, created_at) VALUES (?1, 'prf_1', 'bug', 'b', ?1, 'web', 'dev', 'ko', ?2)`;
+    await run(vox, 'vox_old', ago(181 * DAY));
+    await run(vox, 'vox_new', ago(179 * DAY));
 
     expect(await cleanupExpired(ctx.env.DB, NOW, {}, ops)).toEqual({
       push_news_events: 0,
@@ -115,10 +119,14 @@ describe('T-10-070 매일 정리', () => {
       app_auth_tickets: 1,
       chat_reports: 1,
       chat_mutes: 1,
+      user_voices: 1,
       translations: 1,
       api_status_buckets: 0,
       client_errors: 0,
     });
+    expect(
+      (await ctx.env.DB.prepare('SELECT id FROM user_voices').all<{ id: string }>()).results,
+    ).toEqual([{ id: 'vox_new' }]);
     expect(await count('translations')).toBe(1);
     expect(await count('chat_reports')).toBe(1);
     expect(await count('chat_mutes')).toBe(1);

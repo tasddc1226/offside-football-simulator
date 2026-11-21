@@ -41,6 +41,10 @@ const EXACT: Record<string, string> = {
   // i18n-ignore: 응답 문장을 찾는 한국어 원문 키
   '번역을 너무 자주 요청했어요. 잠시 후 다시 시도해 주세요.':
     "You've asked for translations too often. Please try again in a moment.",
+  // T-11-802 의견 보내기
+  // i18n-ignore: 응답 문장을 찾는 한국어 원문 키
+  '의견을 너무 자주 보내고 있어요. 잠시 뒤에 다시 시도해 주세요.':
+    "You're sending feedback too often. Please try again shortly.",
   '로그인을 마치지 못했어요.': "We couldn't finish signing you in.",
   '앱에서만 쓸 수 있어요.': 'This is only available in the app.',
   '새 프로필을 너무 자주 만들고 있어요. 잠시 뒤에 다시 시도해 주세요.':

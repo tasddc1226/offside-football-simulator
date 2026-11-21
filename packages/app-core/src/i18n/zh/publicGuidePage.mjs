@@ -363,7 +363,7 @@ export default (guideCopy) => {
     ['舊版本的存檔也能讀取嗎？', '舊版本的存檔資料在讀取時，會自動轉換成最新格式。'],
     [
       '發生問題了。',
-      '請將使用環境與發生問題的畫面寄到 <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a>。',
+      '請從設定的「意見回饋」簡短送出發生問題的畫面與情況，App 版本和裝置類型會一併送出。需要回覆時，請將使用環境與發生問題的畫面寄到 <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a>。',
     ],
     [
       '卡片強化失敗後卡片會消失嗎？',

@@ -693,6 +693,21 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'room',
   ],
   chat_mutes: ['profile_id', 'until', 'created_at'],
+  // T-11-802 게임 안 의견 보내기.
+  user_voices: [
+    'id',
+    'profile_id',
+    'kind',
+    'body',
+    'body_key',
+    'screen',
+    'platform',
+    'app_version',
+    'device',
+    'lang',
+    'created_at',
+    'resolved_at',
+  ],
   // T-11-146 사용자 글 번역 캐시.
   translations: ['key', 'text', 'created_at'],
   web_pay_orders: [

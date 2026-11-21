@@ -7,7 +7,7 @@
 | offside-purchases | 검증된 구매·갱신·환불, 전날 결제 이벤트 요약                    | 기존 Queue / GitHub Actions |
 | offside-alerts    | Cloudflare 예산·Workers 문제, 시간별 웹·API·백업·D1 점검과 복구 | Cloudflare / GitHub Actions |
 | offside-daily     | 오전 9시 KST 아침 리포트                                        | GitHub Actions              |
-| offside-feedback  | 커뮤니티·앱 댓글 검토 후보, GitHub 처리 상태                    | GitHub Actions              |
+| offside-feedback  | 커뮤니티·앱 댓글 검토 후보, GitHub 처리 상태, 게임 안 의견 건수 | GitHub Actions              |
 | offside-releases  | 웹·API/OTA 배포 결과, 공식 심사·출시 메일                       | GitHub Actions / 로컬 Orca  |
 
 ## 지표와 주기
@@ -21,6 +21,8 @@
 지정 커뮤니티의 공개 목록을 시간당 최대 3페이지 읽는다. 최초 실행은 현재 글 번호만 기준으로 잡고 과거 글을 일괄 발송하지 않는다. 제목 키워드에 해당하는 신규 글만 후보로 보내므로 본문에만 있는 피드백은 놓칠 수 있다. 페이지 차단·커서 공백은 실패로 알리고 자동으로 건너뛰지 않는다.
 
 앱·웹 댓글은 시간당 최대 100개를 커서로 읽는다. 본문은 키워드 판정에만 쓰며 닉네임·본문을 Slack에 복사하지 않는다. 후보는 확인된 버그가 아니다. 원문 링크에서 재현·기존 PR 중복·시즌 밸런스 영향을 확인하고, 링크로 GitHub 이슈를 만든다. 공개 이슈에는 개인정보를 넣지 않는다.
+
+게임 안 '의견 보내기'(T-11-802)는 아침 리포트(`daily`) 끝에 한국 시간 전날 받은 건수(종류 · 언어별)와 아직 처리하지 않은 건수만 `offside-feedback`에 한 통 보낸다(`slack:ops:voices-daily`). 0건이면 보내지 않고, `user_voices` 표가 없으면(머지 뒤 운영 마이그레이션 전) 조용히 건너뛴다. 본문 · 프로필 id · 닉네임은 보내지 않는다. 디스코드는 보관 기한이 없어 개인정보처리방침의 보유 기간(180일)을 지킬 수 없기 때문이다. 원문은 게임 안 운영 도구 → 유저 의견에서 읽고 처리 표시를 한다.
 
 `feedback` 라벨을 기본으로 사용한다. `feedback:verified`는 재현 확인, `feedback:fixing`은 수정 중, `feedback:deployed`는 운영 반영 확인이다. 이슈 종료만으로 배포 완료로 간주하지 않는다. 시즌 중 밸런스 변경은 운영자에게 먼저 보고한다.
 

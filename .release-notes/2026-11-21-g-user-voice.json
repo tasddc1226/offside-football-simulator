@@ -1,0 +1,34 @@
+{
+  "id": "t-11-802-user-voice",
+  "title": "게임 안에서 의견을 보낼 수 있어요",
+  "items": [
+    "설정 → 도움말 맨 위와 홈 맨 아래의 '의견 보내기'에서 불편한 점이나 바라는 점을 운영자에게 바로 보낼 수 있어요. 종류는 고르지 않아도 되고, 500자까지 쓸 수 있어요.",
+    "앱 버전, 기기 종류, 화면 언어가 함께 전달돼요. 메일 주소 · 전화번호 · 복구 코드로 보이는 내용은 저장하기 전에 가려요.",
+    "운영자만 읽고 여기로는 답장을 드리지 않아요. 답이 필요하면 contact@offside-lab.com으로 메일을 보내 주세요."
+  ],
+  "en": {
+    "title": "Send feedback from inside the game",
+    "items": [
+      "Use 'Send feedback' at the top of Settings → Help or at the bottom of Home to send problems and ideas straight to us. Choosing a type is optional, and you can write up to 500 characters.",
+      "Your app version, device type and language are sent with it. Anything that looks like an email address, phone number or recovery code is hidden before it's saved.",
+      "Only our team reads it, and we can't reply there. If you need an answer, email contact@offside-lab.com."
+    ]
+  },
+  "ja": {
+    "title": "ゲーム内からご意見を送れます",
+    "items": [
+      "設定 → ヘルプの一番上とホームの一番下にある「ご意見を送る」から、不便な点やご要望を運営に直接送れます。種類は選ばなくてもかまいません。500文字まで書けます。",
+      "アプリのバージョン、端末の種類、表示言語が一緒に送られます。メールアドレス・電話番号・復旧コードに見える内容は保存前に伏せます。",
+      "運営だけが読み、ここからは返信できません。返信が必要な場合は contact@offside-lab.com までメールでお送りください。"
+    ]
+  },
+  "zh": {
+    "title": "可以在遊戲內送出意見了",
+    "items": [
+      "在設定 → 說明最上方和首頁最下方的「意見回饋」，可以把不方便的地方和希望改進的事直接告訴營運團隊。類型可不選，最多可寫 500 字。",
+      "會一併送出 App 版本、裝置類型和顯示語言。看起來像電子郵件地址、電話號碼或復原碼的內容會在儲存前遮蔽。",
+      "只有營運團隊會閱讀，這裡無法回覆。需要回覆時，請寄信到 contact@offside-lab.com。"
+    ]
+  },
+  "availability": "web-app"
+}

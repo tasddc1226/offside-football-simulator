@@ -366,7 +366,7 @@ export default (guideCopy) => {
     ],
     [
       '문제가 생겼어요.',
-      '<a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a>으로 사용 환경과 문제가 발생한 화면을 보내 주세요.',
+      '설정의 \'의견 보내기\'로 문제가 생긴 화면과 상황을 짧게 보내 주세요. 앱 버전과 기기 종류가 함께 전달됩니다. 답장이 필요하면 <a href="mailto:contact@offside-lab.com">contact@offside-lab.com</a>으로 사용 환경과 문제가 발생한 화면을 보내 주세요.',
     ],
     [
       '카드 강화에 실패하면 카드가 사라지나요?',
