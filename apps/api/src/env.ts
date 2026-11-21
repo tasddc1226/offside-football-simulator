@@ -116,6 +116,8 @@ export type Bindings = {
   WEB_PAY_ENABLED?: string;
   /** Xsolla 100장 SKU 등록 · 가격 검증 후에만 1로 켠다. 기존 상품 판매와 별개다. */
   WEB_PAY_BOOST_100_ENABLED?: string;
+  /** T-11-809 Xsolla 스카우트권 20장 SKU 등록 · 가격 검증 후에만 1로 켠다. */
+  WEB_PAY_SCOUT_20_ENABLED?: string;
   XSOLLA_PROJECT_ID?: string;
   XSOLLA_API_KEY?: string;
   XSOLLA_WEBHOOK_SECRET?: string;

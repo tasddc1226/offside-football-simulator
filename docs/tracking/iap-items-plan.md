@@ -17,6 +17,7 @@ App Store Connect · Play Console에 같은 ID로 소모성(Consumable · 일회
 | `com.offsidelab.app.boost_100` | 잠재력 강화권 100장      | ₩19,800   |
 | `com.offsidelab.app.scout_1`   | 프리미엄 스카우트권 1장  | ₩1,100    |
 | `com.offsidelab.app.scout_5`   | 프리미엄 스카우트권 5장  | ₩4,400    |
+| `com.offsidelab.app.scout_20`  | 프리미엄 스카우트권 20장 | ₩16,500   |
 | `com.offsidelab.app.scout_50`  | 프리미엄 스카우트권 50장 | ₩39,500   |
 
 - 로그인한 구단주만 산다(아이템이 구단주 계정에 들어온다). 웹에서는 팔지 않고, 가진 아이템은 웹에서도 쓴다.

@@ -55,8 +55,16 @@ import { enforceLimit, NO_STORE, notFoundError, nowIso, ok, readBody } from './s
 const passOnSale = (env: Bindings, now: string) =>
   env.SEASON_PASS_ENABLED === '1' && passSaleOpen(now);
 const memberOnSale = (env: Bindings) => env.MEMBERSHIP_ENABLED === '1';
-const itemOnSale = (env: Bindings, productId: string) =>
-  productId !== 'com.offsidelab.app.boost_100' || env.WEB_PAY_BOOST_100_ENABLED === '1';
+/** 엑솔라 카탈로그 등록 · 가격 확인 뒤에만 여는 상품(스위치 이름). 그 밖의 상품은 웹 결제가 켜지면 바로 판다. */
+const WEB_GATED: Readonly<Record<string, keyof Bindings>> = {
+  'com.offsidelab.app.boost_100': 'WEB_PAY_BOOST_100_ENABLED',
+  // T-11-809 스카우트권 20장은 앱 스토어 상품 먼저. 엑솔라 SKU를 등록한 뒤 켠다.
+  'com.offsidelab.app.scout_20': 'WEB_PAY_SCOUT_20_ENABLED',
+};
+const itemOnSale = (env: Bindings, productId: string) => {
+  const gate = WEB_GATED[productId];
+  return !gate || env[gate] === '1';
+};
 const WEB_SKUS: ReadonlySet<string> = new Set(WEB_PAY_PRODUCT_IDS);
 
 const unavailable = () =>
