@@ -1,0 +1,30 @@
+{
+  "id": "t-11-806-starter-pack",
+  "title": "앱에 첫 구매 묶음이 생겼어요",
+  "items": [
+    "결제한 적이 없는 로그인 구단주는 앱 상점에서 첫 구매 묶음을 한 번 살 수 있어요(3,300원). 프리미엄 스카우트권 1장 · 잠재력 강화권 5장 · 리롤권 5장이 들어 있어요.",
+    "35세 이상까지 뛰고 은퇴한 선수가 있는 구단주 가운데 일부에게 앱 상점과 은퇴 화면에 보여요."
+  ],
+  "en": {
+    "title": "A first-purchase pack is now in the app",
+    "items": [
+      "Signed-in owners who have never paid can buy the first-purchase pack once in the app shop (₩3,300). It has 1 premium scout ticket, 5 potential boost tickets and 5 reroll tickets.",
+      "It appears in the app shop and on the retirement screen for some owners who have a player who played to 35 or older and retired."
+    ]
+  },
+  "ja": {
+    "title": "アプリに初回購入パックが登場しました",
+    "items": [
+      "一度も決済したことのないログイン済みオーナーは、アプリのショップで初回購入パックを一度だけ買えます(3,300ウォン)。プレミアムスカウト券1枚・ポテンシャル強化券5枚・リロール券5枚が入っています。",
+      "35歳以上までプレーして引退した選手がいるオーナーの一部に、アプリのショップと引退画面で表示されます。"
+    ]
+  },
+  "zh": {
+    "title": "App 推出首購組合包",
+    "items": [
+      "從未付款過的已登入球隊老闆，可以在 App 商店購買一次首購組合包（3,300 韓元），內含 1 張高級球探券、5 張潛力強化券、5 張重抽券。",
+      "在有打到 35 歲以上才退休的球員的球隊老闆中，會對部分人顯示在 App 商店與退休畫面。"
+    ]
+  },
+  "availability": "app"
+}
