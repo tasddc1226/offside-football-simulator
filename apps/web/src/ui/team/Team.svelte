@@ -612,7 +612,7 @@
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}{#if appState.friendReq}<span class="btn-dot" data-friend-dot><span class="sr-only">{S.friendReq({ n: appState.friendReq })}</span></span>{/if}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
-        <TeamFriends onplayed={(m, left) => matches.openFriendly(m, left, true)} onopen={(m, left) => matches.openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
+        <TeamFriends season={current ?? season} onplayed={(m, left) => matches.openFriendly(m, left, true)} onopen={(m, left) => matches.openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
       {:else}
       <TeamOpponents
         rating={team?.rating ?? TEAM_RATING_START}

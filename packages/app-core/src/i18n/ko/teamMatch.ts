@@ -162,6 +162,8 @@ const ko = {
   againLeft: (p: { n: number }) => `오늘 ${p.n}경기 남았어요`,
   againNone: '오늘 경기를 모두 치렀어요',
   friendlyNote: '친선전이라 레이팅은 그대로예요.',
+  /** T-11-800 시즌 2부터 친선전 칩(teamScore.ts가 팀 시즌으로 고른다). */
+  friendlyNoteRp: '친선전이라 RP는 그대로예요.',
   scoreAria: (p: { h: number; a: number }) => `${p.h} 대 ${p.a}`,
   // 공유 이미지(대화상자)
   shareTitle: 'SNS 공유 이미지',

@@ -152,6 +152,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   againLeft: (p) => `${p.n} ${p.n === 1 ? 'match' : 'matches'} left today`,
   againNone: 'You’ve played every match today',
   friendlyNote: 'Friendlies don’t change your rating.',
+  friendlyNoteRp: 'Friendlies don’t change your RP.',
   scoreAria: (p) => `${p.h} to ${p.a}`,
   shareTitle: 'Share image',
   shareLeadWeb: 'The lineup you are viewing, on one image.',

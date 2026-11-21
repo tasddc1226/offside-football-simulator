@@ -144,6 +144,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   againLeft: (p) => `今天還剩 ${p.n} 場`,
   againNone: '今天的比賽都踢完了',
   friendlyNote: '友誼賽不會改變積分。',
+  friendlyNoteRp: '友誼賽不會改變 RP。',
   scoreAria: (p) => `${p.h}比${p.a}`,
   shareTitle: '社群分享圖片',
   shareLeadWeb: '把目前查看的陣容整理成一張圖。',

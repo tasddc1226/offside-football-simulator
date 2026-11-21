@@ -8,6 +8,7 @@ import {
   recapHeadline,
   recapHighlights,
   recapShareCells,
+  recapTeamRankLine,
 } from '@offside/app-core/seasonRecap';
 import { seasonRecapText as L } from '@offside/app-core/i18n/ko/seasonRecap';
 import { teamSeasonLabel } from '@offside/app-core/seasonName';
@@ -168,7 +169,7 @@ export function drawRecapShareCard(canvas: HTMLCanvasElement, r: SeasonRecap) {
   if (r.team)
     panel(PAD + half + gap, L.secTeam, r.team.name, [
       recordText({ w: r.team.wins, d: r.team.draws, l: r.team.losses }),
-      `${L.teamRank} ${rankLine(r.team.rank, r.team.ranked)}`,
+      recapTeamRankLine(r.season, r.team),
     ]);
   else if (r.achievements)
     panel(PAD + half + gap, L.secAch, L.achScore, [

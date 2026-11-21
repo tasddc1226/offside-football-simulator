@@ -14,6 +14,7 @@ import type { StreakHint } from '@offside/app-core/losingStreak';
 import { momentGoalSummary, momentTitle, pickedChoice } from '@offside/app-core/teamMoments';
 import { matchOddsView } from '@offside/app-core/matchReport';
 import { recordText, signedNum } from '@offside/app-core/teamText';
+import { teamScoreLabel } from '@offside/app-core/teamScore';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { TeamReport } from './TeamReport';
@@ -253,7 +254,7 @@ export function TeamResult({
       </View>
       {friendly ? (
         <View style={{ flexDirection: 'row' }} testID="team-friendly-label">
-          {chip(L.friendlyNote)}
+          {chip(teamScoreLabel(team?.season ?? 0, L, 'friendlyNote'))}
         </View>
       ) : gain != null || record ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>

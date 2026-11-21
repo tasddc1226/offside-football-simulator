@@ -31,6 +31,7 @@ import {
 } from '@offside/app-core/friendText';
 import { friendText as L } from '@offside/app-core/i18n/ko/friend';
 import { teamHomeText as LH } from '@offside/app-core/i18n/ko/teamHome';
+import { teamScoreLabel } from '@offside/app-core/teamScore';
 import { shellText as S } from '@offside/app-core/i18n/ko/shell';
 import { useSnapshot } from 'valtio';
 import { hofStart } from '@offside/app-core/state';
@@ -359,11 +360,14 @@ const buttons = { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 } as 
 
 export function TeamFriends({
   friends,
+  season,
   onPlayed,
   onOpen,
   onPreseason,
 }: {
   friends: Friends;
+  /** T-11-800 친선전을 치르는 시즌(지금 시즌) — 안내 줄의 팀 점수 이름(시즌 2부터 RP). */
+  season: number;
   /** 친선전을 치르면(중계 화면으로). */
   onPlayed: (match: TeamMatch) => void;
   /** 최근 친선전을 누르면(결과 화면으로). */
@@ -373,6 +377,7 @@ export function TeamFriends({
 }) {
   const c = useColors();
   const { data, status, busy } = friends;
+  const infoLine = teamScoreLabel(season, L, 'info');
   const [input, setInput] = useState('');
   // T-11-622 초대 링크로 들어온 코드(웹 TeamFriends와 같은 카드). 내 코드면 쓸 일이 없다.
   const destination = useSnapshot(notificationDestination);
@@ -426,7 +431,7 @@ export function TeamFriends({
               {L.title}
             </Txt>
             <Txt tone="muted" v="sm" testID="friendly-left">
-              {L.info({ left: data.matchesLeft, per: data.matchesPerDay })}
+              {infoLine({ left: data.matchesLeft, per: data.matchesPerDay })}
             </Txt>
             {data.canPlay ? null : (
               <Txt tone="muted" v="sm" testID="friendly-cant-play">

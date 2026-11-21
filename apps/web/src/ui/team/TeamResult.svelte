@@ -6,6 +6,7 @@
   import { OUTCOME_TITLE, outcomeOf as outcome } from '@offside/app-core/teamOwner';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { recordText, signedNum } from '@offside/app-core/teamText';
+  import { teamScoreLabel } from '@offside/app-core/teamScore';
   import TeamLogo from './TeamLogo.svelte';
   import DivisionEmblem from './DivisionEmblem.svelte';
   import { divisionShiftView, type DivisionShift } from '@offside/app-core/teamDivision';
@@ -116,7 +117,7 @@
     {/if}
   </div>
   {#if m.friendly}
-    <p class="tm-chips"><span class="tm-chip muted">{L.friendlyNote}</span></p>
+    <p class="tm-chips"><span class="tm-chip muted">{teamScoreLabel(team?.season ?? 0, L, 'friendlyNote')}</span></p>
   {:else if gain != null || record}
     <p class="tm-chips">
       {#if gain != null}<span class="tm-chip gain" data-rating-change>{usesRankLadder(team?.season ?? 0) ? L.ratingChangeRp : L.ratingChange}<b>{signedNum(gain)}</b></span>{/if}
