@@ -64,8 +64,8 @@ describe('T-11-770d · T-11-806 스타터팩', () => {
     const me = await owner();
     expect(await state(me.cookie)).toEqual({
       state: 'eligible',
-      version: 'v1',
-      items: { reroll: 5, boost: 5, scout: 1, rename: 0 },
+      version: 'v2',
+      items: { reroll: 10, boost: 10, scout: 1, rename: 0 },
       stores: ['apple'],
       account: me.profileId.replace(/^prf_/, ''),
     });
@@ -118,15 +118,15 @@ describe('T-11-770d · T-11-806 스타터팩', () => {
     const me = await owner();
     appleTx.current = appleFor(me.profileId, 'tx1');
     const first = BuyRes.parse(await (await buy(me.cookie)).json()).data;
-    expect(first.have).toEqual({ reroll: 5, boost: 5, scout: 1, rename: 0 });
+    expect(first.have).toEqual({ reroll: 10, boost: 10, scout: 1, rename: 0 });
     expect(first.pack.state).toBe('owned');
     const again = await buy(me.cookie);
     expect(again.status).toBe(200);
     expect(BuyRes.parse(await again.json()).data.have).toEqual(first.have);
-    expect(await items(me.cookie)).toMatchObject({ reroll: 5, boost: 5, scout: 1 });
+    expect(await items(me.cookie)).toMatchObject({ reroll: 10, boost: 10, scout: 1 });
     expect((await state(me.cookie)).state).toBe('owned');
     const row = await ctx.env.DB.prepare(`SELECT version, test FROM starter_packs`).all();
-    expect(row.results).toEqual([{ version: 'v1', test: 0 }]);
+    expect(row.results).toEqual([{ version: 'v2', test: 0 }]);
   });
 
   it('같은 거래를 동시에 보내도 한 번만 준다', async () => {
@@ -134,7 +134,7 @@ describe('T-11-770d · T-11-806 스타터팩', () => {
     appleTx.current = appleFor(me.profileId, 'tx1');
     const rs = await Promise.all([buy(me.cookie), buy(me.cookie), buy(me.cookie)]);
     expect(rs.map((r) => r.status)).toEqual([200, 200, 200]);
-    expect(await items(me.cookie)).toMatchObject({ reroll: 5, boost: 5, scout: 1 });
+    expect(await items(me.cookie)).toMatchObject({ reroll: 10, boost: 10, scout: 1 });
   });
 
   it('스토어가 서로 다른 유료 거래를 둘 승인했으면 둘 다 주고, 자격은 다시 열리지 않는다', async () => {
@@ -143,7 +143,7 @@ describe('T-11-770d · T-11-806 스타터팩', () => {
     await buy(me.cookie);
     appleTx.current = appleFor(me.profileId, 'tx2');
     expect((await buy(me.cookie)).status).toBe(200);
-    expect(await items(me.cookie)).toMatchObject({ reroll: 10, boost: 10, scout: 2 });
+    expect(await items(me.cookie)).toMatchObject({ reroll: 20, boost: 20, scout: 2 });
     expect((await state(me.cookie)).state).toBe('owned');
   });
 
@@ -178,13 +178,13 @@ describe('T-11-770d · T-11-806 스타터팩', () => {
     const me = await owner();
     appleTx.current = appleFor(me.profileId, 'tx1');
     await buy(me.cookie);
-    // 강화권 3장을 쓴 뒤라 2장만 남았고, 다른 길로 받은 리롤권이 2장 더 있다.
+    // 강화권 8장을 쓴 뒤라 2장만 남았고, 다른 길로 받은 리롤권이 2장 더 있다.
     await ctx.env.DB.batch([
       ctx.env.DB.prepare(
         `UPDATE owner_items SET qty = 2 WHERE profile_id = ? AND item = 'boost'`,
       ).bind(me.profileId),
       ctx.env.DB.prepare(
-        `UPDATE owner_items SET qty = 7 WHERE profile_id = ? AND item = 'reroll'`,
+        `UPDATE owner_items SET qty = 12 WHERE profile_id = ? AND item = 'reroll'`,
       ).bind(me.profileId),
     ]);
     appleNote.current = {
@@ -198,7 +198,7 @@ describe('T-11-770d · T-11-806 스타터팩', () => {
     const row = await ctx.env.DB.prepare(
       `SELECT revoked_json AS revoked, refunded_at AS at FROM starter_packs`,
     ).first<{ revoked: string; at: string }>();
-    expect(JSON.parse(row!.revoked)).toEqual({ reroll: 5, boost: 2, scout: 1 });
+    expect(JSON.parse(row!.revoked)).toEqual({ reroll: 10, boost: 2, scout: 1 });
     expect(row!.at).toBe(NOW);
     expect(await handleAppleNotification(ctx.env, createDb(ctx.env.DB), 'payload', NOW)).toBe(
       'revoked',

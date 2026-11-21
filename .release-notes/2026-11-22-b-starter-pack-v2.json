@@ -1,0 +1,24 @@
+{
+  "id": "t-11-808-starter-pack-v2",
+  "title": "스타터팩 구성이 늘었어요",
+  "items": [
+    "같은 3,300원에 잠재력 강화권과 리롤권이 5장에서 10장으로 늘었어요. 프리미엄 스카우트권 1장은 그대로예요."
+  ],
+  "en": {
+    "title": "The starter pack now has more",
+    "items": [
+      "For the same ₩3,300, potential boost tickets and reroll tickets go up from 5 to 10 each. The 1 premium scout ticket stays the same."
+    ]
+  },
+  "ja": {
+    "title": "スターターパックの中身が増えました",
+    "items": [
+      "同じ3,300ウォンで、ポテンシャル強化券とリロール券がそれぞれ5枚から10枚に増えました。プレミアムスカウト券1枚はそのままです。"
+    ]
+  },
+  "zh": {
+    "title": "新手組合包內容增加了",
+    "items": ["同樣 3,300 韓元，潛力強化券與重抽券各從 5 張增加到 10 張。高級球探券 1 張維持不變。"]
+  },
+  "availability": "app"
+}
