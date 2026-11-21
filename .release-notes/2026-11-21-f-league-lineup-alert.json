@@ -1,0 +1,30 @@
+{
+  "id": "t-11-801-league-lineup-alert",
+  "title": "리그 명단 알림이 기권패를 미리 알려 줘요",
+  "items": [
+    "리그 명단이 잠기기 1시간 전 알림에서 선발이 8명보다 적으면 이대로는 0:3 기권패라고 알려 줘요. 기권이 몇 번 더 쌓이면 남은 경기가 모두 0:3 패가 되는지도 함께 알려 줘요. 전에는 8명보다 적어도 빈 자리는 유스 선수가 뛴다고 잘못 알렸어요.",
+    "알림의 선발 수는 경기 때처럼 지금 가진 선수만 세요. 이적시장에서 팔린 선수 자리는 빼고 세요."
+  ],
+  "en": {
+    "title": "League lineup alerts now warn you about forfeits",
+    "items": [
+      "The alert 1 hour before your league lineup locks now tells you when your starting XI has fewer than 8 players, so the match will be a 0:3 forfeit as it stands. It also tells you how many more forfeits would turn every remaining match into a 0:3 loss. Before, it wrongly said youth players would fill the gaps even below 8.",
+      "The alert counts your starting XI the way the match does, using only players you own now. Spots held by players sold on the transfer market are not counted."
+    ]
+  },
+  "ja": {
+    "title": "リーグのメンバー固定通知で不戦敗を前もってお知らせ",
+    "items": [
+      "リーグの試合でメンバーが固定される1時間前の通知で、スタメンが8人未満なら、このままだと0:3の不戦敗になることをお知らせします。あと何回棄権すると残り試合がすべて0:3の負けになるかも一緒にお知らせします。これまでは8人未満でも、空いた枠はユース選手が出場すると誤って案内していました。",
+      "通知のスタメン人数は、試合のときと同じく今持っている選手だけで数えます。移籍市場で売れた選手の枠は数えません。"
+    ]
+  },
+  "zh": {
+    "title": "聯賽陣容通知會提前告知不戰而敗",
+    "items": [
+      "聯賽比賽陣容鎖定前 1 小時的通知中，若先發不足 8 人，會告知照這樣將以 0:3 判不戰而敗，也會告知再棄權幾次剩餘比賽就會全部以 0:3 判負。之前即使不足 8 人，也會誤告知空位由青訓球員上場。",
+      "通知中的先發人數與比賽時一樣，只計算目前擁有的球員。已在轉會市場售出的球員位置不計入。"
+    ]
+  },
+  "availability": "app"
+}
