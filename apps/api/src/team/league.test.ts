@@ -22,6 +22,7 @@ import {
   profiles,
 } from '../db/schema.js';
 import { eligibleMap, playableCount, type CareerLite } from '../db/repos/ownerTeams.js';
+import { pushText } from '../push/text.js';
 import { forgetSeasonSchedule, saveSeasonSchedule } from '../seasonSchedule.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { ADMIN_EMAIL, callJson, issueAdminCookie, issueGoogleCookie } from '../test/http.js';
@@ -558,7 +559,7 @@ describe('오프사이드 리그 진행 (T-11-418b)', () => {
         `${warn} 이번에 기권하면 1/3번이 되고, 2번 더 기권하면 남은 경기는 모두 0:3 패예요.`,
       );
     expect(await body(last)).toBe(
-      `${warn} 이번에 기권하면 3번째라 남은 경기는 모두 0:3 패가 돼요. 보상도 없고 다음에 신청하면 맨 아래 부에서 시작해요.`,
+      `${warn} 이번에 기권하면 3번째라 남은 경기는 모두 0:3 패가 돼요. 보상도 없고 다음 리그에 신청하면 맨 아래 부에서 시작해요.`,
     );
     // 팀 수와 상관없이 쿼리 한 번으로 선발 카드까지 읽고, 경기는 시각 인덱스 · 팀 · 카드 · 커리어는 기본키로 찾는다.
     const sides = eightTeams.seen.filter((q) => q.includes('json_group_array'));
@@ -993,7 +994,7 @@ describe('T-11-430 리그 알림 문구', () => {
       '선발이 7명이라 이대로면 16:00에 열리는 3라운드 경기는 0:3 기권패예요. 15:00에 명단이 잠기기 전에 선발을 8명 이상 채워 주세요. 이번에 기권하면 1/3번이 되고, 2번 더 기권하면 남은 경기는 모두 0:3 패예요.',
     );
     expect(cupText(warn, 'en')).toBe(
-      'Your starting XI has only 7 players, so your Round 3 match at 16:00 will be a 0:3 forfeit as it stands. Get at least 8 players in before your lineup locks at 15:00. Forfeiting would put you at 1/3, and 2 more means every remaining match is a 0:3 loss.',
+      'Only 7 starters: Round 3 at 16:00 will be a 0:3 forfeit. Get 8+ in by 15:00. Forfeit 1/3: 2 more and every remaining match is a 0:3 loss.',
     );
     expect(cupText(warn, 'ja')).toContain('スタメンが7人なので');
     expect(cupText(warn, 'ja')).toContain('不戦敗になると棄権1/3回になり、あと2回');
@@ -1001,12 +1002,31 @@ describe('T-11-430 리그 알림 문구', () => {
     expect(cupText(warn, 'zh')).toContain('累計 1/3 次，再棄權 2 次');
     const last = cupKo('leagueLineupLastBody', vars);
     expect(cupText(last, 'en')).toBe(
-      'Your starting XI has only 7 players, so your Round 3 match at 16:00 will be a 0:3 forfeit as it stands. Get at least 8 players in before your lineup locks at 15:00. Forfeiting would put you at 3/3, so every remaining match becomes a 0:3 loss. There is no reward and your next entry starts in the bottom tier.',
+      'Only 7 starters: Round 3 at 16:00 will be a 0:3 forfeit. Get 8+ in by 15:00. Forfeit 3/3: all remaining matches lost, no reward, bottom tier next league.',
     );
-    expect(cupText(last, 'ja')).toContain('一番下の部から始まります');
-    expect(cupText(last, 'zh')).toContain('下次報名將從最低級開始');
+    // 맨 아래 부는 바로 다음 리그에 신청할 때만이다(한 회차를 쉬면 새 팀처럼 배치한다).
+    expect(cupText(last, 'ja')).toContain('次のリーグに申し込むと一番下の部から始まります');
+    expect(cupText(last, 'zh')).toContain('報名下一屆聯賽將從最低級開始');
     // 문장을 —로 잇지 않는다.
     for (const lang of ['ko', 'en', 'ja', 'zh'] as const)
       for (const s of [warn, last]) expect(cupText(s, lang)).not.toContain('—');
+  });
+
+  it('T-11-801 1시간 전 알림 본문은 네 언어 모두 앱 푸시 상한(160자) 안이라 잘리지 않는다', () => {
+    // 가장 긴 값: 두 자리 라운드(시즌 2도 60일 안), 한 자리 선발 · 기권 수. 푸시는 받는 사람 언어로 옮긴 뒤 160자에서 자른다.
+    const vars = { round: 99, time: '21:00', lock: '20:00', min: 8, limit: 3 };
+    const bodies = [
+      cupKo('leagueLineupBody', vars),
+      cupKo('leagueLineupShortBody', { ...vars, filled: 10 }),
+      cupKo('leagueLineupForfeitBody', { ...vars, filled: 7, n: 2, left: 1 }),
+      cupKo('leagueLineupLastBody', { ...vars, filled: 7 }),
+    ];
+    for (const lang of ['ko', 'en', 'ja', 'zh'] as const)
+      for (const ko of bodies) {
+        const body = pushText(ko, lang);
+        // 옮기지 못하면 한국어가 그대로 나가므로, 옮겨졌는지도 함께 본다.
+        if (lang !== 'ko') expect(body).not.toMatch(/[가-힣]/);
+        expect(body.length, `${lang}: ${body}`).toBeLessThanOrEqual(160);
+      }
   });
 });

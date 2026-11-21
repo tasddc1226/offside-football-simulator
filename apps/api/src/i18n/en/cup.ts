@@ -149,10 +149,11 @@ export const CUP_EN: Record<CupTextKey, string> = {
     "Your Round {round} match starts at {time}. You can't change your starting XI from {lock} until it ends, so check it now.",
   leagueLineupShortBody:
     'Your Round {round} match starts at {time}. Your lineup locks at {lock} and your starting XI has {filled}/11 players, so youth players fill the gaps.',
+  // T-11-801 App push bodies are cut at 160 characters (push/personal.ts), so these stay within 160.
   leagueLineupForfeitBody:
-    'Your starting XI has only {filled} players, so your Round {round} match at {time} will be a 0:3 forfeit as it stands. Get at least {min} players in before your lineup locks at {lock}. Forfeiting would put you at {n}/{limit}, and {left} more means every remaining match is a 0:3 loss.',
+    'Only {filled} starters: Round {round} at {time} will be a 0:3 forfeit. Get {min}+ in by {lock}. Forfeit {n}/{limit}: {left} more and every remaining match is a 0:3 loss.',
   leagueLineupLastBody:
-    'Your starting XI has only {filled} players, so your Round {round} match at {time} will be a 0:3 forfeit as it stands. Get at least {min} players in before your lineup locks at {lock}. Forfeiting would put you at {limit}/{limit}, so every remaining match becomes a 0:3 loss. There is no reward and your next entry starts in the bottom tier.',
+    'Only {filled} starters: Round {round} at {time} will be a 0:3 forfeit. Get {min}+ in by {lock}. Forfeit {limit}/{limit}: all remaining matches lost, no reward, bottom tier next league.',
   leaguePlacedTitle: 'Season {season} OFFSIDE League placement',
   leaguePlacedBody: '{team} is in Tier {tier}, {title}. Round 1 starts today from {time}.',
   leagueLatePlacedBody: '{team} is in Tier {tier}, {title}. Your matches start today from {time}.',

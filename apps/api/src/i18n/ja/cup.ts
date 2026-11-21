@@ -142,7 +142,7 @@ export const CUP_JA: Record<CupTextKey, string> = {
   leagueLineupForfeitBody:
     'スタメンが{filled}人なので、このままだと{time}開始の第{round}節は0:3の不戦敗です。{lock}にメンバーが固定される前に、スタメンを{min}人以上にしてください。不戦敗になると棄権{n}/{limit}回になり、あと{left}回棄権すると残り試合はすべて0:3の負けです。',
   leagueLineupLastBody:
-    'スタメンが{filled}人なので、このままだと{time}開始の第{round}節は0:3の不戦敗です。{lock}にメンバーが固定される前に、スタメンを{min}人以上にしてください。不戦敗になると棄権{limit}回目になり、残り試合はすべて0:3の負けになります。報酬はなく、次に申し込むと一番下の部から始まります。',
+    'スタメンが{filled}人なので、このままだと{time}開始の第{round}節は0:3の不戦敗です。{lock}にメンバーが固定される前に、スタメンを{min}人以上にしてください。不戦敗になると棄権{limit}回目になり、残り試合はすべて0:3の負けになります。報酬はなく、次のリーグに申し込むと一番下の部から始まります。',
   leaguePlacedTitle: 'シーズン{season} オフサイドリーグ組分け結果',
   leaguePlacedBody: '{team}は{tier}部 {title}です。第1節は今日{time}に始まります。',
   leagueLatePlacedBody: '{team}は{tier}部 {title}です。最初の試合は今日{time}から始まります。',

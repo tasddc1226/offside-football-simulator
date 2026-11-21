@@ -132,7 +132,7 @@ export const CUP_ZH: Record<CupTextKey, string> = {
   leagueLineupForfeitBody:
     '先發只有 {filled} 人，照這樣 {time} 開踢的第 {round} 輪比賽會以 0:3 判不戰而敗。請在 {lock} 陣容鎖定前把先發補到 {min} 人以上。若棄權將累計 {n}/{limit} 次，再棄權 {left} 次，剩餘比賽將全部以 0:3 判負。',
   leagueLineupLastBody:
-    '先發只有 {filled} 人，照這樣 {time} 開踢的第 {round} 輪比賽會以 0:3 判不戰而敗。請在 {lock} 陣容鎖定前把先發補到 {min} 人以上。若棄權將累計 {limit} 次，剩餘比賽將全部以 0:3 判負，也沒有獎勵，下次報名將從最低級開始。',
+    '先發只有 {filled} 人，照這樣 {time} 開踢的第 {round} 輪比賽會以 0:3 判不戰而敗。請在 {lock} 陣容鎖定前把先發補到 {min} 人以上。若棄權將累計 {limit} 次，剩餘比賽將全部以 0:3 判負，也沒有獎勵，報名下一屆聯賽將從最低級開始。',
   leaguePlacedTitle: '第 {season} 賽季 OFFSIDE 聯賽分級結果',
   leaguePlacedBody: '{team} 分在 {tier} 級 {title}。第 1 輪今天 {time} 開踢。',
   leagueLatePlacedBody: '{team} 分在 {tier} 級 {title}。第一場比賽今天 {time} 起開踢。',
