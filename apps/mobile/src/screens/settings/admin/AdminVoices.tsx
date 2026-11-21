@@ -2,7 +2,7 @@
 // 보고, 처리 표시를 한다. 목록은 탭을 열 때 · 필터 · 더 보기 · 새로고침 때만 부르고(메모하지 않는다), 처리한 뒤에는 다시 부르지
 // 않고 그 행만 바꾸거나 뺀다. 본문은 RN Text로만 그린다. 운영 도구라 한국어만 쓴다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { fetchVoices, type AdminVoice, type AdminVoiceList } from '@offside/app-core/api/admin';
@@ -13,6 +13,7 @@ import {
   VOICE_TAB,
   VOICE_UI,
   applyVoiceResolve,
+  mergeVoicePage,
   resolveVoicesAll,
   voiceConfirmAll,
   voiceCopyLabel,
@@ -44,9 +45,18 @@ export default function AdminVoices() {
   const [list, setList] = useState<AdminVoiceList | null>(null);
   const [load, setLoad] = useState<LoadStatus>('loading');
   const [busy, setBusy] = useState(false);
+  // '더 보기'를 부르는 중이면 버튼을 막고(같은 쪽을 두 번 부르지 않게), 필터 · 새로고침을 빠르게 바꿔 늦게 온 옛 응답은 순번으로 버린다.
+  const [moreBusy, setMoreBusy] = useState(false);
+  const moreRef = useRef(false);
+  const seq = useRef(0);
 
   async function fetchList(f: Filter, more = false) {
-    if (!more) setLoad('loading');
+    if (more && moreRef.current) return;
+    const mine = ++seq.current;
+    if (more) {
+      moreRef.current = true;
+      setMoreBusy(true);
+    } else setLoad('loading');
     const last = more ? list?.items.at(-1) : undefined;
     const r = await fetchVoices({
       status: f.status,
@@ -54,12 +64,17 @@ export default function AdminVoices() {
       ...(f.profile ? { profile: f.profile } : {}),
       ...(last ? { before: last.createdAt } : {}),
     });
+    if (more) {
+      moreRef.current = false;
+      setMoreBusy(false);
+    }
+    if (mine !== seq.current) return;
     if (!r.ok) {
       if (more) toast(r.error.message);
       else setLoad('error');
       return;
     }
-    setList(more && list ? { ...r.data, items: [...list.items, ...r.data.items] } : r.data);
+    setList((cur) => (more && cur ? mergeVoicePage(cur, r.data) : r.data));
     setLoad('ready');
   }
   useEffect(() => void fetchList(filter), []);
@@ -249,7 +264,12 @@ export default function AdminVoices() {
           )}
         </View>
         {list?.hasMore ? (
-          <Btn sm testID="voice-more" onPress={() => void fetchList(filter, true)}>
+          <Btn
+            sm
+            testID="voice-more"
+            disabled={moreBusy}
+            onPress={() => void fetchList(filter, true)}
+          >
             {VOICE_UI.more}
           </Btn>
         ) : null}

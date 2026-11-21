@@ -45,8 +45,11 @@ export const voiceOpenCount = (n: number) => `열린 의견 ${n.toLocaleString()
 export const voiceEmpty = (status: 'open' | 'all') =>
   status === 'open' ? '열린 의견이 없어요.' : '의견이 없어요.';
 export const voiceConfirmAll = (n: number) => `${n.toLocaleString()}건을 처리할까요?`;
-export const voiceResolvedToast = (n: number, resolved: boolean) =>
-  resolved ? `${n.toLocaleString()}건 처리했어요` : '다시 열었어요';
+/** 바뀐 것이 없으면(다른 운영자가 먼저 처리 · 다시 열기) '0건 처리했어요' 대신 이미 그 상태라고 알린다. */
+export const voiceResolvedToast = (n: number, resolved: boolean) => {
+  if (n === 0) return resolved ? '이미 처리된 의견이에요' : '이미 열린 의견이에요';
+  return resolved ? `${n.toLocaleString()}건 처리했어요` : '다시 열었어요';
+};
 
 /** 본문 아래 회색 줄: KST 시각 · 웹/iOS/Android · 버전 · 기기 · 입구(설정/홈) · 언어 · 로그인 구단주/익명. */
 export function voiceMeta(v: AdminVoice): string {
@@ -103,4 +106,13 @@ export function applyVoiceResolve(
         );
   const open = list.open + (change.resolved ? -change.updated : change.updated);
   return { ...list, items, open: Math.max(0, open) };
+}
+
+/**
+ * '더 보기'로 받은 다음 쪽을 붙인다. 이미 있는 id는 거른다(같은 쪽을 두 번 받아도 같은 행이 두 번 보이지 않는다). 열린 건수 ·
+ * hasMore는 새 쪽 값을 쓴다.
+ */
+export function mergeVoicePage(list: AdminVoiceList, page: AdminVoiceList): AdminVoiceList {
+  const seen = new Set(list.items.map((v) => v.id));
+  return { ...page, items: [...list.items, ...page.items.filter((v) => !seen.has(v.id))] };
 }

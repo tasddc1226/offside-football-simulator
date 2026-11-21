@@ -39,8 +39,19 @@ describe('T-11-802 의견 본문 가리기', () => {
       ['OFS ABCD EFGH JKMN', '[code]'],
       ['ABCD-2345-WXYZ', '[code]'],
       ['ab12-cd34-ef56', '[code]'],
+      // 접두 없이 띄우거나 붙여 쓴 꼴은 복구 코드 글자(대문자 · 2-9)이고 글자 · 숫자가 함께 있을 때만.
+      ['복구코드 ABCD 2345 WXYZ 이에요', '복구코드 [code] 이에요'],
+      ['복구코드 ABCD2345WXYZ', '복구코드 [code]'],
     ];
     for (const [input, out] of cases) expect(cleanVoiceBody(input), input).toBe(out);
+    for (const kept of [
+      'this game very good',
+      'THIS GAME VERY GOOD',
+      'Championship 경기',
+      'ABCDEFGHJKMN',
+      'abcd 2345 wxyz',
+    ])
+      expect(cleanVoiceBody(kept), kept).toBe(kept);
   });
 
   it('다른 사이트 주소는 쿼리와 조각을 지우고, 오프사이드 주소는 그대로 둔다', () => {
@@ -50,6 +61,15 @@ describe('T-11-802 의견 본문 가리기', () => {
         'https://pay.example.com/checkout 결제가 안 돼요',
       ],
       ['www.example.com/a?b=1', 'www.example.com/a'],
+      // 앞부분 없이 쓴 '도메인/경로?쿼리'도 쿼리를 지운다.
+      ['pay.example.test/pay?token=abc123 결제 안돼요', 'pay.example.test/pay 결제 안돼요'],
+      ['m.example.com/login?code=SECRET 에서', 'm.example.com/login 에서'],
+      ['HTTPS://EVIL.TEST/?token=1', 'HTTPS://EVIL.TEST/'],
+      // 오프사이드 주소에 공백 없이 붙은 글도 경로 쪽은 가린다.
+      [
+        'https://offside-lab.com/settings,010-1234-5678',
+        'https://offside-lab.com/settings,[phone]',
+      ],
       ['https://offside-lab.com.evil.test/?token=1', 'https://offside-lab.com.evil.test/'],
       ['https://example.test/u/010-1234-5678?x=1', 'https://example.test/u/[phone]'],
       // 로그인 콜백의 code · state가 실리는 API 주소는 쿼리를 지운다.
@@ -63,6 +83,10 @@ describe('T-11-802 의견 본문 가리기', () => {
       '소식 https://offside-lab.com/?news=pst_0f3a9c1e-4b7d-4e2a-9f1c-0a1b2c3d4e5f 봤어요',
       'https://www.offside-lab.com/guide/?x=1#y',
       'https://offside-lab.com/?news=01012345678',
+      // 쿼리가 없는 앞부분 없는 주소 · 소수 · 버전 · 메일은 주소로 보지 않는다.
+      'example.com/a 에서 봤어요',
+      '버전 1.2.3/4?',
+      'v1.1.7 업데이트',
     ])
       expect(cleanVoiceBody(kept), kept).toBe(kept);
   });

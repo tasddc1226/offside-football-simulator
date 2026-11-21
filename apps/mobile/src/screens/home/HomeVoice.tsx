@@ -1,5 +1,5 @@
 // T-11-802 홈 맨 아래(소식 아래 · 푸터 위) '의견 보내기' 한 줄(웹 HomeVoice.svelte). 누르면 시트를 연다 — 여는 것만으로는
-// 요청하지 않는다. 눈썹 글자 'Feedback'은 웹과 같이 영어로 둔다.
+// 요청하지 않는다. 눈썹 글자 'Feedback'은 웹과 같이 영어로 두되, 화면 낭독기 이름에는 넣지 않는다(영어 단어가 먼저 읽히지 않게).
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useState } from 'react';
 import { View } from 'react-native';
@@ -19,7 +19,7 @@ export function HomeVoice() {
         scale={0.985}
         testID="home-voice"
         accessibilityRole="button"
-        accessibilityLabel={`Feedback, ${VT.homeTitle}, ${VT.homeSub}`}
+        accessibilityLabel={`${VT.homeTitle}, ${VT.homeSub}`}
         onPress={() => setOpen(true)}
         style={[
           {
@@ -42,7 +42,7 @@ export function HomeVoice() {
             {VT.homeSub}
           </Txt>
         </View>
-        <Txt tone="accent" accessible={false}>
+        <Txt tone="muted" accessible={false}>
           ›
         </Txt>
       </Press>

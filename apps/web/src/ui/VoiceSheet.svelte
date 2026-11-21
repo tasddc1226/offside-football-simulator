@@ -46,6 +46,7 @@
   function edit(e: Event & { currentTarget: HTMLTextAreaElement }) {
     text = e.currentTarget.value;
     voiceDraft.text = text;
+    message = '';
   }
 
   async function send(e: SubmitEvent) {
@@ -68,11 +69,12 @@
 <PopSheet label={VT.title} step={done ? 'done' : ''} {onclose}>
   <div class="voice-sheet" data-voice-sheet={done ? 'done' : 'form'}>
     {#if done}
+      <!-- PopSheet가 단계가 바뀌면 초점을 닫기 버튼으로 옮겨 새 live region을 읽지 않을 수 있어, 닫기 버튼의 설명으로도 건다. -->
       <div class="vs-done" role="status">
-        <h2>{VT.doneTitle}</h2>
-        <p>{VT.doneBody}</p>
+        <h2 id="vs-done-title">{VT.doneTitle}</h2>
+        <p id="vs-done-body">{VT.doneBody}</p>
       </div>
-      <button type="button" class="btn btn-block" data-act="voice-close" onclick={onclose}>{VT.close}</button>
+      <button type="button" class="btn btn-block" aria-describedby="vs-done-title vs-done-body" data-act="voice-close" onclick={onclose}>{VT.close}</button>
     {:else}
       <div class="vs-head">
         <h2>{VT.title}</h2>
@@ -82,10 +84,13 @@
       </div>
       <form class="vs-form" onsubmit={send}>
         <p class="vs-lead fs-sm">{VT.lead}</p>
-        <div class="seg three" role="group" aria-label={VT.kindLabel}>
-          {#each VOICE_KINDS as k (k)}
-            <button type="button" class="opt" aria-pressed={kind === k} data-voice-kind={k} onclick={() => pick(k)}><b>{voiceKindLabel(k)}</b></button>
-          {/each}
+        <div class="vs-field">
+          <small class="fs-sm vs-kind" id="vs-kind">{VT.kindLabel}</small>
+          <div class="seg three" role="group" aria-labelledby="vs-kind">
+            {#each VOICE_KINDS as k (k)}
+              <button type="button" class="opt" aria-pressed={kind === k} data-voice-kind={k} onclick={() => pick(k)}><b>{voiceKindLabel(k)}</b></button>
+            {/each}
+          </div>
         </div>
         <div class="vs-field">
           <textarea
@@ -164,8 +169,13 @@
     box-sizing: border-box;
     resize: vertical;
     min-height: 120px;
-    font: inherit;
+    /* 글자 크기는 전역 textarea 규칙(16px 이상, iOS 초점 확대 방지)에 맡긴다. font: inherit는 그 규칙을 덮는다. */
+    font-family: inherit;
     line-height: 1.5;
+  }
+  /* 흐린 색(muted)은 시트가 열리는 움직임 중에 대비 검사를 넘지 못해 본문 색 · 굵기로 구분한다. */
+  .vs-kind {
+    font-weight: 600;
   }
   .vs-count {
     align-self: flex-end;

@@ -6,6 +6,7 @@
   import { fetchVoices, type AdminVoice, type AdminVoiceList } from '@offside/app-core/api/admin';
   import {
     applyVoiceResolve,
+    mergeVoicePage,
     resolveVoicesAll,
     VOICE_KIND_NAME,
     VOICE_LOAD_FAIL,
@@ -35,25 +36,34 @@
   /** 한 프로필의 의견만 볼 때 그 프로필 id. */
   let profile = $state<string | null>(null);
   let busy = $state(false);
+  /** '더 보기'를 부르는 중. 그동안 버튼을 막아 같은 쪽을 두 번 부르지 않는다. */
+  let moreBusy = $state(false);
+  /** 부를 때마다 올린다. 필터 · 새로고침을 빠르게 바꿔 늦게 온 옛 응답은 버린다. */
+  let seq = 0;
   const tr = createTranslations();
   const openShown = $derived(list.items.filter((v) => !v.resolvedAt));
 
   onMount(() => void load());
 
   async function load(more = false) {
-    if (!more) status = 'loading';
+    if (more && moreBusy) return;
+    const mine = ++seq;
+    if (more) moreBusy = true;
+    else status = 'loading';
     const r = await fetchVoices({
       status: view,
       ...(kind ? { kind } : {}),
       ...(profile ? { profile } : {}),
       ...(more && list.items.length ? { before: list.items.at(-1)!.createdAt } : {}),
     });
+    if (more) moreBusy = false;
+    if (mine !== seq) return;
     if (!r.ok) {
       if (more) toast(r.error.message);
       else status = 'error';
       return;
     }
-    list = more ? { ...r.data, items: [...list.items, ...r.data.items] } : r.data;
+    list = more ? mergeVoicePage(list, r.data) : r.data;
     status = 'ready';
   }
 
@@ -103,7 +113,7 @@
   <div class="row" style="justify-content:space-between">
     <div class="row" style="gap:8px">
       <h2 style="margin:0">{VOICE_TAB}</h2>
-      {#if status === 'ready'}<span class="pill warn num" data-voice-open={list.open}>{voiceOpenCount(list.open)}</span>{/if}
+      {#if status === 'ready'}<span class="pill num" class:warn={list.open > 0} data-voice-open={list.open}>{voiceOpenCount(list.open)}</span>{/if}
     </div>
     <button class="icon-btn" data-act="voices-refresh" onclick={() => load()}>{VOICE_UI.refresh}</button>
   </div>
@@ -155,7 +165,7 @@
         <li class="muted" data-voice-empty>{voiceEmpty(view)}</li>
       {/each}
     </ul>
-    {#if list.hasMore}<button class="icon-btn" data-act="voices-more" onclick={() => load(true)}>{VOICE_UI.more}</button>{/if}
+    {#if list.hasMore}<button class="icon-btn" data-act="voices-more" disabled={moreBusy} onclick={() => load(true)}>{VOICE_UI.more}</button>{/if}
   </LoadState>
 </div>
 

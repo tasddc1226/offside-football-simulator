@@ -164,6 +164,20 @@ describe('의견 보내기 POST /v1/voices', () => {
     expect(await rows()).toHaveLength(2);
   });
 
+  it('처리한 의견과 같은 글을 다시 보내면 그 의견을 다시 연다', async () => {
+    const { cookie } = await issueCookie(ctx);
+    expect((await send(cookie, { body: '로그인이 안 돼요' })).status).toBe(204);
+    await ctx.db.update(userVoices).set({
+      resolvedAt: '2026-11-20T00:00:00.000Z',
+      createdAt: '2026-11-19T00:00:00.000Z',
+    });
+    expect((await send(cookie, { body: '로그인이 안 돼요' })).status).toBe(204);
+    const [row, ...rest] = await rows();
+    expect(rest).toHaveLength(0);
+    expect(row!.resolvedAt).toBeNull();
+    expect(row!.createdAt > '2026-11-19T00:00:00.000Z').toBe(true);
+  });
+
   it('프로필당 시간당 5번. 6번째는 429이고 언어별 문장으로 답한다. 막힌 시도는 IP 횟수에 세지 않는다', async () => {
     const { cookie } = await issueCookie(ctx);
     for (let i = 0; i < 5; i++)

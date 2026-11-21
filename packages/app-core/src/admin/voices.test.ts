@@ -2,11 +2,13 @@ import type { AdminVoice, AdminVoiceList } from '@offside/contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyVoiceResolve,
+  mergeVoicePage,
   resolveVoicesAll,
   voiceCopyLabel,
   voiceMeta,
   voiceProfileShort,
   voiceResolveAllLabel,
+  voiceResolvedToast,
 } from './voices.js';
 
 const voice = (over: Partial<AdminVoice> = {}): AdminVoice => ({
@@ -59,6 +61,31 @@ describe('T-11-802 운영 도구 유저 의견', () => {
     const reopened = applyVoiceResolve(all, { ids: ['a'], resolved: false, updated: 1, at }, 'all');
     expect(reopened.items[0]!.resolvedAt).toBeNull();
     expect(reopened.open).toBe(7);
+  });
+
+  it('더 보기로 받은 쪽은 이미 있는 id를 걸러 붙이고, 열린 건수 · hasMore는 새 쪽 값을 쓴다', () => {
+    const list: AdminVoiceList = {
+      items: [voice({ id: 'a' }), voice({ id: 'b' })],
+      hasMore: true,
+      open: 5,
+    };
+    const page: AdminVoiceList = {
+      items: [voice({ id: 'c' }), voice({ id: 'd' })],
+      hasMore: false,
+      open: 6,
+    };
+    const once = mergeVoicePage(list, page);
+    expect(once.items.map((v) => v.id)).toEqual(['a', 'b', 'c', 'd']);
+    expect(once).toMatchObject({ hasMore: false, open: 6 });
+    // 같은 쪽이 두 번 와도 같은 행이 두 번 붙지 않는다.
+    expect(mergeVoicePage(once, page).items.map((v) => v.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('바뀐 것이 없으면 이미 그 상태라고 알린다', () => {
+    expect(voiceResolvedToast(3, true)).toBe('3건 처리했어요');
+    expect(voiceResolvedToast(1, false)).toBe('다시 열었어요');
+    expect(voiceResolvedToast(0, true)).toBe('이미 처리된 의견이에요');
+    expect(voiceResolvedToast(0, false)).toBe('이미 열린 의견이에요');
   });
 
   it('모두 처리는 50개씩 나눠 보내고, 실패하면 거기서 멈춘다', async () => {

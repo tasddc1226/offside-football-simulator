@@ -155,3 +155,63 @@ test('유저 의견: 목록 · 번역 보기 · 처리 · 더 보기 · 이 프�
   expect(resolves.at(-1)).toEqual({ ids: ['vox_1'], resolved: false });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test('유저 의견: 더 보기를 두 번 눌러도 한 번만 부르고, 이미 처리된 의견은 그렇게 알린다', async ({
+  page,
+}) => {
+  const befores: string[] = [];
+  const errors: string[] = [];
+  page.on('console', (m) => {
+    if (m.type() === 'error') errors.push(m.text());
+  });
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.route(`${API}/v1/**`, async (route) => {
+    const url = new URL(route.request().url());
+    const path = url.pathname;
+    if (path === '/v1/profile')
+      return route.fulfill(
+        ok({
+          id: 'u1',
+          linked: { google: true },
+          googleEmailMasked: 'ad***@gmail.com',
+          nickname: null,
+          recoveryCodeIssuedAt: null,
+          createdAt: at,
+        }),
+      );
+    if (path === '/v1/owner/summary')
+      return route.fulfill(ok({ linked: true, admin: true, tier: null, entries: [] }));
+    if (path === '/v1/boards/viewer')
+      return route.fulfill(ok({ admin: true, google: true, nickname: null }));
+    if (path === '/v1/admin/voices') {
+      const before = url.searchParams.get('before');
+      if (!before) return route.fulfill(ok({ items: FIRST, hasMore: true, open: 0 }));
+      befores.push(before);
+      await new Promise((r) => setTimeout(r, 600));
+      return route.fulfill(ok({ items: MORE, hasMore: false, open: 0 }));
+    }
+    // 다른 운영자가 먼저 처리해 바뀐 것이 없다.
+    if (path === '/v1/admin/voices/resolve') return route.fulfill(ok({ updated: 0 }));
+    return route.fulfill(fail(404, 'NOT_FOUND', 'No fixture'));
+  });
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  await expect(page.getByText('ad***@gmail.com')).toBeVisible();
+  await page.locator('[data-act="admin"]').click();
+  await page.locator('[data-admin-tab="voices"]').click();
+  const section = page.locator('[data-admin="voices"]');
+  await expect(section.locator('[data-admin-voice]')).toHaveCount(2);
+  // 열린 의견이 0이면 경고 색을 쓰지 않는다.
+  await expect(section.locator('[data-voice-open]')).not.toHaveClass(/warn/);
+
+  const more = section.locator('[data-act="voices-more"]');
+  await more.click();
+  await expect(more).toBeDisabled();
+  await more.click({ force: true });
+  await expect(section.locator('[data-admin-voice]')).toHaveCount(3);
+  expect(befores).toHaveLength(1);
+
+  await section.locator('[data-admin-voice="vox_1"] [data-act="voice-resolve"]').click();
+  await expect(page.locator('.toast')).toContainText('이미 처리된 의견이에요');
+  expect(errors.filter((e) => e.includes('each_key_duplicate'))).toEqual([]);
+});

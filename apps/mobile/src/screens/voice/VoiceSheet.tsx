@@ -3,7 +3,7 @@
 // app-core voiceDraft에 남아 닫았다 열어도 그대로 보이고, 보내기에 성공하면 비운다. 닫기 전 확인 창은 두지 않는다.
 // 앱 루트 Toast는 Modal 밑에 깔리므로 결과는 시트 안에서 알린다.
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { AccessibilityInfo, View } from 'react-native';
 import {
   VOICE_BODY_MAX,
   VOICE_KINDS,
@@ -54,6 +54,8 @@ export function VoiceSheet({ screen, close }: { screen: VoiceScreen; close: () =
       setKind(null);
       setText('');
       setDone(true);
+      // accessibilityLiveRegion은 Android에서만 읽어 iOS VoiceOver에도 감사 안내를 직접 알린다.
+      AccessibilityInfo.announceForAccessibility(`${VT.doneTitle} ${VT.doneBody}`);
     } else setError(r.message);
   };
 

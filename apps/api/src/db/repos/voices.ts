@@ -10,12 +10,20 @@ import { accountLinkedSql } from './profiles.js';
 
 export type NewVoice = Omit<typeof userVoices.$inferInsert, 'id' | 'resolvedAt'>;
 
-/** 같은 프로필의 같은 글(body_key)은 한 번만 남긴다. 이미 있으면 아무것도 하지 않는다(응답은 늘 204). */
+/**
+ * 같은 프로필의 같은 글(body_key)은 한 번만 남긴다(응답은 늘 204). 열린 의견이면 아무것도 하지 않는다. 이미 처리한 의견이면
+ * 문제가 다시 생긴 것으로 보고 다시 열며, 받은 시각을 지금으로 옮겨 목록 맨 위 · 아침 건수 · 180일 보관이 새로 센다. 문장 하나라
+ * 쿼리 수는 그대로다.
+ */
 export async function insertVoice(db: Db, voice: NewVoice): Promise<void> {
   await db
     .insert(userVoices)
     .values({ id: newId('vox'), ...voice })
-    .onConflictDoNothing({ target: [userVoices.profileId, userVoices.bodyKey] });
+    .onConflictDoUpdate({
+      target: [userVoices.profileId, userVoices.bodyKey],
+      set: { resolvedAt: null, createdAt: sql`excluded.created_at` },
+      setWhere: isNotNull(userVoices.resolvedAt),
+    });
 }
 
 export type VoiceListQuery = {
@@ -26,7 +34,11 @@ export type VoiceListQuery = {
   limit: number;
 };
 
-/** 운영 목록 한 쪽(최신순 limit+1개로 더 보기를 판단). linked는 구글 · 애플 로그인 구단주인지다. 쿼리 계획 테스트도 이것을 본다. */
+/**
+ * 운영 목록 한 쪽(최신순 limit+1개로 더 보기를 판단). linked는 구글 · 애플 로그인 구단주인지다. 쿼리 계획 테스트도 이것을 본다.
+ * 더 보기 커서는 created_at 하나다. 같은 밀리초에 받은 두 건이 쪽 경계에 걸리면 뒤 건이 빠질 수 있지만, 들어오는 양(프로필당
+ * 시간 5건)으로는 드물어 인덱스를 늘리지 않고 둔다.
+ */
 export const voiceListQuery = (db: Db, q: VoiceListQuery) =>
   db
     .select({

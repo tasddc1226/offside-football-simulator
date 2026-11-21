@@ -12,14 +12,23 @@ import {
 import { sha256Hex } from '../db/hash.js';
 import type { SessionChannel } from '../db/repos/sessions.js';
 
-/** 주소(스킴이 있거나 www.로 시작). 끝의 문장 부호도 함께 잡힐 수 있다. */
-const URL_SPLIT = /(\b(?:https?:\/\/|www\.)[^\s<>"'`]+)/i;
+/**
+ * 주소. 스킴이 있거나 www.로 시작하는 꼴과, 앞부분 없이 '도메인/경로?쿼리'(또는 #조각)로 쓴 꼴(toss.me/pay?token=…)을 잡는다.
+ * 앞부분 없는 꼴은 소수점 · 버전 표기가 걸리지 않게 '/'와 '?'(또는 '#')가 모두 있을 때만 본다. 끝의 문장 부호도 함께 잡힐 수 있다.
+ */
+const URL_SPLIT =
+  /(\b(?:https?:\/\/|www\.)[^\s<>"'`]+|(?<![@\w.-])[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/[^\s<>"'`?#]*[?#][^\s<>"'`]*)/i;
 const EMAIL = /[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/g;
 /** 복구 코드 OFS-XXXX-XXXX-XXXX. 대시 · 공백이 있어도 없어도, 대소문자도 가리지 않는다. */
 const OFS_CODE =
   /(?<![A-Za-z0-9])ofs[\s-]?[a-z0-9]{4}[\s-]?[a-z0-9]{4}[\s-]?[a-z0-9]{4}(?![a-z0-9])/gi;
 /** 접두 없는 4-4-4 대시 꼴. 글자가 섞였을 때만 코드로 본다(숫자만 있는 날짜 · 기록 표기는 둔다). UUID 조각은 앞뒤 대시로 거른다. */
 const DASH_CODE = /(?<![A-Za-z0-9-])[A-Za-z0-9]{4}-[A-Za-z0-9]{4}-[A-Za-z0-9]{4}(?![A-Za-z0-9-])/g;
+/**
+ * 접두 없이 공백으로 띄우거나 붙여 쓴 4-4-4(ABCD EFGH 2345, ABCDEFGH2345). 영어 단어 셋('this game very')이나 긴 단어가 걸리지
+ * 않게 복구 코드 글자(대문자 · 2-9)만으로 되어 있고 글자와 숫자가 함께 있을 때만 가린다.
+ */
+const SPACED_CODE = /(?<![A-Za-z0-9-])[A-Z2-9]{4} ?[A-Z2-9]{4} ?[A-Z2-9]{4}(?![A-Za-z0-9-])/g;
 /** 전화번호 후보: '+국가번호'나 0으로 시작하는 숫자 묶음을 - . 공백 하나로 잇는다. 맞는지는 isPhone이 본다. */
 const PHONE_CANDIDATE = /(?<![\w+.-])(?:\+\d+|0\d+)(?:[-. ]\d+)*/g;
 
@@ -52,11 +61,16 @@ function maskText(text: string): string {
     .replace(EMAIL, '[email]')
     .replace(OFS_CODE, '[code]')
     .replace(DASH_CODE, (m) => (/[A-Za-z]/.test(m) ? '[code]' : m))
+    .replace(SPACED_CODE, (m) => (/[A-Z]/.test(m) && /\d/.test(m) ? '[code]' : m))
     .replace(PHONE_CANDIDATE, maskPhone);
 }
 
+function authorityOf(url: string): string {
+  return url.replace(/^https?:\/\//i, '').split(/[/?#\\]/, 1)[0] ?? '';
+}
+
 function hostOf(url: string): string {
-  const authority = url.replace(/^https?:\/\//i, '').split(/[/?#\\]/, 1)[0] ?? '';
+  const authority = authorityOf(url);
   return authority
     .slice(authority.lastIndexOf('@') + 1)
     .replace(/:\d*$/, '')
@@ -64,15 +78,19 @@ function hostOf(url: string): string {
 }
 
 /**
- * offside-lab.com과 하위 도메인 주소는 그대로 둔다(소식 글 ?news= 링크). 다만 API 주소(api.offside-lab.com)는 구글 로그인 콜백의
- * code · state가 쿼리에 실리므로 쿼리와 조각을 지운다. 다른 사이트 주소는 쿼리와 조각을 지우고 나머지를 가린다.
+ * offside-lab.com과 하위 도메인 주소는 쿼리 · 조각을 그대로 둔다(소식 글 ?news= 링크). 경로에는 공백 없이 붙여 쓴 글
+ * ('…/settings,010-1234-5678')이 섞일 수 있어 경로만 가린다. API 주소(api.offside-lab.com)는 구글 로그인 콜백의 code · state가
+ * 쿼리에 실리므로 쿼리와 조각을 지운다. 다른 사이트 주소는 쿼리와 조각을 지우고 나머지를 가린다.
  */
 function cleanUrl(url: string): string {
   const host = hostOf(url);
   const ours = host === 'offside-lab.com' || host.endsWith('.offside-lab.com');
-  if (ours && host !== 'api.offside-lab.com') return url;
-  const bare = url.split(/[?#]/, 1)[0] ?? '';
-  return ours ? bare : maskText(bare);
+  const cut = url.search(/[?#]/);
+  const bare = cut < 0 ? url : url.slice(0, cut);
+  if (!ours) return maskText(bare);
+  const head = (url.match(/^https?:\/\//i)?.[0] ?? '') + authorityOf(url);
+  const path = head + maskText(bare.slice(head.length));
+  return host === 'api.offside-lab.com' ? path : path + (cut < 0 ? '' : url.slice(cut));
 }
 
 /**

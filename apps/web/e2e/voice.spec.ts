@@ -57,8 +57,16 @@ test('설정에서 연 시트는 요청이 없고, 보내면 POST 한 번 뒤 �
     [],
   );
 
+  // 종류는 고르지 않아도 된다는 안내를 눈에 보이게 둔다(앱과 같이).
+  await expect(sheet.getByRole('group', { name: '종류 (고르지 않아도 돼요)' })).toBeVisible();
+  await expect(sheet.getByText('종류 (고르지 않아도 돼요)')).toBeVisible();
+
   // 종류를 고르면 안내 문구가 바뀌고, 같은 칸을 다시 누르면 고름을 푼다.
   const body = sheet.locator('[data-voice-body]');
+  // 입력 칸 글자는 16px 이상이어야 iOS가 초점 때 화면을 확대하지 않는다.
+  expect(
+    await body.evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+  ).toBeGreaterThanOrEqual(16);
   await sheet.locator('[data-voice-kind="bug"]').click();
   await expect(sheet.locator('[data-voice-kind="bug"]')).toHaveAttribute('aria-pressed', 'true');
   await expect(body).toHaveAttribute(
@@ -84,6 +92,8 @@ test('설정에서 연 시트는 요청이 없고, 보내면 POST 한 번 뒤 �
   const done = page.locator('[data-voice-sheet="done"]');
   await expect(done.getByRole('status')).toContainText('잘 받았어요');
   await expect(done.locator('[data-act="voice-close"]')).toBeFocused();
+  // 초점이 간 닫기 버튼이 감사 안내를 설명으로 읽게 한다.
+  await expect(done.locator('[data-act="voice-close"]')).toHaveAccessibleDescription(/잘 받았어요/);
   expect(api.posts).toHaveLength(1);
   const sent = api.posts[0]!;
   expect(sent).toMatchObject({
