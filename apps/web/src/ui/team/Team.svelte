@@ -652,6 +652,7 @@
         <TeamResult
           m={matches.state.result}
           {team}
+          nowSeason={current ?? season}
           shift={matches.state.divisionShift}
           streak={matches.state.streakHint}
           {eventName}

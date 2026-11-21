@@ -1100,6 +1100,7 @@ export default function Team() {
       <TeamResult
         m={result}
         team={team}
+        nowSeason={current ?? season}
         shift={divisionShift}
         streak={streakHint}
         eventName={eventName}

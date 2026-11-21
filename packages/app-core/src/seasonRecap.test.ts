@@ -1,5 +1,7 @@
 import type { OwnerHonor, SeasonRecap } from '@offside/contracts';
 import { describe, expect, it } from 'vitest';
+import { setLocale } from './i18n/core.js';
+import { en } from './i18n/en/index.js';
 import {
   honorViews,
   PHOTO_MAX,
@@ -190,6 +192,20 @@ describe('T-11-128 시즌 결산 문구', () => {
       ]);
       expect(recapTeamRankLine(1, team)).toBe('레이팅 순위 5위 / 233 · 상위 3%');
       expect(recapTeamRankLine(2, team)).toBe('RP 순위 5위 / 233 · 상위 3%');
+    });
+
+    it('T-11-800 순위 밖 팀은 공유 카드 순위 줄에 순위를 두 번 쓰지 않는다', () => {
+      // 전에는 '레이팅 순위 순위 밖' · 'Rating rank Unranked'였다(로그인하지 않은 구단주의 팀은 순위가 없다).
+      const out = { ...team, rank: null };
+      expect(recapTeamRankLine(1, out)).toBe('레이팅 · 순위 밖');
+      expect(recapTeamRankLine(2, out)).toBe('RP · 순위 밖');
+      setLocale('en', en);
+      try {
+        expect(recapTeamRankLine(1, out)).toBe('Rating · Unranked');
+        expect(recapTeamRankLine(2, out)).toBe('RP · Unranked');
+      } finally {
+        setLocale('ko');
+      }
     });
   });
 });

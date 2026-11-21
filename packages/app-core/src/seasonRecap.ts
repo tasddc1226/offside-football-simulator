@@ -235,11 +235,17 @@ export function rankLine(rank: number | null, total: number): string {
   return `${rankText(rank, total)}${pct === null ? '' : ` · ${L.topPct({ pct })}`}`;
 }
 
-/** 공유 카드 팀 칸의 순위 줄 — '레이팅 순위 3위 / 1,818 · 상위 1%', 시즌 2부터 'RP 순위 …'(T-11-800). */
+/**
+ * 공유 카드 팀 칸의 순위 줄 — '레이팅 순위 3위 / 1,818 · 상위 1%', 시즌 2부터 'RP 순위 …'(T-11-800). 순위가 없으면 '순위'를
+ * 두 번 쓰지 않게 '레이팅 · 순위 밖' · 'RP · 순위 밖'으로 쓴다.
+ */
 export const recapTeamRankLine = (
   season: number,
   t: Pick<NonNullable<SeasonRecap['team']>, 'rank' | 'ranked'>,
-): string => `${teamScoreLabel(season, L, 'teamRank')} ${rankLine(t.rank, t.ranked)}`;
+): string =>
+  t.rank === null
+    ? `${teamScoreLabel(season, L, 'rating')} · ${L.unranked}`
+    : `${teamScoreLabel(season, L, 'teamRank')} ${rankLine(t.rank, t.ranked)}`;
 
 /** 공유 카드 숫자 칸(세 칸씩 두 줄) — 은퇴 선수 수는 한 줄 요약에 있어 빼고, A매치보다 발롱도르가 먼저. */
 export const recapShareCells = (r: SeasonRecap): RecapNumber[] =>

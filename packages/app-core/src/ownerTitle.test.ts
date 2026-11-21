@@ -88,6 +88,9 @@ it('permanent labels and criteria are translated and unknown titles stay hidden'
 });
 
 describe('T-11-619 기록 배지 대표 칭호', () => {
+  // 언어를 바꾸는 테스트가 중간에 실패해도 다음 테스트는 한국어로 돈다.
+  afterEach(() => setLocale('ko'));
+
   it('순위 배지 · 최초 기록은 이름과 그림이 있고, 그 밖의 배지 id는 칭호가 아니다', () => {
     expect(titleLabel('honor-1-achievements-100')).toBe('시즌 1 업적 TOP 100');
     // T-11-800 팀 배지 이름은 그 시즌 팀 점수: 시즌 1은 레이팅, 시즌 2부터 RP(칭호 id는 그대로).
@@ -110,7 +113,6 @@ describe('T-11-619 기록 배지 대표 칭호', () => {
     expect(titleLabel('honor-2-team-10')).toBe('Season 2 Team RP Top 10');
     setLocale('ja', ja);
     expect(titleLabel('honor-2-team-1')).toBe('シーズン2 チームRP 1位');
-    setLocale('ko');
   });
 
   it('달 수 있는 배지만 고르고 최근 시즌 · 높은 순위 먼저 놓는다', () => {

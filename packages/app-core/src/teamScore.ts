@@ -14,3 +14,18 @@ export function teamScoreLabel<
 >(season: number, dict: D, key: K): D[K] | D[`${K}Rp`] {
   return usesRankLadder(season) ? dict[`${key}Rp`] : dict[key];
 }
+
+type MatchSide = { teamId: string };
+
+/**
+ * 친선전 결과 칩의 시즌. 경기에는 시즌이 없어서, 보고 있는 팀이 치른 경기(기록에서 연 지난 시즌 친선전 포함)면 그 팀 시즌을,
+ * 아니면 지금 시즌(now, 친구 탭 안내 줄과 같은 기준)을 쓴다. 지난 시즌 팀을 보다가 친구 탭에서 이번 시즌 팀으로 치른 경기가
+ * 지난 시즌 이름으로 보이지 않게 한다.
+ */
+export function friendlySeason(
+  m: { mine: 'home' | 'away'; home: MatchSide; away: MatchSide },
+  team: { id: string; season: number } | null | undefined,
+  now: number,
+): number {
+  return team && m[m.mine].teamId === team.id ? team.season : now;
+}
