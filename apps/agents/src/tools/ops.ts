@@ -1,7 +1,9 @@
 // @ops 도구: 전부 읽기 전용이다(ADR-015 도구와 권한). D1 토큰은 D1 읽기 권한만 있어 쓰기 쿼리는 Cloudflare가 거절하고,
-// 여기서도 SELECT 한 문장만 보낸다. 결과는 행 · 글자 수를 잘라 넘긴다(토큰 비용).
+// 여기서도 SELECT 한 문장만 보낸다. 계정 · 로그인 · 결제 식별자와 닉네임 열은 보내기 전에 거절한다(T-11-803, sensitive.ts).
+// 결과는 행 · 글자 수를 잘라 넘긴다(토큰 비용).
 import type { Tool } from '../claude.ts';
 import { ghAuth, type GhToken } from '../github.ts';
+import { assertNoSensitive } from './sensitive.ts';
 
 const MAX_ROWS = 50;
 const MAX_CHARS = 6_000;
@@ -11,7 +13,7 @@ const clip = (s: string, n = MAX_CHARS) =>
 const WRITE =
   /\b(insert|update|delete|replace|upsert|drop|alter|create|attach|detach|pragma|vacuum|reindex|analyze|begin|commit|rollback|savepoint|release)\b/i;
 
-/** 읽기 쿼리 한 문장인지 본다. 주석을 빼고, 끝의 `;` 하나만 허용한다. */
+/** 읽기 쿼리 한 문장인지 본다. 주석을 빼고, 끝의 `;` 하나만 허용한다. 개인 정보 열은 거절한다. */
 export function readOnlySql(sql: string): string {
   const s = sql
     .replace(/--[^\n]*/g, ' ')
@@ -23,6 +25,7 @@ export function readOnlySql(sql: string): string {
   if (!/^(select|with)\b/i.test(s)) throw new Error('SELECT · WITH 조회만 할 수 있어요');
   if (WRITE.test(s.replace(/'(?:[^']|'')*'/g, "''")))
     throw new Error('쓰기 · 설정 키워드는 쓸 수 없어요');
+  assertNoSensitive(s);
   return s;
 }
 
@@ -102,7 +105,7 @@ export function opsTools(d: OpsDeps): Tool[] {
     {
       name: 'd1_query',
       description:
-        "운영 D1(SQLite) 읽기 조회. SELECT · WITH 한 문장만. 결과는 최대 50행. 큰 테이블은 인덱스가 있는 열 · 시간 범위 · LIMIT으로 좁힌다. 스키마는 `SELECT name, sql FROM sqlite_master WHERE type='table'`로 본다.",
+        "운영 D1(SQLite) 읽기 조회. SELECT · WITH 한 문장만. 결과는 최대 50행. 이메일 · 로그인 식별자 · 토큰 · 결제 거래 번호 · 닉네임 열은 읽을 수 없고, 그런 열이 있는 표는 * 대신 열 이름을 적는다. 큰 테이블은 인덱스가 있는 열 · 시간 범위 · LIMIT으로 좁힌다. 스키마는 `SELECT name, sql FROM sqlite_master WHERE type='table'`로 본다.",
       input_schema: {
         type: 'object',
         properties: { sql: { type: 'string', description: 'SQLite SELECT 문' } },
