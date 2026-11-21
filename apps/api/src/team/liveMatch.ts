@@ -191,12 +191,11 @@ export async function finalizeLive(
   finishMoments(p.state);
   const result = liveResult(p.state);
   const [[home], [away], [active]] = await teamsForLive(db, row.homeTeamId, row.awayTeamId);
-  const divisions = divisionRules(
-    resolveBalance(active ? balanceVersionOf(active).values : undefined),
-  );
+  const balance = resolveBalance(active ? balanceVersionOf(active).values : undefined);
+  const divisions = divisionRules(balance);
   if (!home || !away) return null;
   const score = matchScore(result.homeGoals, result.awayGoals);
-  const delta = matchRatingChange(p.season, home, away, score, p.met);
+  const delta = matchRatingChange(p.season, home, away, score, p.met, balance.rankDefLoss);
   const detail = {
     home: { ...p.snap.home, ratingChange: delta.home },
     away: { ...p.snap.away, ratingChange: delta.away },

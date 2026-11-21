@@ -1,11 +1,13 @@
 import {
   RANK_REPICKS_DAILY,
+  rankDefenderLoss,
   rankPoints,
   ratingChange,
   usesRankLadder,
 } from '@offside/contracts/owner-team';
 
-// T-11-510 랭크 경기 한 판의 점수 변화와 자동 매칭. 시즌 2부터 RP 사다리(받은 쪽은 깎일 때 절반, 감점은 디비전마다),
+// T-11-510 랭크 경기 한 판의 점수 변화와 자동 매칭. 시즌 2부터 RP 사다리(받은 쪽은 깎일 때 절반 — T-11-807 시즌 3부터 패배는
+// 밸런스 rankDefLoss배, 감점은 디비전마다),
 // 그 전 시즌은 엘로.
 
 type RankSide = { rating: number; division: number };
@@ -16,11 +18,20 @@ export function matchRatingChange(
   away: RankSide,
   score: 0 | 0.5 | 1,
   meetings: number,
+  /** T-11-807 활성 밸런스의 rankDefLoss(시즌 3부터 받은 쪽 패배 감점 배율). */
+  defLoss: number,
 ): { home: number; away: number } {
   if (!usesRankLadder(season)) return ratingChange(home.rating, away.rating, score, meetings);
   return {
     home: rankPoints(home.rating, away.rating, score, home.division),
-    away: rankPoints(away.rating, home.rating, (1 - score) as 0 | 0.5 | 1, away.division, true),
+    away: rankPoints(
+      away.rating,
+      home.rating,
+      (1 - score) as 0 | 0.5 | 1,
+      away.division,
+      true,
+      rankDefenderLoss(season, defLoss),
+    ),
   };
 }
 

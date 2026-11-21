@@ -94,9 +94,20 @@ export const RANK_EDGE_MAX = 8;
  */
 export const RANK_LOSS_EDGE_MAX = 4;
 
+/** 도전을 받은 쪽이 비기거나 질 때 깎이는 몫(시즌 2까지는 패배도 이 값). */
+export const RANK_DEFENDER_CUT = 0.5;
 /**
- * 한 팀 쪽 RP 변화. division = 경기 전 내 디비전, defender = 도전을 받은 쪽(깎일 때만 절반). 0 아래로는 내려가지 않는다.
- * 두 팀 합은 지켜지지 않는다.
+ * T-11-807 도전받은 쪽이 질 때 감점 배율을 밸런스 키(rankDefLoss)로 쓰기 시작하는 서비스 시즌. 시즌 2 재채점(29,758경기)에서
+ * 받은 쪽 패배가 절반이라 마스터에서도 승률 44% 언저리면 RP가 쌓여, 상위 20팀 평균 승률이 46%였다.
+ */
+export const RANK_DEFENDER_LOSS_FROM_SEASON = 3;
+/** 그 시즌 도전받은 쪽 패배 감점 배율. 시즌 2까지는 절반 그대로다. */
+export const rankDefenderLoss = (season: number, balanceValue: number): number =>
+  season >= RANK_DEFENDER_LOSS_FROM_SEASON ? balanceValue : RANK_DEFENDER_CUT;
+
+/**
+ * 한 팀 쪽 RP 변화. division = 경기 전 내 디비전, defender = 도전을 받은 쪽(깎일 때만 줄인다: 무승부는 절반, 패배는
+ * defenderLoss배). 0 아래로는 내려가지 않는다. 두 팀 합은 지켜지지 않는다.
  */
 export function rankPoints(
   me: number,
@@ -104,6 +115,7 @@ export function rankPoints(
   score: 0 | 0.5 | 1,
   division: number,
   defender = false,
+  defenderLoss: number = RANK_DEFENDER_CUT,
 ): number {
   const c = Math.max(-RANK_EDGE_MAX, Math.min(RANK_EDGE_MAX, (opp - me) / RANK_EDGE_DIV));
   const loss =
@@ -114,7 +126,8 @@ export function rankPoints(
       : score === 0.5
         ? RANK_DRAW + c / 2
         : -(loss - Math.max(-RANK_LOSS_EDGE_MAX, c));
-  return Math.max(-me, Math.round(defender && raw < 0 ? raw / 2 : raw)) || 0;
+  const cut = score === 0 ? defenderLoss : RANK_DEFENDER_CUT;
+  return Math.max(-me, Math.round(defender && raw < 0 ? raw * cut : raw)) || 0;
 }
 
 /** 빈 자리를 채우는 유스 선수의 OVR. */

@@ -385,6 +385,13 @@ export const BALANCE_SPEC = {
     max: 0.7,
     step: 0.01,
   },
+  // T-11-807 랭크 경기에서 도전받은 쪽이 질 때 감점 배율. 서비스 시즌 3부터만 읽고(rankDefenderLoss), 시즌 2까지는 0.5 그대로다.
+  rankDefLoss: {
+    def: 0.75,
+    min: 0.5,
+    max: 1,
+    step: 0.05,
+  },
   // T-11-152 구단 자금으로 사는 선수 후보 리롤권. 쌓이기만 하는 구단 자금을 없애려고 비싸게 판다.
   rerollPrice: {
     def: 1_000_000,
