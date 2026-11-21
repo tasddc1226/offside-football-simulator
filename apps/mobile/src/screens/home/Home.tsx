@@ -31,6 +31,7 @@ import { HomeAttendance } from './HomeAttendance';
 import { HomeEvents } from './HomeEvents';
 import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
+import { HomeVoice } from './HomeVoice';
 import { HomeTicker } from './HomeTicker';
 import { SeasonGauge } from './SeasonGauge';
 import { Tile } from './Tile';
@@ -306,6 +307,8 @@ export default function Home() {
         />
         {/* 공지 · 릴리즈 노트를 합친 최근 글(최근 공지 1개 + 최신 글). */}
         <HomeNews />
+        {/* T-11-802 의견 보내기(소식 아래 · 푸터 위). 시트를 열 때는 요청하지 않는다. */}
+        <HomeVoice />
         <SiteFooter />
         {/* T-11-221 맨 아래까지 내려도 떠 있는 채팅 버튼이 하단 문구를 가리지 않게 버튼 높이만큼 비워 둔다. */}
         <View style={{ height: 56 }} />

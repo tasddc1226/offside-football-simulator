@@ -29,6 +29,7 @@ export default {
       'src/screens/owner/ScoutShop.test.mjs',
       'src/screens/retired/shareFlow.test.mjs',
       'src/banners/useTopBanner.test.mjs',
+      'src/platform/voiceContext.test.mjs',
     ],
   },
 };
