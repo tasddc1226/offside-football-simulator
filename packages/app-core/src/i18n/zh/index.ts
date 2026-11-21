@@ -89,6 +89,7 @@ import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
 import { ownerProfile } from './ownerProfile';
 import { partner } from './partner';
+import { playerEdit } from './playerEdit';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
@@ -226,6 +227,7 @@ export const zh = {
   ownerPlayers,
   ownerProfile,
   partner,
+  playerEdit,
   playerNudge,
   publicLegends,
   push,

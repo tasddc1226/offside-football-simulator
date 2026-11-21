@@ -214,7 +214,12 @@ const ko = {
   quickCandidates: '기본값으로 후보 보기 →',
   quickNote: '남은 항목은 기본값으로 시작해도 돼요.',
   moreCustomize: '체격 · 주발 · 외형 더 꾸미기',
-  extraNote: '바꾸지 않아도 돼요. 기본값으로 바로 시작할 수 있어요.',
+  /** T-11-804 첫 시즌 동안 고칠 수 있다는 안내로 바꿈(360×780 한 화면에 들어가게 한 줄 길이 유지). */
+  extraNote: '바꾸지 않아도 돼요. 첫 시즌 동안 선수 탭에서 고칠 수 있어요.',
+  /** T-11-804 '더 꾸미기' 아래 한 줄과 후보 화면의 주발 · 체격 줄. */
+  extraEdit: '첫 시즌 동안 선수 탭에서 고칠 수 있어요.',
+  candBody: (p: { foot: string; h: number; w: number }) => `${p.foot} · ${p.h}cm/${p.w}kg`,
+  candBodyLabel: '주발 · 체격',
   focusMeaning: '시작은 처음 능력치 변화, 성장은 같은 훈련에서 오르는 속도예요.',
   focusTypeLine: (p: { name: string; desc: string }) =>
     `이 조합의 유형: ${p.name} (${p.desc}). 능력치를 나중에 올려도 유형은 바뀌지 않아요.`,
