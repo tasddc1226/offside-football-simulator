@@ -59,8 +59,10 @@ const ShortStringSchema = z.string().max(40);
  */
 export const ClubIdSchema = z.string().regex(/^[a-z0-9-]{1,24}$/);
 
-/** 커리어 생성 시 고정되는 메타(포지션·주발·유형·특성·시작 연도·앱 버전). 매 PUT마다 함께 보내
- * 새 커리어면 이 값으로 생성하고, 이미 있으면 값이 같은지 검증 없이 덮어쓴다(클라이언트가 정본). */
+/** 커리어 생성 시 고정되는 메타(포지션·주발·유형·특성·키·몸무게·시작 연도·앱 버전). 매 PUT마다 함께 보내
+ * 새 커리어면 이 값으로 생성한다. 이미 있으면 앱 버전(과 비어 있던 처음 잠재력)만 바꾸고 나머지는 처음 값을 지킨다
+ * (apps/api db/repos/careers.ts onConflict). T-11-804 첫 시즌 결산 전에는 기기에서 이름 · 주발 · 체격을 고칠 수 있는데,
+ * 그때는 아직 서버에 행이 없어 첫 시즌 업로드가 고친 값으로 처음 들어간다. */
 export const CareerMetaSchema = z
   .strictObject({
     pos: CareerPosSchema,

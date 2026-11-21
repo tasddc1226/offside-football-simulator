@@ -194,7 +194,10 @@ export const create: Translation<CreateMsgs> = {
   quickCandidates: '初期設定で候補を見る →',
   quickNote: '残りの項目は初期設定のまま始められます。',
   moreCustomize: '体格・利き足・見た目をカスタマイズ',
-  extraNote: '変えなくても大丈夫です。初期設定のまますぐ始められます。',
+  extraNote: '変えなくても大丈夫です。最初のシーズンの間は選手タブで直せます。',
+  extraEdit: '最初のシーズンの間は選手タブで直せます。',
+  candBody: (p) => `${p.foot} · ${p.h}cm · ${p.w}kg`,
+  candBodyLabel: '利き足と体格',
   focusMeaning: '開始は最初の能力値の変化、成長は同じ練習で上がる速さです。',
   focusTypeLine: (p: { name: string; desc: string }) =>
     `この組み合わせのタイプ：${p.name}（${p.desc}）。あとで能力値を上げてもタイプは変わりません。`,
