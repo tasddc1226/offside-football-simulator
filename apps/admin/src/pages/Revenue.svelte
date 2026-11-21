@@ -124,7 +124,7 @@
               { metric: 'iap_krw', label: '아이템' },
               { metric: 'ad_free_krw', label: '광고 제거' },
               { metric: 'pass_krw', label: '시즌 패스' },
-              { metric: 'starter_krw', label: '첫 구매 묶음' },
+              { metric: 'starter_krw', label: '스타터팩' },
             ]),
           )}
         />

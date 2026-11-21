@@ -191,9 +191,9 @@ export default (guideCopy) => {
       ],
     ],
     [
-      'First-purchase pack',
+      'Starter pack',
       [
-        'A pack that a signed-in owner who has never paid can buy once in the app (₩3,300). It gives 1 premium scout ticket, 5 potential boost tickets and 5 reroll tickets at once. It appears in the app shop and on the retirement screen for some owners who have at least one player who played to 35 or older and retired. It does not appear if you have ever bought items, a season pass, membership or ad removal (web payments included), and it cannot be bought on the web. If the payment is refunded, the items are taken back as far as you still have them.',
+        'A pack that signed-in owners can buy once per account in the app (₩3,300). It gives 1 premium scout ticket, 5 potential boost tickets and 5 reroll tickets at once. It appears at the top of the app shop and on the retirement screen of a player who played to 35 or older, and you can buy it even if you have paid before. Once bought it no longer appears, and it cannot be bought on the web. If the payment is refunded, the items are taken back as far as you still have them.',
       ],
     ],
     [

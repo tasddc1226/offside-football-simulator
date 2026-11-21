@@ -1,54 +1,24 @@
 import { OWNER_ITEMS, type OwnerItem } from '@offside/contracts';
-import {
-  STARTER_PACK_CONTROL_PCT,
-  STARTER_PACK_RETIRE_AGE,
-  starterPackItems,
-} from '@offside/contracts/starter-pack';
+import { starterPackItems } from '@offside/contracts/starter-pack';
 import type { VerifiedPurchaseMetadata } from '../../iap/metadata.js';
 import type { Db } from '../client.js';
 import { grantItemStatement } from './itemShop.js';
 
-// T-11-770d 첫 구매 묶음: 자격 · 지급 · 환불. 지급은 스토어 거래마다 원장 한 줄(starter_packs)이고, 그 줄을 넣은 요청만 세 가지
+// T-11-770d 스타터팩(T-11-806 전 이름 첫 구매 묶음): 자격 · 지급 · 환불. 지급은 스토어 거래마다 원장 한 줄(starter_packs)이고, 그 줄을 넣은 요청만 세 가지
 // 아이템을 같은 batch에서 준다(원장과 아이템이 따로 놀지 않는다). 자격은 프로필 인덱스로만 읽는다(원장을 훑지 않는다).
 
-export type StarterEligibility = 'owned' | 'paid' | 'no_retire' | 'control' | 'eligible';
+export type StarterEligibility = 'owned' | 'eligible';
 
 /**
- * 대조군인지. 프로필마다 고정이라 다시 접속하거나 기기를 바꿔도 같다. 따로 적어 두지 않고 프로필 id로 다시 계산한다
- * (분석도 같은 식으로 군을 나눈다): SHA-256('starter_v1:' + 프로필 id)의 첫 두 바이트 % 100 < 대조군 비율.
- */
-export async function starterControl(profileId: string): Promise<boolean> {
-  const bytes = new Uint8Array(
-    await crypto.subtle.digest('SHA-256', new TextEncoder().encode(`starter_v1:${profileId}`)),
-  );
-  return ((bytes[0]! << 8) | bytes[1]!) % 100 < STARTER_PACK_CONTROL_PCT;
-}
-
-/**
- * 이 구단주가 첫 구매 묶음을 살 수 있나. 한 번의 왕복으로 읽는다.
- * - 실결제 이력: 아이템 · 시즌 패스 · 멤버십 · 웹 결제 · 광고 제거(원장에 남은 것) 가운데 시험 거래가 아닌 것이 하나라도 있으면
- *   paid. 환불한 거래도 센다(한 번 결제한 구단주를 미결제로 되돌리지 않는다).
- * - 끝까지 뛴(35세 이상) 은퇴 선수가 한 명은 있어야 한다.
+ * 이 구단주가 스타터팩을 살 수 있나. T-11-806부터 로그인한 구단주는 모두 한 번 산다(결제 이력 · 끝까지 뛴 은퇴 선수 · 대조군 조건을
+ * 뺐다). 이미 산 구단주(환불한 거래 포함)만 owned다.
  */
 export async function starterEligibilityOf(db: Db, profileId: string): Promise<StarterEligibility> {
   const row = await db.$client
-    .prepare(
-      `SELECT
-         EXISTS (SELECT 1 FROM starter_packs WHERE profile_id = ?1) AS owned,
-         EXISTS (SELECT 1 FROM iap_purchases WHERE profile_id = ?1 AND test = 0) AS items,
-         EXISTS (SELECT 1 FROM season_passes WHERE profile_id = ?1 AND test = 0) AS pass,
-         EXISTS (SELECT 1 FROM memberships WHERE profile_id = ?1 AND test = 0) AS member,
-         EXISTS (SELECT 1 FROM web_pay_orders WHERE profile_id = ?1 AND status = 'PAID' AND test = 0) AS web,
-         EXISTS (SELECT 1 FROM iap_ad_free_purchases WHERE profile_id = ?1 AND test = 0) AS adFree,
-         EXISTS (SELECT 1 FROM careers WHERE profile_id = ?1 AND status = 'retired' AND retire_age >= ?2) AS retired`,
-    )
-    .bind(profileId, STARTER_PACK_RETIRE_AGE)
-    .first<Record<'owned' | 'items' | 'pass' | 'member' | 'web' | 'adFree' | 'retired', number>>();
-  if (!row) return 'no_retire';
-  if (row.owned) return 'owned';
-  if (row.items || row.pass || row.member || row.web || row.adFree) return 'paid';
-  if (!row.retired) return 'no_retire';
-  return (await starterControl(profileId)) ? 'control' : 'eligible';
+    .prepare(`SELECT 1 AS owned FROM starter_packs WHERE profile_id = ? LIMIT 1`)
+    .bind(profileId)
+    .first<{ owned: number }>();
+  return row ? 'owned' : 'eligible';
 }
 
 /** 이 거래를 받은 구단주(없으면 undefined). */

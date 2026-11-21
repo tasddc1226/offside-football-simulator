@@ -6,10 +6,10 @@ import { IapStoreSchema } from './cup-api.js';
 const Count = z.number().int().min(0);
 
 /**
- * GET /v1/starter-pack — 로그인한 구단주의 첫 구매 묶음 자격.
+ * GET /v1/starter-pack — 로그인한 구단주의 스타터팩 자격.
  * - eligible: 지금 살 수 있다(stores · account가 온다).
  * - owned: 이미 샀다. 다시 팔지 않는다.
- * - ineligible: 살 수 없다(실결제 이력이 있거나, 끝까지 뛴 은퇴 선수가 아직 없거나, 대조군).
+ * - ineligible: T-11-806 전까지 쓰던 값(결제 이력 · 은퇴 선수 · 대조군). 지금 서버는 주지 않지만 옛 앱이 읽어 남겨 둔다.
  * - off: 지금은 팔지 않는다(서버 스위치 · 이 구단주가 쓸 수 있는 스토어 없음).
  */
 export const StarterPackResponseSchema = z.strictObject({
