@@ -52,6 +52,21 @@ export const REWARD_PLACES = [
 ] as const;
 export type RewardPlace = (typeof REWARD_PLACES)[number];
 export type RewardAction = 'view' | 'press' | 'earned' | 'closed' | 'failed';
+/**
+ * T-11-811 보상형 광고 실패 까닭(reward_ad_failed의 reason). 광고 없음(no_fill) · 네트워크 · 시간 초과(SDK 또는 앱의 20초) ·
+ * 보여 주기 실패(show) · 동의 없음 · 단위 없음 · 연속 실패로 잠시 쉼(paused) · 그 밖(other).
+ */
+export const REWARD_FAIL_REASONS = [
+  'no_fill',
+  'network',
+  'timeout',
+  'show',
+  'consent',
+  'no_unit',
+  'paused',
+  'other',
+] as const;
+export type RewardFailReason = (typeof REWARD_FAIL_REASONS)[number];
 /** OS 권한 요청 결과. failed는 권한은 받았지만 기기 등록이 실패한 경우다. */
 export type PushAskResult = 'granted' | 'denied' | 'blocked' | 'failed';
 
@@ -260,14 +275,18 @@ export function createNativeAnalytics(io: IO) {
         ...(action === 'pick' && groups !== undefined ? { groups } : {}),
       });
     },
-    /** T-11-731 보상형 광고 깔때기(REWARD_PLACES). view는 실행마다 곳별로 한 번만 보낸다. */
-    rewarded(action: RewardAction, place: RewardPlace) {
+    /** T-11-731 보상형 광고 깔때기(REWARD_PLACES). view는 실행마다 곳별로 한 번만 보낸다. failed는 까닭(T-11-811)을 같이 보낸다. */
+    rewarded(action: RewardAction, place: RewardPlace, reason?: RewardFailReason) {
       if (!REWARD_PLACES.includes(place)) return;
       if (action === 'view') {
         if (!allowed() || rewardSeen.has(place)) return;
         rewardSeen.add(place);
       }
-      send('reward_ad_' + action, { place });
+      // T-11-811 실패만 까닭을 붙인다(목록 밖 값은 버린다).
+      const params: Params = { place };
+      if (action === 'failed' && reason && REWARD_FAIL_REASONS.includes(reason))
+        params.reason = reason;
+      send('reward_ad_' + action, params);
     },
     /** 강화권 · 스카우트권 구매 퍼널(commerceStage). 보내는 순간의 이용 분석 동의만 본다. 쌓아 두거나 다시 보내지 않는다. */
     commerce(o: CommerceObservation, alive?: () => boolean) {

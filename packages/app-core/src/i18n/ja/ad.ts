@@ -17,6 +17,8 @@ export const ad: Translation<AdMsgs> = {
   noPurchase: 'このストアアカウントには広告削除の購入記録がありません。',
   restoreFail: '復元できませんでした。しばらくしてからもう一度お試しください。',
   rewardedUnavailable: '今は広告を読み込めません。しばらくしてからもう一度お試しください。',
+  rewardedPaused:
+    '広告を何度も読み込めませんでした。2分後にもう一度押してください。広告ブロックアプリやVPNを使っている場合は、オフにすると改善することがあります。',
   rewardedWatch: '広告を最後まで見ると評価を見られます。',
   adRerollBtn: (p) => `広告を見て引き直す(今日あと${p.n}回)`,
   adRerollFreeBtn: (p) => `候補を引き直す(今日あと${p.n}回)`,

@@ -271,6 +271,26 @@ describe('push opt-in analytics', () => {
   });
 });
 
+describe('T-11-811 rewarded failure reason', () => {
+  it('adds an allowlisted reason only to failed events', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.rewarded('failed', 'boost', 'no_fill');
+    h.a.rewarded('failed', 'boost', 'SECRET' as never);
+    h.a.rewarded('failed', 'boost');
+    h.a.rewarded('press', 'boost', 'no_fill');
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name.startsWith('reward_ad_'));
+    expect(events.map((e) => [e.name, e.params.place, e.params.reason])).toEqual([
+      ['reward_ad_failed', 'boost', 'no_fill'],
+      ['reward_ad_failed', 'boost', undefined],
+      ['reward_ad_failed', 'boost', undefined],
+      ['reward_ad_press', 'boost', undefined],
+    ]);
+    expect(JSON.stringify(h.events)).not.toContain('SECRET');
+  });
+});
+
 describe('T-11-676 career share (native)', () => {
   it('sends the web share contract only after consent', async () => {
     const h = setup({ initial: 'unknown' });
