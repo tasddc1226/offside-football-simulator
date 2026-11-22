@@ -299,6 +299,14 @@ export default (guideCopy) => {
       'What does preferred foot affect?',
       'It does not affect growth, matches or events in the career. In club matches, strong-foot fit gives a small boost when a player card at full-back uses the same-side foot, or at winger the opposite-side foot. Two-footed players get half of it. You can change the foot on the Player tab until the first season review, and not after that.',
     ],
+    [
+      'Which focus attributes should I pick?',
+      'Your two focus attributes change both your starting attributes and how fast you grow. The two you pick start 6 higher, and the two other attributes with the smallest OVR weight for your position start 4 and 3 lower. For the whole career, training a focus attribute grows 20% faster and training any other attribute grows 10% slower. To raise OVR quickly, pick two of the underlined OVR key attributes on the player creation screen; the focus selected by default is the two attributes with the biggest OVR weight for that position. The focus pair also sets your player type, so if you want a specific owner-team synergy, check which pair gives that type in the player type guide first. Focus attributes cannot be changed after the player is created.',
+    ],
+    [
+      'What does condition affect?',
+      'Condition affects match performance, starting chances and injuries. Higher condition raises your match rating, below 40 your injury risk rises sharply, and below 35 it becomes hard to start. Playing a full 90 minutes lowers condition by about 2 per match, and matches you sit out restore 1. Attribute training costs 8 per session (12 for physical), a personal coach 6, media activity 5 and a national team call-up 6. Rest and recovery raises condition by 30 and morale a little. When a new season starts, condition below 85 goes back up to 85. The training screen shows your current condition and how each option changes it, so take a stretch off when it gets close to 40.',
+    ],
     ['Do the first three candidates change if I refresh?', guideCopy.candidateRefresh],
     [
       'Do foreign players have military service too?',
@@ -317,6 +325,10 @@ export default (guideCopy) => {
     [
       'What do the player card colors mean?',
       "They are card grades. A legend score of 1,800 or more is Icon (navy), 1,100 or more is Legend (dark green), and below that cards are split by peak OVR into Elite (85 or more), Gold (75 or more), Silver (65 or more) and Bronze. A pale light-green card is a youth player filling an empty spot. During a career, the Career tab's card grade outlook shows your current legend score and the points left to the next grade.",
+    ],
+    [
+      'How does legend score build up?',
+      "Legend score is based on your career totals. Each trophy is worth 10 points and each individual award 12 points (players with a detailed position count up to 3 awards per season), and a Ballon d'Or win or a World Cup win is worth 60 points each. In years you place in the Ballon d'Or ranking, a higher place gives more points (18 for first). Peak OVR gives 2 points per OVR, so even OVR 95 is 190 points; each cap is 0.4 points (plus 25 once you pass 100 caps) and each appearance 0.05 points. Points for goals, assists and clean sheets depend on position, and defensive and central midfielders earn extra in high-rated matches. So to raise your score, playing a long time for a team that can win, collecting trophies and awards, matters far more than OVR, and staying a starter into your mid-30s instead of retiring early keeps adding points every season. You can see your current score in the Card grade outlook on the Career tab. Titles, awards and stats are added together at the season review, so the score does not change mid-season, and retirement titles (Club legend, World-class legend and so on) are decided when you retire.",
     ],
     [
       'What changes if I buy Remove Ads?',
