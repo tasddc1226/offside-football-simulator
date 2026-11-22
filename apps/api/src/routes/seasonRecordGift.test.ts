@@ -1,4 +1,4 @@
-// T-11-487 시즌 1 기록 보상 — 시즌 2 동안 홈 선물 칸에서 한 번. 명예의 전당 순위 · 레전드 점수 · 발롱도르 세 갈래를
+// T-11-487 시즌 1 기록 보상 — 시즌 2 동안 홈 선물 칸에서 한 번(T-11-813부터 매 시즌 지난 시즌 기록으로). 명예의 전당 순위 · 레전드 점수 · 발롱도르 세 갈래를
 // 마감 시각까지 은퇴한 명예의 전당 선수로 세고, 로그인한 구단주만 받는다. 업적 보상이 있으면 그것을 먼저 보인다.
 import {
   HomeGiftResponseSchema,
@@ -131,6 +131,31 @@ describe('T-11-487 시즌 1 기록 보상(GET /v1/items/gift?v=2 · POST /v1/ite
     const res = await claim(me.cookie, RECORD_SEASON_GIFT.id);
     expect(ItemsRes.parse(await res.json()).data).toMatchObject({ reroll: 12, scout: 1, boost: 4 });
     expect((await claim(me.cookie, RECORD_SEASON_GIFT.id)).status).toBe(409);
+    expect(await gift(me.cookie)).toBeNull();
+  });
+
+  it('T-11-813 시즌 3에는 시즌 2 기록으로 다시 한 번 준다(시즌 1 보상을 받았어도)', async () => {
+    const S2_END = '2026-12-20T15:00:00.000Z';
+    const IN_S3 = '2026-12-22T03:00:00.000Z';
+    const me = await issueGoogleCookie(ctx);
+    await addCareer(me.profileId, 1900); // 시즌 1 아이콘
+    vi.setSystemTime(new Date(IN_S2));
+    expect((await claim(me.cookie, RECORD_SEASON_GIFT.id)).status).toBe(200);
+    await addCareer(me.profileId, 2000, { season: 2, at: '2026-12-01T00:00:00.000Z' }); // 시즌 2 1위 · 아이콘
+    await addCareer(me.profileId, 1200, { season: 2, at: '2026-12-21T00:00:00.000Z' }); // 마감 뒤 — 세지 않는다
+    await saveSeasonSchedule(ctx.env.DB, closeSeasonSchedule(2, S2_END, false));
+    vi.setSystemTime(new Date(IN_S3));
+    const g = await gift(me.cookie);
+    expect(g).toMatchObject({
+      id: 'rec-season-2',
+      kind: 'recordSeason',
+      season: 2,
+      record: { hofRank: 1, icons: 1, legends: 1 },
+    });
+    // 지난 시즌 카드(rec-season-1)로는 받지 못하고, 이번 카드로 한 번만 받는다.
+    expect((await claim(me.cookie, RECORD_SEASON_GIFT.id)).status).toBe(409);
+    expect((await claim(me.cookie, 'rec-season-2')).status).toBe(200);
+    expect((await claim(me.cookie, 'rec-season-2')).status).toBe(409);
     expect(await gift(me.cookie)).toBeNull();
   });
 

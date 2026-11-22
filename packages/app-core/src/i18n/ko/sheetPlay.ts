@@ -37,6 +37,7 @@ const ko = {
   tours: '국가대표 · 국제대회',
   gala: "Ballon d'Or 시상식",
   miles: '커리어 이정표',
+  legendGain: '레전드 점수',
   scoutHint: '스카우트 한마디',
   fans: '팬 반응',
   ageWeb: (p: { age: number }) => `${p.age}세가 됐어요. 이제 다음 시즌을 준비해요.`,

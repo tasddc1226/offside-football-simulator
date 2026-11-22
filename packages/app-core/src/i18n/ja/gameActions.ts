@@ -62,6 +62,11 @@ export const gameActions: Translation<GameActionsMsgs> = {
   ok: 'OK',
   colCs: '無失点',
   colAssists: 'アシスト',
+  legendGain: (p) => `レジェンドスコア +${p.gain} · 現在 ${p.score}`,
+  legendCrossLegend: (p) =>
+    `レジェンドカードの基準(${p.score}点)を超えました。今の記録ならレジェンドカードです。`,
+  legendCrossIcon: (p) =>
+    `アイコンカードの基準(${p.score}点)を超えました。今の記録ならアイコンカードです。`,
   seasonTitle: (p) => `${p.club} · ${p.league} ${p.rank}位`,
   compLine: (p) => `${p.name} · ${p.stage} · ${p.apps}試合 ${p.g}ゴール ${p.a}アシスト`,
   toMarket: '移籍市場へ →',

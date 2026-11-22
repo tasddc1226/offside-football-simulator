@@ -80,6 +80,13 @@ const ko = {
   // 시즌 결산 시트
   colCs: '무실점',
   colAssists: '도움',
+  // T-11-813 시즌 결산의 레전드 점수 변화(legendGain.ts). 카드 기준을 이번 시즌에 넘었을 때만 안내 한 줄을 더한다.
+  legendGain: (p: { gain: string; score: string }) =>
+    `레전드 점수 +${p.gain}점 · 지금 ${p.score}점`,
+  legendCrossLegend: (p: { score: string }) =>
+    `레전드 카드 기준(${p.score}점)을 넘었어요. 지금 기록이면 레전드 카드예요.`,
+  legendCrossIcon: (p: { score: string }) =>
+    `아이콘 카드 기준(${p.score}점)을 넘었어요. 지금 기록이면 아이콘 카드예요.`,
   seasonTitle: (p: { club: string; league: string; rank: number | string }) =>
     `${p.club} · ${p.league} ${p.rank}위`,
   compLine: (p: { name: string; stage: string; apps: number; g: number; a: number }) =>

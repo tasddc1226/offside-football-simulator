@@ -37,7 +37,7 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   legendTrackRules: (p) =>
     `A legend score of ${p.icon} or more makes an Icon card, and ${p.legend} or more a Legend card. Below that, peak OVR decides: Elite ${p.elite}, Gold ${p.gold}, Silver ${p.silver} or more, and Bronze otherwise.`,
   legendTrackNote:
-    'Score builds from career stats, trophies and awards. Even with a high OVR, a card stays below Legend and Icon until the score is there.',
+    'Score builds from career stats, trophies and awards, and is added at each season review. Even with a high OVR, a card stays below Legend and Icon until the score is there. Retirement titles are decided when you retire.',
   legendTierName: (p) =>
     ({
       icon: 'Icon',

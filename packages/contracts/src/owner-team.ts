@@ -684,10 +684,26 @@ export const ACH_SEASON_GIFT = {
 
 /**
  * T-11-487 시즌 1 기록 보상 — 시즌 1 명예의 전당 기록(마감 시각 기준)으로 시즌 2 동안 홈 선물 카드에서 한 번 준다.
+ * T-11-813부터 매 시즌 같은 표로 준다(recordSeasonGiftFor).
  * 로그인한 구단주만 받는다. 세 갈래를 더하며, 레전드 점수 · 발롱도르는 맞는 칸 하나만 받는다. 컵은 대회마다 단계 보상을
  * 이미 줘서 더하지 않는다(2026-10-25 사용자 결정). 장수 기준: 컵 우승 15 · 3 · 3, BEST 11 10 · 2 · 2, 컵 4강 7 · 1 · 1.
  */
 export const RECORD_SEASON_GIFT = { id: 'rec-season-1', season: 1, openSeason: 2 } as const;
+/** T-11-813 시즌 기록 보상 id 앞부분. 시즌 N 기록은 'rec-season-N'(시즌 1은 RECORD_SEASON_GIFT.id와 같다). */
+export const RECORD_GIFT_PREFIX = 'rec-season-';
+/**
+ * T-11-813 시즌 기록 보상을 시즌 1만이 아니라 매 시즌으로(2026-11-22 운영자 결정, 레전드 점수 개선 C안). 지금 시즌(openSeason)
+ * 동안 지난 시즌 기록으로 한 번 준다. 상위권이 오래 키운 레전드 · 아이콘이 시즌마다 아이템으로 돌아오게 한다(구단 자금은 주지 않는다).
+ * 시즌 1(프리시즌 다음 첫 시즌) 전에는 없다.
+ */
+export const recordSeasonGiftFor = (openSeason: number | null) =>
+  openSeason !== null && openSeason >= 2
+    ? ({
+        id: `${RECORD_GIFT_PREFIX}${openSeason - 1}`,
+        season: openSeason - 1,
+        openSeason,
+      } as const)
+    : null;
 
 /**
  * T-11-517 광고 제거 구매 감사 선물 — 클럽 멤버십에 광고 제거가 들어가면서, 그 전에 광고 제거를 산 구단주(서버 구매 기록이
