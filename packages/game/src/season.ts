@@ -81,6 +81,11 @@ export interface SeasonEndResult {
   promo?: Promotion | undefined;
   /** T-11-475 시대의 라이벌 소식(등장 · 이번 시즌 기록). 라이벌이 없거나 옛 세이브의 pending.res에는 없다. */
   era?: EraNote | undefined;
+  /**
+   * T-11-813 이 시즌 결산 직전 레전드 점수. 엔진은 채우지 않고 화면(app-core game-actions)이 endSeason 직전에 넣어
+   * 시즌 결산에 '레전드 점수 +N'을 보인다. 옛 세이브의 pending.res에는 없다.
+   */
+  legendBefore?: number | undefined;
 }
 /** 지난 시즌 대륙 챔피언이면 4년마다 열리는 FIFA 클럽 월드컵 결과(무작위 단계). 해당 없으면 null. */
 function clubWorldCup(s: GameState, tier: number): string | null {

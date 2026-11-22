@@ -64,6 +64,11 @@ export const gameActions: Translation<GameActionsMsgs> = {
   ok: 'OK',
   colCs: 'Clean sheets',
   colAssists: 'Assists',
+  legendGain: (p) => `Legend score +${p.gain} · now ${p.score}`,
+  legendCrossLegend: (p) =>
+    `You passed the Legend card line (${p.score}). At this record, it's a Legend card.`,
+  legendCrossIcon: (p) =>
+    `You passed the Icon card line (${p.score}). At this record, it's an Icon card.`,
   seasonTitle: (p) =>
     `${p.club} · ${p.league} ${typeof p.rank === 'number' ? ordinal(p.rank) : p.rank}`,
   compLine: (p) =>

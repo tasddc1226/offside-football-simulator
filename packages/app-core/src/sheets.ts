@@ -1,5 +1,6 @@
 // 시트 본문 뷰 모델. 게임 진행 액션(game-actions.ts)이 게임 상태에서 화면에 필요한 값만 골라 만들고,
 // 웹(ui/sheets/*.svelte)·앱 시트 컴포넌트가 그대로 그린다(컴포넌트는 게임 로직을 직접 부르지 않는다).
+import type { LegendGainView } from './legendGain.js';
 import type { Chip } from '@offside/game/stats';
 import type { TitleView } from '@offside/game/titles';
 import type { Promotion } from '@offside/game/promotion';
@@ -234,6 +235,8 @@ export type SheetView =
       promo: Promotion | undefined;
       /** T-11-475 시대의 라이벌 카드(등장 · 이번 시즌 비교). 라이벌이 없으면 없다. */
       era?: EraCardView | null;
+      /** T-11-813 이번 시즌 레전드 점수 변화와 카드 기준을 넘었을 때의 안내. 점수가 그대로거나 옛 세이브면 null. */
+      legend?: LegendGainView | null;
       notes: string[];
       /** 옛 시트 호환용. 은퇴 전에는 화면에 표시하지 않는다. 육성 중 안내는 scoutHint가 맡는다. */
       scout?: string | null;

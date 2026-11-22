@@ -81,6 +81,8 @@ import { publicNameOf } from './namePublic.js';
 import { fmtValue, growthDirFor, seasonLabelOf } from './format.js';
 import { crossesBorder, flightHours, hubOf } from './flight.js';
 import { gameActionsText as L } from './i18n/ko/gameActions';
+import { legendScore } from '@offside/game/legend';
+import { legendGain } from './legendGain.js';
 import { choiceChipsFor } from './eventPeek';
 import { tn } from '@offside/game/i18n/names';
 
@@ -314,7 +316,9 @@ export function createGameActions(host: GameHost) {
       if (sheet.state.busy) return;
       appState.report = null;
       const growth = takeSeasonGrowth(s); // endSeason이 시즌 끝 값을 다음 시즌으로 넘기기 전에 뜬다.
+      const legendBefore = legendScore(s);
       const res = endSeason(s);
+      res.legendBefore = legendBefore;
       host.uploadSeason(s, res.rec, growth);
       s.pending = { type: 'market', res, m: null };
       host.save();
@@ -471,6 +475,7 @@ export function createGameActions(host: GameHost) {
       titles = [],
       promo,
       era,
+      legendBefore,
     } = res;
     const s = appState.G!;
     // T-10-112 고3 첫 시즌이 끝났다. 다음 커리어는 새 후보를 받는다.
@@ -541,6 +546,7 @@ export function createGameActions(host: GameHost) {
         titles,
         promo: promo && { club: tn(promo.club), down: tn(promo.down) },
         era: era ? eraCard(s, era, rec) : null,
+        legend: legendGain(legendBefore, legendScore(s)),
         notes,
         scoutHint: scoutHint(s, rec.year),
         seasonTrend: seasonTrendLine(s, rec.year),

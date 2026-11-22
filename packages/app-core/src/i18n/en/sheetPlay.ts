@@ -26,6 +26,7 @@ export const sheetPlay: Translation<SheetPlayMsgs> = {
   tours: 'National team · International tournaments',
   gala: "Ballon d'Or ceremony",
   miles: 'Career milestones',
+  legendGain: 'Legend score',
   scoutHint: 'Scout comment',
   fans: 'Fan reaction',
   ageWeb: (p) => `You're now ${p.age}. Time to get ready for next season.`,

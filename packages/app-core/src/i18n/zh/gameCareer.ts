@@ -34,7 +34,7 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   legendTrackRules: (p) =>
     `傳奇分數 ${p.icon} 以上是 ICON，${p.legend} 以上是傳奇卡。低於此分數時依最高 OVR 區分：菁英 ${p.elite}、金卡 ${p.gold}、銀卡 ${p.silver} 以上，其餘為銅卡。`,
   legendTrackNote:
-    '分數由生涯紀錄、獎盃與獎項累積。即使 OVR 很高，分數不足也不會成為 ICON 或傳奇卡。',
+    '分數由生涯紀錄、獎盃與獎項累積，並在賽季結算時一次反映。即使 OVR 很高，分數不足也不會成為 ICON 或傳奇卡。退役稱號在退役時決定。',
   legendTierName: (p) =>
     ({ icon: 'ICON', legend: '傳奇', elite: '菁英', gold: '金卡', silver: '銀卡', bronze: '銅卡' })[
       p.tier

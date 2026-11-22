@@ -1,0 +1,30 @@
+{
+  "id": "t-11-813-legend-season-rewards",
+  "title": "레전드 점수 변화가 시즌 결산에 보이고, 기록 보상을 매 시즌 받아요",
+  "items": [
+    "시즌 결산에 이번 시즌 레전드 점수가 얼마나 올랐는지 보이고, 레전드 · 아이콘 카드 기준을 넘으면 바로 알려 드려요.",
+    "시즌 1에만 있던 명예의 전당 기록 보상을 이제 매 시즌 받아요. 새 시즌이 열리면 지난 시즌 기록(명예의 전당 순위 · 아이콘 · 레전드 · 발롱도르 수상 선수)으로 홈에서 한 번 받을 수 있어요."
+  ],
+  "en": {
+    "title": "Season reviews show legend score gains, and record rewards come every season",
+    "items": [
+      "The season review shows how much your legend score rose this season, and tells you right away when you pass the Legend or Icon card line.",
+      "Hall of Fame record rewards, once only for season 1, now come every season. When a new season opens, you can claim them once on Home for the previous season's records (Hall of Fame rank, Icons, Legends and Ballon d'Or winners)."
+    ]
+  },
+  "ja": {
+    "title": "シーズン決算でレジェンドスコアの伸びが見え、記録報酬を毎シーズン受け取れます",
+    "items": [
+      "シーズン決算に今シーズンのレジェンドスコアの伸びが表示され、レジェンド・アイコンカードの基準を超えるとすぐにお知らせします。",
+      "シーズン1だけだった殿堂記録報酬を、これからは毎シーズン受け取れます。新しいシーズンが始まると、前のシーズンの記録(殿堂順位・アイコン・レジェンド・バロンドール受賞選手)でホームから1回受け取れます。"
+    ]
+  },
+  "zh": {
+    "title": "賽季結算會顯示傳奇分數變化，紀錄獎勵每季都能領",
+    "items": [
+      "賽季結算會顯示本季傳奇分數增加多少，超過傳奇・ICON 卡標準時會立即通知。",
+      "原本只有賽季 1 的名人堂紀錄獎勵，現在每季都能領。新賽季開始後，可依上一賽季的紀錄（名人堂排名・ICON・傳奇・金球獎得主）在首頁領取一次。"
+    ]
+  },
+  "availability": "web-app"
+}
