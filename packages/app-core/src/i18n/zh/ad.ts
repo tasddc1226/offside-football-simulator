@@ -17,6 +17,8 @@ export const ad: Translation<AdMsgs> = {
   noPurchase: '這個商店帳號沒有移除廣告的購買紀錄。',
   restoreFail: '恢復失敗，請稍後再試。',
   rewardedUnavailable: '目前無法載入廣告，請稍後再試。',
+  rewardedPaused:
+    '廣告連續多次無法載入。請在 2 分鐘後再試。如果正在使用廣告攔截 App 或 VPN，關閉後可能會改善。',
   rewardedWatch: '看完廣告就能查看評價。',
   adRerollBtn: (p) => `看廣告重新抽（今天剩 ${p.n} 次）`,
   adRerollFreeBtn: (p) => `重新抽候選（今天剩 ${p.n} 次）`,
