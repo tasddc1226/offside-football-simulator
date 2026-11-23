@@ -1,4 +1,5 @@
 import { REMOVE_ADS_PRODUCT_ID } from '@offside/contracts/cup';
+import { MEMBERSHIP_PRODUCT_ID, type MembershipOffer } from '@offside/contracts/membership';
 import { markPurchaseRefund } from '../db/repos/adFreePurchases.js';
 // ───────── 인앱 상품 환불 회수 (T-11-215) ─────────
 // 소모성 상품을 환불받고도 아이템을 계속 쓰지 못하게, 스토어가 알려 준 환불 거래의 아이템을 회수한다(이용약관 1항).
@@ -21,6 +22,10 @@ const log = (job: string, fields: Record<string, unknown>) =>
 /** 회수 결과 로그(선수명·토큰 원문 없이 거래 id 끝자리만). */
 const summary = (r: IapRevoke) =>
   r.found ? { already: r.already, item: r.item, qty: r.qty, revoked: r.revoked } : { found: false };
+
+/** Apple 거래의 offerType을 매출 집계의 할인 종류로. 신규 구독자 할인(1) · 윈백(4)만 할인가로 센다. */
+export const appleOffer = (offerType: number | undefined): MembershipOffer | null =>
+  offerType === 1 ? 'intro' : offerType === 4 ? 'winback' : null;
 
 export type AppleNotifyResult = 'invalid' | 'ignored' | 'revoked' | 'member';
 
@@ -80,6 +85,7 @@ export async function handleAppleNotification(
                 : 'purchase',
           productId: tx.productId,
           test: tx.environment === 'Sandbox',
+          offer: tx.productId === MEMBERSHIP_PRODUCT_ID ? appleOffer(tx.offerType) : null,
         },
         now,
       );

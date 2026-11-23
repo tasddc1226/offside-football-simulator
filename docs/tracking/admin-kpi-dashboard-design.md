@@ -59,6 +59,9 @@ ADMIN_EMAILS가 여러 개여도 Access 정책이 1명만 통과시킨다. 대�
 | `members_expired`       | 스토어                       | T-11-577 `memberships.until` 그날(지금 끝난 묶음, 다시 결제하면 날이 옮겨 간다)                                                                             |
 | `members_autorenew_off` | 스토어                       | T-11-577 어제 끝에 유효하고 `auto_renew = 0`(지금 상태라 어제만, `active`처럼)                                                                              |
 | `member_intro`          | `스토어_군_항목`             | T-11-774 첫 달 할인 실험 대상(2026-11-21 뒤 앱 스토어 첫 구독)의 지금까지 합. apple · google × offer · control × new · off · due · kept(지금 상태라 어제만) |
+| `members_krw`           | 스토어                       | T-11-780 멤버십 결제 추정 원화(가입 · 갱신 − 환불). 첫 달 할인 2,900 · 윈백 2,200 · 그 밖 4,900                                                             |
+| `iap_product_count`     | 상품 id                      | T-11-780 그날 팔린 아이템 묶음 수(시험 · 환불 제외)                                                                                                         |
+| `iap_product_buyers`    | 상품 id                      | T-11-780 그날 그 상품을 산 사람 수                                                                                                                          |
 | `client_errors`         | 플랫폼                       | T-11-577 `client_errors.count` 그날 합                                                                                                                      |
 | `cup_entries`           | `all`                        | 컵 참가 수(접수 기간 날만)                                                                                                                                  |
 

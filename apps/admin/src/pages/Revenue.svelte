@@ -19,6 +19,7 @@
   const rev30 = loader<AdminRevenue>(() => '/v1/admin/revenue?days=30', () => tick);
   const avg = (krw: number, n: number) => (n ? `결제 건당 ${fmt(krw / n, 'krw')}` : '');
   const MEMBER_EMPTY = '멤버십 흐름은 다음 일일 수집(04:00)부터 보여요.';
+  const PRODUCT_EMPTY = '상품별 판매는 이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
   const WEBPAY_EMPTY = '웹 결제 주문은 이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
   const ADS_EMPTY = '자리별 시청은 이번 배포 뒤 다음 일일 수집(04:00)부터 보여요.';
   const ADMOB_SPLIT_EMPTY = '형식 · 단위별 수익은 이번 배포 뒤 다음 AdMob 수집(08:50)부터 보여요.';
@@ -129,6 +130,18 @@
           )}
         />
         <StackedBars title="아이템 구매자 (스토어별)" days={v.days} series={byDim(v, 'iap_buyers')} empty={KPI_EMPTY} />
+        <StackedBars
+          title="아이템 판매 수 (상품별)"
+          days={v.days}
+          series={byDim(v, 'iap_product_count').map((s) => ({ ...s, label: productLabel(s.key) }))}
+          empty={PRODUCT_EMPTY}
+        />
+        <StackedBars
+          title="아이템 구매자 (상품별)"
+          days={v.days}
+          series={byDim(v, 'iap_product_buyers').map((s) => ({ ...s, label: productLabel(s.key) }))}
+          empty={PRODUCT_EMPTY}
+        />
         <StackedBars title="광고 수익 (AdMob)" unit="krw" days={v.days} series={byDim(v, 'ad_revenue_krw')} empty="AdMob 수집이 붙으면 보여요." />
       </div>
       <p class="note">매출은 상품별 한국 정가 기준 추정이에요(스토어 환산 · 수수료 전). 광고 제거는 판매 시각의 가격으로 세요.</p>

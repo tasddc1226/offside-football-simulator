@@ -3,15 +3,19 @@ import { MEMBERSHIP_INTRO_CONTROL_PCT, MEMBERSHIP_PRICE_KRW } from '@offside/con
 import { valueOn } from './kpi.ts';
 import type { KpiView } from './kpi-page.ts';
 
-/** 그날 스토어 매출(정가 추정) = 아이템 + 광고 제거 + 시즌 패스 + 스타터팩 + 멤버십(새 가입 · 갱신 × 정가). 하나도 없으면 null. */
+/**
+ * 그날 스토어 매출(한국 기준가 추정) = 아이템 + 광고 제거 + 시즌 패스 + 스타터팩 + 멤버십. 하나도 없으면 null.
+ * 멤버십은 `members_krw`(결제 알림 금액, 첫 달 할인은 할인가)를 쓰고, 그 값이 수집되기 전 날은 새 가입 · 갱신 × 정가로 어림한다.
+ */
 export function storeKrwOn(v: KpiView, day: string) {
   const parts = ['iap_krw', 'ad_free_krw', 'pass_krw', 'starter_krw'].map((m) =>
     valueOn(v.idx, day, m),
   );
+  const paid = valueOn(v.idx, day, 'members_krw');
   const members = ['members_new', 'members_renewed'].map((m) => valueOn(v.idx, day, m));
-  if ([...parts, ...members].every((x) => x === null)) return null;
+  if ([...parts, paid, ...members].every((x) => x === null)) return null;
   const sum = (xs: (number | null)[]) => xs.reduce<number>((s, x) => s + (x ?? 0), 0);
-  return sum(parts) + sum(members) * MEMBERSHIP_PRICE_KRW;
+  return sum(parts) + (paid ?? sum(members) * MEMBERSHIP_PRICE_KRW);
 }
 
 /** DAU: GA4가 있으면 GA4, 없으면 운영 DB 접속 프로필(채널 합). */

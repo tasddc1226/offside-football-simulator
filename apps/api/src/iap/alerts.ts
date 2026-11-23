@@ -1,7 +1,7 @@
 import { IAP_PRODUCTS, type IapProductId } from '@offside/contracts';
 import { SEASON_PASS_PRODUCT_ID } from '@offside/contracts/season-pass';
 import { STARTER_PACK_PRODUCT_ID } from '@offside/contracts/starter-pack';
-import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
+import { MEMBERSHIP_PRODUCT_ID, type MembershipOffer } from '@offside/contracts/membership';
 import { billing as ko } from '../i18n/ko/billing.js';
 import { billing as en } from '../i18n/en/billing.js';
 import type { Bindings } from '../env.js';
@@ -13,6 +13,8 @@ export type BillingAlert = {
   kind: 'purchase' | 'renewal' | 'refund' | 'test';
   productId: string;
   test: boolean;
+  /** 멤버십 결제가 할인가였으면 그 종류(매출 집계용). 알림 식별자에는 넣지 않는다. */
+  offer?: MembershipOffer | null;
 };
 const enabled = (env: Bindings) => env.BILLING_ALERTS_ENABLED === '1';
 
@@ -29,10 +31,18 @@ export async function recordBillingAlert(env: Bindings, event: BillingAlert, now
   if (!enabled(env)) return;
   const id = await billingAlertId(event);
   await env.DB.prepare(
-    `INSERT INTO billing_alerts (id, store, kind, product_id, test, created_at)
-    VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
+    `INSERT INTO billing_alerts (id, store, kind, product_id, test, created_at, offer)
+    VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT DO NOTHING`,
   )
-    .bind(id, event.store, event.kind, event.productId.slice(0, 200), event.test ? 1 : 0, now)
+    .bind(
+      id,
+      event.store,
+      event.kind,
+      event.productId.slice(0, 200),
+      event.test ? 1 : 0,
+      now,
+      event.offer ?? null,
+    )
     .run();
   // D1 is the durable outbox; the five-minute recovery job handles a failed enqueue.
   if (env.BILLING_QUEUE)

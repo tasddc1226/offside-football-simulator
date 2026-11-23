@@ -6,7 +6,7 @@ import {
 } from '@offside/contracts';
 import { SEASON_PASS_PRODUCT_ID, SEASON_PASS_PRICE_KRW } from '@offside/contracts/season-pass';
 import { STARTER_PACK_PRICE_KRW, STARTER_PACK_PRODUCT_ID } from '@offside/contracts/starter-pack';
-import { MEMBERSHIP_PRODUCT_ID, MEMBERSHIP_PRICE_KRW } from '@offside/contracts/membership';
+import { MEMBERSHIP_ALERT_PRICE_SQL, MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import type { Db } from '../client.js';
 
 const RECENT_LIMIT = 30;
@@ -53,8 +53,8 @@ const PURCHASES = `WITH purchases AS (
   SELECT store, product_id, NULL, created_at,
     CASE WHEN kind = 'refund' THEN created_at END,
     CASE WHEN kind = 'refund' THEN 0 ELSE 1 END,
-    CASE WHEN kind = 'refund' THEN -${MEMBERSHIP_PRICE_KRW} ELSE ${MEMBERSHIP_PRICE_KRW} END,
-    ${MEMBERSHIP_PRICE_KRW}
+    CASE WHEN kind = 'refund' THEN -1 ELSE 1 END * ${MEMBERSHIP_ALERT_PRICE_SQL},
+    ${MEMBERSHIP_ALERT_PRICE_SQL}
   FROM billing_alerts WHERE test = 0 AND product_id = '${MEMBERSHIP_PRODUCT_ID}'
     AND kind IN ('purchase', 'renewal', 'refund')
 ), ads AS (
