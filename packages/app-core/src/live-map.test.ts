@@ -66,6 +66,22 @@ describe('홈 라이브 지도 (T-11-815)', () => {
     expect(spots[0]!.r / spots[2]!.r).toBeLessThan(158 / 57);
   });
 
+  it('한 나라가 크게 앞서도 점이 이웃 나라를 덮지 않는다(운영 11-23 분포)', () => {
+    const spots = liveSpots(
+      map([
+        ['고교 리그', 1228],
+        ['K리그1', 65],
+        ['프리미어리그', 157],
+        ['J1리그', 72],
+      ]),
+    );
+    const kr = spots.find((s) => s.code === 'ICN')!;
+    const jp = spots.find((s) => s.code === 'HND')!;
+    expect(kr.r).toBe(9);
+    expect(Math.hypot(kr.x - jp.x, kr.y - jp.y)).toBeGreaterThan(kr.r + jp.r);
+    expect(Math.min(...spots.map((s) => s.r))).toBeGreaterThanOrEqual(2.6);
+  });
+
   it('모르는 리그는 한국으로, 지도가 없으면 점도 없다', () => {
     expect(spotOfLeague('없는 리그')).toBe('ICN');
     expect(liveSpots(null)).toEqual([]);
