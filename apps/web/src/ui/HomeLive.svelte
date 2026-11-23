@@ -63,6 +63,42 @@
 
   const ago = (at: string) => agoKo(now + skew - Date.parse(at));
 
+  // T-11-815 라이브 지도. 육지 점 데이터가 커서(첫 화면 번들 밖) 응답에 지도가 있을 때만 따로 불러온다.
+  type MapMod = typeof import('@offside/app-core/live-map');
+  let mapMod = $state.raw<MapMod | null>(null);
+  let mapLoading = false;
+  /** 사용자가 고른 나라(공항 코드). 새 시즌 소식이 들어오면 비워 그 소식의 나라를 따라간다. */
+  let picked = $state<string | null>(null);
+  const liveMap = $derived(data?.map ?? null);
+  const spots = $derived(mapMod ? mapMod.liveSpots(liveMap) : []);
+  const drawn = $derived([...spots].reverse());
+  const sel = $derived(mapMod ? mapMod.pickSpot(spots, feed, picked) : undefined);
+  const selLatest = $derived(mapMod && sel ? mapMod.latestIn(feed, sel.code) : undefined);
+  /** 가장 최근 시즌 소식이 난 나라 — 그 점에서 고리가 퍼진다. */
+  const pingCode = $derived.by(() => {
+    const e = feed.find((x) => x.kind === 'season');
+    return mapMod && e && e.kind === 'season' ? mapMod.spotOfLeague(e.league) : null;
+  });
+  const dots = $derived(mapMod ? mapMod.liveMapDots() : null);
+  const nfmt = (n: number) => n.toLocaleString('en-US');
+  /** 제목 문장을 숫자 앞뒤로 나눈다 — 숫자만 크게 그리되 언어마다 다른 어순은 사전을 따른다. */
+  const headline = $derived.by(() => {
+    if (!liveMap) return ['', ''];
+    const n = nfmt(liveMap.careers);
+    const text = L.mapHeadline({ n });
+    const i = text.indexOf(n);
+    return i < 0 ? [`${text} `, ''] : [text.slice(0, i), text.slice(i + n.length)];
+  });
+  $effect(() => {
+    if (!liveMap || mapMod || mapLoading) return;
+    mapLoading = true;
+    import('@offside/app-core/live-map')
+      .then((m) => (mapMod = m))
+      .catch(() => {
+        mapLoading = false;
+      });
+  });
+
   async function load() {
     const r = await getLive();
     if (!r.ok) {
@@ -80,6 +116,7 @@
     const next = applyPush(live, e);
     if (next === live) return;
     live = next;
+    if (e.kind === 'season') picked = null;
     shifting = false;
     now = Date.now();
   }
@@ -146,6 +183,63 @@
         </button>
       {/if}
     </div>
+    <!-- T-11-815 라이브 지도. 응답 전에도 자리를 잡아 둔다(지도가 늦게 끼어들면 아래가 밀린다). 지도 없는 응답이면 접는다. -->
+    {#if !data || liveMap}
+      <!-- 머리 · 지도 판 · 칩 줄이 응답 전부터 같은 높이를 잡는다(지도 모듈이 늦게 와도 아래가 밀리지 않는다). -->
+      <div class="live-map" data-live-map={sel ? '' : undefined}>
+        <div class="live-map-head">
+          {#if liveMap}
+            <p>{headline[0]}<b class="num">{nfmt(liveMap.careers)}</b>{headline[1]}</p>
+            <small>{L.mapSub({ nations: liveMap.nations, countries: spots.length || liveMap.leagues.length })}</small>
+          {/if}
+        </div>
+        <div class="live-map-board">
+          {#if mapMod && dots && spots.length}
+            <svg
+              viewBox="0 0 {mapMod.LIVE_MAP_W} {mapMod.LIVE_MAP_H}"
+              role="img"
+              aria-label={L.mapA11y({ countries: spots.length, n: nfmt(liveMap?.careers ?? 0) })}
+            >
+              <path class="live-map-land" d={dots.d} stroke-width={dots.w} />
+              {#each drawn as s (s.code)}
+                {#if s.code === pingCode && motionOK}
+                  <circle class="live-map-ping" cx={s.x} cy={s.y} r={s.r} />
+                {/if}
+                <circle class="live-map-spot" class:on={s.code === sel?.code} cx={s.x} cy={s.y} r={s.r} />
+              {/each}
+            </svg>
+            {#if sel}
+              {#key sel.code}
+                <div
+                  class="live-map-bubble"
+                  class:flip={sel.x > mapMod.LIVE_MAP_W * 0.62}
+                  class:below={sel.y < mapMod.LIVE_MAP_H * 0.45}
+                  style:left="{(sel.x / mapMod.LIVE_MAP_W) * 100}%"
+                  style:top="{(sel.y / mapMod.LIVE_MAP_H) * 100}%"
+                  aria-live="polite"
+                >
+                  <b>{L.spotCount({ country: sel.country, n: sel.n })}</b>
+                  <span>{selLatest ? `${who(selLatest)} ${what(selLatest)}` : L.spotEmpty}</span>
+                </div>
+              {/key}
+            {/if}
+          {/if}
+        </div>
+        <div class="live-map-chips">
+          {#if mapMod}
+            {#each spots.slice(0, 6) as s (s.code)}
+              <button
+                class:on={s.code === sel?.code}
+                aria-pressed={s.code === sel?.code}
+                aria-label={L.spotA11y({ country: s.country, n: s.n })}
+                data-live-spot={s.code}
+                onclick={() => (picked = s.code)}
+              >{s.country} <b class="num">{s.n}</b></button>
+            {/each}
+          {/if}
+        </div>
+      </div>
+    {/if}
     {#if !data}
       <!-- 자리표시·실패 안내도 숫자 칸과 티커 높이(3줄)를 그대로 잡아 둔다. 실패하면 30초 재조회를 기다린다. -->
       <div class="live-stats">

@@ -11,6 +11,15 @@ const ko = {
   pauseTitle: '일시정지',
   resumeTitle: '다시 재생',
   failed: '지금은 현황을 불러오지 못했어요. 잠시 뒤 다시 확인할게요.',
+  // T-11-815 라이브 지도.
+  mapHeadline: (p: { n: string }) => `${p.n}명이 지금 뛰고 있어요`,
+  mapSub: (p: { nations: number; countries: number }) =>
+    `국적 ${p.nations}개 · ${p.countries}개 나라 · 최근 24시간`,
+  mapA11y: (p: { countries: number; n: string }) =>
+    `지금 ${p.countries}개 나라에서 ${p.n}명이 뛰고 있어요`,
+  spotA11y: (p: { country: string; n: number }) => `${p.country} ${p.n}명`,
+  spotCount: (p: { country: string; n: number }) => `${p.country} · ${p.n}명`,
+  spotEmpty: '지금 이곳에서 시즌을 치르는 중이에요',
   whatRetire: (p: { score: number }) => `은퇴 · 레전드 점수 ${p.score}`,
   whatFirst: (p: { club: string }) => `${p.club}에서 첫 시즌을 마쳤어요`,
   whatHonor: (p: { honor: string; club: string }) => `${p.honor} · ${p.club}`,

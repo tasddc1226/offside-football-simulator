@@ -7054,6 +7054,166 @@ button.film-raiser:focus-visible {
   font-size: var(--fs-caption2);
   color: var(--muted);
 }
+/* T-11-815 라이브 지도. 피치 색 판 위에 육지 점과 나라 점. 응답 전에도 같은 높이를 잡아 둔다. */
+.live-map {
+  position: relative;
+  background: var(--pitch);
+  color: var(--on-pitch);
+  border-radius: var(--radius-md);
+  padding: 12px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.live-map-head {
+  min-height: 48px;
+}
+.live-map-head p {
+  margin: 0;
+  font-size: var(--fs-body2);
+  font-weight: 600;
+}
+.live-map-head b {
+  font-family: var(--display);
+  font-size: 2rem;
+  line-height: 1;
+  color: var(--pitch-accent);
+  margin-right: 2px;
+}
+.live-map-head small {
+  display: block;
+  font-size: var(--fs-caption2);
+  opacity: 0.78;
+}
+.live-map-board {
+  position: relative;
+  /* app-core live-map의 LIVE_MAP_W × LIVE_MAP_H(live-map.test.ts가 고정). */
+  aspect-ratio: 320 / 132;
+}
+.live-map-board svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+.live-map-land {
+  fill: none;
+  stroke: var(--on-pitch);
+  stroke-linecap: round;
+  opacity: 0.2;
+}
+.live-map-spot {
+  fill: var(--pitch-accent);
+  fill-opacity: 0.78;
+  stroke: var(--pitch);
+  stroke-width: 0.8;
+  transition: fill-opacity 0.2s;
+}
+.live-map-spot.on {
+  fill-opacity: 1;
+  stroke: var(--on-pitch);
+  stroke-width: 1.4;
+}
+/* 퍼지는 고리는 transform·opacity만 움직인다(합성 레이어). */
+.live-map-ping {
+  fill: var(--pitch-accent);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: live-map-ping 1.8s ease-out infinite;
+  pointer-events: none;
+}
+@keyframes live-map-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  75%,
+  100% {
+    transform: scale(3.2);
+    opacity: 0;
+  }
+}
+.live-map-bubble {
+  position: absolute;
+  transform: translate(-14px, calc(-100% - 10px));
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  box-shadow: 0 4px 14px rgba(8, 14, 11, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-width: 220px;
+  pointer-events: none;
+  animation: live-map-rise 0.3s ease-out;
+}
+.live-map-bubble.flip {
+  transform: translate(calc(-100% + 14px), calc(-100% - 10px));
+}
+/* 위쪽 나라(유럽 등)는 말풍선을 점 아래로 — 위로 띄우면 제목을 가린다. */
+.live-map-bubble.below {
+  transform: translate(-14px, 12px);
+}
+.live-map-bubble.flip.below {
+  transform: translate(calc(-100% + 14px), 12px);
+}
+.live-map-bubble b {
+  font-size: var(--fs-caption2);
+  color: var(--accent-text);
+}
+.live-map-bubble span {
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+@keyframes live-map-rise {
+  from {
+    opacity: 0;
+    margin-top: 6px;
+  }
+}
+.live-map-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin: 2px -12px 0;
+  padding: 0 12px;
+  min-height: 32px;
+}
+.live-map-chips button {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--chalk);
+  background: transparent;
+  color: var(--on-pitch);
+  font: inherit;
+  font-size: var(--fs-caption);
+  cursor: pointer;
+}
+.live-map-chips button.on {
+  background: var(--pitch-accent);
+  border-color: var(--pitch-accent);
+  color: var(--accent-ink);
+}
+.live-map-chips b {
+  font-family: var(--display);
+  font-size: var(--fs-body2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-map-ping,
+  .live-map-bubble {
+    animation: none;
+  }
+}
 .live-rows-wrap {
   --row: 44px;
   height: calc(var(--row) * 3);

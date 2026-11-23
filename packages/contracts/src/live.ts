@@ -52,11 +52,27 @@ export const LiveStatsSchema = z.strictObject({
 });
 export type LiveStats = z.infer<typeof LiveStatsSchema>;
 
+/**
+ * T-11-815 홈 라이브 지도. 최근 24시간에 시즌을 올린 진행 중 커리어를 마지막 시즌의 리그로 센 값이다. 서버가 15분마다
+ * 굳혀 두고(app_meta) 조회는 그 한 행만 읽는다. 국적이 빈 커리어는 대한민국으로 센다.
+ */
+export const LiveMapSchema = z.strictObject({
+  /** 집계한 시각. */
+  at: z.string(),
+  careers: z.number().int().nonnegative(),
+  nations: z.number().int().nonnegative(),
+  /** 리그 이름(저장값, 한국어)별 인원. 많은 순. */
+  leagues: z.array(z.strictObject({ league: z.string(), n: z.number().int().positive() })),
+});
+export type LiveMap = z.infer<typeof LiveMapSchema>;
+
 /** `GET /v1/live`. feed는 최신순. 최근 1시간이 한산하면 24시간, 그래도 비면 7일까지 넓혀 채운다. */
 export const LiveResponseSchema = z.strictObject({
   now: z.string(),
   stats: LiveStatsSchema,
   feed: z.array(LiveEventSchema),
+  /** T-11-815 아직 집계 전이면 null, 구버전 응답엔 없다. */
+  map: LiveMapSchema.nullable().optional(),
 });
 export type LiveResponse = z.infer<typeof LiveResponseSchema>;
 

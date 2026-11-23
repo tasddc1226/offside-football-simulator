@@ -1,0 +1,30 @@
+{
+  "id": "live-world-map-20261123",
+  "title": "홈 라이브 세계 지도",
+  "items": [
+    "홈의 '지금 오프사이드에서는'에 작은 세계 지도가 생겼어요. 최근 24시간 동안 시즌을 치른 선수들이 어느 나라 리그에서 뛰고 있는지 점으로 보여 줘요.",
+    "아래 나라 버튼을 누르면 그 나라에서 뛰는 인원과 가장 최근 소식을 볼 수 있어요."
+  ],
+  "en": {
+    "title": "Live world map on Home",
+    "items": [
+      "\"Right now on OFFSIDE\" on Home now has a small world map. Dots show which countries' leagues are home to players who played a season in the last 24 hours.",
+      "Tap a country button below the map to see how many players are there and the latest news from that country."
+    ]
+  },
+  "ja": {
+    "title": "ホームのライブ世界地図",
+    "items": [
+      "ホームの「いまのOFFSIDE」に小さな世界地図が加わりました。直近24時間にシーズンを過ごした選手が、どの国のリーグでプレーしているかを点で表示します。",
+      "地図の下の国ボタンを押すと、その国でプレーしている人数と最新ニュースを確認できます。"
+    ]
+  },
+  "zh": {
+    "title": "首頁即時世界地圖",
+    "items": [
+      "首頁的「此刻的 OFFSIDE」加入了一張小型世界地圖，以圓點顯示最近 24 小時打完賽季的球員正在哪些國家的聯賽比賽。",
+      "點選地圖下方的國家按鈕，即可查看在該國比賽的人數和最新消息。"
+    ]
+  },
+  "availability": "web-app"
+}
