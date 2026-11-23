@@ -181,7 +181,7 @@
               {@const played = t.record.w + t.record.d + t.record.l}
               <li value={t.rank} class:mine={t.teamId === myTeam} aria-current={t.teamId === myTeam ? 'true' : undefined}>
                 <button class="team-standings-columns team-standings-row" data-rank-team={t.teamId} aria-label={L.teamRowAria({ rank: t.rank, name: t.name, played: n(played), w: n(t.record.w), d: n(t.record.d), l: n(t.record.l), metric: metricLabel, value: metricOf(t), form: formText(t.recentForm) })} onclick={() => open(t.teamId)}>
-                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span>{#if t.division !== undefined}<span class="team-standings-div" title={divisionName(t.division)}><DivisionEmblem division={t.division} size={14} /></span>{/if}<span class="team-standings-logo"><TeamLogo logo={t.logo} name={t.name} size={24} decorative />{#if t.title}<span class="team-standings-title"><TitleBadge title={t.title} size="icon" /></span>{/if}</span><b title={t.name}>{t.name}</b><SupporterBadge tier={t.supporter} compact /></span>
+                  <span class="team-standings-team"><span class="team-standings-rank num">{t.rank}</span>{#if t.division !== undefined}<span class="team-standings-div" title={divisionName(t.division)}><DivisionEmblem division={t.division} size={14} /></span>{/if}<span class="team-standings-logo"><TeamLogo logo={t.logo} name={t.name} size={24} decorative />{#if t.title}<span class="team-standings-title"><TitleBadge title={t.title} size="icon" /></span>{/if}<SupporterBadge tier={t.supporter} compact class="team-standings-sup" /></span><b title={t.name}>{t.name}</b></span>
                   <span class="num" title={L.playedTitle({ n: n(played) })}>{n(played)}</span>
                   <span class="num" title={L.winTitle({ n: n(t.record.w) })}>{n(t.record.w)}</span>
                   <span class="num" title={L.drawTitle({ n: n(t.record.d) })}>{n(t.record.d)}</span>
@@ -321,6 +321,14 @@
     position: absolute;
     right: -7px;
     bottom: -6px;
+    line-height: 0;
+  }
+  /* T-11-819 서포터 휘장도 로고 위 모서리에 얹는다(이름 칸 폭을 먹으면 휘장 없는 줄에는 들어가던 이름이 잘린다). */
+  .team-standings-logo :global(.team-standings-sup) {
+    position: absolute;
+    top: -7px;
+    right: -6px;
+    margin: 0;
     line-height: 0;
   }
   .team-standings-rank {
