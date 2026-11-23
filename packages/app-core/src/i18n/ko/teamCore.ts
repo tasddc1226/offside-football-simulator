@@ -32,6 +32,8 @@ const ko = {
   achTeamFitHint: '유스 선수 없이 11명 모두 적합도 1.00이어야 해요',
   achLevel: (p: { level: number; cur: string }) => `${p.level}단계 · ${p.cur}`,
   achNext: (p: { next: string }) => ` · NEXT ${p.next}`,
+  /** T-11-817 단계 업적의 다음 단계를 넘으면 오르는 업적 점수(NEXT 뒤에 붙는다). */
+  achNextWorth: (p: { n: string }) => ` (+${p.n}점)`,
   achMaxLevel: ' · 최고 단계',
   achDone: '달성 완료',
   achUndone: '미달성',

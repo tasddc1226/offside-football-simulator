@@ -374,11 +374,16 @@ const achHint = (id: string): string | undefined =>
         : undefined;
 
 /** 업적 한 줄의 오른쪽 표시. */
-export function achState(i: ClubAchievement): string {
+/** worth: false면 다음 단계 점수를 붙이지 않는다('다음 목표' 묶음은 오른쪽에 +점수를 따로 보인다). */
+export function achState(i: ClubAchievement, { worth = true }: { worth?: boolean } = {}): string {
   if (i.level !== undefined)
     return (
       L.achLevel({ level: i.level, cur: `${num(i.cur ?? 0)}${i.unit ?? ''}` }) +
-      (i.next != null ? L.achNext({ next: num(i.next) }) : L.achMaxLevel)
+      (i.next != null
+        ? L.achNext({ next: num(i.next) }) +
+          // T-11-817 다음 단계를 넘으면 오르는 점수(오른쪽 칸은 단계를 넘으면 모은 점수로 바뀌어 다음 점수가 안 보였다).
+          (worth && i.worth > 0 ? L.achNextWorth({ n: num(i.worth) }) : '')
+        : L.achMaxLevel)
     );
   if (i.max !== undefined) return `${i.cur ?? 0} / ${i.max}`;
   if (i.done) return L.achDone;

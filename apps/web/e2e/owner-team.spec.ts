@@ -879,7 +879,8 @@ test('시즌 업적 — 등급·점수·랭킹 순위, 분류별 단계 묶음�
   if (process.env.SHOT) await first.screenshot({ path: process.env.SHOT });
   const records = box.locator('[data-ach-group="records"]');
   await records.locator('summary').click();
-  await expect(records).toContainText('2단계 · 370골 · NEXT 1,000');
+  // T-11-817 다음 단계를 넘으면 오르는 점수(worth)가 NEXT 뒤에 붙는다.
+  await expect(records).toContainText('2단계 · 370골 · NEXT 1,000 (+40점)');
   await box.locator('[data-ach-cat="owner"]').click();
   await expect(box.locator('[data-ach-group="owner"]')).toContainText('공개 닉네임 정하기');
   await expect(box.locator('[data-ach-group="first"]')).toHaveCount(0);

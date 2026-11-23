@@ -1,0 +1,26 @@
+{
+  "id": "ach-next-worth-20261123",
+  "title": "업적 다음 단계 점수 표시",
+  "items": [
+    "골 · 출전처럼 단계가 있는 업적에 다음 단계를 넘으면 오르는 업적 점수를 'NEXT 1,000 (+40점)'처럼 함께 보여 줘요."
+  ],
+  "en": {
+    "title": "Next-level points on achievements",
+    "items": [
+      "Tiered achievements such as goals and appearances now show how many achievement points the next level adds, like \"NEXT 1,000 (+40 pts)\"."
+    ]
+  },
+  "ja": {
+    "title": "実績の次の段階のポイント表示",
+    "items": [
+      "ゴールや出場のような段階のある実績に、次の段階に届くと増える実績ポイントを「NEXT 1,000 (+40pt)」のように表示します。"
+    ]
+  },
+  "zh": {
+    "title": "成就下一階分數顯示",
+    "items": [
+      "入球、出場等分階成就，現在會以「NEXT 1,000 (+40 分)」的方式顯示達到下一階可增加的成就分數。"
+    ]
+  },
+  "availability": "web-app"
+}

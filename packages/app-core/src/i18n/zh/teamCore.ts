@@ -27,6 +27,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achTeamFitHint: '不使用青訓球員，11 人適性全部為 1.00',
   achLevel: (p) => `第 ${p.level} 階 · ${p.cur}`,
   achNext: (p) => ` · NEXT ${p.next}`,
+  achNextWorth: (p) => ` (+${p.n} 分)`,
   achMaxLevel: ' · 最高階',
   achDone: '已達成',
   achUndone: '未達成',
