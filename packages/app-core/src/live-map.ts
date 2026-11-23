@@ -60,9 +60,16 @@ export interface LiveSpot {
   leagues: { league: string; n: number }[];
   x: number;
   y: number;
-  /** 점 반지름(viewBox 단위). 인원의 제곱근에 비례 — 큰 나라가 작은 나라를 덮지 않게 넓이로 센다. */
+  /** 점 반지름(viewBox 단위). 가장 많은 나라 대비 인원의 제곱근(넓이로 센다), R_MIN ~ R_MAX. */
   r: number;
 }
+
+/**
+ * 점 반지름 범위. 운영 첫 집계(11-23)에서 한국이 1,385명(고교 리그 1,228)이라 인원의 제곱근을 그대로 쓰면 반지름 23으로
+ * 일본(15 떨어짐)을 덮었다. 가장 많은 나라를 R_MAX로 두고 나머지는 그 비율로 줄인다(서울 · 도쿄 점이 겹치지 않는 크기).
+ */
+const R_MIN = 2.6,
+  R_MAX = 9;
 
 /** 리그별 인원을 나라 점으로 모은다. 많은 순(그릴 때는 뒤집어 작은 점이 위에 오게 한다). */
 export function liveSpots(map: LiveMap | null | undefined): LiveSpot[] {
@@ -80,8 +87,9 @@ export function liveSpots(map: LiveMap | null | undefined): LiveSpot[] {
     s.n += n;
     s.leagues.push({ league, n });
   }
+  const max = Math.max(1, ...[...by.values()].map((s) => s.n));
   return [...by.values()]
-    .map((s) => ({ ...s, r: r1(2.6 + Math.sqrt(s.n) * 0.55) }))
+    .map((s) => ({ ...s, r: r1(R_MIN + (R_MAX - R_MIN) * Math.sqrt(s.n / max)) }))
     .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code));
 }
 
