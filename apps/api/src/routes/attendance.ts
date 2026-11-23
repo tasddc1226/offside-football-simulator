@@ -6,7 +6,9 @@ import {
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import { attendanceOf, checkIn, claimAttendanceAdBonus } from '../db/repos/attendance.js';
+import { claimSeasonGift } from '../db/repos/iap.js';
 import { isMember } from '../db/repos/memberships.js';
+import { pendingTenureGifts, tenureOf } from '../db/repos/memberTenure.js';
 import { getDb, type AppEnv } from '../env.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireProfile } from '../middleware/requireProfile.js';
@@ -32,13 +34,32 @@ export function registerAttendanceRoutes(app: Hono<AppEnv>) {
     const db = getDb(c);
     const now = nowIso();
     // T-11-512 클럽 멤버십 구독 중이면 이번 출석 보상을 2배로, T-11-517 잠재력 강화권 1장을 더 준다.
-    const member = await isMember(db, me.id, now);
+    const [member, tenure] = await Promise.all([
+      isMember(db, me.id, now),
+      tenureOf(db, me.id, now),
+    ]);
     const done = await checkIn(db, me.id, now, member);
     if (!done) throw conflictError(cupKo('attendanceChecked'), 'ATTENDANCE_CHECKED');
+    // T-11-818 연속 구독 개월 선물: 출석하는 날 아직 받지 않은 달 것을 함께 준다(하루 한 번이라 홈에 요청을 더하지 않는다).
+    // 받은 기록(gift_claims)이 두 번 주지 않게 막는다. 실패해도 출석은 그대로 끝낸다(다음 출석 때 다시 준다).
+    const tenureGifts: { months: number; boost: number; scout: number }[] = [];
+    if (member && tenure && tenure.months >= 2) {
+      try {
+        for (const g of await pendingTenureGifts(db, me.id, tenure))
+          if (await claimSeasonGift(db, me.id, g.id, g, now))
+            tenureGifts.push({ months: g.months, boost: g.boost, scout: g.scout });
+      } catch (e) {
+        console.error(JSON.stringify({ level: 'error', job: 'tenure-gift', error: String(e) }));
+      }
+    }
     return ok(
       c,
       AttendanceCheckInResponseSchema,
-      { ...done, attendance: { ...done.attendance, member } },
+      {
+        ...done,
+        attendance: { ...done.attendance, member },
+        ...(tenureGifts.length ? { tenureGifts } : {}),
+      },
       200,
       NO_STORE,
     );

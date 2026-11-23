@@ -10,6 +10,7 @@ import {
   MEMBER_MANAGE_URL,
   memberPerks,
   memberStatusText,
+  memberTenureView,
 } from '@offside/app-core/membership-view';
 import { membershipText as L } from '@offside/app-core/i18n/ko/membership';
 import { settingsText as SL } from '@offside/app-core/i18n/ko/settings';
@@ -51,6 +52,7 @@ export function Membership({ onClose }: { onClose: () => void }) {
 
   const m = s.state;
   const line = m ? memberStatusText(m) : null;
+  const tenure = m ? memberTenureView(m) : null;
 
   return (
     <PopSheet label={L.title} step={m ? 'member' : 'load'} testID="membership" onClose={onClose}>
@@ -74,11 +76,33 @@ export function Membership({ onClose }: { onClose: () => void }) {
                     <Txt tone="onPitch" bold style={{ flex: 1 }}>
                       {m.active ? L.active : L.lead}
                     </Txt>
-                    {m.active ? <Pill tone="good">{L.badge}</Pill> : null}
+                    {tenure ? (
+                      <View
+                        testID="member-supporter"
+                        accessible
+                        accessibilityLabel={tenure.pill.label}
+                      >
+                        <Pill tone="good">{tenure.pill.text}</Pill>
+                      </View>
+                    ) : null}
                   </View>
+                  {tenure?.streak ? (
+                    <Txt tone="onPitch" testID="member-streak" style={{ fontSize: rem(0.875) }}>
+                      {tenure.streak}
+                    </Txt>
+                  ) : null}
                   {line ? (
                     <Txt tone="onPitch" style={{ fontSize: rem(0.875), opacity: 0.85 }}>
                       {line}
+                    </Txt>
+                  ) : null}
+                  {tenure?.next ? (
+                    <Txt
+                      tone="onPitch"
+                      testID="member-next-gift"
+                      style={{ fontSize: rem(0.875), opacity: 0.85 }}
+                    >
+                      {tenure.next}
                     </Txt>
                   ) : null}
                 </PitchCard>

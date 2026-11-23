@@ -24,7 +24,7 @@ import {
   TEAM_NAME_MIN,
   TEAM_STATS_MATCHES_MAX,
 } from './owner-team.js';
-import { IsoUtcSchema } from './primitives.js';
+import { IsoUtcSchema, supporterField } from './primitives.js';
 import { CARD_SPECIAL_KINDS } from './card-special.js';
 import { TeamCoachSchema } from './manager.js';
 import { TEAM_DIVISION_TOP } from './team-division.js';
@@ -269,6 +269,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   founder: z.boolean().optional(),
   /** T-11-512 클럽 멤버십 서포터(구독 중). 배포 전 응답엔 없다. */
   member: z.boolean().optional(),
+  /** T-11-818 서포터 뱃지 단계(구독 중일 때만). */
+  supporter: supporterField,
   /** T-11-150 내 대표 칭호(구단주 탭 닉네임 옆). 달지 않았으면 null, 배포 전 응답엔 없다. */
   ownerTitle: titleField,
   /**
@@ -334,6 +336,8 @@ export const TeamOpponentSchema = z.strictObject({
   record: TeamRecordSchema,
   /** T-11-150 구단주 대표 칭호. */
   title: titleField,
+  /** T-11-818 서포터 뱃지 단계(구독 중일 때만). */
+  supporter: supporterField,
   /** T-11-627 경기 전 예상(내 팀 기준 정수 %, 합 100). 시즌 2 자동 매칭의 한 팀에만 온다. */
   odds: z
     .strictObject({
@@ -748,6 +752,8 @@ export const TeamRankItemSchema = z.strictObject({
     .default([]),
   /** T-11-150 구단주 대표 칭호. */
   title: titleField,
+  /** T-11-818 서포터 뱃지 단계(구독 중일 때만). */
+  supporter: supporterField,
 });
 export type TeamRankItem = z.infer<typeof TeamRankItemSchema>;
 
@@ -805,6 +811,8 @@ export const AchRankItemSchema = z.strictObject({
   players: count,
   /** T-11-150 구단주 대표 칭호. */
   title: titleField,
+  /** T-11-818 서포터 뱃지 단계(구독 중일 때만). */
+  supporter: supporterField,
 });
 export type AchRankItem = z.infer<typeof AchRankItemSchema>;
 
@@ -913,6 +921,8 @@ export const TeamProfileSchema = z.strictObject({
   leagueHonors: z.array(LeagueHonorSchema).optional(),
   /** T-11-150 이 팀 구단주의 대표 칭호. */
   ownerTitle: titleField,
+  /** T-11-818 서포터 뱃지 단계(구독 중일 때만). */
+  supporter: supporterField,
   /** T-11-167 구단주의 공개 닉네임(업적 랭킹에 보이는 이름, 닉네임 신고 대상). 없으면 null, 배포 전 응답엔 없다. */
   ownerNickname: z.string().nullable().optional(),
   /**

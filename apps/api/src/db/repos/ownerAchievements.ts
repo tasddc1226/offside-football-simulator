@@ -124,6 +124,7 @@ export async function listAchievementRanking(db: Db, season: number, page: numbe
   const [rows, [total]] = await db.batch([
     db
       .select({
+        profileId: ownerAchievements.profileId,
         score: ownerAchievements.score,
         done: ownerAchievements.done,
         players: ownerAchievements.players,

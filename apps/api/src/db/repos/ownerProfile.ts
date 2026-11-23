@@ -1,5 +1,6 @@
 // T-11-150 구단주 프로필 — 시즌을 넘어 쌓이는 기록을 모은다. 끝난 시즌은 마감 때 굳힌 결산(owner_season_records), 지금
 // 시즌은 지금 업적 점수(owner_achievements)와 지금 팀 순위를 쓴다.
+import { supportersOf } from './memberTenure.js';
 import type { OwnerProfile } from '@offside/contracts';
 import { achTierByRank } from '@offside/contracts/owner-team';
 import { ownerTierOf } from '@offside/contracts/owner-tier';
@@ -27,7 +28,7 @@ export async function ownerProfileOf(
 ): Promise<OwnerProfile> {
   const id = profile.id;
   const current = teamSeasonAt(now);
-  const [tiers, cupHonors, leagueHonors, teams, records, [live], [rn], [retired]] =
+  const [tiers, cupHonors, leagueHonors, teams, records, [live], [rn], [retired], supporters] =
     await Promise.all([
       // T-11-489 굳힌 시즌마다 티어(시즌 2부터 상위 비율) — 지난 시즌 티어도 여기서 고른다.
       ownerTierHistoryOfProfile(db, id, now),
@@ -67,6 +68,8 @@ export async function ownerProfileOf(
             isNotNull(careers.peak),
           ),
         ),
+      // T-11-818 서포터 뱃지 단계(구독 중일 때만, PK 한 번).
+      supportersOf(db, [id], now),
     ]);
   const tierOf = new Map(tiers.map((t) => [t.season, t.tier]));
   const last = lastClosedSeason(now);
@@ -103,6 +106,7 @@ export async function ownerProfileOf(
     nickname: profile.nickname,
     avatarId: profile.avatarId ?? null,
     title: profile.title,
+    ...(supporters.has(id) ? { supporter: supporters.get(id)! } : {}),
     tier,
     team: latest
       ? {

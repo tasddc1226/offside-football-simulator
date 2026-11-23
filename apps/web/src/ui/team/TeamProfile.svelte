@@ -31,6 +31,7 @@
   import CupHonors from '../cup/CupHonors.svelte';
   import TeamComments from './TeamComments.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
+  import SupporterBadge from '../SupporterBadge.svelte';
   import { ownerProfileText as LO } from '@offside/app-core/i18n/ko/ownerProfile';
   import { appState } from '../state.svelte.js';
   import { num as n, recordText } from '@offside/app-core/teamText';
@@ -184,6 +185,7 @@
             {#if team.ownerNickname}<span data-team-owner>{L.profOwner}<b class="tp-manager">{team.ownerNickname}</b></span>{/if}
           {/if}
           {#if team.ownerTitle}<TitleBadge title={team.ownerTitle} size="sm" />{/if}
+          <SupporterBadge tier={team.supporter} data-team-supporter />
         </span>
         <span class="tp-people-go muted fs-sm">{LO.open} ›</span>
       </button>

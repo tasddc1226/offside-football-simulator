@@ -2601,6 +2601,21 @@ export const memberships = sqliteTable(
 );
 
 /**
+ * T-11-818 멤버십 연속 구독(구단주마다 한 줄). since = 끊기지 않은 구독이 시작된 시각, until = 그 구단주의 모든 구독 중 가장 늦은
+ * 혜택 끝(memberships의 max(until)과 같다). 구독 줄이 바뀔 때마다(구매 · 스토어 알림 · 웹 결제 · 환불) 같이 고친다
+ * (repos/memberTenure.ts). 혜택이 끝난 뒤 며칠(TENURE_GAP) 안에 다시 이어지지 않으면 since를 새로 시작한다. 연속 개월 수와
+ * 서포터 뱃지 단계 · 개월 선물은 since · until로 센다.
+ */
+export const memberTenure = sqliteTable('member_tenure', {
+  profileId: text('profile_id')
+    .primaryKey()
+    .references(() => profiles.id, { onDelete: 'cascade' }),
+  since: text('since').notNull(),
+  until: text('until').notNull(),
+  updatedAt: text('updated_at').notNull(),
+});
+
+/**
  * T-11-661 신고 한 줄 보기. 이름 · 채팅 · 게시판 댓글 · 팀 댓글 신고는 대상마다 표가 다르지만(댓글 신고는 댓글이 지워지면
  * 함께 지워지는 외래키가 있다) 읽을 때는 같은 모양이다. 새 신고 알림 · 운영 도구는 이 보기 하나를 읽는다. 쓰기는 각 표로 한다.
  * source: name · chat · board_comment · team_comment. 댓글 신고는 처리 시각이 없다(resolved_at NULL).

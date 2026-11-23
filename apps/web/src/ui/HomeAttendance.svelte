@@ -11,6 +11,7 @@
     ITEM_MARK,
     markAttendancePopup,
     rewardText,
+    tenureGiftLines,
   } from '@offside/app-core/attendance-view';
   import { attendanceText as L } from '@offside/app-core/i18n/ko/attendance';
   import { claimHomePopup, passHomePopup } from '@offside/app-core/homePopup';
@@ -26,6 +27,8 @@
   // T-11-440 누른 칸(그날 보상을 글로 보인다)과 방금 받은 아이템(쓰는 곳 안내 · 내 구단 버튼).
   let picked = $state<number | null>(null);
   let got = $state<string | null>(null);
+  // T-11-818 출석 때 같이 받은 연속 구독 개월 선물 줄.
+  let gifts = $state<string[]>([]);
   let open = $state(false);
   let busy = $state(false);
   // 응답을 못 받아 다시 누르면 같은 키로 보내 서버가 두 번 주지 않는다. 출석이 끝나면 새 키(다음 날 누름)로 바꾼다.
@@ -60,6 +63,7 @@
       playSfx('reward');
       card = { kind: 'owner', att: r.data.attendance };
       got = rewardText(r.data.granted);
+      gifts = tenureGiftLines(r.data.tenureGifts);
       toast(L.stamped({ n: r.data.attendance.stamps, reward: rewardText(r.data.granted) }));
     } else if (r.error.reason === 'ATTENDANCE_CHECKED') {
       card = { kind: 'owner', att: { ...att, checkedIn: true } };
@@ -133,6 +137,7 @@
         {#if got}
           <div class="ha-got" role="status" data-attendance-got>
             <b class="fs-sm">{L.got({ reward: got })}</b>
+            {#each gifts as g (g)}<b class="fs-sm good" data-attendance-tenure-gift>{g}</b>{/each}
             <span class="muted fs-xs">{L.useHint}</span>
           </div>
           <button class="btn btn-block" data-act="attendance-to-owner" onclick={() => { open = false; goRerollShop(); }}>{L.toOwner}</button>

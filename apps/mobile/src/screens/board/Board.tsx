@@ -1,5 +1,6 @@
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { GoogleLoginButton } from '../../ui/GoogleLoginButton';
+import { SupporterBadge } from '../../ui/SupporterBadge';
 // T-10-011 소식 화면(웹 Board.svelte) — 공지사항·릴리즈 노트 게시판. 읽기는 누구나, 글은 관리자만(수정·삭제 포함),
 // 댓글은 로그인하고 닉네임을 정한 사람만(T-10-028). 글 본문은 app-core/boardText의 약속("## 소제목", "- 목록", 줄바꿈)만 읽는다.
 // 남의 댓글은 누구나 신고하고 작성자를 차단한다(앱스토어 UGC 정책) — 신고한 댓글·차단한 사람의 댓글은 서버가 빼고 준다.
@@ -515,6 +516,7 @@ export default function Board() {
                             <Txt bold>{cm.nickname}</Txt>
                             {cm.tier ? <TierBadge tag={cm.tier} /> : null}
                             {cm.title ? <TitleBadge title={cm.title} size="sm" /> : null}
+                            <SupporterBadge tier={cm.supporter} small />
                           </>
                         )}
                         <Txt tone="muted" style={small}>

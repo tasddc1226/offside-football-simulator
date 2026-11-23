@@ -2,6 +2,7 @@
 // 좋아요/조회수 · 팀 히스토리 배지. 누구나 본다. 남의 팀을 열면 조회수를 한 번 올린다(내 팀은 세지 않는다).
 // 웹의 '← 랭킹'(BackBar)은 화면(Hof)이 아래 고정 막대로 그린다.
 import { scrollTo, scrollY } from '../../../ui/scroll';
+import { SupporterBadge } from '../../../ui/SupporterBadge';
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
@@ -309,6 +310,7 @@ export default function TeamProfile({ id }: { id: string }) {
                   </>
                 )}
                 {team.ownerTitle ? <TitleBadge title={team.ownerTitle} size="sm" /> : null}
+                <SupporterBadge tier={team.supporter} testID="team-supporter" />
               </View>
               <Txt tone="muted" style={{ fontSize: rem(FONT.label) }}>
                 {`${LO.open} ›`}

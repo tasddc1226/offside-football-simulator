@@ -10,7 +10,7 @@ import {
   POST_TITLE_MAX,
   POST_VERSION_MAX,
 } from './board-limits.js';
-import { IsoUtcSchema } from './primitives.js';
+import { IsoUtcSchema, supporterField } from './primitives.js';
 import { OwnerTitleSchema } from './teams.js';
 import { OwnerTierTagSchema } from './season-recap.js';
 
@@ -129,6 +129,8 @@ export const CommentSchema = z.object({
   tier: OwnerTierTagSchema.nullable().default(null),
   /** T-11-150 작성자의 대표 칭호(owner-title.ts id). 옛 서버 응답엔 없다. */
   title: OwnerTitleSchema.nullable().default(null),
+  /** T-11-818 서포터 뱃지 단계(구독 중일 때만). */
+  supporter: supporterField,
   /** 보는 사람이 지울 수 있다(본인 댓글이거나 관리자) — 이런 댓글엔 신고·차단 버튼을 그리지 않는다. */
   deletable: z.boolean(),
   createdAt: IsoUtcSchema,

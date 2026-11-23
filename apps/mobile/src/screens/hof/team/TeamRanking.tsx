@@ -1,6 +1,7 @@
 // T-10-092 라이브 랭킹(팀 랭킹, 웹 team/TeamRanking.svelte) — 기록실 탭. 선수가 한 명 이상 있는 구단주 팀을 시즌별로
 // 레이팅(경기 결과) 또는 팀 OVR 순으로 보여 주고, 줄을 누르면 팀 프로필(appState.hof.team)을 연다. 서버가 5분마다 새로 센다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { SupporterBadge } from '../../../ui/SupporterBadge';
 import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -366,6 +367,7 @@ export default function TeamRanking() {
                   <Txt bold numberOfLines={1} style={{ flex: 1, fontSize: 13 }}>
                     {t.name}
                   </Txt>
+                  <SupporterBadge tier={t.supporter} small />
                 </View>
                 {[t.record.w + t.record.d + t.record.l, t.record.w, t.record.d, t.record.l].map(
                   (value, i) => (

@@ -11,7 +11,13 @@ export const membership: Translation<MembershipMsgs> = {
   perkAds: '広告なし',
   perkAdsSub: '購読中は広告を見ずに報酬を受け取れます。',
   perkBadge: 'サポーターバッジ',
-  perkBadgeSub: 'マイクラブとフレンド一覧で、名前の横にサポーターバッジが付きます。',
+  perkBadgeSub:
+    'クラブ・ランキング・フレンド・コメントで、名前の横にサポーターバッジが付きます。3・6・9か月連続でバッジが変わります。',
+  perkTenure: '連続加入ギフト',
+  perkTenureSub:
+    '2か月目から、出席すると毎月ギフトを受け取れます。潜在能力強化券が毎月1枚ずつ増えて最大6枚、3か月ごとにプレミアムスカウト券も1枚もらえます。',
+  streak: (p) => `${p.months}か月連続で加入中です`,
+  nextGift: (p) => `${p.months}か月目のギフト · ${p.reward}`,
   join: (p) => `月額${p.price}で加入する`,
   joinIntro: (p) =>
     p.months === 1 ? `初月${p.price}で加入する` : `最初の${p.months}か月は月額${p.price}で加入する`,
@@ -41,10 +47,8 @@ export const membership: Translation<MembershipMsgs> = {
   loadFail: 'メンバーシップを読み込めませんでした。',
   retry: '再読み込み',
   entry: 'クラブメンバーシップ',
-  entrySub: '出席2倍 · 毎日潜在能力強化券 · 広告なし · サポーターバッジ',
+  entrySub: '出席2倍 · 毎日潜在能力強化券 · 広告なし · 連続加入ギフト',
   entryActive: '利用中',
-  badge: 'サポーター',
-  badgeLabel: 'クラブメンバーシップ サポーター',
   back: 'オーナー画面へ',
   adHint: 'メンバーシップなら広告なしで受け取れます',
   adHintGo: 'メンバーシップを見る',

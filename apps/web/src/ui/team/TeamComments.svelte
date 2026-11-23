@@ -21,6 +21,7 @@
   import OwnerAvatar from '../OwnerAvatar.svelte';
   import TierBadge from '../TierBadge.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
+  import SupporterBadge from '../SupporterBadge.svelte';
 
   let { teamId }: { teamId: string } = $props();
 
@@ -105,7 +106,7 @@
       <div class="board-comment" data-comment={c.id}>
         <div class="row" style="gap:6px;align-items:center">
           <!-- 관리자 댓글은 닉네임 대신 운영자 배지만. -->
-          <OwnerAvatar avatarId={c.avatarId} name={c.nickname} />{#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{c.nickname}</b>{#if c.tier}<TierBadge tag={c.tier} />{/if}{#if c.title}<TitleBadge title={c.title} size="sm" />{/if}{/if}
+          <OwnerAvatar avatarId={c.avatarId} name={c.nickname} />{#if c.admin}<b class="pill good">{ADMIN_NICKNAME}</b>{:else}<b>{c.nickname}</b>{#if c.tier}<TierBadge tag={c.tier} />{/if}{#if c.title}<TitleBadge title={c.title} size="sm" />{/if}<SupporterBadge tier={c.supporter} class="sup-xs" />{/if}
           <span class="muted fs-xs">{dateOf(c.createdAt)}</span>
           {#if c.deletable}<button class="icon-btn board-comment-del" onclick={() => remove(c)}>{LB.remove}</button>
           {:else if !c.admin}<button class="icon-btn board-comment-del" aria-expanded={reporting === c.id} data-act="comment-report" onclick={() => (reporting = reporting === c.id ? null : c.id)}>{LB.report}</button>{/if}

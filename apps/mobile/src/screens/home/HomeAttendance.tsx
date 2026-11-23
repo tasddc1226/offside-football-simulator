@@ -18,6 +18,7 @@ import {
   ITEM_MARK,
   markAttendancePopup,
   rewardText,
+  tenureGiftLines,
 } from '@offside/app-core/attendance-view';
 import { claimHomePopup, passHomePopup } from '@offside/app-core/homePopup';
 import { attendanceText as L } from '@offside/app-core/i18n/ko/attendance';
@@ -51,6 +52,8 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
   // T-11-440 누른 칸(그날 보상을 글로 보인다)과 방금 받은 아이템(쓰는 곳 안내 · 내 구단 버튼).
   const [picked, setPicked] = useState<number | null>(null);
   const [got, setGot] = useState<string | null>(null);
+  // T-11-818 출석 때 같이 받은 연속 구독 개월 선물 줄.
+  const [gifts, setGifts] = useState<string[]>([]);
   // 응답을 못 받아 다시 누르면 같은 키로 보내 서버가 두 번 주지 않는다. 출석이 끝나면 새 키(다음 날 누름)로 바꾼다.
   const key = useRef(crypto.randomUUID());
   // T-11-720 광고 보고 한 번 더 받기. 광고를 끝까지 봤는데 응답을 못 받았으면(earned) 다시 누를 때 광고 없이 같은 키로 보낸다.
@@ -99,6 +102,7 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
       playSfx('reward');
       setCard({ kind: 'owner', att: r.data.attendance });
       setGot(rewardText(r.data.granted));
+      setGifts(tenureGiftLines(r.data.tenureGifts));
       toast(L.stamped({ n: r.data.attendance.stamps, reward: rewardText(r.data.granted) }));
     } else if (r.error.reason === 'ATTENDANCE_CHECKED') {
       setCard({ kind: 'owner', att: { ...att, checkedIn: true } });
@@ -337,6 +341,11 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
                     <Txt v="sm" bold>
                       {L.got({ reward: got })}
                     </Txt>
+                    {gifts.map((g) => (
+                      <Txt key={g} v="sm" bold tone="good" testID="attendance-tenure-gift">
+                        {g}
+                      </Txt>
+                    ))}
                     <Txt v="xs" tone="muted">
                       {L.useHint}
                     </Txt>

@@ -10,6 +10,7 @@ export const attendance: Translation<AttendanceMsgs> = {
   todayLabel: "Today's reward",
   tomorrowLabel: "Tomorrow's reward",
   memberBonus: 'Membership doubles your check-in reward and adds a potential boost ticket',
+  tenureGot: (p) => `${p.months}-month streak gift · ${p.reward}`,
   grace:
     "Check in every day to get that day's reward. Missed days keep your stamps, and missing one day a week keeps your streak.",
   btn: 'Check in',

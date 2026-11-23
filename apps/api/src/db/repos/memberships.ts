@@ -3,6 +3,7 @@ import { WEB_MEMBERSHIP_DAYS, WEB_PAY_STORE } from '@offside/contracts';
 import { and, desc, eq, gt, inArray } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { memberships } from '../schema.js';
+import { noteTenure } from './memberTenure.js';
 
 export type MembershipChain = {
   store: 'apple' | 'google' | 'xsolla';
@@ -42,7 +43,10 @@ export async function bindMembership(db: Db, profileId: string, m: MembershipCha
       .prepare('SELECT profile_id FROM memberships WHERE store = ? AND chain_id = ?')
       .bind(m.store, m.chainId),
   ]);
-  return owner?.results[0]?.profile_id === profileId;
+  const mine = owner?.results[0]?.profile_id === profileId;
+  // T-11-818 연속 구독을 같이 맞춘다(구독 줄이 늘거나 당겨졌을 수 있다).
+  if (mine) await noteTenure(db, profileId, now);
+  return mine;
 }
 
 /** 서버 알림: 이미 묶인 구독만 고친다(구단주는 바꾸지 않는다). 고친 줄의 구단주, 모르는 구독이면 null. */
@@ -63,6 +67,7 @@ export async function updateMembership(db: Db, m: MembershipChain) {
       m.verifiedAt,
     )
     .first<{ profile_id: string }>();
+  if (row) await noteTenure(db, row.profile_id, m.verifiedAt);
   return row?.profile_id ?? null;
 }
 
@@ -134,7 +139,10 @@ export async function revokeWebMembership(db: Db, xsollaOrderId: string, now: st
     )
     .bind(now, now, WEB_PAY_STORE, xsollaOrderId, now)
     .first<{ profile_id: string }>();
-  if (cut) return { found: true, already: false };
+  if (cut) {
+    await noteTenure(db, cut.profile_id, now);
+    return { found: true, already: false };
+  }
   const seen = await d1
     .prepare('SELECT 1 AS one FROM memberships WHERE store = ? AND chain_id = ?')
     .bind(WEB_PAY_STORE, xsollaOrderId)

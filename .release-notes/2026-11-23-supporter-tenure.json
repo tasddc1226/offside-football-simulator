@@ -1,0 +1,30 @@
+{
+  "id": "t-11-818-supporter-tenure",
+  "title": "서포터 뱃지 단계 · 연속 구독 선물",
+  "items": [
+    "클럽 멤버십 서포터 뱃지가 팀 프로필 · 구단주 프로필 · 랭킹 · 매칭 상대 · 댓글에도 붙어요. 이어서 구독한 지 3 · 6 · 9개월이 되면 뱃지 색과 글자가 바뀌어요.",
+    "2개월째부터는 출석할 때 달마다 연속 구독 선물을 받아요. 잠재력 강화권이 한 달에 1장씩 늘어 6장까지, 3개월마다 프리미엄 스카우트권도 1장 받아요. 멤버십 화면에서 연속 개월과 다음 선물을 볼 수 있어요."
+  ],
+  "en": {
+    "title": "Supporter badge tiers and streak gifts",
+    "items": [
+      "The Club Membership supporter badge now also shows on team profiles, owner profiles, rankings, match opponents and comments. Its color and label change at 3, 6 and 9 months in a row.",
+      "From your 2nd month, you get a streak gift every month when you check in. Boost tickets grow by 1 each month up to 6, and every 3rd month adds 1 premium scout ticket. The membership screen shows your streak and next gift."
+    ]
+  },
+  "ja": {
+    "title": "サポーターバッジの段階と連続加入ギフト",
+    "items": [
+      "クラブメンバーシップのサポーターバッジが、チームプロフィール・オーナープロフィール・ランキング・対戦相手・コメントにも付くようになりました。続けて加入して3・6・9か月になると、バッジの色と文字が変わります。",
+      "2か月目からは、出席すると毎月連続加入ギフトを受け取れます。潜在能力強化券が毎月1枚ずつ増えて最大6枚、3か月ごとにプレミアムスカウト券も1枚もらえます。メンバーシップ画面で連続月数と次のギフトを確認できます。"
+    ]
+  },
+  "zh": {
+    "title": "支持者徽章等級與連續訂閱禮物",
+    "items": [
+      "俱樂部會員的支持者徽章現在也會顯示在球隊檔案、球隊老闆檔案、排行榜、對戰對手與留言中。連續訂閱滿 3、6、9 個月時，徽章的顏色與文字會改變。",
+      "從第 2 個月起，每月簽到時可領取連續訂閱禮物。潛力強化券每月多 1 張，最多 6 張；每 3 個月另送 1 張高級球探券。可在會員畫面查看連續月數與下一份禮物。"
+    ]
+  },
+  "availability": "web-app"
+}

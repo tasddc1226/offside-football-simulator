@@ -5,9 +5,11 @@ import {
   successEnvelope,
 } from '@offside/contracts';
 import { checkInReward } from '@offside/contracts/attendance';
+import { supporterTier, tenureGiftAt, tenureMonths } from '@offside/contracts/membership';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createDb } from '../db/client.js';
-import { memberships } from '../db/schema.js';
+import { giftClaims, memberships, memberTenure } from '../db/schema.js';
+import { noteTenure } from '../db/repos/memberTenure.js';
 import { handleAppleNotification } from '../iap/refunds.js';
 import { handleGoogleRtdn } from '../iap/rtdn.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
@@ -162,6 +164,114 @@ describe('T-11-512 클럽 멤버십', () => {
       await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
     );
     expect(team.data.member).toBe(true);
+  });
+
+  it('T-11-818 연속 개월은 30일+5일로 세고, 뱃지는 1 · 3 · 6 · 9개월, 선물은 2개월째부터 달마다 늘어난다', () => {
+    const since = '2026-08-01T00:00:00.000Z';
+    expect(tenureMonths(since, '2026-09-01T00:00:00.000Z', NOW)).toBe(0); // 끝난 구독
+    expect(tenureMonths(NOW, '2026-12-01T00:00:00.000Z', NOW)).toBe(1);
+    // 첫 결제가 조금 늦게 묶여도(29일) 한 달로 센다. 결제 유예 16일은 다음 달로 세지 않는다.
+    expect(tenureMonths('2026-11-02T00:00:00.000Z', '2026-12-01T00:00:00.000Z', NOW)).toBe(1);
+    expect(tenureMonths(since, '2026-12-01T00:00:00.000Z', NOW)).toBe(4);
+    expect([0, 1, 2, 3, 5, 6, 8, 9, 30].map(supporterTier)).toEqual([null, 1, 1, 3, 3, 6, 6, 9, 9]);
+    expect(tenureGiftAt(1)).toBeNull();
+    expect([2, 3, 4, 6, 9].map(tenureGiftAt)).toEqual([
+      { boost: 2, scout: 0 },
+      { boost: 3, scout: 1 },
+      { boost: 4, scout: 0 },
+      { boost: 6, scout: 1 },
+      { boost: 6, scout: 1 },
+    ]);
+  });
+
+  it('T-11-818 구독이 이어지면 시작을 지키고, 7일 넘게 끊겼다가 다시 오면 새로 세며, 환불은 끝만 당긴다', async () => {
+    const me = await issueCookie(ctx);
+    const db = createDb(ctx.env.DB);
+    const row = (until: string, chainId = 'c1') => ({
+      store: 'apple',
+      chainId,
+      profileId: me.profileId,
+      until,
+      autoRenew: true,
+      verifiedAt: NOW,
+      createdAt: NOW,
+    });
+    const tenure = async () =>
+      (await ctx.db.select().from(memberTenure)).map((t) => [t.since, t.until])[0];
+    await ctx.db.insert(memberships).values(row('2026-12-01T00:00:00.000Z'));
+    await noteTenure(db, me.profileId, NOW);
+    expect(await tenure()).toEqual([NOW, '2026-12-01T00:00:00.000Z']);
+
+    // 갱신(끝나기 전 · 끝난 뒤 7일 안)은 이어 센다.
+    await ctx.db.update(memberships).set({ until: '2027-01-01T00:00:00.000Z' });
+    await noteTenure(db, me.profileId, '2026-12-05T00:00:00.000Z');
+    expect(await tenure()).toEqual([NOW, '2027-01-01T00:00:00.000Z']);
+
+    // 환불로 끝이 당겨지면 끝만 바꾼다.
+    await ctx.db.update(memberships).set({ until: '2026-12-20T00:00:00.000Z' });
+    await noteTenure(db, me.profileId, '2026-12-20T00:00:00.000Z');
+    expect(await tenure()).toEqual([NOW, '2026-12-20T00:00:00.000Z']);
+
+    // 끝나고 7일이 넘어 새 구독(새 체인)이 오면 그때부터 다시 센다.
+    const later = '2027-01-10T00:00:00.000Z';
+    await ctx.db.insert(memberships).values(row('2027-02-10T00:00:00.000Z', 'c2'));
+    await noteTenure(db, me.profileId, later);
+    expect(await tenure()).toEqual([later, '2027-02-10T00:00:00.000Z']);
+  });
+
+  it('T-11-818 출석하면 못 받은 개월 선물을 한 번에 주고 다시 주지 않으며, 멤버십 · 내 구단 응답에 서포터 단계가 붙는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const since = '2026-08-01T00:00:00.000Z';
+    await ctx.db.insert(memberships).values({
+      store: 'apple',
+      chainId: 'c1',
+      profileId: me.profileId,
+      until: '2026-12-01T00:00:00.000Z',
+      autoRenew: true,
+      verifiedAt: NOW,
+      createdAt: since,
+    });
+    await ctx.db.insert(memberTenure).values({
+      profileId: me.profileId,
+      since,
+      until: '2026-12-01T00:00:00.000Z',
+      updatedAt: NOW,
+    });
+
+    expect(await state(me.cookie)).toMatchObject({
+      active: true,
+      months: 4,
+      supporter: 3,
+      nextGift: { months: 5, boost: 5, scout: 0 },
+    });
+    const checkIn = async () =>
+      CheckInRes.parse(
+        await (
+          await call('POST', '/v1/attendance/check-in', {
+            cookie: me.cookie,
+            headers: { 'Idempotency-Key': crypto.randomUUID() },
+          })
+        ).json(),
+      ).data;
+    const first = await checkIn();
+    expect(first.tenureGifts).toEqual([
+      { months: 2, boost: 2, scout: 0 },
+      { months: 3, boost: 3, scout: 1 },
+      { months: 4, boost: 4, scout: 0 },
+    ]);
+    expect((await ctx.db.select().from(giftClaims)).map((g) => g.giftId).sort()).toEqual([
+      'mm:2026-08-01:2',
+      'mm:2026-08-01:3',
+      'mm:2026-08-01:4',
+    ]);
+
+    vi.setSystemTime(new Date('2026-11-03T00:00:00.000Z'));
+    expect((await checkIn()).tenureGifts).toBeUndefined();
+
+    const team = TeamRes.parse(
+      await (await call('GET', '/v1/owner-team', { cookie: me.cookie })).json(),
+    );
+    expect(team.data).toMatchObject({ member: true, supporter: 3 });
   });
 
   it('Apple 서버 알림: 앱보다 먼저 온 가입을 구단주 표시로 묶고, 환불되면 바로 혜택을 끈다', async () => {

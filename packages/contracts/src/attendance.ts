@@ -24,6 +24,13 @@ export type Attendance = z.infer<typeof AttendanceSchema>;
 export const AttendanceCheckInResponseSchema = z.strictObject({
   attendance: AttendanceSchema,
   granted: z.strictObject({ reroll: Count, boost: Count, scout: Count, rename: Count }),
+  /**
+   * T-11-818 이번 출석 때 함께 받은 멤버십 개월 선물(연속 months개월째). granted에 더하지 않은 별도 아이템이다. 받을 게 없거나
+   * 배포 전 응답엔 없다. 놓친 달이 있으면 그 달 것도 함께 온다(오래된 달부터).
+   */
+  tenureGifts: z
+    .array(z.strictObject({ months: z.number().int().min(2), boost: Count, scout: Count }))
+    .optional(),
 });
 export type AttendanceCheckInResponse = z.infer<typeof AttendanceCheckInResponseSchema>;
 

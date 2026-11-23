@@ -122,6 +122,7 @@ import { shellInstallGuide } from './shellInstallGuide';
 import { shellLogin } from './shellLogin';
 import { shellMore } from './shellMore';
 import { starterPack } from './starterPack';
+import { supporter } from './supporter';
 import { teamAch } from './teamAch';
 import { teamCore } from './teamCore';
 import { teamDivision } from './teamDivision';
@@ -260,6 +261,7 @@ export const en = {
   shellLogin,
   shellMore,
   starterPack,
+  supporter,
   teamAch,
   teamCore,
   teamDivision,

@@ -2,6 +2,7 @@
 // 읽기는 누구나, 쓰기는 구글(iOS는 Apple도)로 로그인하고 닉네임을 정한 사람만. 남의 댓글은 신고하고 작성자를 차단한다
 // (앱스토어 UGC 정책) — 신고한 댓글·차단한 사람의 댓글은 서버가 빼고 준다. 지우기·신고·차단·차단 해제는 게시판 댓글 API 그대로.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { SupporterBadge } from '../../../ui/SupporterBadge';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -202,6 +203,7 @@ export function TeamComments({ teamId }: { teamId: string }) {
                       <Txt bold>{cm.nickname}</Txt>
                       {cm.tier ? <TierBadge tag={cm.tier} /> : null}
                       {cm.title ? <TitleBadge title={cm.title} size="sm" /> : null}
+                      <SupporterBadge tier={cm.supporter} small />
                     </>
                   )}
                   <Txt tone="muted" style={small}>

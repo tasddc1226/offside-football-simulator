@@ -2,6 +2,7 @@
 // 기록을 한곳에: 대표 칭호와 지난 시즌 등급, 지금 팀, 영구결번 · 은퇴 선수 · 최고 팀 순위, 컵 트로피, 시즌별 업적 점수와 팀 순위.
 // '← 이전으로'는 화면(Hof)이 아래 막대로 그린다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { SupporterBadge } from '../../../ui/SupporterBadge';
 import { useCallback, useEffect, useState } from 'react';
 import { View } from 'react-native';
 import {
@@ -140,6 +141,7 @@ export default function OwnerProfile({ teamId }: { teamId: string }) {
                   {name}
                 </Txt>
                 {owner.title ? <TitleBadge title={owner.title} /> : null}
+                <SupporterBadge tier={owner.supporter} testID="owner-supporter" />
               </View>
             </View>
             <View

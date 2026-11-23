@@ -43,6 +43,7 @@
   import GradeEmblem from './team/GradeEmblem.svelte';
   import { ownerProfileText as H } from '@offside/app-core/i18n/ko/ownerProfile';
   import TitleBadge from './cup/TitleBadge.svelte';
+  import SupporterBadge from './SupporterBadge.svelte';
   import { webPay } from './cup/webPay.svelte.js';
   import { askLockerFocus } from './team/lockerFocus.js';
 
@@ -172,7 +173,7 @@
       <div class="owner-id">
         <OwnerAvatar avatarId={accountCache.value && accountCache.value !== 'error' ? accountCache.value.avatarId : null} name={nickname ?? L.avatarInitial} size={48} />
         <div class="owner-who">
-          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}{#if card?.member}<span class="pill good owner-founder" title={MB.badgeLabel} data-owner-member>{MB.badge}</span>{/if}</b>
+          <b>{#if tierTag}<span class="owner-last-tier" title={tierTitle(tierTag)} data-owner-crest={tierTag.tier}><GradeEmblem id={tierTag.tier} size={24} /></span>{/if}{guest ? L.guestName : (nickname ?? L.title)}{#if card?.title}<span class="owner-founder"><TitleBadge title={card.title} size="sm" /></span>{/if}{#if card?.member}<SupporterBadge tier={card.supporter} member class="owner-founder" data-owner-member />{/if}</b>
           <span class="muted fs-sm">{guest ? L.guestSub : L.title}</span>
         </div>
         {#if linked && accountCache.value && accountCache.value !== 'error'}<OwnerProfileEditor profile={accountCache.value} {admin} />{/if}

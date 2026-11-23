@@ -11,7 +11,13 @@ export const membership: Translation<MembershipMsgs> = {
   perkAds: 'No ads',
   perkAdsSub: 'While subscribed, you get ad rewards without watching ads.',
   perkBadge: 'Supporter badge',
-  perkBadgeSub: 'A supporter badge appears next to your name on your club and in friend lists.',
+  perkBadgeSub:
+    'A supporter badge appears next to your name on clubs, rankings, friends and comments. It changes at 3, 6 and 9 months in a row.',
+  perkTenure: 'Streak gifts',
+  perkTenureSub:
+    'From your 2nd month, you get a gift every month when you check in. Boost tickets grow by 1 each month up to 6, and every 3rd month adds 1 premium scout ticket.',
+  streak: (p) => `Subscribed ${p.months} ${p.months === 1 ? 'month' : 'months'} in a row`,
+  nextGift: (p) => `Month ${p.months} gift · ${p.reward}`,
   join: (p) => `Join for ${p.price}/month`,
   joinIntro: (p) =>
     p.months === 1
@@ -44,10 +50,8 @@ export const membership: Translation<MembershipMsgs> = {
   loadFail: "Couldn't load the membership.",
   retry: 'Try again',
   entry: 'Club membership',
-  entrySub: 'Double check-in · Daily potential boost ticket · No ads · Supporter badge',
+  entrySub: 'Double check-in · Daily potential boost ticket · No ads · Streak gifts',
   entryActive: 'Active',
-  badge: 'Supporter',
-  badgeLabel: 'Club membership supporter',
   back: 'Back to owner',
   adHint: 'Members get this without ads',
   adHintGo: 'See membership',
