@@ -2,17 +2,29 @@
 // 펼친다. 광고 버튼 · 보상 흐름은 건드리지 않는다: 저절로 뜨지 않고, 광고를 누른 뒤에 끼어들지 않는다. '멤버십 보기'는 내 구단
 // 화면의 멤버십 창으로 간다(가입 · 가격 · 자동 갱신 안내 · 복원은 그 창이 한다). 광고 없이 받는 사람(광고 제거 · 멤버십)에게는
 // 부르는 쪽이 그리지 않는다(rewardOffer가 'ad'일 때만).
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform, View } from 'react-native';
 import { membershipText as L } from '@offside/app-core/i18n/ko/membership';
 import { MEMBERSHIP_IOS_LIVE, MEMBERSHIP_LIVE } from '@offside/contracts/membership';
 import { goMembership } from '../game/nav';
+import { offerHint } from '../platform/offerHint';
 import { Btn, Txt } from '../ui';
 
 const LIVE = MEMBERSHIP_LIVE && (Platform.OS !== 'ios' || MEMBERSHIP_IOS_LIVE);
 
-export function MemberAdHint({ place, onGo }: { place: string; onGo?: () => void }) {
+export function MemberAdHint({
+  place,
+  onGo,
+}: {
+  place: 'attendance' | 'boost';
+  onGo?: () => void;
+}) {
   const [open, setOpen] = useState(false);
+  // T-11-779 보임 · 펼침 · 접음 · 멤버십 보기 계측(화면 · 이동은 그대로). 보임은 실행마다 곳별 한 번만 나간다.
+  const hint = `member_${place}` as const;
+  useEffect(() => {
+    if (LIVE) offerHint('view', hint);
+  }, [hint]);
   if (!LIVE) return null;
   return (
     <View style={{ gap: 6 }} testID={`member-hint-${place}`}>
@@ -21,7 +33,11 @@ export function MemberAdHint({ place, onGo }: { place: string; onGo?: () => void
         kind="ghost"
         testID={`member-hint-${place}-toggle`}
         accessibilityState={{ expanded: open }}
-        onPress={() => setOpen((o) => !o)}
+        onPress={() => {
+          if (open) offerHint('close', hint);
+          else offerHint('click', hint, 'open');
+          setOpen(!open);
+        }}
         style={{ alignSelf: 'flex-start' }}
       >
         {L.adHint}
@@ -37,6 +53,7 @@ export function MemberAdHint({ place, onGo }: { place: string; onGo?: () => void
             sm
             testID={`member-hint-${place}-go`}
             onPress={() => {
+              offerHint('click', hint, 'go');
               onGo?.();
               goMembership();
             }}
