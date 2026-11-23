@@ -33,22 +33,29 @@ export function foldLiveMap(rows: Row[], at: string): LiveMap {
 }
 
 /**
- * 최근 24시간 시즌 행(created_at 인덱스)에서 커리어마다 가장 늦은 시즌 하나를 골라 커리어(기본 키)에 붙인다.
+ * 최근 24시간 시즌 행에서 커리어마다 가장 늦은 시즌 하나를 골라 커리어(기본 키)에 붙인다.
  * 공개 순위에서 뺀 커리어(hidden)와 은퇴한 커리어는 세지 않는다.
+ *
+ * 운영 실측(11-23): window 함수(row_number over partition by career_id)로 쓰면 플래너가 커리어 순서 인덱스로
+ * career_seasons 전체를 훑어 19초 · 446만 행을 읽었다(그동안 D1이 다른 요청을 못 받는다). 그래서
+ * - created_at 인덱스를 INDEXED BY로 박아 24시간 범위만 읽고,
+ * - 마지막 시즌은 SQLite의 max() 동반 열 규칙(group by에서 max 행의 다른 열을 돌려준다)으로 고르고,
+ * - cross join으로 순서를 고정해 커리어는 기본 키로만 찾는다(진행 중 커리어 전체를 훑지 않는다).
+ * 이렇게 0.2초 · 7만 행이다. 인덱스 이름을 바꾸면 이 쿼리도 같이 바꾼다.
  */
 export async function computeLiveMap(db: Db, nowMs: number): Promise<LiveMap> {
   const since = new Date(nowMs - WINDOW_MS).toISOString();
   const rows = await db.all<Row>(sql`
     with recent as (
-      select career_id, league,
-        row_number() over (partition by career_id order by created_at desc) as rn
-      from career_seasons
+      select career_id, league, max(created_at) as at
+      from career_seasons indexed by career_seasons_created_idx
       where created_at >= ${since}
+      group by career_id
     )
     select r.league as league, coalesce(c.nation, 'KR') as nation, count(*) as n
     from recent r
-    join careers c on c.id = r.career_id
-    where r.rn = 1 and c.status = 'active' and c.hidden = 0
+    cross join careers c on c.id = r.career_id
+    where c.status = 'active' and c.hidden = 0
     group by r.league, coalesce(c.nation, 'KR')
   `);
   return foldLiveMap(rows, new Date(nowMs).toISOString());
