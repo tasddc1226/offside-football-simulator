@@ -30,6 +30,8 @@ export interface AppleTransaction {
   /** Apple이 이 거래 정보에 서명한 시각(ms). 같은 구독의 정보 중 늦은 것을 고른다. */
   signedDate?: number;
   price?: number;
+  /** 이 결제에 적용된 할인 종류: 1 신규 구독자 할인 · 2 프로모션 · 3 코드 · 4 윈백. */
+  offerType?: number;
   currency?: string;
   storefront?: string;
 }

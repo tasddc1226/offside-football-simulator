@@ -3,7 +3,10 @@ import {
   REMOVE_ADS_PRICE_SQL,
   REMOVE_ADS_PRODUCT,
 } from '@offside/contracts/admin-items';
-import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
+import {
+  MEMBERSHIP_ALERT_PRICE_SQL,
+  MEMBERSHIP_PRODUCT_ID,
+} from '@offside/contracts/membership';
 import { SEASON_PASS_PRICE_KRW } from '@offside/contracts/season-pass';
 import { STARTER_PACK_PRICE_KRW } from '@offside/contracts/starter-pack';
 import {
@@ -52,6 +55,8 @@ const num = (v: unknown) => Number(v ?? 0);
  * 운영 D1 지표 이름. `active` · `members_autorenew_off`는 지금 상태라 그날 바로 다음(어제)만 셀 수 있어 다시 쓰기 · 거꾸로 채우기에서 뺀다.
  * T-11-577 멤버십 흐름: 새 가입(구독 묶음이 처음 생긴 날) · 갱신(스토어 갱신 알림) · 만료(지금 끝난 묶음의 끝난 날, 다시 결제하면 날이 옮겨 간다).
  * `client_errors`는 그날 앱 · 웹 오류 횟수(플랫폼별).
+ * T-11-780 `iap_product_count` · `iap_product_buyers`: 그날 팔린 아이템 묶음 수 · 산 사람 수(상품 id별).
+ * `members_krw`: 그날 멤버십 결제 알림(가입 · 갱신 − 환불)의 한국 기준 금액. 첫 달 할인 · 윈백 결제는 할인가로 센다.
  * T-11-774 `member_intro`: 첫 달 할인 실험 대상(시작 뒤 앱 스토어에서 처음 구독)의 지금까지 합. 차원은 `스토어_군_항목`
  * (apple · google × offer · control × new 가입 · off 자동 갱신 끔 · due 둘째 달 결제일 지남 · kept 둘째 달 결제).
  */
@@ -78,6 +83,8 @@ export const D1_METRICS = [
   'iap_count',
   'iap_krw',
   'iap_buyers',
+  'iap_product_count',
+  'iap_product_buyers',
   'ad_free_count',
   'ad_free_krw',
   'pass_count',
@@ -87,6 +94,7 @@ export const D1_METRICS = [
   'members_active',
   'members_new',
   'members_renewed',
+  'members_krw',
   'members_expired',
   'comments',
   'client_errors',
@@ -201,6 +209,7 @@ export async function collectD1Day(
     elite,
     starters,
     introCohort,
+    iapProducts,
   ] = await d1.batch<Record<string, unknown>>([
     d1
       .prepare(
@@ -261,7 +270,9 @@ export async function collectD1Day(
       .bind(start, end),
     d1
       .prepare(
-        `SELECT store, count(*) n FROM billing_alerts WHERE test = 0 AND kind = 'renewal' AND product_id = ?3
+        `SELECT store, coalesce(sum(kind = 'renewal'), 0) n,
+           coalesce(sum(CASE WHEN kind = 'refund' THEN -1 ELSE 1 END * ${MEMBERSHIP_ALERT_PRICE_SQL}), 0) krw
+           FROM billing_alerts WHERE test = 0 AND kind IN ('purchase', 'renewal', 'refund') AND product_id = ?3
            AND created_at >= ?1 AND created_at < ?2 GROUP BY 1`,
       )
       .bind(start, end, MEMBERSHIP_PRODUCT_ID),
@@ -338,6 +349,13 @@ export async function collectD1Day(
            LIMIT 5000`,
       )
       .bind(MEMBER_INTRO_START, end),
+    // T-11-780 그날 팔린 아이템 묶음을 상품별로(장당 가격 표시 전후 비교용). 위 스토어별 합과 같은 하루치 범위다.
+    d1
+      .prepare(
+        `SELECT product_id, count(*) n, count(DISTINCT profile_id) buyers FROM iap_purchases
+           WHERE test = 0 AND refunded_at IS NULL AND created_at >= ?1 AND created_at < ?2 GROUP BY 1`,
+      )
+      .bind(start, end),
   ]);
   const [errors, api] = await ops.batch<Record<string, unknown>>([
     ops
@@ -372,6 +390,11 @@ export async function collectD1Day(
     add('pass_count', String(r.store), r.n);
     add('pass_krw', String(r.store), num(r.n) * SEASON_PASS_PRICE_KRW);
   }
+  for (const r of iapProducts!.results) {
+    const product = dimOf(r.product_id, 'etc');
+    add('iap_product_count', product, r.n);
+    add('iap_product_buyers', product, r.buyers);
+  }
   for (const r of starters!.results) {
     add('starter_count', String(r.store), r.n);
     add('starter_krw', String(r.store), num(r.n) * STARTER_PACK_PRICE_KRW);
@@ -379,7 +402,10 @@ export async function collectD1Day(
   for (const r of members!.results) add('members_active', String(r.store), r.n);
   add('comments', 'all', comments!.results[0]?.n);
   for (const r of memberNew!.results) add('members_new', String(r.store), r.n);
-  for (const r of memberRenewed!.results) add('members_renewed', String(r.store), r.n);
+  for (const r of memberRenewed!.results) {
+    if (num(r.n)) add('members_renewed', String(r.store), r.n);
+    add('members_krw', String(r.store), r.krw);
+  }
   for (const r of memberExpired!.results) add('members_expired', String(r.store), r.n);
   if (withActive)
     for (const r of autoRenewOff!.results) add('members_autorenew_off', String(r.store), r.n);

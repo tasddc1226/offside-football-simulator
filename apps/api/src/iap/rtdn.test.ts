@@ -58,7 +58,41 @@ describe('Play RTDN uses verified purchase state', () => {
         kind: 'renewal',
         productId: 'membership',
         test: false,
+        offer: null,
       },
+      expect.any(String),
+    );
+  });
+  it('T-11-780 marks only a new membership purchase with the intro offer as discounted', async () => {
+    const sub = (notificationType: number) => {
+      vi.clearAllMocks();
+      vi.mocked(getGoogleSubscription).mockResolvedValue({
+        subscriptionState: 'SUBSCRIPTION_STATE_ACTIVE',
+        lineItems: [
+          {
+            productId: 'com.offsidelab.app.club_monthly',
+            latestSuccessfulOrderId: 'order..2',
+            offerDetails: { basePlanId: 'monthly', offerId: 'intro-1m' },
+          },
+        ],
+      });
+      return handleGoogleRtdn(
+        env,
+        envelope({ subscriptionNotification: { notificationType, purchaseToken: 'secret' } }),
+        '2026-11-21T00:00:00Z',
+      );
+    };
+    await sub(4);
+    expect(recordBillingAlert).toHaveBeenCalledWith(
+      env,
+      expect.objectContaining({ kind: 'purchase', offer: 'intro' }),
+      expect.any(String),
+    );
+    // 할인 ID는 구독에 남지만 갱신은 정상가다.
+    await sub(2);
+    expect(recordBillingAlert).toHaveBeenCalledWith(
+      env,
+      expect.objectContaining({ kind: 'renewal', offer: null }),
       expect.any(String),
     );
   });

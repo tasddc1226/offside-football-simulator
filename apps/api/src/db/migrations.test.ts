@@ -49,6 +49,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'created_at',
     'sent_at',
     'lease_until',
+    'offer',
   ],
   career_activity: [
     'profile_id',

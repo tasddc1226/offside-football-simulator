@@ -53,3 +53,12 @@ describe('T-11-774 첫 달 할인 실험 집계', () => {
     expect(empty.google.offer.new + empty.apple.control.new).toBe(0);
   });
 });
+
+describe('T-11-780 Apple 거래의 할인 종류', () => {
+  it('신규 구독자 할인 · 윈백만 할인가로 센다', async () => {
+    const { appleOffer } = await import('./refunds.js');
+    expect(appleOffer(1)).toBe('intro');
+    expect(appleOffer(4)).toBe('winback');
+    expect([undefined, 2, 3].map(appleOffer)).toEqual([null, null, null]);
+  });
+});

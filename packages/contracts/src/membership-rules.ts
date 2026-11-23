@@ -25,6 +25,14 @@ export const MEMBERSHIP_INTRO_OFFER_ID = 'intro-1m';
 export const MEMBERSHIP_INTRO_CONTROL_PCT = 20;
 /** 한국 기준가(원/월). 실제 결제 금액은 스토어가 나라에 맞춰 보인다. */
 export const MEMBERSHIP_PRICE_KRW = 4900;
+/** 신규 구독자 첫 달 할인(T-11-772) · 이전 구독자 윈백 첫 달의 한국 기준가(원). 매출 집계의 어림에 쓴다. */
+export const MEMBERSHIP_INTRO_PRICE_KRW = 2900;
+export const MEMBERSHIP_WINBACK_PRICE_KRW = 2200;
+/** 스토어 알림(`billing_alerts.offer`)에 적는 첫 결제의 할인 종류. 없으면 정상가다. */
+export const MEMBERSHIP_OFFERS = ['intro', 'winback'] as const;
+export type MembershipOffer = (typeof MEMBERSHIP_OFFERS)[number];
+/** 멤버십 결제 한 건의 한국 기준 금액(원)을 내는 SQL 식. `billing_alerts`의 offer 칸을 읽는다. */
+export const MEMBERSHIP_ALERT_PRICE_SQL = `CASE offer WHEN 'intro' THEN ${MEMBERSHIP_INTRO_PRICE_KRW} WHEN 'winback' THEN ${MEMBERSHIP_WINBACK_PRICE_KRW} ELSE ${MEMBERSHIP_PRICE_KRW} END`;
 /** 구독 중 출석 보상 배수. */
 export const MEMBER_ATTENDANCE_MULT = 2;
 /** T-11-517 구독 중 출석할 때 배수와 따로 더 받는 아이템(매일 잠재력 강화권 1장). */

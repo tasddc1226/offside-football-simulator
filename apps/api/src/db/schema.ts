@@ -2229,6 +2229,8 @@ export const billingAlerts = sqliteTable(
     createdAt: text('created_at').notNull(),
     sentAt: text('sent_at'),
     leaseUntil: integer('lease_until').notNull().default(0),
+    /** T-11-780 멤버십 첫 결제의 할인 종류('intro' 신규 첫 달 · 'winback'). 없으면 정상가로 센다. */
+    offer: text('offer'),
   },
   (t) => [
     index('billing_alerts_pending_idx').on(t.sentAt, t.leaseUntil, t.createdAt),

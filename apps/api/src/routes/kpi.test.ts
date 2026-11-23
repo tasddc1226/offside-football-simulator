@@ -136,6 +136,16 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
       test: false,
       createdAt: mid,
     });
+    // T-11-780 첫 달 할인으로 가입한 결제는 할인가로 센다.
+    await ctx.db.insert(billingAlerts).values({
+      id: 'b3',
+      store: 'google',
+      kind: 'purchase',
+      productId: 'com.offsidelab.app.club_monthly',
+      test: false,
+      createdAt: mid,
+      offer: 'intro',
+    });
     await ctx.ops.insert(clientErrors).values(
       [3, 4].map((count, i) => ({
         day: yesterday!,
@@ -301,6 +311,10 @@ describe('운영 지표 대시보드 /v1/admin/kpi · /v1/internal/kpi (T-11-572
     );
     expect(value(r, yesterday!, 'members_new', 'apple')).toBe(1);
     expect(value(r, yesterday!, 'members_renewed', 'google')).toBe(1);
+    expect(value(r, yesterday!, 'members_krw', 'google')).toBe(4900 + 2900);
+    // T-11-780 상품별 판매 수 · 산 사람 수(테스트 결제 제외).
+    expect(value(r, yesterday!, 'iap_product_count', 'com.offsidelab.app.reroll_40')).toBe(1);
+    expect(value(r, yesterday!, 'iap_product_buyers', 'com.offsidelab.app.reroll_5')).toBe(1);
     expect(value(r, yesterday!, 'members_expired', 'google')).toBe(1);
     expect(value(r, yesterday!, 'members_autorenew_off', 'apple')).toBe(1);
     expect(value(r, yesterday!, 'members_autorenew_off', 'google')).toBeUndefined();

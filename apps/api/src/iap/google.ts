@@ -188,6 +188,8 @@ export interface GoogleSubscription {
     latestSuccessfulOrderId?: string;
     expiryTime?: string;
     autoRenewingPlan?: { autoRenewEnabled?: boolean };
+    /** 이 구독을 살 때 쓴 요금제 · 할인. 할인 단계가 끝난 뒤에도 그대로 남는다. */
+    offerDetails?: { basePlanId?: string; offerId?: string };
   }[];
 }
 

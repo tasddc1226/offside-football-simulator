@@ -1,3 +1,4 @@
+import { MEMBERSHIP_INTRO_OFFER_ID, MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import type { Bindings } from '../env.js';
 import { recordBillingAlert } from './alerts.js';
 import { ANDROID_PACKAGE, getGooglePurchase, getGoogleSubscription } from './google.js';
@@ -86,6 +87,13 @@ export async function handleGoogleRtdn(env: Bindings, body: unknown, now: string
               kind: sub.notificationType === 2 ? 'renewal' : 'purchase',
               productId: line.productId,
               test: !!purchase.testPurchase,
+              // 할인 ID는 구독에 계속 남으므로 첫 결제(새 구독)에만 할인가로 적는다.
+              offer:
+                sub.notificationType === 4 &&
+                line.productId === MEMBERSHIP_PRODUCT_ID &&
+                line.offerDetails?.offerId === MEMBERSHIP_INTRO_OFFER_ID
+                  ? 'intro'
+                  : null,
             },
             now,
           );

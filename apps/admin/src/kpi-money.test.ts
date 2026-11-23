@@ -23,6 +23,15 @@ describe('T-11-739 사용자당 매출 · 결제 전환', () => {
     expect(storeKrwOn(v, '2026-11-16')).toBeNull();
   });
 
+  it('T-11-780 멤버십 결제 금액이 수집된 날은 그 값을 쓴다(첫 달 할인은 할인가)', () => {
+    const v = view([
+      r('2026-11-15', 'iap_krw', 'apple', 10000),
+      r('2026-11-15', 'members_new', 'apple', 2),
+      r('2026-11-15', 'members_krw', 'apple', 2900 + 4900),
+    ]);
+    expect(storeKrwOn(v, '2026-11-15')).toBe(10000 + 2900 + 4900);
+  });
+
   it('DAU가 있는 날만 합으로 계산하고, GA4가 없으면 운영 DB 접속을 쓴다', () => {
     const v = view([
       r('2026-11-15', 'dau', 'ios', 800),
