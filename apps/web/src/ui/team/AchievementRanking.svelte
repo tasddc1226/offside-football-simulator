@@ -156,7 +156,7 @@
           <span class="achievement-owner">
             <span class="achievement-rank num">{r.rank}</span>
             {#if r.team}<TeamLogo logo={r.team.logo} name={r.team.name} size={24} decorative />{/if}
-            <span class="achievement-identity"><b title={name}>{name}{#if r.title} <TitleBadge title={r.title} size="icon" />{/if}<SupporterBadge tier={r.supporter} class="sup-xs" /></b><small class="muted" title={r.team?.name}>{r.team?.name ?? L.noTeam}</small></span>
+            <span class="achievement-identity"><b title={name}>{name}{#if r.title} <TitleBadge title={r.title} size="icon" />{/if}<SupporterBadge tier={r.supporter} compact /></b><small class="muted" title={r.team?.name}>{r.team?.name ?? L.noTeam}</small></span>
           </span>
           <span class="achievement-grade" data-ach-grade={grade.id} role="img" aria-label={gradeName} title={gradeName}><GradeEmblem id={grade.id} size={32} /></span>
           <span class="num achievement-done" title={L.doneTitle({ n: n(r.done) })}>{n(r.done)}</span>

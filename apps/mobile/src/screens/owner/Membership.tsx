@@ -16,6 +16,7 @@ import { membershipText as L } from '@offside/app-core/i18n/ko/membership';
 import { settingsText as SL } from '@offside/app-core/i18n/ko/settings';
 import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import { LoadState, type LoadStatus } from '../../components/LoadState';
+import { SupporterCrest } from '../../ui/SupporterCrest';
 import { WEB_ORIGIN } from '../../platform/config';
 import {
   joinMembership,
@@ -82,7 +83,14 @@ export function Membership({ onClose }: { onClose: () => void }) {
                         accessible
                         accessibilityLabel={tenure.pill.label}
                       >
-                        <Pill tone="good">{tenure.pill.text}</Pill>
+                        <Pill tone="good">
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                            <SupporterCrest tier={tenure.pill.tier} size={18} />
+                            <Txt style={{ fontSize: rem(0.75), fontWeight: '700', color: c.good }}>
+                              {tenure.pill.text}
+                            </Txt>
+                          </View>
+                        </Pill>
                       </View>
                     ) : null}
                   </View>

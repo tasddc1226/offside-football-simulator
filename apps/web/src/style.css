@@ -8404,12 +8404,20 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   }
 }
 
-/* T-11-818 서포터 뱃지 단계: 1 초록 → 3 파랑 → 6 보라 → 9 금색 면. */
+/* T-11-818 · T-11-819 서포터 뱃지: 별 방패 휘장 + 단계 글자(1 초록 → 3 파랑 → 6 보라 → 9 금색). compact는 휘장만. */
 .sup-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
   white-space: nowrap;
   margin-left: 4px;
   vertical-align: middle;
+  font-size: var(--fs-caption);
+  font-weight: 700;
+  line-height: 1.2;
+  border-radius: var(--radius-pill);
+  padding: 2px 9px 2px 4px;
   color: var(--good);
   background: color-mix(in srgb, var(--good) 12%, var(--surface));
 }
@@ -8422,10 +8430,11 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
   background: color-mix(in srgb, var(--r3) 12%, var(--surface));
 }
 .sup-badge[data-supporter='9'] {
-  color: var(--accent-ink);
-  background: var(--accent);
+  color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 20%, var(--surface));
 }
-.sup-badge.sup-xs {
-  font-size: var(--fs-xs, 11px);
-  padding: 1px 6px;
+.sup-badge.compact {
+  padding: 0;
+  margin-left: 6px;
+  background: none;
 }

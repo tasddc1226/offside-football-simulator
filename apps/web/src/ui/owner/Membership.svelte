@@ -3,6 +3,7 @@
   // 보인다. T-11-591부터 웹 결제가 열린 구단주는 자동 갱신 없는
   // 기간권을 웹에서 산다(엑솔라). 앱 구독 중이면 사지 않게 버튼을 숨긴다.
   import PopSheet from '../PopSheet.svelte';
+  import SupporterCrest from '../SupporterCrest.svelte';
   import Skeleton from '../Skeleton.svelte';
   import type { MembershipResponse } from '@offside/contracts';
   import { fetchMembership } from '@offside/app-core/api/membership';
@@ -60,7 +61,7 @@
       <section class="mb-band stack" data-member-state={m.active ? 'active' : 'none'}>
         <div class="mb-band-top">
           <b>{m.active ? L.active : L.lead}</b>
-          {#if tenure}<span class="mb-pill" title={tenure.pill.label} data-member-supporter={tenure.pill.tier}>{tenure.pill.text}</span>{/if}
+          {#if tenure}<span class="mb-pill" title={tenure.pill.label} data-member-supporter={tenure.pill.tier}><SupporterCrest tier={tenure.pill.tier} size={22} />{tenure.pill.text}</span>{/if}
         </div>
         {#if tenure?.streak}<span class="fs-sm" data-member-streak>{tenure.streak}</span>{/if}
         {#if line}<span class="fs-sm mb-soft">{line}</span>{/if}
@@ -92,7 +93,7 @@
   .mb-band {gap:6px;padding:16px;border-radius:var(--radius-md);background:var(--pitch);color:var(--on-pitch);}
   .mb-band-top {display:flex;justify-content:space-between;align-items:center;gap:12px;}
   .mb-soft {opacity:.85;}
-  .mb-pill {font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--pitch-accent);color:var(--pitch);}
+  .mb-pill {display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:2px 10px 2px 4px;border-radius:999px;background:var(--pitch-accent);color:var(--pitch);}
   .mb-perks {list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;}
   .mb-perks li {display:flex;flex-direction:column;gap:2px;padding:12px;border-radius:var(--radius-md);border:1px solid var(--line);background:var(--surface);}
 </style>
