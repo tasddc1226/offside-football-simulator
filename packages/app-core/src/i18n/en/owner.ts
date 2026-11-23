@@ -14,9 +14,9 @@ export const owner: Translation<OwnerMsgs> = {
     'Club value = club funds + the total base value and enhancement value of owned player cards',
   valueInfoOwned: 'Includes players you developed and signed, across all seasons.',
   valueInfoPrice:
-    'A card uses the highest market value among the seasons in which the player reached their peak OVR. Market value depends on league wealth, OVR and age, so playing on after the peak never lowers it.',
+    'A card’s base value is the league salary of the season the player reached peak OVR, times an age multiplier. A richer league and a higher OVR make it larger, and playing on after the peak never lowers it.',
   valueInfoAge:
-    'Market value has an age multiplier: ×5 up to 24, ×4 at 25–29 and ×2 from 30. A player who reached peak OVR after turning 30 can have a base value below the top market value in their career record.',
+    'The base value multiplier is ×4 up to age 29 and ×3 from 30, so it can differ from the market value in the career record. A player who retires with fewer than 10 pro seasons gets only that share (6 seasons give 60%). Players who retired before this rule keep their base value.',
   valueInfoFallback:
     'If that season has no market value, the most valuable professional season is used. Without professional records, the base value is ₩100 million.',
   valueInfoExcluded:

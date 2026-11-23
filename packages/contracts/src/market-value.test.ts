@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   CARD_VALUE_FLOOR,
+  cardAgeMult,
   cardValue,
   fmtValue,
   peakValue,
@@ -58,16 +59,47 @@ describe('T-10-100 몸값', () => {
     // 두 시즌뿐이면 모자란 한 시즌은 0으로 친다
     expect(retireValue(car.slice(0, 1), 0)).toBe(Math.round(top[0]! / 3 / 1000) * 1000);
   });
-  it('T-11-080 카드 기준가 = 최고 OVR 시즌 중 가장 비싼 몸값, 0이면 가장 비싼 프로 시즌, 그래도 없으면 1억', () => {
+  it('T-11-080 카드 기준가 = 최고 OVR 시즌 중 가장 비싼 값, 0이면 가장 비싼 프로 시즌, 그래도 없으면 1억', () => {
+    const pro = (n: number) => Array.from({ length: n }, () => row({ ovr: 60, age: 20 }));
+    const card = (o: number, age: number) =>
+      Math.round((salaryFor('pl', o) * cardAgeMult(age)) / 100) * 100;
     // T-11-422 같은 OVR로 30세를 넘겨 뛰어도 기준가가 줄지 않는다(30세에 은퇴한 카드와 같다).
-    const car = [row({ ovr: 88, age: 29 }), row({ ovr: 88, age: 31 }), row({ ovr: 80 })];
-    expect(cardValue(car, 88)).toBe(valueFor('pl', 88, 29));
-    expect(cardValue(car, 88)).toBe(cardValue(car.slice(0, 1), 88));
-    expect(cardValue(car, 88)).toBeGreaterThan(valueFor('pl', 88, 31));
+    const car = [...pro(9), row({ ovr: 88, age: 29 }), row({ ovr: 88, age: 31 }), row({ ovr: 80 })];
+    expect(cardValue(car, 88)).toBe(card(88, 29));
+    expect(cardValue(car, 88)).toBe(cardValue(car.slice(0, 10), 88));
+    expect(cardValue(car, 88)).toBeGreaterThan(card(88, 31));
     // 최고 OVR 시즌이 복무 시즌이면 가장 비쌌던 프로 시즌
-    const mil = [row({ ovr: 82 }), row({ ovr: 84, league: '병역', mil: true })];
-    expect(cardValue(mil, 84)).toBe(valueFor('pl', 82, 25));
+    const mil = [...pro(9), row({ ovr: 82 }), row({ ovr: 84, league: '병역', mil: true })];
+    expect(cardValue(mil, 84)).toBe(card(82, 25));
     expect(cardValue([row({ league: 'U리그 (대학)', ovr: 70 })], 70)).toBe(CARD_VALUE_FLOOR);
+  });
+  it('T-11-821 카드 기준가의 나이 배수는 4 · 4 · 3이고 프로 10시즌 미만은 뛴 시즌만큼만 받는다', () => {
+    const young = (n: number) => Array.from({ length: n }, () => row({ ovr: 70, age: 20 }));
+    const full = (o: number, age: number) =>
+      Math.round((salaryFor('pl', o) * cardAgeMult(age)) / 100) * 100;
+    // 24세 이하 웃돈이 없고(몸값은 5배), 30세부터는 3배(몸값은 2배).
+    expect([cardAgeMult(24), cardAgeMult(29), cardAgeMult(30)]).toEqual([4, 4, 3]);
+    // 24세에 OVR 90을 찍고 프로 6시즌 뒤 은퇴: 전액의 60%.
+    const farm = [...young(5), row({ ovr: 90, age: 24 })];
+    expect(cardValue(farm, 90)).toBe(Math.round((full(90, 24) * 0.6) / 100) * 100);
+    expect(cardValue(farm, 90)).toBeLessThan(valueFor('pl', 90, 24) / 2);
+    // 고교 · 대학 · 복무 시즌은 연차로 세지 않는다.
+    const uni = [
+      row({ league: 'U리그 (대학)', ovr: 60 }),
+      row({ league: '병역', mil: true, ovr: 60 }),
+      ...farm,
+    ];
+    expect(cardValue(uni, 90)).toBe(cardValue(farm, 90));
+    // 10시즌을 채우면 전액이고 더 뛰어도 늘지 않는다.
+    const ten = [...young(9), row({ ovr: 90, age: 28 })];
+    expect(cardValue(ten, 90)).toBe(full(90, 28));
+    expect(cardValue([...ten, row({ ovr: 85, age: 34 })], 90)).toBe(full(90, 28));
+    // 30세 넘어 최고 OVR을 찍은 완주 카드는 예전(2배)보다 높다.
+    const late = [...young(12), row({ ovr: 95, age: 32 })];
+    expect(cardValue(late, 95)).toBe(full(95, 32));
+    expect(cardValue(late, 95)).toBeGreaterThan(valueFor('pl', 95, 32));
+    // 한 시즌만 뛴 프로도 1억 밑으로 내려가지 않는다.
+    expect(cardValue([row({ league: 'K3리그', ovr: 40, age: 20 })], 40)).toBe(CARD_VALUE_FLOOR);
   });
 });
 

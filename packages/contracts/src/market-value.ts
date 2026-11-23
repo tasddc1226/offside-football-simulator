@@ -67,15 +67,40 @@ export function retireValue(career: ValueRow[], legendScore: number): number {
 /** 프로 경력이 없어 몸값을 매길 수 없는 카드의 기준가(만 원) — 1억. */
 export const CARD_VALUE_FLOOR = 10_000;
 
+/** T-11-821 카드 기준가를 전액 받는 프로 시즌 수. 이보다 적게 뛰고 은퇴하면 뛴 시즌 수만큼만 받는다. */
+export const CARD_TENURE_FULL = 10;
+/** T-11-821 카드 기준가의 나이 배수. 게임 안 몸값 · 이적료(valueFor의 5 · 4 · 2)와 따로 둔다. */
+export const cardAgeMult = (age: number) => (age <= 29 ? 4 : 3);
+
+/** 카드 기준가에 쓰는 그 시즌의 값(만 원). 고교·대학·현역 복무 시즌은 0. */
+function cardSeasonValue(r: ValueRow): number {
+  const L = rowLeague(r);
+  return r.mil || !L || L.amateur
+    ? 0
+    : Math.round((salaryFor(L.id, r.ovr) * cardAgeMult(r.age)) / 100) * 100;
+}
+
 /**
- * T-11-080 카드 기준가(만 원): 최고 OVR을 찍은 시즌 중 몸값이 가장 높았던 시즌의 몸값. 그 시즌들이 모두 대학·현역
+ * T-11-080 카드 기준가(만 원): 최고 OVR을 찍은 시즌 중 값이 가장 높았던 시즌의 값. 그 시즌들이 모두 대학·현역
  * 복무라 0이면 가장 비쌌던 프로 시즌, 프로 경력이 없으면 CARD_VALUE_FLOOR.
  * T-11-422 예전에는 최고 OVR 마지막 시즌이라, 같은 OVR로 30세를 넘겨 뛰면 나이 배수가 반으로 줄어 30세에 바로 은퇴한
  * 카드가 오래 뛴 카드보다 두 배 비쌌다.
+ * T-11-821 몸값(valueFor)의 나이 배수 5 · 4 · 2를 그대로 쓰면 24세에 OVR 90을 찍고 25세에 은퇴한 카드(프로 6시즌,
+ * 평균 434억)가 20시즌 넘게 키운 OVR 90 이상 카드(평균 294억)보다 비쌌고, 하루 10여 명이 구단 자금 지급의 절반 이상을
+ * 가져갔다(2026-11-22 은퇴 카드 1,701장 재계산). 카드 기준가만 나이 배수를 4 · 4 · 3으로 두고, 프로 시즌이
+ * CARD_TENURE_FULL보다 적으면 그 비율만큼만 준다. 은퇴할 때 한 번 정해 cards.card_value에 저장하므로 이미 은퇴한
+ * 카드는 바뀌지 않는다.
  */
 export function cardValue(career: ValueRow[], peak: number): number {
-  const best = Math.max(0, ...career.filter((r) => r.ovr === peak).map(seasonValue));
-  return best || peakValue(career)?.value || CARD_VALUE_FLOOR;
+  const values = career.map(cardSeasonValue);
+  const best =
+    Math.max(0, ...values.filter((_, i) => career[i]!.ovr === peak)) || Math.max(0, ...values);
+  if (!best) return CARD_VALUE_FLOOR;
+  const pro = values.filter((v) => v > 0).length;
+  return Math.max(
+    CARD_VALUE_FLOOR,
+    Math.round((best * Math.min(1, pro / CARD_TENURE_FULL)) / 100) * 100,
+  );
 }
 
 /**
