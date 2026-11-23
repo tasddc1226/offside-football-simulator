@@ -377,6 +377,27 @@ export function partialUniqueKeys(schema: SchemaRow[]): Map<string, string[][]> 
   return out;
 }
 
+/**
+ * 조건 없는 단일 열 고유 인덱스(`ON 표 (열)` · `ON 표 (lower(열))`)를 표별로 모은다.
+ * 값이 다른 행으로 옮겨 갈 수 있는 열이다(구글 연결 · 닉네임). 마감 행이 그 값을 가져오면 앞서 복사한 옛 주인 행과 겹친다.
+ */
+export function singleUniqueKeys(
+  schema: SchemaRow[],
+): Map<string, { col: string; lower: boolean }[]> {
+  const out = new Map<string, { col: string; lower: boolean }[]>();
+  for (const s of schema) {
+    if (!isUniqueIndex(s)) continue;
+    const m = /\sON\s+[`"[]?(\w+)[`"\]]?\s*\((.*)\)\s*$/is.exec(s.sql.replace(/;\s*$/, ''));
+    if (!m) continue;
+    const plain = /^\s*[`"[]?(\w+)[`"\]]?\s*$/.exec(m[2]!);
+    const lowered = /^\s*lower\(\s*[`"[]?(\w+)[`"\]]?\s*\)\s*$/i.exec(m[2]!);
+    const col = plain?.[1] ?? lowered?.[1];
+    if (!col) continue;
+    out.set(m[1]!, [...(out.get(m[1]!) ?? []), { col, lower: !plain }]);
+  }
+  return out;
+}
+
 /** 마감 단계에서 D1 오류가 이만큼 이어지면 마감을 포기하고 live-copy로 끝낸다(백업 자체는 남긴다). */
 export const SEAL_MAX_FAILS = 3;
 const REFETCH_PARAMS = 60;
@@ -419,6 +440,49 @@ async function exportStep(
     }
     const sealable = (name: string) => tableSql.has(name) && next.hwm?.[name] !== undefined;
     const partial = partialUniqueKeys(schema);
+    const single = singleUniqueKeys(schema);
+    const releasers = new Map<string, (cols: string[], row: unknown[]) => string>();
+    /**
+     * 마감 행 앞에 쓸 문장을 만든다: 같은 고유 값을 가진 다른 행(앞서 복사한 옛 주인)의 그 열을 비운다.
+     * 비우지 않으면 INSERT OR REPLACE가 옛 주인 행을 통째로 밀어내 그 자식의 외래 키가 깨진다(2026-11-20 백업: 구글 연결이
+     * 새 프로필로 옮겨 가며 옛 프로필이 빠졌다). 운영에서도 옛 주인은 그 값을 잃었으니 비운 값이 실제에 가깝다.
+     * NULL을 허용하고 기본 키가 아닌 열만 다룬다. 그 밖의 고유 키는 전처럼 밀어낸다.
+     */
+    const releaser = async (name: string) => {
+      const cached = releasers.get(name);
+      if (cached) return cached;
+      let make: (cols: string[], row: unknown[]) => string = () => '';
+      const keys = single.get(name);
+      if (keys?.length) {
+        const info = (
+          await db
+            .prepare(`PRAGMA table_info(${q(name)})`)
+            .all<{ name: string; notnull: number; pk: number }>()
+        ).results;
+        const pk = info.filter((c) => c.pk > 0).map((c) => c.name);
+        const free = keys.filter((k) =>
+          info.some((c) => c.name === k.col && c.notnull === 0 && c.pk === 0),
+        );
+        if (pk.length && free.length)
+          make = (cols, row) => {
+            const at = pk.map((c) => cols.indexOf(c));
+            if (at.some((i) => i < 0)) return '';
+            const self = pk.map((c, i) => `${q(c)} = ${literal(row[at[i]!])}`).join(' AND ');
+            let out = '';
+            for (const k of free) {
+              const v = row[cols.indexOf(k.col)];
+              if (typeof v !== 'string' && typeof v !== 'number') continue;
+              const match = k.lower
+                ? `lower(${q(k.col)}) = lower(${literal(v)})`
+                : `${q(k.col)} = ${literal(v)}`;
+              out += `UPDATE ${q(name)} SET ${q(k.col)} = NULL WHERE ${match} AND NOT (${self});\n`;
+            }
+            return out;
+          };
+      }
+      releasers.set(name, make);
+      return make;
+    };
     /**
      * 마감 행과 조건부 고유 키가 같은 행을 지금 값으로 다시 내보낸다. 마감 행이 들어가며 밀어낸 옛 사본(복사한 뒤
      * 제자리에서 조건을 벗어난 행)이 지금 값으로 되돌아온다. 마감 행 뒤에 써야 한다.
@@ -454,8 +518,11 @@ async function exportStep(
             const [names, ...data] = page as [string[], ...unknown[][]];
             if (!data.length) break;
             const insert = `INSERT OR REPLACE INTO ${q(name)} (${names.slice(1).map(q).join(', ')}) VALUES `;
+            const release = await releaser(name);
             for (const r of data)
-              await write(`${insert}(${r.slice(1).map(literal).join(', ')});\n`);
+              await write(
+                `${release(names.slice(1), r.slice(1))}${insert}(${r.slice(1).map(literal).join(', ')});\n`,
+              );
             written += data.length;
             last = Number(data[data.length - 1]![0]);
             if (data.length < REFETCH_ROWS) break;
@@ -531,8 +598,11 @@ async function exportStep(
             if (data.length === 0) break;
             next.pages++;
             const insert = `INSERT OR REPLACE INTO ${q(name)} (${cols.slice(1).map(q).join(', ')}) VALUES `;
+            const release = await releaser(name);
             for (const r of data)
-              await write(`${insert}(${r.slice(1).map(literal).join(', ')});\n`);
+              await write(
+                `${release(cols.slice(1), r.slice(1))}${insert}(${r.slice(1).map(literal).join(', ')});\n`,
+              );
             next.rows += data.length;
             next.passRows! += data.length;
             next.sealRows! += data.length;
@@ -592,8 +662,13 @@ async function exportStep(
             if (!rows.length) continue;
             const cols = Object.keys(rows[0]!).filter((c) => c !== '__rowid');
             const insert = `INSERT OR REPLACE INTO ${q(name)} (${cols.map(q).join(', ')}) VALUES `;
-            for (const r of rows)
-              await write(`${insert}(${cols.map((c) => literal(r[c])).join(', ')});\n`);
+            const release = await releaser(name);
+            for (const r of rows) {
+              const values = cols.map((c) => r[c]);
+              await write(
+                `${release(cols, values)}${insert}(${values.map(literal).join(', ')});\n`,
+              );
+            }
             next.rows += rows.length;
             next.sealRows! += rows.length;
             await refetch(
