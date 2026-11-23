@@ -7,6 +7,7 @@ import { onPassNudge, takePassNudge } from '@offside/app-core/passNudge';
 import { hofOwnText as L } from '@offside/app-core/i18n/ko/hofOwn';
 import { passEntryOpen, SEASON_PASS_IOS_LIVE } from '@offside/contracts/season-pass';
 import { goSeasonPass } from '../../game/nav';
+import { offerHint } from '../../platform/offerHint';
 import { Btn } from '../../ui';
 import { Card } from '../../ui/Card';
 import { Txt } from '../../ui/Txt';
@@ -19,13 +20,24 @@ export function PassNudgeCard() {
   useEffect(() => {
     if (!live()) return;
     const check = () => {
-      if (takePassNudge() !== null) setShown(true);
+      if (takePassNudge() === null) return;
+      setShown(true);
+      offerHint('view', 'pass_retired');
     };
     check();
     // 이 은퇴가 서버에 올라간 뒤에 기준을 넘길 수 있어, 올라갈 때 한 번 더 본다.
     return onPassNudge(check);
   }, []);
   if (!shown) return null;
+  // T-11-779 보임 · 누름 · 닫음 계측(화면 · 이동은 그대로).
+  const go = () => {
+    offerHint('click', 'pass_retired', 'go');
+    goSeasonPass();
+  };
+  const close = () => {
+    offerHint('close', 'pass_retired');
+    setShown(false);
+  };
   return (
     <Card testID="pass-nudge">
       <View>
@@ -38,10 +50,10 @@ export function PassNudgeCard() {
         {L.passNudgeBody}
       </Txt>
       <View style={{ flexDirection: 'row', gap: 8 }}>
-        <Btn kind="accent" testID="pass-nudge-go" onPress={goSeasonPass}>
+        <Btn kind="accent" testID="pass-nudge-go" onPress={go}>
           {L.passNudgeGo}
         </Btn>
-        <Btn kind="ghost" testID="pass-nudge-close" onPress={() => setShown(false)}>
+        <Btn kind="ghost" testID="pass-nudge-close" onPress={close}>
           {L.passNudgeClose}
         </Btn>
       </View>

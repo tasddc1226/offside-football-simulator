@@ -17,6 +17,7 @@ import {
   commerceParams,
   type CommerceObservation,
 } from '@offside/app-core/commerceStage';
+import { createOfferHint } from '@offside/app-core/offerHint';
 import { funnelParams, type FunnelEvent } from '@offside/app-core/funnelEvents';
 import type { AppStorePlace } from './index.js';
 import {
@@ -450,6 +451,19 @@ export const trackPartnerPopup = (
 ) => {
   try {
     send('partner_popup_' + action, { partner: 'amachuggu', variant });
+  } catch {
+    /* optional */
+  }
+};
+
+/** T-11-779 상품 안내 보임 · 누름 · 닫음(@offside/app-core/offerHint, 앱 nativeAnalytics.offerHint와 같은 이벤트). */
+const offerHint = createOfferHint({
+  allowed: () => allowed() && loaded && screen !== 'admin',
+  send,
+});
+export const trackOfferHint = (...a: Parameters<typeof offerHint>) => {
+  try {
+    offerHint(...a);
   } catch {
     /* optional */
   }
