@@ -1,6 +1,6 @@
 // T-11-770d 첫 구매 묶음 결제(기획 T-11-747 R2). seasonPass.ts와 같은 순서다: 스토어 결제가 끝나면 거래를 서버에 보내고
-// (POST /v1/starter-pack/iap), 서버가 아이템을 준 뒤에만 스토어 거래를 마무리(소비)한다. 못 보낸 거래는 스토어에 남아 다음 실행 때
-// 다시 보낸다(서버는 같은 거래로 한 번만 준다). 살 수 있는지는 서버가 정하고(실결제 이력 없음 · 끝까지 뛴 은퇴 선수 있음 · 대조군
+// (POST /v1/starter-pack/iap), 서버가 아이템을 준 뒤에만 스토어 거래를 마무리(소비)한다. 못 보낸 거래는 스토어에 남아 상점 · 은퇴
+// 화면을 다시 열 때, 사기 버튼을 다시 누를 때, 다음 실행 때 다시 보낸다(서버는 같은 거래로 한 번만 준다, T-11-778). 살 수 있는지는 서버가 정하고(실결제 이력 없음 · 끝까지 뛴 은퇴 선수 있음 · 대조군
 // 아님), 이 기기가 광고 제거를 샀으면 서버 원장에 없어도 결제한 사람이라 묻지 않는다.
 import { Platform } from 'react-native';
 import { proxy } from 'valtio';
@@ -43,23 +43,48 @@ export const starterPackStore = proxy({
 
 let account: string | null = null;
 let syncing: Promise<void> | null = null;
+/** 결제는 끝났는데 서버에서 받지 못한 묶음 거래가 스토어에 남았다(T-11-778). 이 동안은 새 결제를 시작하지 않고 그 거래를 다시 보낸다. */
+let left = false;
+/** 서버에 보내는 중인 거래. 같은 거래를 겹쳐 보내지 않고, 보내는 동안은 새 결제를 시작하지 않는다. */
+const sending = new Set<string>();
 
 const quietUntil = () => Number(kv.getString(QUIET) ?? 0) || 0;
 const quiet = (until: number) => kv.set(QUIET, String(until));
 
-async function claim(p: Purchase, silent: boolean) {
-  if (!p.purchaseToken) return;
-  const r = await claimStarterPackIap({ store: STORE, token: p.purchaseToken });
-  if (!r.ok) {
-    if (!silent) toast(r.error.retryable ? IL.claimFail : r.error.message || IL.claimFail);
-    return;
+/** 거래를 서버에 보내고, 받았으면 true. 다시 하면 될 실패는 거래가 남았다고 적어 둔다(다른 계정의 거래 같은 실패는 적지 않는다). */
+async function claim(p: Purchase, silent: boolean): Promise<boolean> {
+  const token = p.purchaseToken;
+  if (!token || sending.has(token)) return false;
+  sending.add(token);
+  try {
+    const r = await claimStarterPackIap({ store: STORE, token });
+    if (!r.ok) {
+      if (r.error.retryable) left = true;
+      if (!silent) toast(r.error.retryable ? IL.claimFail : r.error.message || IL.claimFail);
+      return false;
+    }
+    left = false;
+    starterPackStore.pack = r.data.pack;
+    starterPackStore.price = null;
+    iapItems.items = r.data.have;
+    quiet(FOREVER);
+    await finishTransaction({ purchase: p, isConsumable: true }).catch(() => {});
+    toast(L.bought);
+    return true;
+  } finally {
+    sending.delete(token);
   }
-  starterPackStore.pack = r.data.pack;
-  starterPackStore.price = null;
-  iapItems.items = r.data.have;
-  quiet(FOREVER);
-  await finishTransaction({ purchase: p, isConsumable: true }).catch(() => {});
-  toast(L.bought);
+}
+
+/** 스토어에 남은 묶음 거래를 조용히 다시 보낸다(스토어 SDK만 읽는다). 하나라도 받았으면 true. */
+async function resendLeft(): Promise<boolean> {
+  const all = await getAvailablePurchases().catch(() => null);
+  if (!all) return false;
+  const mine = all.filter((p) => isStarter(p) && p.purchaseState === 'purchased');
+  if (!mine.length) left = false;
+  let got = false;
+  for (const p of mine) got = (await claim(p, true)) || got;
+  return got;
 }
 
 onStorePurchase((p) => {
@@ -80,6 +105,7 @@ onStoreError((e) => {
 
 onSessionChanged(() => {
   account = null;
+  left = false;
   starterPackStore.pack = null;
   starterPackStore.price = null;
   kv.remove(QUIET);
@@ -95,6 +121,8 @@ async function sync() {
     starterPackStore.price = null;
     // 샀으면 다시 묻지 않고, 살 수 없다는 답(결제 이력 · 대조군 · 아직 은퇴 선수 없음)은 하루 뒤에 다시 묻는다.
     if (pack.state !== 'off') quiet(pack.state === 'owned' ? FOREVER : Date.now() + DAY);
+    // 서버는 줬는데 답을 못 받은 거래가 남았으면 다시 보내 스토어 거래를 마무리한다.
+    if (left && STORE_SUPPORTED && (await connectStore())) await resendLeft();
     return;
   }
   if (!STORE_SUPPORTED || !account || !pack.stores.includes(STORE)) {
@@ -109,6 +137,8 @@ async function sync() {
   } catch {
     starterPackStore.price = null;
   }
+  // 결제는 끝났는데 받지 못한 거래가 있으면 여기서 다시 보낸다. 받으면 claim이 카드를 '샀음'으로 바꾼다.
+  await resendLeft();
 }
 
 /**
@@ -125,13 +155,22 @@ export function syncStarterPack(fresh = false): Promise<void> {
   return syncing;
 }
 
-/** 묶음 사기. 결과는 구매 이벤트로 온다. */
+/**
+ * 묶음 사기. 결과는 구매 이벤트로 온다. 받지 못한 거래를 보내는 중이면 아무것도 하지 않고, 스토어에 받지 못한 거래가 남았으면
+ * 새로 결제하지 않고 그 거래를 다시 보낸다(iOS 소모성 상품은 다시 사면 한 번 더 결제된다, T-11-778).
+ */
 export async function buyStarterPack() {
-  if (!STORE_SUPPORTED || starterPackStore.busy || !account) return;
+  if (!STORE_SUPPORTED || starterPackStore.busy || sending.size || !account) return;
   starterPackStore.busy = true;
   if (!(await connectStore())) {
     starterPackStore.busy = false;
     return toast(IL.storeFail);
+  }
+  const got = await resendLeft();
+  if (got || left || sending.size) {
+    starterPackStore.busy = false;
+    if (!got && left) toast(IL.claimFail);
+    return;
   }
   await requestPurchase({
     request: {
