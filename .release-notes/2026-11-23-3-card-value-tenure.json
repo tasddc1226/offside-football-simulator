@@ -1,0 +1,31 @@
+{
+  "id": "t-11-821-card-value-tenure",
+  "title": "카드 기준가 조정",
+  "items": [
+    "오래 키운 선수의 카드 기준가를 올렸어요. 30세 넘어 최고 OVR을 찍은 선수는 나이 배수가 2배에서 3배가 돼요.",
+    "프로에서 10시즌을 채우지 못하고 은퇴한 선수는 뛴 시즌만큼만 기준가를 받고, 24세 이하 나이 배수는 5배에서 4배가 돼요. 이미 은퇴한 선수의 기준가와 구단 자금은 그대로예요."
+  ],
+  "en": {
+    "title": "Card base value changes",
+    "items": [
+      "Cards of players you raised for a long time are worth more. A player who reached peak OVR after 30 now gets a ×3 age multiplier instead of ×2.",
+      "A player who retires with fewer than 10 pro seasons gets only that share of the base value, and the age multiplier up to 24 goes from ×5 to ×4. Players who already retired keep their base value, and club funds stay the same."
+    ]
+  },
+  "ja": {
+    "title": "カード基準価格の調整",
+    "items": [
+      "長く育てた選手のカード基準価格を上げました。30歳を過ぎて最高OVRに達した選手は、年齢倍率が2倍から3倍になります。",
+      "プロで10シーズンに届かずに引退した選手は、プレーしたシーズン数の分だけ基準価格を受け取り、24歳以下の年齢倍率は5倍から4倍になります。すでに引退した選手の基準価格とクラブ資金はそのままです。"
+    ]
+  },
+  "zh": {
+    "title": "球員卡基準價調整",
+    "items": [
+      "提高了長期培養球員的球員卡基準價。30 歲後才創下最高 OVR 的球員，年齡倍率從 2 倍變為 3 倍。",
+      "職業賽季未滿 10 個就退役的球員，只依效力的賽季數獲得基準價，24 歲以下的年齡倍率從 5 倍變為 4 倍。已退役球員的基準價與球會資金維持不變。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}
