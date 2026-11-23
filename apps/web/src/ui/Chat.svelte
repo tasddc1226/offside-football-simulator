@@ -380,7 +380,7 @@
       {:else if view.me?.reason === 'login' || !view.me}
         <div class="comment-gate" data-chat-gate="login">
           <p class="muted">{L.gateLogin}</p>
-          <LoginButtons act="chat-login" back={{ chat: true }} />
+          <LoginButtons act="chat-login" back={{ chat: true }} place="chat" />
         </div>
       {:else if view.me.reason === 'nickname'}
         <div class="comment-gate" data-chat-gate="nickname">

@@ -18,6 +18,7 @@ import {
   type CommerceObservation,
 } from '@offside/app-core/commerceStage';
 import { createOfferHint } from '@offside/app-core/offerHint';
+import { funnelParams, type FunnelEvent } from '@offside/app-core/funnelEvents';
 import type { AppStorePlace } from './index.js';
 import {
   AD_CONSENT_KEY,
@@ -231,6 +232,7 @@ async function loadTag() {
   pageView();
   retireExp.ready();
   for (const result of initialOperations.splice(0)) trackOperation(result);
+  for (const e of funnelEarly.splice(0)) trackFunnel(e);
 }
 function stop() {
   if (!enabled()) return;
@@ -239,6 +241,7 @@ function stop() {
   analytics.reset();
   metricEpoch++;
   initialOperations.length = 0;
+  funnelEarly.length = 0;
   playerMetrics.reset();
   if (w().dataLayer) w().dataLayer!.length = 0;
   try {
@@ -405,6 +408,25 @@ export const trackCommerce = (o: CommerceObservation) => {
     // 막는 확장 · 대체 gtag가 promise를 돌려주고 거절해도 결제 흐름 · 콘솔에 새지 않게 여기서 삼킨다.
     const r = send(COMMERCE_EVENT, params) as { then?: unknown } | undefined;
     if (r && typeof r.then === 'function') (r as Promise<unknown>).then(undefined, () => {});
+  } catch {
+    /* optional */
+  }
+};
+
+/**
+ * T-11-792 로그인 시도 · 이번 시즌 팀 저장 · 따라가기 안내 단계(funnelEvents의 허용 목록 값만). 동의했지만 태그를 아직 불러오는 중이면
+ * (로그인에서 돌아온 직후) 몇 개만 들고 있다가 보낸다. once가 붙은 이벤트는 이 탭에서 한 번만 보낸다.
+ */
+const funnelEarly: FunnelEvent[] = [];
+const funnelSeen = new Set<string>();
+export const trackFunnel = (e: FunnelEvent) => {
+  try {
+    if (!allowed() || screen === 'admin') return;
+    if (!loaded) return void (funnelEarly.length < 8 && funnelEarly.push(e));
+    const x = funnelParams(e);
+    if (!x || (x.once && funnelSeen.has(x.once))) return;
+    if (x.once) funnelSeen.add(x.once);
+    send(x.name, x.params);
   } catch {
     /* optional */
   }

@@ -52,6 +52,7 @@ const ko = {
   marketPriceMax: '최고 판매가(기준가 배수)',
   cupAtkK: '컵 전력 차이 반영',
   rankAtkK: '랭크 전력 차이 반영',
+  rankDefLoss: '랭크 받은 쪽 패배 감점',
   leagueFatigue: '리그 체력',
   leagueHomeAdv: '리그 홈 이점',
   teamMatchRechargeMin: '랭크 경기 충전 간격(분)',

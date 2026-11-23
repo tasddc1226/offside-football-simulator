@@ -128,6 +128,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   categoryHonor: 'Record badges',
   titleHonorAchievements: 'Achievements',
   titleHonorTeam: 'Team rating',
+  titleHonorTeamRp: 'Team RP',
   titleHonorHof: 'Hall of Fame',
   titleHonorFirstPlace: '#1',
   titleHonorTop: (p: { band: number }) => `Top ${p.band}`,

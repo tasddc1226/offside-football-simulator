@@ -267,6 +267,27 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     expect(JSON.parse(String(calls[0]?.init?.body)).user).not.toHaveProperty('tracking_id');
   });
 
+  it('T-11-809 스카우트권 20장은 엑솔라 스위치를 켜기 전에는 웹에 없고 주문도 받지 않는다', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const productId = 'com.offsidelab.app.scout_20';
+    const calls = stubXsolla();
+    const config = async () =>
+      ConfigRes.parse(await (await call('GET', '/v1/web-pay/config', { cookie: me.cookie })).json())
+        .data;
+    expect((await config()).products?.some((p) => p.productId === productId)).toBe(false);
+    expect(
+      (await call('POST', '/v1/web-pay/orders', { cookie: me.cookie, body: { productId } })).status,
+    ).toBe(503);
+    expect(calls).toHaveLength(0);
+    ctx.env.WEB_PAY_SCOUT_20_ENABLED = '1';
+    expect((await config()).products).toContainEqual({
+      productId,
+      item: 'scout',
+      qty: 20,
+      amount: 16500,
+    });
+  });
+
   it('opens the 100-ticket pack only after catalog readiness and grants it once', async () => {
     const me = await issueGoogleCookie(ctx);
     const productId = 'com.offsidelab.app.boost_100';

@@ -28,7 +28,7 @@ import {
   ACH_SEASON_GIFT,
   AD_FREE_THANKS_GIFT,
   UPDATE_THANKS_GIFT,
-  RECORD_SEASON_GIFT,
+  RECORD_GIFT_PREFIX,
 } from '@offside/contracts/owner-team';
 import {
   CUP_GROUP_ROUNDS,
@@ -831,9 +831,9 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
       const rec = await seasonRecordGiftOf(db, me.id, now);
       if (rec)
         gift = {
-          id: RECORD_SEASON_GIFT.id,
+          id: rec.gift.id,
           kind: 'recordSeason',
-          season: RECORD_SEASON_GIFT.season,
+          season: rec.gift.season,
           ...rec.total,
           record: { ...rec.facts, ...rec.parts },
         };
@@ -854,9 +854,10 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     if (id === undefined || id === ACH_SEASON_GIFT.id) {
       const r = await seasonAchGiftOf(db, me, now);
       if (r) items = await claimSeasonGift(db, me.id, ACH_SEASON_GIFT.id, r, now);
-    } else if (id === RECORD_SEASON_GIFT.id) {
+    } else if (id.startsWith(RECORD_GIFT_PREFIX)) {
+      // T-11-813 화면에 보인 그 시즌 기록 보상만 받는다(시즌이 바뀐 뒤 옛 카드로 누르면 409).
       const rec = await seasonRecordGiftOf(db, me.id, now);
-      if (rec) items = await claimSeasonGift(db, me.id, RECORD_SEASON_GIFT.id, rec.total, now);
+      if (rec?.gift.id === id) items = await claimSeasonGift(db, me.id, id, rec.total, now);
     } else if (id === UPDATE_THANKS_GIFT.id) {
       const upd = await updateThanksGiftOf(db, me.id, now);
       if (upd) items = await claimSeasonGift(db, me.id, UPDATE_THANKS_GIFT.id, upd, now);

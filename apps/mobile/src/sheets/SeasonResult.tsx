@@ -202,6 +202,24 @@ export function SeasonResult({ v }: { v: Extract<SheetView, { kind: 'season' }> 
           ))}
         </View>
       ) : null}
+      {s.legend ? (
+        <View testID="season-legend">
+          <Txt v="eyebrow" style={{ marginBottom: 6 }}>
+            {L.legendGain}
+          </Txt>
+          <Txt>{s.legend.line}</Txt>
+          {s.legend.cross ? (
+            <Hl>
+              <Txt
+                style={{ fontSize: rem(FONT.body2), fontWeight: '700' }}
+                testID="season-legend-cross"
+              >
+                {s.legend.cross}
+              </Txt>
+            </Hl>
+          ) : null}
+        </View>
+      ) : null}
       <NewTitles titles={s.titles} pop />
       {notes.length ? <Txt tone="muted">{notes.join(' · ')}</Txt> : null}
       {s.scoutHint ? (

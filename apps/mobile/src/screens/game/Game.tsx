@@ -41,6 +41,9 @@ import { Press } from '../../ui/Press';
 import { AvatarLook } from './AvatarLook';
 import { RenameSheet } from '../rename/RenameSheet';
 import { renameText as RN } from '@offside/app-core/i18n/ko/rename';
+import { playerEditText as PE } from '@offside/app-core/i18n/ko/playerEdit';
+import { firstSeasonEditOpen } from '@offside/game/player-edit';
+import { PlayerEditSheet } from './PlayerEditSheet';
 import { avatarLookText as LK } from '@offside/app-core/i18n/ko/avatarLook';
 import { lookSeen, markLookSeen } from '@offside/app-core/lookSeen';
 import { AvatarHint } from './AvatarHint';
@@ -184,6 +187,8 @@ export default function Game() {
     }
   };
   const s = snap.G as GameState | null;
+  // T-11-804 첫 시즌 결산 전에는 이름 옆 연필이 무료 고치기 창을 연다(변경권을 쓰지 않게).
+  const freeEdit = !!s && firstSeasonEditOpen(s);
   // OVR 숫자 트윈(T-10-003 goal 3): 훈련·이벤트 결과로 능력치가 바뀔 때마다 즉시 점프하는 대신 짧게 카운트업/다운한다.
   // T-11-756 시트(이벤트 결과 · 경기 중계)가 헤더를 덮는 동안은 숫자를 붙잡아 두고, 닫히면 그동안의 변화를 한 번에 알린다.
   const sheetOpen = useSnapshot(sheetState).open;
@@ -339,7 +344,9 @@ export default function Game() {
         >
           <Topbar />
           {lookOpen ? <AvatarLook close={() => setLookOpen(false)} /> : null}
-          {renameOpen ? (
+          {renameOpen && freeEdit ? (
+            <PlayerEditSheet close={() => setRenameOpen(false)} />
+          ) : renameOpen ? (
             <RenameSheet careerId={s.cid} name={s.name} close={() => setRenameOpen(false)} />
           ) : null}
           <PitchCard gap={12} style={{ paddingTop: 18, paddingHorizontal: 18, paddingBottom: 16 }}>
@@ -390,11 +397,13 @@ export default function Game() {
                   >
                     {s.name}
                   </Txt>
-                  {/* T-11-377 이름 옆 연필을 누르면 이름 변경권 창. */}
+                  {/* T-11-377 이름 옆 연필을 누르면 이름 변경권 창. T-11-804 첫 시즌 결산 전에는 무료 고치기 창. */}
                   <Press
-                    testID="rename-open"
+                    testID={freeEdit ? 'player-edit-name' : 'rename-open'}
                     accessibilityRole="button"
-                    accessibilityLabel={RN.entryLabel({ name: s.name })}
+                    accessibilityLabel={
+                      freeEdit ? PE.entryLabel({ name: s.name }) : RN.entryLabel({ name: s.name })
+                    }
                     hitSlop={8}
                     onPress={() => setRenameOpen(true)}
                     style={{ padding: 6, opacity: 0.7 }}

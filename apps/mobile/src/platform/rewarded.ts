@@ -3,6 +3,9 @@
 // 기본은 비개인화 광고이고(T-11-632 시험군 제외), 동의는 배너와 같은 UMP를 쓴다. 개발 빌드는 구글 테스트 광고를 쓴다.
 // T-11-558 버튼이 보이면 SDK 미리 불러오기(Ad Preloading)로 단위마다 1개를 준비해 두고, 누르면 바로 띄운다.
 // 준비된 광고가 없거나 미리 불러오기를 못 쓰면 예전처럼 누른 뒤에 불러온다.
+// T-11-811 실패하면 까닭(광고 없음 · 네트워크 · 시간 초과 등)을 깔때기에 같이 남기고, 연달아 실패하면 잠시 다시 부르지 않는다.
+// 한 기기에서 광고가 몇 시간째 안 들어와 한 시간에 수십 번 다시 누른 일이 있었다(11-21, 일본 iOS 유저 의견).
+import type { RewardFailReason } from '@offside/app-core/analytics-native';
 import { Platform } from 'react-native';
 import {
   AdEventType,
@@ -76,15 +79,34 @@ export const rewardOffer = (p: RewardPlacement, owned: boolean): 'free' | 'ad' |
  * 불러오지 못한 광고(게재 제한 · 광고 없음 · 네트워크)를 '끝까지 안 봤다'로 안내하지 않으려고 나눈다.
  */
 type WatchResult = 'earned' | 'closed' | 'failed';
+type Watched = { result: WatchResult; reason?: RewardFailReason };
+
+/** SDK 오류를 실패 까닭으로. 보여 주는 단계의 오류는 까닭과 상관없이 show다. */
+export function failReason(error: unknown): RewardFailReason {
+  const e = (error ?? {}) as { reason?: unknown; phase?: unknown };
+  if (e.phase === 'show') return 'show';
+  switch (e.reason) {
+    case 'no-fill':
+    case 'mediation-no-fill':
+      return 'no_fill';
+    case 'network-error':
+      return 'network';
+    case 'timeout':
+      return 'timeout';
+    default:
+      return 'other';
+  }
+}
 
 /** 보상형 광고 하나를 띄우는 데 필요한 것 — 바로 만든 광고와 미리 불러 둔 광고가 같이 쓴다. */
 type Playable = Pick<RewardedAd, 'show' | 'addAdEventListener'>;
 
 /** 띄우고 닫힐 때까지 기다린다. loaded가 있으면 LOADED를 기다렸다가 띄우고(바로 만든 광고), 없으면 바로 띄운다. */
-function play(ad: Playable, load?: () => boolean): Promise<WatchResult> {
+function play(ad: Playable, load?: () => boolean): Promise<Watched> {
   return new Promise((resolve) => {
     let earned = false;
     let shown = false;
+    let reason: RewardFailReason = 'other';
     const offs = [
       ad.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
         earned = true;
@@ -93,27 +115,40 @@ function play(ad: Playable, load?: () => boolean): Promise<WatchResult> {
         shown = true;
       }),
       ad.addAdEventListener(AdEventType.CLOSED, () => done()),
-      ad.addAdEventListener(AdEventType.ERROR, () => done()),
+      ad.addAdEventListener(AdEventType.ERROR, (error) => {
+        reason = failReason(error);
+        done();
+      }),
     ];
     // 불러오기가 끝나지 않으면(네트워크) 20초에서 끊는다. 보여 주는 중이면 닫힐 때 끝난다.
     let timer: ReturnType<typeof setTimeout> | undefined;
     function done() {
       clearTimeout(timer);
       offs.forEach((off) => off());
-      resolve(earned ? 'earned' : shown ? 'closed' : 'failed');
+      if (earned) resolve({ result: 'earned' });
+      else if (shown) resolve({ result: 'closed' });
+      else resolve({ result: 'failed', reason });
     }
+    const showFailed = () => {
+      reason = 'show';
+      done();
+    };
     if (load) {
       offs.push(
         ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-          ad.show().catch(() => done());
+          ad.show().catch(showFailed);
         }),
       );
-      timer = setTimeout(() => !load() && done(), 20_000);
-    } else ad.show().catch(() => done());
+      timer = setTimeout(() => {
+        if (load()) return;
+        reason = 'timeout';
+        done();
+      }, 20_000);
+    } else ad.show().catch(showFailed);
   });
 }
 
-function watch(unit: string): Promise<WatchResult> {
+function watch(unit: string): Promise<Watched> {
   const ad = RewardedAd.createForAdRequest(unit, adRequestOptions());
   const result = play(ad, () => ad.loaded);
   ad.load();
@@ -167,7 +202,7 @@ export function prepareReward(p: RewardPlacement) {
 }
 
 /** 미리 불러 둔 광고를 띄운다. 꺼낼 광고가 없거나 띄우지 못하면 null(바로 불러오기로 넘어간다). */
-async function watchPooled(unit: string): Promise<WatchResult | null> {
+async function watchPooled(unit: string): Promise<Watched | null> {
   const pool = await within(poolOf(unit), POOL_WAIT_MS);
   if (!pool) return null;
   const r = await within(pool.poll(), POOL_WAIT_MS, (late) => {
@@ -179,14 +214,23 @@ async function watchPooled(unit: string): Promise<WatchResult | null> {
     ad.destroy();
     return null;
   }
-  const result = await play(ad);
+  const watched = await play(ad);
   ad.destroy();
-  return result === 'failed' ? null : result;
+  return watched.result === 'failed' ? null : watched;
 }
+
+/** 이만큼 연달아 실패하면(곳 상관없이) 잠시 광고를 부르지 않는다. 보상을 받거나 광고가 열리면 처음부터 센다. */
+export const FAIL_STREAK = 3;
+/** 연속 실패 뒤 다시 부르지 않는 시간. 안내 문구(rewardedPaused)의 '2분'과 맞춘다. */
+export const PAUSE_MS = 2 * 60_000;
+let failStreak = 0;
+let pausedUntil = 0;
+
+const now = () => Date.now();
 
 /**
  * 보상을 받으면 onEarned를 부르고 ''를, 못 받으면 보여 줄 안내를 돌려준다(동의·불러오기 실패 = 불러올 수 없음,
- * 끝까지 보지 않음 = skipped).
+ * 끝까지 보지 않음 = skipped, 연달아 실패해 잠시 쉼 = rewardedPaused).
  * 광고 제거 구매자는 광고 없이 바로 받는다.
  */
 export async function claimReward(
@@ -198,13 +242,25 @@ export async function claimReward(
   if (!free) {
     const unit = unitOf(p);
     rewardFunnel('press', p);
-    if (!unit || !(await askConsent())) {
-      rewardFunnel('failed', p);
-      return adText.rewardedUnavailable;
+    if (now() < pausedUntil) {
+      rewardFunnel('failed', p, 'paused');
+      return adText.rewardedPaused;
     }
-    const result = (await watchPooled(unit)) ?? (await watch(unit));
+    let watched: Watched;
+    if (!unit) watched = { result: 'failed', reason: 'no_unit' };
+    else if (!(await askConsent())) watched = { result: 'failed', reason: 'consent' };
+    else watched = (await watchPooled(unit)) ?? (await watch(unit));
+    const { result, reason } = watched;
+    if (result === 'failed') {
+      rewardFunnel(result, p, reason);
+      failStreak += 1;
+      if (failStreak < FAIL_STREAK) return adText.rewardedUnavailable;
+      failStreak = 0;
+      pausedUntil = now() + PAUSE_MS;
+      return adText.rewardedPaused;
+    }
     rewardFunnel(result, p);
-    if (result === 'failed') return adText.rewardedUnavailable;
+    failStreak = 0;
     if (result === 'closed') return skipped;
   }
   // 광고 이용 요약(시즌 업로드)은 커리어 화면의 세 자리만 센다.

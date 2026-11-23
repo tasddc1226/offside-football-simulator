@@ -8,6 +8,12 @@ describe('T-11-588 언어별 공개 문서 · 공유 링크', () => {
     expect(publicDocPath('/faq/', 'ja')).toBe('/ja/faq/');
     expect(publicDocPath('/guide/', 'zh')).toBe('/zh/guide/');
   });
+  it('T-11-790 앱 소개 페이지도 언어별 주소로 연다', () => {
+    expect(publicDocPath('/app/', 'ko')).toBe('/app/');
+    expect(publicDocPath('/app/', 'en')).toBe('/en/app/');
+    expect(publicDocPath('/app/', 'ja')).toBe('/ja/app/');
+    expect(publicDocPath('/app/', 'zh')).toBe('/zh/app/');
+  });
   it('공유 링크는 한국어가 아니면 ?lang=을 붙이고, 공유한 곳을 허용 목록 UTM으로 붙인다(T-11-676)', () => {
     expect(careerShareUrl('https://offside-lab.com', 'abc', 'app', 'ko')).toBe(
       'https://offside-lab.com/career/abc?utm_source=offside_app&utm_medium=share&utm_campaign=career_share',

@@ -89,6 +89,7 @@ import { ownerConflict } from './ownerConflict';
 import { ownerPlayers } from './ownerPlayers';
 import { ownerProfile } from './ownerProfile';
 import { partner } from './partner';
+import { playerEdit } from './playerEdit';
 import { playerNudge } from './playerNudge';
 import { publicLegends } from './publicLegends';
 import { push } from './push';
@@ -133,6 +134,7 @@ import { title } from './title';
 import { titleTag } from './titleTag';
 import { translate } from './translate';
 import { tutorial } from './tutorial';
+import { voice } from './voice';
 import { webPay } from './webPay';
 
 export const en = {
@@ -225,6 +227,7 @@ export const en = {
   ownerPlayers,
   ownerProfile,
   partner,
+  playerEdit,
   playerNudge,
   publicLegends,
   push,
@@ -269,5 +272,6 @@ export const en = {
   titleTag,
   translate,
   tutorial,
+  voice,
   webPay,
 };

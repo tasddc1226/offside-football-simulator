@@ -6,6 +6,7 @@
   import { OUTCOME_TITLE, outcomeOf as outcome } from '@offside/app-core/teamOwner';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { recordText, signedNum } from '@offside/app-core/teamText';
+  import { friendlySeason, teamScoreLabel } from '@offside/app-core/teamScore';
   import TeamLogo from './TeamLogo.svelte';
   import DivisionEmblem from './DivisionEmblem.svelte';
   import { divisionShiftView, type DivisionShift } from '@offside/app-core/teamDivision';
@@ -20,6 +21,7 @@
   let {
     m,
     team,
+    nowSeason,
     shift = null,
     streak = null,
     eventName,
@@ -33,6 +35,8 @@
   }: {
     m: TeamMatch;
     team: OwnerTeam | null;
+    /** T-11-800 지금 시즌 — 보고 있는 팀이 아닌 팀으로 치른 친선전 칩의 팀 점수 이름(친구 탭 안내 줄과 같은 기준). */
+    nowSeason: number;
     /** T-11-375 방금 치른 경기의 내 디비전 전후(기록에서 연 경기는 null). */
     shift?: DivisionShift | null;
     /** T-11-722 랭크 연패 안내 — 방금 마감한 내가 건 랭크 경기에만 온다. */
@@ -116,7 +120,7 @@
     {/if}
   </div>
   {#if m.friendly}
-    <p class="tm-chips"><span class="tm-chip muted">{L.friendlyNote}</span></p>
+    <p class="tm-chips"><span class="tm-chip muted">{teamScoreLabel(friendlySeason(m, team, nowSeason), L, 'friendlyNote')}</span></p>
   {:else if gain != null || record}
     <p class="tm-chips">
       {#if gain != null}<span class="tm-chip gain" data-rating-change>{usesRankLadder(team?.season ?? 0) ? L.ratingChangeRp : L.ratingChange}<b>{signedNum(gain)}</b></span>{/if}

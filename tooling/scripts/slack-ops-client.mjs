@@ -71,9 +71,15 @@ export async function productionDb(env = process.env, fetcher = fetch) {
       ...(body ? { body: JSON.stringify(body) } : {}),
       signal: AbortSignal.timeout(30_000),
     });
-    if (!r.ok) throw new Error(`Cloudflare query failed (HTTP ${r.status})`);
-    const v = await r.json();
-    if (!v.success || !v.result) throw new Error('Cloudflare query unsuccessful');
+    const v = await r.json().catch(() => null);
+    if (!r.ok || !v?.success || !v.result) {
+      // T-11-802 표가 아직 없는 경우(머지 뒤 운영 마이그레이션 전)만 알아보게 표시를 붙인다. 응답 본문은 옮기지 않는다.
+      const missing = /no such table/i.test(JSON.stringify(v?.errors ?? []));
+      const why = r.ok
+        ? 'Cloudflare query unsuccessful'
+        : `Cloudflare query failed (HTTP ${r.status})`;
+      throw new Error(missing ? `${why}: no such table` : why);
+    }
     return v.result;
   };
   const db = (await request(`${base}?per_page=100`)).find((x) => x.name === 'offside-production');
@@ -81,7 +87,11 @@ export async function productionDb(env = process.env, fetcher = fetch) {
   const query = async (sql, params = []) => {
     const rows = await request(`${base}/${encodeURIComponent(db.uuid)}/query`, { sql, params });
     if (rows.length !== 1 || rows[0]?.success !== true)
-      throw new Error('Production SQL unsuccessful');
+      throw new Error(
+        /no such table/i.test(JSON.stringify(rows[0] ?? {}))
+          ? 'Production SQL unsuccessful: no such table'
+          : 'Production SQL unsuccessful',
+      );
     return rows[0].results;
   };
   return {

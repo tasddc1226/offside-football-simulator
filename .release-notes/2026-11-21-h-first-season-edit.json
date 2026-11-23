@@ -1,0 +1,38 @@
+{
+  "id": "t-11-804-first-season-edit",
+  "title": "첫 시즌 동안 선수 정보를 고칠 수 있어요",
+  "items": [
+    "첫 시즌 결산 전까지 선수 탭의 '고치기'에서 이름 · 주발 · 키 · 몸무게를 무료로, 몇 번이든 고칠 수 있어요. 이름 옆 연필도 이 기간에는 변경권 없이 같은 창을 열어요.",
+    "체격을 고치면 세부 능력치 분포만 옮겨요. 대부분 OVR은 그대로이고, 두 역할 중 높은 쪽으로 OVR을 재는 일부 유형은 체격에 따라 조금 달라질 수 있어요. 경기를 치른 뒤에 고쳐도 그동안 오른 능력치는 그대로 남아요. 이벤트 같은 선택을 기다리는 동안에는 체격을 고칠 수 없어요.",
+    "주발은 선수 경기 결과에 영향이 없고, 구단 경기에서 선수 카드를 풀백 · 윙어 자리에 세울 때만 쓰여요.",
+    "선수 만들기의 후보 화면에 주발과 체격을 함께 보여 줘요."
+  ],
+  "en": {
+    "title": "Edit your player's info during the first season",
+    "items": [
+      "Until the first season review, you can change name, preferred foot, height and weight for free, as many times as you like, with 'Edit' on the Player tab. During this time, the pencil next to the name opens the same window without a rename ticket.",
+      "Changing build only shifts the spread of detailed attributes. OVR usually stays the same, but a few types whose OVR uses the higher of two roles may change slightly with build. Even after matches, the growth so far is kept. Build can't be changed while a choice such as an event is waiting.",
+      "Preferred foot doesn't affect your player's match results. It only matters when the player card is placed at full-back or winger in club matches.",
+      "The candidate screen in player creation now shows preferred foot and build."
+    ]
+  },
+  "ja": {
+    "title": "最初のシーズンの間、選手情報を直せます",
+    "items": [
+      "最初のシーズン決算までは、選手タブの「直す」から名前・利き足・身長・体重を無料で、何回でも直せます。この期間は名前の横の鉛筆も、変更券なしで同じ画面を開きます。",
+      "体格を直すと詳細能力値の配分だけが動きます。ほとんどの場合OVRは変わりませんが、2つの役割のうち高いほうでOVRを測る一部のタイプは、体格によって少し変わることがあります。試合の後に直しても、それまでに伸びた能力値はそのままです。イベントなどの選択を待っている間は体格を直せません。",
+      "利き足は選手の試合結果に影響せず、クラブの試合で選手カードをサイドバック・ウインガーの枠に置くときだけ使われます。",
+      "選手作成の候補画面に利き足と体格を表示します。"
+    ]
+  },
+  "zh": {
+    "title": "第一季期間可以修改球員資料",
+    "items": [
+      "第一季結算前，可以在球員分頁的「修改」免費修改名字、慣用腳、身高和體重，次數不限。這段期間，名字旁的鉛筆圖示也會開啟同一個視窗，不需要改名券。",
+      "修改體格只會調整細項能力值的分布。大多數情況下 OVR 不變，但以兩種角色中較高者計算 OVR 的少數類型，可能會隨體格稍微改變。比賽後再修改，目前為止成長的能力值也會保留。等待事件等選擇期間無法修改體格。",
+      "慣用腳不影響球員的比賽結果，只在俱樂部比賽中把球員卡放在邊後衛、邊鋒位置時使用。",
+      "建立球員的候選畫面會一併顯示慣用腳和體格。"
+    ]
+  },
+  "availability": "web-app"
+}

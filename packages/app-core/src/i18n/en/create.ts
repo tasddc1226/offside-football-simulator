@@ -197,7 +197,10 @@ export const create: Translation<CreateMsgs> = {
   quickCandidates: 'See candidates with defaults →',
   quickNote: 'You can start with defaults for the rest.',
   moreCustomize: 'Customize build, foot and look',
-  extraNote: 'All optional. You can start with the defaults.',
+  extraNote: 'All optional. You can change these in the Player tab during the first season.',
+  extraEdit: 'You can change these in the Player tab during the first season.',
+  candBody: (p) => `${p.foot} · ${p.h}cm · ${p.w}kg`,
+  candBodyLabel: 'Foot and build',
   focusMeaning:
     'Start is the change to your first attributes. Growth is how fast they rise from the same training.',
   focusTypeLine: (p: { name: string; desc: string }) =>

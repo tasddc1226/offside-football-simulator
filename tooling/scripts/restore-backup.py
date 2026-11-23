@@ -13,7 +13,7 @@ import time
 import zlib
 
 
-def restore(source, destination, chunks, expected_tables, expected_rows):
+def restore(source, destination, chunks, expected_tables, expected_rows, min_rows=None):
     source, destination = Path(source).resolve(), Path(destination).resolve()
     if not 1 <= chunks <= 10000:
         raise ValueError('Invalid chunk count')
@@ -26,6 +26,9 @@ def restore(source, destination, chunks, expected_tables, expected_rows):
     started = time.monotonic()
     db = sqlite3.connect(destination)
     try:
+        # Sealed copies end with INSERT OR REPLACE rows. With enforcement on, replacing a parent
+        # would cascade-delete children restored earlier; integrity is checked explicitly below.
+        db.execute('PRAGMA foreign_keys = OFF')
         db.execute('BEGIN')
         for part in parts:
             with part.open('rb') as raw:
@@ -50,7 +53,7 @@ def restore(source, destination, chunks, expected_tables, expected_rows):
         result = {'chunks': chunks, 'tables': len(tables), 'rows': rows,
                   'integrityOk': integrity == ['ok'], 'foreignKeyViolations': foreign_keys,
                   'expectedTables': expected_tables, 'expectedRows': expected_rows,
-                  'countsMatch': (expected_tables is None or len(tables) == expected_tables) and (expected_rows is None or rows == expected_rows),
+                  'countsMatch': (expected_tables is None or len(tables) == expected_tables) and (expected_rows is None or (min_rows <= rows <= expected_rows if min_rows is not None else rows == expected_rows)),
                   'restoreSeconds': round(time.monotonic() - started, 2),
                   'databaseBytes': destination.stat().st_size}
         # Never include SQL, table names, keys or row contents in reports.
@@ -66,9 +69,12 @@ def main():
     parser.add_argument('--chunks', required=True, type=int)
     parser.add_argument('--tables', required=True, type=int)
     parser.add_argument('--rows', required=True, type=int)
+    # Sealed copies re-emit rows (INSERT OR REPLACE), so the restored count may be lower than
+    # the emitted statement count, but never below this bound.
+    parser.add_argument('--min-rows', type=int)
     args = parser.parse_args()
     try:
-        result = restore(args.source, args.destination, args.chunks, args.tables, args.rows)
+        result = restore(args.source, args.destination, args.chunks, args.tables, args.rows, args.min_rows)
         print(json.dumps(result))
         return 0 if result['integrityOk'] and result['countsMatch'] and result['foreignKeyViolations'] == 0 else 1
     except (ValueError, OSError, EOFError, zlib.error, sqlite3.Error):

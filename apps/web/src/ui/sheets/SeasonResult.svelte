@@ -77,6 +77,13 @@
     {#each v.miles as m, i (i)}<p>· {m}</p>{/each}
   </div>
 {/if}
+{#if v.legend}
+  <div data-season-legend>
+    <div class="eyebrow" style="margin-bottom:6px">{L.legendGain}</div>
+    <p>{v.legend.line}</p>
+    {#if v.legend.cross}<p class="hl" data-season-legend-cross><b>{v.legend.cross}</b></p>{/if}
+  </div>
+{/if}
 <NewTitles titles={v.titles} pop />
 {#if notes.length}<p class="muted">{notes.join(' · ')}</p>{/if}
 {#if v.scoutHint}

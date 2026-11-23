@@ -2,7 +2,13 @@
 // Claude API 요청에 실리지 않는다. Claude API MCP 커넥터는 Cloudflare MCP와 연결에 실패했다(2026-10-15).
 import type { Tool } from './claude.ts';
 
-export type McpServer = { name: string; url: string; token: string };
+/** deny: 입력(JSON)이 pattern에 맞는 호출은 서버에 보내지 않고 message로 거절한다. */
+export type McpServer = {
+  name: string;
+  url: string;
+  token: string;
+  deny?: { pattern: RegExp; message: string };
+};
 
 const MAX_CHARS = 6_000;
 
@@ -60,6 +66,7 @@ export async function mcpTools(server: McpServer, fetcher: typeof fetch = fetch)
     description: (t.description ?? '').slice(0, 4000),
     input_schema: t.inputSchema ?? { type: 'object' },
     run: async (input) => {
+      if (server.deny?.pattern.test(JSON.stringify(input))) throw new Error(server.deny.message);
       const res = (await send('tools/call', { name: t.name, arguments: input })) as {
         content?: { type: string; text?: string }[];
         isError?: boolean;

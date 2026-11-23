@@ -969,7 +969,7 @@ export default function Manager() {
       {loginNeeded ? (
         <Card gap={10}>
           <Txt tone="muted">{M.loginNeeded}</Txt>
-          <LoginButtons />
+          <LoginButtons place="manager" />
         </Card>
       ) : failed && !data ? (
         <Card gap={10}>

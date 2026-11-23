@@ -213,7 +213,7 @@ function EntryCard({
       <Card gap={10} testID="league-login">
         <Txt v="sm">{card.text}</Txt>
         {/* T-11-640 iOS에서는 Apple 로그인도 함께(컵 화면과 같은 LoginButtons). */}
-        <LoginButtons back={{ league: true }} />
+        <LoginButtons place="league" back={{ league: true }} />
       </Card>
     );
   if (card.kind === 'error' || !me)

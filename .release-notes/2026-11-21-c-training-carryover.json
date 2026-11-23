@@ -1,0 +1,26 @@
+{
+  "id": "t-11-798-training-carryover",
+  "title": "새 시즌에도 고른 훈련 이어 가기",
+  "items": [
+    "이적 시장을 마치면 훈련이 휴식·회복으로 돌아가, 다시 고르지 않으면 프리시즌 훈련 한 번이 그대로 지나가던 문제를 고쳤어요. 이제 고른 능력치 훈련이 새 시즌에도 이어져요. 개인 코치와 미디어 활동은 지금처럼 휴식·회복으로 돌아가요."
+  ],
+  "en": {
+    "title": "Your training now carries into the new season",
+    "items": [
+      "Fixed training switching back to Rest and recovery after the transfer window, which cost you a preseason training session unless you picked again. Your attribute training now carries into the new season. Personal coach and Media work still switch back to Rest and recovery."
+    ]
+  },
+  "ja": {
+    "title": "新シーズンも選んだトレーニングを継続",
+    "items": [
+      "移籍市場を終えるとトレーニングが休養・回復に戻り、選び直さないとプレシーズンのトレーニングが1回分なくなっていた問題を修正しました。選んだ能力トレーニングが新シーズンにも引き継がれます。個人コーチとメディア活動はこれまで通り休養・回復に戻ります。"
+    ]
+  },
+  "zh": {
+    "title": "新賽季延續已選的訓練",
+    "items": [
+      "修正了轉會市場結束後訓練會變回休息・恢復，若沒有重新選擇就會少掉一次季前訓練的問題。現在選好的能力訓練會延續到新賽季。個人教練與媒體活動仍會變回休息・恢復。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -41,3 +41,43 @@ it('restores ordered decoded/gzip chunks, checks counts/FKs and refuses missing 
     rmSync(dir, { recursive: true, force: true });
   }
 });
+it('T-11-777 accepts a row count between --min-rows and --rows when seal rows replace earlier ones', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'offside-restore-test-'));
+  try {
+    writeFileSync(
+      join(dir, '0001.sql'),
+      "CREATE TABLE parent(id INTEGER PRIMARY KEY, v TEXT);\nINSERT INTO parent VALUES(1, 'old');\n",
+    );
+    writeFileSync(
+      join(dir, '0002.sql'),
+      "INSERT OR REPLACE INTO parent VALUES(1, 'new');\nINSERT OR REPLACE INTO parent VALUES(2, 'late');\n",
+    );
+    const run = (name, extra) =>
+      spawnSync(
+        'python3',
+        [
+          script,
+          '--source',
+          dir,
+          '--destination',
+          join(dir, name),
+          '--chunks',
+          '2',
+          '--tables',
+          '1',
+          '--rows',
+          '3',
+          ...extra,
+        ],
+        { encoding: 'utf8' },
+      );
+    // 조각에 적힌 행은 3개지만 하나는 바꿔 넣기라 복원한 행은 2개다.
+    expect(run('exact.sqlite', []).status).toBe(1);
+    const ranged = run('ranged.sqlite', ['--min-rows', '1']);
+    expect(ranged.status).toBe(0);
+    expect(JSON.parse(ranged.stdout)).toMatchObject({ rows: 2, countsMatch: true });
+    expect(run('short.sqlite', ['--min-rows', '3']).status).toBe(1);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

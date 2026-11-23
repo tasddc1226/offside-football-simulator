@@ -25,3 +25,10 @@ export function parseAppLink(raw: string): AppLink | null {
   const code = normalizeFriendCode(fromPath ?? fromQuery ?? '');
   return code ? { kind: 'friend', code } : null;
 }
+
+/** T-11-794 로그인을 마치고 돌아오는 주소(`offside://auth?…`, contracts APP_AUTH_REDIRECT_URL)인가. Android는 이 주소가 앱
+ * 링크로도 들어와 라우터가 없는 경로 화면을 띄운다. 로그인 흐름이 직접 받는 주소라 라우터는 첫 화면에 둔다. */
+const AUTH_RETURN = /^offside:\/\/auth(?:[/?#]|$)/i;
+export function isAuthReturnLink(raw: string): boolean {
+  return AUTH_RETURN.test(raw);
+}

@@ -8,7 +8,7 @@ import type { HomeGiftResponse, OwnerItemsResponse } from '@offside/contracts';
 import {
   ACH_SEASON_GIFT,
   AD_FREE_THANKS_GIFT,
-  RECORD_SEASON_GIFT,
+  RECORD_GIFT_PREFIX,
   UPDATE_THANKS_GIFT,
 } from '@offside/contracts/owner-team';
 import { teamSeasonAt } from '@offside/contracts/service-seasons';
@@ -28,7 +28,7 @@ export type HomeGift = NonNullable<HomeGiftResponse['gift']>;
 
 // 받을 수 있는 선물 묶음이 늘면 표시 문자열도 바뀌어, 업적 보상만 있던 때 남긴 "다 받음" 표시로 기록 보상을 놓치지 않는다.
 const doneMark = () =>
-  `${ACH_SEASON_GIFT.id}+${RECORD_SEASON_GIFT.id}+${AD_FREE_THANKS_GIFT.id}+${UPDATE_THANKS_GIFT.id}:${teamSeasonAt(new Date().toISOString()) ?? 0}`;
+  `${ACH_SEASON_GIFT.id}+${RECORD_GIFT_PREFIX}+${AD_FREE_THANKS_GIFT.id}+${UPDATE_THANKS_GIFT.id}:${teamSeasonAt(new Date().toISOString()) ?? 0}`;
 
 function giftDone() {
   try {

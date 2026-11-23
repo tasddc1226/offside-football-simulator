@@ -17,6 +17,8 @@ export const ad: Translation<AdMsgs> = {
   noPurchase: 'This store account has no Remove ads purchase on record.',
   restoreFail: "Couldn't restore. Please try again in a moment.",
   rewardedUnavailable: "Can't load an ad right now. Please try again in a moment.",
+  rewardedPaused:
+    "Ads couldn't load several times in a row. Please try again in 2 minutes. Turning off an ad blocker or VPN may help.",
   rewardedWatch: 'Watch the ad to the end to see the assessment.',
   adRerollBtn: (p) => `Watch an ad to redraw (${p.n} left today)`,
   adRerollFreeBtn: (p) => `Redraw candidates (${p.n} left today)`,

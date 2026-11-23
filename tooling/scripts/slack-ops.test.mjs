@@ -80,7 +80,9 @@ describe('operations delivery and time boundaries', () => {
     db.query.mockImplementation(async (sql) =>
       sql.includes('billing_alerts')
         ? [{ store: 'google', kind: 'purchase', product_id: 'reroll', n: 2 }]
-        : [{ n: 3 }],
+        : sql.includes('user_voices')
+          ? []
+          : [{ n: 3 }],
     );
     const f = vi.fn(async () => ok());
     await daily(db, hooks, now, f);
@@ -91,6 +93,109 @@ describe('operations delivery and time boundaries', () => {
     expect(db.query.mock.calls[0][0]).toContain('test=0');
   });
 });
+describe('T-11-802 in-game voice digest', () => {
+  const env = { ...hooks, SLACK_FEEDBACK_WEBHOOK: 'https://discord.com/api/webhooks/1/feedback' };
+  const voiceRows = [
+    { kind: 'bug', lang: 'ko', n: 2 },
+    { kind: 'idea', lang: 'en', n: 1 },
+    { kind: 'other', lang: 'ja', n: 1 },
+  ];
+  const fakeDb = (voices) => {
+    const db = dbFake();
+    db.query.mockImplementation(async (sql) => {
+      if (!sql.includes('user_voices')) return sql.includes('billing_alerts') ? [] : [{ n: 3 }];
+      if (voices instanceof Error) throw voices;
+      return sql.includes('resolved_at IS NULL') ? [{ n: 5 }] : voices;
+    });
+    return db;
+  };
+  const sentTo = (f, hook) =>
+    f.mock.calls.filter(([url]) => url === hook).map(([, init]) => JSON.parse(init.body).content);
+
+  it('sends yesterday counts by kind and language with the open total, once a day, without bodies or ids', async () => {
+    const db = fakeDb(voiceRows);
+    const f = vi.fn(async () => ok());
+    await daily(db, env, now, f);
+    const [content, ...rest] = sentTo(f, env.SLACK_FEEDBACK_WEBHOOK);
+    expect(rest).toEqual([]);
+    expect(content).toContain('게임 안 의견 · 2026-10-11 · 4건');
+    expect(content).toContain('버그 · 불편 2 · 건의 1 · 기타 1');
+    expect(content).toContain('한국어 2 · 영어 1 · 일본어 1 · 중국어 0');
+    expect(content).toContain('아직 처리하지 않은 의견 5건');
+    expect(content).toContain('https://offside-lab.com/settings');
+    const voiceSql = db.query.mock.calls
+      .map(([sql]) => sql)
+      .filter((s) => s.includes('user_voices'));
+    expect(voiceSql).toHaveLength(2);
+    for (const sql of voiceSql) expect(sql).not.toMatch(/body|profile_id|nickname/);
+    expect(db.query.mock.calls.find(([sql]) => sql.includes('GROUP BY kind'))[1]).toEqual([
+      '2026-10-10T15:00:00.000Z',
+      '2026-10-11T15:00:00.000Z',
+    ]);
+    // 같은 날 다시 돌아도 다시 묻거나 보내지 않는다.
+    const calls = db.query.mock.calls.length;
+    await daily(db, env, now, f);
+    expect(db.query.mock.calls).toHaveLength(calls);
+    expect(sentTo(f, env.SLACK_FEEDBACK_WEBHOOK)).toHaveLength(1);
+  });
+
+  it('sends nothing when no voice arrived yesterday', async () => {
+    const db = fakeDb([]);
+    const f = vi.fn(async () => ok());
+    await daily(db, env, now, f);
+    expect(sentTo(f, env.SLACK_FEEDBACK_WEBHOOK)).toEqual([]);
+    expect(db.query.mock.calls.some(([sql]) => sql.includes('resolved_at IS NULL'))).toBe(false);
+    expect(f).toHaveBeenCalledTimes(2);
+    // 끝난 날의 0건은 다시 묻지 않는다.
+    const calls = db.query.mock.calls.length;
+    await daily(db, env, now, f);
+    expect(db.query.mock.calls).toHaveLength(calls);
+  });
+
+  it('skips quietly before the production migration, while other morning reports still go out', async () => {
+    const db = fakeDb(new Error('Cloudflare query failed (HTTP 400): no such table'));
+    const f = vi.fn(async () => ok());
+    await expect(daily(db, env, now, f)).resolves.toBeUndefined();
+    expect(sentTo(f, env.SLACK_FEEDBACK_WEBHOOK)).toEqual([]);
+    expect(f).toHaveBeenCalledTimes(2);
+    expect(db.state.has('slack:ops:voices-daily')).toBe(false);
+  });
+
+  it('reports other query failures instead of claiming zero', async () => {
+    const db = fakeDb(new Error('Cloudflare query failed (HTTP 500)'));
+    await expect(
+      daily(
+        db,
+        env,
+        now,
+        vi.fn(async () => ok()),
+      ),
+    ).rejects.toThrow('HTTP 500');
+  });
+
+  it('keeps only a missing-table marker from D1 errors, never the response body', async () => {
+    const { productionDb } = await import('./slack-ops-client.mjs');
+    const fetcher = vi.fn(async (url) =>
+      String(url).includes('per_page')
+        ? Response.json({ success: true, result: [{ name: 'offside-production', uuid: 'u1' }] })
+        : Response.json(
+            {
+              success: false,
+              result: [],
+              errors: [{ code: 7500, message: 'no such table: user_voices: SQLITE_ERROR' }],
+            },
+            { status: 400 },
+          ),
+    );
+    const db = await productionDb(
+      { CLOUDFLARE_ACCOUNT_ID: 'acct', CLOUDFLARE_API_TOKEN: 'token' },
+      fetcher,
+    );
+    const err = await db.query('SELECT 1 FROM user_voices').catch((e) => e);
+    expect(err.message).toBe('Cloudflare query failed (HTTP 400): no such table');
+  });
+});
+
 describe('feedback source boundaries', () => {
   it('extracts only actual community rows; ignores ads/notices and foreign links', () => {
     const row = (id, href, title, type = 'icon_txt') =>
