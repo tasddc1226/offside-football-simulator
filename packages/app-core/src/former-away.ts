@@ -65,7 +65,15 @@ export function afterFormerAway(
 ): Pending | null {
   const game = block?.games.find((g) => g.rd === visit.rd && g.opp === visit.clubId);
   if (!game) return next;
-  const result = game.g ? 'goal' : game.a ? 'assist' : game.mins ? 'played' : 'bench';
+  const result = game.g
+    ? 'goal'
+    : game.a
+      ? 'assist'
+      : game.mins
+        ? 'played'
+        : game.inj
+          ? 'injured'
+          : 'unused';
   return { type: 'formerAway', clubId: visit.clubId, rd: visit.rd, reply, result, next };
 }
 
@@ -93,6 +101,8 @@ export function showFormerAway(
     assist: L.visitAssist,
     played: L.visitPlayed,
     bench: L.visitBench,
+    unused: L.visitUnused,
+    injured: L.visitInjured,
   };
   sheet.showSheet(
     { kind: 'notice', eyebrow: gameText.formerAway, title: scene[result]({ club }), text: intro },

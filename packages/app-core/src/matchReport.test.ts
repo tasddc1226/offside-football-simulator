@@ -128,6 +128,8 @@ describe('T-11-379 평점 구성', () => {
     const games: MatchGame[] = [
       {
         rd: 1,
+        gf: 2,
+        ga: 0,
         res: 'W',
         mins: 90,
         g: 1,
@@ -137,6 +139,8 @@ describe('T-11-379 평점 구성', () => {
       },
       {
         rd: 2,
+        gf: 0,
+        ga: 1,
         res: 'L',
         mins: 90,
         g: 0,
@@ -144,7 +148,7 @@ describe('T-11-379 평점 구성', () => {
         rating: 5.9,
         parts: parts({ ovrEdge: 0.3, form: -0.4, result: -0.2, luck: 0.03 }),
       },
-      { rd: 3, res: 'D', mins: 0 },
+      { rd: 3, gf: 0, ga: 0, res: 'D', mins: 0 },
     ];
     const b = ratingBreakdown(games, 6.2)!;
     expect(b.avg).toBe(6.75);
@@ -152,7 +156,7 @@ describe('T-11-379 평점 구성', () => {
     expect(Math.abs(sum - b.avg)).toBeLessThan(0.051);
     expect(b.rows.find((r) => r.key === 'goals')!.value).toBe(0.5);
     expect(b.rows.some((r) => r.key === 'cs')).toBe(false);
-    expect(ratingBreakdown([{ rd: 1, res: 'W', mins: 0 }], 6.2)).toBeNull();
+    expect(ratingBreakdown([{ rd: 1, gf: 1, ga: 0, res: 'W', mins: 0 }], 6.2)).toBeNull();
   });
 });
 

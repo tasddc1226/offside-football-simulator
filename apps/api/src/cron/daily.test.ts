@@ -16,6 +16,7 @@ import {
   latestManifestKey,
   manifestKey,
   partialUniqueKeys,
+  singleUniqueKeys,
   runBackupStep,
   type BackupResult,
   type BackupState,
@@ -401,6 +402,80 @@ describe('T-10-070 D1 → R2 백업', () => {
           { type: 'index', name: 'd', sql: 'CREATE UNIQUE INDEX d ON "t" ("x", y DESC) WHERE z' },
         ]),
       ).toEqual(new Map([['t', [['x', 'y']]]]));
+    });
+
+    it('T-11-814 고유 값이 새 행으로 옮겨 가도 옛 주인 행은 남고 그 값만 비운다', async () => {
+      const { results } = await ctx.env.DB.prepare(
+        "SELECT type, name, sql FROM sqlite_master WHERE sql IS NOT NULL AND type = 'index'",
+      ).all<{ type: string; name: string; sql: string }>();
+      const keys = singleUniqueKeys(results).get('profiles')!;
+      expect(keys).toContainEqual({ col: 'google_sub', lower: false });
+      expect(keys).toContainEqual({ col: 'nickname', lower: true });
+      // 여러 열 · 조건부 고유 인덱스는 대상이 아니다.
+      expect(
+        singleUniqueKeys([
+          { type: 'index', name: 'a', sql: 'CREATE UNIQUE INDEX a ON t (x, y)' },
+          { type: 'index', name: 'b', sql: 'CREATE UNIQUE INDEX b ON t (x) WHERE y = 1' },
+          { type: 'index', name: 'c', sql: 'CREATE INDEX c ON t (x)' },
+        ]).size,
+      ).toBe(0);
+
+      await run("DELETE FROM app_meta WHERE key LIKE 'cron:backup:%'");
+      await run('CREATE TABLE seal_owners (id TEXT PRIMARY KEY, sub TEXT, nick TEXT)');
+      await run('CREATE UNIQUE INDEX seal_owners_sub_unique ON seal_owners (`sub`)');
+      await run('CREATE UNIQUE INDEX seal_owners_nick_unique ON seal_owners (lower("nick"))');
+      await run(
+        'CREATE TABLE seal_owned (id INTEGER PRIMARY KEY, owner TEXT NOT NULL REFERENCES seal_owners(id) ON DELETE CASCADE)',
+      );
+      await run(
+        "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 260) INSERT INTO seal_owners SELECT 'o' || i, 'g' || i, 'nick' || i FROM n",
+      );
+      await run(
+        "WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 260) INSERT INTO seal_owned SELECT i, 'o' || i FROM n",
+      );
+      try {
+        const at = (st: BackupState, t: string) => st.tables.indexOf(t);
+        const copied = (st: BackupState, t: string, top: number) =>
+          st.table > at(st, t) || (st.table === at(st, t) && st.after >= top);
+        const state = await stepUntil(
+          'sealk',
+          (st) => !!st && copied(st, 'seal_owners', 260) && copied(st, 'seal_owned', 260),
+        );
+        expect(state?.phase).toBe('copy');
+        // 복사한 뒤: o1의 연결과 닉네임이 새 행으로 옮겨 간다(대소문자만 다른 닉네임).
+        await run("UPDATE seal_owners SET sub = NULL, nick = 'renamed' WHERE id = 'o1'");
+        await run("INSERT INTO seal_owners VALUES ('o1b', 'g1', 'NICK1')");
+        await stepUntil('sealk', () => false);
+        const last = (await meta<BackupResult>(BACKUP_LAST_KEY))!;
+        expect(last.consistency).toBe('sealed');
+        const { sql } = await dumpOf(bucket(), last.key);
+        const db = restore(sql);
+        try {
+          expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+          expect(db.prepare('SELECT count(*) AS n FROM seal_owners').get()).toEqual({ n: 261 });
+          // 옛 주인은 남는다. 옮겨 간 값은 비고(복사한 때의 값이라 새 닉네임은 모른다), 새 행이 그 값을 갖는다.
+          expect(
+            db
+              .prepare(
+                "SELECT id, sub, nick FROM seal_owners WHERE id IN ('o1', 'o1b') ORDER BY id",
+              )
+              .all(),
+          ).toEqual([
+            { id: 'o1', sub: null, nick: null },
+            { id: 'o1b', sub: 'g1', nick: 'NICK1' },
+          ]);
+          expect(
+            db.prepare("SELECT count(*) AS n FROM seal_owned WHERE owner = 'o1'").get(),
+          ).toEqual({
+            n: 1,
+          });
+        } finally {
+          db.close();
+        }
+      } finally {
+        await run('DROP TABLE seal_owned');
+        await run('DROP TABLE seal_owners');
+      }
     });
 
     it('조건부 고유 키가 겹치는 새 행과 옛 사본, 복사 뒤 커진 작은 표도 복원된다', async () => {

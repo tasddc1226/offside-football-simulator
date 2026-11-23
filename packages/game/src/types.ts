@@ -360,7 +360,7 @@ export type AfterPhase =
   { type: 'event'; id: string; then?: 'seasonEnd' | null } | { type: 'seasonEnd' };
 
 export type ReturnReply = 'respect' | 'fans' | 'later';
-export type ReturnResult = 'goal' | 'assist' | 'played' | 'bench';
+export type ReturnResult = 'goal' | 'assist' | 'played' | 'bench' | 'unused' | 'injured';
 
 export type Pending =
   | {
@@ -479,6 +479,9 @@ export interface GameState {
     year: number;
     round: number;
     returnRound?: number;
+    returnYear?: number;
+    returnScore?: string;
+    returnResult?: 'W' | 'D' | 'L';
   };
   flags: Flags;
   peak: number;

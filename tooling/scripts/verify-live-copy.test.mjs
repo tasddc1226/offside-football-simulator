@@ -112,7 +112,12 @@ describe('T-11-777 live-copy restore verification', () => {
     const verdict = await withDir((output) =>
       verifyLiveCopy({ env, output, publish: true }, broken.fetcher),
     );
-    expect(verdict).toMatchObject({ passed: false, published: false, foreignKeyViolations: 1 });
+    expect(verdict).toMatchObject({
+      passed: false,
+      published: false,
+      foreignKeyViolations: 1,
+      foreignKeyTables: { 'child -> parent': 1 },
+    });
     expect(broken.store.has(verifiedKey('production'))).toBe(false);
 
     const altered = fakeStorage(SQL);
@@ -137,6 +142,30 @@ describe('T-11-777 live-copy restore verification', () => {
     await expect(
       verifyLiveCopy({ env: {}, output: '/nonexistent', publish: true }, altered.fetcher),
     ).rejects.toThrow('credentials');
+  });
+
+  it('T-11-814 passes after removing children of a parent deleted during the backup, and records the count', async () => {
+    const { store, fetcher } = fakeStorage(
+      [
+        'CREATE TABLE parent(id INTEGER PRIMARY KEY);\nCREATE TABLE child(id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES parent(id) ON DELETE CASCADE);\nINSERT INTO parent VALUES(1);\nINSERT INTO child VALUES(1, 1);\nINSERT INTO child VALUES(2, 9);\n',
+      ],
+      { rows: 3, seal: { passes: 1, rows: 0 } },
+    );
+    const result = await withDir((output) =>
+      verifyLiveCopy({ env, output, publish: true, now: 5000 }, fetcher),
+    );
+    expect(result).toMatchObject({
+      passed: true,
+      published: true,
+      rows: 2,
+      foreignKeyViolations: 0,
+      orphansRepaired: 1,
+      orphanTables: { child: 1 },
+    });
+    expect(JSON.parse(store.get(verifiedKey('production')).toString()).restored).toMatchObject({
+      foreignKeyViolations: 0,
+      orphansRepaired: 1,
+    });
   });
 
   it('verifies a named day without publishing by default', async () => {

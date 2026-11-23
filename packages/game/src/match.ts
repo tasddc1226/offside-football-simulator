@@ -9,7 +9,7 @@ import {
   type AttrKey,
 } from './data.js';
 import { ovr, wOf } from './attributes.js';
-import { clamp, ri, chance, gauss, poisson, rnd } from './rng.js';
+import { clamp, createRng, getActiveRng, ri, chance, gauss, poisson, rnd } from './rng.js';
 import { BAL } from './balance.js';
 import type { GameState } from './types.js';
 import { leagueOf, roleOf } from './player.js';
@@ -68,6 +68,9 @@ export function scoreBoost(atk: number, o: number, perf: number, avg: number): n
 
 export interface MatchGame {
   rd: number;
+  /** Final team goals, from the career player's side. */
+  gf: number;
+  ga: number;
   res: 'W' | 'D' | 'L';
   mins: number;
   g?: number;
@@ -80,6 +83,31 @@ export interface MatchGame {
   /** T-11-379 평점 구성(뛴 경기만). 화면 설명용이라 세이브에 남지 않는다(BlockResult는 저장하지 않는다). */
   parts?: RatingParts;
 }
+/**
+ * Draw a score conditional on the simulated result, the player's goal contributions and
+ * the defence's clean-sheet roll. A separate match stream keeps career RNG draws stable.
+ */
+export function leagueScore(
+  res: MatchGame['res'],
+  contributions: number,
+  cleanSheet: boolean,
+  mustConcede: boolean,
+  random: () => number,
+): Pick<MatchGame, 'gf' | 'ga'> {
+  const draw = (low: number, high: number) => low + Math.floor(random() * (high - low + 1));
+  const minimumAgainst = mustConcede ? 1 : 0;
+  if (res === 'D') {
+    const goals = cleanSheet ? 0 : Math.max(contributions, minimumAgainst, draw(0, 2));
+    return { gf: goals, ga: goals };
+  }
+  if (res === 'W') {
+    const gf = Math.max(contributions, minimumAgainst + 1, draw(1, 3));
+    return { gf, ga: cleanSheet ? 0 : draw(minimumAgainst, gf - 1) };
+  }
+  const gf = Math.max(contributions, draw(0, 2));
+  return { gf, ga: gf + draw(1, 2) };
+}
+
 /**
  * T-11-379 경기 평점을 이룬 몫(반올림 · 상한 전). 경기력(perf × 0.35)은 OVR 우위 · 컨디션 · 사기 · 그날 흐름으로 나눈다.
  * 이미 굴린 값을 그대로 담을 뿐 난수를 더 쓰지 않는다.
@@ -316,6 +344,7 @@ export function simBlock(s: GameState, mo?: MomentHooks): BlockResult {
   const at = () => ({ game: r.games.length, rd: S.played });
   for (let i = 0; i < n; i++) {
     S.played++;
+    const scoreRng = createRng(getActiveRng().getState().seed ^ 0x53434f52);
     const { mins, inj } = rollMinutes(s, startP, subP);
     let perf = 0,
       g = 0,
@@ -362,6 +391,7 @@ export function simBlock(s: GameState, mo?: MomentHooks): BlockResult {
         S.cs++;
       }
     }
+    const score = leagueScore(res, g + a, cs, isKeeperLine(s) && mins > 0 && !cs, scoreRng.next);
     const k = res === 'W' ? 'w' : res === 'D' ? 'd' : 'l';
     S[k] = (S[k] ?? 0) + 1;
     r[k] = (r[k] ?? 0) + 1;
@@ -379,14 +409,14 @@ export function simBlock(s: GameState, mo?: MomentHooks): BlockResult {
       r.rs += rating;
       r.hl.push(...matchHighlights(s, S.played, g, rating, cs));
       addStat(s, 'cond', -(mins / 90) * 3.2);
-      r.games.push({ rd: S.played, res, mins, g, a, rating, cs, ...oppTag, parts });
+      r.games.push({ rd: S.played, res, ...score, mins, g, a, rating, cs, ...oppTag, parts });
       const hurt = rollInjury(s, S.played);
       if (hurt) {
         r.injured = true;
         r.hl.push(hurt);
       }
     }
-    if (!mins) r.games.push({ rd: S.played, res, mins: 0, inj, ...oppTag });
+    if (!mins) r.games.push({ rd: S.played, res, ...score, mins: 0, inj, ...oppTag });
     addStat(s, 'cond', 1.1);
   }
   if (moment) r.moment = moment;
