@@ -16,6 +16,8 @@ export const careerMoment: Translation<typeof careerMomentText> = {
   visitAssist: (p: { club: string }) => `Set up a teammate’s goal away at ${p.club}.`,
   visitPlayed: (p: { club: string }) =>
     `Applauded the familiar stands at full time away at ${p.club}.`,
+  visitUnused: (p: { club: string }) => `You stayed on the bench away at ${p.club}.`,
+  visitInjured: (p: { club: string }) => `You missed the match away at ${p.club} through injury.`,
   visitBench: (p: { club: string }) =>
     `Did not play away at ${p.club} and caught up with former teammates after the match.`,
   rank: (p: { rank: number }) => `Estimated league finish: ${p.rank}`,

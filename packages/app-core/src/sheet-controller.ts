@@ -2,7 +2,6 @@
 // 아래에서 올라오는 시트 하나에 뷰 모델(sheets.ts)을 띄우고, 진행 단계·경기 중계·판정 바늘·미니게임을 시간에 맞춰
 // 채운다. 상태 객체는 클라이언트가 반응형으로 감싸 넘긴다(웹 Svelte `$state`, 앱 스토어) — 여기서는 그 객체를
 // 고치기만 한다. 띄운 뷰는 showSheet이 돌려준 것(state.view를 다시 읽은 반응형 프록시)을 고쳐야 화면이 바뀐다.
-import { ri } from '@offside/game/rng';
 import { clubsIn } from '@offside/game/engine';
 import { tn } from '@offside/game/i18n/names';
 import { clubById } from '@offside/game/clubs';
@@ -69,29 +68,6 @@ const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 /** 프리시즌 단계·구간 뒤 부가 줄(컵 결과·A매치 소집 등) 하나가 머무는 시간. */
 export const STEP_MS = 520;
 
-// T-11-414 수비수 · 골키퍼가 뛴 경기는 무실점 기록(cs)과 스코어가 맞아야 한다. 무실점이 아니면 상대가 한 골 이상
-// 넣은 스코어로 그린다(예전에는 1-0 · 0-0이 나와도 무실점에 세지 않아 개수가 어긋나 보였다).
-export function fakeScore(m: MatchGame, keeper = false): string {
-  const conceded = keeper && m.mins > 0 && !m.cs;
-  let gf = Math.max(m.g || 0, m.res === 'W' ? ri(1, 3) : ri(0, 2));
-  let ga: number;
-  if (m.res === 'W') {
-    if (conceded) gf = Math.max(gf, 2);
-    ga = m.cs ? 0 : ri(conceded ? 1 : 0, gf - 1);
-  } else if (m.res === 'D') {
-    if (m.cs) gf = 0;
-    else if (conceded) gf = Math.max(gf, 1);
-    ga = gf;
-  } else ga = gf + ri(1, 2);
-  // A player's own goals and assists belong to different team goals.
-  // Reconcile after the existing draws so presentation consumes the same RNG count.
-  const minimum = (m.g ?? 0) + (m.a ?? 0);
-  gf = Math.max(gf, minimum);
-  if (m.res === 'D') ga = gf;
-  else if (m.res === 'L') ga = Math.max(ga, gf + 1);
-  return `${gf}-${ga}`;
-}
-
 /** 탭 뒤 결과 장면(공이 날아가고 멈추는 연출)을 보여 주는 시간. */
 const MG_SCENE_MS = 1300;
 /** 비행 장면이 끝나고(또는 건너뛴 뒤) 도착 표시를 보여 주는 시간. */
@@ -110,13 +86,12 @@ export function matchRows(s: GameState, b: BlockResult): TickerRow[] {
     opps ??= clubsIn(s.leagueId, s).filter((c) => c.id !== s.club.id);
     return opps.length ? tn(opps[rd % opps.length]!.name) : L.opponent;
   };
-  const keeper = s.pos === 'DF' || s.pos === 'GK';
   return b.games.map((m, i) => ({
     key: i,
     rd: m.rd,
     res: m.res,
     opp: oppName(m) ?? legacyOpp(m.rd),
-    score: fakeScore(m, keeper),
+    score: `${m.gf}-${m.ga}`,
     mins: m.mins,
     g: m.g,
     a: m.a,
