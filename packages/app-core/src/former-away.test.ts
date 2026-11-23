@@ -1,4 +1,5 @@
 import { expect, it, vi } from 'vitest';
+import { loadSave } from '@offside/game/save';
 import fixture from '../../game/src/__fixtures__/save-fw26.json';
 import type { GameState } from '@offside/game/types';
 import type { BlockResult } from '@offside/game/match';
@@ -29,14 +30,18 @@ it.each([
   [2, 1, 90, 'goal', 2],
   [0, 1, 70, 'assist', 1],
   [0, 0, 20, 'played', 1],
-  [0, 0, 0, 'bench', 1],
+  [0, 0, 0, 'unused', 1],
+  [0, 0, 0, 'injured', 1],
 ] as const)(
   'uses the final match line (%i goals, %i assists, %i minutes)',
   (g, a, mins, result, buttons) => {
-    const s = career();
-    const block = { games: [{ rd: 20, opp: 'pl-3', g, a, mins }] } as BlockResult;
+    let s = career();
+    const block = {
+      games: [{ rd: 20, opp: 'pl-3', g, a, mins, inj: result === 'injured' }],
+    } as BlockResult;
     const next = { type: 'seasonEnd' } as const;
     s.pending = afterFormerAway(visit, 'respect', block, next);
+    s = loadSave(JSON.parse(JSON.stringify(s)))!.G;
     if (s.pending?.type !== 'formerAway') throw new Error('Missing return scene');
     expect(s.pending.result).toBe(result);
     const sheet = createSheetController(initialSheetState(), {
@@ -52,6 +57,12 @@ it.each([
     finish();
     finish();
     expect(s.miles).toHaveLength(before + 1);
+    if (result === 'injured' || result === 'unused') {
+      const loaded = loadSave(JSON.parse(JSON.stringify(s)))!.G;
+      expect(loaded.miles?.at(-1)?.t).toContain(
+        result === 'injured' ? '부상으로 결장했다' : '벤치 미출전',
+      );
+    }
     expect(save).toHaveBeenCalledTimes(1);
     expect(s.pending).toEqual(next);
   },

@@ -13,6 +13,8 @@ export const careerMoment: Translation<typeof careerMomentText> = {
   run: '奔向客隊看台',
   visitAssist: (p: { club: string }) => `作客${p.club}時助攻隊友破門。`,
   visitPlayed: (p: { club: string }) => `作客${p.club}賽後，向熟悉的看台鼓掌致意。`,
+  visitUnused: (p: { club: string }) => `作客${p.club}時，你留在後備席，沒有上陣。`,
+  visitInjured: (p: { club: string }) => `你因傷錯過了作客${p.club}的比賽。`,
   visitBench: (p: { club: string }) => `作客${p.club}時沒有上場，賽後和老隊友敘舊。`,
   rank: (p: { rank: number }) => `預估聯賽第 ${p.rank} 名`,
   competition: (p: { competition: string }) => `下賽季 ${p.competition}`,
