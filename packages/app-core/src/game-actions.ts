@@ -234,7 +234,7 @@ export function createGameActions(host: GameHost) {
           titles: x.titles.map(titleView),
         };
       };
-      const settle = (x: PhaseResult) => {
+      const settle = (x: PhaseResult, shown: TickerRow[] = []) => {
         // 부상 소식은 로그 문장이 아니라 엔진이 알려 주는 신호로 기록한다(언어가 달라도 같다).
         if (x.block?.injured) s.flags.injuredYear = s.year;
         const next: AfterPhase | null = x.ev
@@ -243,9 +243,20 @@ export function createGameActions(host: GameHost) {
             ? { type: 'seasonEnd' }
             : null;
         s.pending = visit && reply && km ? km.afterFormerAway(visit, reply, x.block, next) : next;
+        const f = s.markingFixture;
+        if (f?.returnRound !== undefined && f.returnYear === s.year && !f.returnScore) {
+          const game = x.block?.games.find((m) => m.rd === f.returnRound && m.opp === f.opponent);
+          if (game)
+            f.returnScore = (shown.find((m) => m.rd === game.rd) ??
+              lines(x).rows.find((m) => m.rd === game.rd))!.score;
+        }
         host.save();
         // T-11-438 저장은 중계 전에 끝나므로, 중계 도중 앱을 끄면 리포트도 함께 남겨 다음 실행 때 보여 준다(세이브와 따로 둔다).
-        keepPhaseReport(s.cid, reportOf(x, lines(x).rows));
+        const rows = lines(x).rows;
+        keepPhaseReport(
+          s.cid,
+          reportOf(x, shown.length ? [...shown, ...rows.slice(shown.length)] : rows),
+        );
       };
       settle(r);
       host.analytics.play(s, ph === 0 && s.career.length === 0);

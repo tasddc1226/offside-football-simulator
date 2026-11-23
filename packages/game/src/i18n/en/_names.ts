@@ -691,6 +691,11 @@ const patterns: NamePattern[] = [
     (m, tn) =>
       `Round ${m[1]} vs ${tn(m[2]!)} · ${m[3] === '부상 결장' ? 'Injured' : 'Did not play'}`,
   ],
+  [
+    /^(\d+)R (.+) 재대결 · (공격수 추적|중앙 침투 차단)(?: · (팀 승리|팀 무승부|팀 패배)(?: (\d+-\d+))?)?$/,
+    (m, tn) =>
+      `Round ${m[1]} rematch vs ${tn(m[2]!)} · ${tn(m[3]!)}${m[4] ? ' · ' + tn(m[4]) : ''}${m[5] ? ' ' + m[5] : ''}`,
+  ],
   [/^(.+) 원정 · (.+)$/, (m, tn) => `Away at ${tn(m[1]!)} · ${tn(m[2]!)}`],
   // 로그 시각 라벨 `2026 프리시즌`
   [/^(\d{4}) (프리시즌|전반기|후반기|시즌 종료)$/, (m) => `${m[1]} ${PHASE[m[2]!]}`],
@@ -765,6 +770,13 @@ export const names: NameTable = {
     '득점 후 원정석으로 달려갔다': 'Ran to the away end after scoring',
     '동료의 골을 도왔다': 'Set up a teammate’s goal',
     '팬들에게 박수를 보냈다': 'Applauded the fans',
+    '공격수 추적': 'Tracked the striker',
+    '중앙 침투 차단': 'Covered the central run',
+    '팀 승리': 'Team win',
+    '팀 무승부': 'Team draw',
+    '팀 패배': 'Team loss',
+    '벤치 미출전': 'Unused substitute',
+    '부상으로 결장했다': 'Missed the match through injury',
     '옛 동료들과 인사를 나눴다': 'Caught up with former teammates',
     '관중석에서 온 편지': 'A letter from the stands',
     '데뷔전을 응원하는 사람': 'In your corner on debut',

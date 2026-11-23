@@ -1,5 +1,5 @@
 import { CLUBS } from './data.js';
-import { markingAbsence, markingOpener } from './i18n/ko/gTurn.js';
+import { markingAbsence, markingOpener, markingReturn } from './i18n/ko/gTurn.js';
 import type { MatchGame } from './match.js';
 import { scoringTable } from './scoring-table.js';
 import { schedule } from './story.js';
@@ -45,6 +45,26 @@ export function recordFirstMarking(s: GameState, approach: 'man' | 'zone') {
     ];
 }
 
+export function finishMarking(s: GameState, choice: 'follow' | 'hand') {
+  const f = s.markingFixture;
+  if (f?.returnRound !== undefined) {
+    s.miles = [
+      ...(s.miles ?? []),
+      {
+        year: f.returnYear ?? s.year,
+        t: markingReturn(
+          savedClubName(f.opponent),
+          f.returnRound,
+          choice,
+          f.returnResult,
+          f.returnScore,
+        ),
+      },
+    ];
+  }
+  delete s.markingFixture;
+}
+
 /** Deal with the FIRST later meeting, using its own minutes and injury flag, not end-of-block condition. */
 export function checkMarkingFixture(s: GameState, games: readonly MatchGame[]) {
   const f = s.markingFixture;
@@ -71,5 +91,7 @@ export function checkMarkingFixture(s: GameState, games: readonly MatchGame[]) {
     return;
   }
   f.returnRound = game.rd;
+  f.returnYear = s.year;
+  f.returnResult = game.res;
   schedule(s, MARKING_RETURN, 0);
 }

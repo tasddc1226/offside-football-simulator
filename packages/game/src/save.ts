@@ -21,7 +21,8 @@ export function loadSave(raw: GameState | null): { G: GameState; newCid: boolean
  * (부른 쪽이 바로 저장해야 한다 — 안 그러면 다음 부팅 때 또 다른 ID가 생겨 서버 기록과 어긋난다). */
 export function migrateSave(G: GameState): { newCid: boolean } {
   // Older marking reservations and pending choices use the timed path; never invent a past opponent.
-  // formerAway is an additive pending variant. Earlier saves keep their pending decision and journey as-is.
+  // A pending legacy rematch has no saved match result; keep it unknown. A legacy bench scene
+  // similarly retains its original wording because its injury status cannot be recovered.
   // Position expansion is additive: preserve legacy FB/W and the original eight-role peakProfile.
   // New team slots read the corresponding base role; never guess a saved player's left/right side.
   // finalTable은 선택 필드다. 없는 이전 저장은 다음 결산에서 현재 표를 고정한다.

@@ -1,4 +1,4 @@
-import { recordFirstMarking } from './marking-fixture.js';
+import { finishMarking, recordFirstMarking } from './marking-fixture.js';
 import { followupTexts } from './followup-copy.js';
 import { gFollowupText } from './i18n/ko/gFollowup.js';
 import { natRefusing } from './national.js';
@@ -72,11 +72,11 @@ export const CAREER_FOLLOWUPS = [
       s.flags.markLeague === s.leagueId,
     (s) => {
       addAttr(s, 'pac', 1);
-      delete s.markingFixture;
+      finishMarking(s, 'follow');
     },
     (s) => {
       addAttr(s, 'def', 1);
-      delete s.markingFixture;
+      finishMarking(s, 'hand');
     },
   ),
   followup(

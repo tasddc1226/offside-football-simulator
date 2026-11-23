@@ -3,15 +3,15 @@
 exports[`게임 특성화 (T-11-044) > endSeason — 시즌 정산(seasonAwards·natSeasonEnd·milSeasonEnd 포함) 1`] = `
 {
   "대표팀": {
-    "hash": "e82e76d4edf23762",
+    "hash": "e72851f0888c2c93",
     "n": 178,
   },
   "병역": {
-    "hash": "dfb78ccda7ee5cb0",
+    "hash": "f6159f7abbf399a5",
     "n": 178,
   },
   "원본": {
-    "hash": "a645ce4c12b5eabe",
+    "hash": "c04178a12e80fd2e",
     "n": 178,
   },
 }
@@ -30,31 +30,31 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
   ],
   "대표팀": {
     "accepted": {
-      "hash": "cd8b131b6a092a84",
+      "hash": "6190642e8a9c901a",
       "n": 178,
     },
     "options": {
-      "hash": "e2d369f38d390b43",
+      "hash": "7621718906b59652",
       "n": 178,
     },
   },
   "병역": {
     "accepted": {
-      "hash": "2b55533ecdf00094",
+      "hash": "90b31ea863ed1abe",
       "n": 178,
     },
     "options": {
-      "hash": "b005b6879a95c98f",
+      "hash": "6ae1d60311656bc4",
       "n": 178,
     },
   },
   "원본": {
     "accepted": {
-      "hash": "61b2837d449cedd0",
+      "hash": "2e8fa3ca681d676f",
       "n": 178,
     },
     "options": {
-      "hash": "a36c1c70d38c3555",
+      "hash": "b7d3eda492dfd141",
       "n": 178,
     },
   },
@@ -64,11 +64,11 @@ exports[`게임 특성화 (T-11-044) > market·acceptOption — 시장 선택지
 exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1`] = `
 {
   "대표팀": {
-    "hash": "3d2d93b69a6e09b7",
+    "hash": "fbdeea0a50aac0ce",
     "n": 534,
   },
   "원본": {
-    "hash": "5760709853f9c63f",
+    "hash": "cbdcaec319375008",
     "n": 534,
   },
 }
@@ -77,7 +77,7 @@ exports[`게임 특성화 (T-11-044) > natWindow — A매치·국제대회 창 1
 exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 {
   "distinct": 77,
-  "hash": "337120f7cee36375",
+  "hash": "159388397808e77c",
   "n": 534,
 }
 `;
@@ -85,15 +85,15 @@ exports[`게임 특성화 (T-11-044) > rollEvent — 이벤트 추첨 1`] = `
 exports[`게임 특성화 (T-11-044) > simBlock — 리그 구간 경기 결과 1`] = `
 {
   "대표팀": {
-    "hash": "9e40409b123e30a1",
+    "hash": "a1997b6d9c51f95b",
     "n": 357,
   },
   "병역": {
-    "hash": "8ca746a722a2ba0d",
+    "hash": "ca1f90251798b8a6",
     "n": 357,
   },
   "원본": {
-    "hash": "de32b269fedb43c6",
+    "hash": "14561d34b7582674",
     "n": 357,
   },
 }
@@ -127,7 +127,7 @@ exports[`게임 특성화 (T-11-044) > 이벤트 × 선택지 — 확률 p 격�
     "df-header": "103 caf55700fb0e15c1",
     "df-lastman": "103 25407b6f2e280c84",
     "df-marking": "103 3ba40e79ff2905dc",
-    "df-marking-rematch": "13 744ce6761f7f2a2c",
+    "df-marking-rematch": "13 5628d83c1e28e615",
     "df-overlap": "0 b9040095f6c3c036",
     "df-trap": "103 4428fed9da9cec43",
     "diet": "890 8d33fecbe96c1fcf",
