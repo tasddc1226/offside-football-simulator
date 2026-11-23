@@ -14,6 +14,8 @@ const match = (opp: string, rd: number, mins: number, inj = false): MatchGame =>
   mins,
   inj,
   res: 'D',
+  gf: 2,
+  ga: 2,
 });
 function setup() {
   setActiveRng(createRng(771));
@@ -47,7 +49,7 @@ it.each([
   );
   expect(restored.markingFixture?.returnRound).toBe(2);
   expect(restored.flags.markApproach).toBe('zone');
-  restored.markingFixture!.returnScore = '2-2';
+  expect(restored.markingFixture?.returnScore).toBe('2-2');
   const pending = loadSave(JSON.parse(JSON.stringify(restored)))!.G;
   const before = pending.miles!.length;
   resolveChoice(pending, MARKING_RETURN, choice);

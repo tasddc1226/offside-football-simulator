@@ -114,7 +114,7 @@ export function createMomentDriver(o: {
   /** 구간 전 상태(JSON)와 난수 상태. */
   pre: string;
   rng: number;
-  settle: (r: PhaseResult, shown?: TickerRow[]) => void;
+  settle: (r: PhaseResult) => void;
   lines: (r: PhaseResult) => { rows: TickerRow[]; extras: string[] };
 }): MomentDriver & {
   cur: PhaseResult;
@@ -204,13 +204,12 @@ export function createMomentDriver(o: {
         setActiveRng(createRng(o.rng));
         const r = playPhase(o.s, momentHooks(o.s, picks));
         log(r);
-
+        o.settle(r);
+        const next = o.lines(r);
         // 이미 보여 준 줄은 그대로 둔다: 리그 장면이면 그 경기 앞까지, 결승이면 경기 전부와 그 대회 줄 앞까지.
         const final = key !== 'league';
         const keepRows = final ? d.rows.length : q.at;
         const keepExtras = final ? q.at : 0;
-        o.settle(r, d.rows.slice(0, keepRows));
-        const next = o.lines(r);
         d.rows = [...d.rows.slice(0, keepRows), ...next.rows.slice(keepRows)];
         d.extras = [...d.extras.slice(0, keepExtras), ...next.extras.slice(keepExtras)];
         d.cur = r;

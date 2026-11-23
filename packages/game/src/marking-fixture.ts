@@ -93,5 +93,6 @@ export function checkMarkingFixture(s: GameState, games: readonly MatchGame[]) {
   f.returnRound = game.rd;
   f.returnYear = s.year;
   f.returnResult = game.res;
+  f.returnScore = `${game.gf}-${game.ga}`;
   schedule(s, MARKING_RETURN, 0);
 }

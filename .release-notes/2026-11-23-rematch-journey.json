@@ -2,25 +2,30 @@
   "id": "rematch-journey-20261123",
   "title": "재대결과 친정팀 원정 기록",
   "items": [
+    "리그 경기마다 내 팀과 상대 팀의 득점이 결정돼요. 중계와 경기 리포트에서 같은 스코어를 볼 수 있어요.",
     "득점 선두 구단과의 재대결에 출전하면 수비 선택과 경기 리포트의 스코어가 여정에 남아요. 친정팀 원정에서는 부상 결장과 벤치 미출전을 구분해요."
   ],
   "en": {
     "title": "Rematches and returns to former clubs",
     "items": [
+      "Each league match now produces a final score for both teams. The ticker and match report show the same result.",
       "Your journey records your marking choice and match report’s scoreline after a rematch with the top scorer’s club. It also distinguishes an injury absence from an unused substitute on a return to your former club."
     ]
   },
   "ja": {
     "title": "再戦と古巣遠征の記録",
     "items": [
+      "リーグ戦の各試合で両チームの得点が決まります。実況と試合レポートで同じスコアを確認できます。",
       "得点首位の選手が所属するクラブとの再戦に出場すると、守備の選択と試合レポートのスコアが記録されます。古巣への遠征では負傷欠場とベンチでの出番なしが区別されます。"
     ]
   },
   "zh": {
     "title": "再戰與作客舊東家的紀錄",
     "items": [
+      "每場聯賽都會決定雙方入球數，即時戰報和賽事報告會顯示相同的比分。",
       "再戰射手榜榜首所屬球會時，如有上陣，生涯歷程會記下你的防守選擇及比賽報告的比分。作客舊東家時，也會分別記錄因傷缺陣及列入後備名單但未上陣。"
     ]
   },
-  "availability": "web-app"
+  "availability": "web-app",
+  "balance": true
 }

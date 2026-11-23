@@ -181,7 +181,7 @@ export function createGameActions(host: GameHost) {
         throw error;
       }
       host.analytics.complete?.({ cid: s.cid, year: s.year, phase: ph, matches: r.block?.n ?? 0 });
-      // 경기 줄(가짜 스코어)은 게임 난수를 쓴다. 결과 하나에 한 번만 만들어 난수 소비 순서를 그대로 둔다(T-11-438 리포트 보관도 같은 줄을 쓴다).
+      // The ticker and saved report share the rows for the settled engine result.
       const made = new WeakMap<PhaseResult, { rows: TickerRow[]; extras: string[] }>();
       const lines = (x: PhaseResult) => {
         let v = made.get(x);
@@ -234,7 +234,7 @@ export function createGameActions(host: GameHost) {
           titles: x.titles.map(titleView),
         };
       };
-      const settle = (x: PhaseResult, shown: TickerRow[] = []) => {
+      const settle = (x: PhaseResult) => {
         // 부상 소식은 로그 문장이 아니라 엔진이 알려 주는 신호로 기록한다(언어가 달라도 같다).
         if (x.block?.injured) s.flags.injuredYear = s.year;
         const next: AfterPhase | null = x.ev
@@ -243,20 +243,9 @@ export function createGameActions(host: GameHost) {
             ? { type: 'seasonEnd' }
             : null;
         s.pending = visit && reply && km ? km.afterFormerAway(visit, reply, x.block, next) : next;
-        const f = s.markingFixture;
-        if (f?.returnRound !== undefined && f.returnYear === s.year && !f.returnScore) {
-          const game = x.block?.games.find((m) => m.rd === f.returnRound && m.opp === f.opponent);
-          if (game)
-            f.returnScore = (shown.find((m) => m.rd === game.rd) ??
-              lines(x).rows.find((m) => m.rd === game.rd))!.score;
-        }
         host.save();
         // T-11-438 저장은 중계 전에 끝나므로, 중계 도중 앱을 끄면 리포트도 함께 남겨 다음 실행 때 보여 준다(세이브와 따로 둔다).
-        const rows = lines(x).rows;
-        keepPhaseReport(
-          s.cid,
-          reportOf(x, shown.length ? [...shown, ...rows.slice(shown.length)] : rows),
-        );
+        keepPhaseReport(s.cid, reportOf(x, lines(x).rows));
       };
       settle(r);
       host.analytics.play(s, ph === 0 && s.career.length === 0);
