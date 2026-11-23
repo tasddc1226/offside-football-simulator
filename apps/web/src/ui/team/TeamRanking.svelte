@@ -323,10 +323,11 @@
     bottom: -6px;
     line-height: 0;
   }
-  /* T-11-819 서포터 휘장도 로고 위 모서리에 얹는다(이름 칸 폭을 먹으면 휘장 없는 줄에는 들어가던 이름이 잘린다). */
+  /* T-11-819 서포터 휘장도 로고 위 모서리에 얹는다(이름 칸 폭을 먹으면 휘장 없는 줄에는 들어가던 이름이 잘린다).
+     줄이 overflow: hidden이라 로고 윗변 위로 나가면 방패 윗부분이 잘린다. */
   .team-standings-logo :global(.team-standings-sup) {
     position: absolute;
-    top: -7px;
+    top: 0;
     right: -6px;
     margin: 0;
     line-height: 0;
