@@ -1,5 +1,6 @@
 // My club: shared owner identity and operations, with team-specific play in the team card.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { SupporterBadge } from '../../ui/SupporterBadge';
 import { useEffect, useState } from 'react';
 import { shapeOf, usesRankLadder } from '@offside/contracts/owner-team';
 import { Alert, Platform, View } from 'react-native';
@@ -392,9 +393,7 @@ export default function Owner() {
                 </Txt>
                 {card?.title ? <TitleBadge title={card.title} /> : null}
                 {card?.member ? (
-                  <View testID="owner-member-badge" accessible accessibilityLabel={MB.badgeLabel}>
-                    <Pill tone="good">{MB.badge}</Pill>
-                  </View>
+                  <SupporterBadge testID="owner-member-badge" tier={card.supporter} member />
                 ) : null}
               </Row>
               <Txt tone="muted" style={{ fontSize: rem(FONT.body2) }}>

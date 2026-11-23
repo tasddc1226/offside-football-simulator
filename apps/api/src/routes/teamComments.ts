@@ -6,6 +6,7 @@ import {
   TeamCommentsResponseSchema,
   TeamIdSchema,
 } from '@offside/contracts';
+import { supportersOf } from '../db/repos/memberTenure.js';
 import type { Context, Hono } from 'hono';
 import { getViewer } from '../auth/admin.js';
 import {
@@ -47,14 +48,17 @@ export function registerTeamCommentRoutes(app: Hono<AppEnv>): void {
     const shown = rows.filter(
       (r) => !hidden?.blockedAuthors.has(r.profileId) && !hidden?.reportedComments.has(r.id),
     );
-    const tiers = await ownerTiersOf(
-      db,
-      shown.map((r) => r.profileId),
-      nowIso(),
-    );
+    const ids = shown.map((r) => r.profileId);
+    const now = nowIso();
+    // T-11-818 작성자 서포터 뱃지 단계를 티어와 같이 읽는다.
+    const [tiers, supporters] = await Promise.all([
+      ownerTiersOf(db, ids, now),
+      supportersOf(db, ids, now),
+    ]);
     const comments = shown.map(({ profileId, ...r }) => ({
       ...r,
       tier: tiers.get(profileId) ?? null,
+      ...(supporters.has(profileId) ? { supporter: supporters.get(profileId)! } : {}),
       deletable: viewer.admin || profileId === viewer.profileId,
     }));
     return ok(
@@ -88,6 +92,9 @@ export function registerTeamCommentRoutes(app: Hono<AppEnv>): void {
       admin: viewer.admin,
       tier: await ownerTierOfProfile(db, profileId, now),
       title: viewer.title,
+      ...(await supportersOf(db, [profileId], now).then((m) =>
+        m.has(profileId) ? { supporter: m.get(profileId)! } : {},
+      )),
       avatarId: viewer.avatarId ?? null,
       deletable: true,
       createdAt: now,

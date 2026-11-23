@@ -11,7 +11,13 @@ export const membership: Translation<MembershipMsgs> = {
   perkAds: '移除廣告',
   perkAdsSub: '訂閱期間不用看廣告就能領取獎勵。',
   perkBadge: '支持者徽章',
-  perkBadgeSub: '在我的俱樂部和好友列表中，名字旁會顯示支持者徽章。',
+  perkBadgeSub:
+    '在俱樂部、排行榜、好友和留言中，名字旁會顯示支持者徽章。連續 3、6、9 個月時徽章會改變。',
+  perkTenure: '連續訂閱禮物',
+  perkTenureSub:
+    '從第 2 個月起，每月簽到時可領取禮物。潛力強化券每月多 1 張，最多 6 張；每 3 個月另送 1 張高級球探券。',
+  streak: (p) => `已連續訂閱 ${p.months} 個月`,
+  nextGift: (p) => `第 ${p.months} 個月禮物 · ${p.reward}`,
   join: (p) => `每月${p.price}加入`,
   joinIntro: (p) =>
     p.months === 1 ? `首月${p.price}加入` : `前 ${p.months} 個月每月${p.price}加入`,
@@ -39,10 +45,8 @@ export const membership: Translation<MembershipMsgs> = {
   loadFail: '無法載入會員資訊。',
   retry: '重新載入',
   entry: '俱樂部會員',
-  entrySub: '簽到 2 倍 · 每日潛力強化券 · 移除廣告 · 支持者徽章',
+  entrySub: '簽到 2 倍 · 每日潛力強化券 · 移除廣告 · 連續訂閱禮物',
   entryActive: '使用中',
-  badge: '支持者',
-  badgeLabel: '俱樂部會員 支持者',
   back: '回到球隊老闆頁面',
   adHint: '加入會員就不用看廣告',
   adHintGo: '查看會員',

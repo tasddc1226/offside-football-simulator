@@ -2,6 +2,7 @@
 // 경기할 수 없으면(hint) 목록 대신 이유를 보여 준다. T-11-510 시즌 2(ladder)는 서버가 고른 상대 한 팀과
 // '다른 상대 찾기'(경기마다 3번)를 보여 준다. T-11-603 그 화면은 queue로 받는다(매칭 찾기를 눌러 큐를 거쳐 상대를 받는다).
 import { FONT } from '@offside/app-core/design-tokens';
+import { SupporterBadge } from '../../ui/SupporterBadge';
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { useSnapshot } from 'valtio';
@@ -130,6 +131,7 @@ export function TeamOpponents({
                         {o.name}
                       </Txt>
                       {o.title ? <TitleBadge title={o.title} size="icon" /> : null}
+                      <SupporterBadge tier={o.supporter} small />
                     </View>
                     <Txt
                       tone="muted"

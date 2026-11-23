@@ -28,6 +28,7 @@
     preseasonTeamLine,
   } from '@offside/app-core/friendText';
   import { friendText as L } from '@offside/app-core/i18n/ko/friend';
+  import SupporterBadge from '../SupporterBadge.svelte';
   import { teamScoreLabel } from '@offside/app-core/teamScore';
   import { toast } from '../helpers.js';
   import { copyText } from '../inapp-open.js';
@@ -240,7 +241,7 @@
           <svelte:element this={profileTeam ? 'button' : 'div'} class="fr-who" type={profileTeam ? 'button' : undefined} aria-label={profileTeam ? L.profileAria({ name: p.name }) : undefined} onclick={profileTeam ? () => openProfile(profileTeam) : undefined} data-act={profileTeam ? 'friend-profile' : undefined}>
             <TeamLogo logo={p.team?.logo ?? null} name={p.team?.name ?? p.name} size={32} decorative />
             <div class="fr-info">
-              <b>{p.name}{#if p.member}<span class="pill good fr-member" title={L.supporterLabel} data-friend-member>{L.supporter}</span>{/if}</b>
+              <b>{p.name}{#if p.member}<SupporterBadge tier={p.supporter} member class="fr-member" data-friend-member />{/if}</b>
               <span class="muted fs-sm">{teamLine(p)}</span>
               {#if preseasonLine}<span class="muted fs-sm" data-friend-preseason>{preseasonLine}</span>{/if}
               {#if h2h}<span class="fs-sm">{L.h2hLine({ record: h2h })}</span>{/if}

@@ -83,6 +83,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'iap_ad_free_purchases',
   'iap_refund_markers',
   'memberships',
+  'member_tenure',
   'scout_pity',
   'gift_claims',
   'owner_attendance',

@@ -1,4 +1,5 @@
 import { teamCoachOf } from '../db/repos/managers.js';
+import { supportersOf } from '../db/repos/memberTenure.js';
 import { cupHonorsOf } from '../team/cup.js';
 import { leagueHonorsOf } from '../team/league.js';
 import {
@@ -113,10 +114,18 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           ? undefined
           : divisionRange(await activeDivisionRules(getDb(c)), division);
       const { rows, total } = await listTeamRanking(getDb(c), season, q.sort, page, now, range);
-      const forms = await listTeamRecentForm(
-        getDb(c),
-        rows.map((t) => t.id),
-      );
+      const [forms, supporters] = await Promise.all([
+        listTeamRecentForm(
+          getDb(c),
+          rows.map((t) => t.id),
+        ),
+        // T-11-818 구단주 서포터 뱃지 단계(엣지 캐시에 같이 담긴다 — 5분 늦을 수 있다).
+        supportersOf(
+          getDb(c),
+          rows.map((t) => t.profileId),
+          now,
+        ),
+      ]);
       return {
         season,
         sort: q.sort,
@@ -138,6 +147,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           createdAt: t.createdAt,
           recentForm: forms.get(t.id) ?? [],
           title: t.title,
+          ...(supporters.has(t.profileId) ? { supporter: supporters.get(t.profileId)! } : {}),
         })),
       };
     };
@@ -217,6 +227,11 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         RANK_TTL,
         async (): Promise<Omit<AchRankResponse, 'seasons'>> => {
           const { rows, total } = await listAchievementRanking(getDb(c), season, page);
+          const supporters = await supportersOf(
+            getDb(c),
+            rows.map((r) => r.profileId),
+            now,
+          );
           return {
             season,
             page,
@@ -232,6 +247,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
               done: r.done,
               players: r.players,
               title: r.title,
+              ...(supporters.has(r.profileId) ? { supporter: supporters.get(r.profileId)! } : {}),
             })),
           };
         },
@@ -267,19 +283,22 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const ids = slotIdsOf(t);
     const other = session && session.profileId !== t.profileId ? session.profileId : null;
     const { ownerNickname } = found;
-    const [rows, rank, liked, friend, cupHonors, leagueHonors, coach] = await Promise.all([
-      careersByIds(
-        db,
-        ids.filter((x): x is string => !!x),
-      ),
-      ratingRankOf(db, t),
-      session ? isTeamLiked(db, t.id, session.profileId) : false,
-      other ? friendStateOf(db, other, t.profileId) : null,
-      cupHonorsOf(db, t.profileId),
-      leagueHonorsOf(db, t.profileId),
-      // T-11-335 감독 칸에 앉힌 감독(카드 id 고유 인덱스 한 줄).
-      teamCoachOf(db, t),
-    ]);
+    const [rows, rank, liked, friend, cupHonors, leagueHonors, coach, supporters] =
+      await Promise.all([
+        careersByIds(
+          db,
+          ids.filter((x): x is string => !!x),
+        ),
+        ratingRankOf(db, t),
+        session ? isTeamLiked(db, t.id, session.profileId) : false,
+        other ? friendStateOf(db, other, t.profileId) : null,
+        cupHonorsOf(db, t.profileId),
+        leagueHonorsOf(db, t.profileId),
+        // T-11-335 감독 칸에 앉힌 감독(카드 id 고유 인덱스 한 줄).
+        teamCoachOf(db, t),
+        // T-11-818 구단주 서포터 뱃지 단계.
+        supportersOf(db, [t.profileId], nowIso()),
+      ]);
     const now = nowIso();
     const eligible = eligibleMap(rows, t.profileId, t.season, t.season === teamSeasonAt(now));
     const lineup = buildLineup(t.formation as FormationId, ids, eligible, layoutOf(t));
@@ -313,6 +332,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
           leagueHonors,
           ownerTitle: found.title,
           ownerNickname,
+          ...(supporters.has(t.profileId) ? { supporter: supporters.get(t.profileId)! } : {}),
           // T-11-165 선발에 실제로 든 선수만(숨김·지난 주인 카드는 eligible에서 이미 빠졌다).
           players: rows.filter((r) => eligible.has(r.id)).map((r) => teamPlayerCard(r)),
           // T-11-290 선발 시너지 — 내 팀 화면과 같은 표를 남의 팀 프로필에도(경기 계산과 같은 입력).

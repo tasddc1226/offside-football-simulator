@@ -2,6 +2,7 @@
 // 앞선다). 구단주는 공개 닉네임과 그 시즌 팀 이름으로만 보이고, 팀이 있으면 줄을 눌러 팀 프로필(appState.hof.team)을 연다.
 // 서버가 5분마다 새로 센다.
 import { FONT, RADIUS } from '@offside/app-core/design-tokens';
+import { SupporterBadge } from '../../../ui/SupporterBadge';
 import { useEffect, useRef, useState } from 'react';
 import { useSnapshot } from 'valtio';
 import { View } from 'react-native';
@@ -222,6 +223,7 @@ export default function AchievementRanking() {
                       {r.nickname ?? L.anonOwner}
                     </Txt>
                     {r.title ? <TitleBadge title={r.title} size="icon" /> : null}
+                    <SupporterBadge tier={r.supporter} small />
                   </View>
                   {team ? (
                     <Txt tone="muted" numberOfLines={1} style={{ fontSize: 12 }}>

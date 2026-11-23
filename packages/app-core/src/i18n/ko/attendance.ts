@@ -9,6 +9,8 @@ const ko = {
   tomorrowLabel: '내일 보상',
   /** T-11-512 클럽 멤버십 구독 중. */
   memberBonus: '멤버십 혜택으로 출석 보상 2배에 잠재력 강화권 1장을 더 받아요',
+  /** T-11-818 연속 구독 개월 선물(출석할 때 같이 받는다). */
+  tenureGot: (p: { months: number; reward: string }) => `연속 ${p.months}개월 선물 · ${p.reward}`,
   grace:
     '매일 출석하면 그날 칸의 보상을 받아요. 빠진 날이 있어도 도장은 남고, 한 주에 하루는 빠져도 연속 기록이 이어져요.',
   btn: '출석하기',

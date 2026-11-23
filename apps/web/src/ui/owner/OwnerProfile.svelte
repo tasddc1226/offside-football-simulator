@@ -15,6 +15,7 @@
   import TeamLogo from '../team/TeamLogo.svelte';
   import CupHonors from '../cup/CupHonors.svelte';
   import TitleBadge from '../cup/TitleBadge.svelte';
+  import SupporterBadge from '../SupporterBadge.svelte';
   import { appState } from '../state.svelte.js';
   import { go, openOwnerHallVisit } from '../nav.js';
 
@@ -70,6 +71,7 @@
             <span class="eyebrow op-eyebrow">{['Owner profile', owner.tier ? tierTitle(owner.tier) : null, mine ? L.mine : null].filter(Boolean).join(' · ')}</span>
             <h1>{owner.nickname ?? L.noNickname}</h1>
             {#if owner.title}<TitleBadge title={owner.title} />{/if}
+            <SupporterBadge tier={owner.supporter} data-owner-supporter />
           </div>
         </div>
         <dl class="op-strip">

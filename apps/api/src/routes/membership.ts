@@ -3,11 +3,12 @@ import {
   MembershipResponseSchema,
   type MembershipResponse,
 } from '@offside/contracts';
-import { memberActive } from '@offside/contracts/membership';
+import { memberActive, tenureGiftAt } from '@offside/contracts/membership';
 import type { Hono } from 'hono';
 import { cupKo } from '../cupText.js';
 import type { Db } from '../db/client.js';
 import { bindMembership, membershipOf } from '../db/repos/memberships.js';
+import { tenureOf } from '../db/repos/memberTenure.js';
 import { waitUntil } from '../edgeCache.js';
 import { getDb, type AppEnv, type Bindings } from '../env.js';
 import { AppError } from '../errors.js';
@@ -37,10 +38,17 @@ const storesFor = (env: Bindings, profileId: string) =>
   env.MEMBERSHIP_ENABLED === '1' ? iapStores(env, profileId) : [];
 
 async function memberView(env: Bindings, db: Db, profileId: string): Promise<MembershipResponse> {
-  const row = await membershipOf(db, profileId);
+  const now = nowIso();
+  const [row, tenure] = await Promise.all([
+    membershipOf(db, profileId),
+    tenureOf(db, profileId, now),
+  ]);
   const stores = storesFor(env, profileId);
+  // T-11-818 연속 개월 · 서포터 단계 · 다음 개월 선물(구독 중일 때만).
+  const months = tenure?.months ?? 0;
+  const next = months > 0 ? tenureGiftAt(Math.max(months + 1, 2)) : null;
   return {
-    active: memberActive(row?.until, nowIso()),
+    active: memberActive(row?.until, now),
     until: row?.until ?? null,
     // T-11-591 웹 결제 멤버십은 자동 갱신이 없는 기간권이라 '자동 결제를 껐어요' 대신 끝나는 날만 보이게 null로 보낸다.
     autoRenew: row?.store === 'xsolla' ? null : (row?.autoRenew ?? null),
@@ -52,6 +60,9 @@ async function memberView(env: Bindings, db: Db, profileId: string): Promise<Mem
     (await membershipIntroGroup(profileId)) === 'offer'
       ? { introOffer: true }
       : {}),
+    ...(months > 0 ? { months } : {}),
+    ...(tenure?.tier ? { supporter: tenure.tier } : {}),
+    ...(next ? { nextGift: { months: Math.max(months + 1, 2), ...next } } : {}),
   };
 }
 

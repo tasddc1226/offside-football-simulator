@@ -14,6 +14,14 @@ import type { AttendanceCard } from './api/attendance';
 import { hasSessionHint } from './api/client.js';
 import { attendanceText as L } from './i18n/ko/attendance';
 
+/** T-11-818 출석 때 같이 받은 연속 구독 개월 선물 줄(오래된 달부터). */
+export const tenureGiftLines = (
+  gifts: readonly { months: number; boost: number; scout: number }[] | undefined,
+) =>
+  (gifts ?? []).map((g) =>
+    L.tenureGot({ months: g.months, reward: rewardText({ boost: g.boost, scout: g.scout }) }),
+  );
+
 /** 받은 · 받을 아이템을 한 줄로. 아무것도 없으면 빈 문자열. */
 export const rewardText = (r: AttendanceReward) =>
   OWNER_ITEMS.filter((k) => r[k])

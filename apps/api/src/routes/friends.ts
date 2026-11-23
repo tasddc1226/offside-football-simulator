@@ -61,6 +61,7 @@ import {
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
 import { membersOf } from '../db/repos/memberships.js';
+import { supporterMap, tenuresOf } from '../db/repos/memberTenure.js';
 import { claimReferral, inviteCountsOf } from '../db/repos/referrals.js';
 import type { Db } from '../db/client.js';
 import { purgeEdge } from '../edgeCache.js';
@@ -136,14 +137,16 @@ async function peopleOf(
   // 개막 뒤(휴식기 포함)엔 프리시즌 팀도 함께 읽는다(친선전용 편성으로).
   const legacy = season !== 0;
   const seasons = [...(season === null ? [] : [season]), ...(legacy ? [0] : [])];
-  const [[teams, founders, members, teamIds], managers] = await Promise.all([
+  const now = nowIso();
+  const [[teams, founders, members, teamIds, tenures], managers] = await Promise.all([
     ids.length === 0
-      ? [[], [], [], []]
+      ? [[], [], [], [], []]
       : db.batch([
           teamsOfOwners(db, ids, seasons),
           foundersOf(db, ids),
-          membersOf(db, ids, nowIso()),
+          membersOf(db, ids, now),
           teamIdsOfOwners(db, ids),
+          tenuresOf(db, ids, now),
         ]),
     latestManagersOf(
       db,
@@ -156,6 +159,7 @@ async function peopleOf(
   );
   const founder = new Set(founders.map((f) => f.profileId));
   const member = new Set(members.map((m) => m.profileId));
+  const supporter = supporterMap(tenures, now);
   const latest = new Map<string, string>();
   for (const t of teamIds) if (!latest.has(t.profileId)) latest.set(t.profileId, t.id);
   return new Map(
@@ -172,6 +176,8 @@ async function peopleOf(
           ...(legacy ? { preseasonTeam: lt ? teamSummary(lt) : null } : {}),
           founder: founder.has(p.profileId),
           member: member.has(p.profileId),
+          // T-11-818 연속 구독 단계(연속 기록이 아직 없으면 1단계).
+          ...(member.has(p.profileId) ? { supporter: supporter.get(p.profileId) ?? 1 } : {}),
           profileTeamId: latest.get(p.profileId) ?? null,
         },
       ];

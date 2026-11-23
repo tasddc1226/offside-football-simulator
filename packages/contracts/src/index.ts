@@ -205,7 +205,7 @@ export {
   type CompCustomResponse,
 } from './comp-custom.js';
 
-export { IsoUtcSchema } from './primitives.js';
+export { IsoUtcSchema, SupporterTierSchema } from './primitives.js';
 
 export * from './boards.js';
 export * from './chat.js';

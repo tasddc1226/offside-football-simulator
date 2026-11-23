@@ -1,6 +1,7 @@
 // T-11-512 클럽 멤버십 API(GET /v1/membership, POST /v1/membership/iap).
 import { z } from 'zod';
 import { IapStoreSchema } from './cup-api.js';
+import { SupporterTierSchema } from './primitives.js';
 
 export const MembershipResponseSchema = z.strictObject({
   /** 지금 혜택이 있나(만료 · 환불이면 false). */
@@ -20,6 +21,18 @@ export const MembershipResponseSchema = z.strictObject({
    * 있는지(처음 구독하는지)는 스토어가 정한다.
    */
   introOffer: z.boolean().optional(),
+  /** T-11-818 지금 이어지는 연속 구독 개월 수(구독 중이 아니면 0). 배포 전 응답엔 없다. */
+  months: z.number().int().min(0).optional(),
+  /** T-11-818 서포터 뱃지 단계(구독 중일 때만). */
+  supporter: SupporterTierSchema.optional(),
+  /** T-11-818 다음 개월 선물(연속 months개월째에 받는다). 구독 중이 아니면 없다. */
+  nextGift: z
+    .strictObject({
+      months: z.number().int().min(2),
+      boost: z.number().int().min(0),
+      scout: z.number().int().min(0),
+    })
+    .optional(),
 });
 export type MembershipResponse = z.infer<typeof MembershipResponseSchema>;
 

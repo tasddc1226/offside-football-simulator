@@ -2,8 +2,6 @@ import type { Translation } from '../core';
 import type { FriendMsgs } from '../ko/friend';
 
 export const friend: Translation<FriendMsgs> = {
-  supporter: '支持者',
-  supporterLabel: '俱樂部會員 支持者',
   invite: (p) => `來 OFFSIDE 一起球隊對決吧！好友碼：${p.code}\n${p.url}`,
   accepted: (p) => `已和${p.name}成為好友`,
   requestSent: '已送出好友邀請',

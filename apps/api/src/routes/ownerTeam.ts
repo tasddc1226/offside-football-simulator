@@ -85,6 +85,7 @@ import {
   type OwnerTeamRow,
 } from '../db/repos/ownerTeams.js';
 import { membersOf } from '../db/repos/memberships.js';
+import { supporterMap, supportersOf, tenuresOf } from '../db/repos/memberTenure.js';
 import { achievementRankOf } from '../db/repos/ownerAchievements.js';
 import { teamCoachOf } from '../db/repos/managers.js';
 import {
@@ -210,7 +211,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     const now = nowIso();
     const season = seasonQuery(c, now);
     const todayStart = kstTodayStart(now);
-    const [teams, players, played, openLive, founder, [balance], member, cupSeasons] =
+    const [teams, players, played, openLive, founder, [balance], member, cupSeasons, tenures] =
       await db.batch([
         listMyTeams(db, me.id),
         listEligibleCareers(db, me.id, season),
@@ -220,6 +221,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         activeBalanceQuery(db),
         membersOf(db, [me.id], now),
         activeCompetitionSeasonsQuery(db, me.id),
+        tenuresOf(db, [me.id], now),
       ]);
     const current = teamSeasonAt(now);
     // T-11-552 끝나지 않은 컵·리그에 참가 중인 지난 시즌(시즌 1 제3회 컵). 그 시즌 팀은 컵 명단으로 고친다.
@@ -287,6 +289,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         enhanceOpen: enhanceOpenFrom(balance),
         founder: founder.length > 0,
         member: member.length > 0,
+        // T-11-818 연속 구독 단계(연속 기록이 아직 없으면 1단계).
+        ...(member.length > 0 ? { supporter: supporterMap(tenures, now).get(me.id) ?? 1 } : {}),
         // 컵 성적은 최근 대회부터 온다 — 첫 우승이 가장 최근 우승.
         ownerTitle: me.title,
         ...(fatigue ? { fatigue } : {}),
@@ -443,8 +447,14 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     // T-11-627 자동 매칭이 고른 한 팀의 경기 전 예상. 매칭 찾기를 눌렀을 때만 오는 요청이라 명단을 이때만 읽는다.
     const matched = ladder ? candidates[0] : undefined;
     const odds = matched ? await opponentOdds(db, season, mine, matched) : null;
-    const items: TeamOpponent[] = candidates
-      .slice(0, OPPONENTS_SHOWN)
+    const shown = candidates.slice(0, OPPONENTS_SHOWN);
+    // T-11-818 상대 구단주의 서포터 뱃지 단계(보이는 팀만, PK 한 번).
+    const supporters = await supportersOf(
+      db,
+      shown.map((t) => t.profileId),
+      nowIso(),
+    );
+    const items: TeamOpponent[] = shown
       .sort((a, b) => b.rating - a.rating || b.ovr - a.ovr)
       .map((team) => ({
         teamId: team.id,
@@ -457,6 +467,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         rating: team.rating,
         record: recordOf(team),
         title: team.title,
+        ...(supporters.has(team.profileId) ? { supporter: supporters.get(team.profileId)! } : {}),
         ...(odds ? { odds } : {}),
       }));
     return ok(c, TeamOpponentsResponseSchema, { items }, 200, NO_STORE);

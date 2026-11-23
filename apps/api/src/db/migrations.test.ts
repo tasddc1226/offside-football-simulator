@@ -197,6 +197,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'verified_at',
     'created_at',
   ],
+  member_tenure: ['profile_id', 'since', 'until', 'updated_at'],
   career_renames: ['id', 'career_id', 'profile_id', 'old_name', 'new_name', 'created_at'],
   owner_item_purchases: ['id', 'profile_id', 'item', 'qty', 'price', 'created_at'],
   scout_pity: ['profile_id', 'used', 'streak', 'elites', 'mode', 'updated_at'],

@@ -8403,3 +8403,29 @@ body:has(.tabs) .sx-foot .sx-sheet-tab {
     animation: sk-in 0.2s ease-out 0.2s forwards;
   }
 }
+
+/* T-11-818 서포터 뱃지 단계: 1 초록 → 3 파랑 → 6 보라 → 9 금색 면. */
+.sup-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+  margin-left: 4px;
+  vertical-align: middle;
+  color: var(--good);
+  background: color-mix(in srgb, var(--good) 12%, var(--surface));
+}
+.sup-badge[data-supporter='3'] {
+  color: var(--r2);
+  background: color-mix(in srgb, var(--r2) 12%, var(--surface));
+}
+.sup-badge[data-supporter='6'] {
+  color: var(--r3);
+  background: color-mix(in srgb, var(--r3) 12%, var(--surface));
+}
+.sup-badge[data-supporter='9'] {
+  color: var(--accent-ink);
+  background: var(--accent);
+}
+.sup-badge.sup-xs {
+  font-size: var(--fs-xs, 11px);
+  padding: 1px 6px;
+}

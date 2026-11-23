@@ -8,6 +8,7 @@ export const attendance: Translation<AttendanceMsgs> = {
   todayLabel: '今日獎勵',
   tomorrowLabel: '明日獎勵',
   memberBonus: '會員福利：簽到獎勵 2 倍，再加送 1 張潛力強化券',
+  tenureGot: (p) => `連續 ${p.months} 個月禮物 · ${p.reward}`,
   grace:
     '每天簽到即可領取當天格子的獎勵。漏簽的日子印章也會保留，每週漏簽 1 天以內連續紀錄不會中斷。',
   btn: '簽到',

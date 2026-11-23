@@ -1,5 +1,6 @@
 // T-11-026 구단주 화면(웹 Owner.svelte · 앱 screens/owner/Owner.tsx 공용) — 화면 맨 위 구단주 요약과 '내 팀' 카드가
 // 그리기 전에 계산하는 것만 둔다.
+import type { SupporterTier } from '@offside/contracts/membership';
 import type { OwnerTeamResponse } from './api/team.js';
 import { matchHintOf } from './teamOwner.js';
 import { ownerText as L } from './i18n/ko/owner.js';
@@ -53,6 +54,8 @@ export type OwnerTeamCard = {
   founder: boolean;
   /** T-11-512 클럽 멤버십 서포터(구독 중). */
   member: boolean;
+  /** T-11-818 서포터 뱃지 단계(1 · 3 · 6 · 9개월). 구독 중이 아니면 null. */
+  supporter: SupporterTier | null;
   /** T-11-145 가장 최근에 우승한 컵 회차(닉네임 옆 '제N회 챔피언'). */
   title: string | null;
 };
@@ -75,6 +78,7 @@ export function ownerTeamCard(d: OwnerTeamResponse): OwnerTeamCard {
     ),
     founder: !!d.founder,
     member: !!d.member,
+    supporter: d.supporter ?? null,
     title: d.ownerTitle ?? null,
   };
 }

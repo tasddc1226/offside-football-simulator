@@ -1,7 +1,7 @@
 // T-11-150 구단주 프로필(누구나 보는 화면)과 명예관(대표 칭호 고르기). 시즌을 넘어 쌓이는 기록 — 컵 트로피, 시즌별 업적
 // 점수, 영구결번 — 을 한곳에 모은다. 남의 프로필은 팀 id로 연다(프로필 id는 내보내지 않는다).
 import { z } from 'zod';
-import { IsoUtcSchema } from './primitives.js';
+import { IsoUtcSchema, supporterField } from './primitives.js';
 import { TITLE_NONE, PERMANENT_TITLES } from './owner-title.js';
 import { OwnerHonorSchema, OwnerTierSchema, OwnerTierTagSchema } from './season-recap.js';
 import {
@@ -38,6 +38,8 @@ export const OwnerProfileSchema = z.strictObject({
   avatarId: z.uuid().nullable().optional(),
   title: OwnerTitleSchema.nullable(),
   tier: OwnerTierTagSchema.nullable(),
+  /** T-11-818 서포터 뱃지 단계(구독 중일 때만). */
+  supporter: supporterField,
   /** 가장 최근 시즌 팀(감독 이름과 함께). 팀을 만든 적이 없으면 null. */
   team: z
     .strictObject({

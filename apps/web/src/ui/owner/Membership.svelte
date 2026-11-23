@@ -7,7 +7,7 @@
   import type { MembershipResponse } from '@offside/contracts';
   import { fetchMembership } from '@offside/app-core/api/membership';
   import { needsOwnerLogin } from '@offside/app-core/market';
-  import { memberPerks, memberStatusText } from '@offside/app-core/membership-view';
+  import { memberPerks, memberStatusText, memberTenureView } from '@offside/app-core/membership-view';
   import { membershipText as L } from '@offside/app-core/i18n/ko/membership';
   import { hasSessionHint } from '@offside/app-core/api/client';
   import { loadWebPay, startWebPay, webPay } from '../cup/webPay.svelte.js';
@@ -40,6 +40,7 @@
   const canWebBuy = $derived(!!webMember && !!m && (!m.active || m.store === null));
 
   const line = $derived(m ? memberStatusText(m) : null);
+  const tenure = $derived(m ? memberTenureView(m) : null);
 </script>
 
 <PopSheet label={L.title} step={m ? 'member' : 'load'} {onclose}>
@@ -59,9 +60,11 @@
       <section class="mb-band stack" data-member-state={m.active ? 'active' : 'none'}>
         <div class="mb-band-top">
           <b>{m.active ? L.active : L.lead}</b>
-          {#if m.active}<span class="mb-pill">{L.badge}</span>{/if}
+          {#if tenure}<span class="mb-pill" title={tenure.pill.label} data-member-supporter={tenure.pill.tier}>{tenure.pill.text}</span>{/if}
         </div>
+        {#if tenure?.streak}<span class="fs-sm" data-member-streak>{tenure.streak}</span>{/if}
         {#if line}<span class="fs-sm mb-soft">{line}</span>{/if}
+        {#if tenure?.next}<span class="fs-sm mb-soft" data-member-next-gift>{tenure.next}</span>{/if}
       </section>
       <ul class="mb-perks">
         {#each memberPerks() as p (p.key)}

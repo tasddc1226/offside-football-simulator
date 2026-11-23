@@ -41,3 +41,44 @@ export const MEMBER_DAILY_BONUS = { boost: 1 } as const;
 /** 스토어가 알려 준 만료 시각 기준으로 지금 혜택이 있나(결제 유예 중이면 유예 끝까지). */
 export const memberActive = (until: string | null | undefined, now: string) =>
   !!until && until > now;
+
+// ───────── T-11-818 연속 구독 · 서포터 뱃지 단계 · 개월 선물 ─────────
+// 연속 구독(api member_tenure)은 끊기지 않은 구독이 시작된 시각(since)과 모든 구독 중 가장 늦은 혜택 끝(until)이다.
+
+/** 혜택이 끝난 뒤 이 날수 안에 다시 이어지면 연속으로 본다(결제 재시도 · 늦게 다시 산 웹 이용권). */
+export const TENURE_GAP_DAYS = 7;
+const DAY_MS = 86_400_000;
+/**
+ * 지금까지 결제한 연속 개월 수(구독 중이 아니면 0). 한 달 = 30일로 세고 5일을 더해 28~31일 달 · 웹 30일권 · 첫 구독 때 묶인 시각이
+ * 결제보다 조금 늦은 차이를 덮는다(결제 유예 16일까지는 다음 달로 세지 않는다).
+ */
+export function tenureMonths(since: string, until: string, now: string): number {
+  if (!(until > now)) return 0;
+  const days = (Date.parse(until) - Date.parse(since)) / DAY_MS;
+  return Math.max(1, Math.floor((days + 5) / 30));
+}
+
+/** 서포터 뱃지 단계: 3개월 미만 1, 그다음 3 · 6 · 9개월. 구독 중이 아니면 null. */
+export type SupporterTier = 1 | 3 | 6 | 9;
+export const SUPPORTER_TIERS: readonly SupporterTier[] = [9, 6, 3];
+export function supporterTier(months: number): SupporterTier | null {
+  if (months <= 0) return null;
+  return SUPPORTER_TIERS.find((t) => months >= t) ?? 1;
+}
+
+/** 개월 선물이 시작되는 연속 개월(가입한 첫 달은 멤버십 혜택만). */
+export const TENURE_GIFT_FROM = 2;
+/** 개월 선물의 잠재력 강화권 상한(달마다 1장씩 늘어 이 장수에서 멈춘다). */
+export const TENURE_GIFT_BOOST_MAX = 6;
+/**
+ * 연속 n개월째 선물: 잠재력 강화권 n장(최대 TENURE_GIFT_BOOST_MAX장), 뱃지 단계가 오르는 3의 배수 달엔 프리미엄 스카우트권 1장을
+ * 더한다. 2개월 미만이면 null.
+ */
+export function tenureGiftAt(months: number): { boost: number; scout: number } | null {
+  if (months < TENURE_GIFT_FROM) return null;
+  return { boost: Math.min(months, TENURE_GIFT_BOOST_MAX), scout: months % 3 === 0 ? 1 : 0 };
+}
+/** 선물 받은 기록(gift_claims) id. 연속 구독이 새로 시작되면 since 날짜가 바뀌어 다시 2개월째부터 받는다. */
+export const tenureGiftPrefix = (since: string) => `mm:${since.slice(0, 10)}:`;
+export const tenureGiftId = (since: string, months: number) =>
+  `${tenureGiftPrefix(since)}${months}`;

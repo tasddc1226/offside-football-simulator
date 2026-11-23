@@ -12,7 +12,14 @@ const ko = {
   perkAds: '광고 제거',
   perkAdsSub: '구독하는 동안 광고를 보지 않고 보상을 받아요.',
   perkBadge: '서포터 뱃지',
-  perkBadgeSub: '내 구단과 친구 목록의 이름 옆에 서포터 뱃지가 붙어요.',
+  perkBadgeSub:
+    '구단 · 랭킹 · 친구 · 댓글의 이름 옆에 서포터 뱃지가 붙어요. 3 · 6 · 9개월 연속이면 뱃지가 바뀌어요.',
+  perkTenure: '연속 구독 선물',
+  perkTenureSub:
+    '2개월째부터 출석할 때 달마다 선물을 받아요. 잠재력 강화권이 한 달에 1장씩 늘어 6장까지, 3개월마다 프리미엄 스카우트권도 1장 받아요.',
+  /** T-11-818 이어서 구독한 개월(구독 중일 때). */
+  streak: (p: { months: number }) => `연속 ${p.months}개월째 구독하고 있어요`,
+  nextGift: (p: { months: number; reward: string }) => `${p.months}개월째 선물 · ${p.reward}`,
   join: (p: { price: string }) => `월 ${p.price}로 가입하기`,
   joinIntro: (p: { price: string; months: number }) =>
     p.months === 1 ? `첫 달 ${p.price}에 가입하기` : `첫 ${p.months}개월 월 ${p.price}에 가입하기`,
@@ -41,10 +48,8 @@ const ko = {
   loadFail: '멤버십을 불러오지 못했어요.',
   retry: '다시 불러오기',
   entry: '클럽 멤버십',
-  entrySub: '출석 2배 · 매일 잠재력 강화권 · 광고 제거 · 서포터 뱃지',
+  entrySub: '출석 2배 · 매일 잠재력 강화권 · 광고 제거 · 연속 구독 선물',
   entryActive: '이용 중',
-  badge: '서포터',
-  badgeLabel: '클럽 멤버십 서포터',
   back: '구단주 화면으로',
   adHint: '멤버십이면 광고 없이 받아요',
   adHintGo: '멤버십 보기',

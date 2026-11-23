@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { FRIEND_CODE_RE } from './owner-team.js';
+import { supporterField } from './primitives.js';
 import { TeamIdSchema, TeamLogoSchema, TeamMatchSchema, TeamRecordSchema } from './teams.js';
 
 // T-11-098 친구 · 친선전. 친구는 로그인한 구단주끼리 신청 → 수락으로 맺는다. 사람은 친구 코드로만 가리킨다(프로필 id를
@@ -43,6 +44,8 @@ export const FriendPersonSchema = z.strictObject({
   founder: z.boolean().optional(),
   /** T-11-512 클럽 멤버십 서포터(구독 중). 배포 전 응답엔 없다. */
   member: z.boolean().optional(),
+  /** T-11-818 서포터 뱃지 단계(구독 중일 때만). */
+  supporter: supporterField,
   /** T-11-601 구단주 프로필을 여는 팀 id(가장 최근 시즌 팀, 팀을 만든 적 없으면 null). 배포 전 응답엔 없다. */
   profileTeamId: TeamIdSchema.nullable().optional(),
 });
