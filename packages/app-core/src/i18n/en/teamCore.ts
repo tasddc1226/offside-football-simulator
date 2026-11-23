@@ -29,6 +29,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achTeamFitHint: 'All 11 players need a fit of 1.00, with no youth players',
   achLevel: (p) => `Level ${p.level} · ${p.cur}`,
   achNext: (p) => ` · NEXT ${p.next}`,
+  achNextWorth: (p) => ` (+${p.n} pts)`,
   achMaxLevel: ' · Max level',
   achDone: 'Completed',
   achUndone: 'Not yet',

@@ -446,7 +446,7 @@ export function TeamAchievements({
                       <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
                         <Txt bold>{tn(n.item.label)}</Txt>
                         <Txt tone="muted" style={{ fontSize: rem(FONT.caption) }}>
-                          {`${n.group} · ${achState(n.item)}`}
+                          {`${n.group} · ${achState(n.item, { worth: false })}`}
                         </Txt>
                       </View>
                       <Pts got>{L.worthPlus({ n: num(n.item.worth) })}</Pts>

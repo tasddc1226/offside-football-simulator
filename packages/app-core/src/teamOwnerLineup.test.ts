@@ -205,6 +205,14 @@ describe('업적 한 줄 표시', () => {
       '2단계 · 1,200골 · NEXT 5,000',
     );
   });
+  it('다음 단계를 넘으면 오르는 점수를 NEXT 뒤에 붙인다(T-11-817)', () => {
+    expect(
+      achState(ach({ level: 2, cur: 1200, unit: '골', next: 5000, points: 30, worth: 40 })),
+    ).toBe('2단계 · 1,200골 · NEXT 5,000 (+40점)');
+    expect(
+      achState(ach({ level: 2, cur: 1200, unit: '골', next: 5000, worth: 40 }), { worth: false }),
+    ).toBe('2단계 · 1,200골 · NEXT 5,000');
+  });
   it('최고 단계는 NEXT 대신 안내를 보인다', () => {
     expect(achState(ach({ level: 3, cur: 30, next: null }))).toBe('3단계 · 30 · 최고 단계');
   });

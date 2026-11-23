@@ -92,7 +92,7 @@
           <ul>
             {#each near as n (n.item.id)}
               <li>
-                <span class="tm-near-txt"><b>{n.item.label}</b><small class="muted">{n.group} · {achState(n.item)}</small></span>
+                <span class="tm-near-txt"><b>{n.item.label}</b><small class="muted">{n.group} · {achState(n.item, { worth: false })}</small></span>
                 <span class="tm-pts">{L.worthPlus({ n: num(n.item.worth) })}</span>
                 <span class="tm-bar sm" aria-hidden="true"><span style:width="{n.ratio * 100}%"></span></span>
               </li>

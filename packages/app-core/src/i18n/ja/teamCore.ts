@@ -28,6 +28,7 @@ export const teamCore: Translation<TeamCoreMsgs> = {
   achTeamFitHint: 'ユース選手なしで11人全員の適性が1.00であることが条件です',
   achLevel: (p) => `${p.level}段階 · ${p.cur}`,
   achNext: (p) => ` · NEXT ${p.next}`,
+  achNextWorth: (p) => ` (+${p.n}pt)`,
   achMaxLevel: ' · 最高段階',
   achDone: '達成済み',
   achUndone: '未達成',
