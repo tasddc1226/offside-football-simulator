@@ -36,6 +36,7 @@ import { STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
 import { runDailyRank } from './team/dailyRank.js';
 import { logErrorText } from './logError.js';
+import { liveMapDue, refreshLiveMap } from './db/repos/liveMap.js';
 
 import { consumeBillingAlerts, recoverBillingAlerts } from './iap/alerts.js';
 
@@ -185,6 +186,21 @@ export default {
         .then((r) => r && console.log(JSON.stringify({ level: 'info', job: 'league-ai', ...r })))
         .catch(logged('league-ai'));
       mark('writeLeagueNewsAi');
+      // T-11-815 홈 라이브 지도: 15분마다 최근 24시간 진행 중 커리어를 리그 · 국적별로 세어 한 행에 굳힌다.
+      if (liveMapDue(controller.scheduledTime))
+        await refreshLiveMap(createDb(env.DB), controller.scheduledTime)
+          .then((m) =>
+            console.log(
+              JSON.stringify({
+                level: 'info',
+                job: 'live-map',
+                careers: m.careers,
+                leagues: m.leagues.length,
+              }),
+            ),
+          )
+          .catch(logged('live-map'));
+      mark('refreshLiveMap');
       // T-11-445 리그가 밀리면 운영 슬랙에 알린다(15분마다, 문제마다 한 번).
       if (new Date(controller.scheduledTime).getUTCMinutes() % 15 === 0)
         await alertLeagueStalls(

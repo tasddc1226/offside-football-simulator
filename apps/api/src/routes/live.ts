@@ -3,6 +3,7 @@ import { LIVE_POLL_SEC } from '@offside/contracts/polling';
 import type { Hono } from 'hono';
 import { ok } from './shared.js';
 import { liveFeed, liveStats } from '../db/repos/live.js';
+import { readLiveMap } from '../db/repos/liveMap.js';
 import { edgeCached } from '../edgeCache.js';
 import { EDGE } from '../edgeKeys.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -17,9 +18,11 @@ export function registerLiveRoutes(app: Hono<AppEnv>): void {
     const data = await edgeCached(c, EDGE.live, TTL, async () => {
       const db = getDb(c);
       const now = Date.now();
-      const [daily, feed, presence] = await Promise.all([
+      const [daily, feed, map, presence] = await Promise.all([
         liveStats(db, now),
         liveFeed(db, now),
+        // T-11-815 지도는 cron이 굳힌 한 행만 읽는다. 못 읽어도 현황은 그대로 보낸다.
+        readLiveMap(db).catch(() => null),
         c.env.LIVE?.get(c.env.LIVE.idFromName(HUB))
           .presence()
           .catch(() => null),
@@ -30,6 +33,7 @@ export function registerLiveRoutes(app: Hono<AppEnv>): void {
         now: new Date(now).toISOString(),
         stats: { ...daily, playing: online ?? 0, online },
         feed,
+        map,
       };
     });
     return ok(c, LiveResponseSchema, data, 200, `public, max-age=${TTL}`);

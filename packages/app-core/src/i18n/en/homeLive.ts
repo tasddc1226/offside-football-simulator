@@ -12,6 +12,14 @@ export const homeLive: Translation<HomeLiveMsgs> = {
   pauseTitle: 'Pause',
   resumeTitle: 'Resume',
   failed: "Couldn't load the live feed. We'll check again shortly.",
+  mapHeadline: (p) => `${p.n} players are playing right now`,
+  mapSub: (p) =>
+    `${plural(p.nations, 'nationality', 'nationalities')} · ${plural(p.countries, 'country', 'countries')} · last 24 hours`,
+  mapA11y: (p) =>
+    `${p.n} players are playing in ${plural(p.countries, 'country', 'countries')} right now`,
+  spotA11y: (p) => `${p.country}: ${plural(p.n, 'player')}`,
+  spotCount: (p) => `${p.country} · ${plural(p.n, 'player')}`,
+  spotEmpty: 'Seasons in progress here',
   whatRetire: (p) => `Retired · Legend Score ${p.score}`,
   whatFirst: (p) => `Finished a first season at ${p.club}`,
   whatHonor: (p) => `${p.honor} · ${p.club}`,

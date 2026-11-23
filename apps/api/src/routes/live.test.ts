@@ -2,6 +2,8 @@ import { readFileSync } from 'node:fs';
 import { LiveResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
+import { createDb } from '../db/client.js';
+import { foldLiveMap, liveMapDue, refreshLiveMap } from '../db/repos/liveMap.js';
 import { fakeHub } from '../test/liveHub.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import {
@@ -229,5 +231,77 @@ describe('홈 라이브 현황 /v1/live (T-10-030)', () => {
     expect(data.feed).toHaveLength(1);
     expect(data.feed[0]).toMatchObject({ kind: 'season', goals: 0 });
     expect(data.stats.online).toBe(7); // 시즌 업로드 시각과 무관한 실제 접속 수
+  });
+
+  it('지도는 cron이 굳히기 전엔 null이고, 굳힌 뒤엔 마지막 시즌 리그 · 국적으로 센다 (T-11-815)', async () => {
+    await putJson(
+      ctx,
+      cookie,
+      `/v1/careers/${A}/seasons/2026`,
+      seasonBody({ league: '고교 리그' }),
+    );
+    await putJson(
+      ctx,
+      cookie,
+      `/v1/careers/${A}/seasons/2027`,
+      seasonBody({ league: '프리미어리그' }),
+    );
+    await putJson(ctx, cookie, `/v1/careers/${B}/seasons/2026`, seasonBody({ league: 'J1리그' }));
+    await putJson(
+      ctx,
+      cookie,
+      `/v1/careers/${C}/seasons/2026`,
+      seasonBody({ league: '프리미어리그' }),
+    );
+    expect((await read(ctx)).map).toBeNull();
+
+    await ctx.env.DB.prepare("UPDATE careers SET nation = 'JP' WHERE id = ?").bind(B).run();
+    await refreshLiveMap(createDb(ctx.env.DB), Date.now());
+    const map = (await read(ctx)).map!;
+    // A는 마지막 시즌(프리미어리그)으로 한 번만, 국적이 빈 A · C는 대한민국으로 센다.
+    expect(map).toMatchObject({
+      careers: 3,
+      nations: 2,
+      leagues: [
+        { league: '프리미어리그', n: 2 },
+        { league: 'J1리그', n: 1 },
+      ],
+    });
+  });
+
+  it('지도는 은퇴 · 숨김 커리어와 24시간보다 오래된 시즌을 빼고, 아무도 없으면 null이다 (T-11-815)', async () => {
+    for (const id of [A, B, C])
+      await putJson(ctx, cookie, `/v1/careers/${id}/seasons/2026`, seasonBody());
+    await putJson(ctx, cookie, `/v1/careers/${A}/retirement`, summary);
+    await ctx.env.DB.prepare('UPDATE careers SET hidden = 1 WHERE id = ?').bind(B).run();
+    await ctx.env.DB.prepare('UPDATE career_seasons SET created_at = ? WHERE career_id = ?')
+      .bind(new Date(Date.now() - 25 * 3_600_000).toISOString(), C)
+      .run();
+    const map = await refreshLiveMap(createDb(ctx.env.DB), Date.now());
+    expect(map.careers).toBe(0);
+    expect((await read(ctx)).map).toBeNull();
+  });
+
+  it('지도 집계는 리그별로 합치고 많은 순으로 두며, cron은 15분 배수에만 센다 (T-11-815)', () => {
+    const m = foldLiveMap(
+      [
+        { league: '라리가', nation: 'KR', n: 2 },
+        { league: '프리미어리그', nation: 'KR', n: 3 },
+        { league: '라리가', nation: 'BR', n: 2 },
+        { league: 'MLS', nation: 'US', n: 0 },
+      ],
+      '2026-11-23T04:00:00.000Z',
+    );
+    expect(m).toEqual({
+      at: '2026-11-23T04:00:00.000Z',
+      careers: 7,
+      nations: 2,
+      leagues: [
+        { league: '라리가', n: 4 },
+        { league: '프리미어리그', n: 3 },
+      ],
+    });
+    expect(liveMapDue(Date.parse('2026-11-23T04:15:00Z'))).toBe(true);
+    expect(liveMapDue(Date.parse('2026-11-23T04:05:00Z'))).toBe(false);
   });
 });

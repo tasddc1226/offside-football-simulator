@@ -41,6 +41,17 @@ const live = {
     season(90, { pos: 'GK', cs: 11, goals: 0, assists: 0 }),
     season(60 * 30),
   ],
+  // T-11-815 라이브 지도(cron이 굳힌 리그별 인원).
+  map: {
+    at: new Date(NOW).toISOString(),
+    careers: 57,
+    nations: 4,
+    leagues: [
+      { league: 'K리그1', n: 25 },
+      { league: '프리미어리그', n: 20 },
+      { league: 'J1리그', n: 12 },
+    ],
+  },
 };
 async function stub(page: Page, body: unknown = live, status = 200) {
   await page.route(`${API}/v1/live`, (r) =>
@@ -269,4 +280,34 @@ test('클럽 id가 있으면 이름이 다른 클럽의 기본 이름과 같아�
   const [renamed, byId, byName] = [await crest(0), await crest(1), await crest(2)];
   expect(renamed).toBe(byId);
   expect(renamed).not.toBe(byName);
+});
+
+// T-11-815 홈 라이브 지도: 나라 점 · 말풍선 · 칩으로 고르기.
+test('라이브 지도는 지금 뛰는 나라를 보여 주고, 칩으로 나라를 고르면 말풍선이 바뀐다', async ({
+  page,
+}) => {
+  await stub(page);
+  await page.goto('/');
+  const map = page.locator('[data-home-live] .live-map');
+  await expect(map.locator('.live-map-head')).toContainText('57명이 지금 뛰고 있어요');
+  await expect(map.locator('.live-map-head small')).toContainText('국적 4개 · 3개 나라');
+  await expect(map.locator('circle.live-map-spot')).toHaveCount(3);
+  await expect(
+    map.getByRole('img', { name: '지금 3개 나라에서 57명이 뛰고 있어요' }),
+  ).toBeVisible();
+  // 처음엔 가장 최근 시즌 소식(청운고 · K리그1)의 나라를 가리킨다.
+  const bubble = map.locator('.live-map-bubble');
+  await expect(bubble).toContainText('대한민국 · 25명');
+  await expect(bubble).toContainText('청운고에서 첫 시즌을 마쳤어요');
+  await map.locator('[data-live-spot="LHR"]').click();
+  await expect(map.locator('[data-live-spot="LHR"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(bubble).toContainText('잉글랜드 · 20명');
+  await expect(bubble).toContainText('지금 이곳에서 시즌을 치르는 중이에요');
+});
+
+test('지도가 없는 응답이면 지도 자리를 접는다', async ({ page }) => {
+  await stub(page, { ...live, map: null });
+  await page.goto('/');
+  await expect(page.locator('[data-home-live] [data-live-stat="playing"]')).toBeVisible();
+  await expect(page.locator('[data-home-live] .live-map')).toHaveCount(0);
 });

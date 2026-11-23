@@ -33,6 +33,7 @@ import {
   type HomeLiveState,
 } from '@offside/app-core/homeLive';
 import { CountUp } from '../../components/CountUp';
+import { HomeLiveMap } from './HomeLiveMap';
 import { openPublicLegendById } from '../../game/host';
 import { prefs } from '../../store';
 import { DISPLAY, rem } from '../../theme/type';
@@ -184,6 +185,11 @@ export function HomeLive() {
               </Btn>
             ) : null}
           </View>
+
+          {/* T-11-815 라이브 지도. 응답 전에도 같은 높이를 잡아 두고, 지도 없는 응답이면 접는다. */}
+          {!data || data.map ? (
+            <HomeLiveMap map={data?.map ?? null} feed={feed} motionOK={motionOK} />
+          ) : null}
 
           {!data ? (
             <>
