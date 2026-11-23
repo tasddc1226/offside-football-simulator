@@ -18,6 +18,8 @@ export const VERIFIED_FORMAT = 'offside-d1-live-copy-verified-v1';
 const MAX_CHUNK = 64 * 1024 * 1024;
 const MAX_CHUNKS = 10000;
 const BUCKET = 'offside-d1-backup';
+/** 백업 도중 지워진 부모의 자식 행을 이만큼까지 정리한다. 넘으면 부모가 빠진 것으로 보고 실패한다. */
+export const ORPHAN_LIMIT = 2000;
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
 
 export const latestKey = (env) => `d1-manifests/${env}/latest.json`;
@@ -153,6 +155,11 @@ export async function verifyLiveCopy(
     integrityOk: restored.integrityOk === true,
     countsMatch: restored.countsMatch === true,
     foreignKeyViolations: restored.foreignKeyViolations,
+    // 표 이름과 건수만(스키마는 공개돼 있다). 키 · 행 내용은 싣지 않는다.
+    foreignKeyTables: restored.foreignKeyTables ?? {},
+    orphansRepaired: restored.orphansRepaired ?? 0,
+    orphanTables: restored.orphanTables ?? {},
+    orphanLimitExceeded: restored.orphanLimitExceeded === true,
     restoreSeconds: restored.restoreSeconds,
     databaseBytes: restored.databaseBytes,
     passed,
@@ -175,6 +182,7 @@ export async function verifyLiveCopy(
             tables: restored.tables,
             rows: restored.rows,
             foreignKeyViolations: 0,
+            orphansRepaired: restored.orphansRepaired ?? 0,
             restoreSeconds: restored.restoreSeconds,
             databaseBytes: restored.databaseBytes,
           },
@@ -205,6 +213,8 @@ function runRestore({ source, destination, chunks, tables, rows, minRows }) {
         String(rows),
         '--min-rows',
         String(minRows),
+        '--repair-orphans',
+        String(ORPHAN_LIMIT),
       ],
       { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], maxBuffer: 1024 * 1024 },
     );
