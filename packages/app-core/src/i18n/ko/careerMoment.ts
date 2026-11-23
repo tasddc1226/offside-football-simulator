@@ -16,6 +16,9 @@ const ko = {
   visitAssist: (p: { club: string }) => `${p.club} 원정에서 동료의 골을 도왔습니다.`,
   visitPlayed: (p: { club: string }) =>
     `${p.club} 원정 경기가 끝나고 익숙한 관중석을 향해 박수를 보냈습니다.`,
+  visitUnused: (p: { club: string }) =>
+    `${p.club} 원정에서 교체를 기다렸지만 출전 기회는 오지 않았습니다.`,
+  visitInjured: (p: { club: string }) => `부상으로 ${p.club} 원정에 출전하지 못했습니다.`,
   visitBench: (p: { club: string }) =>
     `${p.club} 원정에서 출전 기회는 없었습니다. 경기 뒤 옛 동료들과 인사를 나눴습니다.`,
   rank: (p: { rank: number }) => `예상 리그 ${p.rank}위`,

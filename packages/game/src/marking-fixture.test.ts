@@ -3,6 +3,7 @@ import './event-registry.js';
 import { newGame } from './engine.js';
 import { rollEvent, resolveChoice } from './event-runner.js';
 import { firstMarkingGame, MARKING_RETURN } from './marking-fixture.js';
+import { createRng, setActiveRng } from './rng.js';
 import { scoringTable } from './scoring-table.js';
 import { loadSave } from './save.js';
 import type { MatchGame } from './match.js';
@@ -13,8 +14,11 @@ const match = (opp: string, rd: number, mins: number, inj = false): MatchGame =>
   mins,
   inj,
   res: 'D',
+  gf: 2,
+  ga: 2,
 });
 function setup() {
+  setActiveRng(createRng(771));
   const s = newGame(
     { name: 'Fixture', number: 4, pos: 'DF', type: 'stopper', foot: '오른발', trait: 'late' },
     771,
@@ -31,7 +35,10 @@ function setup() {
   resolveChoice(s, 'df-marking', 1, 0);
   return { s, source };
 }
-it('matches the first later fixture against the saved club across a season and reload', () => {
+it.each([
+  [0, '공격수 추적'],
+  [1, '중앙 침투 차단'],
+] as const)('records rematch choice %i once across a season and reload', (choice, action) => {
   const { s, source } = setup();
   const restored = loadSave(JSON.parse(JSON.stringify(s)))!.G;
   expect(rollEvent(restored, [source, match('other', 8, 90)])).not.toBe(MARKING_RETURN);
@@ -42,8 +49,19 @@ it('matches the first later fixture against the saved club across a season and r
   );
   expect(restored.markingFixture?.returnRound).toBe(2);
   expect(restored.flags.markApproach).toBe('zone');
-  resolveChoice(restored, MARKING_RETURN, 1);
-  expect(restored.markingFixture).toBeUndefined();
+  expect(restored.markingFixture?.returnScore).toBe('2-2');
+  const pending = loadSave(JSON.parse(JSON.stringify(restored)))!.G;
+  const before = pending.miles!.length;
+  resolveChoice(pending, MARKING_RETURN, choice);
+  expect(pending.markingFixture).toBeUndefined();
+  const done = loadSave(JSON.parse(JSON.stringify(pending)))!.G;
+  expect(done.miles?.at(-1)).toMatchObject({
+    year: restored.year,
+    t: expect.stringContaining('2R '),
+  });
+  expect(done.miles?.at(-1)?.t).toContain(action + ' · 팀 무승부 2-2');
+  resolveChoice(done, MARKING_RETURN, choice);
+  expect(done.miles).toHaveLength(before + 1);
 });
 it.each([true, false])('records a missed fixture once (injured: %s)', (inj) => {
   const { s, source } = setup();
@@ -60,4 +78,12 @@ it('cancels the old assignment on transfer', () => {
   s.club = { ...s.club, id: 'other' };
   expect(rollEvent(s, [match(source.opp!, 13, 90)])).not.toBe(MARKING_RETURN);
   expect(s.markingFixture).toBeUndefined();
+});
+
+it('keeps an older pending rematch playable without inventing a result', () => {
+  const { s } = setup();
+  s.markingFixture!.returnRound = 15;
+  const restored = loadSave(JSON.parse(JSON.stringify(s)))!.G;
+  resolveChoice(restored, MARKING_RETURN, 0);
+  expect(restored.miles?.at(-1)?.t).toMatch(/^15R .+ 재대결 · 공격수 추적$/);
 });

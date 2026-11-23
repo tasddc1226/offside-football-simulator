@@ -181,7 +181,7 @@ export function createGameActions(host: GameHost) {
         throw error;
       }
       host.analytics.complete?.({ cid: s.cid, year: s.year, phase: ph, matches: r.block?.n ?? 0 });
-      // 경기 줄(가짜 스코어)은 게임 난수를 쓴다. 결과 하나에 한 번만 만들어 난수 소비 순서를 그대로 둔다(T-11-438 리포트 보관도 같은 줄을 쓴다).
+      // The ticker and saved report share the rows for the settled engine result.
       const made = new WeakMap<PhaseResult, { rows: TickerRow[]; extras: string[] }>();
       const lines = (x: PhaseResult) => {
         let v = made.get(x);

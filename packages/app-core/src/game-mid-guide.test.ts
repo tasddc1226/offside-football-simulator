@@ -167,7 +167,7 @@ describe('G5 중계 도중 끊긴 구간 리포트', () => {
     return h;
   }
 
-  it('저장 때 리포트도 남기고, 중계가 끝나 화면에 띄우면 지운다. 난수는 경기 줄 한 번만 쓴다', async () => {
+  it('저장 때 리포트도 남기고, 중계가 끝나 화면에 띄우면 지운다. 경기 줄은 엔진의 득실을 그대로 쓴다', async () => {
     vi.useFakeTimers();
     setKeyMomentsOn(false);
     const s = career();
@@ -190,13 +190,17 @@ describe('G5 중계 도중 끊긴 구간 리포트', () => {
     expect(mid!.report.games.length).toBe(h.state.report!.games.length);
     expect({ ...mid!.report, key: 0 }).toEqual({ ...h.state.report!, key: 0 });
     expect(mem.get('ft_phase_report')).toBe('null');
-    // 리포트를 보관해도 난수 소비는 '구간 진행 + 경기 줄 한 번'과 같다.
+    // Reading or rebuilding the report must not advance the career RNG.
     const after = getActiveRng().getState().seed;
     setActiveRng(createRng(seed));
     const s2 = JSON.parse(pre) as GameState;
     recordPhaseOvr(s2);
     const r2 = g.playPhase(s2);
-    matchRows(s2, r2.block!);
+    expect(getActiveRng().getState().seed).toBe(after);
+    expect(mid!.report.games.map((row) => row.score)).toEqual(
+      r2.block!.games.map((m) => `${m.gf}-${m.ga}`),
+    );
+    expect(matchRows(s2, r2.block!)).toEqual(mid!.report.games);
     expect(getActiveRng().getState().seed).toBe(after);
   });
 
