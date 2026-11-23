@@ -23,6 +23,7 @@ export default {
       'src/platform/interstitial.test.mjs',
       'src/components/AdSlot.test.mjs',
       'src/platform/iapItems.test.mjs',
+      'src/platform/starterPack.test.mjs',
       'src/platform/playSignals.test.mjs',
       'src/analytics/retireExp.test.mjs',
       'src/game/nav.test.mjs',

@@ -42,6 +42,8 @@ const endings = {
   run: '득점 후 원정석으로 달려갔다',
   assist: '동료의 골을 도왔다',
   played: '팬들에게 박수를 보냈다',
+  unused: '벤치 미출전',
+  injured: '부상으로 결장했다',
   bench: '옛 동료들과 인사를 나눴다',
 };
 export const formerAwayMilestone = (club: string, ending: keyof typeof endings) =>
@@ -52,3 +54,15 @@ export const markingAbsence = (club: string, rd: number, injured: boolean) =>
 
 export const markingOpener = (club: string, rd: number, approach: 'man' | 'zone') =>
   `${rd}R ${club} 전담 마크 · ${approach === 'man' ? '대인 수비' : '지역 수비'}`;
+
+const teamResults = { W: '팀 승리', D: '팀 무승부', L: '팀 패배' } as const;
+export function markingReturn(
+  club: string,
+  rd: number,
+  choice: 'follow' | 'hand',
+  result?: keyof typeof teamResults,
+  score?: string,
+) {
+  const action = choice === 'follow' ? '공격수 추적' : '중앙 침투 차단';
+  return `${rd}R ${club} 재대결 · ${action}${result ? ' · ' + teamResults[result] : ''}${score ? ' ' + score : ''}`;
+}
