@@ -58,7 +58,6 @@ async function packView(env: Bindings, db: Db, profileId: string): Promise<Start
   if (eligibility === 'owned') return { ...base, state: 'owned', stores: [] };
   const stores = env.STARTER_PACK_ENABLED === '1' ? iapStores(env, profileId) : [];
   if (!stores.length) return { ...base, state: 'off', stores: [] };
-  if (eligibility !== 'eligible') return { ...base, state: 'ineligible', stores: [] };
   return { ...base, state: 'eligible', stores, account: iapAccount(profileId) };
 }
 

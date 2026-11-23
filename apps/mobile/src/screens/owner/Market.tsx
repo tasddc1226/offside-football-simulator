@@ -281,7 +281,7 @@ export default function Market() {
   const guestPane = (v: MarketView) => (
     <View testID={`market-guest-${v}`} style={{ gap: 10 }}>
       <Txt style={small}>{marketGuestText(v)}</Txt>
-      <LoginButtons back={{ market: true }} onDone={() => void loadMe()} />
+      <LoginButtons place="market" back={{ market: true }} onDone={() => void loadMe()} />
     </View>
   );
 
@@ -1089,7 +1089,7 @@ export default function Market() {
         foot={
           buying ? (
             !me ? (
-              <LoginButtons back={{ market: true }} onDone={() => void loadMe()} />
+              <LoginButtons place="market" back={{ market: true }} onDone={() => void loadMe()} />
             ) : ownBuying ? (
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Btn

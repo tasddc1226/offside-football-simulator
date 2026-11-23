@@ -13,6 +13,7 @@
   import { createCupPredictionController, emptyCupPredictions, type CupPredictionContext } from '@offside/app-core/cupPredictions';
   import { cupFolds, rememberCupFolds, type CupScheduleTab } from '@offside/app-core/cupFolds';
   import { divisionCapLabel, divisionLabel } from '@offside/app-core/cupDivision';
+  import { teamScoreLabel } from '@offside/app-core/teamScore';
   import Topbar from './Topbar.svelte';
   import LoadState, { type LoadStatus } from './LoadState.svelte';
   import TeamLogo from './team/TeamLogo.svelte';
@@ -205,7 +206,7 @@
           <section class="card stack cup-login" data-cup-login>
             <h2>{L.predictionLoginTitle}</h2>
             <p class="muted fs-sm" data-cup-login-note>{L.loginCardNote}</p>
-            <LoginButtons act="cup-login-google" back={{cup:true}} />
+            <LoginButtons act="cup-login-google" back={{cup:true}} place="cup" />
           </section>
         {/if}
         <section class="card stack" style="gap:12px" aria-label={L.secMine} data-cup-hero data-cup-phase={data.phase}>
@@ -261,7 +262,7 @@
             <li>{L.rulePoints}</li>
             <li>{L.ruleKnockout}</li>
             <li>{L.ruleDaily({ time: matchTime })}</li>
-            <li>{L.ruleLock({ time: lockTime })}</li>
+            <li>{teamScoreLabel(data.cup.season, L, 'ruleLock')({ time: lockTime })}</li>
             <li>{L.ruleForfeit}</li>
             {#if data.divisions}<li data-cup-rule-divisions>{L.ruleDivisions}</li><li>{L.ruleDivisionMove}</li>{/if}
           </ul>

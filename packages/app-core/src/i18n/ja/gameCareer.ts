@@ -36,7 +36,7 @@ export const gameCareer: Translation<GameCareerMsgs> = {
   legendTrackRules: (p) =>
     `レジェンドスコア${p.icon}以上ならアイコン、${p.legend}以上ならレジェンドカードです。それ未満は最高OVRで分かれます。エリート${p.elite}、ゴールド${p.gold}、シルバー${p.silver}以上で、それ以外はブロンズです。`,
   legendTrackNote:
-    'スコアは通算記録・トロフィー・受賞で貯まります。OVRが高くても、スコアが足りなければアイコン・レジェンドカードにはなりません。',
+    'スコアは通算記録・トロフィー・受賞で貯まり、シーズン決算のときにまとめて反映されます。OVRが高くても、スコアが足りなければアイコン・レジェンドカードにはなりません。引退称号は引退するときに決まります。',
   legendTierName: (p) =>
     ({
       icon: 'アイコン',

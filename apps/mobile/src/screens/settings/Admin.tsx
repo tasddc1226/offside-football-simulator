@@ -17,6 +17,8 @@ import AdminDashboard from './admin/AdminDashboard';
 import AdminFunds from './admin/AdminFunds';
 import AdminInvites from './admin/AdminInvites';
 import AdminUsers from './admin/AdminUsers';
+import AdminVoices from './admin/AdminVoices';
+import { VOICE_TAB } from '@offside/app-core/admin/voices';
 import AdminRevenue from './admin/AdminRevenue';
 import AdminPush from './admin/AdminPush';
 import AdminCupPredictions from './admin/AdminCupPredictions';
@@ -37,6 +39,8 @@ const TABS = [
     },
   },
   { id: 'comments', label: '신고·댓글' },
+  // T-11-802 게임 안 '의견 보내기'로 온 글.
+  { id: 'voices', label: VOICE_TAB },
   { id: 'balance', label: '밸런스' },
   { id: 'club-strength', label: strengthText.title },
   { id: 'automation', label: '자동 플레이' },
@@ -108,6 +112,8 @@ export default function Admin() {
                 <AdminNameReports />
                 <AdminComments />
               </>
+            ) : tab === 'voices' ? (
+              <AdminVoices />
             ) : tab === 'automation' ? (
               <AdminAutomation />
             ) : tab === 'funds' ? (

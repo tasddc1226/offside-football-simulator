@@ -52,6 +52,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMax: '最高販売価格(基準価格の倍率)',
   cupAtkK: 'カップの戦力差の反映',
   rankAtkK: 'ランク戦の戦力差の反映',
+  rankDefLoss: 'ランク戦の挑戦を受けた側の敗戦減点',
   leagueFatigue: 'リーグの疲労',
   leagueHomeAdv: 'リーグのホームアドバンテージ',
   teamMatchRechargeMin: 'ランク戦の回復間隔（分）',

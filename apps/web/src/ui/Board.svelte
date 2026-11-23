@@ -385,7 +385,7 @@
           {:else if !viewer.google}
             <div class="comment-gate" data-comment-gate="login">
               <p class="muted">{L.loginGate}</p>
-              <LoginButtons act="comment-login" back={{ board, postId: detail?.post.id ?? null }} />
+              <LoginButtons act="comment-login" back={{ board, postId: detail?.post.id ?? null }} place="board" />
             </div>
           {:else if !viewer.nickname}
             <div class="comment-gate" data-comment-gate="nickname">

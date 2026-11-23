@@ -3,10 +3,7 @@ import {
   REMOVE_ADS_PRICE_SQL,
   REMOVE_ADS_PRODUCT,
 } from '@offside/contracts/admin-items';
-import {
-  MEMBERSHIP_ALERT_PRICE_SQL,
-  MEMBERSHIP_PRODUCT_ID,
-} from '@offside/contracts/membership';
+import { MEMBERSHIP_ALERT_PRICE_SQL, MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
 import { SEASON_PASS_PRICE_KRW } from '@offside/contracts/season-pass';
 import { STARTER_PACK_PRICE_KRW } from '@offside/contracts/starter-pack';
 import {

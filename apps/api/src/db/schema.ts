@@ -2,6 +2,8 @@ import { sql } from 'drizzle-orm';
 import { COMMENT_REPORT_REASONS, NAME_REPORT_KINDS } from '@offside/contracts/board-limits';
 import { CARD_SPECIAL_KINDS } from '@offside/contracts/card-special';
 import { CHAT_ROOMS } from '@offside/contracts/chat';
+import { LOCALES } from '@offside/contracts/i18n';
+import { VOICE_KINDS, VOICE_PLATFORMS } from '@offside/contracts/voice';
 import {
   check,
   index,
@@ -1460,6 +1462,40 @@ export const chatReports = sqliteTable(
     index('chat_reports_open_idx').on(table.resolvedAt, table.createdAt),
     index('chat_reports_profile_idx').on(table.profileId),
     index('chat_reports_author_idx').on(table.authorProfileId),
+  ],
+);
+
+/**
+ * T-11-802 게임 안 '의견 보내기'. 운영자만 읽는다(운영 도구 → 유저 의견). body는 메일 · 전화번호 · 복구 코드와 다른 사이트 주소의
+ * 쿼리를 가린 뒤 저장한 본문이다(voice/clean.ts). 같은 프로필의 같은 글(body_key)은 한 번만 남긴다. 받은 지 180일이 지나면 cron이
+ * 지우고, 계정을 삭제하면 바로 지운다. IP는 남기지 않는다. 운영자가 처리하면 resolved_at을 채운다.
+ */
+export const userVoices = sqliteTable(
+  'user_voices',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id').notNull(),
+    kind: text('kind', { enum: VOICE_KINDS }).notNull(),
+    body: text('body').notNull(),
+    /** 소문자 · 공백 하나로 맞춘 본문의 SHA-256 앞 16자. */
+    bodyKey: text('body_key').notNull(),
+    /** 의견 창을 연 곳(settings · home). 모르는 값이면 null. */
+    screen: text('screen'),
+    platform: text('platform', { enum: VOICE_PLATFORMS }).notNull(),
+    appVersion: text('app_version').notNull(),
+    /** 기기 대략값(예: 'ios 18.1', 'android instagram'). 없으면 null. */
+    device: text('device'),
+    lang: text('lang', { enum: LOCALES }).notNull(),
+    createdAt: text('created_at').notNull(),
+    resolvedAt: text('resolved_at'),
+  },
+  (table) => [
+    // 같은 글 막기 · 프로필 필터 · 계정 삭제.
+    uniqueIndex('user_voices_profile_body_unique').on(table.profileId, table.bodyKey),
+    // 열린 목록 · 열린 건수.
+    index('user_voices_open_idx').on(table.resolvedAt, table.createdAt),
+    // 전체 목록 · 보관 정리 · 아침 건수.
+    index('user_voices_created_idx').on(table.createdAt),
   ],
 );
 

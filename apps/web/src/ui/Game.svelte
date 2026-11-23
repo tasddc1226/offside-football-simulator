@@ -37,6 +37,8 @@
   import { lookSeen, markLookSeen } from '@offside/app-core/lookSeen';
   import PixelAvatar from './PixelAvatar.svelte';
   import { renameText as RN } from '@offside/app-core/i18n/ko/rename';
+  import { playerEditText as PE } from '@offside/app-core/i18n/ko/playerEdit';
+  import { firstSeasonEditOpen } from '@offside/game/player-edit';
 
   let actionHeight = $state(0);
   $effect(() => {
@@ -84,6 +86,8 @@
   let lookOpen = $state(false);
   // T-11-377 이름 옆 연필을 누르면 이름 변경권 창. 창은 따로 불러온다.
   let renameOpen = $state(false);
+  // T-11-804 첫 시즌 결산 전에는 연필이 무료 고치기 창을 연다(변경권을 쓰지 않게).
+  const freeEdit = $derived(firstSeasonEditOpen(s));
   // 꾸미기를 한 번도 안 열었으면 도트 선수 둘레 고리를 깜빡여 누를 수 있다고 알린다.
   let lookSeenNow = $state(lookSeen());
   function openLook() {
@@ -140,7 +144,7 @@
     <div>
       <div class="shirt">No.{s.number} · {posLabel(s)}</div>
       {#if title}<button class="card-title r{title.rarity}" data-act="titles" aria-label={T.titleOpen({ name: tn(title.name) })} onclick={openTitles}>{tn(title.name)}</button>{/if}
-      <div class="name-row"><h1>{s.name}</h1><button class="name-edit" data-act="rename-open" aria-label={RN.entryLabel({ name: s.name })} onclick={() => (renameOpen = true)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /></svg></button></div>
+      <div class="name-row"><h1>{s.name}</h1><button class="name-edit" data-act={freeEdit ? 'player-edit-name' : 'rename-open'} aria-label={freeEdit ? PE.entryLabel({ name: s.name }) : RN.entryLabel({ name: s.name })} onclick={() => (renameOpen = true)}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4Z" /></svg></button></div>
       <div class="meta">{T.age({ n: s.age })} · <ClubBadge club={s.club} size={16} /> {tn(s.club.name)}<br />{tn(L.name)}{contract ? ` · ${contract}` : ''}</div>
     </div>
     <div class="ovr">
@@ -206,4 +210,4 @@
 </nav>
 
 {#if lookOpen}{#await import('./AvatarLook.svelte') then { default: AvatarLook }}<AvatarLook {s} onclose={() => (lookOpen = false)} />{/await}{/if}
-{#if renameOpen}{#await import('./RenameSheet.svelte') then { default: RenameSheet }}<RenameSheet careerId={s.cid} name={s.name} back="game" onclose={() => (renameOpen = false)} />{/await}{/if}
+{#if renameOpen && freeEdit}{#await import('./PlayerEditSheet.svelte') then { default: PlayerEditSheet }}<PlayerEditSheet {s} onclose={() => (renameOpen = false)} />{/await}{:else if renameOpen}{#await import('./RenameSheet.svelte') then { default: RenameSheet }}<RenameSheet careerId={s.cid} name={s.name} back="game" onclose={() => (renameOpen = false)} />{/await}{/if}

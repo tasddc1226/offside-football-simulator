@@ -58,6 +58,9 @@ import { AttrCard } from './AttrCard';
 import { TrophyRow } from './TrophyTab';
 import { tn } from '@offside/game/i18n/names';
 import { appFormatText } from '@offside/app-core/i18n/ko/appFormat';
+import { firstSeasonEditOpen } from '@offside/game/player-edit';
+import { playerEditText as PE } from '@offside/app-core/i18n/ko/playerEdit';
+import { PlayerEditSheet } from './PlayerEditSheet';
 
 type Row = { k: string; v: ReactNode; testID?: string };
 
@@ -590,6 +593,9 @@ export function PlayerTab({ s }: { s: GameState }) {
   const nation = nationOf(s);
   // 체격 입력 이전 선수는 포지션 표준 체격으로 보여 준다(표시만 — 능력치 보정은 없다).
   const body = s.body ?? BODY_DEFAULT[s.pos];
+  // T-11-804 첫 시즌 결산 전에는 이름 · 주발 · 체격을 무료로 고친다.
+  const editOpen = firstSeasonEditOpen(s);
+  const [editing, setEditing] = useState(false);
   // T-11-079 보상형 광고로 이번 시즌 스카우트 평가 보기. 광고 단위도 광고 제거도 없으면 예전 안내만 둔다.
   const owned = adsOff(useSnapshot(adFree));
   const peek = useSnapshot(potPeek);
@@ -658,6 +664,26 @@ export function PlayerTab({ s }: { s: GameState }) {
           <TermHelp of="playerProfile" />
         </View>
         <Kv rows={info} />
+        {editOpen ? (
+          <View
+            testID="player-edit-entry"
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 }}
+          >
+            <Txt tone="muted" style={{ flex: 1, fontSize: rem(FONT.label) }}>
+              {PE.hint}
+            </Txt>
+            <Btn
+              sm
+              kind="tonal"
+              testID="player-edit-open"
+              accessibilityLabel={PE.entryLabel({ name: s.name })}
+              onPress={() => setEditing(true)}
+            >
+              {PE.entry}
+            </Btn>
+          </View>
+        ) : null}
+        {editing && editOpen ? <PlayerEditSheet close={() => setEditing(false)} /> : null}
         {pot.kind === 'shown' ? (
           <Txt tone="muted" style={{ fontSize: rem(FONT.caption), marginTop: 8 }} testID="pot-note">
             {pot.note}

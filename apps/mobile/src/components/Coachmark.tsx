@@ -13,11 +13,13 @@ import {
   coachDone,
   coachPick,
   coachReplay,
+  coachReplaying,
   coachResume,
   type CoachId,
 } from '@offside/app-core/tutorial';
 import { tutorialText as T } from '@offside/app-core/i18n/ko/tutorial';
 import { FOCUS_PICK } from '@offside/game/data';
+import { trackFunnel } from '../analytics';
 import { appState, prefs, sheetState } from '../store';
 import { useColors } from '../theme/useColors';
 import { scrollToView } from '../ui/scroll';
@@ -27,6 +29,12 @@ import { Txt } from '../ui/Txt';
 
 export const coachState = proxy<{ i: number | null }>({ i: null });
 let started = false;
+// T-11-792 설정의 다시 보기로 연 안내는 단계 계측을 보내지 않는다(처음 온 기기의 안내만 잰다). T-11-796 표시는 저장값에 있어
+// 다시 보기를 끝내지 않고 앱을 다시 켜도 이어진다.
+const track = (action: 'step' | 'skip' | 'done', i: number | null) => {
+  const step = i === null ? undefined : COACH_STEPS[i];
+  if (step && !coachReplaying()) trackFunnel({ kind: 'tutorial', action, step: step.id });
+};
 /** 앱을 연 뒤 한 번(저장소가 준비된 뒤) 이어 볼 단계를 읽는다. */
 export function startCoach() {
   if (started) return;
@@ -47,14 +55,16 @@ export const CoachLayer = LayerCtx.Provider;
 const targets = new Map<CoachId, { view: View; layer: Layer; enabled: () => boolean }>();
 
 function next(i: number) {
-  if (i + 1 >= COACH_STEPS.length) return skip();
+  if (i + 1 >= COACH_STEPS.length) return finish('done');
   // T-11-605 주력 안내로 넘어가면 선수 만들기 화면도 주력 단계로 같이 넘어간다(자리가 없으면 안내가 다음 단계로 건너뛴다).
   if (COACH_STEPS[i + 1]!.id === 'focus' && appState.createStep === 'pos')
     appState.createStep = 'focus';
   coachState.i = i + 1;
   coachAt(i + 1);
 }
-function skip() {
+const skip = () => finish('skip');
+function finish(action: 'skip' | 'done') {
+  track(action, coachState.i);
   coachDone();
   coachState.i = null;
 }
@@ -168,6 +178,7 @@ export function Coachmark({ layer }: { layer: Layer }) {
         if (layer === 'root' && (rect.y < 0 || rect.y + rect.h > win.height - 80))
           scrollToView(targets.get(COACH_STEPS[idx]!.target)?.view ?? null, prefs.motionOK);
       }
+      track('step', idx);
       setAt((p) =>
         p &&
         p.idx === idx &&

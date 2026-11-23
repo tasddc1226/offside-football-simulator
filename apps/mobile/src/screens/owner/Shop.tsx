@@ -93,7 +93,7 @@ export default function Shop() {
       ) : guest ? (
         <Card gap={12} testID="shop-guest">
           <Txt tone="muted">{L.shopLoginNeeded}</Txt>
-          <LoginButtons />
+          <LoginButtons place="shop" />
         </Card>
       ) : null}
     </Screen>

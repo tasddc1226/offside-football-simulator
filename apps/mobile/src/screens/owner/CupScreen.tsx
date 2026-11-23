@@ -40,6 +40,7 @@ import { CupCard, useCup, type CupState } from './TeamCup';
 
 import { cupFolds, rememberCupFolds, type CupScheduleTab } from '@offside/app-core/cupFolds';
 import { divisionCapLabel, divisionLabel } from '@offside/app-core/cupDivision';
+import { teamScoreLabel } from '@offside/app-core/teamScore';
 import { CupPrediction, PredictionIntro, usePredictions } from './CupPrediction';
 import type { CupPredictionContext } from '@offside/app-core/cupPredictions';
 
@@ -818,7 +819,7 @@ function CupBody({
             {L.loginCardNote}
           </Txt>
           {/* T-11-443 iOS에서는 Apple 로그인도 함께(다른 로그인 카드와 같은 LoginButtons). */}
-          <LoginButtons back={{ cup: true }} />
+          <LoginButtons place="cup" back={{ cup: true }} />
         </Card>
       ) : null}
       <CupCard
@@ -847,7 +848,11 @@ function CupBody({
         <Bullet>{L.rulePoints}</Bullet>
         <Bullet>{L.ruleKnockout}</Bullet>
         {first ? <Bullet>{L.ruleDaily({ time: timeText(first.at) })}</Bullet> : null}
-        {first ? <Bullet>{L.ruleLock({ time: timeText(first.lockAt) })}</Bullet> : null}
+        {first ? (
+          <Bullet>
+            {teamScoreLabel(data.cup.season, L, 'ruleLock')({ time: timeText(first.lockAt) })}
+          </Bullet>
+        ) : null}
         <Bullet>{L.ruleForfeit}</Bullet>
         {data.divisions ? <Bullet>{L.ruleDivisions}</Bullet> : null}
         {data.divisions ? <Bullet>{L.ruleDivisionMove}</Bullet> : null}

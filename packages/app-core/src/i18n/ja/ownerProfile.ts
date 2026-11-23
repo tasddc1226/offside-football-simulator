@@ -126,6 +126,7 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   categoryHonor: '記録バッジ',
   titleHonorAchievements: '実績',
   titleHonorTeam: 'チームレーティング',
+  titleHonorTeamRp: 'チームRP',
   titleHonorHof: '殿堂',
   titleHonorFirstPlace: '1位',
   titleHonorTop: (p: { band: number }) => `TOP ${p.band}`,

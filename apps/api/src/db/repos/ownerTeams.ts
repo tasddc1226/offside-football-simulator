@@ -13,6 +13,7 @@ import type {
 } from '@offside/contracts';
 import { anonName } from '@offside/contracts/positions';
 import {
+  LINEUP_SIZE,
   TEAM_RANK_PER_PAGE,
   type DetailPos,
   type FormationId,
@@ -547,10 +548,23 @@ export async function careersByIds(db: Db, ids: string[]) {
 }
 export type CareerLite = Awaited<ReturnType<typeof careersByIds>>[number];
 
+/** 선발에 세울 수 있는지 가르는 카드 칸(careersByIds 행이나 playableCardsSql의 JSON 한 줄). */
+export type PlayableCard = {
+  ownerId: string | null;
+  manager: boolean | number;
+  serviceSeason: number;
+  hidden: boolean | number;
+};
+
 /**
- * 그 구단주의 그 시즌 팀에 넣을 수 있는 카드만 골라 선발 맵으로(그 시즌까지의 선수 · 숨김 아님, T-11-114). T-11-080 소유 규칙: 지금
- * 시즌 팀(open)은 지금 주인인지 확인하고, 닫힌 시즌 팀은 그 뒤 방출·이적과 상관없이 id로 읽기만 한다.
+ * 이 카드를 그 구단주의 그 시즌 팀에 세울 수 있는가(그 시즌까지의 선수 · 숨김 아님, T-11-114). T-11-080 소유 규칙: 지금 시즌
+ * 팀(open)은 지금 주인인지 확인하고, 닫힌 시즌 팀은 그 뒤 방출·이적과 상관없이 id로 읽기만 한다. T-11-310 감독이 된 카드는
+ * 지금 시즌 팀에서 뛰지 않는다(닫힌 시즌 기록은 그대로 읽는다).
  */
+export const playableIn = (r: PlayableCard, ownerId: string, season: number, open: boolean) =>
+  (!open || (r.ownerId === ownerId && !r.manager)) && r.serviceSeason <= season && !r.hidden;
+
+/** 그 구단주의 그 시즌 팀에 넣을 수 있는 카드만 골라 선발 맵으로(playableIn). */
 export function eligibleMap(
   rows: readonly CareerLite[],
   ownerId: string,
@@ -559,13 +573,39 @@ export function eligibleMap(
 ) {
   const map = new Map<string, ReturnType<typeof toLineupCareer>>();
   for (const r of rows) {
-    // T-11-310 감독이 된 카드는 지금 시즌 팀에서 뛰지 않는다(닫힌 시즌 기록은 그대로 읽는다).
-    if (open && (r.ownerId !== ownerId || r.manager)) continue;
-    if (r.serviceSeason > season || r.hidden) continue;
+    if (!playableIn(r, ownerId, season, open)) continue;
     map.set(r.id, toLineupCareer({ ...r, raised: r.raiserId === ownerId }));
   }
   return map;
 }
+
+/**
+ * T-11-801 지금 시즌 팀이 경기 때 실제로 세우는 선발 수(lineupsOf → filledCount와 같은 값). 빈 자리 · 팔린 카드 · 감독이 된
+ * 카드 자리는 유스가 뛰므로 세지 않는다. 저장된 owner_teams.filled는 카드가 팔려도 줄지 않아 이 값과 다를 수 있다. cards는
+ * career_id → 카드(다른 팀 카드가 섞여도 된다). 선발은 늘 LINEUP_SIZE자리라(포메이션 · 배치 모두) 앞에서 그만큼만 본다.
+ */
+export function playableCount(
+  team: Pick<OwnerTeamRow, 'profileId' | 'slotsJson'>,
+  cards: ReadonlyMap<string, PlayableCard>,
+  season: number,
+) {
+  let n = 0;
+  for (const id of slotIdsOf(team).slice(0, LINEUP_SIZE)) {
+    const c = id ? cards.get(id) : undefined;
+    if (c && playableIn(c, team.profileId, season, true)) n++;
+  }
+  return n;
+}
+
+/**
+ * T-11-801 팀 행 하나의 선발 카드를 PlayableCard JSON 배열로 읽는 스칼라 서브쿼리(D1 SQL 조각). slots는 owner_teams.slots_json
+ * 칸(별칭 포함)이고, 카드 · 커리어는 기본키로 자리 수만큼만 찾는다. 팀 행이 없으면 '[]'.
+ */
+export const playableCardsSql = (slots: string) =>
+  `(SELECT json_group_array(json_object('id', c.career_id, 'ownerId', c.owner_id, 'manager', c.manager,
+      'serviceSeason', c.service_season, 'hidden', COALESCE(k.hidden, 0)))
+    FROM cards c LEFT JOIN careers k ON k.id = c.career_id
+    WHERE c.career_id IN (SELECT value FROM json_each(${slots})))`;
 
 /** 팀 한 개(없으면 빈 배열). 구글 연결이 끊겼거나 삭제된 구단주의 팀은 없는 것으로 본다. batch에 넣을 수 있게 쿼리로 돌려준다. */
 export const liveTeam = (db: Db, teamId: string) =>

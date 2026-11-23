@@ -66,6 +66,7 @@ import { coachBreakdown, coachLineBonus } from '@offside/app-core/managerCard';
 import { accountCache, appState, prefs } from '../../store';
 import { notificationDestination } from '../../platform/notificationDestination';
 import { askPushAfter } from '../../platform/pushAsk';
+import { trackFunnel } from '../../analytics';
 import { useColors } from '../../theme/useColors';
 import { BackBar, Btn, Card, Screen, Topbar, Txt, scrollTo } from '../../ui';
 import { BarBelow } from '../../ui/Screen';
@@ -464,6 +465,9 @@ export default function Team() {
       return;
     }
     setNeedLogin(false);
+    // T-11-792 이번 시즌 팀이 아직 없는 구단주가 팀 화면을 받았다(실행마다 한 번, 시즌이 바뀌면 기존 구단주도 다시 잡힌다).
+    if (!d.team && d.season === d.current)
+      trackFunnel({ kind: 'team_view', players: d.players.length });
     applyTeam(d.team, d.lastManager);
     setDivisionNotice(
       d.team && teamEditableIn(d.season, d.current) && d.season === d.current
@@ -530,9 +534,16 @@ export default function Team() {
       manager: manager.trim(),
       ...(season > 0 ? { layout: positions } : {}),
     };
+    // T-11-796 이번 시즌 팀을 처음 만드는 저장인지(team_create_view와 같은 조건). 프리시즌 · 지난 시즌 팀의 첫 저장은 세지 않는다.
+    const creating = !team && season === current;
     try {
       const r = await saveOwnerTeam(season !== current ? { ...body, season } : body);
       if (!r.ok) {
+        trackFunnel({
+          kind: 'team_fail',
+          reason: r.error.reason ?? r.error.code,
+          created: creating,
+        });
         toast(r.error.message);
         // 컵 검사(잠금 · 상한 · 최소 인원)에 걸렸으면 띠를 다시 받는다.
         if (r.error.reason?.startsWith('CUP_')) void cupState.reload(true);
@@ -540,6 +551,8 @@ export default function Team() {
       }
       const unchanged = JSON.stringify(draftNow.current) === snapshot;
       const created = !team;
+      if (creating)
+        trackFunnel({ kind: 'team_done', starters: body.slots.filter((x) => x !== null).length });
       if (unchanged) {
         applyTeam(r.data.team);
         setRenaming(false);
@@ -717,7 +730,7 @@ export default function Team() {
           {L.myTeam}
         </Txt>
         <Txt tone="muted">{L.loginOnly}</Txt>
-        <LoginButtons block={false} />
+        <LoginButtons place="team" block={false} />
       </Card>
     );
   } else if (view === 'achievements') {
@@ -1006,6 +1019,7 @@ export default function Team() {
         {oppTab === 'friends' ? (
           <TeamFriends
             friends={friends}
+            season={current ?? season}
             onPlayed={(m) => showFriendly(m, true)}
             onOpen={(m) => showFriendly(m, false)}
             onPreseason={() => {
@@ -1086,6 +1100,7 @@ export default function Team() {
       <TeamResult
         m={result}
         team={team}
+        nowSeason={current ?? season}
         shift={divisionShift}
         streak={streakHint}
         eventName={eventName}

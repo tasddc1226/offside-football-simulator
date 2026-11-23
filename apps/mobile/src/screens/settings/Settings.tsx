@@ -30,6 +30,8 @@ import { scrollBackTo } from '../../ui/scroll';
 import { ItemsHint } from '../../components/ItemsHint';
 import { firstGuideText as FG } from '@offside/app-core/i18n/ko/firstGuide';
 import { glossaryText as GL } from '@offside/app-core/i18n/ko/glossary';
+import { voiceText as VT } from '@offside/app-core/i18n/ko/voice';
+import { VoiceSheet } from '../voice/VoiceSheet';
 import { openWeb } from '../../platform/openWeb';
 import { appBuildInfo } from '../../platform/updates';
 import { prefs } from '../../store';
@@ -159,6 +161,7 @@ export default function Settings() {
   const textSize = useTextSize();
   const consent = useSyncExternalStore(nativeAnalytics.onConsent, nativeAnalytics.getConsent);
   const [namePublic, setNamePublicState] = useState(namePublicEnabled());
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const { lang, haptics, sfx, revealShort, barAutoHide } = useSnapshot(prefs);
 
   /** 언어: 이 기기에 저장하고 루트를 다시 그린다(_layout의 key). */
@@ -216,7 +219,7 @@ export default function Settings() {
           <Account />
           {guest ? (
             <View style={{ marginTop: 12 }}>
-              <LoginButtons />
+              <LoginButtons place="settings" />
             </View>
           ) : null}
           {admin ? (
@@ -359,6 +362,8 @@ export default function Settings() {
         <LinkList
           label={L.help}
           items={[
+            // T-11-802 의견 보내기(도움말 맨 위). 시트를 열 때는 요청하지 않는다.
+            { text: VT.entry, id: 'voice', onPress: () => setVoiceOpen(true) },
             { text: L.guide, path: publicDocPath('/guide/'), id: 'guide' },
             { text: L.faq, path: publicDocPath('/faq/'), id: 'faq' },
             { text: L.fairness, id: 'fairness', onPress: goFairness },
@@ -370,6 +375,7 @@ export default function Settings() {
         />
         {/* T-11-321 서버 상태(펼칠 때만 불러온다) */}
         <ServerStatus />
+        {voiceOpen ? <VoiceSheet screen="settings" close={() => setVoiceOpen(false)} /> : null}
       </Group>
 
       <Group eyebrow="Legal" title={L.legal}>

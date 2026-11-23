@@ -52,6 +52,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   marketPriceMax: 'Maximum sale price (× base)',
   cupAtkK: 'Cup strength gap weight',
   rankAtkK: 'Ranked strength gap weight',
+  rankDefLoss: 'Ranked loss cut when challenged',
   leagueFatigue: 'League fatigue',
   leagueHomeAdv: 'League home advantage',
   teamMatchRechargeMin: 'Ranked match recharge interval (min)',

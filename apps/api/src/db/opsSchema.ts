@@ -41,6 +41,9 @@ export const authAttempts = sqliteTable(
         'CAREER_ACTIVITY',
         'WEB_PAY',
         'CREATOR_ATTRIBUTION',
+        // T-11-802 게임 안 의견 보내기(프로필당 · IP당).
+        'VOICE',
+        'VOICE_IP',
       ],
     }).notNull(),
     subject: text('subject').notNull(),

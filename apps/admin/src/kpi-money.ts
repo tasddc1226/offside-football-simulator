@@ -4,7 +4,7 @@ import { valueOn } from './kpi.ts';
 import type { KpiView } from './kpi-page.ts';
 
 /**
- * 그날 스토어 매출(한국 기준가 추정) = 아이템 + 광고 제거 + 시즌 패스 + 첫 구매 묶음 + 멤버십. 하나도 없으면 null.
+ * 그날 스토어 매출(한국 기준가 추정) = 아이템 + 광고 제거 + 시즌 패스 + 스타터팩 + 멤버십. 하나도 없으면 null.
  * 멤버십은 `members_krw`(결제 알림 금액, 첫 달 할인은 할인가)를 쓰고, 그 값이 수집되기 전 날은 새 가입 · 갱신 × 정가로 어림한다.
  */
 export function storeKrwOn(v: KpiView, day: string) {

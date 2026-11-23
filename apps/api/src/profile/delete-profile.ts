@@ -8,6 +8,7 @@ import { deleteBoardActivityStatements } from '../db/repos/boards.js';
 import { deleteTeamCommentActivityStatements } from '../db/repos/teamComments.js';
 import { deleteChatActivityStatements } from '../db/repos/chat.js';
 import { deleteNameReportsStatement } from '../db/repos/nameReports.js';
+import { deleteVoicesStatement } from '../db/repos/voices.js';
 import { deleteCareersStatements } from '../db/repos/careers.js';
 import { deleteClubCustomStatement } from '../db/repos/clubCustom.js';
 import { deleteCompCustomStatement } from '../db/repos/compCustom.js';
@@ -187,6 +188,8 @@ export async function executeProfileDeletion(
     ...deleteBoardActivityStatements(db, input.profileId),
     ...deleteTeamCommentActivityStatements(db, input.profileId),
     ...deleteChatActivityStatements(db, input.profileId),
+    // T-11-802 게임 안에서 보낸 의견(보관 180일 전이라도 계정을 지우면 바로).
+    deleteVoicesStatement(db, input.profileId),
     db.delete(pushDevices).where(eq(pushDevices.profileId, input.profileId)),
     db.delete(pushNewsDeliveries).where(eq(pushNewsDeliveries.profileId, input.profileId)),
     db.delete(pushDeliveries).where(eq(pushDeliveries.profileId, input.profileId)),

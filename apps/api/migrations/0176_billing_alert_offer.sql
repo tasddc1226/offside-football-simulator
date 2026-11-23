@@ -1,0 +1,1 @@
+ALTER TABLE `billing_alerts` ADD `offer` text;

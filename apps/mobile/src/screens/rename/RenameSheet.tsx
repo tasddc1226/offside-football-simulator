@@ -94,7 +94,10 @@ export function RenameSheet({
       {have === null ? (
         <>
           <Txt v="sm">{L.guest}</Txt>
-          <LoginButtons onDone={() => setAsked(hasSessionHint() ? undefined : null)} />
+          <LoginButtons
+            place="rename"
+            onDone={() => setAsked(hasSessionHint() ? undefined : null)}
+          />
         </>
       ) : (
         <>

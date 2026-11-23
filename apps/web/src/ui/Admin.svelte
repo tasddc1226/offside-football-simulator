@@ -18,6 +18,8 @@
   import AdminInvites from './admin/AdminInvites.svelte';
   import AdminUsers from './admin/AdminUsers.svelte';
   import AdminRevenue from './admin/AdminRevenue.svelte';
+  import AdminVoices from './admin/AdminVoices.svelte';
+  import { VOICE_TAB } from '@offside/app-core/admin/voices';
 
   import AdminClubStrength from './admin/AdminClubStrength.svelte';
   import { T as strengthText } from '@offside/app-core/admin/club-strength';
@@ -29,6 +31,7 @@
     { id: 'push', label: '앱 푸시' },
     { id: 'cup', get label() { return L.adminCupTitle; } },
     { id: 'comments', label: '신고·댓글' },
+    { id: 'voices', label: VOICE_TAB },
     { id: 'balance', label: '밸런스' },
     { id: 'club-strength', label: strengthText.title },
     { id: 'automation', label: '자동 플레이' },
@@ -66,6 +69,7 @@
       {:else if tab === 'push'}<AdminPush />
       {:else if tab === 'cup'}<AdminLeague /><AdminCups />
       {:else if tab === 'comments'}<AdminChatReports /><AdminNameReports /><AdminComments />
+      {:else if tab === 'voices'}<AdminVoices />
       {:else if tab === 'automation'}<AdminAutomation />
       {:else if tab === 'funds'}<AdminFunds />
       {:else if tab === 'club-strength'}<AdminClubStrength />

@@ -503,6 +503,9 @@
         {/if}
       {/each}
     </div>
+    <!-- T-11-804 '기본값으로 후보 보기'로 오면 주발 · 체격을 못 보고 시작하기 쉬워 후보 바로 아래에 보인다. 낮은 화면에서는 후보를
+         고른 뒤(카드가 펼쳐진 뒤) 접는다. 카드 아래라 접혀도 카드가 움직이지 않는다. -->
+    <p class="muted fs-sm cand-body" class:after-pick={appState.candidatePick != null} data-cand-body><b>{L.candBodyLabel}</b> {L.candBody({ foot: L.foot({ v: C.foot }), h: body.h, w: body.w })}<br />{L.extraEdit}</p>
     {#if premium}<p class="muted fs-sm" data-premium-note>{SL.premiumNote}</p>{/if}
     <!-- 카드 아래 도구를 고른 후보 · 다른 후보 찾기 · 잠재력 확인으로 묶는다. -->
     {#if picked || hasChangeTools || hasPotentialTools}
@@ -667,6 +670,7 @@
   .compact-candidates .cand-list { gap: 8px; }
   .compact-candidates .cand-card { padding-block: 6px; }
   .compact-candidates .cand-tools { padding: 0; }
+  .compact-candidates .cand-body.after-pick { display: none; }
 }
 /* 주소창까지 있는 브라우저의 작은 화면: 보조 설명을 접어 고르는 칸을 먼저 보인다. */
 @media (max-height: 700px) {
@@ -686,7 +690,8 @@
 .tool-h { margin: 0; font-size: var(--fs-label); font-weight: 600; color: var(--muted); }
 .ovr-guide-box, .position-guide-box, .more-tools { padding-block: 0; }
 .more-body { padding-bottom: 14px; }
-.cand-note { margin: 0; }
+.cand-note, .cand-body { margin: 0; }
+.cand-body b { font-weight: 600; }
 .position-guide-box :global(.position-guide) { border-top: 0; }
 .ovr-guide-box .ovr-guide { margin-top: 0; }
 .ovr-guide { border-left: 3px solid var(--progress); padding: 4px 0 4px 12px; margin: 12px 0; font-size: var(--fs-label); line-height: 1.5; }

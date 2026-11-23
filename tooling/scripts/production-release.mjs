@@ -104,6 +104,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'team_live_matches',
   'team_matches',
   'translations',
+  'user_voices',
   'web_pay_orders',
 ]);
 

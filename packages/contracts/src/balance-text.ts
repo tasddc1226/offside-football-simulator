@@ -301,6 +301,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '랭크 전력 차이 반영', // i18n-ignore admin-only copy
     desc: '시즌 2부터 랭크 경기에서 공격과 상대 수비벽 10점 차이가 기대 득점에 주는 무게(지수). 높일수록 강한 팀이 이변 없이 이긴다. 시작하는 경기부터 적용된다', // i18n-ignore admin-only copy
   },
+  rankDefLoss: {
+    group: 'team',
+    label: '랭크 받은 쪽 패배 감점', // i18n-ignore admin-only copy
+    desc: '시즌 3부터 랭크 경기에서 도전받은 팀이 질 때 원래 감점의 몇 배를 깎을지. 0.5면 시즌 2처럼 절반, 1이면 도전한 쪽과 같다. 무승부는 늘 절반. 시작하는 경기부터 적용된다', // i18n-ignore admin-only copy
+  },
   rerollPrice: {
     group: 'market',
     label: '리롤권 가격',

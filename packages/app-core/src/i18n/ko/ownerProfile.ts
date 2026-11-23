@@ -127,6 +127,8 @@ const ko = {
   categoryHonor: '기록 배지',
   titleHonorAchievements: '업적',
   titleHonorTeam: '팀 레이팅',
+  /** T-11-800 시즌 2부터 팀 배지 이름(teamScore.ts가 배지 시즌으로 고른다). */
+  titleHonorTeamRp: '팀 RP',
   titleHonorHof: '명예의 전당',
   titleHonorFirstPlace: '1위',
   titleHonorTop: (p: { band: number }) => `TOP ${p.band}`,
