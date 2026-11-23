@@ -215,6 +215,8 @@ export const cup: Translation<CupMsgs> = {
     `One match a day at ${p.time}, played by the server. You don't need to keep the app or site open.`,
   ruleLock: (p) =>
     `Lineups lock 1 hour before the match (${p.time}) and unlock when it ends. Cup matches have no home advantage and don't count toward regular match records or rating.`,
+  ruleLockRp: (p) =>
+    `Lineups lock 1 hour before the match (${p.time}) and unlock when it ends. Cup matches have no home advantage and don't count toward regular match records or RP.`,
   ruleSeasonCards:
     'Only players you raised or signed this season can be in your cup lineup. League, ranked and friendly matches still use all your players.',
   ruleForfeit:

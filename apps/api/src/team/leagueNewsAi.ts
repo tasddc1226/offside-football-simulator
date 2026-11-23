@@ -332,6 +332,30 @@ export function checkArticle(
   return 'reason' in r ? null : r;
 }
 
+/**
+ * T-11-805 헤드라인에 붙은 대회 구절을 잘라 낸다. 한국어 모델이 프롬프트와 달리 '[T2] 오프사이드 리그 5부에서 [T1] 상대로
+ * 이변의 승리'처럼 대회를 헤드라인에 자주 넣어, 11-07~11-21 15라운드 중 9라운드의 한국어 1면이 세 번 모두 head-where로
+ * 버려졌다. 구절 뒤 조사(에서 · 서 · 의 / で · の)까지 지우고 띄어쓰기 · 앞뒤 쉼표를 고른다.
+ */
+const WHERE_IN_HEAD: Partial<Record<Locale, RegExp>> = {
+  ko: /오프사이드 ?리그(?: ?\d+부)?(?: ?\d+리그)?(?: ?\d+라운드)?(?:에서|서|의)?/g, // i18n-ignore: 대회 구절 패턴
+  ja: /オフサイド ?リーグ(?: ?\d+部)?(?: ?\d+組)?(?: ?第\d+節)?(?:で|の)?/g,
+};
+function dropWhere(head: string, lang: Locale): string {
+  const re = WHERE_IN_HEAD[lang];
+  if (!re) return head;
+  if (!head.match(re)) return head;
+  return (
+    head
+      .replace(re, lang === 'ja' ? '' : ' ')
+      .replace(/\s+/g, ' ')
+      // '[T2] 오프사이드 리그 5부에서 [T1] 상대로'에서 구절이 빠지면 두 팀 이름이 맞붙는다.
+      .replace(/(\[[TP]\d\]) (?=\[[TP]\d\])/g, '$1, ')
+      .replace(/\s+([,、，])/g, '$1')
+      .replace(/^[\s,、，·]+|[\s,、，·]+$/g, '')
+  );
+}
+
 /** checkArticle과 같고, 거른 이유(로그용, 원문 없이)를 돌려준다. */
 export function inspectArticle(
   raw: string,
@@ -345,12 +369,13 @@ export function inspectArticle(
   const rawHead = p.head ?? p.headline ?? p.title;
   const rawBody = p.body ?? p.text ?? p.article;
   if (typeof rawHead !== 'string' || typeof rawBody !== 'string') return no('shape');
-  const head = halfDigits(rawHead.trim());
+  const head = dropWhere(halfDigits(rawHead.trim()), lang);
   const body = halfDigits(rawBody.trim().replace(/\s*\n+\s*/g, ' '));
   const l = LIMIT[lang];
   if (head.length < 4 || head.length > l.head || head.includes('\n')) return no('head-length');
   if (body.length < 20 || body.length > l.body) return no('body-length');
-  // 대회 이름은 본문에만(헤드라인이 '오프사이드 리그 1부 1리그 3라운드 …'처럼 길어진다).
+  // 대회 이름은 본문에만(헤드라인이 '오프사이드 리그 1부 1리그 3라운드 …'처럼 길어진다). 대회 구절은 dropWhere가 이미
+  // 잘라 냈고, 그래도 남은 대회 이름(구절 모양이 다른 것)은 거른다.
   if ((lang === 'ko' || lang === 'ja') && head.includes(WHERE[lang](0, 0, 0).split(' ')[0]!))
     return no('head-where');
   const text = `${head} ${body}`;

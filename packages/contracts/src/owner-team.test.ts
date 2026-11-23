@@ -22,6 +22,7 @@ import {
   YOUTH_OVR,
   fit,
   lineStrength,
+  rankDefenderLoss,
   rankPoints,
   ratingChange,
   usesRankLadder,
@@ -395,6 +396,12 @@ describe('T-11-510 RP 사다리', () => {
     // T-11-701 RP가 낮은 상대에게 지면 더 깎는 몫은 4점까지(높은 상대에게 지면 덜 깎는 몫은 8점 그대로).
     expect(rankPoints(2275, 2000, 0, 7)).toBe(-26);
     expect(rankPoints(2275, 2000, 0, 7, true)).toBe(-13);
+    // T-11-807 받은 쪽 패배 배율(무승부는 절반 그대로).
+    expect(rankPoints(2275, 2000, 0, 7, true, 0.75)).toBe(-19);
+    expect(rankPoints(2275, 2000, 0, 7, true, 1)).toBe(-26);
+    expect(rankPoints(2300, 2000, 0.5, 7, true, 1)).toBe(0);
+    expect(rankDefenderLoss(2, 0.75)).toBe(0.5);
+    expect(rankDefenderLoss(3, 0.75)).toBe(0.75);
     expect(rankPoints(2000, 2050, 0, 7)).toBe(-20);
     expect(rankPoints(1500, 1475, 0, 4)).toBe(-19);
     expect(rankPoints(2275, 2000, 0.5, 7)).toBe(-1);

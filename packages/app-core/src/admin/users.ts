@@ -10,6 +10,7 @@ import {
 import { SEASON_PASS_PRODUCT_ID } from '@offside/contracts/season-pass';
 import { STARTER_PACK_PRODUCT_ID } from '@offside/contracts/starter-pack';
 import { MEMBERSHIP_PRODUCT_ID } from '@offside/contracts/membership';
+import { usesRankLadder } from '@offside/contracts/owner-team';
 import { kstDateTime as kst } from '../boardText.js';
 import { fundsText } from '../funds.js';
 
@@ -45,7 +46,7 @@ const STAGE: Record<string, string> = {
 /** 상품 이름(리롤권 40장 · 광고 제거). 모르는 상품은 id 그대로. */
 export function productName(productId: string) {
   if (productId === SEASON_PASS_PRODUCT_ID) return '시즌 패스';
-  if (productId === STARTER_PACK_PRODUCT_ID) return '첫 구매 묶음';
+  if (productId === STARTER_PACK_PRODUCT_ID) return '스타터팩';
   if (productId === MEMBERSHIP_PRODUCT_ID) return '클럽 멤버십';
   if (productId === REMOVE_ADS_PRODUCT) return '광고 제거';
   const p = iapProduct(productId);
@@ -93,8 +94,9 @@ export const careerLine = (c: AdminUser['careers']['recent'][number]) =>
   ]
     .filter(Boolean)
     .join(' · ');
+// T-11-800 시즌 2부터 팀 점수는 RP다(rating 칸에 RP가 담긴다).
 export const teamLine = (t: AdminUser['teams'][number]) =>
-  `시즌 ${t.season} · ${t.name} · OVR ${t.ovr} · 선발 ${t.filled}/11 · 레이팅 ${t.rating} · ${t.wins}승 ${t.draws}무 ${t.losses}패`;
+  `시즌 ${t.season} · ${t.name} · OVR ${t.ovr} · 선발 ${t.filled}/11 · ${usesRankLadder(t.season) ? `${t.rating} RP` : `레이팅 ${t.rating}`} · ${t.wins}승 ${t.draws}무 ${t.losses}패`;
 export const cupLine = (c: AdminUser['cups'][number]) =>
   `${c.cupId} · ${c.team} · ${c.stage ? (STAGE[c.stage] ?? c.stage) : c.status === 'withdrawn' ? '취소' : '진행 중'}${c.rewardedAt ? ' · 보상 지급' : ''}`;
 export const purchaseLine = (x: AdminUser['purchases'][number]) =>

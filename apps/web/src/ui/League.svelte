@@ -178,7 +178,7 @@
         <p class="fs-sm">{(data?.league.teamSeason === undefined ? L.pitch : L.cyclePitch)}{#if data?.league.teamSeason} {L.cycleTeam({ season: data.league.teamSeason })}{/if}</p>
         {#if card?.kind === 'login'}
           <p class="muted fs-sm" data-league-login>{card.text}</p>
-          <LoginButtons act="league-login-google" back={{ league: true }} />
+          <LoginButtons act="league-login-google" back={{ league: true }} place="league" />
         {:else if card?.kind === 'error'}
           <div class="league-row" data-league-me-error>
             <span class="muted fs-sm">{card.text}</span>

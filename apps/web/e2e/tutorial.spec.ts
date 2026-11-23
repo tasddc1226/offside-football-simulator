@@ -70,6 +70,20 @@ test.describe('처음 온 기기', () => {
     await page.locator('[data-act="settings"]').click();
     await page.locator('[data-act="tutorial-replay"]').click();
     await expect(page.locator('.coach-bubble')).toHaveAttribute('data-coach-step', 'new');
+    // T-11-796 다시 보기라는 표시를 함께 적는다(새로고침 뒤에도 단계 계측에서 빼기 위해). 건너뛰면 지워진다.
+    expect(await page.evaluate(() => localStorage.getItem('ft_tutorial'))).toBe(
+      '{"i":0,"replay":true}',
+    );
+    // 새로고침 뒤에도 저장값의 표시를 되읽어 다시 보기로 이어진다(단계를 넘기면 표시를 이어 적는다).
+    await page.reload();
+    await expect(page.locator('.coach-bubble')).toHaveAttribute('data-coach-step', 'new');
+    await page.locator('[data-coach="new"]').click();
+    await expect(page.locator('.coach-bubble')).toHaveAttribute('data-coach-step', 'pos');
+    expect(await page.evaluate(() => localStorage.getItem('ft_tutorial'))).toBe(
+      '{"i":1,"replay":true}',
+    );
+    await page.locator('[data-act="coach-skip"]').click();
+    expect(await page.evaluate(() => localStorage.getItem('ft_tutorial'))).toBe('{"i":-1}');
   });
 });
 

@@ -25,7 +25,7 @@ export const billing: typeof ko = {
   membership: 'Club membership (monthly)',
   removeAds: 'Remove ads',
   seasonPass: 'Season pass',
-  starterPack: 'First-purchase pack',
+  starterPack: 'Starter pack',
   items: {
     reroll: 'Reroll tickets',
     boost: 'Potential boost tickets',

@@ -18,6 +18,7 @@ import {
   recapHeadline,
   recapHighlights,
   recapShareCells,
+  recapTeamRankLine,
 } from '@offside/app-core/seasonRecap';
 import { num, recordText } from '@offside/app-core/teamText';
 import { TeamDialog } from '../../components/TeamDialog';
@@ -276,7 +277,7 @@ function ShareCard({ recap }: { recap: SeasonRecap }) {
         {recap.team
           ? panel(234 + 12, L.secTeam, recap.team.name, [
               recordText({ w: recap.team.wins, d: recap.team.draws, l: recap.team.losses }),
-              `${L.teamRank} ${rankLine(recap.team.rank, recap.team.ranked)}`,
+              recapTeamRankLine(recap.season, recap.team),
             ])
           : recap.achievements
             ? panel(234 + 12, L.secAch, L.achScore, [

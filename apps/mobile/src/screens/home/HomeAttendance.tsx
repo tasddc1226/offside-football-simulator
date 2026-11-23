@@ -300,7 +300,7 @@ export function HomeAttendance({ auto = false }: { auto?: boolean }) {
           {!att ? (
             <>
               <Txt v="sm">{L.guestLead(boardTotal())}</Txt>
-              <LoginButtons back={{ home: true }} onDone={() => void reload()} />
+              <LoginButtons place="home" back={{ home: true }} onDone={() => void reload()} />
             </>
           ) : att.checkedIn ? (
             <>

@@ -11,8 +11,10 @@ import type { BoardKey } from '@offside/contracts/board-limits';
 import { apiFetch, clearApiCache } from '@offside/app-core/api/client';
 import { flushOutbox } from '@offside/app-core/outbox';
 import { googleFailText, loginDoneText, loginOfflineText } from '@offside/app-core/loginText';
+import type { LoginOutcome, LoginPlace, LoginProvider } from '@offside/app-core/funnelEvents';
 import { loadHOF } from '@offside/game/hof-store';
 import { hofStart } from '@offside/app-core/state';
+import { trackFunnel } from '../analytics';
 import { appState } from '../store';
 import {
   openLocalLegend,
@@ -54,11 +56,21 @@ function randomToken(): string {
 
 let busy = false;
 
-export async function startGoogleLogin(back: LoginReturn | null): Promise<void> {
+/** T-11-792 로그인 시도 계측. 누른 곳 · 제공자 · 결과만 보낸다(서버 사유는 funnelEvents가 허용 목록으로 접는다). */
+const track =
+  (place: LoginPlace, provider: LoginProvider) => (outcome: LoginOutcome, reason?: unknown) =>
+    trackFunnel({ kind: 'login', outcome, place, provider, reason });
+
+export async function startGoogleLogin(back: LoginReturn | null, place: LoginPlace): Promise<void> {
   if (busy) return;
   busy = true;
+  const t = track(place, 'google');
+  t('start');
   try {
-    if (!(await ensureSession())) return toast(loginOfflineText());
+    if (!(await ensureSession())) {
+      t('fail', 'offline');
+      return toast(loginOfflineText());
+    }
     const verifier = randomToken();
     const challenge = b64url(
       await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, verifier, {
@@ -69,21 +81,37 @@ export async function startGoogleLogin(back: LoginReturn | null): Promise<void> 
       method: 'POST',
       body: JSON.stringify({ challenge }),
     });
-    if (!start.ok) return toast(loginOfflineText());
-    const res = await WebBrowser.openAuthSessionAsync(start.data.url, REDIRECT_URL);
-    if (res.type !== 'success') return;
+    if (!start.ok) {
+      t('fail', 'start');
+      return toast(loginOfflineText());
+    }
+    let res: WebBrowser.WebBrowserAuthSessionResult;
+    try {
+      res = await WebBrowser.openAuthSessionAsync(start.data.url, REDIRECT_URL);
+    } catch {
+      // T-11-796 로그인 창을 열지 못했다(브라우저가 없는 기기, 이미 열린 로그인 창 등). 안내도 끝 이벤트도 없이 끝나던 경우다.
+      t('fail', 'provider');
+      return toast(L.googleFinishFail);
+    }
+    if (res.type !== 'success') return t('cancel');
     const q = Linking.parse(res.url).queryParams ?? {};
     const google = typeof q.google === 'string' ? q.google : 'error';
     const ticket = typeof q.ticket === 'string' ? q.ticket : null;
     if (google === 'error' || !ticket) {
       const reason = typeof q.reason === 'string' ? q.reason : '';
+      if (reason === 'cancelled') t('cancel');
+      else t('fail', reason);
       return toast(googleFailText(reason));
     }
     const ex = await apiFetch<AuthResult>('/v1/auth/app/exchange', {
       method: 'POST',
       body: JSON.stringify({ ticket, verifier }),
     });
-    if (!ex.ok) return toast(L.googleFinishFail);
+    if (!ex.ok) {
+      t('fail', 'finish');
+      return toast(L.googleFinishFail);
+    }
+    t(ex.data.result);
     await finishLogin(ex.data, back, L.viaGoogle);
   } finally {
     busy = false;
@@ -114,11 +142,16 @@ export async function appleReauthCode(): Promise<string | null | 'cancel'> {
   }
 }
 
-export async function startAppleLogin(back: LoginReturn | null): Promise<void> {
+export async function startAppleLogin(back: LoginReturn | null, place: LoginPlace): Promise<void> {
   if (busy) return;
   busy = true;
+  const t = track(place, 'apple');
+  t('start');
   try {
-    if (!(await ensureSession())) return toast(loginOfflineText());
+    if (!(await ensureSession())) {
+      t('fail', 'offline');
+      return toast(loginOfflineText());
+    }
     // Apple에는 nonce의 SHA-256(hex)을 넘기고, 서버에는 원문을 보내 토큰의 nonce와 맞춰 보게 한다(재전송 방지).
     const nonce = randomToken();
     const hashed = await Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, nonce);
@@ -127,15 +160,23 @@ export async function startAppleLogin(back: LoginReturn | null): Promise<void> {
       const cred = await AppleAuthentication.signInAsync({ requestedScopes: [], nonce: hashed });
       identityToken = cred.identityToken;
     } catch (e) {
-      if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') return;
+      if ((e as { code?: string }).code === 'ERR_REQUEST_CANCELED') return t('cancel');
+      t('fail', 'provider');
       return toast(L.appleStartFail);
     }
-    if (!identityToken) return toast(L.appleStartFail);
+    if (!identityToken) {
+      t('fail', 'token');
+      return toast(L.appleStartFail);
+    }
     const r = await apiFetch<AuthResult>('/v1/auth/apple', {
       method: 'POST',
       body: JSON.stringify({ identityToken, nonce }),
     });
-    if (!r.ok) return toast(L.appleFinishFail);
+    if (!r.ok) {
+      t('fail', 'finish');
+      return toast(L.appleFinishFail);
+    }
+    t(r.data.result);
     await finishLogin(r.data, back, L.viaApple);
   } finally {
     busy = false;

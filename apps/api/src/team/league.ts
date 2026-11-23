@@ -47,7 +47,12 @@ import { eventNotificationStatements } from '../push/events.js';
 import { drawGroups, rngFrom } from './cupRules.js';
 import { currentLeague, saveLeagueCycle } from './leagueSchedule.js';
 import { buildLeagueNews } from './leagueNews.js';
-import type { OwnerTeamRow } from '../db/repos/ownerTeams.js';
+import {
+  playableCardsSql,
+  playableCount,
+  type OwnerTeamRow,
+  type PlayableCard,
+} from '../db/repos/ownerTeams.js';
 import { FATIGUE_LOOKBACK, startStreaks, withFatigue, type PlayedLeagueMatch } from './fatigue.js';
 import { lineupsOf, matchDetailOf } from './match.js';
 import { filledCount, simulateMatch } from './sim.js';
@@ -147,10 +152,57 @@ export async function remindLeague(db: Db, league: LeagueDef, now: string) {
 }
 
 /**
+ * 경기에 나설 수 있는 팀(경기 처리와 1시간 전 알림이 같이 쓴다): 신청이 살아 있고 기권이 한도 밑이며, 그 리그 시즌의 같은
+ * 구단주 팀이어야 한다. 아니면 그 쪽은 0:3 기권패다. forfeits는 이번 cron에서 늘어난 기권까지 센 수(따라잡기)다.
+ */
+function fieldedTeam<T extends Pick<OwnerTeamRow, 'season' | 'profileId'>>(
+  league: LeagueDef,
+  e: LeagueEntryRow | undefined,
+  t: T | undefined,
+  forfeits = e?.forfeits ?? 0,
+): T | undefined {
+  const fine =
+    e?.status === 'active' &&
+    forfeits < LEAGUE_FORFEIT_LIMIT &&
+    t &&
+    t.season === leagueTeamSeason(league) &&
+    t.profileId === e.profileId;
+  return fine ? t : undefined;
+}
+
+/** T-11-801 1시간 전 알림 본문. filled는 경기 때처럼 센 실제 선발 수, forfeits는 지금까지 쌓인 기권 수. */
+function lineupBody(
+  league: LeagueDef,
+  round: number,
+  at: string,
+  filled: number,
+  forfeits: number,
+) {
+  const time = kstHm(at);
+  const lock = kstHm(new Date(Date.parse(at) - CUP_LOCK_MIN * 60_000).toISOString());
+  if (filled >= TEAM_SLOTS) return cupKo('leagueLineupBody', { round, time, lock });
+  if (filled >= league.minFilled)
+    return cupKo('leagueLineupShortBody', { round, time, lock, filled });
+  // 자격 수보다 적으면 이 경기는 0:3 기권패다. 이번 기권이 한도에 닿으면 남은 경기도 모두 기권패(퇴출)다.
+  const vars = { round, time, lock, filled, min: league.minFilled, limit: LEAGUE_FORFEIT_LIMIT };
+  const n = forfeits + 1;
+  return n < LEAGUE_FORFEIT_LIMIT
+    ? cupKo('leagueLineupForfeitBody', { ...vars, n, left: LEAGUE_FORFEIT_LIMIT - n })
+    : cupKo('leagueLineupLastBody', vars);
+}
+
+/**
  * T-11-644 명단 잠금 안내: 잠금(경기 CUP_LOCK_MIN분 전) LEAGUE_LINEUP_REMIND_MS 전부터 잠금 전까지, 그 시각 경기에 나가는 리그
  * 팀에 한 번 알린다(쉬는 팀은 경기가 없어 잠기지 않는다). 경기 시각마다 app_meta에 보낸 표시를 남겨 다음 cron이 다시 보내지 않는다.
+ * T-11-801 선발은 저장된 filled(카드가 팔려도 줄지 않는다)가 아니라 경기 때처럼(fieldedTeam · playableCount) 실제로 서는 선수로
+ * 센다. 그 시각 두 팀 행과 선발 카드는 팀 수와 상관없이 쿼리 하나로 읽는다(경기 시각 인덱스 · 팀 · 카드 기본키).
  */
-export async function remindLineups(db: Db, league: LeagueDef, now: string) {
+export async function remindLineups(
+  db: Db,
+  league: LeagueDef,
+  entries: readonly LeagueEntryRow[],
+  now: string,
+) {
   const d1 = db.$client;
   const lockAt = Date.parse(now) + CUP_LOCK_MIN * 60_000;
   const { results: slots } = await d1
@@ -173,40 +225,65 @@ export async function remindLineups(db: Db, league: LeagueDef, now: string) {
   const sent = new Set(done.map((r) => r.key));
   const todo = slots.find((s) => !sent.has(markOf(s.at)));
   if (!todo) return 0;
-  // 한 시각에 나가는 팀은 전체 리그 팀을 경기 시각 수로 나눈 만큼이라 한 번에 보낸다.
+  // 한 시각에 나가는 팀은 전체 리그 팀을 경기 시각 수로 나눈 만큼(마지막 라운드는 모두)이라 한 번에 보낸다. 팀이 지워졌으면
+  // 팀 칸이 비어 기권패로 센다.
   const { results } = await d1
     .prepare(
-      `SELECT e.profile_id AS profileId, m.round AS round, COALESCE(t.filled, 0) AS filled
-       FROM league_matches m
-       JOIN league_entries e ON e.season = m.season AND e.team_id IN (m.home_team_id, m.away_team_id)
-       LEFT JOIN owner_teams t ON t.id = e.team_id
-       WHERE m.season = ? AND m.at = ? AND m.played_at IS NULL AND e.status = 'active'`,
+      `WITH sides AS (
+         SELECT round, home_team_id AS team_id FROM league_matches
+         WHERE season = ?1 AND at = ?2 AND played_at IS NULL
+         UNION ALL
+         SELECT round, away_team_id FROM league_matches
+         WHERE season = ?1 AND at = ?2 AND played_at IS NULL
+       )
+       SELECT s.round AS round, s.team_id AS teamId, t.profile_id AS profileId, t.season AS season,
+         t.slots_json AS slotsJson, ${playableCardsSql('t.slots_json')} AS cardsJson
+       FROM sides s LEFT JOIN owner_teams t ON t.id = s.team_id`,
     )
     .bind(league.season, todo.at)
-    .all<{ profileId: string; round: number; filled: number }>();
-  const time = kstHm(todo.at);
-  const lock = kstHm(new Date(Date.parse(todo.at) - CUP_LOCK_MIN * 60_000).toISOString());
+    .all<{
+      round: number;
+      teamId: string;
+      profileId: string | null;
+      season: number | null;
+      slotsJson: string | null;
+      cardsJson: string | null;
+    }>();
+  const byTeam = new Map(entries.filter(inLeague).map((e) => [e.teamId!, e]));
   const stmts: D1PreparedStatement[] = [];
-  for (const r of results)
+  let told = 0;
+  for (const r of results) {
+    const e = byTeam.get(r.teamId);
+    // 기권 처리된 팀은 남은 경기가 모두 기권패라 알리지 않는다.
+    if (e?.status !== 'active') continue;
+    const row =
+      r.profileId !== null && r.season !== null && r.slotsJson !== null
+        ? { profileId: r.profileId, season: r.season, slotsJson: r.slotsJson }
+        : undefined;
+    const team = fieldedTeam(league, e, row);
+    const cards = new Map(
+      (JSON.parse(r.cardsJson ?? '[]') as (PlayableCard & { id: string })[]).map((c) => [c.id, c]),
+    );
+    const filled = team ? playableCount(team, cards, leagueTeamSeason(league)) : 0;
     stmts.push(
       ...notify(
         d1,
-        r.profileId,
+        e.profileId,
         `league:${league.season}:lineup:r${r.round}`,
         cupKo('leagueLineupTitle'),
-        r.filled < TEAM_SLOTS
-          ? cupKo('leagueLineupShortBody', { round: r.round, time, lock, filled: r.filled })
-          : cupKo('leagueLineupBody', { round: r.round, time, lock }),
+        lineupBody(league, r.round, todo.at, filled, e.forfeits),
         now,
       ),
     );
+    told++;
+  }
   stmts.push(
     d1
       .prepare('INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO NOTHING')
       .bind(markOf(todo.at), now),
   );
   await d1.batch(stmts);
-  return results.length || 1;
+  return told || 1;
 }
 
 /** T-11-418e 같은 구단주의 지난 시즌 리그 결산(결과가 있는 것만). */
@@ -608,14 +685,7 @@ export async function playLeagueMatches(
   for (const m of due) {
     const side = (id: string) => {
       const e = byTeam.get(id);
-      const t = teams.get(id);
-      const fine =
-        e?.status === 'active' &&
-        (forfeits.get(id) ?? e.forfeits) < LEAGUE_FORFEIT_LIMIT &&
-        t &&
-        t.season === leagueTeamSeason(league) &&
-        t.profileId === e.profileId;
-      return fine ? t : undefined;
+      return fieldedTeam(league, e, teams.get(id), forfeits.get(id) ?? e?.forfeits);
     };
     const homeTeam = side(m.homeTeamId);
     const awayTeam = side(m.awayTeamId);
@@ -863,7 +933,7 @@ export async function runLeague(db: Db, now: string, given?: LeagueDef) {
   const entries = await leagueEntriesOf(db, league.season);
   const n = await playLeagueMatches(db, league, entries, now);
   if (n) return { season: league.season, step: 'play', n };
-  const reminded = await remindLineups(db, league, now);
+  const reminded = await remindLineups(db, league, entries, now);
   if (reminded) return { season: league.season, step: 'lineup', n: reminded };
   const { played, last } = await leagueProgress(db, league.season);
   // T-11-540 게이지가 시즌 마감을 당기면 마감 뒤로 잡힌 라운드(아직 안 치른 경기)를 지운다. 마감은 48시간 넘게 남기고

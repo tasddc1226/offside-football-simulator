@@ -1,11 +1,11 @@
-// T-11-487 시즌 1 기록 보상(홈 선물 칸, 시즌 2 동안 한 번). 시즌 결산(seasonClose)의 명예의 전당 기준과 같은 선수만,
+// T-11-487 시즌 1 기록 보상(홈 선물 칸, 시즌 2 동안 한 번). T-11-813부터 매 시즌: 지금 시즌 동안 지난 시즌 기록으로 한 번. 시즌 결산(seasonClose)의 명예의 전당 기준과 같은 선수만,
 // 같은 마감 시각까지 은퇴한 기록으로 센다 — 마감 뒤엔 바뀌지 않아 언제 물어도 같다. 결산이 끝나기 전에 물어도 되게
 // owner_season_records 대신 careers를 바로 센다. 로그인 확인은 라우트(requireOwner)가 한다.
 import { CARD_ICON_SCORE, CARD_LEGEND_SCORE } from '@offside/contracts/card-tier';
 import { HOF_MIN_RETIRE_AGE } from '@offside/contracts/hof-rules';
 import {
   RECORD_HOF_TIERS,
-  RECORD_SEASON_GIFT,
+  recordSeasonGiftFor,
   seasonRecordRewardOf,
   type SeasonRecordFacts,
 } from '@offside/contracts/owner-team';
@@ -70,10 +70,10 @@ export async function seasonRecordFactsOf(
   };
 }
 
-/** 지금 받을 수 있는 시즌 기록 보상. 열린 시즌이 아니거나 받았거나 받을 게 없으면 null. */
+/** 지금 받을 수 있는 시즌 기록 보상(지난 시즌 기록). 지난 시즌이 없거나 받았거나 받을 게 없으면 null. */
 export async function seasonRecordGiftOf(db: Db, profileId: string, now: string) {
-  const g = RECORD_SEASON_GIFT;
-  if (teamSeasonAt(now) !== g.openSeason) return null;
+  const g = recordSeasonGiftFor(teamSeasonAt(now));
+  if (!g) return null;
   const cutoff = teamSeasonEndsAt(g.season);
   if (!cutoff) return null;
   const claimed = await db.$client
@@ -84,5 +84,5 @@ export async function seasonRecordGiftOf(db: Db, profileId: string, now: string)
   const facts = await seasonRecordFactsOf(db, profileId, g.season, cutoff);
   if (!facts) return null;
   const { parts, total } = seasonRecordRewardOf(facts);
-  return total.reroll + total.scout + total.boost > 0 ? { facts, parts, total } : null;
+  return total.reroll + total.scout + total.boost > 0 ? { gift: g, facts, parts, total } : null;
 }

@@ -20,6 +20,11 @@ import type {
   AdminRevenue,
   AdminStats,
   AdminUser,
+  AdminVoice,
+  AdminVoiceList,
+  AdminVoiceQuery,
+  AdminVoiceResolve,
+  AdminVoiceResolveResult,
   AutomationReport,
   AutomationEnforcement,
   BalanceDraftInput,
@@ -44,10 +49,32 @@ export type {
   AdminLeague,
   AdminNameReport,
   AdminStats,
+  AdminVoice,
+  AdminVoiceList,
+  AdminVoiceQuery,
   AutomationReport,
   AutomationEnforcement,
   BalanceVersion,
 };
+
+/** T-11-802 유저 의견(운영 도구 '유저 의견' 탭). 탭을 열 때 · 필터 · 더 보기 · 새로고침 때만 부르고 메모하지 않는다. */
+export const fetchVoices = (q: AdminVoiceQuery = {}) => {
+  const p = new URLSearchParams();
+  if (q.status) p.set('status', q.status);
+  if (q.kind) p.set('kind', q.kind);
+  if (q.profile) p.set('profile', q.profile);
+  if (q.before) p.set('before', q.before);
+  if (q.limit !== undefined) p.set('limit', String(q.limit));
+  const qs = p.toString();
+  return apiFetch<AdminVoiceList>(`/v1/admin/voices${qs ? `?${qs}` : ''}`);
+};
+/** 처리 · 다시 열기(50개까지). 다른 운영 탭의 메모는 비우지 않는다. */
+export const resolveVoices = (input: AdminVoiceResolve) =>
+  apiFetch<AdminVoiceResolveResult>('/v1/admin/voices/resolve', {
+    method: 'POST',
+    body: JSON.stringify(input),
+    keepCache: true,
+  });
 
 // T-11-427 오프사이드 리그 상태 · 배치 전 일정 미루기(T-11-418b). 늘 최신을 본다.
 export const fetchAdminLeague = () => apiFetch<AdminLeague>('/v1/admin/leagues/current');

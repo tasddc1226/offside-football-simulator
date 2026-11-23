@@ -18,7 +18,6 @@ import { claimStarterPackIap, fetchStarterPack } from '@offside/app-core/api/sta
 import { iapText as IL } from '@offside/app-core/i18n/ko/iap';
 import { starterPackText as L } from '@offside/app-core/i18n/ko/starterPack';
 import { toast } from '../game/host';
-import { adFree } from './adFree';
 import { iapItems } from './iapItems';
 import { onSessionChanged } from './session';
 import { kv } from './setup';
@@ -147,7 +146,7 @@ async function sync() {
  * 서버를 부르지 않는다. `fresh`는 은퇴가 방금 올라가 자격이 바뀌었을 수 있을 때만 준다.
  */
 export function syncStarterPack(fresh = false): Promise<void> {
-  if (!live() || adFree.owned) return Promise.resolve();
+  if (!live()) return Promise.resolve();
   const until = quietUntil();
   if (until === FOREVER || (!fresh && Date.now() < until)) return Promise.resolve();
   syncing ??= sync().finally(() => {

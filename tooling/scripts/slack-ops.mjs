@@ -168,6 +168,59 @@ export async function daily(db, env, now = Date.now(), fetcher = fetch) {
       fetcher,
     );
   }
+  // T-11-802 게임 안 의견 건수. 다른 아침 리포트를 보낸 뒤 따로 돈다.
+  await voiceDigest(db, env, now, fetcher);
+}
+const voiceKinds = { bug: '버그 · 불편', idea: '건의', other: '기타' };
+const voiceLangs = { ko: '한국어', en: '영어', ja: '일본어', zh: '중국어' };
+const adminLink = { label: '운영 도구 열기', url: 'https://offside-lab.com/settings' };
+/**
+ * T-11-802 전날(KST) 받은 게임 안 의견 건수(종류 · 언어별)와 아직 처리하지 않은 건수를 #offside-feedback에 한 통 보낸다.
+ * 본문 · 프로필 id · 닉네임은 싣지 않는다(디스코드는 보관 기한이 없어 방침의 보유 기간을 지킬 수 없다). 전날 0건이면 보내지 않는다.
+ * 표가 아직 없으면(머지 뒤 운영 마이그레이션 전) 조용히 건너뛰고, 그 밖의 오류는 실패 알림으로 올린다.
+ */
+export async function voiceDigest(db, env, now = Date.now(), fetcher = fetch) {
+  const { day, start, end } = previousKstDay(now);
+  const key = 'slack:ops:voices-daily';
+  if ((await db.get(key))?.version === day) return false;
+  let rows, open;
+  try {
+    rows = await db.query(
+      'SELECT kind, lang, COUNT(*) AS n FROM user_voices WHERE created_at>=? AND created_at<? GROUP BY kind, lang',
+      [start, end],
+    );
+    if (!rows.some((r) => r.n > 0)) {
+      // 전날은 이미 끝난 날이라 0건이면 그날은 다시 묻지 않는다(같은 날 다시 돌려도 조회하지 않게).
+      await db.set(key, { version: day, sentAt: null });
+      return false;
+    }
+    [open] = await db.query('SELECT COUNT(*) AS n FROM user_voices WHERE resolved_at IS NULL');
+  } catch (e) {
+    if (String(e?.message ?? e).includes('no such table')) return false;
+    throw e;
+  }
+  const sum = (pick) => rows.filter(pick).reduce((n, r) => n + r.n, 0);
+  return deliverOnce(
+    db,
+    key,
+    day,
+    env.SLACK_FEEDBACK_WEBHOOK,
+    slackMessage(
+      `게임 안 의견 · ${day} · ${fmt(sum(() => true))}건`,
+      [
+        Object.entries(voiceKinds)
+          .map(([k, label]) => `${label} ${fmt(sum((r) => r.kind === k))}`)
+          .join(' · '),
+        Object.entries(voiceLangs)
+          .map(([l, label]) => `${label} ${fmt(sum((r) => r.lang === l))}`)
+          .join(' · '),
+        `아직 처리하지 않은 의견 ${fmt(open?.n)}건`,
+        '본문은 알림에 옮기지 않아요. 운영 도구 → 유저 의견에서 읽어 주세요.',
+      ],
+      [adminLink],
+    ),
+    fetcher,
+  );
 }
 export async function main(mode, env = process.env, fetcher = fetch) {
   const db = await productionDb(env, fetcher);

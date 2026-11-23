@@ -133,6 +133,8 @@
   {#await import('./AppConversion.svelte') then { default: AppConversion }}<AppConversion context="home" />{/await}
   <!-- 공지 · 릴리즈 노트를 합친 최근 글. 새 소식 확인과 같은 요청을 함께 쓰도록 홈과 같이 그린다. 순위는 하단 기록실에서 본다. -->
   <HomeNews />
+  <!-- T-11-802 의견 보내기 한 줄(소식 아래 · 푸터 위). 문구 · 시트는 첫 화면 번들 밖 지연 청크, 불러오는 동안 같은 높이를 잡는다(CLS). -->
+  {#await import('./HomeVoice.svelte')}<div class="card" style="min-height:64px;box-sizing:border-box" aria-hidden="true"></div>{:then { default: HomeVoice }}<HomeVoice />{/await}
   <!-- 푸터는 홈 맨 아래라 첫 화면 번들 밖 지연 청크로(소식은 앱 시작 때 새 글 점과 같은 요청을 함께 써야 해서 그대로 둔다). -->
   {#await import('./SiteFooter.svelte') then { default: SiteFooter }}<SiteFooter />{/await}
   <!-- T-11-015 라운지 채팅으로 가는 떠 있는 버튼(하단 메뉴 위). -->

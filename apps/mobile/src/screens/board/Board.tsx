@@ -314,8 +314,8 @@ export default function Board() {
   }
   // 로그인을 마치고 돌아오면 보던 글로 다시 연다.
   const back = () => ({ board, postId: detail?.post.id ?? null });
-  const login = () => void startGoogleLogin(back());
-  const loginApple = () => void startAppleLogin(back());
+  const login = () => void startGoogleLogin(back(), 'board');
+  const loginApple = () => void startAppleLogin(back(), 'board');
   async function removeComment(cm: Comment) {
     if (!(await confirmAsync(L.deleteCommentConfirm, undefined, L.remove))) return;
     const r = await api.deleteComment(cm.id);

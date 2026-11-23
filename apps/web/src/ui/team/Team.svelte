@@ -3,6 +3,7 @@
   import { createTeamMatches } from './teamMatches.svelte.js';
   import { projectTeamDraft } from '@offside/app-core/teamDraftView';
   import LoginButtons from '../LoginButtons.svelte';
+  import { trackFunnel } from '../../analytics/index.js';
   import { takeTeamSeason } from '@offside/app-core/teamOwner';
   import { seasonLabel } from '@offside/app-core/seasonName';
   import { needsOwnerLogin } from '@offside/app-core/market';
@@ -305,6 +306,8 @@
     enhanceOpen = !!r.data.enhanceOpen;
     fatigue = r.data.fatigue ?? null;
     needLogin = false;
+    // T-11-792 이번 시즌 팀이 아직 없는 구단주가 팀 화면을 받았다(탭마다 한 번, 시즌이 바뀌면 기존 구단주도 다시 잡힌다).
+    if (!r.data.team && season === current) trackFunnel({ kind: 'team_view', players: players.length });
     applyTeam(r.data.team);
     divisionNotice =
       editable && team && season === current ? (takeDivisionChange(season, team.division)?.text ?? null) : null;
@@ -385,6 +388,8 @@
     const sequence = loadSequence;
     const submitted = JSON.parse(JSON.stringify(draftValue())) as ReturnType<typeof draftValue>;
     saving = true;
+    // T-11-796 이번 시즌 팀을 처음 만드는 저장인지(team_create_view와 같은 조건). 프리시즌 · 지난 시즌 팀의 첫 저장은 세지 않는다.
+    const creating = !team && season === current;
     const r = await saveOwnerTeam({
       ...submitted, name: submitted.name.trim(), manager: submitted.manager.trim(),
       ...(season > 0 ? { layout: previewLayout } : {}),
@@ -392,6 +397,7 @@
     });
     saving = false;
     if (!r.ok) {
+      trackFunnel({ kind: 'team_fail', reason: r.error.reason ?? r.error.code, created: creating });
       toast(r.error.message);
       // 컵 검사에 걸렸으면(잠금 · 상한 · 최소 인원) 띠를 다시 받는다. 서버는 사유를 details.reason에 담는다.
       if (r.error.reason?.startsWith('CUP_')) void loadCupBand(season);
@@ -399,6 +405,7 @@
     }
     if (sequence !== loadSequence) { if (key) writeTeamDraft(key, null); return false; }
     const created = !team;
+    if (creating) trackFunnel({ kind: 'team_done', starters: submitted.slots.filter((x) => x !== null).length });
     const unchanged = JSON.stringify(submitted) === JSON.stringify(draftValue());
     if (!unchanged) {
       team = r.data.team;
@@ -490,7 +497,7 @@
         <div class="eyebrow">My team</div>
         <h1>{L.myTeam}</h1>
         <p class="muted">{L.loginOnly}</p>
-        <LoginButtons back={null} />
+        <LoginButtons back={null} place="team" />
       </section>
     {:else if view === 'achievements'}
       <TeamAchievements ach={records.state.ach} status={records.state.achStatus} newIds={records.state.achNewIds} bind:cat={records.state.achCat} load={(s) => void records.loadAchievements(s)} onrank={openAchRanking} />
@@ -605,7 +612,7 @@
         <button class="hof-sort" aria-pressed={friendsUi.mode === 'friends'} data-match-mode="friends" onclick={() => (friendsUi.mode = 'friends')}>{L.modeFriends}{#if appState.friendReq}<span class="btn-dot" data-friend-dot><span class="sr-only">{S.friendReq({ n: appState.friendReq })}</span></span>{/if}</button>
       </div>
       {#if friendsUi.mode === 'friends'}
-        <TeamFriends onplayed={(m, left) => matches.openFriendly(m, left, true)} onopen={(m, left) => matches.openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
+        <TeamFriends season={current ?? season} onplayed={(m, left) => matches.openFriendly(m, left, true)} onopen={(m, left) => matches.openFriendly(m, left, false)} onpreseason={() => pickSeason(0)} />
       {:else}
       <TeamOpponents
         rating={team?.rating ?? TEAM_RATING_START}
@@ -645,6 +652,7 @@
         <TeamResult
           m={matches.state.result}
           {team}
+          nowSeason={current ?? season}
           shift={matches.state.divisionShift}
           streak={matches.state.streakHint}
           {eventName}

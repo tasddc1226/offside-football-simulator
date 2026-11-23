@@ -271,6 +271,26 @@ describe('push opt-in analytics', () => {
   });
 });
 
+describe('T-11-811 rewarded failure reason', () => {
+  it('adds an allowlisted reason only to failed events', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.rewarded('failed', 'boost', 'no_fill');
+    h.a.rewarded('failed', 'boost', 'SECRET' as never);
+    h.a.rewarded('failed', 'boost');
+    h.a.rewarded('press', 'boost', 'no_fill');
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name.startsWith('reward_ad_'));
+    expect(events.map((e) => [e.name, e.params.place, e.params.reason])).toEqual([
+      ['reward_ad_failed', 'boost', 'no_fill'],
+      ['reward_ad_failed', 'boost', undefined],
+      ['reward_ad_failed', 'boost', undefined],
+      ['reward_ad_press', 'boost', undefined],
+    ]);
+    expect(JSON.stringify(h.events)).not.toContain('SECRET');
+  });
+});
+
 describe('T-11-676 career share (native)', () => {
   it('sends the web share contract only after consent', async () => {
     const h = setup({ initial: 'unknown' });
@@ -407,5 +427,112 @@ describe('T-11-731 rewarded ad funnel', () => {
       ['reward_ad_failed', 'attendance'],
     ]);
     expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
+  });
+});
+
+describe('T-11-792 login, season team and tutorial funnel', () => {
+  it('sends nothing without consent', async () => {
+    const h = setup({ initial: 'denied' });
+    await h.a.settled();
+    h.a.funnel({ kind: 'login', outcome: 'start', place: 'owner', provider: 'google' });
+    h.a.funnel({ kind: 'team_view', players: 3 });
+    h.a.funnel({ kind: 'team_done', starters: 11 });
+    h.a.funnel({ kind: 'team_fail', reason: 'BLOCKED_WORD', created: true });
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    await h.a.settled();
+    expect(h.events).toEqual([]);
+  });
+  it('sends allowlisted values only and folds unknown reasons', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.funnel({ kind: 'login', outcome: 'start', place: 'retire', provider: 'apple' });
+    h.a.funnel({ kind: 'login', outcome: 'cancel', place: 'retire', provider: 'apple' });
+    h.a.funnel({
+      kind: 'login',
+      outcome: 'fail',
+      place: 'home',
+      provider: 'google',
+      reason: 'PRIVATE server text',
+    });
+    h.a.funnel({
+      kind: 'login',
+      outcome: 'fail',
+      place: 'home',
+      provider: 'google',
+      reason: 'rate_limited',
+    });
+    // 성공에는 reason을 싣지 않는다.
+    h.a.funnel({
+      kind: 'login',
+      outcome: 'linked',
+      place: 'settings',
+      provider: 'google',
+      reason: 'session',
+    });
+    h.a.funnel({ kind: 'login', outcome: 'start', place: 'PRIVATE' as never, provider: 'google' });
+    h.a.funnel({ kind: 'login', outcome: 'start', place: 'owner', provider: 'PRIVATE' as never });
+    h.a.funnel({ kind: 'team_fail', reason: 'CUP_LOCKED', created: false });
+    h.a.funnel({ kind: 'team_fail', reason: 'PRIVATE team name', created: true });
+    // T-11-796 서버 답을 받지 못한 실패(연결 끊김 · 읽지 못한 응답)는 서버 거절과 따로 센다.
+    h.a.funnel({ kind: 'team_fail', reason: 'NETWORK_ERROR', created: true });
+    h.a.funnel({ kind: 'team_fail', reason: 'INVALID_RESPONSE', created: false });
+    // 팀 저장이 실제로 내는 사유는 그대로 남고, 조회에서만 나오는 사유는 목록 밖이다.
+    h.a.funnel({ kind: 'team_fail', reason: 'SEASON_CLOSED', created: true });
+    h.a.funnel({ kind: 'team_fail', reason: 'LEAGUE_LINEUP_LOCKED', created: false });
+    h.a.funnel({ kind: 'team_fail', reason: 'COACH_NOT_ELIGIBLE', created: false });
+    h.a.funnel({ kind: 'team_fail', reason: 'SEASON_NOT_OPEN', created: false });
+    h.a.funnel({ kind: 'team_done', starters: 7 });
+    h.a.funnel({ kind: 'tutorial', action: 'skip', step: 'pos' });
+    h.a.funnel({ kind: 'tutorial', action: 'done', step: 'PRIVATE' as never });
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name !== 'screen_view');
+    const strip = ({ measurement_version: _m, app_version: _a, ...rest }: Params) => rest;
+    expect(events.map((e) => [e.name, strip(e.params)])).toEqual([
+      ['login_attempt', { place: 'retire', provider: 'apple', outcome: 'start' }],
+      ['login_attempt', { place: 'retire', provider: 'apple', outcome: 'cancel' }],
+      ['login_attempt', { place: 'home', provider: 'google', outcome: 'fail', reason: 'other' }],
+      [
+        'login_attempt',
+        { place: 'home', provider: 'google', outcome: 'fail', reason: 'rate_limited' },
+      ],
+      ['login_attempt', { place: 'settings', provider: 'google', outcome: 'linked' }],
+      ['team_save_fail', { reason: 'CUP', mode: 'edit' }],
+      ['team_save_fail', { reason: 'other', mode: 'create' }],
+      ['team_save_fail', { reason: 'network', mode: 'create' }],
+      ['team_save_fail', { reason: 'network', mode: 'edit' }],
+      ['team_save_fail', { reason: 'SEASON_CLOSED', mode: 'create' }],
+      ['team_save_fail', { reason: 'LEAGUE_LINEUP_LOCKED', mode: 'edit' }],
+      ['team_save_fail', { reason: 'COACH_NOT_ELIGIBLE', mode: 'edit' }],
+      ['team_save_fail', { reason: 'other', mode: 'edit' }],
+      ['team_create_done', { starters: '6_10' }],
+      ['tutorial_skip', { step: 'pos' }],
+    ]);
+    expect(JSON.stringify(h.events)).not.toContain('PRIVATE');
+  });
+  it('sends the team view and each tutorial step once per run', async () => {
+    const h = setup({ initial: 'granted' });
+    await h.a.settled();
+    h.a.funnel({ kind: 'team_view', players: 0 });
+    h.a.funnel({ kind: 'team_view', players: 12 });
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'pos' });
+    await h.a.settled();
+    const events = h.events.filter((e) => e.name !== 'screen_view');
+    expect(events.map((e) => [e.name, e.params.players ?? e.params.step])).toEqual([
+      ['team_create_view', '0'],
+      ['tutorial_step', 'new'],
+      ['tutorial_step', 'pos'],
+    ]);
+  });
+  it('keeps a step that was shown before consent for the first send after consent', async () => {
+    const h = setup({ initial: 'unknown' });
+    await h.a.settled();
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    h.a.setConsent('granted');
+    await h.a.settled();
+    h.a.funnel({ kind: 'tutorial', action: 'step', step: 'new' });
+    await h.a.settled();
+    expect(h.events.filter((e) => e.name === 'tutorial_step')).toHaveLength(1);
   });
 });

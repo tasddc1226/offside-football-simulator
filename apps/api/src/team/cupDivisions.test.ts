@@ -84,12 +84,12 @@ describe('T-11-410 다음 회차', () => {
     ...planCup({ id: 's1-2', season: 1, edition: 2, opensOn: '2026-10-16' }),
   };
 
-  it('제3회가 다음 시즌으로 넘어가면 개막 이틀 뒤 21:10에 구간 셋을 함께 연다', () => {
+  it('제3회가 다음 시즌으로 넘어가면 개막 3일 뒤 21:10에 구간 셋을 함께 연다(T-11-799)', () => {
     applySeasonSchedule(closeSeasonSchedule(1, '2026-10-30T15:00:00.000Z', false));
     const next = nextCupsFor(PREV);
     expect(next.map((c) => c.id)).toEqual(['s2-3-junior', 's2-3-senior', 's2-3-master']);
-    // 10-31 00:00 KST 개막 → 11-02 21:10 KST.
-    expect(new Set(next.map((c) => c.opensAt))).toEqual(new Set(['2026-11-02T12:10:00.000Z']));
+    // 10-31 00:00 KST 개막 → 11-03 21:10 KST.
+    expect(new Set(next.map((c) => c.opensAt))).toEqual(new Set(['2026-11-03T12:10:00.000Z']));
     expect(next.every((c) => c.ovrMax === null)).toBe(true);
     // T-11-527 주니어만 참가 자격을 낮춘다.
     expect(next.map((c) => c.minFilled)).toEqual([CUP_JUNIOR_MIN_FILLED, 8, 8]);

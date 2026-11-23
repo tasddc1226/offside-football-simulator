@@ -26,6 +26,7 @@ export const sheetPlay: Translation<SheetPlayMsgs> = {
   tours: '代表 · 国際大会',
   gala: 'バロンドール授賞式',
   miles: 'キャリアの節目',
+  legendGain: 'レジェンドスコア',
   scoutHint: 'スカウトのひと言',
   fans: 'ファンの反応',
   ageWeb: (p) => `${p.age}歳になりました。次のシーズンの準備をしましょう。`,

@@ -44,6 +44,8 @@
   import WebPayPacks from '../cup/WebPayPacks.svelte';
   import TermHelp from '../TermHelp.svelte';
   import AuctionCard from '../auction/AuctionCard.svelte';
+  import { firstSeasonEditOpen } from '@offside/game/player-edit';
+  import { playerEditText as PE } from '@offside/app-core/i18n/ko/playerEdit';
 
   const { s }: { s: GameState } = $props();
   const lg = $derived(leagueOf(s.leagueId));
@@ -56,6 +58,9 @@
   const nation = $derived(nationOf(s));
   // 체격 입력 이전 선수는 포지션 표준 체격으로 보여 준다(표시만 — 능력치 보정은 없다).
   const body = $derived(s.body ?? BODY_DEFAULT[s.pos]);
+  // T-11-804 첫 시즌 결산 전에는 이름 · 주발 · 체격을 무료로 고친다(창은 지연 청크).
+  const editOpen = $derived(firstSeasonEditOpen(s));
+  let editing = $state(false);
   // T-11-133 자금을 내고 이번 시즌 스카우트 평가 보기(앱은 보상형 광고).
   let peek = $state(loadPeek());
   const pot = $derived(peekView(s, peek, 'pay'));
@@ -232,6 +237,12 @@
       <dt>{L.value}</dt><dd data-value>{fmtValue(value)}</dd>
     {/if}
   </dl>
+  {#if editOpen}
+    <div class="pe-entry" data-player-edit-entry>
+      <p class="muted fs-sm">{PE.hint}</p>
+      <button class="btn btn-sm btn-tonal" data-act="player-edit-open" aria-label={PE.entryLabel({ name: s.name })} onclick={() => (editing = true)}>{PE.entry}</button>
+    </div>
+  {/if}
   {#if pot.kind === 'shown'}<p class="muted fs-sm" data-pot-note>{pot.note}</p>{/if}
   {#if pot.kind === 'available' || pot.kind === 'short'}
     <div class="pot-peek" data-pot-peek={pot.kind}>
@@ -403,6 +414,8 @@
   {/if}
 </section>
 
+{#if editing && editOpen}{#await import('../PlayerEditSheet.svelte') then { default: PlayerEditSheet }}<PlayerEditSheet {s} onclose={() => (editing = false)} />{/await}{/if}
+
 {#if s.age >= MIN_RETIRE_AGE}
   <button class="btn btn-block" data-act="retire-ask" onclick={() => retireAsk()}>{L.retire}</button>
 {/if}
@@ -420,6 +433,19 @@
     align-items: flex-start;
     gap: 2px;
     text-align: left;
+  }
+  .pe-entry {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  .pe-entry p {
+    margin: 0;
+  }
+  .pe-entry .btn {
+    flex: none;
   }
   .pot-peek {
     display: grid;

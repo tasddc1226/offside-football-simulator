@@ -93,6 +93,14 @@ export const TRAININGS: TrainingDef[] = [
     },
   },
 ];
+/**
+ * T-11-798 이적 시장을 마치고 새 시즌으로 넘어갈 때의 훈련. 능력치 훈련은 그대로 이어 간다(전에는 모든 훈련을 휴식으로
+ * 되돌려, 다시 고르지 않으면 프리시즌 훈련 한 번이 사라졌다). 돈이 드는 개인 코치와 인기가 걸린 미디어 활동은 휴식으로
+ * 되돌린다 — 새 구단 · 새 연봉에서 고르지 않은 지출이나 활동이 이어지지 않게.
+ */
+export const nextSeasonTraining = (t: string): string =>
+  TRAININGS.some((x) => x.id === t && x.attr) ? t : 'rest';
+
 /** applyTraining과 같은 숫자 — 설명과 실제 효과가 어긋나지 않게 한곳에 둔다. */
 const REST = { cond: 30, morale: 4 };
 const MEDIA = { fame: [5, 9] as const, cond: -5, morale: 3 };

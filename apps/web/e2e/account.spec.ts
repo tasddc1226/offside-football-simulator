@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { API, fail, ok } from './helpers.js';
 
 const PROFILE_URL = `${API}/v1/profile`;
@@ -185,6 +185,107 @@ test('로그아웃 직후 다시 구글로 로그인하면 새 세션부터 받�
   expect(calls.slice(0, 2)).toEqual(['profile', 'start']);
 });
 
+// T-11-796 로그인을 시작하는 동안 버튼을 다시 눌러도 같은 시도다. 프로필 요청과 시작 계측이 두 번 나가던 것을 막는다.
+test('로그인 버튼을 여러 번 눌러도 한 번만 시작한다', async ({ page }) => {
+  const calls: string[] = [];
+  let slow = false;
+  let whileLeaving: string[] | null = null;
+  await page.route(PROFILE_URL, async (route) => {
+    calls.push('profile');
+    if (slow) await new Promise((resolve) => setTimeout(resolve, 300));
+    await route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+  await page.route(`${API}/v1/auth/google/start`, async (route) => {
+    calls.push('start');
+    const back = `${new URL(page.url()).origin}/settings?google=linked`;
+    // 로그인 화면의 응답이 늦게 오면 그동안 지금 화면이 남아 다시 눌릴 수 있다. 떠나기 전까지 나간 요청을 적어 둔다.
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    whileLeaving ??= [...calls];
+    await route.fulfill({ status: 302, headers: { Location: back } });
+  });
+
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  const login = page.locator('[data-act="google-login"]');
+  await expect(login).toBeVisible();
+  calls.length = 0;
+  slow = true;
+  // 떠나는 중에도 누른다. Playwright의 click은 진행 중인 이동이 끝나기를 기다리므로 페이지 안에서 예약해 둔다.
+  await login.evaluate((el) => {
+    for (const ms of [900, 1500]) setTimeout(() => (el as HTMLElement).click(), ms);
+  });
+  // 프로필을 받는 사이에 두 번 누른다.
+  await login.dblclick();
+  await expect(page.locator('#toast')).toContainText('구글 계정을 연결했어요');
+  // 떠나기 전까지 나간 요청은 프로필 한 번과 시작 한 번뿐이다.
+  expect(whileLeaving).toEqual(['profile', 'start']);
+  expect(calls.filter((c) => c === 'start')).toHaveLength(1);
+});
+
+// T-11-797 떠난 뒤의 가드는 그 시도가 건 예약으로만 풀린다. 첫 로드의 pageshow나 이전 시도의 타이머가 다음 시도를 일찍 풀면
+// 떠나는 중의 누름이 다시 시작 계측과 프로필 요청을 만든다.
+test('떠난 뒤의 로그인 가드는 뒤로 가기 복귀에서만 바로 풀리고, 이전 시도의 예약이 다음 시도를 풀지 않는다', async ({
+  page,
+}) => {
+  const calls: string[] = [];
+  await page.route(PROFILE_URL, (route) => {
+    calls.push('profile');
+    return route.fulfill(
+      ok({
+        id: 'u1',
+        linked: { google: false },
+        googleEmailMasked: null,
+        recoveryCodeIssuedAt: null,
+        createdAt: '2026-01-01T00:00:00.000Z',
+      }),
+    );
+  });
+  // 204면 브라우저가 지금 문서에 그대로 남는다(이동이 취소된 것과 같다).
+  await page.route(`${API}/v1/auth/google/start`, (route) => {
+    calls.push('start');
+    return route.fulfill({ status: 204 });
+  });
+  const starts = () => calls.filter((c) => c === 'start').length;
+  const pageshow = (persisted: boolean) =>
+    page.evaluate(
+      (p) => void window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: p })),
+      persisted,
+    );
+
+  await page.goto('/');
+  await page.locator('[data-act="settings"]').click();
+  const login = page.locator('[data-act="google-login"]');
+  await expect(login).toBeVisible();
+  calls.length = 0;
+  // 첫 시도(0초): 떠나기 시작한다. 이 시도의 타이머는 4초에 끝난다.
+  await login.click();
+  await expect.poll(starts).toBe(1);
+  // 첫 로드의 pageshow(돌아온 것이 아님)는 가드를 풀지 않는다.
+  await pageshow(false);
+  await login.click();
+  await page.waitForTimeout(400);
+  expect(starts()).toBe(1);
+  // 뒤로 가기로 돌아오면(3초쯤) 바로 풀린다 → 두 번째 시도. 이 시도는 7초쯤까지 막아야 한다.
+  await page.waitForTimeout(2500);
+  await pageshow(true);
+  await login.click();
+  await expect.poll(starts).toBe(2);
+  // 첫 시도의 4초가 지나도 두 번째 시도의 가드는 그대로다.
+  await page.waitForTimeout(1500);
+  await login.click();
+  await page.waitForTimeout(400);
+  expect(starts()).toBe(2);
+  expect(calls.filter((c) => c === 'profile')).toHaveLength(2);
+});
+
 // T-11-204 웹 Apple 로그인도 주소창으로 갔다가 /settings?apple=...로 돌아온다.
 test('Apple로 로그인하면 세션부터 받고 시작해 연결 안내를 띄운다', async ({ page }) => {
   const calls: string[] = [];
@@ -227,6 +328,94 @@ test('Apple 로그인을 쓸 수 없으면 Apple 안내를 띄운다', async ({ 
 test('세션 없이 로그인 시작에서 돌아오면 다시 누르라고 알린다', async ({ page }) => {
   await page.goto('/settings?google=error&reason=session');
   await expect(page.locator('#toast')).toContainText('다시 눌러 주세요');
+});
+
+// T-11-795 영어 · 일본어 · 번체 중국어 화면에서 로그인 · 결제 복귀 안내가 한국어로 뜨던 문제. 복귀 코드는 작아서 언어 사전보다
+// 거의 늘 먼저 도착했고, 그때 부른 토스트 문구가 한국어로 굳었다. 청크 하나만 늦춰 도착 순서를 고정하고 본다.
+// 빌드 산출물의 청크(/assets/*.js)를 골라 늦추므로 개발 서버(E2E_DEV)에서는 돌리지 않는다.
+async function delayChunk(page: Page, marker: string): Promise<() => number> {
+  let delayed = 0;
+  await page.route('**/assets/*.js', async (route) => {
+    const response = await route.fetch();
+    const body = await response.text();
+    if (body.includes(marker)) {
+      delayed += 1;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
+    await route.fulfill({ response, body });
+  });
+  return () => delayed;
+}
+/** 아직 처리 중인 청크 요청이 테스트가 끝난 뒤 오류로 바뀌지 않게 가로채기를 걷는다. */
+const stopDelaying = (page: Page) => page.unrouteAll({ behavior: 'ignoreErrors' });
+
+test.describe('복귀 안내의 언어', () => {
+  test.skip(process.env.E2E_DEV === '1', '빌드 산출물의 청크를 늦춰서 보는 사례');
+
+  for (const c of [
+    {
+      locale: 'en-US',
+      marker: 'Signed in to your existing',
+      toast: 'Signed in to your existing Google account.',
+      title: 'My club',
+    },
+    {
+      locale: 'ja-JP',
+      marker: 'アカウントでログインしました',
+      toast: 'お使いのGoogleアカウントでログインしました。',
+      title: 'マイクラブ',
+    },
+    {
+      locale: 'zh-TW',
+      marker: '已登入原本使用的',
+      toast: '已登入原本使用的 Google 帳號。',
+      title: '我的俱樂部',
+    },
+  ]) {
+    test.describe(`로그인 (${c.locale})`, () => {
+      test.use({ locale: c.locale });
+
+      test('사전보다 로그인 복귀 코드가 먼저 와도 그 언어로 뜬다', async ({ page }) => {
+        const delayed = await delayChunk(page, c.marker);
+        await page.goto('/settings?google=switched');
+        const toast = page.locator('#toast');
+        await expect(toast).toHaveText(c.toast);
+        await expect(toast).toBeVisible();
+        // 사전 청크를 실제로 늦췄는지(표식이 번들에서 사라지면 이 사례가 아무것도 고정하지 못한다).
+        expect(delayed()).toBeGreaterThan(0);
+        await expect(page).toHaveURL(/\/$/);
+        await expect(page.locator('h1')).toHaveText(c.title);
+        await stopDelaying(page);
+      });
+    });
+  }
+
+  test.describe('영어 화면의 다른 순서 · 결제', () => {
+    test.use({ locale: 'en-US' });
+
+    test('로그인 복귀 코드가 사전보다 늦게 와도(그린 뒤 처리) 영어로 뜬다', async ({ page }) => {
+      // 로그인 코드(ui/login.ts)에만 있는 저장 키 이름으로 그 청크를 고른다.
+      const delayed = await delayChunk(page, 'ft_login_place');
+      await page.goto('/settings?google=linked');
+      const toast = page.locator('#toast');
+      await expect(toast).toHaveText('Google account linked.');
+      await expect(toast).toBeVisible();
+      expect(delayed()).toBeGreaterThan(0);
+      await expect(page).toHaveURL(/\/$/);
+      await expect(page.locator('h1')).toHaveText('My club');
+      await stopDelaying(page);
+    });
+
+    test('결제창에서 돌아온 확인 안내도 영어로 뜬다', async ({ page }) => {
+      const delayed = await delayChunk(page, 'Confirming payment');
+      await page.goto(`/?webpay=wp_${'a'.repeat(32)}`);
+      const toast = page.locator('#toast');
+      await expect(toast).toHaveText('Confirming payment…');
+      await expect(toast).toBeVisible();
+      expect(delayed()).toBeGreaterThan(0);
+      await stopDelaying(page);
+    });
+  });
 });
 
 test('계정 카드에서 댓글 닉네임을 정하고 바꾼다 (T-10-028)', async ({ page }) => {

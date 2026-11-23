@@ -54,6 +54,7 @@ import {
   type SeasonEndResult,
 } from '@offside/game/season';
 import { saveKey } from '@offside/game/storage';
+import { nextSeasonTraining } from '@offside/game/training';
 import { pickFanLines } from '@offside/game/fanfeed';
 import { chLabel } from '@offside/game/records';
 import { titleView } from '@offside/game/titles';
@@ -80,6 +81,8 @@ import { publicNameOf } from './namePublic.js';
 import { fmtValue, growthDirFor, seasonLabelOf } from './format.js';
 import { crossesBorder, flightHours, hubOf } from './flight.js';
 import { gameActionsText as L } from './i18n/ko/gameActions';
+import { legendScore } from '@offside/game/legend';
+import { legendGain } from './legendGain.js';
 import { choiceChipsFor } from './eventPeek';
 import { tn } from '@offside/game/i18n/names';
 
@@ -313,7 +316,9 @@ export function createGameActions(host: GameHost) {
       if (sheet.state.busy) return;
       appState.report = null;
       const growth = takeSeasonGrowth(s); // endSeason이 시즌 끝 값을 다음 시즌으로 넘기기 전에 뜬다.
+      const legendBefore = legendScore(s);
       const res = endSeason(s);
+      res.legendBefore = legendBefore;
       host.uploadSeason(s, res.rec, growth);
       s.pending = { type: 'market', res, m: null };
       host.save();
@@ -470,6 +475,7 @@ export function createGameActions(host: GameHost) {
       titles = [],
       promo,
       era,
+      legendBefore,
     } = res;
     const s = appState.G!;
     // T-10-112 고3 첫 시즌이 끝났다. 다음 커리어는 새 후보를 받는다.
@@ -540,6 +546,7 @@ export function createGameActions(host: GameHost) {
         titles,
         promo: promo && { club: tn(promo.club), down: tn(promo.down) },
         era: era ? eraCard(s, era, rec) : null,
+        legend: legendGain(legendBefore, legendScore(s)),
         notes,
         scoutHint: scoutHint(s, rec.year),
         seasonTrend: seasonTrendLine(s, rec.year),
@@ -808,7 +815,9 @@ export function createGameActions(host: GameHost) {
     if (r?.ok !== undefined) logEntry.ok = r.ok;
     pushEvLog(G, logEntry);
     if (r) {
-      G.training = 'rest';
+      // T-11-798 병역으로 확정되면 지금처럼 휴식으로 시작한다. 시장이 다시 열리면(상무 불합격 · 현역 뒤) 아직 떠나지 않았으니
+      // 그대로 두고, 다시 고를 때 정한다.
+      if (!r.reopen) G.training = 'rest';
       if (r.reopen) {
         G.pending = { type: 'market', res: null, m: market(G) };
         host.save();
@@ -844,7 +853,8 @@ export function createGameActions(host: GameHost) {
       return false;
     }
     G.pending = null;
-    G.training = 'rest';
+    // T-11-798 고른 능력치 훈련은 새 시즌에도 이어 간다(개인 코치 · 미디어 활동만 휴식으로).
+    G.training = nextSeasonTraining(G.training);
     host.save();
     host.analytics.play(G);
     return true;

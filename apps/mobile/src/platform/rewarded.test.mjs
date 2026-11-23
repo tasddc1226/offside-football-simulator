@@ -41,7 +41,7 @@ vi.mock('./adFree', () => ({
 vi.mock('./adUsage', () => ({ countReward: f.countReward }));
 vi.mock('./adFunnel', () => ({ rewardFunnel: f.funnel }));
 vi.mock('@offside/app-core/i18n/ko/ad', () => ({
-  adText: { rewardedUnavailable: 'unavailable' },
+  adText: { rewardedUnavailable: 'unavailable', rewardedPaused: 'paused' },
 }));
 let show;
 beforeEach(() => {
@@ -65,7 +65,10 @@ beforeEach(() => {
     },
   }));
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 async function begin(placement = 'candidates') {
   const { claimReward } = await import('./rewarded');
@@ -124,7 +127,7 @@ describe('candidate report rewarded placement', () => {
     expect(grant).not.toHaveBeenCalled();
     expect(f.funnel.mock.calls).toEqual([
       ['press', 'candidates'],
-      ['failed', 'candidates'],
+      ['failed', 'candidates', 'consent'],
     ]);
   });
   it('grants without an ad for an ad-free purchaser', async () => {
@@ -238,5 +241,100 @@ describe('T-11-558 preloaded rewarded ads', () => {
     expect(f.create).toHaveBeenCalledOnce();
     f.listeners.get('closed')();
     expect(await result).toBe('unavailable');
+  });
+});
+
+describe('T-11-811 failure reasons and pause after repeated failures', () => {
+  it.each([
+    [{ reason: 'no-fill', phase: 'load' }, 'no_fill'],
+    [{ reason: 'mediation-no-fill', phase: 'load' }, 'no_fill'],
+    [{ reason: 'network-error', phase: 'load' }, 'network'],
+    [{ reason: 'timeout', phase: 'load' }, 'timeout'],
+    [{ reason: 'no-fill', phase: 'show' }, 'show'],
+    [{ reason: 'internal-error', phase: 'load' }, 'other'],
+    [undefined, 'other'],
+  ])('maps SDK error %o to %s', async (error, reason) => {
+    const { failReason } = await import('./rewarded');
+    expect(failReason(error)).toBe(reason);
+  });
+  it('sends the SDK failure reason with the failed funnel event', async () => {
+    const { result } = await begin('boost');
+    f.listeners.get('error')({ reason: 'no-fill', phase: 'load' });
+    expect(await result).toBe('unavailable');
+    expect(f.funnel).toHaveBeenLastCalledWith('failed', 'boost', 'no_fill');
+  });
+  it('reports show when a loaded ad cannot be shown', async () => {
+    show.mockRejectedValue(new Error('cannot present'));
+    const { result } = await begin('boost');
+    f.listeners.get('loaded')();
+    expect(await result).toBe('unavailable');
+    expect(f.funnel).toHaveBeenLastCalledWith('failed', 'boost', 'show');
+  });
+  it('reports timeout when the ad never loads within 20 seconds', async () => {
+    vi.useFakeTimers();
+    try {
+      f.create.mockImplementation(() => ({
+        loaded: false,
+        show,
+        load: vi.fn(),
+        addAdEventListener: (event, fn) => {
+          f.listeners.set(event, fn);
+          return () => f.listeners.delete(event);
+        },
+      }));
+      const { claimReward } = await import('./rewarded');
+      const result = claimReward('boost', vi.fn(), 'skipped');
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(await result).toBe('unavailable');
+      expect(f.funnel).toHaveBeenLastCalledWith('failed', 'boost', 'timeout');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  async function fail(placement = 'boost') {
+    const { result } = await begin(placement);
+    f.listeners.get('error')({ reason: 'no-fill', phase: 'load' });
+    return result;
+  }
+  it('pauses for two minutes after three failures in a row, then tries again', async () => {
+    let clock = 1_000_000;
+    vi.spyOn(Date, 'now').mockImplementation(() => clock);
+    const { FAIL_STREAK, PAUSE_MS } = await import('./rewarded');
+    expect(FAIL_STREAK).toBe(3);
+    expect(await fail()).toBe('unavailable');
+    expect(await fail('attendance')).toBe('unavailable');
+    expect(await fail()).toBe('paused');
+    expect(f.create).toHaveBeenCalledTimes(3);
+
+    // 쉬는 동안은 광고를 만들지 않고 바로 안내한다.
+    const { claimReward } = await import('./rewarded');
+    clock += PAUSE_MS - 1;
+    const asked = f.consent.mock.calls.length;
+    expect(await claimReward('boost', vi.fn(), 'skipped')).toBe('paused');
+    expect(f.create).toHaveBeenCalledTimes(3);
+    expect(f.consent).toHaveBeenCalledTimes(asked);
+    expect(f.funnel).toHaveBeenLastCalledWith('failed', 'boost', 'paused');
+
+    clock += 1;
+    const { grant, result } = await begin('boost');
+    expect(f.create).toHaveBeenCalledTimes(4);
+    f.listeners.get('loaded')();
+    f.listeners.get('opened')();
+    f.listeners.get('earned')();
+    f.listeners.get('closed')();
+    expect(await result).toBe('');
+    expect(grant).toHaveBeenCalledOnce();
+  });
+  it('starts counting again after an ad opens', async () => {
+    expect(await fail()).toBe('unavailable');
+    expect(await fail()).toBe('unavailable');
+    const { result } = await begin('boost');
+    f.listeners.get('loaded')();
+    f.listeners.get('opened')();
+    f.listeners.get('closed')();
+    expect(await result).toBe('skipped');
+    expect(await fail()).toBe('unavailable');
+    expect(await fail()).toBe('unavailable');
+    expect(await fail()).toBe('paused');
   });
 });

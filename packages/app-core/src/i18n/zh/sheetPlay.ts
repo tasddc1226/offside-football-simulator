@@ -24,6 +24,7 @@ export const sheetPlay: Translation<SheetPlayMsgs> = {
   tours: '國家隊 · 國際賽事',
   gala: '金球獎頒獎典禮',
   miles: '生涯里程碑',
+  legendGain: '傳奇分數',
   scoutHint: '球探一句話',
   fans: '球迷反應',
   ageWeb: (p) => `${p.age} 歲了。開始準備下個賽季吧。`,
