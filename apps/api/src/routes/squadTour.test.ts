@@ -35,8 +35,14 @@ describe('원정 투어 (T-11-825)', () => {
     ctx = await createTestD1();
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date(NOW));
+    // 경기 씨앗은 경기 ID다. ID를 순번으로 고정해 같은 편성이 늘 같은 결과를 내게 한다.
+    let n = 0;
+    vi.spyOn(crypto, 'randomUUID').mockImplementation(
+      () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`,
+    );
   });
   afterEach(async () => {
+    vi.restoreAllMocks();
     vi.useRealTimers();
     await ctx.dispose();
   });
