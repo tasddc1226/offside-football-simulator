@@ -235,6 +235,7 @@ export function applyTourOrder(
       rules,
       on.map((c) => tourCardOf(c!)),
       s.season,
+      true,
     )
   )
     return 'rule';

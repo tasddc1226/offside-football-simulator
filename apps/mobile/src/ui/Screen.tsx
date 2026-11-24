@@ -27,6 +27,7 @@ export function Screen({
   refreshControl,
   fixed,
   scrollEnabled = true,
+  background,
 }: {
   children: ReactNode;
   /** 화면 아래 고정 버튼 줄(ActionBar). */
@@ -37,6 +38,8 @@ export function Screen({
   /** 화면을 스크롤하지 않고 한 화면에 맞춘다(채팅처럼 안쪽 목록만 스크롤할 때). 키보드가 오르면 그만큼 줄인다. */
   fixed?: boolean;
   scrollEnabled?: boolean;
+  /** 화면 배경색(경기 · 결과처럼 밤 경기장 색으로 칠할 때). 없으면 테마 배경. */
+  background?: string;
 }) {
   const c = useColors();
   const insets = useSafeAreaInsets();
@@ -81,7 +84,7 @@ export function Screen({
     <View
       style={{
         flex: 1,
-        backgroundColor: c.bg,
+        backgroundColor: background ?? c.bg,
         paddingTop: Platform.OS === 'ios' ? insets.top : 0,
       }}
     >
@@ -123,7 +126,7 @@ export function Screen({
             left: 0,
             right: 0,
             height: insets.top,
-            backgroundColor: c.bg,
+            backgroundColor: background ?? c.bg,
           }}
         />
       ) : null}

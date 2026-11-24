@@ -24,7 +24,7 @@ export type TourCard = {
  * - peakMax: 최고 OVR이 max 이하인 카드만
  * - enhanceMax: 강화 단계가 max 이하인 카드만
  * - plain: 모든 카드가 뛰지만 강화 OVR을 빼고 잰다
- * - season: 이번 시즌 카드만('now') · 이번 시즌보다 앞선 모든 시즌(프리시즌 포함) 카드만('past')
+ * - season: 교체 명단까지 이번 시즌 카드만('now'). 'past'는 선발 시즌 규칙(tourStarterOk)이 생기면서 뽑지 않는다(옛 값 호환용)
  * - leagueBan: 그 리그 출신은 뛰지 못한다
  * - typeCap · nationCap · leagueCap: 같은 유형 · 같은 국적 · 그 리그 출신을 max명까지만
  */
@@ -72,6 +72,13 @@ export const tourCapMax = (rule: TourRule): number | null =>
     ? rule.max
     : null;
 
+/**
+ * T-11-827 선발은 이번 시즌 카드만 세운다(모든 경기에 적용). 지난 시즌 카드는 교체 명단에 두었다가 작전 타임에 넣을 수 있다.
+ * season은 지금 서비스 시즌.
+ */
+export const tourStarterOk = (card: Pick<TourCard, 'season'>, season: number): boolean =>
+  card.season === season;
+
 /** 강화 OVR을 빼고 재는 경기인가. */
 export const tourPlain = (rules: readonly TourRule[]): boolean =>
   rules.some((r) => r.kind === 'plain');
@@ -84,7 +91,10 @@ export function tourLineupOk(
   rules: readonly TourRule[],
   cards: readonly TourCard[],
   season: number,
+  /** 경기 중(작전 타임 교체 뒤)의 11명이면 true. 선발 시즌 규칙은 출발할 때만 본다 — 지난 시즌 카드는 교체로 들어올 수 있다. */
+  midMatch = false,
 ): boolean {
+  if (!midMatch && cards.some((c) => !tourStarterOk(c, season))) return false;
   for (const rule of rules) {
     const max = tourCapMax(rule);
     const seen = new Map<string, number>();
@@ -164,7 +174,8 @@ export const tourRankCompare = (a: TourStanding, b: TourStanding): number =>
 /**
  * 주마다 뽑는 제한 후보. light는 본선 1~2차전, mid는 3~5차전, late는 6~7차전, extra는 무한 원정에만 나온다(무한 원정은 mid도 쓴다).
  * 본선 대전료는 편성을 바꿔서 닿을 수 있어야 하므로, 강화 · 높은 OVR 카드를 통째로 막거나 팀을 크게 깎는 제한은 extra에만 둔다.
- * 이번 시즌 카드가 적으면 용병으로만 뛰게 되는 시즌 제한은 6~7차전에 두지 않는다.
+ * 교체 명단까지 이번 시즌 카드로 묶는 시즌 제한은 6~7차전에 두지 않는다.
+ * 후보를 빼거나 순서를 바꾸면 진행 중인 주의 제한이 달라지므로, 바꿀 때는 같은 자리에 다른 제한을 넣는다.
  */
 export const TOUR_POOL: {
   light: readonly TourRule[];
@@ -202,7 +213,8 @@ export const TOUR_POOL: {
     { kind: 'peakMax', max: 95 },
     { kind: 'peakMax', max: 92 },
     { kind: 'nationCap', max: 4 },
-    { kind: 'season', when: 'past' },
+    // T-11-827 전에는 '지난 시즌 카드만'이었다. 선발이 이번 시즌 카드로 묶이면서 같은 자리에 다른 제한을 둔다.
+    { kind: 'enhanceMax', max: 3 },
     { kind: 'leagueBan', league: 'pl' },
   ],
 };
@@ -341,3 +353,12 @@ export function tourWeekOf(now: string): string {
 /** 이긴 경기의 별(1~3): 승리 · 그 경기 첫 도전에 승리 · 90분 2골 차 이상. 진 경기는 0. */
 export const tourStars = (win: boolean, tries: number, goalDiff: number): number =>
   win ? 1 + (tries === 1 ? 1 : 0) + (goalDiff >= 2 ? 1 : 0) : 0;
+
+/**
+ * T-11-827 상대 AI 구단(게임 구단 id). 매주 순서를 섞어 경기마다 한 곳씩 만난다. 이름 · 엠블럼은 게임 구단 데이터를, 선수 이름은
+ * 서버 사전(api i18n tourClubs)을 쓴다. 실력은 구단과 상관없이 tourOpp(stage)다.
+ */
+export const TOUR_CLUBS = ['pl-0', 'pl-1', 'pl-2', 'll-0', 'll-1', 'bl-0', 'sa-0', 'l1-0'] as const;
+export type TourClubId = (typeof TOUR_CLUBS)[number];
+export const tourClub = (week: string, stage: number): TourClubId =>
+  shuffled(TOUR_CLUBS, rngOf(`club:${week}`))[(stage - 1) % TOUR_CLUBS.length]!;

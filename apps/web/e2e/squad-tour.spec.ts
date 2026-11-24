@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { API, fail, ok } from './helpers.js';
 
-// T-11-825 원정 투어 — 내 구단 화면 칸 → 여정 지도 → 편성(자동 편성 · 전술) → 작전 경기(30분 · 60분 작전 타임) → 결과 → 주간 순위.
+// T-11-825 원정 투어 — 내 구단 화면 칸 → 투어 지도 → 편성(자동 편성 · 전술) → 작전 경기(30분 · 60분 작전 타임) → 결과 → 주간 순위.
 // 서버는 page.route로 흉내 낸다. 입구는 내 팀 응답의 tourOpen이 켜졌을 때만 보인다.
 
 const NOW = '2026-11-24T03:00:00Z';
@@ -40,6 +40,20 @@ const card = (n: number, extra: Record<string, unknown> = {}) => ({
   season: 2,
   ...extra,
 });
+const CLUBS = ['pl-0', 'll-0', 'bl-0', 'pl-1', 'sa-0', 'l1-0', 'll-1'];
+const OPP = [
+  '에데르숀',
+  '워크너',
+  '디아슈',
+  '스토운',
+  '그바르디온',
+  '로드로',
+  '데브라이너',
+  '포덴',
+  '베르날도',
+  '홀룬',
+  '그렐리시',
+];
 const stageOf = (stage: number, stars = 0) => ({
   stage,
   opp: [70, 76, 82, 86, 90, 93, 96][stage - 1],
@@ -49,6 +63,8 @@ const stageOf = (stage: number, stars = 0) => ({
   fee: [500000, 650000, 900000, 1100000, 1350000, 1600000, 1900000][stage - 1],
   merc: 58,
   stars,
+  club: CLUBS[stage - 1],
+  players: OPP,
 });
 
 async function stub(page: Page, opts: { open?: boolean; start?: 'ok' | 'noTries' } = {}) {
@@ -129,6 +145,9 @@ async function stub(page: Page, opts: { open?: boolean; start?: 'ok' | 'noTries'
           players: [
             ...Array.from({ length: 16 }, (_, i) => card(i + 1)),
             card(17, { listing: { id: 'sale', price: 10_000 } }),
+            // 지난 시즌 카드: 선발로는 못 서고 교체 명단에만 들어간다.
+            card(18, { season: 1, peak: 99 }),
+            card(19),
           ],
           lastManager: null,
           matchesLeft: 10,
@@ -223,7 +242,7 @@ async function stub(page: Page, opts: { open?: boolean; start?: 'ok' | 'noTries'
 }
 
 const shot = (page: Page, name: string) =>
-  page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: false });
+  page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true });
 
 test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 열 때만 받는다', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -252,6 +271,24 @@ test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 �
   await sheet.locator('[data-act="tour-go"]').click();
   await expect(sheet.locator('[data-tour-scout]')).toContainText('역습');
   await expect(sheet.locator('[data-tour-bench-count]')).toContainText('5 / 5');
+  // 팀 그라운드처럼 라커룸에서 고른다. 지난 시즌 카드(18번)는 교체 명단에 들어가 있고 선발 자리에는 서지 못한다.
+  const old = sheet.locator(`[data-tour-player="${id(18)}"]`);
+  await expect(old).toHaveAttribute('data-blocked', 'season');
+  await expect(old).toContainText('교체 명단');
+  await old.locator('.tl-select').click();
+  await sheet.locator('[data-slot="10"]').click();
+  await expect(sheet.locator('[data-tour-note]')).toContainText('지난 시즌 카드');
+  // 대기 중인 이번 시즌 카드를 고른 뒤 자리를 누르면 선발로 선다.
+  const waiting = sheet
+    .locator('[data-tour-player]:not([data-blocked])')
+    .filter({ hasText: '대기' })
+    .first();
+  const waitingId = await waiting.getAttribute('data-tour-player');
+  await waiting.locator('.tl-select').click();
+  await sheet.locator('[data-slot="10"]').click();
+  await expect(sheet.locator(`[data-tour-player="${waitingId}"]`)).toContainText('선발');
+  const axePrep = await new AxeBuilder({ page }).include('[data-squad-tour]').analyze();
+  expect(axePrep.violations).toEqual([]);
   // 상대가 역습이면 점유가 상성에서 앞선다.
   await expect(sheet.locator('[data-tour-tactic="possession"]')).toContainText(
     '상대 전술에 강해요',
@@ -265,6 +302,9 @@ test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 �
   expect(body.slotIds.filter(Boolean)).toHaveLength(11);
   expect(body.bench).toHaveLength(5);
   expect([...body.slotIds, ...body.bench]).not.toContain(id(17));
+  expect(body.slotIds[10]).toBe(waitingId);
+  expect(body.slotIds).not.toContain(id(18));
+  expect(body.bench).toContain(id(18));
   expect(body.tactic).toBe('possession');
   expect(s.starts[0]!.key).toBeTruthy();
 
@@ -278,6 +318,8 @@ test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 �
   await expect(sheet.locator('[data-tour-sub]')).toHaveCount(1);
   await expect(sheet.locator('[data-tour-subs]')).toContainText('2');
   await shot(page, 'tour-timeout');
+  const axeTimeout = await new AxeBuilder({ page }).include('[data-squad-tour]').analyze();
+  expect(axeTimeout.violations).toEqual([]);
   await sheet.locator('[data-act="tour-continue"]').click();
   await expect(sheet.locator('[data-tour-match]')).toHaveAttribute('data-done', '2');
   expect(s.orders[0]).toMatchObject({ done: 1, tactic: 'park' });
@@ -293,8 +335,10 @@ test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 �
   );
   await expect(sheet.locator('[data-tour-fee]')).toContainText('50억');
   await shot(page, 'tour-result');
+  const axeResult = await new AxeBuilder({ page }).include('[data-squad-tour]').analyze();
+  expect(axeResult.violations).toEqual([]);
 
-  // 여정 지도로 돌아가면 1차전은 통과, 2차전이 열려 있다.
+  // 투어 지도로 돌아가면 1차전은 통과, 2차전이 열려 있다.
   await sheet.locator('[data-act="tour-map"]').click();
   await expect(sheet.locator('[data-tour-stage="1"]')).toHaveAttribute('data-state', 'done');
   await expect(sheet.locator('[data-tour-stage="2"]')).toHaveAttribute('data-state', 'next');
@@ -327,6 +371,44 @@ test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 �
   await expect(hist).toHaveCount(3);
   expect(s.historyGets).toBe(1);
   expect(s.tourGets).toBe(gets);
+});
+
+test('원정 투어: 경기는 시계와 함께 재생되고, 빨리 보기로 작전 타임으로 넘어간다', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const s = await stub(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="tour"]').click();
+  const tour = page.locator('[data-squad-tour]');
+  await tour.locator('[data-act="tour-go"]').click();
+  await tour.locator('[data-act="tour-depart"]').click();
+  // 킥오프 장면 → 시계가 흐른다. 재생 중에는 작전 타임 지시가 없고 뒤로 가기 대신 빨리 보기가 있다.
+  await expect(tour.locator('[data-tour-kickoff]')).toBeVisible();
+  await expect(tour.locator('[data-tour-match]')).toHaveAttribute('data-tour-playing', '');
+  await expect(tour.locator('[data-tour-talk]')).toHaveCount(0);
+  await expect(tour.locator('[data-act="tour-back"]')).toHaveCount(0);
+  await expect(tour.locator('[data-tour-score]')).toHaveText('0 : 0');
+  // 랭크 경기와 같은 말판 그라운드가 나오고, 내 선발 11명에는 이름표가 붙는다.
+  await expect(tour.locator('[data-tour-ground] [data-match-ground]')).toBeVisible();
+  await expect(tour.locator('[data-tour-ground] .mg-pl')).toHaveCount(22);
+  // 두 팀 22명 모두 이름표가 붙고, 내 팀(원정)이 금색이다.
+  await expect(tour.locator('[data-tour-ground] .mg-name')).toHaveCount(22);
+  await expect(tour.locator('[data-tour-ground] [data-match-ground]')).toHaveClass(/flip/);
+  await expect(tour.locator('[data-tour-club]').first()).toContainText('맨체스터 스카이블루');
+  // 골이 난 분에 멈춰 득점자를 보여 주고, 그 뒤에 점수가 오른다.
+  await expect(tour.locator('[data-tour-goal]')).toContainText('원정선수9', { timeout: 20_000 });
+  await shot(page, 'tour-goal');
+  await expect(tour.locator('[data-tour-score]')).toHaveText('0 : 1', { timeout: 5_000 });
+  await shot(page, 'tour-playing');
+  await tour.locator('[data-act="tour-skip"]').click();
+  await expect(tour.locator('[data-tour-talk]')).toBeVisible();
+  await expect(tour.locator('[data-tour-score]')).toHaveText('0 : 1');
+  await expect(tour.locator('[data-act="tour-continue"]')).toBeVisible();
+  await page.waitForTimeout(600);
+  await shot(page, 'tour-talk');
+  expect(s.starts).toHaveLength(1);
 });
 
 test('원정 투어: 닫혀 있으면 입구가 없고, 출발이 거절되면 이유를 보여 준다', async ({ page }) => {

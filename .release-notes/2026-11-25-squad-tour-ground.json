@@ -1,0 +1,39 @@
+{
+  "id": "t-11-827-squad-tour-ground",
+  "title": "원정 투어 새 화면",
+  "items": [
+    "원정 투어가 전용 화면으로 바뀌었어요. 경기가 시작되면 두 팀 선수가 그라운드에서 움직이고, 골 장면과 중계가 함께 나와요.",
+    "편성은 팀 그라운드처럼 해요. 자리를 누르고 라커룸에서 선수를 고르거나, 카드를 끌어다 놓아요.",
+    "선발은 이번 시즌 카드만 세울 수 있어요. 지난 시즌 카드는 교체 명단에 넣었다가 작전 타임에 투입해요.",
+    "상대가 명문 구단을 떠올리게 하는 가상 구단 8곳으로 바뀌었어요. 매주 만나는 순서가 달라지고, 상대 실력은 그대로예요."
+  ],
+  "en": {
+    "title": "New Away tour screens",
+    "items": [
+      "The Away tour now has its own screen. Once a match starts, both teams move on the pitch with goal scenes and commentary.",
+      "Build your squad the way you do on the team pitch. Tap a slot and pick a player in the locker room, or drag a card onto the pitch.",
+      "Only this season's cards can start. Put past-season cards on the bench and bring them on at a team talk.",
+      "Opponents are now 8 fictional clubs modelled on famous sides. The order changes every week and opponent strength is unchanged."
+    ]
+  },
+  "ja": {
+    "title": "遠征ツアーの新しい画面",
+    "items": [
+      "遠征ツアーが専用画面になりました。試合が始まると両チームの選手がピッチ上で動き、ゴールシーンと実況が流れます。",
+      "編成はチームのピッチと同じ方法です。枠をタップしてロッカールームで選手を選ぶか、カードをドラッグして置きます。",
+      "スタメンは今シーズンのカードだけです。過去シーズンのカードはベンチに入れて、作戦タイムに投入します。",
+      "相手が名門クラブを思わせる架空のクラブ8つになりました。対戦順は毎週変わり、相手の強さはそのままです。"
+    ]
+  },
+  "zh": {
+    "title": "遠征巡迴賽新畫面",
+    "items": [
+      "遠征巡迴賽改為專屬畫面。比賽開始後，兩隊球員會在球場上移動，並搭配進球畫面與文字轉播。",
+      "編排陣容的方式與球隊球場相同。點選位置後在更衣室挑選球員，或直接拖曳卡片。",
+      "先發只能使用本賽季的卡片。上賽季的卡片可放進替補名單，在戰術暫停時換上場。",
+      "對手改為 8 支令人聯想到豪門的虛構俱樂部。每週交手順序不同，對手實力不變。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

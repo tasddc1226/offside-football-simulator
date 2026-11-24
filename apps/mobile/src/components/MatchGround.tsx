@@ -53,6 +53,8 @@ function Dot({
   size,
   dur,
   motionOK,
+  name,
+  gold,
 }: {
   p: GroundSpot;
   w: number;
@@ -60,10 +62,14 @@ function Dot({
   size: number;
   dur: number;
   motionOK: boolean;
+  /** 늘 보이는 이름표(원정 투어). 장면 이름표(tag)가 있으면 그쪽이 먼저다. */
+  name?: string | undefined;
+  /** 금색으로 그릴 팀(내 팀). */
+  gold: GroundSide;
 }) {
   const c = useColors();
   const pos = useSlide((p.x / 100) * w, (p.y / 100) * h, dur, MOVE, motionOK);
-  const home = p.side === 'home';
+  const home = p.side === gold;
   const ink = home ? HOME_INK : AWAY_INK;
   const ring = p.on || (home && p.mate);
   return (
@@ -111,6 +117,36 @@ function Dot({
           {p.no}
         </Txt>
       </View>
+      {!p.tag && name ? (
+        <View
+          pointerEvents="none"
+          style={{
+            position: 'absolute',
+            top: size + 1,
+            left: size / 2 - 36,
+            width: 72,
+            alignItems: 'center',
+          }}
+        >
+          <Txt
+            numberOfLines={1}
+            ellipsizeMode="tail"
+            style={{
+              maxWidth: 9 * 6.4,
+              paddingHorizontal: 3,
+              borderRadius: 3,
+              overflow: 'hidden',
+              backgroundColor: 'rgba(10,24,17,0.7)',
+              color: '#f2f6f1',
+              fontSize: 9,
+              lineHeight: 12,
+              fontWeight: '500',
+            }}
+          >
+            {name}
+          </Txt>
+        </View>
+      ) : null}
       {p.tag ? (
         <View
           style={{
@@ -262,6 +298,8 @@ export function MatchGround({
   home,
   away,
   motionOK,
+  names = null,
+  gold = 'home',
 }: {
   spots: readonly GroundSpot[];
   ball: Pt;
@@ -276,6 +314,10 @@ export function MatchGround({
   home: string;
   away: string;
   motionOK: boolean;
+  /** 선수 키(a0~) → 이름. 있는 선수 아래에 작은 이름표를 늘 보인다(원정 투어에서 내 선수). 없으면 지금처럼. */
+  names?: Readonly<Record<string, string>> | null;
+  /** 금색으로 그릴 팀(내 팀). 원정 투어는 내가 원정 팀이라 away를 준다. */
+  gold?: GroundSide;
 }) {
   const c = useColors();
   const [w, setW] = useState(0);
@@ -431,7 +473,17 @@ export function MatchGround({
               </>
             ) : null}
             {spots.map((p) => (
-              <Dot key={p.key} p={p} w={w} h={h} size={size} dur={dur} motionOK={motionOK} />
+              <Dot
+                key={p.key}
+                p={p}
+                w={w}
+                h={h}
+                size={size}
+                dur={dur}
+                motionOK={motionOK}
+                name={names?.[p.key]}
+                gold={gold}
+              />
             ))}
             <Ball b={ball} w={w} h={h} dur={dur} motionOK={motionOK} />
             {goal ? <GoalFx goal={goal} motionOK={motionOK} /> : null}

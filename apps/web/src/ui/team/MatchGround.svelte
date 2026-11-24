@@ -11,6 +11,8 @@
     goal = null,
     trail = [],
     arrows = [],
+    names = null,
+    gold = 'home',
     home,
     away,
   }: {
@@ -24,6 +26,10 @@
     trail?: readonly Pt[];
     /** 장면 카드 선택지 화살표. */
     arrows?: readonly GroundArrow[];
+    /** T-11-827 말판마다 늘 보이는 이름표(선수 키 → 이름). 원정 투어가 내 선발 11명을 넣는다. */
+    names?: Readonly<Record<string, string>> | null;
+    /** 금색으로 그릴 팀(내 팀). 원정 투어는 내가 원정 팀이라 away를 준다. */
+    gold?: GroundSide;
     home: string;
     away: string;
   } = $props();
@@ -35,7 +41,7 @@
   const trailPoints = $derived(trail.map((p) => `${p[0]},${p[1]}`).join(' '));
 </script>
 
-<section class="mg" style:--mg-dur="{dur}ms" aria-label={L.groundAria({ home, away })} data-match-ground>
+<section class="mg" class:flip={gold === 'away'} style:--mg-dur="{dur}ms" aria-label={L.groundAria({ home, away })} data-match-ground>
   <div class="mg-field">
     <svg class="mg-lines" viewBox="0 0 105 68" preserveAspectRatio="none" aria-hidden="true">
       <rect x="1.5" y="1.5" width="102" height="65" />
@@ -60,7 +66,7 @@
     {/if}
     {#each spots as p (p.key)}
       <span class="mg-pl {p.side}" class:on={p.on} class:mate={p.mate} class:dim={p.dim} style:left="{p.x}%" style:top="{p.y}%" aria-hidden="true">
-        {p.no}{#if p.tag}<span class="mg-tag">{p.tag}</span>{/if}
+        {p.no}{#if p.tag}<span class="mg-tag">{p.tag}</span>{:else if names?.[p.key]}<span class="mg-tag mg-name">{names[p.key]}</span>{/if}
       </span>
     {/each}
     <i class="mg-ball" style:left="{ball[0]}%" style:top="{ball[1]}%" aria-hidden="true"></i>
@@ -147,6 +153,12 @@
     color: var(--mg-away-ink);
     box-shadow: 0 0 0 1.5px var(--mg-away-ink);
   }
+  .mg.flip {
+    --mg-home: #22324f;
+    --mg-home-ink: #f2f6f1;
+    --mg-away: var(--pitch-accent);
+    --mg-away-ink: #1b1405;
+  }
   .mg-pl.on {
     z-index: 4;
     transform: scale(1.25);
@@ -179,6 +191,21 @@
     color: #f2f6f1;
     font: 500 10px/1.4 var(--body);
     white-space: nowrap;
+  }
+  /* 늘 보이는 이름표는 작게, 길면 줄인다. 강조한 선수(on)의 이름표가 위에 온다. */
+  .mg-name {
+    top: calc(var(--mg-dot) + 1px);
+    max-width: 6.4em;
+    padding: 0 3px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: rgba(10, 24, 17, 0.62);
+    font-size: 9px;
+  }
+  .mg-pl.on .mg-name {
+    max-width: none;
+    background: rgba(10, 24, 17, 0.9);
+    font-size: 10px;
   }
   .mg-ball {
     position: absolute;

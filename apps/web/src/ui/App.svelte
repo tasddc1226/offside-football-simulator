@@ -97,6 +97,11 @@
   $effect(() => {
     if (appState.screen === 'players' && !OwnerPlayers) void import('./owner/OwnerPlayers.svelte').then((m) => (OwnerPlayers = m.default));
   });
+  // T-11-826 원정 투어 화면도 처음 열 때 불러온다.
+  let SquadTour = $state<Component<Record<string, never>> | null>(null);
+  $effect(() => {
+    if (appState.screen === 'tour' && !SquadTour) void import('./owner/SquadTour.svelte').then((m) => (SquadTour = m.default));
+  });
   let OwnerHonors = $state<Component<{ visitTeam?: string | null }> | null>(null);
   $effect(() => {
     if ((appState.screen === 'honors' || appState.screen === 'recap') && !OwnerHonors) void import('./owner/OwnerHonors.svelte').then((m) => (OwnerHonors = m.default));
@@ -217,6 +222,8 @@
       {#if Owner}<Owner />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'players'}
       {#if OwnerPlayers}<OwnerPlayers />{:else}{@render waiting()}{/if}
+    {:else if appState.screen === 'tour'}
+      {#if SquadTour}<SquadTour />{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'honors'}
       {#if OwnerHonors}{#key appState.honorsVisit}<OwnerHonors visitTeam={appState.honorsVisit} />{/key}{:else}{@render waiting()}{/if}
     {:else if appState.screen === 'team'}

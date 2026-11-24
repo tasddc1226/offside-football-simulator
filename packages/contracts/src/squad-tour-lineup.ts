@@ -9,6 +9,7 @@ import {
   tourCapMax,
   tourEligible,
   tourPlain,
+  tourStarterOk,
   type TourCard,
   type TourRule,
 } from './squad-tour.js';
@@ -29,6 +30,10 @@ export const tourPickCard = (c: TourPick): TourCard => ({
 export const tourPlayable = (rules: readonly TourRule[], c: TourPick, season: number): boolean =>
   rules.every((r) => tourEligible(r, tourPickCard(c), season));
 
+/** 선발로 세울 수 있는가: 그 경기에 뛸 수 있고 이번 시즌 카드다. */
+export const tourStartable = (rules: readonly TourRule[], c: TourPick, season: number): boolean =>
+  tourStarterOk(c, season) && tourPlayable(rules, c, season);
+
 /** 강화 OVR을 빼고 재는 경기면 강화 단계를 0으로 본 자리 실력. */
 export const tourSlotRating = (
   slot: Parameters<typeof slotRating>[0],
@@ -37,7 +42,7 @@ export const tourSlotRating = (
 ): number => slotRating(slot, tourPlain(rules) ? { ...c, enhance: 0 } : c);
 
 /**
- * 자동 편성: 뛸 수 있는 카드로 자리 실력이 높은 조합부터 놓는다(욕심쟁이). 선발 전체 제한(같은 유형 · 국적 · 리그 인원)을 넘기지
+ * 자동 편성: 선발로 세울 수 있는(이번 시즌) 카드로 자리 실력이 높은 조합부터 놓는다(욕심쟁이). 선발 전체 제한(같은 유형 · 국적 · 리그 인원)을 넘기지
  * 않고, 용병보다 못한 자리는 비워 둔다(현지 용병이 뛴다). 실력이 같으면 내 카드를 세운다.
  */
 export function tourAutoPick(
@@ -48,7 +53,7 @@ export function tourAutoPick(
   merc: number,
 ): (string | null)[] {
   const slots = FORMATIONS[formation];
-  const pool = cards.filter((c) => tourPlayable(rules, c, season));
+  const pool = cards.filter((c) => tourStartable(rules, c, season));
   const pairs: { i: number; c: TourPick; r: number }[] = [];
   slots.forEach((slot, i) => {
     for (const c of pool) {

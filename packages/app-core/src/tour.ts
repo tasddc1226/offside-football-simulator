@@ -17,9 +17,12 @@ import {
   tourCapBlocked,
   tourPlayable,
   tourSlotRating,
+  tourStartable,
   type TourPick,
 } from '@offside/contracts/squad-tour-lineup';
 import { DAY_MS, KST_MS } from '@offside/contracts/kst';
+import { clubById } from '@offside/game/clubs';
+import { tn } from '@offside/game/i18n/names';
 import { tourText as L } from './i18n/ko/tour.js';
 import { leagueName } from './market.js';
 
@@ -95,6 +98,12 @@ export const tourStageName = (stage: number): string =>
       ? L.stageNo({ n: stage })
       : L.endless({ n: stage - TOUR_MAIN_STAGES });
 
+/** T-11-827 그 경기의 상대 구단(엠블럼용 구단과 화면 이름). 서버가 구단을 주지 않으면 null이고 화면은 '상대'로 쓴다. */
+export function tourOppClub(stage: Pick<TourStage, 'club'> | null | undefined) {
+  const club = stage?.club ? clubById(stage.club) : null;
+  return club ? { club, name: tn(club.name) } : null;
+}
+
 /** 이번 주가 끝날 때까지 남은 일 · 시간(다음 월요일 0시, 한국 시간). */
 export function tourWeekLeft(now: string): { d: number; h: number } {
   const end = Date.parse(`${tourWeekOf(now)}T00:00:00.000Z`) - KST_MS + 7 * DAY_MS;
@@ -154,52 +163,90 @@ export function tourCells(
   });
 }
 
-/** 선수 고르기 목록의 한 줄: 그 자리에 세울 때의 실력과 못 세우는 이유. */
-export type TourOption = { id: string; rating: number; blocked: 'rule' | 'cap' | null };
+/** 그 카드를 선발로 못 세우는 이유: 지난 시즌 카드(season) · 그 경기 출전 제한(rule) · 인원 제한(cap). */
+export type TourBlock = 'season' | 'rule' | 'cap' | null;
+
+/** 라커룸의 한 줄: 내 카드 한 장의 실력과 지금 있는 곳, 선발로 못 세우는 이유. */
+export type TourLockerRow = {
+  id: string;
+  /** 고른 자리가 있으면 그 자리 실력, 없으면 가장 잘 맞는 자리 실력. */
+  rating: number;
+  /** 선발 자리 번호(-1 = 선발 아님). */
+  at: number;
+  bench: boolean;
+  /** 선발로 세울 수 없는 이유(교체 명단에는 playable이면 넣을 수 있다). */
+  blocked: TourBlock;
+  /** 그 경기에 뛸 수 있는가(교체 명단 가능 여부). */
+  playable: boolean;
+};
 
 /**
- * 그 자리(slot 번호)에 세울 수 있는 내 카드 목록(자리 실력 높은 순). 이미 다른 자리 · 교체 명단에 있는 카드는 뺀다. 제한 때문에 못
- * 뛰는 카드는 이유와 함께 뒤에 둔다.
+ * 라커룸 목록(팀 그라운드와 같은 방식으로 고른다). slot이 있으면 그 자리 실력 순, 없으면 가장 잘 맞는 자리 실력 순이고, 선발로 못
+ * 세우는 카드는 뒤에 둔다. 인원 제한은 그 카드가 지금 서 있는 자리 · 고른 자리의 선수를 빼고 센다.
  */
-export function tourOptions(
+export function tourLocker(
   draft: TourDraft,
-  i: number,
   picks: readonly TourPick[],
   rules: readonly TourRule[],
   season: number,
-): TourOption[] {
-  const slot = FORMATIONS[draft.formation][i]!;
-  const taken = new Set([...draft.slotIds.filter((_, k) => k !== i), ...draft.bench]);
+  slot: number | null = null,
+): TourLockerRow[] {
+  const slots = FORMATIONS[draft.formation];
   const byId = new Map(picks.map((p) => [p.id, p]));
-  const on = draft.slotIds
-    .filter((id, k): id is string => id !== null && k !== i)
-    .map((id) => byId.get(id))
-    .filter((p): p is TourPick => !!p);
   return picks
-    .filter((p) => !taken.has(p.id))
-    .map((p): TourOption => ({
-      id: p.id,
-      rating: tourSlotRating(slot, p, rules),
-      blocked: !tourPlayable(rules, p, season)
-        ? 'rule'
-        : tourCapBlocked(rules, on, p)
-          ? 'cap'
-          : null,
-    }))
+    .map((p): TourLockerRow => {
+      const at = draft.slotIds.indexOf(p.id);
+      const on = draft.slotIds
+        .filter((id, k): id is string => id !== null && k !== slot && k !== at)
+        .map((id) => byId.get(id))
+        .filter((x): x is TourPick => !!x);
+      const playable = tourPlayable(rules, p, season);
+      return {
+        id: p.id,
+        rating:
+          slot !== null
+            ? tourSlotRating(slots[slot]!, p, rules)
+            : Math.max(...slots.map((sl) => tourSlotRating(sl, p, rules))),
+        at,
+        bench: draft.bench.includes(p.id),
+        playable,
+        blocked: !playable
+          ? 'rule'
+          : !tourStartable(rules, p, season)
+            ? 'season'
+            : tourCapBlocked(rules, on, p)
+              ? 'cap'
+              : null,
+      };
+    })
     .sort((a, b) => Number(!!a.blocked) - Number(!!b.blocked) || b.rating - a.rating);
 }
 
-/** 교체 명단에 넣을 수 있는 카드(선발 · 명단에 없는, 뛸 수 있는 카드. 최고 OVR 순). */
-export function tourBenchOptions(
-  draft: TourDraft,
-  picks: readonly TourPick[],
-  rules: readonly TourRule[],
-  season: number,
-): TourPick[] {
-  const taken = new Set([...draft.slotIds, ...draft.bench]);
-  return picks
-    .filter((p) => !taken.has(p.id) && tourPlayable(rules, p, season))
-    .sort((a, b) => b.peak - a.peak);
+/**
+ * 카드를 선발 자리 i에 세운다. 그 카드가 다른 선발 자리에 있었으면 두 자리를 맞바꾸고, 교체 명단에 있었으면 명단에서 뺀다.
+ * id가 null이면 자리를 비운다(현지 용병이 뛴다).
+ */
+export function tourAssign(draft: TourDraft, i: number, id: string | null): TourDraft {
+  const slotIds = [...draft.slotIds];
+  const from = id === null ? -1 : slotIds.indexOf(id);
+  if (from >= 0) slotIds[from] = slotIds[i] ?? null;
+  slotIds[i] = id;
+  return {
+    ...draft,
+    slotIds,
+    bench: id === null ? draft.bench : draft.bench.filter((x) => x !== id),
+  };
+}
+
+/** 카드를 교체 명단에 넣거나 뺀다. 선발에 있던 카드는 자리를 비우고 명단으로 간다. 명단이 꽉 찼으면 그대로 둔다. */
+export function tourToggleBench(draft: TourDraft, id: string): TourDraft {
+  if (draft.bench.includes(id)) return { ...draft, bench: draft.bench.filter((x) => x !== id) };
+  if (draft.bench.length >= TOUR_LIVE.bench) return draft;
+  return {
+    ...draft,
+    slotIds: draft.slotIds.map((x) => (x === id ? null : x)),
+    bench: [...draft.bench, id],
+  };
 }
 
 /** 작전 타임 화면에서 자리마다: 지금 체력과 그만큼 깎인 실력. */
