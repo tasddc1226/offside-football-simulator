@@ -446,6 +446,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '카드 강화 열기',
     desc: '1이면 카드 강화 시도를 받는다. 0이면 닫는다(이미 올린 단계의 효과는 그대로다)',
   },
+  tourOpen: {
+    group: 'team',
+    label: '원정 투어 열기',
+    desc: '1이면 원정 투어 도전과 주간 순위를 받는다. 0이면 닫는다(쌓인 진행 · 순위는 그대로 남는다)',
+  },
   enhanceCostScale: {
     group: 'team',
     label: '카드 강화 비용 배율',

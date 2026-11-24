@@ -6,12 +6,14 @@ import type {
 } from '@offside/contracts';
 import type { Db } from '../client.js';
 import { MATCH_INCOME_KINDS_SQL } from './matchIncome.js';
+import { TOUR_FEE_KIND } from './squadTour.js';
 
 // T-11-153 구단 자금 대조(운영 도구). 잔액(owner_funds)이 기록 세 곳에서 다시 계산한 값과 같은지 본다.
 //   방출(cards.released_value, 키운 사람 = careers.profile_id) + 은퇴 장려금(cards.bonus_value, T-11-163)
 //   + 판매(market_listings 가격 − 수수료)
 //   − 영입(market_listings 가격) − 구단 자금으로 산 것(owner_item_purchases) − 카드 강화(card_enhance_log, T-11-373)
 //   + 랭크 경기 수입(T-11-823, owner_fund_ledger의 match_income · match_income_ad 줄 — 출처 표가 따로 없다)
+//     · 원정 투어 대전료(T-11-825, tour_fee 줄)
 // 운영자가 열 때만 읽는다. 전체 대조는 세 기록을 한 번씩 훑는다. 방출 · 장려금은 그 값이 있는 카드만 담은 부분 인덱스에서
 // 출발해 커리어를 기본 키로 찾고(커리어 26만 행을 돌지 않는다), 구단주별 합은 한 번만 계산해 요약 · 어긋난 목록을 함께
 // 만든다(T-11-493). 전체 행은 Worker로 보내지 않는다(T-11-493b).
@@ -36,7 +38,7 @@ const sums = (one: boolean) => {
            UNION ALL
            SELECT profile_id, cost FROM card_enhance_log WHERE 1 = 1${w('profile_id')}) GROUP BY 1),
   g AS (SELECT profile_id pid, sum(delta) v FROM owner_fund_ledger
-         WHERE kind IN (${MATCH_INCOME_KINDS_SQL})${w('profile_id')} GROUP BY 1),
+         WHERE kind IN (${MATCH_INCOME_KINDS_SQL}, '${TOUR_FEE_KIND}')${w('profile_id')} GROUP BY 1),
   x AS (SELECT f.profile_id profileId, p.nickname, f.balance,
                coalesce(r.v, 0) released, coalesce(r.bonus, 0) bonus, coalesce(s.v, 0) sold, coalesce(s.fee, 0) fees,
                coalesce(b.v, 0) bought, coalesce(i.v, 0) items, coalesce(g.v, 0) matchIncome
@@ -153,7 +155,7 @@ export async function fundsOwner(db: Db, q: string): Promise<AdminFundsOwner | n
            SELECT 'item', 'enhance', -cost, created_at FROM card_enhance_log WHERE profile_id = ?1
            UNION ALL
            SELECT 'match', NULL, delta, created_at FROM owner_fund_ledger
-            WHERE profile_id = ?1 AND kind IN (${MATCH_INCOME_KINDS_SQL}))
+            WHERE profile_id = ?1 AND kind IN (${MATCH_INCOME_KINDS_SQL}, '${TOUR_FEE_KIND}'))
          ORDER BY at DESC LIMIT ?2`,
       )
       .bind(pid, MOVES_LIMIT),

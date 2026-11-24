@@ -84,6 +84,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivRewardFrom: 'Division rewards start season',
   teamDivMinMatches: 'Division rewards: minimum matches',
   enhanceOpen: 'Card enhance: open',
+  tourOpen: 'Away tour: open',
   enhanceCostScale: 'Card enhance: cost multiplier',
   enhanceRateScale: 'Card enhance: success rate multiplier',
   teamDivReward3: 'Pro II season reward rerolls',

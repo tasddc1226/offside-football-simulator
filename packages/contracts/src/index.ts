@@ -252,3 +252,4 @@ export * from './card-exchange.js';
 export * from './card-exchange-rules.js';
 export * from './best11.js';
 export * from './admin-schedules.js';
+export * from './squad-tour-api.js';

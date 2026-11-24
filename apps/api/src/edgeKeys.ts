@@ -52,6 +52,8 @@ export const EDGE = {
   seasonGauge: '/v1/season/gauge',
   hofDetail: (careerId: string) => `/v1/hof/${careerId}`,
   /** T-11-463 시즌 BEST 11(시즌 id를 푼 경로). 자리 주인이 바뀌면 지운다. */
+  /** T-11-825 원정 투어 주간 순위(주마다 하나). 이긴 경기가 마감되면 지운다. */
+  tourRanking: (week: string) => `/v1/tour/ranking?week=${week}`,
   best11: (season: number) => `/v1/best11?season=${season}`,
   hofList: (
     limit: number,

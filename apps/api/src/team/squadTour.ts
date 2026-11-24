@@ -31,6 +31,10 @@ import {
 /** AI 구단이 쓰는 포메이션(주 · 경기 번호로 고른다). */
 const AI_FORMATIONS: readonly FormationId[] = ['4-3-3', '4-4-2', '3-5-2'];
 
+/** n번째 경기 AI 구단의 포메이션(tourOpponent와 같은 값). */
+export const tourOppFormation = (week: string, stage: number): FormationId =>
+  AI_FORMATIONS[Math.floor(rngOf(seedOf(`tour:${week}:${stage}`))() * AI_FORMATIONS.length)]!;
+
 /** n번째 경기의 AI 구단 선발. 자리 실력은 목표 평균 ±2 안에서 흩고 합을 목표에 맞춘다. 같은 주 · 같은 경기면 모두에게 같다. */
 export function tourOpponent(week: string, stage: number): LineupSlot[] {
   const rng = rngOf(seedOf(`tour:${week}:${stage}`));

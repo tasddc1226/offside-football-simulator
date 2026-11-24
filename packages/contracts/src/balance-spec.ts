@@ -580,6 +580,13 @@ export const BALANCE_SPEC = {
     max: 1,
     step: 1,
   },
+  // T-11-825 원정 투어(주간 스쿼드 챌린지). 화면이 나가기 전에는 닫아 둔다. 1이면 도전 · 순위를 받는다.
+  tourOpen: {
+    def: 0,
+    min: 0,
+    max: 1,
+    step: 1,
+  },
   enhanceCostScale: {
     def: 1,
     min: 0.1,

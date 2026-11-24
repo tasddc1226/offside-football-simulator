@@ -2665,3 +2665,59 @@ export const storePurchaseLedger = sqliteView('store_purchase_ledger', {
     price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM iap_purchases
   UNION ALL SELECT 'ad_free', store, transaction_id, profile_id, product_id, test, created_at, purchased_at,
     price_milliunits, currency, storefront, refunded_at, first_touch_id, last_touch_id FROM iap_ad_free_purchases`);
+
+/**
+ * T-11-825 원정 투어 주간 진행(구단주 · 주마다 한 줄). week는 한국 시각 월요일 날짜. cleared는 이긴 경기 수(경기는 차례로만 간다),
+ * score는 이긴 경기 점수의 합, tries는 그 주에 쓴 도전 수다. tries_at_score · reached_at은 마지막으로 이긴 순간의 값이라 그 뒤에
+ * 진 경기로는 순위가 내려가지 않는다(주간 순위: 점수 → tries_at_score → reached_at). stars_json은 경기 번호 → 별(1~3).
+ */
+export const tourProgress = sqliteTable(
+  'tour_progress',
+  {
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    week: text('week').notNull(),
+    cleared: integer('cleared').notNull().default(0),
+    score: integer('score').notNull().default(0),
+    tries: integer('tries').notNull().default(0),
+    triesAtScore: integer('tries_at_score').notNull().default(0),
+    reachedAt: text('reached_at'),
+    starsJson: text('stars_json').notNull().default('{}'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (t) => [
+    primaryKey({ columns: [t.profileId, t.week] }),
+    index('tour_progress_rank_idx').on(t.week, t.score, t.triesAtScore, t.reachedAt),
+  ],
+);
+
+/**
+ * T-11-825 원정 투어 작전 경기(도전 한 번 = 한 줄). 만들 때 도전권을 쓴다(day는 한국 날짜, 하루 TOUR_TRIES_PER_DAY판). state_json은
+ * 작전 경기 상태와 그때의 카드 값(경기 도중 카드가 팔리거나 강화돼도 결과가 흔들리지 않게 굳힌다). done은 끝난 구간 수로, 작전 타임
+ * 지시를 한 번만 받게 하는 조건에 쓴다. status: live(진행 중, 구단주마다 하나) · won · lost.
+ */
+export const tourMatches = sqliteTable(
+  'tour_matches',
+  {
+    id: text('id').primaryKey(),
+    profileId: text('profile_id')
+      .notNull()
+      .references(() => profiles.id, { onDelete: 'cascade' }),
+    week: text('week').notNull(),
+    stage: integer('stage').notNull(),
+    day: text('day').notNull(),
+    tryNo: integer('try_no').notNull(),
+    status: text('status').notNull(),
+    done: integer('done').notNull().default(0),
+    stateJson: text('state_json').notNull(),
+    createdAt: text('created_at').notNull(),
+    finishedAt: text('finished_at'),
+  },
+  (t) => [
+    index('tour_matches_profile_day_idx').on(t.profileId, t.day),
+    uniqueIndex('tour_matches_live_idx')
+      .on(t.profileId)
+      .where(sql`${t.status} = 'live'`),
+  ],
+);

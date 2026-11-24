@@ -11,6 +11,8 @@ export const fundsHistory: Translation<FundsHistoryMsgs> = {
   bonus: '引退奨励金',
   matchIncome: '試合収入',
   matchGames: (p) => `ランク戦 ${p.n}試合`,
+  tourFee: '遠征ファイトマネー',
+  tourStage: (p) => `遠征ツアー 第${p.n}戦`,
   enhance: 'カード強化',
   sold: '売却',
   fees: (p) => `手数料 ${p.fee} 差引`,

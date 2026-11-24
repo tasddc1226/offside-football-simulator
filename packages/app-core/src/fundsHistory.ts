@@ -1,5 +1,5 @@
 // 구단 자금 내역 화면(웹·앱 공용). 서버가 준 한 줄(FundsHistoryEntry)을 화면 문구로 바꾸고 한국 시각 날짜로 묶는다.
-import { fundsMatchCount } from '@offside/contracts';
+import { fundsMatchCount, fundsTourStage } from '@offside/contracts';
 import type { FundsHistoryEntry, FundsHistoryResponse } from '@offside/contracts';
 import { tn } from '@offside/game/i18n/names';
 import { POS_LABEL } from '@offside/game/pos-label';
@@ -34,30 +34,36 @@ function fundsHistoryRow(
   const { time } = kstParts(e.at);
   // T-11-823 랭크 경기 수입은 하루치가 한 줄이다(id 'match:<날짜>:<경기 수>').
   const games = fundsMatchCount(e.id);
+  // T-11-825 원정 투어 대전료는 이긴 경기마다 한 줄이다(id 'tour:<주>:<경기 번호>').
+  const tour = fundsTourStage(e.id);
   return {
     id: e.id,
     kind: e.kind,
     badge:
       games !== null
         ? H.matchIncome
-        : e.id.startsWith('enhance:')
-          ? H.enhance
-          : e.kind === 'spent'
-            ? M.tradeSpent
-            : e.kind === 'bonus'
-              ? M.tradeBonus
-              : TRADE_LABEL[e.kind],
+        : tour !== null
+          ? H.tourFee
+          : e.id.startsWith('enhance:')
+            ? H.enhance
+            : e.kind === 'spent'
+              ? M.tradeSpent
+              : e.kind === 'bonus'
+                ? M.tradeBonus
+                : TRADE_LABEL[e.kind],
     title:
       games !== null
         ? // 자정을 넘겨 한 번 더 받은 날은 그날 치른 경기가 없다(0경기로 적지 않는다).
           games > 0
           ? H.matchGames({ n: games })
           : H.matchIncome
-        : e.item
-          ? SPEND_LABEL[e.item]
-          : e.card
-            ? `${marketName(e.card, local)} ${tn(POS_LABEL[e.card.pos])} ${e.card.peak}`
-            : '',
+        : tour !== null
+          ? H.tourStage({ n: tour })
+          : e.item
+            ? SPEND_LABEL[e.item]
+            : e.card
+              ? `${marketName(e.card, local)} ${tn(POS_LABEL[e.card.pos])} ${e.card.peak}`
+              : '',
     sub: e.fee ? `${time} · ${H.fees({ fee: fmtValue(e.fee) })}` : time,
     amount: `${e.amount < 0 ? '−' : '+'}${fmtValue(Math.abs(e.amount))}`,
     plus: e.amount >= 0,

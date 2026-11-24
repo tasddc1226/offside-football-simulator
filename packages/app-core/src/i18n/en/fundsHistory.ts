@@ -13,6 +13,8 @@ export const fundsHistory: Translation<FundsHistoryMsgs> = {
   bonus: 'Retirement bonus',
   matchIncome: 'Match income',
   matchGames: (p) => `${p.n} ranked ${p.n === 1 ? 'match' : 'matches'}`,
+  tourFee: 'Away tour fee',
+  tourStage: (p) => `Away tour match ${p.n}`,
   enhance: 'Card enhance',
   sold: 'Sold',
   fees: (p) => `${p.fee} fee taken`,
