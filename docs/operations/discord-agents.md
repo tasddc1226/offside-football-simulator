@@ -41,6 +41,8 @@
    - `DISCORD_APP_ID` · `DISCORD_PUBLIC_KEY` · `DISCORD_GUILD_ID`
    - `OPERATOR_USER_ID`(서버 주인), `DESK_CHANNEL`, `APPROVAL_CHANNEL`, `ALERT_CHANNELS`
 2. 에이전트 Worker를 배포한다(`pnpm --filter @offside/agents exec wrangler deploy`).
+   운영 배포(Production Release)의 `agents-release` 잡이 배포 안 된 `apps/agents` 변경을 찾아 경고하고, 저장소 변수
+   `AGENTS_AUTO_DEPLOY=1`이면 직접 올린다(T-11-824, [운영 배포 런북](production-release.md) 13번).
 3. 개발자 포털 General Information의 **Interactions Endpoint URL**에 `https://agents.offside-lab.com/discord/interactions`를 넣고 저장한다. 디스코드가 서명한 확인 요청을 보내 통과해야 저장된다.
 
 ## 3. 채널 · 웹훅 · 비밀값 (운영자가 한 번 실행)

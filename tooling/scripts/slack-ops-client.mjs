@@ -57,7 +57,12 @@ export async function sendSlack(url, message, fetcher = fetch) {
   });
   if (!r.ok) throw new Error(`Notify delivery failed (HTTP ${r.status})`);
 }
-export async function productionDb(env = process.env, fetcher = fetch) {
+/** name: 운영 D1 이름. 기본은 게임 DB(offside-production), 운영 지표 · 앱 오류는 offside-ops-production(T-11-824). */
+export async function productionDb(
+  env = process.env,
+  fetcher = fetch,
+  name = 'offside-production',
+) {
   if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_API_TOKEN)
     throw new Error('Cloudflare monitoring credentials unavailable');
   const base = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(env.CLOUDFLARE_ACCOUNT_ID)}/d1/database`;
@@ -82,7 +87,7 @@ export async function productionDb(env = process.env, fetcher = fetch) {
     }
     return v.result;
   };
-  const db = (await request(`${base}?per_page=100`)).find((x) => x.name === 'offside-production');
+  const db = (await request(`${base}?per_page=100`)).find((x) => x.name === name);
   if (!db?.uuid) throw new Error('Production database unavailable');
   const query = async (sql, params = []) => {
     const rows = await request(`${base}/${encodeURIComponent(db.uuid)}/query`, { sql, params });
