@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest';
 import {
   TOUR,
+  TOUR_LIVE,
   TOUR_MAIN_STAGES,
   TOUR_POOL,
+  TOUR_TACTICS,
+  tourAiTactic,
   tourCapKey,
+  tourDrained,
   tourEligible,
+  tourFatigue,
   tourFee,
   tourLineupOk,
   tourRankCompare,
   tourRules,
   tourScore,
+  tourTacticEdge,
   type TourCard,
 } from './squad-tour.js';
 
@@ -89,5 +95,32 @@ describe('원정 투어 규칙', () => {
     expect(tourFee(TOUR_MAIN_STAGES) / total).toBeLessThanOrEqual(0.25);
     expect(tourScore(3, 5, 1)).toBe(380);
     expect(tourScore(3, -1, 2)).toBe(300);
+  });
+
+  it('전술마다 둘에게 강하고 둘에게 약하며 상성은 서로 반대다', () => {
+    for (const a of TOUR_TACTICS) {
+      const edges = TOUR_TACTICS.map((b) => tourTacticEdge(a, b));
+      expect(edges.filter((e) => e === 1).length, a).toBe(2);
+      expect(edges.filter((e) => e === -1).length, a).toBe(2);
+      for (const b of TOUR_TACTICS) expect(tourTacticEdge(a, b) + tourTacticEdge(b, a)).toBe(0);
+    }
+    expect(tourTacticEdge('possession', 'counter')).toBe(1);
+    expect(tourTacticEdge('press', 'counter')).toBe(-1);
+    expect(tourTacticEdge('wings', 'park')).toBe(1);
+  });
+
+  it('체력은 전방 압박에서 가장 빨리 빠지고, 지치기 전에는 실력이 깎이지 않는다', () => {
+    expect(tourDrained(100, 'press')).toBeLessThan(tourDrained(100, 'possession'));
+    expect(tourDrained(100, 'park')).toBeGreaterThan(tourDrained(100, 'possession'));
+    expect(tourDrained(5, 'press')).toBe(0);
+    expect(tourFatigue(100)).toBe(0);
+    expect(tourFatigue(TOUR_LIVE.stamina.tiredAt)).toBe(0);
+    expect(tourFatigue(50)).toBeGreaterThan(0);
+  });
+
+  it('AI 구단은 지고 있으면 전방 압박, 이기고 있으면 밀집 수비, 비기면 시작 전술이다', () => {
+    expect(tourAiTactic('wings', -1)).toBe('press');
+    expect(tourAiTactic('wings', 2)).toBe('park');
+    expect(tourAiTactic('wings', 0)).toBe('wings');
   });
 });

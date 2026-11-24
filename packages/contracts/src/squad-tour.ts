@@ -265,3 +265,66 @@ export function tourRules(week: string, stage: number): TourRule[] {
   }
   return [mainRules(week)[stage - 1]!];
 }
+
+/**
+ * 작전(원정 투어 전용). 경기를 TOUR_LIVE.segments 구간으로 나눠 치르고, 구간 사이 작전 타임마다 전술을 바꾸거나 선수를 교체한다.
+ * 랭크 · 리그 · 컵 경기에는 쓰지 않는다.
+ */
+export const TOUR_TACTICS = ['press', 'possession', 'wings', 'counter', 'park'] as const;
+export type TourTactic = (typeof TOUR_TACTICS)[number];
+
+/**
+ * 조절 수치.
+ * - lines: 전술이 내 줄 힘에 더하는 값(공격 · 중원 · 수비). 합이 0 근처라 전술만으로 강해지지 않는다.
+ * - drain: 한 구간에 빠지는 체력 배율(기본 stamina.drain에 곱한다)
+ * - edge: 상성에서 앞선 쪽의 기대 득점은 (1 + edge)배, 밀린 쪽은 (1 − edge)배
+ * - stamina: 구간마다 drain만큼 빠지고, tiredAt 아래로 내려간 1점마다 자리 실력이 perPoint만큼 깎인다. 교체로 들어온 선수는 100.
+ * - bench · subs: 교체 명단 수와 한 경기 교체 횟수
+ * - choiceSec: 작전 타임 제한 시간(초). 지나면 그대로 이어 간다.
+ */
+export const TOUR_LIVE = {
+  segments: 3,
+  lines: {
+    press: { atk: 2, mid: 1, def: -2 },
+    possession: { atk: 0, mid: 2, def: 0 },
+    wings: { atk: 1.5, mid: -1, def: 0 },
+    counter: { atk: 1, mid: -2, def: 1 },
+    park: { atk: -3, mid: 0, def: 3 },
+  },
+  drain: { press: 1.5, possession: 1, wings: 1.1, counter: 0.85, park: 0.8 },
+  edge: 0.08,
+  stamina: { drain: 22, tiredAt: 75, perPoint: 0.3 },
+  bench: 5,
+  subs: 3,
+  choiceSec: 45,
+} as const satisfies {
+  lines: Record<TourTactic, { atk: number; mid: number; def: number }>;
+  drain: Record<TourTactic, number>;
+  [k: string]: unknown;
+};
+
+/**
+ * 상성: 전술마다 둘에게 강하고 둘에게 약하다(TOUR_TACTICS 순서에서 뒤의 둘에게 강하다).
+ * 전방 압박 > 점유 · 측면, 점유 > 측면 · 역습, 측면 > 역습 · 밀집, 역습 > 밀집 · 전방 압박, 밀집 > 전방 압박 · 점유.
+ * 내가 앞서면 1, 밀리면 -1, 같은 전술이면 0.
+ */
+export function tourTacticEdge(mine: TourTactic, theirs: TourTactic): -1 | 0 | 1 {
+  const n = TOUR_TACTICS.length;
+  const d = (TOUR_TACTICS.indexOf(theirs) - TOUR_TACTICS.indexOf(mine) + n) % n;
+  return d === 0 ? 0 : d <= 2 ? 1 : -1;
+}
+
+/** 체력 st인 선수의 자리 실력에서 깎는 값. */
+export const tourFatigue = (st: number): number =>
+  Math.max(0, TOUR_LIVE.stamina.tiredAt - st) * TOUR_LIVE.stamina.perPoint;
+
+/** 그 전술로 한 구간을 뛴 뒤의 체력. */
+export const tourDrained = (st: number, tactic: TourTactic): number =>
+  Math.max(0, st - TOUR_LIVE.stamina.drain * TOUR_LIVE.drain[tactic]);
+
+/**
+ * AI 구단의 경기 운영(경기 전 상대 분석에 그대로 보여 준다): 작전 타임에 지고 있으면 전방 압박, 이기고 있으면 밀집 수비로 바꾸고,
+ * 비기고 있으면 시작 전술로 돌아간다.
+ */
+export const tourAiTactic = (start: TourTactic, goalDiff: number): TourTactic =>
+  goalDiff < 0 ? 'press' : goalDiff > 0 ? 'park' : start;

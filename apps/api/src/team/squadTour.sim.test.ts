@@ -3,10 +3,13 @@
 //   TOUR_SIM_DATA=/path/cards.jsonl pnpm --filter @offside/api exec vitest run src/team/squadTour.sim.test.ts
 import { readFileSync, writeFileSync } from 'node:fs';
 import { describe, it } from 'vitest';
-import type { FormationId } from '@offside/contracts/owner-team';
+import { FORMATIONS, slotRating, type FormationId } from '@offside/contracts/owner-team';
 import type { PosGroup, DetailPos, PeakProfile } from '@offside/contracts/positions';
 import {
   TOUR,
+  TOUR_LIVE,
+  TOUR_TACTICS,
+  tourEligible,
   tourFee,
   tourMerc,
   tourOpp,
@@ -14,15 +17,28 @@ import {
   tourRules,
   tourScore,
   type TourRule,
+  type TourTactic,
 } from '@offside/contracts/squad-tour';
 import { filledCount, lineupOvr, rngOf, seedOf, type LineupCareer } from './sim.js';
 import {
   playTourMatch,
   tourAutoSlots,
+  tourCardOf,
   tourLineup,
   tourOpponent,
   tourWinChance,
 } from './squadTour.js';
+import {
+  applyTourOrder,
+  playTourSegment,
+  startTourLive,
+  tourLiveChance,
+  tourLiveMine,
+  tourLiveOver,
+  tourLiveResult,
+  tourOppTactic,
+  type TourLive,
+} from './squadTourLive.js';
 
 const DATA = process.env.TOUR_SIM_DATA;
 const SEASON = 2;
@@ -303,6 +319,107 @@ describe.skipIf(!DATA)('원정 투어 시뮬레이션', () => {
         `  활성 ${ACTIVE}명 가운데 ${f0(part * 100)}% 참여: 주 ${f1((weekly * part) / 1e8)}조 = 하루 ${f1((weekly * part) / 1e8 / 7)}조`,
       );
     if (process.env.TOUR_SIM_OUT) writeFileSync(process.env.TOUR_SIM_OUT, log.join('\n'));
+    else console.log(log.join('\n'));
+  });
+
+  // 작전 경기(구간 · 전술 · 체력 · 교체)가 승률을 얼마나 움직이는지: 한 판 계산 · 손대지 않는 구단주 · 잘 고르는 구단주.
+  it.skipIf(!process.env.TOUR_SIM_LIVE)('작전 경기 승률', { timeout: 1_800_000 }, () => {
+    const owners = load(DATA!);
+    const N = Number(process.env.TOUR_SIM_N ?? 80);
+    const log = [
+      `구단주 ${owners.length}명, 경기마다 ${N}판. 손대지 않음 = 점유로 시작해 그대로, 잘 고름 = 경기 전 · 작전 타임마다 가망이 가장 높은 전술 + 지친 자리 교체`,
+      '주 | 경기 | 상대 전술 | 한 판 계산 p50 | 손대지 않음 p10/p50/p90 | 잘 고름 p10/p50/p90 | 차이 p50(%p) | 교체 수 평균 | 대역별 잘 고름(<85 85-89 90-93 94-97 98+)',
+    ];
+    for (const week of WEEKS.slice(0, 2)) {
+      for (const stage of (process.env.TOUR_SIM_STAGES ?? '3,5,6,7,8').split(',').map(Number)) {
+        const rules = tourRules(week, stage);
+        const merc = tourMerc(stage);
+        const opp = tourOpponent(week, stage);
+        const oppTactic = tourOppTactic(week, stage);
+        const rows = owners.map((o) => {
+          const slotIds = tourAutoSlots(o.formation, o.cards, rules, SEASON, merc);
+          const used = new Set(slotIds);
+          const slots = FORMATIONS[o.formation];
+          // 교체 명단: 뛸 수 있는 남은 카드 가운데 어느 자리든 가장 잘 맞는 다섯 장.
+          const bench = o.cards
+            .filter(
+              (c) => !used.has(c.id) && rules.every((r) => tourEligible(r, tourCardOf(c), SEASON)),
+            )
+            .map((c) => ({ c, best: Math.max(...slots.map((sl) => slotRating(sl, c))) }))
+            .sort((a, b) => b.best - a.best)
+            .slice(0, TOUR_LIVE.bench)
+            .map((x) => x.c.id);
+          const byId = new Map(o.cards.map((c) => [c.id, c]));
+          const start = (seed: string, tactic: TourTactic) =>
+            startTourLive({
+              seed,
+              season: SEASON,
+              formation: o.formation,
+              slotIds,
+              bench,
+              tactic,
+              merc,
+              oppTactic,
+            });
+          const bestTactic = (st: TourLive) =>
+            [...TOUR_TACTICS].sort(
+              (x, y) =>
+                tourLiveChance(st, o.cards, rules, opp, y) -
+                tourLiveChance(st, o.cards, rules, opp, x),
+            )[0]!;
+          let subs = 0;
+          const run = (seed: string, smart: boolean) => {
+            let st = start(seed, 'possession');
+            if (smart) st = { ...st, tactic: bestTactic(st) };
+            while (!tourLiveOver(st)) {
+              st = playTourSegment(st, o.cards, rules, opp);
+              if (tourLiveOver(st) || !smart) continue;
+              // 지친 자리에 더 나은 교체 카드가 있으면 바꾼다(2점 넘게 오를 때만, 좋은 것부터).
+              for (let k = 0; k < st.subsLeft; k++) {
+                const mine = tourLiveMine(st, o.cards, rules);
+                let pick: { slot: number; cardId: string; gain: number } | null = null;
+                for (const id of st.bench)
+                  mine.forEach((m, i) => {
+                    const gain = slotRating(slots[i]!, byId.get(id)!) - m.rating;
+                    if (gain > 2 && (!pick || gain > pick.gain))
+                      pick = { slot: i, cardId: id, gain };
+                  });
+                if (!pick) break;
+                const next = applyTourOrder(st, { subs: [pick] }, o.cards, rules);
+                if (typeof next === 'string') break;
+                st = next;
+                subs++;
+              }
+              st = { ...st, tactic: bestTactic(st) };
+            }
+            return tourLiveResult(st, o.cards, rules, opp).win;
+          };
+          const mine0 = tourLineup(o.formation, slotIds, o.cards, rules, merc);
+          let base = 0;
+          let idle = 0;
+          let smart = 0;
+          for (let k = 0; k < N; k++) {
+            const seed = `${week}:${stage}:${o.id}:${k}`;
+            if (playTourMatch(seed, mine0, opp, SEASON, ATK_K).win) base++;
+            if (run(seed, false)) idle++;
+            if (run(seed, true)) smart++;
+          }
+          return { o, base: base / N, idle: idle / N, smart: smart / N, subs: subs / N };
+        });
+        const q = (f: (r: (typeof rows)[number]) => number, p: number) =>
+          f0(100 * pct(rows.map(f), p));
+        log.push(
+          `${week} | ${stage} | ${oppTactic} | ${q((r) => r.base, 0.5)} | ${q((r) => r.idle, 0.1)}/${q((r) => r.idle, 0.5)}/${q((r) => r.idle, 0.9)} | ${q((r) => r.smart, 0.1)}/${q((r) => r.smart, 0.5)}/${q((r) => r.smart, 0.9)} | ${f1(
+            100 *
+              pct(
+                rows.map((r) => r.smart - r.idle),
+                0.5,
+              ),
+          )} | ${f1(avg(rows.map((r) => r.subs)))} | ${BANDS.map((b) => f0(100 * avg(rows.filter((r) => band(r.o.ovr) === b).map((r) => r.smart)))).join(' ')}`,
+        );
+      }
+    }
+    if (process.env.TOUR_SIM_OUT) writeFileSync(`${process.env.TOUR_SIM_OUT}.live`, log.join('\n'));
     else console.log(log.join('\n'));
   });
 
