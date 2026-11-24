@@ -2,7 +2,7 @@ import { rankedMatchProgress } from './rankedMatchProgress.js';
 // T-11-387 장면 경기 시작 · 장면 판정 · 마감. 랭크 경기 라우트(routes/ownerTeam.ts)와 5분 cron(마감 안 된 경기 정리)이 같이 쓴다.
 import type { PlayTeamMatchResponse, TeamMatchEvent } from '@offside/contracts';
 import { MOMENT_RULES } from '@offside/contracts/team-moments';
-import { matchScore } from '@offside/contracts/owner-team';
+import { matchScore, rankMatchIncome } from '@offside/contracts/owner-team';
 import { matchRatingChange } from './rank.js';
 import type { Db } from '../db/client.js';
 import {
@@ -202,6 +202,7 @@ export async function finalizeLive(
     events: result.events.map(storedEvent),
     moments: p.state.moments.filter((m) => m.shown).map(viewOf),
   };
+  const income = rankMatchIncome(result.homeGoals > result.awayGoals, balance);
   const head = {
     id: row.id,
     homeTeamId: home.id,
@@ -224,6 +225,7 @@ export async function finalizeLive(
     ...rankedMatchProgress(p.season, home, score, delta.home, divisions),
     matchesLeft: p.left,
     matchesNextAt: p.nextAt ?? null,
+    ...(income > 0 ? { income } : {}),
   };
   try {
     await commitNotifiedEvent(
@@ -249,6 +251,7 @@ export async function finalizeLive(
           detail,
           now: row.createdAt,
           divisions,
+          income,
         }),
         markLiveDone(db, row.id, JSON.stringify(p), JSON.stringify(response), now),
       ],

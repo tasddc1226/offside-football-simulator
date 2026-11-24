@@ -44,7 +44,7 @@
     <button class="icon-btn" data-act="refresh-funds" onclick={load}>새로고침</button>
   </div>
   <p class="muted fs-xs" style="margin:0">
-    잔액 = 방출 + 판매(수수료 뺀) − 영입 − 구단 자금으로 산 것(리롤권 · 광고 대신 보상). 차이가 0이 아니면 기록 밖에서 잔액이
+    잔액 = 방출 + 장려금 + 판매(수수료 뺀) + 경기 수입 − 영입 − 구단 자금으로 산 것(리롤권 · 광고 대신 보상). 차이가 0이 아니면 기록 밖에서 잔액이
     바뀐 구단주예요.
   </p>
   <LoadState {status} failText="구단 자금 대조를 불러오지 못했어요." retry={load}>
@@ -57,6 +57,7 @@
       <dt>방출로 들어옴</dt><dd>{fundsText(r.released)}</dd>
       <dt>은퇴 장려금</dt><dd data-funds-bonus>{fundsText(r.bonus)}</dd>
       <dt>판매(수수료 뺀)</dt><dd>{fundsText(r.sold)}</dd>
+      <dt>랭크 경기 수입</dt><dd data-funds-match>{fundsText(r.matchIncome ?? 0)}</dd>
       <dt>영입</dt><dd>{fundsText(r.bought)}</dd>
       <dt>수수료로 없어짐</dt><dd>{fundsText(r.fees)}</dd>
       {#each Object.entries(r.items) as [item, v] (item)}
@@ -84,7 +85,7 @@
     <div class="owner" data-funds-owner={owner.profileId}>
       <b>{owner.nickname ?? '닉네임 없음'} <small class="muted">{owner.profileId}</small></b>
       <p class="fs-sm" style="margin:0">
-        잔액 {fundsText(owner.balance)} = 방출 {fundsText(owner.released)} + 장려금 {fundsText(owner.bonus)} + 판매 {fundsText(owner.sold)} − 영입
+        잔액 {fundsText(owner.balance)} = 방출 {fundsText(owner.released)} + 장려금 {fundsText(owner.bonus)} + 판매 {fundsText(owner.sold)} + 경기 {fundsText(owner.matchIncome ?? 0)} − 영입
         {fundsText(owner.bought)} − 사용 {fundsText(owner.items)}
         <b class:bad={owner.diff !== 0}>{owner.diff === 0 ? '· 일치' : `· 차이 ${signedFunds(owner.diff)}`}</b>
       </p>

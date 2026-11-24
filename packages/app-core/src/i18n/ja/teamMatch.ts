@@ -145,6 +145,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   recordChip: (p) => `マイチーム戦績 ${p.record}`,
   ratingChange: 'マイチームのレーティング ',
   ratingChangeRp: 'マイチームのRP ',
+  incomeChip: (p) => `試合収入 +${p.amount}`,
   backHistory: '記録に戻る',
   backDefaultApp: 'マイチーム',
   replay: '実況をもう一度見る',

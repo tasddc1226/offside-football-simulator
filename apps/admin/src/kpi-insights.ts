@@ -184,6 +184,8 @@ const FUND_KIND: Record<string, string> = {
   market_sale: '이적시장 판매',
   release: '방출',
   manager_release: '감독 방출',
+  match_income: '랭크 경기 수입',
+  match_income_ad: '랭크 경기 수입(한 번 더)',
 };
 export const fundKindName = (k: string) => FUND_KIND[k] ?? k;
 

@@ -36,4 +36,9 @@ export const ad: Translation<AdMsgs> = {
   attendFree: 'Get it again',
   attendWatch: 'Watch the ad to the end to get the reward again.',
   attendFail: 'Could not get it. Please try again in a moment.',
+  incomeAd: 'Watch an ad to get it again',
+  incomeFree: 'Get it again',
+  incomeWatch: 'Watch the ad to the end to get the income again.',
+  incomeFail: 'Could not get it. Please try again in a moment.',
+  incomeGot: (p: { amount: string }) => `Match income received again +${p.amount}`,
 };

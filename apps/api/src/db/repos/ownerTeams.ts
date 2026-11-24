@@ -1022,6 +1022,9 @@ export function divisionSql(rating: SQL, rules: DivisionRules): SQL {
   return sql`max(${band(0)}, min(${ownerTeams.division}, ${band(rules.guard)}))`;
 }
 
+/** T-11-823 구단 자금 거래 기록(owner_fund_ledger.kind)에서 랭크 경기 수입. 내역 · 대조가 이 줄을 출처로 읽는다. */
+export const MATCH_INCOME_KIND = 'match_income';
+
 /** 경기 한 판을 남기고 두 팀 전적·레이팅·디비전·연승·득실(+ 다시 계산한 선발 수·OVR)을 한 batch로 고친다. 행 쓰기 3번. */
 export function recordMatchStatements(
   db: Db,
@@ -1034,8 +1037,12 @@ export function recordMatchStatements(
     now: string;
     /** T-11-375 디비전 경계 · 강등 보호(활성 밸런스). */
     divisions: DivisionRules;
+    /** T-11-823 경기를 건 구단주가 받는 구단 자금(만 원, 중계권료 + 승리 수당). 0이면 주지 않는다. */
+    income?: number;
   },
 ) {
+  const income = Math.max(0, Math.round(input.income ?? 0));
+  const raw = (sql: string, params: unknown[]) => ({ toSQL: () => ({ sql, params }) });
   const bump = (me: Side, them: Side) => {
     const won = me.goals > them.goals;
     const margin = me.goals - them.goals;
@@ -1073,7 +1080,22 @@ export function recordMatchStatements(
     }),
     bump(input.home, input.away),
     bump(input.away, input.home),
-  ] as const;
+    // T-11-823 경기 수입. 경기 기록과 같은 batch라 같은 경기를 두 번 마감해도(기본 키 충돌) 한 번만 들어간다.
+    ...(income > 0
+      ? [
+          raw(
+            `INSERT INTO owner_funds (profile_id, balance, updated_at) VALUES (?, ?, ?)
+             ON CONFLICT (profile_id) DO UPDATE SET balance = balance + excluded.balance, updated_at = excluded.updated_at`,
+            [input.profileId, income, input.now],
+          ),
+          raw(
+            `INSERT INTO owner_fund_ledger (profile_id, kind, delta, balance, ref, created_at)
+             VALUES (?, '${MATCH_INCOME_KIND}', ?, (SELECT balance FROM owner_funds WHERE profile_id = ?), ?, ?)`,
+            [input.profileId, income, input.profileId, input.id, input.now],
+          ),
+        ]
+      : []),
+  ];
 }
 
 const newestFirst = (a: TeamMatchRow, b: TeamMatchRow) =>

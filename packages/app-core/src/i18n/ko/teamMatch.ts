@@ -155,6 +155,7 @@ const ko = {
   recordChip: (p: { record: string }) => `내 팀 전적 ${p.record}`,
   ratingChange: '내 팀 레이팅 ',
   ratingChangeRp: '내 팀 RP ',
+  incomeChip: (p: { amount: string }) => `경기 수입 +${p.amount}`,
   backHistory: '기록으로 돌아가기',
   backDefaultApp: '내 팀',
   replay: '중계 다시 보기',

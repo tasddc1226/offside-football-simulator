@@ -56,6 +56,8 @@ const ko = {
   leagueFatigue: '리그 체력',
   leagueHomeAdv: '리그 홈 이점',
   teamMatchRechargeMin: '랭크 경기 충전 간격(분)',
+  rankMatchIncome: '랭크 중계권료(만 원)',
+  rankWinIncome: '랭크 승리 수당(만 원)',
   rerollPrice: '리롤권 가격',
   rerollPriceGrowth: '리롤권 가격 상승 배율',
   rerollDailyCap: '하루 리롤권 구매 수',

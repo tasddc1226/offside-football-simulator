@@ -11,6 +11,8 @@ export const fundsHistory: Translation<FundsHistoryMsgs> = {
   spending: 'Money out',
   released: 'Released',
   bonus: 'Retirement bonus',
+  matchIncome: 'Match income',
+  matchGames: (p) => `${p.n} ranked ${p.n === 1 ? 'match' : 'matches'}`,
   enhance: 'Card enhance',
   sold: 'Sold',
   fees: (p) => `${p.fee} fee taken`,
@@ -18,7 +20,7 @@ export const fundsHistory: Translation<FundsHistoryMsgs> = {
   spent: 'Spent from funds',
   log: 'History',
   empty:
-    'No club funds have moved yet. Release players you raised or sell them on the market to earn funds.',
+    'No club funds have moved yet. Play ranked matches or release players you raised to earn funds.',
   more: 'Show more',
   loadFail: "Couldn't load the history.",
   retry: 'Try again',

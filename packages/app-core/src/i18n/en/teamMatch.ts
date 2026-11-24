@@ -145,6 +145,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   recordChip: (p) => `Team record ${p.record}`,
   ratingChange: 'Team rating ',
   ratingChangeRp: 'Team RP ',
+  incomeChip: (p) => `Match income +${p.amount}`,
   backHistory: 'Back to history',
   backDefaultApp: 'My team',
   replay: 'Watch commentary again',

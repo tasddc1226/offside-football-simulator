@@ -42,6 +42,12 @@ const ko = {
   attendFree: '한 번 더 받기',
   attendWatch: '광고를 끝까지 봐야 한 번 더 받을 수 있어요.',
   attendFail: '받지 못했어요. 잠시 뒤 다시 눌러 주세요.',
+  // T-11-823 랭크 경기 수입 한 번 더 받기(경기마다 한 번).
+  incomeAd: '광고 보고 한 번 더 받기',
+  incomeFree: '한 번 더 받기',
+  incomeWatch: '광고를 끝까지 봐야 한 번 더 받을 수 있어요.',
+  incomeFail: '받지 못했어요. 잠시 뒤 다시 눌러 주세요.',
+  incomeGot: (p: { amount: string }) => `경기 수입을 한 번 더 받았어요 +${p.amount}`,
 };
 
 export type AdMsgs = typeof ko;

@@ -465,6 +465,8 @@ export const PlayTeamMatchResponseSchema = z.strictObject({
   matchesLeft: z.number().int().min(0),
   /** 하루 경기를 다 치렀을 때 다음 1경기가 열리는 시각. 배포 전 응답엔 없다. */
   matchesNextAt: z.string().nullable().optional(),
+  /** T-11-823 이 경기로 받은 구단 자금(만 원, 중계권료 + 승리 수당). 받지 않았거나 배포 전 응답엔 없다. */
+  income: z.number().int().min(0).optional(),
   /**
    * T-11-387 장면 경기를 시작했으면 고를 장면들. 이때 match는 장면을 뺀 지금까지의 골만 담고, record · rating은 경기 전
    * 값이다. 마지막 장면을 고르거나 마감하면 TeamMomentResponse.final로 결과가 온다.
@@ -472,6 +474,17 @@ export const PlayTeamMatchResponseSchema = z.strictObject({
   live: TeamLiveSchema.optional(),
 });
 export type PlayTeamMatchResponse = z.infer<typeof PlayTeamMatchResponseSchema>;
+
+/**
+ * T-11-823 POST /v1/owner-team/matches/:id/income-bonus — 앱에서 광고를 보고(광고 제거 · 멤버십은 바로) 그 경기 수입을 한 번 더
+ * 받은 결과. amount는 이번에 더 받은 구단 자금(만 원), 이미 받았으면 0이고 taken이 true다.
+ */
+export const MatchIncomeBonusResponseSchema = z.strictObject({
+  amount: z.number().int().min(0),
+  balance: z.number().int().min(0),
+  taken: z.boolean(),
+});
+export type MatchIncomeBonusResponse = z.infer<typeof MatchIncomeBonusResponseSchema>;
 
 /** 장면 하나를 고른 결과. goals는 이 장면에서 난 골, final은 경기가 끝났을 때의 경기 결과다. */
 export const TeamMomentResponseSchema = z.strictObject({

@@ -1,4 +1,5 @@
 // 구단 자금 내역 화면(웹·앱 공용). 서버가 준 한 줄(FundsHistoryEntry)을 화면 문구로 바꾸고 한국 시각 날짜로 묶는다.
+import { fundsMatchCount } from '@offside/contracts';
 import type { FundsHistoryEntry, FundsHistoryResponse } from '@offside/contracts';
 import { tn } from '@offside/game/i18n/names';
 import { POS_LABEL } from '@offside/game/pos-label';
@@ -31,21 +32,32 @@ function fundsHistoryRow(
   local: ReadonlyMap<string, string>,
 ): FundsHistoryRow {
   const { time } = kstParts(e.at);
+  // T-11-823 랭크 경기 수입은 하루치가 한 줄이다(id 'match:<날짜>:<경기 수>').
+  const games = fundsMatchCount(e.id);
   return {
     id: e.id,
     kind: e.kind,
-    badge: e.id.startsWith('enhance:')
-      ? H.enhance
-      : e.kind === 'spent'
-        ? M.tradeSpent
-        : e.kind === 'bonus'
-          ? M.tradeBonus
-          : TRADE_LABEL[e.kind],
-    title: e.item
-      ? SPEND_LABEL[e.item]
-      : e.card
-        ? `${marketName(e.card, local)} ${tn(POS_LABEL[e.card.pos])} ${e.card.peak}`
-        : '',
+    badge:
+      games !== null
+        ? H.matchIncome
+        : e.id.startsWith('enhance:')
+          ? H.enhance
+          : e.kind === 'spent'
+            ? M.tradeSpent
+            : e.kind === 'bonus'
+              ? M.tradeBonus
+              : TRADE_LABEL[e.kind],
+    title:
+      games !== null
+        ? // 자정을 넘겨 한 번 더 받은 날은 그날 치른 경기가 없다(0경기로 적지 않는다).
+          games > 0
+          ? H.matchGames({ n: games })
+          : H.matchIncome
+        : e.item
+          ? SPEND_LABEL[e.item]
+          : e.card
+            ? `${marketName(e.card, local)} ${tn(POS_LABEL[e.card.pos])} ${e.card.peak}`
+            : '',
     sub: e.fee ? `${time} · ${H.fees({ fee: fmtValue(e.fee) })}` : time,
     amount: `${e.amount < 0 ? '−' : '+'}${fmtValue(Math.abs(e.amount))}`,
     plus: e.amount >= 0,
@@ -70,11 +82,12 @@ export function fundsHistoryDays(
   return days;
 }
 
-/** 위쪽 합계: 들어온 자금(방출 · 은퇴 장려금 · 판매)과 나간 자금(영입 · 구단 자금 사용). 합은 부호를 붙이고(0이면 없이), 0인 줄은 뺀다. */
+/** 위쪽 합계: 들어온 자금(방출 · 은퇴 장려금 · 판매 · 경기 수입)과 나간 자금(영입 · 구단 자금 사용). 합은 부호를 붙이고(0이면 없이), 0인 줄은 뺀다. */
 export function fundsHistoryTotals(t: FundsHistoryResponse['totals']) {
   const line = (label: string, v: number) => ({ label, value: fundsText(v) });
   const signed = (sign: string, v: number) => (v > 0 ? `${sign}${fundsText(v)}` : fundsText(0));
-  const income = t.released + t.bonus + t.sold;
+  const matchIncome = t.matchIncome ?? 0;
+  const income = t.released + t.bonus + t.sold + matchIncome;
   const spending = t.bought + t.spent;
   return {
     income: {
@@ -83,6 +96,7 @@ export function fundsHistoryTotals(t: FundsHistoryResponse['totals']) {
         ...(t.released ? [line(H.released, t.released)] : []),
         ...(t.bonus ? [line(H.bonus, t.bonus)] : []),
         ...(t.sold ? [line(H.sold, t.sold)] : []),
+        ...(matchIncome ? [line(H.matchIncome, matchIncome)] : []),
       ],
     },
     spending: {

@@ -36,4 +36,9 @@ export const ad: Translation<AdMsgs> = {
   attendFree: '再領一次',
   attendWatch: '看完廣告才能再領一次。',
   attendFail: '無法領取，請稍後再按一次。',
+  incomeAd: '看廣告再領一次',
+  incomeFree: '再領一次',
+  incomeWatch: '看完廣告才能再領一次。',
+  incomeFail: '無法領取，請稍後再按一次。',
+  incomeGot: (p: { amount: string }) => `已再領一次比賽收入 +${p.amount}`,
 };

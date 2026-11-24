@@ -1,0 +1,35 @@
+{
+  "id": "t-11-823-rank-match-income",
+  "title": "랭크 경기 수입",
+  "items": [
+    "랭크 경기를 걸면 경기마다 구단 자금을 받아요. 중계권료 3억 원에, 이기면 승리 수당 2억 원이 더해져요.",
+    "받은 금액은 경기 결과에 바로 나오고, 구단 자금 내역에서 하루치를 모아 볼 수 있어요. 경기를 받은 쪽은 받지 않아요.",
+    "앱에서는 경기 결과에서 광고를 보고 그 경기 수입을 한 번 더 받을 수 있어요. 광고 제거 · 클럽 멤버십이 있으면 광고 없이 바로 받아요."
+  ],
+  "en": {
+    "title": "Ranked match income",
+    "items": [
+      "You now earn club funds for every ranked match you start: a ₩300M broadcast fee, plus a ₩200M win bonus when you win.",
+      "The amount shows on the match result, and Club funds history groups each day's total. The team that was challenged gets nothing.",
+      "In the app, watch an ad on the match result to get that match's income once more. With Remove Ads or Club Membership you get it right away."
+    ]
+  },
+  "ja": {
+    "title": "ランク戦の収入",
+    "items": [
+      "ランク戦を挑むと、1試合ごとにクラブ資金を受け取れます。放映権料3億ウォンに、勝てば勝利手当2億ウォンが加わります。",
+      "受け取った金額は試合結果にすぐ表示され、クラブ資金の履歴で1日分をまとめて確認できます。挑まれた側は受け取りません。",
+      "アプリでは試合結果で広告を見ると、その試合の収入をもう一回受け取れます。広告削除・クラブメンバーシップがあれば広告なしですぐ受け取れます。"
+    ]
+  },
+  "zh": {
+    "title": "排名賽收入",
+    "items": [
+      "發起排名賽時，每場都能獲得俱樂部資金：轉播費 3 億韓元，獲勝再加 2 億韓元勝利獎金。",
+      "獲得的金額會直接顯示在比賽結果中，也能在俱樂部資金紀錄裡查看每天的合計。被挑戰的一方不會獲得。",
+      "在 App 中，可在比賽結果看廣告再領一次該場收入。擁有移除廣告或俱樂部會員則直接領取。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

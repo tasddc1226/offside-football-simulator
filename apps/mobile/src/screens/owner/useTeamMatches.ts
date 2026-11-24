@@ -49,6 +49,8 @@ export function useTeamMatches({
   const [result, setResult] = useState<TeamMatch | null>(null);
   /** T-11-375 방금 치른 경기의 디비전 전후(결과 화면 승격 · 강등), 받은 경기로 바뀐 디비전 알림. */
   const [divisionShift, setDivisionShift] = useState<DivisionShift | null>(null);
+  /** T-11-823 방금 마감한 랭크 경기로 받은 구단 자금(만 원). 기록에서 연 경기 · 친선전은 null. */
+  const [income, setIncome] = useState<number | null>(null);
   /** T-11-722 방금 마감한 경기에 보일 연패 안내(기록에서 연 경기 · 친선전은 null). */
   const [streakHint, setStreakHint] = useState<StreakHint | null>(null);
   /** 방금 치른 경기(또는 '다시 보기')를 문자중계로 보여 주는 중(T-10-097). */
@@ -59,6 +61,7 @@ export function useTeamMatches({
   function openHistoryMatch(m: TeamMatch) {
     setResultOrigin('history');
     setDivisionShift(null);
+    setIncome(null);
     setStreakHint(null);
     setResult(m);
     setLiveMoments(undefined);
@@ -114,6 +117,7 @@ export function useTeamMatches({
     // T-11-375 승격 · 강등 띠는 마감한 결과에만 온다(장면 경기 시작 응답에는 없다).
     const shift = r.division ?? null;
     setDivisionShift(shift);
+    setIncome(r.income ?? null);
     if (shift) markDivisionSeen(season, shift.to);
     setTeam((t) =>
       t
@@ -140,6 +144,7 @@ export function useTeamMatches({
   /** 친구 칸에서 친선전을 치렀거나(중계부터) 최근 친선전을 열 때(결과부터). 친선전은 레이팅·전적을 건드리지 않는다. */
   function showFriendly(m: TeamMatch, withLive: boolean) {
     setDivisionShift(null);
+    setIncome(null);
     setStreakHint(null);
     setResultOrigin('opponents');
     setResult(m);
@@ -159,6 +164,7 @@ export function useTeamMatches({
     playing,
     result,
     divisionShift,
+    income,
     streakHint,
     live,
     setLive,

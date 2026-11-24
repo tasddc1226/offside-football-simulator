@@ -56,6 +56,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   leagueFatigue: '聯賽體力',
   leagueHomeAdv: '聯賽主場優勢',
   teamMatchRechargeMin: '排名賽恢復間隔（分鐘）',
+  rankMatchIncome: '排名賽轉播費（萬韓元）',
+  rankWinIncome: '排名賽勝利獎金（萬韓元）',
   rerollPrice: '重抽券價格',
   rerollPriceGrowth: '重抽券價格上漲倍率',
   rerollDailyCap: '每日重抽券購買數',

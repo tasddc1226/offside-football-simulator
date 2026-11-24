@@ -137,6 +137,7 @@ export const teamMatch: Translation<TeamMatchMsgs> = {
   recordChip: (p) => `我的球隊戰績 ${p.record}`,
   ratingChange: '我的球隊積分 ',
   ratingChangeRp: '我的球隊 RP ',
+  incomeChip: (p) => `比賽收入 +${p.amount}`,
   backHistory: '返回紀錄',
   backDefaultApp: '我的球隊',
   replay: '重看直播',
