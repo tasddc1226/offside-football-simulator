@@ -3,7 +3,7 @@ import type { TourMsgs } from '../ko/tour';
 
 export const tour: Translation<TourMsgs> = {
   entryTitle: '遠征巡迴賽',
-  entrySub: '每週挑戰一組新的 AI 球會',
+  entrySub: '每週挑戰一組新的 AI 俱樂部',
   entryAria: '開啟遠征巡迴賽',
   title: '遠征巡迴賽',
   lead: '每場比賽的出場限制都不同。用手上的卡牌組隊，贏了就能前往下一場。',
@@ -99,7 +99,7 @@ export const tour: Translation<TourMsgs> = {
   again: '再次挑戰',
   loseHint: '可以更換陣容或戰術後再次挑戰',
   rankingTitle: '每週排名',
-  rankingEmpty: '尚無球會上榜',
+  rankingEmpty: '尚無俱樂部上榜',
   rankingCleared: (p) => `通過 ${p.n} 場`,
   rankingLead: '分數相同時，挑戰次數較少者在前，其次為先達成者',
   rankingFail: '無法載入每週排名。',
