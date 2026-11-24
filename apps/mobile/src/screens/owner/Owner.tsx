@@ -46,7 +46,9 @@ import { ownerText as L } from '@offside/app-core/i18n/ko/owner';
 import { accountText as A } from '@offside/app-core/i18n/ko/account';
 import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
 import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
+import { tourText as TR } from '@offside/app-core/i18n/ko/tour';
 import { CardExchange } from './CardExchange';
+import { SquadTour } from './SquadTour';
 import { SeasonPass } from './SeasonPass';
 import { seasonPassText as SP } from '@offside/app-core/i18n/ko/seasonPass';
 import { passEntryOpen, SEASON_PASS_IOS_LIVE } from '@offside/contracts/season-pass';
@@ -272,6 +274,9 @@ export default function Owner() {
   const [admin, setAdmin] = useState(false);
   // T-11-374 카드 과제 창.
   const [exchangeOpen, setExchangeOpen] = useState(false);
+  // T-11-825 원정 투어 창. 입구는 밸런스 tourOpen이 켜졌을 때만(내 팀 응답에 실려 온다).
+  const [tourOn, setTourOn] = useState(false);
+  const [tourOpen, setTourOpen] = useState(false);
   const [passOpen, setPassOpen] = useState(() => takeFocus('seasonPass'));
   // T-11-770b 광고 자리의 멤버십 안내로 들어왔으면 멤버십 창을 연 채로 시작한다(한 번만 읽힌다).
   const [memberOpen, setMemberOpen] = useState(() => takeFocus('membership'));
@@ -337,8 +342,10 @@ export default function Owner() {
     let alive = true;
     void track(fetchOwnerTeam()).then((r) => {
       if (!alive) return;
-      if (r.ok) setCard(ownerTeamCard(r.data));
-      else setCardFailed(true);
+      if (r.ok) {
+        setCard(ownerTeamCard(r.data));
+        setTourOn(!!r.data.tourOpen);
+      } else setCardFailed(true);
     });
     void track(fetchMarketFunds()).then((r) => alive && r.ok && setMarket(r.data));
     return () => {
@@ -620,6 +627,16 @@ export default function Owner() {
                 fresh={XC.entryNew}
                 onPress={() => setExchangeOpen(true)}
               />
+              {tourOn ? (
+                <Tile
+                  testID="tour"
+                  label={TR.entryAria}
+                  title={TR.entryTitle}
+                  sub={TR.entrySub}
+                  fresh={XC.entryNew}
+                  onPress={() => setTourOpen(true)}
+                />
+              ) : null}
               <Tile
                 testID="manager"
                 label={MG.entryAria}
@@ -649,6 +666,7 @@ export default function Owner() {
         </View>
       ) : null}
       {exchangeOpen ? <CardExchange onClose={() => setExchangeOpen(false)} /> : null}
+      {tourOpen ? <SquadTour onClose={() => setTourOpen(false)} /> : null}
 
       {linked && (passEntry || memberEntry) ? (
         // T-11-567 시즌 패스 · 클럽 멤버십은 한 카드에 두 줄로.

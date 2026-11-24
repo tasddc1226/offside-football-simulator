@@ -397,7 +397,7 @@
           {#each benchLeft as id (id)}
             {@const p = byId.get(id)}
             {#if p}
-              <button class="st-opt" disabled={outSlot === null} data-tour-sub-in={id} onclick={() => pickIn(id)}>
+              <button class="st-opt" class:on={outSlot !== null} aria-disabled={outSlot === null} data-tour-sub-in={id} onclick={() => pickIn(id)}>
                 <PlayerCard player={p} name={marketName(p, local)} rating={p.peak} role={outSlot !== null ? FORMATIONS[match.formation][outSlot]! : (p.dpos ?? FORMATIONS[match.formation][0]!)} mini />
               </button>
             {/if}
@@ -481,7 +481,9 @@
   .st-node.next .st-badge {border-color:var(--accent-text);color:var(--accent-text);}
   .st-node-body {gap:6px;padding:12px;border-radius:var(--radius-md);border:1px solid var(--line);background:var(--surface);min-width:0;}
   .st-node.next .st-node-body {border-color:var(--accent-text);}
-  .st-node.locked .st-node-body {opacity:.6;}
+  /* 잠긴 경기는 흐리게 하지 않는다(글자 대비). 점선 테두리와 옅은 배경으로 구분한다. */
+  .st-node.locked .st-node-body {border-style:dashed;background:var(--surface-2);}
+  .st-node.locked .st-fee {color:var(--muted);}
   .st-node-top {display:flex;justify-content:space-between;align-items:center;gap:8px;}
   .st-stars {color:var(--warn);letter-spacing:2px;}
   .st-stars i {font-style:normal;color:var(--line);}
@@ -502,7 +504,8 @@
   .st-tactic {display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-height:56px;padding:8px 12px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:inherit;font:inherit;text-align:left;cursor:pointer;}
   .st-tactic.on {border:2px solid var(--accent-text);}
   .st-tactic small {font-size:12px;}
-  .st-cta {min-height:52px;position:sticky;bottom:0;}
+  /* 아래에 붙는 버튼은 뒤 내용이 비치지 않게 창 배경색 띠를 두른다. */
+  .st-cta {min-height:52px;position:sticky;bottom:0;box-shadow:0 0 0 12px var(--surface);}
   .st-score {font-size:3rem;line-height:1;text-align:center;}
   .st-segs {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;}
   .st-segs i {height:6px;border-radius:999px;background:var(--chalk);opacity:.35;}
