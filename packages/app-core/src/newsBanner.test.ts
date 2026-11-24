@@ -13,6 +13,7 @@ const EXPECTED: Record<Screen, boolean> = {
   owner: true,
   honors: true,
   players: true,
+  tour: false,
   team: true,
   market: true,
   funds: true,

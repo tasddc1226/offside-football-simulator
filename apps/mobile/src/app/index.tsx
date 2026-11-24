@@ -40,6 +40,7 @@ import Team from '../screens/owner/Team';
 import Market from '../screens/owner/Market';
 import FundsHistory from '../screens/owner/FundsHistory';
 import Shop from '../screens/owner/Shop';
+import SquadTour from '../screens/owner/SquadTour';
 import Manager from '../screens/owner/Manager';
 import Cup from '../screens/owner/CupScreen';
 import League from '../screens/league/LeagueScreen';
@@ -68,6 +69,8 @@ const SCREENS: Record<Screen, ComponentType> = {
   funds: FundsHistory,
   // T-11-567 상점(구단주 화면의 상점 칸으로 연다).
   shop: Shop,
+  // T-11-826 원정 투어(구단주 화면의 원정 투어 칸으로 연다).
+  tour: SquadTour,
   // T-11-310 감독 커리어(구단주 화면의 감독 커리어 카드로 연다).
   manager: Manager,
   // T-11-128 구단주 시즌 결산(구단주 화면의 결산 카드로 연다).

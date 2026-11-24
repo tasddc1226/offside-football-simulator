@@ -1,8 +1,13 @@
 <script lang="ts">
-  // T-11-825 원정 투어(내 구단 화면 '원정 투어' 칸으로 연다). 열 때 투어 홈과 내 팀(선수 목록, 1분 메모)만 받는다. 사다리 · 제한 ·
+  // T-11-825 원정 투어(내 구단 화면 '원정 투어' 칸으로 연다, T-11-826부터 전용 화면). 열 때 투어 홈과 내 팀(선수 목록, 1분 메모)만 받는다. 사다리 · 제한 ·
   // 자동 편성은 contracts 계산이라 따로 부르지 않는다. 여정 지도 → 편성(상대 분석 · 선발 · 교체 명단 · 전술) → 작전 경기(30분 ·
   // 60분 작전 타임) → 결과. 주간 순위는 탭을 열 때만 받는다. 그라운드 · 선수 카드는 팀 화면의 것을 그대로 쓴다.
-  import PopSheet from '../PopSheet.svelte';
+  // 경기는 서버가 30분씩 계산해 돌려주고, 화면은 그 30분을 시계와 함께 다시 보여 준다(골 순간에 멈춘다). 감속 모션이면 바로 결과를 보여 준다.
+  import { onDestroy, tick } from 'svelte';
+  import CountUp from '../CountUp.svelte';
+  import { go } from '../nav.js';
+  import { goBack } from '../history.svelte.js';
+  import { buzz, motionOK } from '../motion.js';
   import TeamPitch from '../team/TeamPitch.svelte';
   import PlayerCard from '../team/PlayerCard.svelte';
   import type { TeamPlayer } from '@offside/app-core/api/team';
@@ -40,7 +45,6 @@
   import { tourText as L } from '@offside/app-core/i18n/ko/tour';
   import { playSfx } from '../sfx.js';
 
-  const { onclose }: { onclose: () => void } = $props();
   const local = localCareerNames();
 
   type View = 'map' | 'prep' | 'live' | 'result' | 'rank' | 'history';
@@ -63,6 +67,7 @@
     if (!draftFormation && team.data.team) draftFormation = team.data.team.formation;
     if (t.data.live) {
       match = t.data.live;
+      clock = t.data.live.done * SEG;
       resetOrder();
       view = 'live';
     }
@@ -89,6 +94,7 @@
   function openStage(s: TourStage) {
     if (!tour) return;
     stage = s;
+    justWon = null;
     draft = tourAutoDraft(s, picks, tour.season, draftFormation ?? '4-3-3');
     slotOpen = null;
     benchOpen = false;
@@ -119,6 +125,7 @@
     const slotIds = [...draft.slotIds];
     slotIds[slotOpen] = id;
     draft = { ...draft, slotIds };
+    flash(slotOpen);
     slotOpen = null;
   }
   function toggleBench(id: string) {
@@ -137,11 +144,11 @@
       error = r.error.message || L.departFail;
       return;
     }
-    playSfx('reward');
     match = r.data.match;
     if (tour) tour = { ...tour, triesLeft: r.data.triesLeft };
     resetOrder();
     view = 'live';
+    void playSegment();
   }
 
   // ── 작전 경기 ──
@@ -198,13 +205,105 @@
     match = r.data.match;
     if (tour) tour = { ...tour, triesLeft: r.data.triesLeft };
     resetOrder();
-    if (match.status !== 'live') {
-      if (match.status === 'won') playSfx('reward');
-      view = 'result';
-      // 진행 · 순위 · 별이 바뀌었다(지시 요청이 메모를 비웠다).
-      const t = await fetchTour();
-      if (t.ok) tour = t.data;
+    // 끝난 경기면 진행 · 순위 · 별이 바뀌었다(지시 요청이 메모를 비웠다). 재생하는 동안 받아 둔다.
+    if (match.status !== 'live') void fetchTour().then((t) => t.ok && (tour = t.data));
+    void playSegment();
+  }
+
+  // ── 경기 재생 ── 방금 계산된 30분을 시계로 흘려 보낸다. 골이 난 분에 멈춰 득점자를 보여 주고 점수를 올린다.
+  type Goal = TourMatchView['events'][number];
+  const SEG = 90 / TOUR_LIVE.segments;
+  const MIN_MS = 210;
+  const GOAL_MS = 1900;
+  let playing = $state(false);
+  let kickoff = $state(false);
+  let clock = $state(0);
+  let banner = $state<Goal | null>(null);
+  // 골 장면 도중에 점수가 올라간다.
+  let scored = $state(false);
+  let run = 0;
+  const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+  onDestroy(() => run++);
+  function endSegment() {
+    playing = false;
+    kickoff = false;
+    banner = null;
+    if (!match) return;
+    clock = match.done * SEG;
+    if (match.status === 'live') return playSfx('whistle');
+    if (match.status === 'won') justWon = match.stage;
+    playSfx(match.status === 'won' ? 'trophy' : 'fulltime');
+    view = 'result';
+  }
+  async function playSegment() {
+    if (!match) return;
+    const id = ++run;
+    const to = match.done * SEG;
+    const from = to - SEG;
+    if (!motionOK) return endSegment();
+    playing = true;
+    clock = from;
+    if (from === 0) {
+      kickoff = true;
+      playSfx('found');
+      await wait(1500);
+      if (id !== run) return;
+      kickoff = false;
     }
+    const goals = match.events.filter((e) => e.minute > from && e.minute <= to);
+    for (let m = from + 1; m <= to; m++) {
+      await wait(MIN_MS);
+      if (id !== run) return;
+      clock = m;
+      for (const g of goals.filter((e) => e.minute === m)) {
+        scored = false;
+        banner = g;
+        playSfx(g.side === 'away' ? 'good' : 'bad');
+        buzz(g.side === 'away' ? 30 : 10);
+        await wait(700);
+        if (id !== run) return;
+        scored = true;
+        await wait(GOAL_MS - 700);
+        if (id !== run) return;
+        banner = null;
+      }
+    }
+    await wait(400);
+    if (id === run) endSegment();
+  }
+  function skip() {
+    run++;
+    endSegment();
+  }
+  // 재생 중에는 시계까지 난 골만 센다. home이 상대(AI), away가 나다.
+  const shown = $derived.by(() => {
+    if (!match) return { mine: 0, opp: 0, events: [] as Goal[] };
+    if (!playing) return { mine: match.goalsFor, opp: match.goalsAgainst, events: match.events };
+    const events = match.events.filter((e) => e.minute < clock || (e.minute === clock && (banner !== e || scored)));
+    return { mine: events.filter((e) => e.side === 'away').length, opp: events.filter((e) => e.side === 'home').length, events };
+  });
+  // 골을 넣은 선수의 자리(그라운드에서 빛난다).
+  const scorerSlot = $derived(banner && banner.side === 'away' && banner.scorerId && match ? match.slotIds.indexOf(banner.scorerId) : -1);
+
+  // ── 여정 지도 ── 방금 이긴 경기에는 도장이 찍히고 다음 경기가 열린다(한 번). 지도에 들어오면 다음 경기로 내려간다.
+  let justWon = $state<number | null>(null);
+  let mapEl = $state<HTMLElement>();
+  async function toMap() {
+    view = 'map';
+    await tick();
+    mapEl?.querySelector('[data-state="next"]')?.scrollIntoView({ block: 'center', behavior: motionOK ? 'smooth' : 'auto' });
+  }
+  function back() {
+    if (view === 'map') return goBack(() => go('owner'));
+    void toMap();
+  }
+  // 방금 놓은 자리가 한 번 빛난다.
+  let placed = $state<number | null>(null);
+  let placedTimer: ReturnType<typeof setTimeout> | undefined;
+  function flash(i: number) {
+    placed = i;
+    clearTimeout(placedTimer);
+    placedTimer = setTimeout(() => (placed = null), 700);
   }
   const goalText = (e: TourMatchView['events'][number]) =>
     e.side === 'away' ? (e.scorerId ? nameOf(e.scorerId) : e.scorer) : L.oppGoal;
@@ -232,12 +331,12 @@
   const nextStage = $derived(tour ? (tour.stages.find((s) => s.stage === tour!.cleared + 1) ?? null) : null);
 </script>
 
-<PopSheet label={L.title} step={view} {onclose}>
-  <div class="stack st" data-squad-tour aria-busy={busy}>
+<div class="wrap">
+  <div class="stack st" class:st-dark={view === 'live' || view === 'result'} data-squad-tour data-view={view} aria-busy={busy}>
     <div class="st-head">
-      {#if view === 'prep' || view === 'rank' || view === 'history'}<button class="btn btn-sm st-icon" data-act="tour-back" aria-label={L.back} onclick={() => (view = 'map')}>‹</button>{/if}
-      <h2>{view === 'rank' ? L.rankingTitle : view === 'history' ? L.historyTitle : stage && view === 'prep' ? tourStageName(stage.stage) : L.title}</h2>
-      {#if view !== 'live'}<button class="btn btn-sm st-icon" data-act="tour-close" aria-label={L.close} onclick={onclose}>✕</button>{/if}
+      {#if !playing}<button class="btn btn-sm st-icon" data-act="tour-back" aria-label={L.back} onclick={back}>‹</button>{/if}
+      <h1>{view === 'rank' ? L.rankingTitle : view === 'history' ? L.historyTitle : stage && view === 'prep' ? tourStageName(stage.stage) : match && (view === 'live' || view === 'result') ? tourStageName(match.stage) : L.title}</h1>
+      {#if playing}<button class="btn btn-sm st-ghost" data-act="tour-skip" onclick={skip}>{L.skip}</button>{/if}
     </div>
 
     {#if failed}
@@ -264,10 +363,10 @@
         <span data-tour-tries>{L.triesLeft({ n: tour.triesLeft, max: TOUR_TRIES_PER_DAY })}</span>
       </div>
       <p class="muted st-lead">{L.lead}</p>
-      <ol class="st-map" data-tour-map>
-        {#each tour.stages as s (s.stage)}
+      <ol class="st-map" data-tour-map bind:this={mapEl}>
+        {#each tour.stages as s, k (s.stage)}
           {@const state = tourStageState(s, tour.cleared)}
-          <li class="st-node {state}" data-tour-stage={s.stage} data-state={state}>
+          <li class="st-node {state}" class:fresh={justWon === s.stage} class:unlock={justWon !== null && justWon + 1 === s.stage} style:--i={k} data-tour-stage={s.stage} data-state={state}>
             <div class="st-badge st-num">{state === 'done' ? '✓' : s.stage}</div>
             <div class="stack st-node-body">
               <div class="st-node-top">
@@ -286,6 +385,7 @@
               {:else if state === 'locked'}
                 <small class="muted">{L.locked}</small>
               {/if}
+              {#if justWon !== null && justWon + 1 === s.stage}<small class="st-fee st-unlocked" data-tour-unlocked>{L.unlocked}</small>{/if}
             </div>
           </li>
         {/each}
@@ -316,7 +416,7 @@
         </div>
       </div>
       <small class="muted">{L.pickSlot}</small>
-      <TeamPitch formation={draft.formation} cells={pitchCells} selected={slotOpen} onpick={(i) => { slotOpen = slotOpen === i ? null : i; benchOpen = false; return true; }} />
+      <TeamPitch formation={draft.formation} cells={pitchCells} selected={slotOpen} focus={placed === null ? null : [placed]} onpick={(i) => { slotOpen = slotOpen === i ? null : i; benchOpen = false; return true; }} />
       {#if slotOpen !== null}
         <div class="st-picker" data-tour-options>
           <button class="st-opt" data-act="tour-clear" onclick={() => place(null)}><b>{L.emptySlot}</b><small class="muted">{L.mercName} {stage.merc}</small></button>
@@ -369,30 +469,51 @@
       {#if error}<p class="st-bad" role="alert">{error}</p>{/if}
       <button class="btn btn-primary st-cta" data-act="tour-depart" disabled={busy} onclick={() => void depart()}>{L.depart}</button>
     {:else if (view === 'live' || view === 'result') && match}
-      {@const over = match.status !== 'live'}
-      <div class="stack st-band" data-tour-match data-status={match.status} data-done={match.done}>
+      {@const over = match.status !== 'live' && !playing}
+      <div class="stack st-stage" class:goal={banner?.side === 'away'} class:conceded={banner?.side === 'home'} data-tour-match data-status={match.status} data-done={match.done} data-tour-playing={playing ? '' : undefined}>
         <div class="st-band-top">
-          <span>{tourStageName(match.stage)}</span>
-          <span class="st-gold">{over ? (match.status === 'won' ? L.winTitle : L.loseTitle) : `${L.minute({ n: span.from })} · ${L.timeout}`}</span>
+          <span>{liveStage ? L.fee({ v: fmtValue(liveStage.fee) }) : ''}</span>
+          <span class="st-gold st-live" class:on={playing} data-tour-clock>{over ? (match.status === 'won' ? L.winTitle : L.loseTitle) : playing ? L.minute({ n: clock }) : `${L.minute({ n: span.from })} · ${L.timeout}`}</span>
         </div>
-        <div class="st-score st-num" data-tour-score>{match.goalsAgainst} : {match.goalsFor}</div>
-        <div class="st-segs" aria-hidden="true">{#each Array.from({ length: TOUR_LIVE.segments }, (_, i) => i) as i (i)}<i class:on={i < match.done}></i>{/each}</div>
-        <small>{L.oppNow({ name: tourTacticName(match.oppTactic) })}</small>
+        <div class="st-board">
+          <div class="st-side"><small>{liveStage ? L.oppOvr({ n: liveStage.opp }) : ''}</small><b>{liveStage?.formation ?? ''}</b></div>
+          <div class="st-score st-num" data-tour-score>{#key shown.opp}<span class="st-digit">{shown.opp}</span>{/key} : {#key shown.mine}<span class="st-digit mine">{shown.mine}</span>{/key}</div>
+          <div class="st-side right"><small>{L.vsAway}</small><b>{match.formation}</b></div>
+        </div>
+        <div class="st-clock" aria-hidden="true"><i style:width="{Math.min(100, ((playing ? clock : match.done * SEG) / 90) * 100)}%"></i>{#each [1, 2] as n (n)}<u style:left="{(n * 100) / TOUR_LIVE.segments}%"></u>{/each}</div>
+        <div class="st-call">
+          {#if kickoff}
+            <div class="st-flash" data-tour-kickoff><b>{L.kickoff}</b></div>
+          {:else if banner}
+            <div class="st-flash" class:bad={banner.side === 'home'} role="status" data-tour-goal>
+              <b>{banner.side === 'away' ? L.goalMine : L.goalOpp}</b>
+              <span>{banner.minute}' {goalText(banner)}{#if banner.side === 'away' && banner.assist} · {L.assist({ name: banner.assistId ? nameOf(banner.assistId) : banner.assist })}{/if}</span>
+            </div>
+          {:else}
+            <small>{L.oppNow({ name: tourTacticName(match.oppTactic) })} · {tourTacticName(match.tactic)}</small>
+          {/if}
+        </div>
       </div>
+      {#if playing}
+        <TeamPitch formation={match.formation} cells={livePitch} focus={scorerSlot >= 0 ? [scorerSlot] : null} />
+      {/if}
       <ul class="st-events" data-tour-events>
-        {#each match.events as e, k (k)}
+        {#each shown.events as e, k (k)}
           <li class:mine={e.side === 'away'}><span class="st-num">{e.minute}'</span><span>{goalText(e)}{#if e.side === 'away' && e.assist} · {L.assist({ name: e.assistId ? nameOf(e.assistId) : e.assist })}{/if}</span></li>
         {:else}
-          <li class="muted">{L.noGoals}</li>
+          {#if !playing}<li class="muted">{L.noGoals}</li>{/if}
         {/each}
       </ul>
-      {#if !over}
+      {#if playing}
+        <span></span>
+      {:else if !over}
+        <div class="stack st-talk" data-tour-talk>
         <b>{L.timeout}</b>
         <small class="muted">{L.timeoutLead}</small>
         <div class="st-tactics" role="radiogroup" aria-label={L.timeout}>
           {#each chances as c (c.tactic)}
             <button class="st-tactic" class:on={orderTactic === c.tactic} role="radio" aria-checked={orderTactic === c.tactic} data-tour-tactic={c.tactic} onclick={() => (orderTactic = c.tactic)}>
-              <b>{tourTacticName(c.tactic)}{#if c.tactic === match.tactic} <small class="muted">{L.now}</small>{/if}</b>
+              <b>{tourTacticName(c.tactic)}{#if c.tactic === match.tactic}<small class="st-now">{L.now}</small>{/if}</b>
               <small class={c.diff > 0 ? 'st-good' : c.diff < 0 ? 'st-bad' : 'muted'}>{L.chance({ n: c.pct })}</small>
             </button>
           {/each}
@@ -425,6 +546,7 @@
         {/each}
         {#if error}<p class="st-bad" role="alert">{error}</p>{/if}
         <button class="btn btn-primary st-cta" data-act="tour-continue" disabled={busy} onclick={() => void sendOrder()}>{L.continueBtn(span)}</button>
+        </div>
       {:else}
         {#if match.result}
           {#if match.result.pens}<small class="muted">{L.pens}</small>{/if}
@@ -436,14 +558,15 @@
             </div>
             <div class="st-stats st-gain">
               <div><small>{L.feeGot}</small><b class="st-num st-gold" data-tour-fee>+{fmtValue(match.result.fee)}</b></div>
-              <div><small>{L.scoreGot}</small><b class="st-num">+{match.result.score}</b></div>
+              <div><small>{L.scoreGot}</small><b class="st-num">+<CountUp value={match.result.score} ms={900} /></b></div>
             </div>
+            {#if nextStage}<p class="st-next st-gold" data-tour-next-open>{L.unlocked}</p>{/if}
           {:else}
             <p class="muted">{L.loseHint}</p>
           {/if}
         {/if}
         <div class="st-actions">
-          <button class="btn" data-act="tour-map" onclick={() => (view = 'map')}>{L.toMap}</button>
+          <button class="btn" data-act="tour-map" onclick={() => void toMap()}>{L.toMap}</button>
           {#if nextStage && tour.triesLeft > 0}
             <button class="btn btn-primary" data-act="tour-next" onclick={() => openStage(nextStage)}>{match.status === 'won' ? L.nextStage : L.again}</button>
           {/if}
@@ -486,12 +609,28 @@
       {/if}
     {/if}
   </div>
-</PopSheet>
+</div>
 
 <style>
-  .st {gap:12px;padding:4px 16px 20px;}
+  .st {gap:12px;padding:8px 0 calc(24px + env(safe-area-inset-bottom));min-height:100dvh;box-sizing:border-box;}
+  /* 경기 · 결과는 경기장 조명 아래처럼 어두운 무대에서 본다. */
+  .st {--st-night:color-mix(in srgb, var(--pitch) 42%, #000);}
+  .st-dark {margin-inline:calc(-1 * var(--pad-l)) calc(-1 * var(--pad-r));padding-inline:var(--pad-l) var(--pad-r);background:var(--st-night);color:var(--on-pitch);}
+  .st.st-dark :global(.muted),.st.st-dark .st-result-stars small {color:var(--on-pitch);opacity:.88;}
+  .st-dark .st-icon,.st-dark .btn:not(.btn-primary) {background:transparent;border-color:var(--chalk);color:var(--on-pitch);}
+  .st-dark .st-events li.mine,.st-dark .st-good {color:var(--pitch-accent);}
+  .st-dark .st-bad {color:color-mix(in srgb, var(--bad) 40%, #fff);}
+  .st-dark .st-tactic,.st-dark .st-opt,.st-dark .st-sub {background:rgb(255 255 255 / .06);border-color:var(--chalk);color:var(--on-pitch);}
+  .st-dark .st-tactic.on,.st-dark .st-opt.on {border-color:var(--pitch-accent);}
+  .st-dark .st-cta {box-shadow:0 0 0 12px var(--st-night);}
+  .st-dark .st-result-stars {padding:16px 0;background:radial-gradient(closest-side at 50% 45%, color-mix(in srgb, var(--pitch-accent) 22%, transparent), transparent);}
+  .st-dark .st-result-stars div {color:rgb(255 255 255 / .22);}
+  .st-dark .st-result-stars div.on {color:var(--pitch-accent);text-shadow:0 0 16px color-mix(in srgb, var(--pitch-accent) 55%, transparent);}
+  .st-dark .st-result-stars small {text-shadow:none;opacity:.9;}
+  :global(body:has(.st-dark)) {background:color-mix(in srgb, var(--pitch) 42%, #000);}
   .st-head {display:flex;align-items:center;gap:8px;}
-  .st-head h2 {flex:1;margin:0;font-size:1.1rem;}
+  .st-head {min-height:44px;}
+  .st-head h1 {flex:1;margin:0;font-size:1.2rem;}
   .st-icon {min-width:44px;min-height:44px;font-weight:700;}
   .st-num {font-family:var(--display);font-weight:700;}
   .st-gold {color:var(--pitch-accent);}
@@ -527,7 +666,7 @@
   .st-card {gap:6px;padding:14px;border-radius:var(--radius-md);border:1px solid var(--line);background:var(--surface);}
   .st-tools {display:flex;justify-content:space-between;align-items:center;gap:8px;}
   .st-row {display:flex;gap:8px;}
-  .st-row .btn,.st-tools .btn {min-height:44px;}
+  .st-row .btn,.st-tools .btn {min-height:44px;white-space:nowrap;}
   .st-picker {display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
   .st-picker:empty {display:none;}
   .st-opt {flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:76px;min-height:44px;padding:6px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:inherit;font:inherit;cursor:pointer;}
@@ -539,8 +678,38 @@
   .st-tactic.on {border:2px solid var(--accent-text);}
   .st-tactic small {font-size:12px;}
   /* 아래에 붙는 버튼은 뒤 내용이 비치지 않게 창 배경색 띠를 두른다. */
-  .st-cta {min-height:52px;position:sticky;bottom:0;box-shadow:0 0 0 12px var(--surface);}
-  .st-score {font-size:3rem;line-height:1;text-align:center;}
+  .st-cta {min-height:52px;margin-top:12px;position:sticky;bottom:calc(12px + env(safe-area-inset-bottom));box-shadow:0 0 0 12px var(--bg);}
+  .st-stage {position:relative;gap:10px;padding:16px;border-radius:var(--radius-md);background:radial-gradient(120% 90% at 50% -20%, color-mix(in srgb, var(--pitch) 70%, #fff) 0%, var(--pitch) 60%);color:var(--on-pitch);overflow:hidden;}
+  .st-stage.goal {animation:st-glow 1.9s ease-out both;}
+  .st-stage.conceded {animation:st-shake .5s ease-out both;}
+  .st-board {display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}
+  .st-side {display:flex;flex-direction:column;gap:2px;font-size:13px;}
+  .st-side.right {align-items:flex-end;}
+  .st-side small {font-size:11px;opacity:.8;}
+  .st-score {font-size:3.4rem;line-height:1;text-align:center;}
+  .st-digit {display:inline-block;animation:st-tick .45s cubic-bezier(.2,.9,.3,1.3) both;}
+  .st-digit.mine {color:var(--pitch-accent);}
+  .st-clock {position:relative;height:6px;border-radius:999px;background:rgb(255 255 255 / .2);}
+  .st-clock i {position:absolute;inset:0 auto 0 0;border-radius:999px;background:var(--pitch-accent);transition:width .2s linear;}
+  .st-clock u {position:absolute;top:-3px;width:2px;height:12px;background:var(--on-pitch);opacity:.7;}
+  /* 점수판 아래 한 줄: 평소엔 전술, 킥오프 · 골 순간엔 장면 문구가 같은 자리에 뜬다(점수판은 그대로 보인다). */
+  .st-call {min-height:76px;display:flex;align-items:center;justify-content:center;text-align:center;}
+  .st-flash {display:flex;flex-direction:column;align-items:center;gap:4px;animation:st-in .25s ease-out both;}
+  .st-flash b {font-family:var(--display);font-size:2.8rem;font-style:italic;font-weight:900;line-height:1;color:var(--pitch-accent);text-shadow:0 0 18px color-mix(in srgb, var(--pitch-accent) 60%, transparent);animation:st-pop .6s cubic-bezier(.2,.9,.3,1.3) both;}
+  .st-live.on::before {content:'';display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:#ff5a4d;animation:st-blink 1s ease-in-out infinite;}
+  .st-now {margin-left:6px;padding:1px 6px;border-radius:999px;border:1px solid currentColor;font-size:11px;font-weight:700;opacity:.85;}
+  .st-events .st-num {color:var(--pitch-accent);font-size:1rem;line-height:1.2;}
+  @keyframes st-blink {0%,100% {opacity:1;} 50% {opacity:.25;}}
+  .st-flash.bad b {color:var(--on-pitch);text-shadow:none;}
+  .st-flash span {font-size:17px;font-weight:700;}
+  .st-talk {gap:12px;animation:st-rise .45s ease-out both;}
+  .st-next {margin:0;text-align:center;font-weight:700;animation:st-rise .5s ease-out 1.4s both;}
+  .st-gain {animation:st-rise .5s ease-out 1s both;}
+  @keyframes st-in {from {opacity:0;} to {opacity:1;}}
+  @keyframes st-rise {from {opacity:0;transform:translateY(14px);} to {opacity:1;transform:none;}}
+  @keyframes st-tick {0% {transform:scale(1.7);} 100% {transform:scale(1);}}
+  @keyframes st-glow {0% {box-shadow:0 0 0 0 var(--pitch-accent);} 30% {box-shadow:0 0 0 6px var(--pitch-accent);} 100% {box-shadow:0 0 0 0 transparent;}}
+  @keyframes st-shake {0%,100% {transform:none;} 25% {transform:translateX(-5px);} 75% {transform:translateX(5px);}}
   .st-segs {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;}
   .st-segs i {height:6px;border-radius:999px;background:var(--chalk);opacity:.35;}
   .st-segs i.on {background:var(--pitch-accent);opacity:1;}
@@ -557,7 +726,17 @@
   .st-star {font-size:3rem;line-height:1;}
   .st-result-stars .on .st-star {animation:st-pop .6s cubic-bezier(.2,.9,.3,1.3) both;animation-delay:var(--d);}
   @keyframes st-pop {0% {transform:scale(0) rotate(-30deg);opacity:0;} 70% {transform:scale(1.25) rotate(6deg);opacity:1;} 100% {transform:scale(1) rotate(0);}}
-  @media (prefers-reduced-motion: reduce) {.st-result-stars .on .st-star {animation:none;}}
+  /* 여정 지도: 들어올 때 한 칸씩 차례로, 방금 이긴 경기에는 도장이 찍히고 다음 경기가 열린다. */
+  .st-node {animation:st-rise .35s ease-out both;animation-delay:calc(var(--i, 0) * 45ms);}
+  .st-node.fresh .st-badge {animation:st-pop .6s cubic-bezier(.2,.9,.3,1.3) .3s both;}
+  .st-node.unlock .st-node-body {animation:st-open 1.1s ease-out .7s both;}
+  .st-unlocked {animation:st-rise .4s ease-out 1s both;}
+  .st-node.next .st-badge {animation:st-beat 1.6s ease-in-out 3;}
+  @keyframes st-open {0% {box-shadow:0 0 0 0 var(--accent-text);} 40% {box-shadow:0 0 0 5px var(--accent-text);} 100% {box-shadow:0 0 0 0 transparent;}}
+  @keyframes st-beat {0%,100% {transform:none;} 50% {transform:scale(1.12);}}
+  @media (prefers-reduced-motion: reduce) {
+    .st *,.st {animation:none !important;transition:none !important;}
+  }
   .st-actions {display:flex;gap:8px;}
   .st-actions .btn {flex:1;min-height:48px;}
   .st-rank li {display:grid;grid-template-columns:32px 1fr auto;column-gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);}

@@ -131,14 +131,8 @@
     exchangeOpen = true;
     if (!Exchange) void import('./owner/CardExchange.svelte').then((m) => (Exchange = m.default));
   }
-  // T-11-825 원정 투어 창도 열 때만 불러온다. 입구는 밸런스 tourOpen이 켜졌을 때만 보인다(내 팀 응답에 실려 온다).
-  let Tour = $state<Component<{ onclose: () => void }> | null>(null);
-  let tourOpen = $state(false);
+  // T-11-825 원정 투어 입구는 밸런스 tourOpen이 켜졌을 때만 보인다(내 팀 응답에 실려 온다). 화면은 따로 연다(T-11-826).
   let tourOn = $state(false);
-  function openTour() {
-    tourOpen = true;
-    if (!Tour) void import('./owner/SquadTour.svelte').then((m) => (Tour = m.default));
-  }
   // T-11-511 시즌 패스 창도 열 때만 불러온다.
   let Pass = $state<Component<{ onclose: () => void }> | null>(null);
   let passOpen = $state(false);
@@ -288,7 +282,7 @@
           <b>{XC.entryTitle}<span class="pill good">{XC.entryNew}</span></b><span>{L.tileExchange}</span>
         </button>
         {#if tourOn}
-          <button class="owner-tile" data-act="tour" data-owner-tour aria-label={TR.entryAria} onclick={openTour}>
+          <button class="owner-tile" data-act="tour" data-owner-tour aria-label={TR.entryAria} onclick={() => go('tour')}>
             <b>{TR.entryTitle}<span class="pill good">{XC.entryNew}</span></b><span>{TR.entrySub}</span>
           </button>
         {/if}
@@ -306,7 +300,6 @@
     </nav>
   {/if}
   {#if exchangeOpen && Exchange}<Exchange onclose={() => (exchangeOpen = false)} />{/if}
-  {#if tourOpen && Tour}<Tour onclose={() => (tourOpen = false)} />{/if}
 
   {#if linked && (passEntry || memberEntry)}
     <!-- T-11-567 시즌 패스 · 클럽 멤버십은 한 카드에 두 줄로. -->

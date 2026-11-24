@@ -223,7 +223,7 @@ async function stub(page: Page, opts: { open?: boolean; start?: 'ok' | 'noTries'
 }
 
 const shot = (page: Page, name: string) =>
-  page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: false });
+  page.screenshot({ path: test.info().outputPath(`${name}.png`), fullPage: true });
 
 test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 열 때만 받는다', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -278,6 +278,8 @@ test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 �
   await expect(sheet.locator('[data-tour-sub]')).toHaveCount(1);
   await expect(sheet.locator('[data-tour-subs]')).toContainText('2');
   await shot(page, 'tour-timeout');
+  const axeTimeout = await new AxeBuilder({ page }).include('[data-squad-tour]').analyze();
+  expect(axeTimeout.violations).toEqual([]);
   await sheet.locator('[data-act="tour-continue"]').click();
   await expect(sheet.locator('[data-tour-match]')).toHaveAttribute('data-done', '2');
   expect(s.orders[0]).toMatchObject({ done: 1, tactic: 'park' });
@@ -293,6 +295,8 @@ test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 �
   );
   await expect(sheet.locator('[data-tour-fee]')).toContainText('50억');
   await shot(page, 'tour-result');
+  const axeResult = await new AxeBuilder({ page }).include('[data-squad-tour]').analyze();
+  expect(axeResult.violations).toEqual([]);
 
   // 여정 지도로 돌아가면 1차전은 통과, 2차전이 열려 있다.
   await sheet.locator('[data-act="tour-map"]').click();
@@ -327,6 +331,37 @@ test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 �
   await expect(hist).toHaveCount(3);
   expect(s.historyGets).toBe(1);
   expect(s.tourGets).toBe(gets);
+});
+
+test('원정 투어: 경기는 시계와 함께 재생되고, 빨리 보기로 작전 타임으로 넘어간다', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  const s = await stub(page);
+  await page.goto('/');
+  await page.locator('[data-act="owner"]').click();
+  await page.locator('[data-act="tour"]').click();
+  const tour = page.locator('[data-squad-tour]');
+  await tour.locator('[data-act="tour-go"]').click();
+  await tour.locator('[data-act="tour-depart"]').click();
+  // 킥오프 장면 → 시계가 흐른다. 재생 중에는 작전 타임 지시가 없고 뒤로 가기 대신 빨리 보기가 있다.
+  await expect(tour.locator('[data-tour-kickoff]')).toBeVisible();
+  await expect(tour.locator('[data-tour-match]')).toHaveAttribute('data-tour-playing', '');
+  await expect(tour.locator('[data-tour-talk]')).toHaveCount(0);
+  await expect(tour.locator('[data-act="tour-back"]')).toHaveCount(0);
+  await expect(tour.locator('[data-tour-score]')).toHaveText('0 : 0');
+  // 골이 난 분에 멈춰 득점자를 보여 주고, 그 뒤에 점수가 오른다.
+  await expect(tour.locator('[data-tour-goal]')).toContainText('원정선수9', { timeout: 10_000 });
+  await shot(page, 'tour-goal');
+  await expect(tour.locator('[data-tour-score]')).toHaveText('0 : 1', { timeout: 5_000 });
+  await shot(page, 'tour-playing');
+  await tour.locator('[data-act="tour-skip"]').click();
+  await expect(tour.locator('[data-tour-talk]')).toBeVisible();
+  await expect(tour.locator('[data-tour-score]')).toHaveText('0 : 1');
+  await expect(tour.locator('[data-act="tour-continue"]')).toBeVisible();
+  await page.waitForTimeout(600);
+  await shot(page, 'tour-talk');
+  expect(s.starts).toHaveLength(1);
 });
 
 test('원정 투어: 닫혀 있으면 입구가 없고, 출발이 거절되면 이유를 보여 준다', async ({ page }) => {

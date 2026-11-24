@@ -1,8 +1,31 @@
-// T-11-825 원정 투어(내 구단 화면 '원정 투어' 칸으로 연다, 웹 owner/SquadTour.svelte). 열 때 투어 홈과 내 팀(선수 목록, 1분 메모)만
-// 받는다. 사다리 · 제한 · 자동 편성은 app-core/contracts 계산이라 따로 부르지 않는다. 여정 지도 → 편성(상대 분석 · 선발 · 교체 명단 ·
-// 전술) → 작전 경기(30분 · 60분 작전 타임) → 결과. 주간 순위는 탭을 열 때만 받는다. 그라운드 · 선수 카드는 팀 화면의 것을 그대로 쓴다.
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { View } from 'react-native';
+// T-11-825 원정 투어(내 구단 화면 '원정 투어' 칸으로 연다, 웹 owner/SquadTour.svelte). T-11-826부터 팝업이 아니라 전용 화면(tour)이다.
+// 열 때 투어 홈과 내 팀(선수 목록, 1분 메모)만 받는다. 사다리 · 제한 · 자동 편성은 app-core/contracts 계산이라 따로 부르지 않는다.
+// 여정 지도 → 편성(상대 분석 · 선발 · 교체 명단 · 전술) → 작전 경기(30분 · 60분 작전 타임) → 결과. 주간 순위는 탭을 열 때만 받는다.
+// 그라운드 · 선수 카드는 팀 화면의 것을 그대로 쓴다. 경기는 서버가 30분씩 계산해 돌려주고, 화면은 그 30분을 시계와 함께 다시 보여 준다
+// (골이 난 분에 멈춘다). 시계는 JS 타이머와 상태로 돌리고, 애니메이션은 한 번 돌고 멈추는 것만 쓴다(끝없이 도는 반짝임 금지, T-11-730).
+// 동작 줄이기면 재생 없이 바로 결과 · 작전 타임을 보여 준다.
+import {
+  createContext,
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
+import {
+  Animated,
+  BackHandler,
+  Easing,
+  View,
+  type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
+import * as Haptics from 'expo-haptics';
+import { useSnapshot } from 'valtio';
 import { fetchOwnerTeam, type TeamPlayer } from '@offside/app-core/api/team';
 import {
   fetchTour,
@@ -49,15 +72,181 @@ import { RADIUS } from '@offside/app-core/design-tokens';
 import { marketName } from '@offside/app-core/market';
 import { localCareerNames } from '@offside/game/hof-store';
 import { tourText as L } from '@offside/app-core/i18n/ko/tour';
+import { mix } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
 import { DISPLAY, rem } from '../../theme/type';
-import { Btn, Opt, Press, Txt } from '../../ui';
-import { PopSheet } from '../../ui/PopSheet';
+import { Btn, Opt, Press, Screen, Txt } from '../../ui';
+import type { TxtProps } from '../../ui/Txt';
+import { scrollTo, viewH } from '../../ui/scroll';
+import { prefs, sheetState } from '../../store';
+import { go, goBack } from '../../game/nav';
+import { hapticsOn } from '../../game/host';
 import { PlayerCard, type PlayerCardData } from '../../components/PlayerCard';
 import { TeamPitch } from '../../components/TeamPitch';
 import { playSfx } from '../../platform/sfx';
 
 type Step = 'map' | 'prep' | 'live' | 'result' | 'rank' | 'history';
+type Goal = TourMatchView['events'][number];
+
+// 경기 재생 박자(웹 SquadTour.svelte와 같다). 한 구간은 90 / TOUR_LIVE.segments분.
+const SEG = 90 / TOUR_LIVE.segments;
+const MIN_MS = 210;
+const GOAL_MS = 1900;
+const KICKOFF_MS = 1500;
+const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+const digit = { fontFamily: DISPLAY[700], fontSize: rem(3.4), lineHeight: rem(3.6) } as const;
+const flashTitle = { fontFamily: DISPLAY[700], fontSize: rem(2.6), lineHeight: rem(2.9) } as const;
+
+/** 경기 · 결과 화면은 밤 경기장처럼 어둡다. 그 위에 바로 놓이는 글자(카드 · 버튼 안이 아닌)는 Tx로 밝게 그린다. */
+const NightCtx = createContext(false);
+function Tx(props: TxtProps) {
+  const night = useContext(NightCtx);
+  const c = useColors();
+  if (!night) return <Txt {...props} />;
+  const { tone, style, ...rest } = props;
+  const gold = tone === 'accent' || tone === 'good' || tone === 'pitchAccent' || tone === 'warn';
+  return (
+    <Txt
+      {...rest}
+      tone={gold ? 'pitchAccent' : 'onPitch'}
+      style={[
+        style,
+        tone === 'bad' && { color: mix(c.bad, '#ffffff', 0.4) },
+        tone === 'muted' && { opacity: 0.8 },
+      ]}
+    />
+  );
+}
+
+/** 한 번 튀어 오르며 나타난다(스프링 하나, 반복 없음). from이 1보다 크면 커졌다가 줄어든다. 동작 줄이기면 그냥 보인다. */
+function Pop({
+  children,
+  from = 0,
+  delay = 0,
+}: {
+  children: ReactNode;
+  from?: number;
+  delay?: number;
+}) {
+  const { motionOK } = useSnapshot(prefs);
+  const v = useRef(new Animated.Value(motionOK ? from : 1)).current;
+  useEffect(() => {
+    if (!motionOK) return;
+    const a = Animated.sequence([
+      Animated.delay(delay),
+      Animated.spring(v, { toValue: 1, friction: 4, tension: 110, useNativeDriver: true }),
+    ]);
+    a.start();
+    return () => a.stop();
+  }, [motionOK, delay, v]);
+  return (
+    <Animated.View
+      style={{
+        opacity:
+          from < 1
+            ? v.interpolate({ inputRange: [0, 0.6], outputRange: [0, 1], extrapolate: 'clamp' })
+            : 1,
+        transform: [{ scale: v }],
+      }}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+/** 아래에서 떠오르며 나타난다(한 번). */
+function Rise({
+  children,
+  delay = 0,
+  dy = 14,
+  ms = 450,
+  style,
+  onLayout,
+}: {
+  children: ReactNode;
+  delay?: number;
+  dy?: number;
+  ms?: number;
+  style?: StyleProp<ViewStyle>;
+  onLayout?: (e: LayoutChangeEvent) => void;
+}) {
+  const { motionOK } = useSnapshot(prefs);
+  const v = useRef(new Animated.Value(motionOK ? 0 : 1)).current;
+  useEffect(() => {
+    if (!motionOK) return;
+    const a = Animated.sequence([
+      Animated.delay(delay),
+      Animated.timing(v, {
+        toValue: 1,
+        duration: ms,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]);
+    a.start();
+    return () => a.stop();
+  }, [motionOK, delay, ms, v]);
+  return (
+    <Animated.View
+      {...(onLayout ? { onLayout } : {})}
+      style={[
+        style,
+        {
+          opacity: v,
+          transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [dy, 0] }) }],
+        },
+      ]}
+    >
+      {children}
+    </Animated.View>
+  );
+}
+
+/** on이 켜지는 순간 좌우로 한 번 흔든다(실점). */
+function Shake({ on, children }: { on: object | null; children: ReactNode }) {
+  const { motionOK } = useSnapshot(prefs);
+  const v = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!on || !motionOK) return;
+    const a = Animated.sequence(
+      [-6, 6, -4, 3, 0].map((toValue) =>
+        Animated.timing(v, { toValue, duration: 90, useNativeDriver: true }),
+      ),
+    );
+    a.start();
+    return () => a.stop();
+  }, [on, motionOK, v]);
+  return <Animated.View style={{ transform: [{ translateX: v }] }}>{children}</Animated.View>;
+}
+
+/** 킥오프 · 골 장면: 점수판 위를 덮는다. */
+function Flash({ children, testID }: { children: ReactNode; testID: string }) {
+  const c = useColors();
+  return (
+    <View
+      testID={testID}
+      accessibilityLiveRegion="polite"
+      style={{
+        position: 'absolute',
+        top: 0,
+        right: 0,
+        bottom: 0,
+        left: 0,
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 4,
+        padding: 12,
+        backgroundColor: c.pitch,
+      }}
+    >
+      {children}
+    </View>
+  );
+}
+
+// 재생 중 시계 틱마다 화면이 다시 그려져도 그라운드(선수 카드 11장)는 다시 그리지 않는다.
+const MemoPitch = memo(TeamPitch);
 
 /** 선수 한 명을 그라운드 · 목록 카드 값으로(빈 자리는 팀 화면의 유소년 카드 모양). */
 const cellOf = (p: TeamPlayer | undefined, name: string, rating: number): PlayerCardData =>
@@ -105,19 +294,19 @@ function Mini({
       >
         <PlayerCard compact mini animate={false} code={code} cell={cellOf(player, name, rating)} />
       </View>
-      <Txt v="xs" numberOfLines={1} style={{ maxWidth: 76 }}>
+      <Tx v="xs" numberOfLines={1} style={{ maxWidth: 76 }}>
         {name}
-      </Txt>
+      </Tx>
       {note ? (
-        <Txt v="xs" tone={noteTone ?? 'muted'} center>
+        <Tx v="xs" tone={noteTone ?? 'muted'} center>
           {note}
-        </Txt>
+        </Tx>
       ) : null}
     </View>
   );
 }
 
-export function SquadTour({ onClose }: { onClose: () => void }) {
+export default function SquadTour() {
   const c = useColors();
   const [local] = useState(() => localCareerNames());
   const [view, setView] = useState<Step>('map');
@@ -146,6 +335,25 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
   const [history, setHistory] = useState<TourHistoryResponse | null>(null);
   const [historyFailed, setHistoryFailed] = useState(false);
 
+  // 경기 재생
+  const [playing, setPlaying] = useState(false);
+  const [kickoff, setKickoff] = useState(false);
+  const [clock, setClock] = useState(0);
+  const [banner, setBanner] = useState<Goal | null>(null);
+  // 골 장면 도중에 점수가 올라간다(웹과 같다).
+  const [scored, setScored] = useState(false);
+  const run = useRef(0);
+  const alive = useRef(true);
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+      run.current++;
+    };
+  }, []);
+  // 방금 이긴 경기(지도에서 도장이 찍히고 다음 경기가 열린다, 한 번).
+  const [justWon, setJustWon] = useState<number | null>(null);
+
   const resetOrder = (m: TourMatchView | null) => {
     setOrderTactic(m?.tactic ?? 'possession');
     setSubs([]);
@@ -161,6 +369,7 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
     if (team.data.team) setDraftFormation((f) => f ?? team.data.team!.formation);
     if (t.data.live) {
       setMatch(t.data.live);
+      setClock(t.data.live.done * SEG);
       resetOrder(t.data.live);
       setView('live');
     }
@@ -172,16 +381,20 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
   const byId = useMemo(() => new Map(players.map((p) => [p.careerId, p])), [players]);
   const picks = useMemo(() => tourPicks(players), [players]);
   const pickById = useMemo(() => new Map(picks.map((p) => [p.id, p])), [picks]);
-  const nameOf = (id: string | null) => {
-    const p = id ? byId.get(id) : undefined;
-    return p ? marketName(p, local) : L.mercName;
-  };
+  const nameOf = useCallback(
+    (id: string | null) => {
+      const p = id ? byId.get(id) : undefined;
+      return p ? marketName(p, local) : L.mercName;
+    },
+    [byId, local],
+  );
   const totalStars = (tour?.stages ?? []).reduce((a, s) => a + s.stars, 0);
   const left = tourWeekLeft(new Date().toISOString());
 
   function openStage(s: TourStage) {
     if (!tour) return;
     setStage(s);
+    setJustWon(null);
     setDraft(tourAutoDraft(s, picks, tour.season, draftFormation ?? '4-3-3'));
     setSlotOpen(null);
     setBenchOpen(false);
@@ -220,13 +433,71 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
     setBusy(true);
     setError('');
     const r = await startTourMatch({ stage: stage.stage, ...draft });
+    if (!alive.current) return;
     setBusy(false);
     if (!r.ok) return setError(r.error.message || L.departFail);
-    playSfx('reward');
     setMatch(r.data.match);
     setTour((t) => (t ? { ...t, triesLeft: r.data.triesLeft } : t));
     resetOrder(r.data.match);
     setView('live');
+    void playSegment(r.data.match);
+  }
+
+  // ── 경기 재생 ── 방금 계산된 30분을 시계로 흘려 보낸다. 골이 난 분에 멈춰 득점자를 보여 주고 점수를 올린다.
+  function endSegment(m: TourMatchView) {
+    setPlaying(false);
+    setKickoff(false);
+    setBanner(null);
+    setClock(m.done * SEG);
+    if (m.status === 'live') return playSfx('whistle');
+    if (m.status === 'won') setJustWon(m.stage);
+    playSfx(m.status === 'won' ? 'trophy' : 'fulltime');
+    setView('result');
+  }
+  async function playSegment(m: TourMatchView) {
+    const id = ++run.current;
+    const to = m.done * SEG;
+    const from = to - SEG;
+    if (!prefs.motionOK) return endSegment(m);
+    const live = () => id === run.current && alive.current;
+    setPlaying(true);
+    setClock(from);
+    if (from === 0) {
+      setKickoff(true);
+      playSfx('found');
+      await wait(KICKOFF_MS);
+      if (!live()) return;
+      setKickoff(false);
+    }
+    const goals = m.events.filter((e) => e.minute > from && e.minute <= to);
+    for (let min = from + 1; min <= to; min++) {
+      await wait(MIN_MS);
+      if (!live()) return;
+      setClock(min);
+      for (const g of goals.filter((e) => e.minute === min)) {
+        setScored(false);
+        setBanner(g);
+        playSfx(g.side === 'away' ? 'good' : 'bad');
+        if (hapticsOn())
+          void Haptics.impactAsync(
+            g.side === 'away'
+              ? Haptics.ImpactFeedbackStyle.Medium
+              : Haptics.ImpactFeedbackStyle.Light,
+          ).catch(() => {});
+        await wait(700);
+        if (!live()) return;
+        setScored(true);
+        await wait(GOAL_MS - 700);
+        if (!live()) return;
+        setBanner(null);
+      }
+    }
+    await wait(400);
+    if (live()) endSegment(m);
+  }
+  function skip() {
+    run.current++;
+    if (match) endSegment(match);
   }
 
   const cells = useMemo(
@@ -250,21 +521,56 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
   const liveSlots = match
     ? match.slotIds.map((id, i) => subs.find((s) => s.slot === i)?.cardId ?? id)
     : [];
-  const liveCells = match
-    ? liveSlots.map((id, i) => {
-        const p = id ? byId.get(id) : undefined;
-        const fresh = subs.some((s) => s.slot === i);
-        const base = tourCells(
-          { formation: match.formation, slotIds: liveSlots },
-          pickById,
-          liveStage?.rules ?? [],
-          liveStage?.merc ?? 0,
-        )[i]!;
-        const t = tourTired(base.rating, fresh ? 100 : (match.stamina[i] ?? 100));
-        return { i, id, slot: FORMATIONS[match.formation][i]!, name: nameOf(id), player: p, ...t };
-      })
-    : [];
-  const livePitch = liveCells.map((x) => cellOf(x.player, x.name, Math.round(x.rating)));
+  const liveCells = useMemo(
+    () =>
+      match
+        ? liveSlots.map((id, i) => {
+            const p = id ? byId.get(id) : undefined;
+            const fresh = subs.some((s) => s.slot === i);
+            const base = tourCells(
+              { formation: match.formation, slotIds: liveSlots },
+              pickById,
+              liveStage?.rules ?? [],
+              liveStage?.merc ?? 0,
+            )[i]!;
+            const t = tourTired(base.rating, fresh ? 100 : (match.stamina[i] ?? 100));
+            return {
+              i,
+              id,
+              slot: FORMATIONS[match.formation][i]!,
+              name: nameOf(id),
+              player: p,
+              ...t,
+            };
+          })
+        : [],
+    // liveSlots는 match · subs에서 나온다.
+    [match, subs, byId, pickById, liveStage, nameOf],
+  );
+  const livePitch = useMemo(
+    () => liveCells.map((x) => cellOf(x.player, x.name, Math.round(x.rating))),
+    [liveCells],
+  );
+  // 재생 중에는 시계까지 난 골만 센다. home이 상대(AI), away가 나다.
+  const shown = useMemo(() => {
+    if (!match) return { mine: 0, opp: 0, events: [] as Goal[] };
+    if (!playing) return { mine: match.goalsFor, opp: match.goalsAgainst, events: match.events };
+    const events = match.events.filter(
+      (e) => e.minute < clock || (e.minute === clock && (banner !== e || scored)),
+    );
+    return {
+      mine: events.filter((e) => e.side === 'away').length,
+      opp: events.filter((e) => e.side === 'home').length,
+      events,
+    };
+  }, [match, playing, clock, banner, scored]);
+  // 골을 넣은 선수의 자리(그라운드에서 테두리로 빛난다).
+  const scorerSlot =
+    banner && banner.side === 'away' && banner.scorerId && match
+      ? match.slotIds.indexOf(banner.scorerId)
+      : -1;
+  const focus = useMemo(() => (scorerSlot >= 0 ? [scorerSlot] : null), [scorerSlot]);
+  const over = !!match && match.status !== 'live' && !playing;
   const benchLeft = match ? match.bench.filter((id) => !subs.some((s) => s.cardId === id)) : [];
   const chances = match ? tourChances(match) : [];
   const span = match ? tourSpan(match.done) : { from: 0, to: 30 };
@@ -286,19 +592,19 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
       ...(orderTactic !== match.tactic ? { tactic: orderTactic } : {}),
       ...(subs.length ? { subs } : {}),
     });
+    if (!alive.current) return;
     setBusy(false);
     if (!r.ok) return setError(r.error.message || L.orderFail);
     const next = r.data.match;
     setMatch(next);
     setTour((t) => (t ? { ...t, triesLeft: r.data.triesLeft } : t));
     resetOrder(next);
-    if (next.status !== 'live') {
-      if (next.status === 'won') playSfx('reward');
-      setView('result');
-      // 진행 · 순위 · 별이 바뀌었다(지시 요청이 메모를 비웠다).
-      const t = await fetchTour();
-      if (t.ok) setTour(t.data);
-    }
+    // 끝난 경기면 진행 · 순위 · 별이 바뀌었다(지시 요청이 메모를 비웠다). 재생하는 동안 받아 둔다.
+    if (next.status !== 'live')
+      void fetchTour().then((t) => {
+        if (t.ok && alive.current) setTour(t.data);
+      });
+    void playSegment(next);
   }
   const goalText = (e: TourMatchView['events'][number]) =>
     e.side === 'away' ? (e.scorerId ? nameOf(e.scorerId) : e.scorer) : L.oppGoal;
@@ -408,6 +714,50 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
     </View>
   );
 
+  // ── 뒤로 가기 ── 지도에서는 구단주 화면(이전 기록)으로, 그 밖의 단계에서는 지도로. 재생 중에는 뒤로 가기가 빨리 보기다.
+  const night = (view === 'live' || view === 'result') && !!match && !!tour?.open && !failed;
+  const nightColor = useMemo(() => mix(c.pitch, '#000000', 0.42), [c.pitch]);
+  function back() {
+    if (view === 'map') return goBack(() => go('owner'));
+    setView('map');
+  }
+  const onBack = useRef(() => {});
+  useEffect(() => {
+    onBack.current = playing ? skip : back;
+  });
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      // 열린 시트(업적 알림 등)는 앱 루트가 먼저 닫는다.
+      if (sheetState.open) return false;
+      onBack.current();
+      return true;
+    });
+    return () => sub.remove();
+  }, []);
+
+  // ── 여정 지도 ── 들어오면 다음 경기가 보이게 내려가고, 다른 단계로 가면 맨 위로 올린다.
+  // onLayout과 아래 효과 중 어느 쪽이 먼저 오든 맞도록, 원하는 경기 번호를 적어 두고 둘 다 맞으면 한 번 내려간다.
+  const mapY = useRef<number | null>(null);
+  const nextBox = useRef<{ stage: number; y: number; height: number } | null>(null);
+  const wantStage = useRef<number | null>(null);
+  const settleScroll = useCallback(() => {
+    const box = nextBox.current;
+    if (wantStage.current === null || mapY.current === null || !box) return;
+    if (box.stage !== wantStage.current) return;
+    wantStage.current = null;
+    const bottom = mapY.current + box.y + box.height - viewH() + 24;
+    const y = Math.min(bottom, mapY.current + box.y - 12);
+    if (y > 0) scrollTo(y, prefs.motionOK);
+  }, []);
+  const nextNo =
+    tour && tour.stages.some((s) => s.stage === tour.cleared + 1) ? tour.cleared + 1 : null;
+  const ready = !!tour?.open;
+  useEffect(() => {
+    wantStage.current = view === 'map' && ready ? nextNo : null;
+    if (wantStage.current === null) scrollTo(0);
+    else settleScroll();
+  }, [view, ready, nextNo, settleScroll]);
+
   const header =
     view === 'rank'
       ? L.rankingTitle
@@ -415,23 +765,25 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
         ? L.historyTitle
         : stage && view === 'prep'
           ? tourStageName(stage.stage)
-          : L.title;
+          : match && (view === 'live' || view === 'result')
+            ? tourStageName(match.stage)
+            : L.title;
 
   return (
-    <PopSheet label={L.title} step={view} testID="squad-tour" onClose={onClose}>
-      <View style={{ gap: 12, paddingHorizontal: 16, paddingBottom: 20 }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {view === 'prep' || view === 'rank' || view === 'history' ? (
-            <Btn sm testID="tour-back" accessibilityLabel={L.back} onPress={() => setView('map')}>
+    <NightCtx.Provider value={night}>
+      <Screen {...(night ? { background: nightColor } : {})}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
+          {!playing ? (
+            <Btn sm testID="tour-back" accessibilityLabel={L.back} onPress={back}>
               ‹
             </Btn>
           ) : null}
-          <Txt v="h2" style={{ flex: 1 }} accessibilityRole="header">
+          <Tx v="h2" style={{ flex: 1 }} accessibilityRole="header" testID="squad-tour">
             {header}
-          </Txt>
-          {view !== 'live' ? (
-            <Btn sm testID="tour-close" accessibilityLabel={L.close} onPress={onClose}>
-              ✕
+          </Tx>
+          {playing ? (
+            <Btn sm testID="tour-skip" onPress={skip}>
+              {L.skip}
             </Btn>
           ) : null}
         </View>
@@ -486,99 +838,137 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
             <Txt v="sm" tone="muted">
               {L.lead}
             </Txt>
-            <View testID="tour-map" style={{ gap: 12 }}>
-              {tour.stages.map((s) => {
+            <View
+              testID="tour-map"
+              style={{ gap: 12 }}
+              onLayout={(e) => {
+                mapY.current = e.nativeEvent.layout.y;
+                settleScroll();
+              }}
+            >
+              {tour.stages.map((s, k) => {
                 const state = tourStageState(s, tour.cleared);
                 const next = state === 'next';
-                return (
+                const unlock = justWon !== null && justWon + 1 === s.stage;
+                const badge = (
                   <View
-                    key={s.stage}
-                    testID={`tour-stage-${s.stage}`}
-                    style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 22,
+                      borderWidth: 2,
+                      borderColor: state === 'done' ? c.good : next ? c.accentText : c.line,
+                      backgroundColor: state === 'done' ? c.good : c.surface,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
                   >
-                    <View
+                    <Txt
+                      accessible={false}
                       style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: 22,
-                        borderWidth: 2,
-                        borderColor: state === 'done' ? c.good : next ? c.accentText : c.line,
-                        backgroundColor: state === 'done' ? c.good : c.surface,
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        fontFamily: DISPLAY[700],
+                        fontSize: rem(1.2),
+                        color: state === 'done' ? c.surface : next ? c.accentText : c.muted,
                       }}
                     >
-                      <Txt
-                        accessible={false}
-                        style={{
-                          fontFamily: DISPLAY[700],
-                          fontSize: rem(1.2),
-                          color: state === 'done' ? c.surface : next ? c.accentText : c.muted,
-                        }}
-                      >
-                        {state === 'done' ? '✓' : String(s.stage)}
-                      </Txt>
-                    </View>
-                    <View
-                      style={[
-                        box,
-                        {
-                          flex: 1,
-                          minWidth: 0,
-                          gap: 6,
-                          padding: 12,
-                          borderColor: next ? c.accentText : c.line,
-                          opacity: state === 'locked' ? 0.6 : 1,
-                        },
-                      ]}
-                    >
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: 8,
-                        }}
-                      >
-                        <Txt bold>{tourStageName(s.stage)}</Txt>
-                        <Txt
-                          accessibilityLabel={L.starsOf({ n: s.stars, max: 3 })}
-                          style={{ color: c.warn, letterSpacing: 2 }}
-                        >
-                          {'★'.repeat(s.stars)}
-                          <Txt style={{ color: c.line, letterSpacing: 2 }}>
-                            {'★'.repeat(3 - s.stars)}
-                          </Txt>
-                        </Txt>
-                      </View>
-                      <Txt v="xs" tone="muted">
-                        {`${L.oppOvr({ n: s.opp })} · ${s.formation} · ${tourTacticName(s.tactic)}`}
-                      </Txt>
-                      {s.rules.map((r, k) => rule(tourRuleText(r), String(k)))}
-                      <Txt
-                        v="xs"
-                        bold={state !== 'done'}
-                        tone={state === 'done' ? 'muted' : 'accent'}
-                      >
-                        {state === 'done' ? L.cleared : L.fee({ v: fmtValue(s.fee) })}
-                      </Txt>
-                      {next ? (
-                        tour.triesLeft > 0 ? (
-                          <Btn kind="primary" testID="tour-go" onPress={() => openStage(s)}>
-                            {L.go}
-                          </Btn>
-                        ) : (
-                          <Txt v="xs" tone="muted" testID="tour-no-tries">
-                            {L.noTries}
-                          </Txt>
-                        )
-                      ) : state === 'locked' ? (
-                        <Txt v="xs" tone="muted">
-                          {L.locked}
-                        </Txt>
-                      ) : null}
-                    </View>
+                      {state === 'done' ? '✓' : String(s.stage)}
+                    </Txt>
                   </View>
+                );
+                return (
+                  <Rise
+                    key={s.stage}
+                    dy={10}
+                    ms={350}
+                    delay={k * 45}
+                    {...(next
+                      ? {
+                          onLayout: (e: LayoutChangeEvent) => {
+                            nextBox.current = { stage: s.stage, ...e.nativeEvent.layout };
+                            settleScroll();
+                          },
+                        }
+                      : {})}
+                  >
+                    <View
+                      testID={`tour-stage-${s.stage}`}
+                      style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}
+                    >
+                      {justWon === s.stage ? (
+                        <Pop from={0} delay={300}>
+                          {badge}
+                        </Pop>
+                      ) : (
+                        badge
+                      )}
+                      <View
+                        style={[
+                          box,
+                          {
+                            flex: 1,
+                            minWidth: 0,
+                            gap: 6,
+                            padding: 12,
+                            borderColor: next ? c.accentText : c.line,
+                            opacity: state === 'locked' ? 0.6 : 1,
+                          },
+                        ]}
+                      >
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            gap: 8,
+                          }}
+                        >
+                          <Txt bold>{tourStageName(s.stage)}</Txt>
+                          <Txt
+                            accessibilityLabel={L.starsOf({ n: s.stars, max: 3 })}
+                            style={{ color: c.warn, letterSpacing: 2 }}
+                          >
+                            {'★'.repeat(s.stars)}
+                            <Txt style={{ color: c.line, letterSpacing: 2 }}>
+                              {'★'.repeat(3 - s.stars)}
+                            </Txt>
+                          </Txt>
+                        </View>
+                        <Txt v="xs" tone="muted">
+                          {`${L.oppOvr({ n: s.opp })} · ${s.formation} · ${tourTacticName(s.tactic)}`}
+                        </Txt>
+                        {s.rules.map((r, k) => rule(tourRuleText(r), String(k)))}
+                        <Txt
+                          v="xs"
+                          bold={state !== 'done'}
+                          tone={state === 'done' ? 'muted' : 'accent'}
+                        >
+                          {state === 'done' ? L.cleared : L.fee({ v: fmtValue(s.fee) })}
+                        </Txt>
+                        {next ? (
+                          tour.triesLeft > 0 ? (
+                            <Btn kind="primary" testID="tour-go" onPress={() => openStage(s)}>
+                              {L.go}
+                            </Btn>
+                          ) : (
+                            <Txt v="xs" tone="muted" testID="tour-no-tries">
+                              {L.noTries}
+                            </Txt>
+                          )
+                        ) : state === 'locked' ? (
+                          <Txt v="xs" tone="muted">
+                            {L.locked}
+                          </Txt>
+                        ) : null}
+                        {unlock ? (
+                          <Rise delay={1000} dy={8} ms={400}>
+                            <Txt v="xs" bold tone="accent" testID="tour-unlocked">
+                              {L.unlocked}
+                            </Txt>
+                          </Rise>
+                        ) : null}
+                      </View>
+                    </View>
+                  </Rise>
                 );
               })}
             </View>
@@ -790,303 +1180,401 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
           </>
         ) : (view === 'live' || view === 'result') && match ? (
           <>
-            {(() => {
-              const over = match.status !== 'live';
-              return (
-                <>
-                  <View testID="tour-match" style={band}>
+            <Shake on={banner?.side === 'home' ? banner : null}>
+              <View testID="tour-match" style={[band, { overflow: 'hidden' }]}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 12,
+                  }}
+                >
+                  <Txt v="sm" tone="onPitch">
+                    {liveStage ? L.oppOvr({ n: liveStage.opp }) : ''}
+                  </Txt>
+                  <Txt v="sm" tone="pitchAccent" testID="tour-clock">
+                    {over
+                      ? match.status === 'won'
+                        ? L.winTitle
+                        : L.loseTitle
+                      : playing
+                        ? L.minute({ n: clock })
+                        : `${L.minute({ n: span.from })} · ${L.timeout}`}
+                  </Txt>
+                </View>
+                <View
+                  testID="tour-score"
+                  accessible
+                  accessibilityLabel={`${shown.opp} : ${shown.mine}`}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 12,
+                  }}
+                >
+                  <View style={{ flex: 1, gap: 2 }}>
+                    <Txt v="xs" tone="onPitch" style={{ opacity: 0.8 }}>
+                      {L.oppGoal}
+                    </Txt>
+                    <Txt v="sm" bold tone="onPitch">
+                      {liveStage?.formation ?? ''}
+                    </Txt>
+                  </View>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Pop key={`o${shown.opp}`} from={1.7}>
+                      <Txt tone="onPitch" style={digit}>
+                        {String(shown.opp)}
+                      </Txt>
+                    </Pop>
+                    <Txt tone="onPitch" style={digit}>
+                      :
+                    </Txt>
+                    <Pop key={`m${shown.mine}`} from={1.7}>
+                      <Txt tone="pitchAccent" style={digit}>
+                        {String(shown.mine)}
+                      </Txt>
+                    </Pop>
+                  </View>
+                  <View style={{ flex: 1, gap: 2, alignItems: 'flex-end' }}>
+                    <Txt v="xs" tone="onPitch" style={{ opacity: 0.8 }}>
+                      {L.vsAway}
+                    </Txt>
+                    <Txt v="sm" bold tone="onPitch">
+                      {match.formation}
+                    </Txt>
+                  </View>
+                </View>
+                <View
+                  accessible={false}
+                  style={{
+                    height: 6,
+                    borderRadius: RADIUS.pill,
+                    backgroundColor: c.chalk,
+                    justifyContent: 'center',
+                  }}
+                >
+                  <View
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: `${Math.min(100, ((playing ? clock : match.done * SEG) / 90) * 100)}%`,
+                      borderRadius: RADIUS.pill,
+                      backgroundColor: c.pitchAccent,
+                    }}
+                  />
+                  {Array.from({ length: TOUR_LIVE.segments - 1 }, (_, i) => (
                     <View
+                      key={i}
+                      style={{
+                        position: 'absolute',
+                        left: `${((i + 1) * 100) / TOUR_LIVE.segments}%`,
+                        top: -3,
+                        width: 2,
+                        height: 12,
+                        backgroundColor: c.onPitch,
+                        opacity: 0.7,
+                      }}
+                    />
+                  ))}
+                </View>
+                <Txt v="xs" tone="onPitch">
+                  {`${L.oppNow({ name: tourTacticName(match.oppTactic) })} · ${tourTacticName(match.tactic)}`}
+                </Txt>
+                {kickoff ? (
+                  <Flash testID="tour-kickoff">
+                    <Pop from={0}>
+                      <Txt tone="pitchAccent" style={flashTitle}>
+                        {L.kickoff}
+                      </Txt>
+                    </Pop>
+                  </Flash>
+                ) : banner ? (
+                  <Flash testID="tour-goal">
+                    <Pop from={0}>
+                      <Txt
+                        tone={banner.side === 'away' ? 'pitchAccent' : 'onPitch'}
+                        style={flashTitle}
+                      >
+                        {banner.side === 'away' ? L.goalMine : L.goalOpp}
+                      </Txt>
+                    </Pop>
+                    <Txt tone="onPitch" bold center>
+                      {`${banner.minute}' ${goalText(banner)}${
+                        banner.side === 'away' && banner.assist
+                          ? ` · ${L.assist({ name: banner.assistId ? nameOf(banner.assistId) : banner.assist })}`
+                          : ''
+                      }`}
+                    </Txt>
+                  </Flash>
+                ) : null}
+              </View>
+            </Shake>
+            {playing ? (
+              <MemoPitch formation={match.formation} cells={livePitch} focus={focus} />
+            ) : null}
+            <View testID="tour-events" style={{ gap: 6 }}>
+              {shown.events.length ? (
+                shown.events.map((e, k) => (
+                  <View key={k} style={{ flexDirection: 'row', gap: 10 }}>
+                    <Tx v="sm" num style={{ width: 36 }}>{`${e.minute}'`}</Tx>
+                    <Tx
+                      v="sm"
+                      bold={e.side === 'away'}
+                      tone={e.side === 'away' ? 'accent' : 'ink'}
+                      style={{ flex: 1 }}
+                    >
+                      {goalText(e)}
+                      {e.side === 'away' && e.assist
+                        ? ` · ${L.assist({ name: e.assistId ? nameOf(e.assistId) : e.assist })}`
+                        : ''}
+                    </Tx>
+                  </View>
+                ))
+              ) : (
+                <Tx v="sm" tone="muted">
+                  {L.noGoals}
+                </Tx>
+              )}
+            </View>
+            {playing ? null : !over ? (
+              <Rise dy={18} style={{ gap: 12 }}>
+                <Tx bold>{L.timeout}</Tx>
+                <Tx v="xs" tone="muted">
+                  {L.timeoutLead}
+                </Tx>
+                {tacticGrid(
+                  chances.map((x) => ({
+                    tactic: x.tactic,
+                    text: L.chance({ n: x.pct }),
+                    textTone: tone(x.diff),
+                    now: x.tactic === match.tactic,
+                  })),
+                  orderTactic,
+                  setOrderTactic,
+                  L.timeout,
+                )}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
+                  <Tx bold testID="tour-subs" style={{ flexShrink: 1 }}>
+                    {L.subsLeft({ n: match.subsLeft - subs.length })}
+                  </Tx>
+                  <Tx v="xs" tone="muted" style={{ flex: 1, textAlign: 'right' }}>
+                    {outSlot === null ? L.subPickOut : L.subPickIn}
+                  </Tx>
+                </View>
+                <MemoPitch
+                  formation={match.formation}
+                  cells={livePitch}
+                  selected={outSlot}
+                  animate={false}
+                  onpick={pickOut}
+                />
+                {liveCells
+                  .filter((x) => x.tired)
+                  .map((x) => (
+                    <View
+                      key={x.i}
                       style={{
                         flexDirection: 'row',
                         justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: 12,
+                        gap: 8,
                       }}
                     >
-                      <Txt v="sm" tone="onPitch">
-                        {tourStageName(match.stage)}
-                      </Txt>
-                      <Txt v="sm" tone="pitchAccent">
-                        {over
-                          ? match.status === 'won'
-                            ? L.winTitle
-                            : L.loseTitle
-                          : `${L.minute({ n: span.from })} · ${L.timeout}`}
-                      </Txt>
+                      <Tx v="sm" bold style={{ flex: 1 }}>{`${x.slot} ${x.name}`}</Tx>
+                      <Tx v="sm" tone="bad">
+                        {L.stamina({ n: x.stamina })}
+                      </Tx>
                     </View>
-                    <Txt
-                      center
-                      tone="onPitch"
-                      testID="tour-score"
-                      style={{ fontFamily: DISPLAY[700], fontSize: rem(3), lineHeight: rem(3.2) }}
-                    >
-                      {`${match.goalsAgainst} : ${match.goalsFor}`}
-                    </Txt>
-                    <View style={{ flexDirection: 'row', gap: 4 }} accessible={false}>
-                      {Array.from({ length: TOUR_LIVE.segments }, (_, i) => (
-                        <View
-                          key={i}
-                          style={{
-                            flex: 1,
-                            height: 6,
-                            borderRadius: RADIUS.pill,
-                            backgroundColor: i < match.done ? c.pitchAccent : c.chalk,
-                            opacity: i < match.done ? 1 : 0.35,
-                          }}
-                        />
-                      ))}
-                    </View>
-                    <Txt v="xs" tone="onPitch">
-                      {L.oppNow({ name: tourTacticName(match.oppTactic) })}
-                    </Txt>
-                  </View>
-                  <View testID="tour-events" style={{ gap: 6 }}>
-                    {match.events.length ? (
-                      match.events.map((e, k) => (
-                        <View key={k} style={{ flexDirection: 'row', gap: 10 }}>
-                          <Txt v="sm" num style={{ width: 36 }}>{`${e.minute}'`}</Txt>
-                          <Txt
-                            v="sm"
-                            bold={e.side === 'away'}
-                            tone={e.side === 'away' ? 'accent' : 'ink'}
-                            style={{ flex: 1 }}
-                          >
-                            {goalText(e)}
-                            {e.side === 'away' && e.assist
-                              ? ` · ${L.assist({ name: e.assistId ? nameOf(e.assistId) : e.assist })}`
-                              : ''}
-                          </Txt>
-                        </View>
-                      ))
-                    ) : (
-                      <Txt v="sm" tone="muted">
-                        {L.noGoals}
-                      </Txt>
-                    )}
-                  </View>
-                  {!over ? (
-                    <>
-                      <Txt bold>{L.timeout}</Txt>
-                      <Txt v="xs" tone="muted">
-                        {L.timeoutLead}
-                      </Txt>
-                      {tacticGrid(
-                        chances.map((x) => ({
-                          tactic: x.tactic,
-                          text: L.chance({ n: x.pct }),
-                          textTone: tone(x.diff),
-                          now: x.tactic === match.tactic,
-                        })),
-                        orderTactic,
-                        setOrderTactic,
-                        L.timeout,
-                      )}
-                      <View
+                  ))}
+                <View
+                  testID="tour-live-bench"
+                  style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
+                >
+                  {benchLeft.map((id) => {
+                    const p = byId.get(id);
+                    if (!p) return null;
+                    const nm = marketName(p, local);
+                    return (
+                      <Press
+                        key={id}
+                        testID={`tour-sub-in-${id}`}
+                        accessibilityLabel={nm}
+                        accessibilityState={{ disabled: outSlot === null }}
+                        disabled={outSlot === null}
+                        onPress={() => pickIn(id)}
                         style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
-                          gap: 8,
+                          opacity: outSlot === null ? 0.5 : 1,
+                          minHeight: 44,
+                          padding: 2,
                         }}
                       >
-                        <Txt bold testID="tour-subs" style={{ flexShrink: 1 }}>
-                          {L.subsLeft({ n: match.subsLeft - subs.length })}
-                        </Txt>
-                        <Txt v="xs" tone="muted" style={{ flex: 1, textAlign: 'right' }}>
-                          {outSlot === null ? L.subPickOut : L.subPickIn}
-                        </Txt>
-                      </View>
-                      <TeamPitch
-                        formation={match.formation}
-                        cells={livePitch}
-                        selected={outSlot}
-                        animate={false}
-                        onpick={pickOut}
-                      />
-                      {liveCells
-                        .filter((x) => x.tired)
-                        .map((x) => (
-                          <View
-                            key={x.i}
-                            style={{
-                              flexDirection: 'row',
-                              justifyContent: 'space-between',
-                              gap: 8,
-                            }}
-                          >
-                            <Txt v="sm" bold style={{ flex: 1 }}>{`${x.slot} ${x.name}`}</Txt>
-                            <Txt v="sm" tone="bad">
-                              {L.stamina({ n: x.stamina })}
-                            </Txt>
-                          </View>
-                        ))}
-                      <View
-                        testID="tour-live-bench"
-                        style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
-                      >
-                        {benchLeft.map((id) => {
-                          const p = byId.get(id);
-                          if (!p) return null;
-                          const nm = marketName(p, local);
-                          return (
-                            <Press
-                              key={id}
-                              testID={`tour-sub-in-${id}`}
-                              accessibilityLabel={nm}
-                              accessibilityState={{ disabled: outSlot === null }}
-                              disabled={outSlot === null}
-                              onPress={() => pickIn(id)}
-                              style={{
-                                opacity: outSlot === null ? 0.5 : 1,
-                                minHeight: 44,
-                                padding: 2,
-                              }}
-                            >
-                              <Mini
-                                player={p}
-                                name={nm}
-                                rating={p.peak}
-                                code={
-                                  outSlot !== null
-                                    ? FORMATIONS[match.formation][outSlot]!
-                                    : detailPosOf(p)
-                                }
-                              />
-                            </Press>
-                          );
-                        })}
-                      </View>
-                      {subs.map((s, k) => (
+                        <Mini
+                          player={p}
+                          name={nm}
+                          rating={p.peak}
+                          code={
+                            outSlot !== null
+                              ? FORMATIONS[match.formation][outSlot]!
+                              : detailPosOf(p)
+                          }
+                        />
+                      </Press>
+                    );
+                  })}
+                </View>
+                {subs.map((s, k) => (
+                  <View
+                    key={s.slot}
+                    testID="tour-sub"
+                    style={[
+                      box,
+                      {
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 8,
+                        padding: 8,
+                        paddingLeft: 12,
+                      },
+                    ]}
+                  >
+                    <Txt v="sm" style={{ flex: 1 }}>
+                      <Txt v="sm" bold tone="bad">
+                        {L.subOut}
+                      </Txt>
+                      {` ${nameOf(match.slotIds[s.slot] ?? null)} → `}
+                      <Txt v="sm" bold tone="good">
+                        {L.subIn}
+                      </Txt>
+                      {` ${nameOf(s.cardId)}`}
+                    </Txt>
+                    <Btn sm onPress={() => setSubs((cur) => cur.filter((_, i) => i !== k))}>
+                      {L.subCancel}
+                    </Btn>
+                  </View>
+                ))}
+                {error ? (
+                  <Tx tone="bad" accessibilityRole="alert">
+                    {error}
+                  </Tx>
+                ) : null}
+                <Btn
+                  kind="primary"
+                  block
+                  testID="tour-continue"
+                  disabled={busy}
+                  onPress={() => void sendOrder()}
+                >
+                  {L.continueBtn(span)}
+                </Btn>
+              </Rise>
+            ) : (
+              <>
+                {match.result ? (
+                  <>
+                    {match.result.pens ? (
+                      <Tx v="sm" tone="muted">
+                        {L.pens}
+                      </Tx>
+                    ) : null}
+                    {match.status === 'won' ? (
+                      <>
                         <View
-                          key={s.slot}
-                          testID="tour-sub"
-                          style={[
-                            box,
-                            {
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                              gap: 8,
-                              padding: 8,
-                              paddingLeft: 12,
-                            },
-                          ]}
+                          testID="tour-result-stars"
+                          accessibilityLabel={L.starsOf({ n: match.result.stars, max: 3 })}
+                          style={{ flexDirection: 'row', gap: 8 }}
                         >
-                          <Txt v="sm" style={{ flex: 1 }}>
-                            <Txt v="sm" bold tone="bad">
-                              {L.subOut}
-                            </Txt>
-                            {` ${nameOf(match.slotIds[s.slot] ?? null)} → `}
-                            <Txt v="sm" bold tone="good">
-                              {L.subIn}
-                            </Txt>
-                            {` ${nameOf(s.cardId)}`}
-                          </Txt>
-                          <Btn sm onPress={() => setSubs((cur) => cur.filter((_, i) => i !== k))}>
-                            {L.subCancel}
-                          </Btn>
-                        </View>
-                      ))}
-                      {error ? (
-                        <Txt tone="bad" accessibilityRole="alert">
-                          {error}
-                        </Txt>
-                      ) : null}
-                      <Btn
-                        kind="primary"
-                        block
-                        testID="tour-continue"
-                        disabled={busy}
-                        onPress={() => void sendOrder()}
-                      >
-                        {L.continueBtn(span)}
-                      </Btn>
-                    </>
-                  ) : (
-                    <>
-                      {match.result ? (
-                        <>
-                          {match.result.pens ? (
-                            <Txt v="sm" tone="muted">
-                              {L.pens}
-                            </Txt>
-                          ) : null}
-                          {match.status === 'won' ? (
-                            <>
-                              <View
-                                testID="tour-result-stars"
-                                accessibilityLabel={L.starsOf({ n: match.result.stars, max: 3 })}
-                                style={{ flexDirection: 'row', gap: 8 }}
+                          {[L.starWin, L.starFirst, L.starMargin].map((label, i) => {
+                            const got =
+                              i === 0 ||
+                              (i === 1 && match.tryNo === 1) ||
+                              (i === 2 &&
+                                !match.result!.pens &&
+                                match.goalsFor - match.goalsAgainst >= 2);
+                            const star = (
+                              <Txt
+                                accessible={false}
+                                style={{
+                                  fontSize: rem(3),
+                                  lineHeight: rem(3.2),
+                                  color: got ? c.pitchAccent : c.chalk,
+                                }}
                               >
-                                {[L.starWin, L.starFirst, L.starMargin].map((label, i) => {
-                                  const got =
-                                    i === 0 ||
-                                    (i === 1 && match.tryNo === 1) ||
-                                    (i === 2 &&
-                                      !match.result!.pens &&
-                                      match.goalsFor - match.goalsAgainst >= 2);
-                                  return (
-                                    <View
-                                      key={label}
-                                      style={{ flex: 1, alignItems: 'center', gap: 2 }}
-                                    >
-                                      <Txt
-                                        accessible={false}
-                                        style={{
-                                          fontSize: rem(3),
-                                          lineHeight: rem(3.2),
-                                          color: got ? c.warn : c.line,
-                                        }}
-                                      >
-                                        ★
-                                      </Txt>
-                                      <Txt v="xs" tone="muted" center>
-                                        {label}
-                                      </Txt>
-                                    </View>
-                                  );
-                                })}
+                                ★
+                              </Txt>
+                            );
+                            return (
+                              <View key={label} style={{ flex: 1, alignItems: 'center', gap: 2 }}>
+                                {got ? (
+                                  <Pop from={0} delay={200 + i * 250}>
+                                    {star}
+                                  </Pop>
+                                ) : (
+                                  star
+                                )}
+                                <Tx v="xs" tone="muted" center>
+                                  {label}
+                                </Tx>
                               </View>
-                              <View style={band}>
-                                {stats([
-                                  {
-                                    label: L.feeGot,
-                                    value: `+${fmtValue(match.result.fee)}`,
-                                    gold: true,
-                                    testID: 'tour-fee',
-                                  },
-                                  { label: L.scoreGot, value: `+${match.result.score}` },
-                                ])}
-                              </View>
-                            </>
-                          ) : (
-                            <Txt tone="muted">{L.loseHint}</Txt>
-                          )}
-                        </>
-                      ) : null}
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
-                        <View style={{ flex: 1 }}>
-                          <Btn block testID="tour-map-btn" onPress={() => setView('map')}>
-                            {L.toMap}
-                          </Btn>
+                            );
+                          })}
                         </View>
-                        {nextStage && tour.triesLeft > 0 ? (
-                          <View style={{ flex: 1 }}>
-                            <Btn
-                              block
-                              kind="primary"
-                              testID="tour-next"
-                              onPress={() => openStage(nextStage)}
-                            >
-                              {match.status === 'won' ? L.nextStage : L.again}
-                            </Btn>
+                        <Rise delay={1000}>
+                          <View style={band}>
+                            {stats([
+                              {
+                                label: L.feeGot,
+                                value: `+${fmtValue(match.result.fee)}`,
+                                gold: true,
+                                testID: 'tour-fee',
+                              },
+                              { label: L.scoreGot, value: `+${match.result.score}` },
+                            ])}
                           </View>
+                        </Rise>
+                        {nextStage ? (
+                          <Rise delay={1400}>
+                            <Tx bold center tone="accent" testID="tour-next-open">
+                              {L.unlocked}
+                            </Tx>
+                          </Rise>
                         ) : null}
-                      </View>
-                    </>
-                  )}
-                </>
-              );
-            })()}
+                      </>
+                    ) : (
+                      <Tx tone="muted">{L.loseHint}</Tx>
+                    )}
+                  </>
+                ) : null}
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <View style={{ flex: 1 }}>
+                    <Btn block testID="tour-map-btn" onPress={() => setView('map')}>
+                      {L.toMap}
+                    </Btn>
+                  </View>
+                  {nextStage && tour.triesLeft > 0 ? (
+                    <View style={{ flex: 1 }}>
+                      <Btn
+                        block
+                        kind="primary"
+                        testID="tour-next"
+                        onPress={() => openStage(nextStage)}
+                      >
+                        {match.status === 'won' ? L.nextStage : L.again}
+                      </Btn>
+                    </View>
+                  ) : null}
+                </View>
+              </>
+            )}
           </>
         ) : view === 'rank' ? (
           <>
@@ -1198,7 +1686,7 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
             )}
           </>
         ) : null}
-      </View>
-    </PopSheet>
+      </Screen>
+    </NightCtx.Provider>
   );
 }
