@@ -15,6 +15,7 @@ import {
   OwnerTeamResponseSchema,
   PlayTeamMatchBodySchema,
   PlayTeamMatchResponseSchema,
+  MatchIncomeBonusResponseSchema,
   TeamMomentBodySchema,
   TeamMomentResponseSchema,
   PutOwnerTeamBodySchema,
@@ -95,7 +96,8 @@ import {
   enhanceOpenFrom,
   leagueFatigueFrom,
 } from '../db/repos/balance.js';
-import { leagueMatches, leagueState, ownerTeams } from '../db/schema.js';
+import { leagueMatches, leagueState, ownerFunds, ownerTeams } from '../db/schema.js';
+import { claimMatchIncomeAd } from '../db/repos/matchIncome.js';
 import { FATIGUE_LOOKBACK, startStreaks } from '../team/fatigue.js';
 import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm';
 import { edgeCached, purgeEdge, waitUntil } from '../edgeCache.js';
@@ -543,6 +545,30 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
     if (!f) throw liveNotFound();
     if (f.fresh) afterLiveFinal(c, f);
     return ok(c, PlayTeamMatchResponseSchema, f.response);
+  });
+
+  // T-11-823 앱에서 보상형 광고를 끝까지 본 뒤 부른다(광고 제거 · 멤버십은 광고 없이 바로). 내가 건 경기의 수입을 한 번 더 준다.
+  app.post('/v1/owner-team/matches/:id/income-bonus', requireProfile, idempotency, async (c) => {
+    const me = await requireOwner(c);
+    const db = getDb(c);
+    const r = await claimMatchIncomeAd(db, {
+      profileId: me.id,
+      matchId: c.req.param('id'),
+      now: nowIso(),
+    });
+    if (r === 'none') throw liveNotFound();
+    if (r === 'taken') {
+      const [funds] = await db
+        .select({ balance: ownerFunds.balance })
+        .from(ownerFunds)
+        .where(eq(ownerFunds.profileId, me.id));
+      return ok(c, MatchIncomeBonusResponseSchema, {
+        amount: 0,
+        balance: funds?.balance ?? 0,
+        taken: true,
+      });
+    }
+    return ok(c, MatchIncomeBonusResponseSchema, { ...r, taken: false });
   });
 
   // 구단 시즌 업적(클럽하우스). season 없으면 지금 시즌, 0이면 프리시즌. 팀 업적은 그 시즌 팀으로 판정한다(지난 시즌에 팀이

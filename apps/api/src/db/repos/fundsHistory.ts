@@ -1,10 +1,15 @@
 import type { FundsHistoryEntry, FundsHistoryResponse } from '@offside/contracts';
+import { FUNDS_MATCH_ID } from '@offside/contracts';
 import type { Db } from '../client.js';
+import { MATCH_INCOME_KIND } from './ownerTeams.js';
+import { MATCH_INCOME_KINDS_SQL } from './matchIncome.js';
 
 // 구단 자금 내역(구단주 화면 → 구단 자금). 잔액을 바꾸는 기록 네 곳을 시각순으로 합친다 — 원장 테이블이 따로 없다
 // (운영 도구 대조 fundsAudit.ts와 같은 출처): 방출(cards.released_value, 키운 사람) · 은퇴 장려금(cards.bonus_value) · 판매(가격 − 수수료) · 영입(가격) ·
 // 구단 자금으로 산 것(owner_item_purchases) · T-11-373 카드 강화(card_enhance_log — 옛 앱이 모르는 item 대신 item NULL에 카드를 붙이고
 // id를 'enhance:'로 시작한다). D1은 UNION 한 덩어리에 다섯 항까지라 지출 두 곳은 안쪽에서 먼저 합친다. 한 번에 여러 장 방출하면 시각이 같아 id로 순서를 굳힌다.
+// T-11-823 랭크 경기 수입(중계권료 + 승리 수당)은 출처 표가 따로 없어 거래 기록(owner_fund_ledger, 구단주 인덱스)에서 읽는다.
+// 광고를 보고 한 번 더 받은 몫(match_income_ad)도 같은 줄에 더한다. 하루 열 경기 넘게 쌓이므로 한국 날짜로 한 줄씩 묶고, 옛 앱이 모르는 kind 대신 bonus에 id 'match:<날짜>:<경기 수>'를 붙인다.
 
 export const FUNDS_HISTORY_PAGE = 30;
 
@@ -14,9 +19,15 @@ const MOVES = `
     FROM cards c JOIN careers ca ON ca.id = c.career_id
    WHERE ca.profile_id = ?1 AND c.released_at IS NOT NULL
   UNION ALL
-  SELECT 'bonus:' || c.career_id, 'bonus', NULL, c.bonus_value, NULL, c.created_at, c.career_id
-    FROM cards c JOIN careers ca ON ca.id = c.career_id
-   WHERE ca.profile_id = ?1 AND c.bonus_value IS NOT NULL
+  SELECT id, 'bonus', NULL, amount, NULL, at, cid FROM (
+    SELECT 'bonus:' || c.career_id id, c.bonus_value amount, c.created_at at, c.career_id cid
+      FROM cards c JOIN careers ca ON ca.id = c.career_id
+     WHERE ca.profile_id = ?1 AND c.bonus_value IS NOT NULL
+    UNION ALL
+    SELECT '${FUNDS_MATCH_ID}' || date(created_at, '+9 hours') || ':' || sum(kind = '${MATCH_INCOME_KIND}'), sum(delta),
+           max(created_at), NULL
+      FROM owner_fund_ledger WHERE profile_id = ?1 AND kind IN (${MATCH_INCOME_KINDS_SQL})
+     GROUP BY date(created_at, '+9 hours'))
   UNION ALL
   SELECT id, 'sold', NULL, price - fee, fee, closed_at, career_id
     FROM market_listings WHERE seller_id = ?1 AND status = 'sold'
@@ -64,6 +75,8 @@ export async function fundsHistory(
            (SELECT coalesce(sum(price), 0) FROM market_listings WHERE buyer_id = ?1 AND status = 'sold') AS bought,
            (SELECT coalesce(sum(price), 0) FROM owner_item_purchases WHERE profile_id = ?1)
              + (SELECT coalesce(sum(cost), 0) FROM card_enhance_log WHERE profile_id = ?1) AS spent,
+           (SELECT coalesce(sum(delta), 0) FROM owner_fund_ledger
+             WHERE profile_id = ?1 AND kind IN (${MATCH_INCOME_KINDS_SQL})) AS matchIncome,
            (SELECT balance FROM owner_funds WHERE profile_id = ?1) AS balance
            FROM (SELECT coalesce(sum(CASE WHEN c.released_at IS NOT NULL THEN c.released_value END), 0) AS released,
                         coalesce(sum(c.bonus_value), 0) AS bonus

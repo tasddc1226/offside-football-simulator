@@ -12,6 +12,8 @@ import {
   PlayTeamMatchResponseSchema,
   TeamMomentResponseSchema,
   type PlayTeamMatchResponse,
+  type FundsHistoryResponse,
+  fundsMatchCount,
   PutOwnerTeamResponseSchema,
   TeamMatchesResponseSchema,
   TeamOpponentsResponseSchema,
@@ -33,10 +35,11 @@ import {
   positionedLayout,
   FORMATIONS,
   LEGACY_NO_SALARY_BUDGET,
+  rankMatchIncome,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
 import * as ids from '../db/ids.js';
-import { resolveBalance } from '@offside/contracts/balance';
+import { BALANCE_SPEC, resolveBalance } from '@offside/contracts/balance';
 import { divisionRules, nextDivision } from '@offside/contracts/team-division';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -50,6 +53,8 @@ import {
   notifications,
   pushDeliveries,
   friends,
+  ownerFundLedger,
+  ownerFunds,
   ownerItems,
   ownerTeams,
   cupEntries,
@@ -1373,6 +1378,99 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
     ]);
   });
 
+  it('T-11-823 랭크 경기를 건 구단주는 중계권료(이기면 승리 수당까지)를 받고, 받은 쪽은 받지 않는다', async () => {
+    const me = await ownerWithTeam(5, 85);
+    const rivals = [await ownerWithTeam(3, 70), await ownerWithTeam(3, 70)];
+    let total = 0;
+    const matchIds: string[] = [];
+    for (const rival of rivals) {
+      const res = await call('POST', '/v1/owner-team/matches', {
+        cookie: me.cookie,
+        headers: idem(),
+        body: { opponentTeamId: rival.team.id },
+      });
+      const { match, income } = PlayRes.parse(await res.json()).data;
+      const want =
+        BALANCE_SPEC.rankMatchIncome.def +
+        (match.home.goals > match.away.goals ? BALANCE_SPEC.rankWinIncome.def : 0);
+      expect(income).toBe(want);
+      total += want;
+      matchIds.push(match.id);
+    }
+    // 잔액은 건 쪽만 생기고, 거래 기록은 경기마다 한 줄(ref = 경기 id)이다.
+    expect(await ctx.db.select().from(ownerFunds)).toMatchObject([
+      { profileId: me.profileId, balance: total },
+    ]);
+    const ledger = await ctx.db.select().from(ownerFundLedger);
+    expect(ledger.map((l) => [l.profileId, l.kind, l.ref])).toEqual(
+      matchIds.map((id) => [me.profileId, 'match_income', id]),
+    );
+    expect(ledger.at(-1)!.balance).toBe(total);
+    // 자금 내역은 하루치를 한 줄로 묶고(id에 경기 수), 합계에 경기 수입을 따로 준다.
+    const history = (
+      (await (await call('GET', '/v1/market/funds/history', { cookie: me.cookie })).json()) as {
+        data: FundsHistoryResponse;
+      }
+    ).data;
+    expect(history.balance).toBe(total);
+    expect(history.totals.matchIncome).toBe(total);
+    expect(history.items).toHaveLength(1);
+    expect(history.items[0]).toMatchObject({ kind: 'bonus', amount: total, card: null });
+    expect(history.items[0]!.id).toMatch(/^match:\d{4}-\d{2}-\d{2}:2$/);
+    expect(fundsMatchCount(history.items[0]!.id)).toBe(2);
+  });
+
+  it('T-11-823 건 경기의 수입은 경기마다 한 번 더 받을 수 있고, 받은 쪽 · 다시 누르기 · 없는 경기는 주지 않는다', async () => {
+    const me = await ownerWithTeam(5, 85);
+    const rival = await ownerWithTeam(3, 70);
+    const res = await call('POST', '/v1/owner-team/matches', {
+      cookie: me.cookie,
+      headers: idem(),
+      body: { opponentTeamId: rival.team.id },
+    });
+    const { match, income } = PlayRes.parse(await res.json()).data;
+    const bonus = (cookie: string, id: string) =>
+      call('POST', `/v1/owner-team/matches/${id}/income-bonus`, { cookie, headers: idem() });
+    const data = async (r: Response) =>
+      ((await r.json()) as { data: { amount: number; balance: number; taken: boolean } }).data;
+    expect(await data(await bonus(me.cookie, match.id))).toEqual({
+      amount: income,
+      balance: income! * 2,
+      taken: false,
+    });
+    // 다시 누르면 더 주지 않는다. 상대(받은 쪽)와 없는 경기는 404다.
+    expect(await data(await bonus(me.cookie, match.id))).toEqual({
+      amount: 0,
+      balance: income! * 2,
+      taken: true,
+    });
+    expect((await bonus(rival.cookie, match.id)).status).toBe(404);
+    expect((await bonus(me.cookie, 'nope')).status).toBe(404);
+    expect(await ctx.db.select().from(ownerFunds)).toMatchObject([
+      { profileId: me.profileId, balance: income! * 2 },
+    ]);
+    const ledger = await ctx.db.select().from(ownerFundLedger);
+    expect(ledger.map((l) => [l.kind, l.delta, l.balance, l.ref])).toEqual([
+      ['match_income', income, income, match.id],
+      ['match_income_ad', income, income! * 2, match.id],
+    ]);
+    // 내역은 같은 날 한 줄에 더하고, 경기 수는 치른 경기만 센다.
+    const history = (
+      (await (await call('GET', '/v1/market/funds/history', { cookie: me.cookie })).json()) as {
+        data: FundsHistoryResponse;
+      }
+    ).data;
+    expect(history.totals.matchIncome).toBe(income! * 2);
+    expect(history.items).toHaveLength(1);
+    expect(fundsMatchCount(history.items[0]!.id)).toBe(1);
+  });
+
+  it('활성 밸런스에서 경기 수입을 0으로 두면 자금을 주지 않는다', async () => {
+    expect(rankMatchIncome(true, { rankMatchIncome: 0, rankWinIncome: 0 })).toBe(0);
+    expect(rankMatchIncome(false, { rankMatchIncome: 30000, rankWinIncome: 20000 })).toBe(30000);
+    expect(rankMatchIncome(true, { rankMatchIncome: 30000, rankWinIncome: 20000 })).toBe(50000);
+  });
+
   it('내 팀·빈 팀·없는 팀은 상대가 될 수 없고, 내 팀에 선수가 없으면 경기할 수 없다', async () => {
     const me = await ownerWithTeam(1);
     const play = (cookie: string, opponentTeamId: string) =>
@@ -1572,6 +1670,14 @@ describe('/v1/owner-team (T-10-092 구단주 팀)', () => {
       expect(b).toEqual(a);
       expect(a.match.moments?.every((m) => m.picked === 'auto')).toBe(true);
       expect(await ctx.db.select().from(teamMatches)).toHaveLength(1);
+      // T-11-823 장면 경기도 마감할 때 경기 수입을 한 번만 받는다(다시 마감해도 그대로).
+      const wantIncome =
+        BALANCE_SPEC.rankMatchIncome.def +
+        (a.match.home.goals > a.match.away.goals ? BALANCE_SPEC.rankWinIncome.def : 0);
+      expect(a.income).toBe(wantIncome);
+      expect(await ctx.db.select().from(ownerFunds)).toMatchObject([
+        { profileId: me.profileId, balance: wantIncome },
+      ]);
       // 마감한 뒤 장면을 보내면 마감한 결과를 그대로 준다.
       const m = data.live!.moments[0]!;
       const late = MomentRes.parse(

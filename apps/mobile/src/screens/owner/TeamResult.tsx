@@ -14,10 +14,12 @@ import type { StreakHint } from '@offside/app-core/losingStreak';
 import { momentGoalSummary, momentTitle, pickedChoice } from '@offside/app-core/teamMoments';
 import { matchOddsView } from '@offside/app-core/matchReport';
 import { recordText, signedNum } from '@offside/app-core/teamText';
+import { fmtValue } from '@offside/app-core/format';
 import { friendlySeason, teamScoreLabel } from '@offside/app-core/teamScore';
 import { DISPLAY, rem } from '../../theme/type';
 import { Btn, Card, Press, Txt } from '../../ui';
 import { TeamReport } from './TeamReport';
+import { MatchIncomeBonus } from './MatchIncomeBonus';
 import { usesRankLadder, type ReportLine } from '@offside/contracts/owner-team';
 import { DivisionEmblem } from '../../components/DivisionEmblem';
 import { divisionShiftView, type DivisionShift } from '@offside/app-core/teamDivision';
@@ -27,6 +29,7 @@ export function TeamResult({
   team,
   nowSeason,
   shift = null,
+  income = null,
   streak = null,
   eventName,
   matchesLeft,
@@ -43,6 +46,8 @@ export function TeamResult({
   nowSeason: number;
   /** T-11-375 방금 치른 경기의 디비전 전후(기록에서 연 경기는 null). */
   shift?: DivisionShift | null;
+  /** T-11-823 방금 마감한 랭크 경기로 받은 구단 자금(만 원, 기록에서 연 경기는 null). */
+  income?: number | null;
   /** T-11-722 랭크 연패 안내 — 방금 마감한 내가 건 랭크 경기에만 온다(웹 TeamResult streak). */
   streak?: StreakHint | null;
   eventName: (id: string | null, fallback: string) => string;
@@ -259,7 +264,7 @@ export function TeamResult({
         <View style={{ flexDirection: 'row' }} testID="team-friendly-label">
           {chip(teamScoreLabel(friendlySeason(m, team, nowSeason), L, 'friendlyNote'))}
         </View>
-      ) : gain != null || record ? (
+      ) : gain != null || record || income ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
           {gain != null
             ? chip(
@@ -269,8 +274,10 @@ export function TeamResult({
               )
             : null}
           {record ? chip(L.recordChip({ record })) : null}
+          {income ? chip(L.incomeChip({ amount: fmtValue(income) }), true, 'match-income') : null}
         </View>
       ) : null}
+      {income && !friendly ? <MatchIncomeBonus key={m.id} matchId={m.id} /> : null}
       {odds ? (
         <View
           testID="team-match-odds"

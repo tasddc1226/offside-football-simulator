@@ -56,6 +56,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   leagueFatigue: 'リーグの疲労',
   leagueHomeAdv: 'リーグのホームアドバンテージ',
   teamMatchRechargeMin: 'ランク戦の回復間隔（分）',
+  rankMatchIncome: 'ランク戦の放映権料（万ウォン）',
+  rankWinIncome: 'ランク戦の勝利手当（万ウォン）',
   rerollPrice: 'リロールチケットの価格',
   rerollPriceGrowth: 'リロールチケットの値上がり倍率',
   rerollDailyCap: '1日のリロールチケット購入数',

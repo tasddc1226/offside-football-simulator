@@ -56,6 +56,8 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   leagueFatigue: 'League fatigue',
   leagueHomeAdv: 'League home advantage',
   teamMatchRechargeMin: 'Ranked match recharge interval (min)',
+  rankMatchIncome: 'Ranked broadcast fee (10k KRW)',
+  rankWinIncome: 'Ranked win bonus (10k KRW)',
   rerollPrice: 'Reroll ticket price',
   rerollPriceGrowth: 'Reroll ticket price growth',
   rerollDailyCap: 'Reroll tickets per day',

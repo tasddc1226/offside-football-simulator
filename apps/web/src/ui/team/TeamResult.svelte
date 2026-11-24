@@ -6,6 +6,7 @@
   import { OUTCOME_TITLE, outcomeOf as outcome } from '@offside/app-core/teamOwner';
   import { teamMatchText as L } from '@offside/app-core/i18n/ko/teamMatch';
   import { recordText, signedNum } from '@offside/app-core/teamText';
+  import { fmtValue } from '@offside/app-core/format';
   import { friendlySeason, teamScoreLabel } from '@offside/app-core/teamScore';
   import TeamLogo from './TeamLogo.svelte';
   import DivisionEmblem from './DivisionEmblem.svelte';
@@ -23,6 +24,7 @@
     team,
     nowSeason,
     shift = null,
+    income = null,
     streak = null,
     eventName,
     matchesLeft,
@@ -39,6 +41,8 @@
     nowSeason: number;
     /** T-11-375 방금 치른 경기의 내 디비전 전후(기록에서 연 경기는 null). */
     shift?: DivisionShift | null;
+    /** T-11-823 방금 마감한 랭크 경기로 받은 구단 자금(만 원, 기록에서 연 경기는 null). */
+    income?: number | null;
     /** T-11-722 랭크 연패 안내 — 방금 마감한 내가 건 랭크 경기에만 온다. */
     streak?: StreakHint | null;
     eventName: (id: string | null, fallback: string) => string;
@@ -121,10 +125,11 @@
   </div>
   {#if m.friendly}
     <p class="tm-chips"><span class="tm-chip muted">{teamScoreLabel(friendlySeason(m, team, nowSeason), L, 'friendlyNote')}</span></p>
-  {:else if gain != null || record}
+  {:else if gain != null || record || income}
     <p class="tm-chips">
       {#if gain != null}<span class="tm-chip gain" data-rating-change>{usesRankLadder(team?.season ?? 0) ? L.ratingChangeRp : L.ratingChange}<b>{signedNum(gain)}</b></span>{/if}
       {#if record}<span class="tm-chip">{L.recordChip({ record })}</span>{/if}
+      {#if income}<span class="tm-chip gain" data-match-income>{L.incomeChip({ amount: fmtValue(income) })}</span>{/if}
     </p>
   {/if}
   {#if odds}

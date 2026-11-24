@@ -228,6 +228,7 @@ export default function Team() {
     playing,
     result,
     divisionShift,
+    income,
     streakHint,
     live,
     setLive,
@@ -1102,6 +1103,7 @@ export default function Team() {
         team={team}
         nowSeason={current ?? season}
         shift={divisionShift}
+        income={income}
         streak={streakHint}
         eventName={eventName}
         matchesLeft={matchesLeft}

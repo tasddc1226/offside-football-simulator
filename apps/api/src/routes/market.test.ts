@@ -789,7 +789,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     expect((await call('GET', '/v1/market/funds/history')).status).toBe(401);
     expect(await history(seller.cookie)).toEqual({
       balance: 0,
-      totals: { released: 0, bonus: 0, sold: 0, bought: 0, spent: 0 },
+      totals: { released: 0, bonus: 0, sold: 0, bought: 0, spent: 0, matchIncome: 0 },
       items: [],
       hasMore: false,
     });
@@ -831,6 +831,7 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
       sold: 1_140_000,
       bought: 0,
       spent: 1_000_000,
+      matchIncome: 0,
     });
     expect(s.items.map((i) => [i.kind, i.item, i.amount, i.fee, i.card?.careerId ?? null])).toEqual(
       [

@@ -654,6 +654,7 @@
           {team}
           nowSeason={current ?? season}
           shift={matches.state.divisionShift}
+          income={matches.state.income}
           streak={matches.state.streakHint}
           {eventName}
           matchesLeft={matches.state.result.friendly ? matches.state.friendlyLeft : matchesLeft}

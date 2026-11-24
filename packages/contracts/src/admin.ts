@@ -221,6 +221,8 @@ export const AdminFundsOwnerSumsSchema = z.object({
   sold: z.number().int(),
   bought: z.number().int(),
   items: z.number().int(),
+  /** T-11-823 랭크 경기 수입(중계권료 + 승리 수당). 배포 전 응답엔 없다. */
+  matchIncome: z.number().int().optional(),
   diff: z.number().int(),
 });
 export type AdminFundsOwnerSums = z.infer<typeof AdminFundsOwnerSumsSchema>;
@@ -235,6 +237,8 @@ export const AdminFundsReportSchema = z.object({
   bonus: z.number().int(),
   sold: z.number().int(),
   bought: z.number().int(),
+  /** T-11-823 랭크 경기 수입으로 들어온 돈. 배포 전 응답엔 없다. */
+  matchIncome: z.number().int().optional(),
   /** 거래 수수료로 없어진 돈. */
   fees: z.number().int(),
   /** 구단 자금으로 산 것(없어진 돈) — item별(reroll · reward:<kind>). */
@@ -246,7 +250,7 @@ export type AdminFundsReport = z.infer<typeof AdminFundsReportSchema>;
 
 /** 자금이 움직인 한 번. amount는 들어오면 +, 나가면 −. item은 kind가 item일 때(reroll · reward:<kind>). */
 export const AdminFundsMoveSchema = z.object({
-  kind: z.enum(['released', 'bonus', 'sold', 'bought', 'item']),
+  kind: z.enum(['released', 'bonus', 'sold', 'bought', 'item', 'match']),
   item: z.string().nullable(),
   amount: z.number().int(),
   at: z.string(),

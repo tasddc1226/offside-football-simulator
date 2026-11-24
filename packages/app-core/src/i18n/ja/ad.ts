@@ -36,4 +36,9 @@ export const ad: Translation<AdMsgs> = {
   attendFree: 'もう一回受け取る',
   attendWatch: '広告を最後まで見るともう一回受け取れます。',
   attendFail: '受け取れませんでした。少ししてからもう一度押してください。',
+  incomeAd: '広告を見てもう一回受け取る',
+  incomeFree: 'もう一回受け取る',
+  incomeWatch: '広告を最後まで見るともう一回受け取れます。',
+  incomeFail: '受け取れませんでした。少ししてからもう一度押してください。',
+  incomeGot: (p: { amount: string }) => `試合収入をもう一回受け取りました +${p.amount}`,
 };

@@ -38,6 +38,8 @@ export function createTeamMatches(host: MatchHost) {
     playing: false,
     result: null as TeamMatch | null,
     divisionShift: null as DivisionShift | null,
+    /** T-11-823 방금 마감한 랭크 경기로 받은 구단 자금(만 원). 기록에서 연 경기 · 친선전은 null. */
+    income: null as number | null,
     /** T-11-722 방금 마감한 경기에 보일 연패 안내(기록에서 연 경기 · 친선전은 null). */
     streakHint: null as StreakHint | null,
     resultOrigin: 'opponents' as 'opponents' | 'history',
@@ -102,6 +104,7 @@ export function createTeamMatches(host: MatchHost) {
   function applyPlayed(r: PlayTeamMatchResponse) {
     // T-11-375 승격 · 강등 띠는 마감한 결과에만 온다(장면 경기 시작 응답에는 없다).
     state.divisionShift = r.division ?? null;
+    state.income = r.income ?? null;
     const team = host.team();
     if (!team) return;
     team.record = r.record;
@@ -126,6 +129,7 @@ export function createTeamMatches(host: MatchHost) {
   function openFriendly(m: TeamMatch, left: number, fresh: boolean) {
     state.result = m;
     state.divisionShift = null;
+    state.income = null;
     state.streakHint = null;
     state.resultOrigin = 'opponents';
     state.live = fresh;
@@ -137,6 +141,7 @@ export function createTeamMatches(host: MatchHost) {
   function openHistoryMatch(m: TeamMatch) {
     state.result = m;
     state.divisionShift = null;
+    state.income = null;
     state.streakHint = null;
     state.resultOrigin = 'history';
     state.live = false;

@@ -1,5 +1,6 @@
 // T-10-092 구단주 팀 · 라이브 랭킹 API. 팀 화면·기록실(지연 청크)만 import한다. 타입은 type-only import라 번들에 zod가 들어가지 않는다.
 import type {
+  MatchIncomeBonusResponse,
   Comment,
   CommentInput,
   TeamCommentsResponse,
@@ -22,6 +23,7 @@ import type {
   TeamDivisionsResponse,
   TeamMomentResponse,
 } from '@offside/contracts';
+import { IDEMPOTENCY_KEY_HEADER } from '@offside/contracts/headers';
 import { apiFetch, cachedGet, ownerCachedGet } from './client.js';
 import { withOwnerHint } from './friendPending.js';
 import { signalOn } from '../clubSignals.js';
@@ -184,6 +186,12 @@ export const chooseMoment = (matchId: string, index: number, choice: string) =>
     ),
     'club_match',
     (r) => r.ok && !!r.data.final,
+  );
+/** T-11-823 방금 건 랭크 경기의 수입을 한 번 더 받는다(앱 전용 — 광고를 끝까지 본 뒤, 광고 제거 · 멤버십은 바로). */
+export const claimMatchIncomeBonus = (matchId: string, key: string) =>
+  apiFetch<MatchIncomeBonusResponse>(
+    `/v1/owner-team/matches/${encodeURIComponent(matchId)}/income-bonus`,
+    { method: 'POST', headers: { [IDEMPOTENCY_KEY_HEADER]: key } },
   );
 /** 남은 장면을 감독에게 맡기고 경기를 끝낸다('결과 바로 보기'). */
 export const finishLiveMatch = (matchId: string) =>

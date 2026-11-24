@@ -64,6 +64,11 @@ const UNITS = {
     ios: 'ca-app-pub-3797087216173591/9962450572',
     android: 'ca-app-pub-3797087216173591/7873589266',
   },
+  /** T-11-823 랭크 경기 수입 한 번 더 받기. 따로 만든 단위가 생기기 전까지 출석 한 번 더 단위를 같이 쓴다(GA4 place로 나눠 본다). */
+  income: {
+    ios: 'ca-app-pub-3797087216173591/9261466164',
+    android: 'ca-app-pub-3797087216173591/8363317467',
+  },
 };
 type RewardPlacement = keyof typeof UNITS;
 const unitOf = (p: RewardPlacement) => (__DEV__ ? TestIds.REWARDED : Platform.select(UNITS[p]));
@@ -263,8 +268,8 @@ export async function claimReward(
     failStreak = 0;
     if (result === 'closed') return skipped;
   }
-  // 광고 이용 요약(시즌 업로드)은 커리어 화면의 세 자리만 센다.
-  if (p !== 'repick') countReward(p, free);
+  // 광고 이용 요약(시즌 업로드)은 커리어 화면의 자리만 센다(구단 화면의 상대 다시 찾기 · 경기 수입은 GA4로 본다).
+  if (p !== 'repick' && p !== 'income') countReward(p, free);
   onEarned();
   return '';
 }

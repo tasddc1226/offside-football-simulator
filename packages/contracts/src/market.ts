@@ -219,6 +219,15 @@ export const FundsSpendSchema = z.strictObject({
 });
 export type FundsSpend = z.infer<typeof FundsSpendSchema>;
 
+/**
+ * T-11-823 랭크 경기 수입 줄의 id 머리. 옛 앱이 모르는 kind 대신 bonus로 보내고 id를 `match:<한국 날짜>:<경기 수>`로 준다
+ * (하루치를 한 줄로 묶는다).
+ */
+export const FUNDS_MATCH_ID = 'match:';
+/** 랭크 경기 수입 줄이면 그날 경기 수, 아니면 null. */
+export const fundsMatchCount = (id: string): number | null =>
+  id.startsWith(FUNDS_MATCH_ID) ? Number(id.split(':')[2]) || 0 : null;
+
 /** 자금 내역 한 줄(GET /v1/market/funds/history). amount는 잔액 변화(받으면 +, 쓰면 −). */
 export const FundsHistoryEntrySchema = z.strictObject({
   id: z.string(),
@@ -251,6 +260,8 @@ export const FundsHistoryResponseSchema = z.strictObject({
     bought: man,
     /** 리롤권 · 광고 대신 받은 보상에 쓴 자금. */
     spent: man,
+    /** T-11-823 랭크 경기로 받은 자금(중계권료 + 승리 수당). 배포 전 응답엔 없다. */
+    matchIncome: man.optional(),
   }),
   items: z.array(FundsHistoryEntrySchema),
   hasMore: z.boolean(),

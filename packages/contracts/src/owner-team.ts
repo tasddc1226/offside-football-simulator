@@ -138,6 +138,16 @@ export const TEAM_MATCHES_PER_DAY = 10;
 /** 하루 경기를 다 치른 뒤 1경기가 더 열리는 간격(분). BALANCE_SPEC.teamMatchRechargeMin.def와 같다. */
 export const TEAM_MATCH_RECHARGE_MIN = 180;
 /**
+ * T-11-823 랭크 경기 수입(만 원): 경기를 건 구단주가 받는 중계권료 + 이겼을 때 승리 수당. 받은 쪽은 받지 않는다.
+ * 금액은 활성 밸런스(rankMatchIncome · rankWinIncome)에서 온다.
+ */
+export const rankMatchIncome = (
+  won: boolean,
+  rules: { rankMatchIncome: number; rankWinIncome: number },
+): number =>
+  Math.max(0, Math.round(rules.rankMatchIncome)) +
+  (won ? Math.max(0, Math.round(rules.rankWinIncome)) : 0);
+/**
  * 오늘 남은 랭크 경기와 다음 충전 시각. 하루 경기를 다 치른 순간부터 간격마다 1경기씩 쌓이고, 자정에 처음으로 돌아간다. 따로
  * 저장하지 않고 오늘 건 경기 시각으로 센다. 자정 전에 더 열리지 않으면 nextAt은 null이다. 간격이 0이면 충전하지 않는다.
  */

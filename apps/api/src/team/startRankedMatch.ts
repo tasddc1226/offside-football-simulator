@@ -1,5 +1,10 @@
 import type { PlayTeamMatchBody, PlayTeamMatchResponse } from '@offside/contracts';
-import { TEAM_MATCHES_PER_DAY, matchScore, usesRankLadder } from '@offside/contracts/owner-team';
+import {
+  TEAM_MATCHES_PER_DAY,
+  matchScore,
+  rankMatchIncome,
+  usesRankLadder,
+} from '@offside/contracts/owner-team';
 import { resolveBalance } from '@offside/contracts/balance';
 import { divisionRules } from '@offside/contracts/team-division';
 import type { Db } from '../db/client.js';
@@ -183,6 +188,7 @@ export async function startRankedMatch(
     activeBalance.rankDefLoss,
   );
   const detail = matchDetailOf(mine, opp.team, lineups, result, delta, { xi: true });
+  const income = rankMatchIncome(result.homeGoals > result.awayGoals, activeBalance);
   const homeSide = {
     teamId: mine.id,
     filled: filledCount(lineups.home),
@@ -208,6 +214,7 @@ export async function startRankedMatch(
         detail,
         now,
         divisions,
+        income,
       }),
     ],
     matchNotice(id, mine, opp.team, result.homeGoals, result.awayGoals, now),
@@ -231,5 +238,6 @@ export async function startRankedMatch(
     match: playedMatch(head, detail, lineups, mine, opp.team, lang),
     ...rankedMatchProgress(season, mine, score, delta.home, divisions),
     ...after,
+    ...(income > 0 ? { income } : {}),
   };
 }

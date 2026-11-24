@@ -7,6 +7,7 @@ export const FUNDS_MOVE: Record<Exclude<AdminFundsMove['kind'], 'item'>, string>
   bonus: '은퇴 장려금',
   sold: '판매',
   bought: '영입',
+  match: '랭크 경기 수입',
 };
 const ITEM: Record<string, string> = {
   reroll: '리롤권 구매',

@@ -281,6 +281,16 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '랭크 경기 충전 간격(분)',
     desc: '하루 랭크 경기를 다 치른 뒤 이 시간마다 1경기가 더 열린다. 자정에 처음으로 돌아간다. 0이면 충전하지 않는다',
   },
+  rankMatchIncome: {
+    group: 'team',
+    label: '랭크 중계권료(만 원)',
+    desc: '랭크 경기를 건 구단주가 경기마다 받는 구단 자금. 승패와 상관없이 받고 받은 쪽은 받지 않는다. 0이면 주지 않는다',
+  },
+  rankWinIncome: {
+    group: 'team',
+    label: '랭크 승리 수당(만 원)',
+    desc: '랭크 경기를 건 구단주가 이기면 중계권료에 더 받는 구단 자금. 0이면 주지 않는다',
+  },
   leagueHomeAdv: {
     group: 'team',
     label: '리그 홈 이점',
