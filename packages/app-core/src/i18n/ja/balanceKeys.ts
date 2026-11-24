@@ -84,6 +84,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivRewardFrom: 'ディビジョン報酬の開始シーズン',
   teamDivMinMatches: 'ディビジョン報酬の最低試合数',
   enhanceOpen: 'カード強化を開く',
+  tourOpen: '遠征ツアーを開く',
   enhanceCostScale: 'カード強化の費用倍率',
   enhanceRateScale: 'カード強化の成功確率倍率',
   teamDivReward3: 'プロIIシーズン報酬のリロール券',

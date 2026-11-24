@@ -1,16 +1,9 @@
 // T-11-825 원정 투어 경기 계산. AI 구단은 DB 없이 자리 실력만으로 만든 선발이고, 경기는 랭크와 같은 엔진(sim.ts)으로 굴린다.
 // 원정이라 AI 구단이 홈 이점을 받는다. 비기면 승부차기로 가른다(다시 도전을 줄인다).
-import {
-  FORMATIONS,
-  YOUTH_NAME,
-  slotRating,
-  type FormationId,
-} from '@offside/contracts/owner-team';
+import { FORMATIONS, YOUTH_NAME, type FormationId } from '@offside/contracts/owner-team';
+import { tourAutoPick } from '@offside/contracts/squad-tour-lineup';
 import {
   TOUR,
-  tourCapKey,
-  tourCapMax,
-  tourEligible,
   tourLineupOk,
   tourOpp,
   tourPlain,
@@ -30,6 +23,10 @@ import {
 
 /** AI 구단이 쓰는 포메이션(주 · 경기 번호로 고른다). */
 const AI_FORMATIONS: readonly FormationId[] = ['4-3-3', '4-4-2', '3-5-2'];
+
+/** n번째 경기 AI 구단의 포메이션(tourOpponent와 같은 값). */
+export const tourOppFormation = (week: string, stage: number): FormationId =>
+  AI_FORMATIONS[Math.floor(rngOf(seedOf(`tour:${week}:${stage}`))() * AI_FORMATIONS.length)]!;
 
 /** n번째 경기의 AI 구단 선발. 자리 실력은 목표 평균 ±2 안에서 흩고 합을 목표에 맞춘다. 같은 주 · 같은 경기면 모두에게 같다. */
 export function tourOpponent(week: string, stage: number): LineupSlot[] {
@@ -65,44 +62,28 @@ const forRules = (c: LineupCareer, rules: readonly TourRule[]): LineupCareer =>
   tourPlain(rules) ? { ...c, enhance: 0 } : c;
 
 /**
- * 제한 아래에서 뛸 수 있는 카드로 자리마다 가장 잘 맞는 선수를 놓는다(욕심쟁이 — 자리 실력이 가장 높은 조합부터). 화면의 자동 편성과
- * 시뮬레이션이 같이 쓴다. 놓을 카드가 없으면 빈 자리(null)로 두고 현지 용병이 뛴다.
+ * 제한 아래에서 뛸 수 있는 카드로 자리마다 가장 잘 맞는 선수를 놓는다(계산은 화면과 같은 contracts의 tourAutoPick). 시뮬레이션이
+ * 쓴다. 놓을 카드가 없으면 빈 자리(null)로 두고 현지 용병이 뛴다.
  */
-export function tourAutoSlots(
+export const tourAutoSlots = (
   formation: FormationId,
   cards: readonly LineupCareer[],
   rules: readonly TourRule[],
   season: number,
   merc: number,
-): (string | null)[] {
-  const slots = FORMATIONS[formation];
-  const pool = cards
-    .filter((c) => rules.every((r) => tourEligible(r, tourCardOf(c), season)))
-    .map((c) => forRules(c, rules));
-  // 용병보다 못한 자리에는 카드를 세우지 않는다(그 자리는 용병이 뛴다). 실력이 같으면 내 카드를 세운다.
-  const pairs: { i: number; c: LineupCareer; r: number }[] = [];
-  slots.forEach((slot, i) => {
-    for (const c of pool) {
-      const r = slotRating(slot, c);
-      if (r >= merc) pairs.push({ i, c, r });
-    }
-  });
-  pairs.sort((a, b) => b.r - a.r);
-  const out: (string | null)[] = slots.map(() => null);
-  const used = new Set<string>();
-  const counts = rules.map(() => new Map<string, number>());
-  for (const p of pairs) {
-    if (out[p.i] !== null || used.has(p.c.id)) continue;
-    const card = tourCardOf(p.c);
-    const keys = rules.map((r) => (tourCapMax(r) === null ? null : tourCapKey(r, card)));
-    if (keys.some((k, j) => k !== null && (counts[j]!.get(k) ?? 0) >= tourCapMax(rules[j]!)!))
-      continue;
-    keys.forEach((k, j) => k !== null && counts[j]!.set(k, (counts[j]!.get(k) ?? 0) + 1));
-    out[p.i] = p.c.id;
-    used.add(p.c.id);
-  }
-  return out;
-}
+): (string | null)[] =>
+  tourAutoPick(
+    formation,
+    cards.map((c) => ({
+      ...c,
+      season: c.season ?? 0,
+      nation: c.nation ?? null,
+      mainLeague: c.mainLeague ?? null,
+    })),
+    rules,
+    season,
+    merc,
+  );
 
 /**
  * 그 편성의 선발(제한을 반영한 자리 실력). 빈 자리는 유스 선수 대신 현지 용병(merc 실력)이 뛴다 — 카드가 적은 구단주도 제한 때문에

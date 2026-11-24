@@ -1,0 +1,39 @@
+{
+  "id": "t-11-825-squad-tour",
+  "title": "원정 투어",
+  "items": [
+    "내 구단 화면에 원정 투어가 생겼어요. 매주 모두에게 같은 AI 구단 7곳을 차례로 원정 가고, 그 뒤로 무한 원정이 이어져요.",
+    "경기마다 출전 제한이 달라요. 가진 카드로 선발 11명과 교체 명단 5명을 새로 짜고, 30분 · 60분 작전 타임에 전술과 교체를 지시해요.",
+    "하루 3번 도전할 수 있어요. 경기를 처음 이기면 대전료(구단 자금)를 받고, 점수로 주간 순위를 겨뤄요. 지난 주 기록은 참여 기록에서 볼 수 있어요.",
+    "매주 월요일 0시(한국 시간)에 새로 시작해요. Google · Apple로 로그인한 구단주가 참가할 수 있어요."
+  ],
+  "en": {
+    "title": "Away tour",
+    "items": [
+      "The Away tour is now on the My Club screen. Each week you travel through 7 AI clubs that are the same for everyone, and an endless run follows.",
+      "Every match has a different squad restriction. Build a new starting 11 and a bench of 5 from your cards, then change tactics and make substitutions at the 30' and 60' team talks.",
+      "You get 3 attempts a day. The first win of each match pays a match fee (club funds), and your score counts toward the weekly ranking. Past weeks are listed under My record.",
+      "The tour starts over every Monday at 00:00 KST. Owners signed in with Google or Apple can take part."
+    ]
+  },
+  "ja": {
+    "title": "遠征ツアー",
+    "items": [
+      "マイクラブ画面に遠征ツアーが追加されました。毎週全員に同じAIクラブ7つへ順番に遠征し、その後は無限遠征が続きます。",
+      "試合ごとに出場制限が変わります。持っているカードでスタメン11人とベンチ5人を組み直し、30分 · 60分の作戦タイムで戦術と交代を指示します。",
+      "1日3回挑戦できます。各試合に初めて勝つとファイトマネー(クラブ資金)を受け取り、スコアで週間ランキングを競います。過去の週の記録は参加記録で確認できます。",
+      "毎週月曜0時(韓国時間)に新しく始まります。Google · Appleでログインしたオーナーが参加できます。"
+    ]
+  },
+  "zh": {
+    "title": "遠征巡迴賽",
+    "items": [
+      "「我的俱樂部」畫面新增了遠征巡迴賽。每週依序挑戰所有人都相同的 7 支 AI 俱樂部，之後還有無限遠征。",
+      "每場比賽的出賽限制都不同。用手上的卡片重新安排 11 名先發與 5 名替補，並在 30 分 · 60 分的戰術暫停時調整戰術與換人。",
+      "每天可挑戰 3 次。首次贏下每場比賽可獲得出場費（俱樂部資金），並以分數競爭每週排名。過去各週的紀錄可在參加紀錄中查看。",
+      "每週一 0 點（韓國時間）重新開始。以 Google 或 Apple 登入的老闆可以參加。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}

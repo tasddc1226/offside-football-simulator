@@ -84,6 +84,7 @@ const ko = {
   teamDivRewardFrom: '디비전 보상 시작 시즌',
   teamDivMinMatches: '디비전 보상 최소 경기 수',
   enhanceOpen: '카드 강화 열기',
+  tourOpen: '원정 투어 열기',
   enhanceCostScale: '카드 강화 비용 배율',
   enhanceRateScale: '카드 강화 확률 배율',
   teamDivReward3: '프로 II 시즌 보상 리롤권',

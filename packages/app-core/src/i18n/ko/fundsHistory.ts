@@ -11,6 +11,8 @@ const ko = {
   bonus: '은퇴 장려금',
   matchIncome: '경기 수입',
   matchGames: (p: { n: number }) => `랭크 ${p.n}경기`,
+  tourFee: '원정 대전료',
+  tourStage: (p: { n: number }) => `원정 투어 ${p.n}차전`,
   enhance: '카드 강화',
   sold: '판매',
   fees: (p: { fee: string }) => `수수료 ${p.fee} 뺌`,

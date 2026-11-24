@@ -41,6 +41,10 @@ export async function getActiveBalance(db: Db): Promise<BalanceVersion | undefin
 export const enhanceOpenFrom = (row: Row | undefined) =>
   resolveBalance(row && toVersion(row).values).enhanceOpen >= 1;
 
+/** T-11-825 원정 투어를 받는가(밸런스 tourOpen). */
+export const tourOpenFrom = (row: Row | undefined) =>
+  resolveBalance(row && toVersion(row).values).tourOpen >= 1;
+
 /** 랭크 경기 충전 간격(분, 0이면 끔). */
 export const matchRechargeFrom = (row: Row | undefined) =>
   resolveBalance(row && toVersion(row).values).teamMatchRechargeMin;

@@ -32,6 +32,7 @@
   import { accountText as A } from '@offside/app-core/i18n/ko/account';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
   import { exchangeText as XC } from '@offside/app-core/i18n/ko/exchange';
+  import { tourText as TR } from '@offside/app-core/i18n/ko/tour';
   import { seasonPassText as SP } from '@offside/app-core/i18n/ko/seasonPass';
   import { passEntryOpen } from '@offside/contracts/season-pass';
   import { membershipText as MB } from '@offside/app-core/i18n/ko/membership';
@@ -91,7 +92,10 @@
   $effect(() => {
     if (!linked) return;
     void fetchOwnerTeam().then((r) => {
-      if (r.ok) card = ownerTeamCard(r.data);
+      if (r.ok) {
+        card = ownerTeamCard(r.data);
+        tourOn = !!r.data.tourOpen;
+      }
       else cardFailed = true;
     });
   });
@@ -126,6 +130,14 @@
   function openExchange() {
     exchangeOpen = true;
     if (!Exchange) void import('./owner/CardExchange.svelte').then((m) => (Exchange = m.default));
+  }
+  // T-11-825 원정 투어 창도 열 때만 불러온다. 입구는 밸런스 tourOpen이 켜졌을 때만 보인다(내 팀 응답에 실려 온다).
+  let Tour = $state<Component<{ onclose: () => void }> | null>(null);
+  let tourOpen = $state(false);
+  let tourOn = $state(false);
+  function openTour() {
+    tourOpen = true;
+    if (!Tour) void import('./owner/SquadTour.svelte').then((m) => (Tour = m.default));
   }
   // T-11-511 시즌 패스 창도 열 때만 불러온다.
   let Pass = $state<Component<{ onclose: () => void }> | null>(null);
@@ -275,6 +287,11 @@
         <button class="owner-tile" data-act="exchange" data-owner-exchange aria-label={XC.entryAria} onclick={openExchange}>
           <b>{XC.entryTitle}<span class="pill good">{XC.entryNew}</span></b><span>{L.tileExchange}</span>
         </button>
+        {#if tourOn}
+          <button class="owner-tile" data-act="tour" data-owner-tour aria-label={TR.entryAria} onclick={openTour}>
+            <b>{TR.entryTitle}<span class="pill good">{XC.entryNew}</span></b><span>{TR.entrySub}</span>
+          </button>
+        {/if}
         <button class="owner-tile" data-act="manager" data-owner-manager aria-label={MG.entryAria} onclick={() => go('manager')}>
           <b>{MG.entryTitle}<span class="pill good" data-owner-manager-new>{MG.entryNew}</span></b><span>{L.tileManager}</span>
         </button>
@@ -289,6 +306,7 @@
     </nav>
   {/if}
   {#if exchangeOpen && Exchange}<Exchange onclose={() => (exchangeOpen = false)} />{/if}
+  {#if tourOpen && Tour}<Tour onclose={() => (tourOpen = false)} />{/if}
 
   {#if linked && (passEntry || memberEntry)}
     <!-- T-11-567 시즌 패스 · 클럽 멤버십은 한 카드에 두 줄로. -->

@@ -4,6 +4,7 @@
  * 여기에는 제한 · 단계 · 점수 · 대전료의 정의만 둔다. 경기 계산은 apps/api/src/team/squadTour.ts.
  * zod가 없는 서브패스(`@offside/contracts/squad-tour`)라 웹 · 앱 번들에 넣어도 가볍다.
  */
+import { DAY_MS, kstDay } from './kst.js';
 import { DEFAULT_NATION } from './nations.js';
 
 /** 제한을 따질 때 보는 카드 값(모두 cards · careers에 이미 있는 값). */
@@ -328,3 +329,15 @@ export const tourDrained = (st: number, tactic: TourTactic): number =>
  */
 export const tourAiTactic = (start: TourTactic, goalDiff: number): TourTactic =>
   goalDiff < 0 ? 'press' : goalDiff > 0 ? 'park' : start;
+
+/** 그 시각이 속한 투어 주(한국 시각 월요일 날짜, YYYY-MM-DD). 월요일 0시에 새 주가 열린다. */
+export function tourWeekOf(now: string): string {
+  const day = kstDay(now);
+  const at = Date.parse(`${day}T00:00:00.000Z`);
+  const dow = new Date(at).getUTCDay();
+  return new Date(at - ((dow + 6) % 7) * DAY_MS).toISOString().slice(0, 10);
+}
+
+/** 이긴 경기의 별(1~3): 승리 · 그 경기 첫 도전에 승리 · 90분 2골 차 이상. 진 경기는 0. */
+export const tourStars = (win: boolean, tries: number, goalDiff: number): number =>
+  win ? 1 + (tries === 1 ? 1 : 0) + (goalDiff >= 2 ? 1 : 0) : 0;

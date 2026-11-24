@@ -22,7 +22,8 @@ export type IdPrefix =
   | 'mgr'
   | 'xch'
   | 'enh'
-  | 'vox';
+  | 'vox'
+  | 'tur';
 
 export function newId(prefix: IdPrefix): string {
   return `${prefix}_${crypto.randomUUID()}`;

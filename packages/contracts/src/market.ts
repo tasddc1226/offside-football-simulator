@@ -228,6 +228,12 @@ export const FUNDS_MATCH_ID = 'match:';
 export const fundsMatchCount = (id: string): number | null =>
   id.startsWith(FUNDS_MATCH_ID) ? Number(id.split(':')[2]) || 0 : null;
 
+/** T-11-825 원정 투어 대전료 줄의 id 머리(`tour:<주>:<경기 번호>`). 랭크 경기 수입처럼 bonus로 보낸다. */
+export const FUNDS_TOUR_ID = 'tour:';
+/** 원정 투어 대전료 줄이면 경기 번호, 아니면 null. */
+export const fundsTourStage = (id: string): number | null =>
+  id.startsWith(FUNDS_TOUR_ID) ? Number(id.split(':')[2]) || 0 : null;
+
 /** 자금 내역 한 줄(GET /v1/market/funds/history). amount는 잔액 변화(받으면 +, 쓰면 −). */
 export const FundsHistoryEntrySchema = z.strictObject({
   id: z.string(),
