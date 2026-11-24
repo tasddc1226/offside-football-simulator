@@ -9,7 +9,10 @@
   import { goBack } from '../history.svelte.js';
   import { buzz, motionOK } from '../motion.js';
   import TeamPitch from '../team/TeamPitch.svelte';
+  import MatchGround from '../team/MatchGround.svelte';
+  import TourLineup from './TourLineup.svelte';
   import PlayerCard from '../team/PlayerCard.svelte';
+  import ClubBadge from '../ClubBadge.svelte';
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
   import { fetchTour, fetchTourHistory, fetchTourRanking, orderTourMatch, startTourMatch } from '@offside/app-core/api/tour';
@@ -21,11 +24,10 @@
     TOUR_MAIN_STAGES,
     TOUR_TACTICS,
     tourAutoDraft,
-    tourBenchOptions,
     tourCells,
     tourChances,
     tourEdge,
-    tourOptions,
+    tourOppClub,
     tourPicks,
     tourRuleText,
     tourSpan,
@@ -39,6 +41,9 @@
     type TourDraft,
     type TourTactic,
   } from '@offside/app-core/tour';
+  import { tourGroundNames, tourGroundPlay, tourOppShare, tourSegmentLines } from '@offside/app-core/tourGround';
+  import { groundBall, groundLineWaitMs, groundSpots, type GroundPlay, type GroundPlayer, type GroundPose, type Pt } from '@offside/app-core/matchGround';
+  import { MOMENTUM_START, momentumAfter, momentumDecay, type LiveLine } from '@offside/app-core/teamLive';
   import { marketName } from '@offside/app-core/market';
   import { fmtValue } from '@offside/contracts/market-value';
   import { localCareerNames } from '@offside/game/hof-store';
@@ -51,6 +56,7 @@
   let view = $state<View>('map');
   let tour = $state<TourStateResponse | null>(null);
   let players = $state<TeamPlayer[]>([]);
+  let myName = $state<string>(L.mySide);
   let failed = $state(false);
   let busy = $state(false);
   let error = $state('');
@@ -64,6 +70,7 @@
     }
     tour = t.data;
     players = team.data.players;
+    if (team.data.team?.name) myName = team.data.team.name;
     if (!draftFormation && team.data.team) draftFormation = team.data.team.formation;
     if (t.data.live) {
       match = t.data.live;
@@ -88,16 +95,11 @@
   let draftFormation = $state<FormationId | null>(null);
   let stage = $state<TourStage | null>(null);
   let draft = $state<TourDraft | null>(null);
-  let slotOpen = $state<number | null>(null);
-  let benchOpen = $state(false);
-
   function openStage(s: TourStage) {
     if (!tour) return;
     stage = s;
     justWon = null;
     draft = tourAutoDraft(s, picks, tour.season, draftFormation ?? '4-3-3');
-    slotOpen = null;
-    benchOpen = false;
     error = '';
     view = 'prep';
   }
@@ -105,34 +107,10 @@
     if (!tour || !stage || !draft) return;
     draftFormation = f;
     draft = { ...tourAutoDraft(stage, picks, tour.season, f), tactic: draft.tactic };
-    slotOpen = null;
   }
   function auto() {
     if (!tour || !stage || !draft) return;
     draft = { ...tourAutoDraft(stage, picks, tour.season, draft.formation), tactic: draft.tactic };
-    slotOpen = null;
-  }
-  const cells = $derived(stage && draft ? tourCells(draft, pickById, stage.rules, stage.merc) : []);
-  const pitchCells = $derived(
-    cells.map((c) => ({ rating: c.rating, name: nameOf(c.id), youth: c.merc, player: c.id ? byId.get(c.id) : undefined })),
-  );
-  const options = $derived(
-    tour && stage && draft && slotOpen !== null ? tourOptions(draft, slotOpen, picks, stage.rules, tour.season) : [],
-  );
-  const benchOptions = $derived(tour && stage && draft && benchOpen ? tourBenchOptions(draft, picks, stage.rules, tour.season) : []);
-  function place(id: string | null) {
-    if (!draft || slotOpen === null) return;
-    const slotIds = [...draft.slotIds];
-    slotIds[slotOpen] = id;
-    draft = { ...draft, slotIds };
-    flash(slotOpen);
-    slotOpen = null;
-  }
-  function toggleBench(id: string) {
-    if (!draft) return;
-    const has = draft.bench.includes(id);
-    if (!has && draft.bench.length >= TOUR_LIVE.bench) return;
-    draft = { ...draft, bench: has ? draft.bench.filter((x) => x !== id) : [...draft.bench, id] };
   }
   async function depart() {
     if (!stage || !draft || busy) return;
@@ -162,6 +140,8 @@
     outSlot = null;
   }
   const liveStage = $derived(match ? (tour?.stages.find((s) => s.stage === match!.stage) ?? null) : null);
+  const liveOpp = $derived(tourOppClub(liveStage));
+  const oppName = $derived(liveOpp?.name ?? L.oppSide);
   const liveSlots = $derived(match ? match.slotIds.map((id, i) => subs.find((s) => s.slot === i)?.cardId ?? id) : []);
   const liveCells = $derived.by(() => {
     if (!match) return [];
@@ -210,11 +190,11 @@
     void playSegment();
   }
 
-  // ── 경기 재생 ── 방금 계산된 30분을 시계로 흘려 보낸다. 골이 난 분에 멈춰 득점자를 보여 주고 점수를 올린다.
+  // ── 경기 재생 ── 방금 계산된 30분을 시계와 말판으로 다시 보여 준다(랭크 경기 문자중계와 같은 2D 그라운드). 서버는 골만 주므로
+  // 그 사이 기회 · 선방 줄은 화면이 채운다. 골이 난 분에는 빌드업부터 골까지 움직임을 보여 주고 그 사이 점수를 올린다.
   type Goal = TourMatchView['events'][number];
   const SEG = 90 / TOUR_LIVE.segments;
   const MIN_MS = 210;
-  const GOAL_MS = 1900;
   let playing = $state(false);
   let kickoff = $state(false);
   let clock = $state(0);
@@ -222,12 +202,34 @@
   // 골 장면 도중에 점수가 올라간다.
   let scored = $state(false);
   let run = 0;
+  /** 그라운드: 22명의 기본 자리, 지금 자세 · 전환 시간 · 골까지 공이 지난 길, 흐름, 지금 중계 줄. */
+  let gPlayers = $state.raw<readonly GroundPlayer[]>([]);
+  let gPose = $state.raw<GroundPose | null>(null);
+  let gDur = $state(700);
+  let gTrail = $state.raw<readonly Pt[]>([]);
+  let momentum = $state(MOMENTUM_START);
+  let line = $state<LiveLine | null>(null);
+  let gTimers: ReturnType<typeof setTimeout>[] = [];
+  const spots = $derived(groundSpots(gPlayers, gPose, momentum));
+  const ball = $derived(groundBall(gPose, momentum));
+  const groundNames = $derived(match ? tourGroundNames(match.slotIds, nameOf, liveStage?.players) : null);
+  function stopGround() {
+    for (const t of gTimers) clearTimeout(t);
+    gTimers = [];
+  }
   const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-  onDestroy(() => run++);
+  onDestroy(() => {
+    run++;
+    stopGround();
+  });
   function endSegment() {
+    stopGround();
     playing = false;
     kickoff = false;
     banner = null;
+    line = null;
+    gPose = null;
+    gTrail = [];
     if (!match) return;
     clock = match.done * SEG;
     if (match.status === 'live') return playSfx('whistle');
@@ -235,12 +237,39 @@
     playSfx(match.status === 'won' ? 'trophy' : 'fulltime');
     view = 'result';
   }
+  /** 줄 하나의 움직임을 total(ms) 안에 차례로 보여 준다. */
+  function playLine(g: GroundPlay, l: LiveLine, total: number, id: number) {
+    stopGround();
+    const steps = g.line(l, total);
+    const trail = g.trail;
+    for (const st of steps) {
+      gTimers.push(
+        setTimeout(() => {
+          if (id !== run) return;
+          gPose = st.pose;
+          gDur = Math.min(900, st.dur);
+          gTrail = st.pose.goal ? trail : [];
+        }, st.at),
+      );
+    }
+  }
   async function playSegment() {
     if (!match) return;
     const id = ++run;
     const to = match.done * SEG;
     const from = to - SEG;
-    if (!motionOK) return endSegment();
+    const stg = tour?.stages.find((s) => s.stage === match!.stage);
+    if (!motionOK || !stg) return endSegment();
+    const g = tourGroundPlay(match, stg.formation);
+    const mine = liveCells.length ? liveCells.reduce((a, c) => a + c.rating, 0) / liveCells.length : stg.opp;
+    const lines = tourSegmentLines(match, { opp: oppName, mine: myName }, (pid, fallback) => (pid ? nameOf(pid) : fallback), tourOppShare(stg.opp, mine));
+    const goals = match.events.filter((e) => e.minute > from && e.minute <= to);
+    let goalNo = 0;
+    gPlayers = g.players;
+    gPose = null;
+    gTrail = [];
+    momentum = MOMENTUM_START;
+    line = null;
     playing = true;
     clock = from;
     if (from === 0) {
@@ -250,20 +279,31 @@
       if (id !== run) return;
       kickoff = false;
     }
-    const goals = match.events.filter((e) => e.minute > from && e.minute <= to);
     for (let m = from + 1; m <= to; m++) {
       await wait(MIN_MS);
       if (id !== run) return;
       clock = m;
-      for (const g of goals.filter((e) => e.minute === m)) {
-        scored = false;
-        banner = g;
-        playSfx(g.side === 'away' ? 'good' : 'bad');
-        buzz(g.side === 'away' ? 30 : 10);
-        await wait(700);
-        if (id !== run) return;
-        scored = true;
-        await wait(GOAL_MS - 700);
+      if (g.settle()) {
+        gPose = null;
+        gTrail = [];
+      }
+      momentum = momentumDecay(momentum);
+      for (const l of lines.filter((x) => x.minute === m)) {
+        const total = groundLineWaitMs(l.kind);
+        line = l;
+        momentum = momentumAfter(momentum, l);
+        playLine(g, l, total, id);
+        const goal = l.kind === 'goal' ? goals[goalNo++] : undefined;
+        if (goal) {
+          scored = false;
+          banner = goal;
+          playSfx(goal.side === 'away' ? 'good' : 'bad');
+          buzz(goal.side === 'away' ? 30 : 10);
+          await wait(700);
+          if (id !== run) return;
+          scored = true;
+          await wait(total - 700);
+        } else await wait(total);
         if (id !== run) return;
         banner = null;
       }
@@ -282,9 +322,6 @@
     const events = match.events.filter((e) => e.minute < clock || (e.minute === clock && (banner !== e || scored)));
     return { mine: events.filter((e) => e.side === 'away').length, opp: events.filter((e) => e.side === 'home').length, events };
   });
-  // 골을 넣은 선수의 자리(그라운드에서 빛난다).
-  const scorerSlot = $derived(banner && banner.side === 'away' && banner.scorerId && match ? match.slotIds.indexOf(banner.scorerId) : -1);
-
   // ── 여정 지도 ── 방금 이긴 경기에는 도장이 찍히고 다음 경기가 열린다(한 번). 지도에 들어오면 다음 경기로 내려간다.
   let justWon = $state<number | null>(null);
   let mapEl = $state<HTMLElement>();
@@ -297,16 +334,8 @@
     if (view === 'map') return goBack(() => go('owner'));
     void toMap();
   }
-  // 방금 놓은 자리가 한 번 빛난다.
-  let placed = $state<number | null>(null);
-  let placedTimer: ReturnType<typeof setTimeout> | undefined;
-  function flash(i: number) {
-    placed = i;
-    clearTimeout(placedTimer);
-    placedTimer = setTimeout(() => (placed = null), 700);
-  }
   const goalText = (e: TourMatchView['events'][number]) =>
-    e.side === 'away' ? (e.scorerId ? nameOf(e.scorerId) : e.scorer) : L.oppGoal;
+    e.side === 'away' ? (e.scorerId ? nameOf(e.scorerId) : e.scorer) : liveOpp ? e.scorer : L.oppGoal;
 
   // ── 주간 순위 ──
   let ranking = $state<TourRankingResponse | null>(null);
@@ -373,6 +402,7 @@
                 <b>{tourStageName(s.stage)}</b>
                 <span class="st-stars" aria-label={L.starsOf({ n: s.stars, max: 3 })}>{'★'.repeat(s.stars)}<i>{'★'.repeat(3 - s.stars)}</i></span>
               </div>
+              {#if tourOppClub(s)}{@const o = tourOppClub(s)!}<span class="st-club" data-tour-club><ClubBadge club={o.club} size={20} />{o.name}</span>{/if}
               <small class="muted">{L.oppOvr({ n: s.opp })} · {s.formation} · {tourTacticName(s.tactic)}</small>
               {#each s.rules as r, k (k)}<span class="st-rule">{tourRuleText(r)}</span>{/each}
               <small class={state === 'done' ? 'muted' : 'st-fee'}>{state === 'done' ? L.cleared : L.fee({ v: fmtValue(s.fee) })}</small>
@@ -400,6 +430,7 @@
       {@const edge = tourEdge(draft.tactic, stage.tactic)}
       <div class="stack st-card" data-tour-scout>
         <b>{L.scoutTitle}</b>
+        {#if tourOppClub(stage)}{@const o = tourOppClub(stage)!}<span class="st-club" data-tour-club><ClubBadge club={o.club} size={24} />{o.name}</span>{/if}
         <span>{L.oppOvr({ n: stage.opp })} · {stage.formation} · {L.oppTactic({ name: tourTacticName(stage.tactic) })}</span>
         <small class="muted">{L.oppHabit}</small>
         <b>{L.restriction}</b>
@@ -415,46 +446,7 @@
           <button class="btn btn-sm" data-act="tour-auto" onclick={auto}>{L.auto}</button>
         </div>
       </div>
-      <small class="muted">{L.pickSlot}</small>
-      <TeamPitch formation={draft.formation} cells={pitchCells} selected={slotOpen} focus={placed === null ? null : [placed]} onpick={(i) => { slotOpen = slotOpen === i ? null : i; benchOpen = false; return true; }} />
-      {#if slotOpen !== null}
-        <div class="st-picker" data-tour-options>
-          <button class="st-opt" data-act="tour-clear" onclick={() => place(null)}><b>{L.emptySlot}</b><small class="muted">{L.mercName} {stage.merc}</small></button>
-          {#each options as o (o.id)}
-            {@const p = byId.get(o.id)}
-            {#if p}
-              <button class="st-opt" class:off={!!o.blocked} disabled={!!o.blocked} data-tour-option={o.id} onclick={() => place(o.id)}>
-                <PlayerCard player={p} name={marketName(p, local)} rating={o.rating} role={FORMATIONS[draft.formation][slotOpen]!} mini />
-                {#if o.blocked}<small class="st-bad">{o.blocked === 'rule' ? L.blocked : L.capFull}</small>{/if}
-              </button>
-            {/if}
-          {/each}
-        </div>
-      {/if}
-      <div class="st-tools">
-        <b data-tour-bench-count>{L.benchTitle({ n: draft.bench.length, max: TOUR_LIVE.bench })}</b>
-        <button class="btn btn-sm" data-act="tour-bench" onclick={() => { benchOpen = !benchOpen; slotOpen = null; }}>{benchOpen ? L.close : L.pickBench}</button>
-      </div>
-      <div class="st-picker" data-tour-bench>
-        {#each draft.bench as id (id)}
-          {@const p = byId.get(id)}
-          {#if p}
-            <button class="st-opt on" onclick={() => toggleBench(id)}>
-              <PlayerCard player={p} name={marketName(p, local)} rating={p.peak} role={p.dpos ?? FORMATIONS[draft.formation][0]!} mini />
-            </button>
-          {/if}
-        {/each}
-        {#if benchOpen}
-          {#each benchOptions as c (c.id)}
-            {@const p = byId.get(c.id)}
-            {#if p}
-              <button class="st-opt" disabled={draft.bench.length >= TOUR_LIVE.bench} data-tour-bench-option={c.id} onclick={() => toggleBench(c.id)}>
-                <PlayerCard player={p} name={marketName(p, local)} rating={p.peak} role={p.dpos ?? FORMATIONS[draft.formation][0]!} mini />
-              </button>
-            {/if}
-          {/each}
-        {/if}
-      </div>
+      <TourLineup bind:draft {stage} {picks} season={tour.season} {byId} {nameOf} />
       <b>{L.tacticPick}</b>
       <div class="st-tactics" role="radiogroup" aria-label={L.tacticPick}>
         {#each TOUR_TACTICS as t (t)}
@@ -476,9 +468,9 @@
           <span class="st-gold st-live" class:on={playing} data-tour-clock>{over ? (match.status === 'won' ? L.winTitle : L.loseTitle) : playing ? L.minute({ n: clock }) : `${L.minute({ n: span.from })} · ${L.timeout}`}</span>
         </div>
         <div class="st-board">
-          <div class="st-side"><small>{liveStage ? L.oppOvr({ n: liveStage.opp }) : ''}</small><b>{liveStage?.formation ?? ''}</b></div>
+          <div class="st-side">{#if liveOpp}<b class="st-club" data-tour-club><ClubBadge club={liveOpp.club} size={20} />{liveOpp.name}</b>{/if}<small>{liveStage ? `${L.oppOvr({ n: liveStage.opp })} · ${liveStage.formation}` : ''}</small></div>
           <div class="st-score st-num" data-tour-score>{#key shown.opp}<span class="st-digit">{shown.opp}</span>{/key} : {#key shown.mine}<span class="st-digit mine">{shown.mine}</span>{/key}</div>
-          <div class="st-side right"><small>{L.vsAway}</small><b>{match.formation}</b></div>
+          <div class="st-side right"><b>{myName}</b><small>{L.vsAway} · {match.formation}</small></div>
         </div>
         <div class="st-clock" aria-hidden="true"><i style:width="{Math.min(100, ((playing ? clock : match.done * SEG) / 90) * 100)}%"></i>{#each [1, 2] as n (n)}<u style:left="{(n * 100) / TOUR_LIVE.segments}%"></u>{/each}</div>
         <div class="st-call">
@@ -489,13 +481,17 @@
               <b>{banner.side === 'away' ? L.goalMine : L.goalOpp}</b>
               <span>{banner.minute}' {goalText(banner)}{#if banner.side === 'away' && banner.assist} · {L.assist({ name: banner.assistId ? nameOf(banner.assistId) : banner.assist })}{/if}</span>
             </div>
+          {:else if playing && line}
+            {#key line}<small class="st-line" data-tour-line>{line.minute}' {line.text}</small>{/key}
           {:else}
             <small>{L.oppNow({ name: tourTacticName(match.oppTactic) })} · {tourTacticName(match.tactic)}</small>
           {/if}
         </div>
       </div>
       {#if playing}
-        <TeamPitch formation={match.formation} cells={livePitch} focus={scorerSlot >= 0 ? [scorerSlot] : null} />
+        <div class="st-ground" data-tour-ground>
+          <MatchGround {spots} {ball} dur={gDur} goal={gPose?.goal ?? null} trail={gTrail} names={groundNames} gold="away" home={oppName} away={myName} />
+        </div>
       {/if}
       <ul class="st-events" data-tour-events>
         {#each shown.events as e, k (k)}
@@ -528,12 +524,12 @@
             <li><b>{c.slot} {c.name}</b><span class="st-bad">{L.stamina({ n: c.stamina })}</span></li>
           {/each}
         </ul>
-        <div class="st-picker" data-tour-live-bench>
+        <div class="st-bench-row" data-tour-live-bench>
           {#each benchLeft as id (id)}
             {@const p = byId.get(id)}
             {#if p}
               <button class="st-opt" class:on={outSlot !== null} aria-disabled={outSlot === null} data-tour-sub-in={id} onclick={() => pickIn(id)}>
-                <PlayerCard player={p} name={marketName(p, local)} rating={p.peak} role={outSlot !== null ? FORMATIONS[match.formation][outSlot]! : (p.dpos ?? FORMATIONS[match.formation][0]!)} mini />
+                <PlayerCard player={p} name={marketName(p, local)} rating={p.peak} role={outSlot !== null ? FORMATIONS[match.formation][outSlot]! : (p.dpos ?? FORMATIONS[match.formation][0]!)} compact />
               </button>
             {/if}
           {/each}
@@ -667,6 +663,10 @@
   .st-tools {display:flex;justify-content:space-between;align-items:center;gap:8px;}
   .st-row {display:flex;gap:8px;}
   .st-row .btn,.st-tools .btn {min-height:44px;white-space:nowrap;}
+  /* 작전 타임 교체 명단: 편성 화면의 교체 명단과 같은 다섯 칸. */
+  .st-bench-row {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
+  .st-bench-row:empty {display:none;}
+  .st-bench-row .st-opt {min-width:0;padding:4px;}
   .st-picker {display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
   .st-picker:empty {display:none;}
   .st-opt {flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:76px;min-height:44px;padding:6px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:inherit;font:inherit;cursor:pointer;}
@@ -683,7 +683,8 @@
   .st-stage.goal {animation:st-glow 1.9s ease-out both;}
   .st-stage.conceded {animation:st-shake .5s ease-out both;}
   .st-board {display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:12px;}
-  .st-side {display:flex;flex-direction:column;gap:2px;font-size:13px;}
+  .st-club {display:inline-flex;align-items:center;gap:6px;font-weight:700;min-width:0;}
+  .st-side {min-width:0;display:flex;flex-direction:column;gap:2px;font-size:13px;}
   .st-side.right {align-items:flex-end;}
   .st-side small {font-size:11px;opacity:.8;}
   .st-score {font-size:3.4rem;line-height:1;text-align:center;}
@@ -694,6 +695,10 @@
   .st-clock u {position:absolute;top:-3px;width:2px;height:12px;background:var(--on-pitch);opacity:.7;}
   /* 점수판 아래 한 줄: 평소엔 전술, 킥오프 · 골 순간엔 장면 문구가 같은 자리에 뜬다(점수판은 그대로 보인다). */
   .st-call {min-height:76px;display:flex;align-items:center;justify-content:center;text-align:center;}
+  .st-line {font-size:14px;line-height:1.45;animation:st-in .25s ease-out both;}
+  /* 말판과 이름표가 겹치지 않게 랭크 경기보다 조금 높게 그린다. */
+  .st-ground :global(.mg-field) {aspect-ratio:105/80;}
+  .st-ground :global(.mg-dir) {color:var(--on-pitch);opacity:.75;}
   .st-flash {display:flex;flex-direction:column;align-items:center;gap:4px;animation:st-in .25s ease-out both;}
   .st-flash b {font-family:var(--display);font-size:2.8rem;font-style:italic;font-weight:900;line-height:1;color:var(--pitch-accent);text-shadow:0 0 18px color-mix(in srgb, var(--pitch-accent) 60%, transparent);animation:st-pop .6s cubic-bezier(.2,.9,.3,1.3) both;}
   .st-live.on::before {content:'';display:inline-block;width:8px;height:8px;margin-right:6px;border-radius:50%;background:#ff5a4d;animation:st-blink 1s ease-in-out infinite;}

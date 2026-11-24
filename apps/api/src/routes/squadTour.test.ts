@@ -64,7 +64,7 @@ describe('원정 투어 (T-11-825)', () => {
       activatedAt: '2026-09-29T00:00:00.000Z',
     });
   /** 최고 OVR이 peak인 카드 n장(자리 구성은 4-3-3 순서로 돈다). 유형 · 국적을 흩어 본선 앞쪽 제한에 걸리지 않게 한다. */
-  async function addCards(profileId: string, n: number, peak: number) {
+  async function addCards(profileId: string, n: number, peak: number, season = SEASON) {
     const ids: string[] = [];
     const at = '2026-10-10T00:00:00.000Z';
     for (let i = 0; i < n; i++) {
@@ -90,7 +90,7 @@ describe('원정 투어 (T-11-825)', () => {
         apps: 300,
         nation: ['KR', 'JP', 'GB', 'FR', 'DE', 'BR', 'AR', 'ES'][i % 8]!,
         mainLeague: null,
-        serviceSeason: SEASON,
+        serviceSeason: season,
         value: 1_000_000,
       });
       ids.push(id);
@@ -161,6 +161,14 @@ describe('원정 투어 (T-11-825)', () => {
     });
     expect(home.data.stages.map((s) => s.opp)).toEqual([...TOUR.opp]);
     expect(home.data.stages.every((s) => s.rules.length === 1 && s.stars === 0)).toBe(true);
+    // 경기마다 상대 구단과 선발 11명 이름이 붙고, 선수 이름은 요청 언어로 온다.
+    expect(new Set(home.data.stages.map((s) => s.club)).size).toBe(home.data.stages.length);
+    expect(home.data.stages.every((s) => s.players?.length === 11)).toBe(true);
+    const en = State.parse(
+      await (await call('GET', '/v1/tour?lang=en', { cookie: owner.cookie })).json(),
+    );
+    expect(en.data.stages[0]!.club).toBe(home.data.stages[0]!.club);
+    expect(en.data.stages[0]!.players!.join()).not.toMatch(/[가-힣]/);
   });
 
   it('강한 팀이 1차전을 이기면 대전료 · 점수 · 별을 받고 다음 경기가 열린다', async () => {
@@ -340,9 +348,16 @@ describe('원정 투어 (T-11-825)', () => {
       updatedAt: '2026-11-23T03:00:00.000Z',
     });
     const ids = await addCards(owner.profileId, 16, 60);
+    const { stages } = State.parse(
+      await (await call('GET', '/v1/tour', { cookie: owner.cookie })).json(),
+    ).data;
     let lost = 0;
     for (let i = 0; i < 3; i++) {
       const end = await playOut(owner.cookie, ids, 5);
+      // 상대 골은 그 경기 상대 구단 명단의 선수 이름으로 온다.
+      const squad = stages.find((x) => x.stage === 5)!.players!;
+      for (const e of end.match.events.filter((x) => x.side === 'home'))
+        expect(squad).toContain(e.scorer);
       if (end.match.status === 'lost') {
         lost++;
         expect(end.match.result).toMatchObject({ fee: 0, score: 0, stars: 0 });
@@ -364,6 +379,26 @@ describe('원정 투어 (T-11-825)', () => {
       await (await call('GET', '/v1/tour', { cookie: owner.cookie })).json(),
     );
     expect(home.data.triesLeft).toBe(3);
+  });
+
+  it('지난 시즌 카드는 선발로 세울 수 없고 교체 명단에는 넣을 수 있다', async () => {
+    await open();
+    const owner = await issueGoogleCookie(ctx);
+    const now = await addCards(owner.profileId, 11, 99);
+    const old = await addCards(owner.profileId, 5, 99, SEASON - 1);
+    const bad = await start(owner.cookie, [old[0]!, ...now.slice(1), ...old.slice(1)]);
+    expect(bad.status).toBe(409);
+    expect(await reason(bad)).toBe('TOUR_LINEUP');
+    expect(await ctx.db.select().from(tourMatches)).toHaveLength(0);
+    const ok = await start(owner.cookie, [...now, ...old]);
+    expect(ok.status).toBe(200);
+    // 교체 명단의 지난 시즌 카드는 작전 타임에 들어올 수 있다.
+    const live = Match.parse(await ok.json()).data;
+    const sub = await order(owner.cookie, live.match.id, 1, {
+      subs: [{ slot: 10, cardId: old[0]! }],
+    });
+    expect(sub.status).toBe(200);
+    expect(Match.parse(await sub.json()).data.match.slotIds[10]).toBe(old[0]);
   });
 
   it('남의 카드 · 판매에 올린 카드 · 같은 카드 두 번은 편성에 넣을 수 없다', async () => {

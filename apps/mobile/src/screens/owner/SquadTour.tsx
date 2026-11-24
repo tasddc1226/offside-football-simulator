@@ -1,8 +1,9 @@
 // T-11-825 원정 투어(내 구단 화면 '원정 투어' 칸으로 연다, 웹 owner/SquadTour.svelte). T-11-826부터 팝업이 아니라 전용 화면(tour)이다.
 // 열 때 투어 홈과 내 팀(선수 목록, 1분 메모)만 받는다. 사다리 · 제한 · 자동 편성은 app-core/contracts 계산이라 따로 부르지 않는다.
 // 여정 지도 → 편성(상대 분석 · 선발 · 교체 명단 · 전술) → 작전 경기(30분 · 60분 작전 타임) → 결과. 주간 순위는 탭을 열 때만 받는다.
-// 그라운드 · 선수 카드는 팀 화면의 것을 그대로 쓴다. 경기는 서버가 30분씩 계산해 돌려주고, 화면은 그 30분을 시계와 함께 다시 보여 준다
-// (골이 난 분에 멈춘다). 시계는 JS 타이머와 상태로 돌리고, 애니메이션은 한 번 돌고 멈추는 것만 쓴다(끝없이 도는 반짝임 금지, T-11-730).
+// 편성은 팀 그라운드와 같은 방식(TourLineup: 그라운드 + 라커룸, 끌어 놓기). 경기는 서버가 30분씩 계산해 돌려주고, 화면은 그 30분을
+// 시계와 함께 다시 보여 준다: 랭크 경기와 같은 말판 그라운드(MatchGround)에 중계 줄을 한 줄씩 움직이고(내 선수는 이름표), 골이 난 분에
+// 골 장면이 뜬다. 시계는 JS 타이머와 상태로 돌리고, 애니메이션은 한 번 돌고 멈추는 것만 쓴다(끝없이 도는 반짝임 금지, T-11-730).
 // 동작 줄이기면 재생 없이 바로 결과 · 작전 타임을 보여 준다.
 import {
   createContext,
@@ -50,11 +51,10 @@ import {
   TOUR_MAIN_STAGES,
   TOUR_TACTICS,
   tourAutoDraft,
-  tourBenchOptions,
   tourCells,
   tourChances,
   tourEdge,
-  tourOptions,
+  tourOppClub,
   tourPicks,
   tourRuleText,
   tourSpan,
@@ -69,8 +69,29 @@ import {
   type TourTactic,
 } from '@offside/app-core/tour';
 import { RADIUS } from '@offside/app-core/design-tokens';
+import {
+  GroundPlay,
+  groundBall,
+  groundLineWaitMs,
+  groundSpots,
+  type GroundPose,
+  type Pt,
+} from '@offside/app-core/matchGround';
+import {
+  MOMENTUM_START,
+  momentumAfter,
+  momentumDecay,
+  type LiveLine,
+} from '@offside/app-core/teamLive';
+import {
+  tourGroundNames,
+  tourGroundPlay,
+  tourOppShare,
+  tourSegmentLines,
+} from '@offside/app-core/tourGround';
 import { marketName } from '@offside/app-core/market';
 import { localCareerNames } from '@offside/game/hof-store';
+import { ClubBadge } from '../../ui/ClubBadge';
 import { tourText as L } from '@offside/app-core/i18n/ko/tour';
 import { mix } from '../../theme/colors';
 import { useColors } from '../../theme/useColors';
@@ -81,8 +102,10 @@ import { scrollTo, viewH } from '../../ui/scroll';
 import { prefs, sheetState } from '../../store';
 import { go, goBack } from '../../game/nav';
 import { hapticsOn } from '../../game/host';
-import { PlayerCard, type PlayerCardData } from '../../components/PlayerCard';
+import { PlayerCard } from '../../components/PlayerCard';
+import { MatchGround } from '../../components/MatchGround';
 import { TeamPitch } from '../../components/TeamPitch';
+import { cellOf, TourLineup } from './TourLineup';
 import { playSfx } from '../../platform/sfx';
 
 type Step = 'map' | 'prep' | 'live' | 'result' | 'rank' | 'history';
@@ -248,42 +271,17 @@ function Flash({ children, testID }: { children: ReactNode; testID: string }) {
 // 재생 중 시계 틱마다 화면이 다시 그려져도 그라운드(선수 카드 11장)는 다시 그리지 않는다.
 const MemoPitch = memo(TeamPitch);
 
-/** 선수 한 명을 그라운드 · 목록 카드 값으로(빈 자리는 팀 화면의 유소년 카드 모양). */
-const cellOf = (p: TeamPlayer | undefined, name: string, rating: number): PlayerCardData =>
-  p
-    ? {
-        name,
-        rating,
-        youth: false,
-        peak: p.peak,
-        number: p.number,
-        legendScore: p.legendScore,
-        specials: p.specials,
-        daily: p.daily,
-        careerId: p.careerId,
-        look: p.look,
-        nation: p.nation,
-        season: p.season,
-        enhance: p.enhance,
-        locked: p.locked,
-      }
-    : { name, rating, youth: true };
-
-/** 선수 고르기 · 교체 명단의 작은 카드(팀 화면 카드의 compact · mini판)와 이름. */
+/** 작전 타임 교체 명단의 작은 카드(팀 화면 카드의 compact · mini판)와 이름. */
 function Mini({
   player,
   name,
   rating,
   code,
-  note,
-  noteTone,
 }: {
   player: TeamPlayer;
   name: string;
   rating: number;
   code: DetailPos;
-  note?: string | null;
-  noteTone?: 'bad' | 'muted';
 }) {
   return (
     <View style={{ width: 76, alignItems: 'center', gap: 4 }}>
@@ -297,17 +295,13 @@ function Mini({
       <Tx v="xs" numberOfLines={1} style={{ maxWidth: 76 }}>
         {name}
       </Tx>
-      {note ? (
-        <Tx v="xs" tone={noteTone ?? 'muted'} center>
-          {note}
-        </Tx>
-      ) : null}
     </View>
   );
 }
 
 export default function SquadTour() {
   const c = useColors();
+  const { motionOK } = useSnapshot(prefs);
   const [local] = useState(() => localCareerNames());
   const [view, setView] = useState<Step>('map');
   const [tour, setTour] = useState<TourStateResponse | null>(null);
@@ -320,8 +314,8 @@ export default function SquadTour() {
   const [draftFormation, setDraftFormation] = useState<FormationId | null>(null);
   const [stage, setStage] = useState<TourStage | null>(null);
   const [draft, setDraft] = useState<TourDraft | null>(null);
-  const [slotOpen, setSlotOpen] = useState<number | null>(null);
-  const [benchOpen, setBenchOpen] = useState(false);
+  // 선수를 끌고 있는 동안은 화면 스크롤을 잠근다(TourLineup).
+  const [dragging, setDragging] = useState(false);
 
   // 작전 경기
   const [match, setMatch] = useState<TourMatchView | null>(null);
@@ -342,6 +336,14 @@ export default function SquadTour() {
   const [banner, setBanner] = useState<Goal | null>(null);
   // 골 장면 도중에 점수가 올라간다(웹과 같다).
   const [scored, setScored] = useState(false);
+  // 말판 그라운드: 경기마다 한 번 만들고 구간이 이어지는 동안 위치를 이어 간다. 자세 · 흐름 · 지금 줄(해설)은 재생 중에만 쓴다.
+  const groundRef = useRef<{ id: string; play: GroundPlay } | null>(null);
+  const [gPose, setGPose] = useState<GroundPose | null>(null);
+  const [gDur, setGDur] = useState(700);
+  const [gTrail, setGTrail] = useState<readonly Pt[]>([]);
+  const [momentum, setMomentum] = useState(MOMENTUM_START);
+  const [liveLine, setLiveLine] = useState<string | null>(null);
+  const gTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const run = useRef(0);
   const alive = useRef(true);
   useEffect(() => {
@@ -349,6 +351,8 @@ export default function SquadTour() {
     return () => {
       alive.current = false;
       run.current++;
+      for (const t of gTimers.current) clearTimeout(t);
+      gTimers.current = [];
     };
   }, []);
   // 방금 이긴 경기(지도에서 도장이 찍히고 다음 경기가 열린다, 한 번).
@@ -396,8 +400,6 @@ export default function SquadTour() {
     setStage(s);
     setJustWon(null);
     setDraft(tourAutoDraft(s, picks, tour.season, draftFormation ?? '4-3-3'));
-    setSlotOpen(null);
-    setBenchOpen(false);
     setError('');
     setView('prep');
   }
@@ -405,7 +407,6 @@ export default function SquadTour() {
     if (!tour || !stage || !draft) return;
     setDraftFormation(f);
     setDraft({ ...tourAutoDraft(stage, picks, tour.season, f), tactic: draft.tactic });
-    setSlotOpen(null);
   }
   function auto() {
     if (!tour || !stage || !draft) return;
@@ -413,20 +414,6 @@ export default function SquadTour() {
       ...tourAutoDraft(stage, picks, tour.season, draft.formation),
       tactic: draft.tactic,
     });
-    setSlotOpen(null);
-  }
-  function place(id: string | null) {
-    if (!draft || slotOpen === null) return;
-    const slotIds = [...draft.slotIds];
-    slotIds[slotOpen] = id;
-    setDraft({ ...draft, slotIds });
-    setSlotOpen(null);
-  }
-  function toggleBench(id: string) {
-    if (!draft) return;
-    const has = draft.bench.includes(id);
-    if (!has && draft.bench.length >= TOUR_LIVE.bench) return;
-    setDraft({ ...draft, bench: has ? draft.bench.filter((x) => x !== id) : [...draft.bench, id] });
   }
   async function depart() {
     if (!stage || !draft || busy) return;
@@ -443,16 +430,52 @@ export default function SquadTour() {
     void playSegment(r.data.match);
   }
 
-  // ── 경기 재생 ── 방금 계산된 30분을 시계로 흘려 보낸다. 골이 난 분에 멈춰 득점자를 보여 주고 점수를 올린다.
+  // ── 경기 재생 ── 방금 계산된 30분을 시계로 흘려 보낸다. 분마다 그 분의 중계 줄을 말판 그라운드에서 한 줄씩 보여 주고,
+  // 골이 난 분에는 골 장면을 띄워 득점자를 보여 주며 점수를 올린다.
+  function clearGround() {
+    for (const t of gTimers.current) clearTimeout(t);
+    gTimers.current = [];
+  }
   function endSegment(m: TourMatchView) {
+    clearGround();
+    if (groundRef.current?.play.settle()) {
+      setGPose(null);
+      setGTrail([]);
+    }
     setPlaying(false);
     setKickoff(false);
     setBanner(null);
+    setLiveLine(null);
     setClock(m.done * SEG);
     if (m.status === 'live') return playSfx('whistle');
     if (m.status === 'won') setJustWon(m.stage);
     playSfx(m.status === 'won' ? 'trophy' : 'fulltime');
     setView('result');
+  }
+  /** 이 경기의 그라운드(처음 부를 때 만든다). home = 상대(AI), away = 나. */
+  function groundFor(m: TourMatchView, oppFormation: FormationId): GroundPlay {
+    const g = groundRef.current;
+    if (g && g.id === m.id) return g.play;
+    const play = tourGroundPlay(m, oppFormation);
+    groundRef.current = { id: m.id, play };
+    setMomentum(MOMENTUM_START);
+    setGPose(null);
+    setGTrail([]);
+    return play;
+  }
+  /** 줄 하나의 움직임을 그 줄 대기 시간 안에 차례로 보여 준다. */
+  function playGround(ground: GroundPlay, l: LiveLine) {
+    clearGround();
+    const steps = ground.line(l, groundLineWaitMs(l.kind));
+    const trail = ground.trail;
+    for (const st of steps)
+      gTimers.current.push(
+        setTimeout(() => {
+          setGPose(st.pose);
+          setGDur(Math.min(900, st.dur));
+          setGTrail(st.pose.goal ? trail : []);
+        }, st.at),
+      );
   }
   async function playSegment(m: TourMatchView) {
     const id = ++run.current;
@@ -460,8 +483,24 @@ export default function SquadTour() {
     const from = to - SEG;
     if (!prefs.motionOK) return endSegment(m);
     const live = () => id === run.current && alive.current;
+    const st = tour?.stages.find((x) => x.stage === m.stage);
+    const ground = groundFor(m, st?.formation ?? '4-3-3');
+    // 상대가 기회를 잡는 몫은 상대 전력과 내 선발 평균의 차이로 정한다(연출일 뿐 결과와 무관).
+    const mine = tourCells(
+      { formation: m.formation, slotIds: m.slotIds },
+      pickById,
+      st?.rules ?? [],
+      st?.merc ?? 0,
+    );
+    const lines = tourSegmentLines(
+      m,
+      { opp: tourOppClub(st)?.name ?? L.oppSide, mine: L.mySide },
+      (who, fallback) => (who ? nameOf(who) : fallback),
+      tourOppShare(st?.opp ?? 0, mine.reduce((a, x) => a + x.rating, 0) / (mine.length || 1)),
+    );
     setPlaying(true);
     setClock(from);
+    setLiveLine(null);
     if (from === 0) {
       setKickoff(true);
       playSfx('found');
@@ -470,26 +509,54 @@ export default function SquadTour() {
       setKickoff(false);
     }
     const goals = m.events.filter((e) => e.minute > from && e.minute <= to);
+    /** 골 장면: 배너 · 효과음 · 진동, 700ms에 점수가 오르고 GOAL_MS 뒤에 걷힌다. */
+    async function playGoal(g: Goal) {
+      setScored(false);
+      setBanner(g);
+      playSfx(g.side === 'away' ? 'good' : 'bad');
+      if (hapticsOn())
+        void Haptics.impactAsync(
+          g.side === 'away'
+            ? Haptics.ImpactFeedbackStyle.Medium
+            : Haptics.ImpactFeedbackStyle.Light,
+        ).catch(() => {});
+      await wait(700);
+      if (!live()) return;
+      setScored(true);
+      await wait(GOAL_MS - 700);
+      if (!live()) return;
+      setBanner(null);
+    }
     for (let min = from + 1; min <= to; min++) {
       await wait(MIN_MS);
       if (!live()) return;
       setClock(min);
-      for (const g of goals.filter((e) => e.minute === min)) {
-        setScored(false);
-        setBanner(g);
-        playSfx(g.side === 'away' ? 'good' : 'bad');
-        if (hapticsOn())
-          void Haptics.impactAsync(
-            g.side === 'away'
-              ? Haptics.ImpactFeedbackStyle.Medium
-              : Haptics.ImpactFeedbackStyle.Light,
-          ).catch(() => {});
-        await wait(700);
+      // 골 뒤 자세는 다음 분으로 넘어가며 킥오프 자리로 돌린다. 흐름은 분마다 가운데로 조금씩 돌아온다.
+      if (ground.settle()) {
+        setGPose(null);
+        setGTrail([]);
+      }
+      setMomentum(momentumDecay);
+      const here = goals.filter((e) => e.minute === min);
+      let at = 0;
+      for (const l of lines.filter((x) => x.minute === min)) {
+        setLiveLine(l.text);
+        setMomentum((v) => momentumAfter(v, l));
+        playGround(ground, l);
+        const hold = groundLineWaitMs(l.kind);
+        const goal = l.kind === 'goal' ? here[at++] : undefined;
+        if (goal) {
+          // 골 장면(GOAL_MS)을 돌리고 남은 대기만 기다린다.
+          await playGoal(goal);
+          if (!live()) return;
+          await wait(Math.max(0, hold - GOAL_MS));
+        } else await wait(hold);
         if (!live()) return;
-        setScored(true);
-        await wait(GOAL_MS - 700);
+      }
+      // 줄이 없는 골은 없지만 안전망으로 장면만 보인다.
+      for (const g of here.slice(at)) {
+        await playGoal(g);
         if (!live()) return;
-        setBanner(null);
       }
     }
     await wait(400);
@@ -507,17 +574,10 @@ export default function SquadTour() {
   const pitchCells = cells.map((x) =>
     cellOf(x.id ? byId.get(x.id) : undefined, nameOf(x.id), x.rating),
   );
-  const options =
-    tour && stage && draft && slotOpen !== null
-      ? tourOptions(draft, slotOpen, picks, stage.rules, tour.season)
-      : [];
-  const benchOptions =
-    tour && stage && draft && benchOpen
-      ? tourBenchOptions(draft, picks, stage.rules, tour.season)
-      : [];
 
   // 작전 경기
   const liveStage = match ? (tour?.stages.find((s) => s.stage === match.stage) ?? null) : null;
+  const liveOpp = tourOppClub(liveStage);
   const liveSlots = match
     ? match.slotIds.map((id, i) => subs.find((s) => s.slot === i)?.cardId ?? id)
     : [];
@@ -564,12 +624,11 @@ export default function SquadTour() {
       events,
     };
   }, [match, playing, clock, banner, scored]);
-  // 골을 넣은 선수의 자리(그라운드에서 테두리로 빛난다).
-  const scorerSlot =
-    banner && banner.side === 'away' && banner.scorerId && match
-      ? match.slotIds.indexOf(banner.scorerId)
-      : -1;
-  const focus = useMemo(() => (scorerSlot >= 0 ? [scorerSlot] : null), [scorerSlot]);
+  // 말판 이름표: 내 선발 11명의 이름(교체로 들어온 선수는 그 자리 이름이 바뀐다).
+  const groundNames = useMemo(
+    () => (match ? tourGroundNames(match.slotIds, nameOf, liveStage?.players) : null),
+    [match, nameOf, liveStage?.players],
+  );
   const over = !!match && match.status !== 'live' && !playing;
   const benchLeft = match ? match.bench.filter((id) => !subs.some((s) => s.cardId === id)) : [];
   const chances = match ? tourChances(match) : [];
@@ -607,7 +666,13 @@ export default function SquadTour() {
     void playSegment(next);
   }
   const goalText = (e: TourMatchView['events'][number]) =>
-    e.side === 'away' ? (e.scorerId ? nameOf(e.scorerId) : e.scorer) : L.oppGoal;
+    e.side === 'away'
+      ? e.scorerId
+        ? nameOf(e.scorerId)
+        : e.scorer
+      : liveOpp
+        ? e.scorer
+        : L.oppGoal;
 
   async function openRank() {
     setView('rank');
@@ -771,7 +836,7 @@ export default function SquadTour() {
 
   return (
     <NightCtx.Provider value={night}>
-      <Screen {...(night ? { background: nightColor } : {})}>
+      <Screen scrollEnabled={!dragging} {...(night ? { background: nightColor } : {})}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44 }}>
           {!playing ? (
             <Btn sm testID="tour-back" accessibilityLabel={L.back} onPress={back}>
@@ -933,6 +998,14 @@ export default function SquadTour() {
                             </Txt>
                           </Txt>
                         </View>
+                        {tourOppClub(s) ? (
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                            <ClubBadge club={tourOppClub(s)!.club} size={20} />
+                            <Txt v="sm" bold>
+                              {tourOppClub(s)!.name}
+                            </Txt>
+                          </View>
+                        ) : null}
                         <Txt v="xs" tone="muted">
                           {`${L.oppOvr({ n: s.opp })} · ${s.formation} · ${tourTacticName(s.tactic)}`}
                         </Txt>
@@ -986,6 +1059,14 @@ export default function SquadTour() {
           <>
             <View testID="tour-scout" style={[box, { gap: 6, padding: 14 }]}>
               <Txt bold>{L.scoutTitle}</Txt>
+              {tourOppClub(stage) ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <ClubBadge club={tourOppClub(stage)!.club} size={24} />
+                  <Txt v="sm" bold>
+                    {tourOppClub(stage)!.name}
+                  </Txt>
+                </View>
+              ) : null}
               <Txt>{`${L.oppOvr({ n: stage.opp })} · ${stage.formation} · ${L.oppTactic({ name: tourTacticName(stage.tactic) })}`}</Txt>
               <Txt v="xs" tone="muted">
                 {L.oppHabit}
@@ -1017,139 +1098,17 @@ export default function SquadTour() {
                 {L.auto}
               </Btn>
             </View>
-            <Txt v="xs" tone="muted">
-              {L.pickSlot}
-            </Txt>
-            <TeamPitch
-              formation={draft.formation}
+            <TourLineup
+              draft={draft}
+              onChange={setDraft}
+              stage={stage}
+              picks={picks}
+              season={tour.season}
+              byId={byId}
+              nameOf={nameOf}
               cells={pitchCells}
-              selected={slotOpen}
-              animate={false}
-              onpick={(i) => {
-                setSlotOpen((cur) => (cur === i ? null : i));
-                setBenchOpen(false);
-              }}
+              dragging={setDragging}
             />
-            {slotOpen !== null ? (
-              <View testID="tour-options" style={{ gap: 8 }}>
-                <Press
-                  testID="tour-clear"
-                  accessibilityLabel={`${L.emptySlot}, ${L.mercName} ${stage.merc}`}
-                  onPress={() => place(null)}
-                  style={[box, { minHeight: 44, justifyContent: 'center', paddingHorizontal: 12 }]}
-                >
-                  <Txt bold>{L.emptySlot}</Txt>
-                  <Txt v="xs" tone="muted">{`${L.mercName} ${stage.merc}`}</Txt>
-                </Press>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                  {options.map((o) => {
-                    const p = byId.get(o.id);
-                    if (!p) return null;
-                    const nm = marketName(p, local);
-                    const off = !!o.blocked;
-                    return (
-                      <Press
-                        key={o.id}
-                        testID={`tour-option-${o.id}`}
-                        accessibilityLabel={`${nm} ${o.rating}${off ? `, ${o.blocked === 'rule' ? L.blocked : L.capFull}` : ''}`}
-                        accessibilityState={{ disabled: off }}
-                        disabled={off}
-                        onPress={() => place(o.id)}
-                        style={{ opacity: off ? 0.5 : 1, minHeight: 44 }}
-                      >
-                        <Mini
-                          player={p}
-                          name={nm}
-                          rating={o.rating}
-                          code={FORMATIONS[draft.formation][slotOpen]!}
-                          note={off ? (o.blocked === 'rule' ? L.blocked : L.capFull) : null}
-                          noteTone="bad"
-                        />
-                      </Press>
-                    );
-                  })}
-                </View>
-              </View>
-            ) : null}
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 8,
-              }}
-            >
-              <Txt bold testID="tour-bench-count" style={{ flexShrink: 1 }}>
-                {L.benchTitle({ n: draft.bench.length, max: TOUR_LIVE.bench })}
-              </Txt>
-              <Btn
-                sm
-                testID="tour-bench"
-                onPress={() => {
-                  setBenchOpen((v) => !v);
-                  setSlotOpen(null);
-                }}
-              >
-                {benchOpen ? L.close : L.pickBench}
-              </Btn>
-            </View>
-            <View
-              testID="tour-bench-list"
-              style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}
-            >
-              {draft.bench.map((id) => {
-                const p = byId.get(id);
-                if (!p) return null;
-                return (
-                  <Press
-                    key={id}
-                    testID={`tour-bench-on-${id}`}
-                    accessibilityLabel={marketName(p, local)}
-                    accessibilityState={{ selected: true }}
-                    onPress={() => toggleBench(id)}
-                    style={{
-                      minHeight: 44,
-                      padding: 2,
-                      borderRadius: RADIUS.sm,
-                      borderWidth: 2,
-                      borderColor: c.accentText,
-                    }}
-                  >
-                    <Mini
-                      player={p}
-                      name={marketName(p, local)}
-                      rating={p.peak}
-                      code={detailPosOf(p)}
-                    />
-                  </Press>
-                );
-              })}
-              {benchOpen
-                ? benchOptions.map((o) => {
-                    const p = byId.get(o.id);
-                    if (!p) return null;
-                    const full = draft.bench.length >= TOUR_LIVE.bench;
-                    return (
-                      <Press
-                        key={o.id}
-                        testID={`tour-bench-option-${o.id}`}
-                        accessibilityLabel={marketName(p, local)}
-                        accessibilityState={{ disabled: full }}
-                        disabled={full}
-                        onPress={() => toggleBench(o.id)}
-                        style={{ opacity: full ? 0.5 : 1, minHeight: 44, padding: 2 }}
-                      >
-                        <Mini
-                          player={p}
-                          name={marketName(p, local)}
-                          rating={p.peak}
-                          code={detailPosOf(p)}
-                        />
-                      </Press>
-                    );
-                  })
-                : null}
-            </View>
             <Txt bold>{L.tacticPick}</Txt>
             {tacticGrid(
               TOUR_TACTICS.map((t) => {
@@ -1216,7 +1175,7 @@ export default function SquadTour() {
                 >
                   <View style={{ flex: 1, gap: 2 }}>
                     <Txt v="xs" tone="onPitch" style={{ opacity: 0.8 }}>
-                      {L.oppGoal}
+                      {liveOpp?.name ?? L.oppSide}
                     </Txt>
                     <Txt v="sm" bold tone="onPitch">
                       {liveStage?.formation ?? ''}
@@ -1281,8 +1240,11 @@ export default function SquadTour() {
                     />
                   ))}
                 </View>
-                <Txt v="xs" tone="onPitch">
-                  {`${L.oppNow({ name: tourTacticName(match.oppTactic) })} · ${tourTacticName(match.tactic)}`}
+                {/* 재생 중에는 지금 중계 줄이 이 자리에 한 줄로 나온다. */}
+                <Txt v="xs" tone="onPitch" numberOfLines={1} testID="tour-commentary">
+                  {playing && liveLine
+                    ? liveLine
+                    : `${L.oppNow({ name: tourTacticName(match.oppTactic) })} · ${tourTacticName(match.tactic)}`}
                 </Txt>
                 {kickoff ? (
                   <Flash testID="tour-kickoff">
@@ -1313,8 +1275,19 @@ export default function SquadTour() {
                 ) : null}
               </View>
             </Shake>
-            {playing ? (
-              <MemoPitch formation={match.formation} cells={livePitch} focus={focus} />
+            {playing && groundRef.current ? (
+              <MatchGround
+                spots={groundSpots(groundRef.current.play.players, gPose, momentum)}
+                ball={groundBall(gPose, momentum)}
+                dur={gDur}
+                goal={gPose?.goal ?? null}
+                trail={gTrail}
+                home={liveOpp?.name ?? L.oppSide}
+                away={L.mySide}
+                gold="away"
+                motionOK={motionOK}
+                names={groundNames}
+              />
             ) : null}
             <View testID="tour-events" style={{ gap: 6 }}>
               {shown.events.length ? (

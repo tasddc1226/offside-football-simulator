@@ -80,7 +80,11 @@ const KIT: Record<BaseDetailPos, readonly number[]> = {
 };
 
 /** 두 팀 22명의 기본 자리(포메이션 배치를 눕혀 홈은 왼쪽 진영, 원정은 오른쪽 진영). */
-export function groundLineup(m: Pick<TeamMatch, 'home' | 'away'>): GroundPlayer[] {
+/** 그라운드를 그릴 때 보는 경기 값(두 팀 포메이션). */
+export type GroundMatch = { id: string; home: GroundTeam; away: GroundTeam };
+type GroundTeam = Pick<TeamMatch['home'], 'formation'>;
+
+export function groundLineup(m: Pick<GroundMatch, 'home' | 'away'>): GroundPlayer[] {
   return (['home', 'away'] as const).flatMap((side) => {
     const layout = presetLayout(m[side].formation).map((p, i) => ({
       ...p,
@@ -748,7 +752,7 @@ export class GroundPlay {
   trail: Pt[] = [];
   private lastKind: LiveKind | null = null;
 
-  constructor(private readonly match: Pick<TeamMatch, 'id' | 'home' | 'away'>) {
+  constructor(private readonly match: GroundMatch) {
     this.players = groundLineup(match);
   }
 

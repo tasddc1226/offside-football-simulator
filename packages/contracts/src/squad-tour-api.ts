@@ -32,6 +32,9 @@ export const TourStageSchema = z.strictObject({
   merc: z.number(),
   /** 내가 받은 별(0 = 아직 못 이김). */
   stars: z.number().int().min(0).max(3),
+  /** T-11-827 상대 구단(게임 구단 id)과 선발 11명 이름(요청 언어, 포메이션 자리 순서). */
+  club: z.string().optional(),
+  players: z.array(z.string()).optional(),
 });
 export type TourStage = z.infer<typeof TourStageSchema>;
 

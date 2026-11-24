@@ -4,12 +4,14 @@ import { FORMATIONS, YOUTH_NAME, type FormationId } from '@offside/contracts/own
 import { tourAutoPick } from '@offside/contracts/squad-tour-lineup';
 import {
   TOUR,
+  tourClub,
   tourLineupOk,
   tourOpp,
   tourPlain,
   type TourCard,
   type TourRule,
 } from '@offside/contracts/squad-tour';
+import { tourClubs as KO_CLUBS } from '../i18n/ko/tourClubs.js';
 import {
   buildLineup,
   matchOdds,
@@ -28,11 +30,12 @@ const AI_FORMATIONS: readonly FormationId[] = ['4-3-3', '4-4-2', '3-5-2'];
 export const tourOppFormation = (week: string, stage: number): FormationId =>
   AI_FORMATIONS[Math.floor(rngOf(seedOf(`tour:${week}:${stage}`))() * AI_FORMATIONS.length)]!;
 
-/** n번째 경기의 AI 구단 선발. 자리 실력은 목표 평균 ±2 안에서 흩고 합을 목표에 맞춘다. 같은 주 · 같은 경기면 모두에게 같다. */
+/** n번째 경기의 AI 구단 선발. 선수 이름은 그 주 그 경기의 상대 구단(tourClub) 명단이다. 자리 실력은 목표 평균 ±2 안에서 흩고 합을 목표에 맞춘다. 같은 주 · 같은 경기면 모두에게 같다. */
 export function tourOpponent(week: string, stage: number): LineupSlot[] {
   const rng = rngOf(seedOf(`tour:${week}:${stage}`));
   const formation = AI_FORMATIONS[Math.floor(rng() * AI_FORMATIONS.length)]!;
   const target = tourOpp(stage);
+  const names = KO_CLUBS[tourClub(week, stage)];
   const jitter = FORMATIONS[formation].map(() => Math.round(rng() * 4 - 2));
   const drift = Math.round(jitter.reduce((a, b) => a + b, 0) / jitter.length);
   return FORMATIONS[formation].map((slot, i) => ({
@@ -41,7 +44,7 @@ export function tourOpponent(week: string, stage: number): LineupSlot[] {
     pos: null,
     rating: target + jitter[i]! - drift,
     fit: 1,
-    ref: { careerId: null, anon: YOUTH_NAME },
+    ref: { careerId: null, anon: names[i] ?? YOUTH_NAME },
     publicName: null,
     syn: null,
   }));

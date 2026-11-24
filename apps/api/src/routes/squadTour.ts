@@ -13,6 +13,7 @@ import { teamSeasonAt } from '@offside/contracts/service-seasons';
 import {
   TOUR_MAIN_STAGES,
   TOUR_TACTICS,
+  tourClub,
   tourFee,
   tourMerc,
   tourOpp,
@@ -44,11 +45,16 @@ import { tourText as en } from '../i18n/en/tour.js';
 import { tourText as ja } from '../i18n/ja/tour.js';
 import { tourText as ko } from '../i18n/ko/tour.js';
 import { tourText as zh } from '../i18n/zh/tour.js';
-import { reqLang } from '../lang.js';
+import { tourClubs as enClubs } from '../i18n/en/tourClubs.js';
+import { tourClubs as jaClubs } from '../i18n/ja/tourClubs.js';
+import { tourClubs as koClubs } from '../i18n/ko/tourClubs.js';
+import { tourClubs as zhClubs } from '../i18n/zh/tourClubs.js';
+import { reqLang, type Lang } from '../lang.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { requireOwner } from '../middleware/requireOwner.js';
 import { requireProfile } from '../middleware/requireProfile.js';
 import type { LineupCareer } from '../team/sim.js';
+import { anonText } from '../team/anon.js';
 import { tourOpponent, tourOppFormation, tourSlotsError } from '../team/squadTour.js';
 import {
   applyTourOrder,
@@ -73,10 +79,17 @@ const AHEAD = 1;
 type Stored = { live: TourLive; cards: LineupCareer[] };
 
 const TEXT = { ko, en, ja, zh };
+const CLUBS = { ko: koClubs, en: enClubs, ja: jaClubs, zh: zhClubs };
 const T = (c: Context<AppEnv>) => TEXT[reqLang(c)];
 const closed = (c: Context<AppEnv>) => notFoundError(T(c).closed, 'TOUR_CLOSED');
 
-function stageOf(week: string, stage: number, stars: Record<string, number>): TourStage {
+function stageOf(
+  week: string,
+  stage: number,
+  stars: Record<string, number>,
+  lang: Lang,
+): TourStage {
+  const club = tourClub(week, stage);
   return {
     stage,
     opp: tourOpp(stage),
@@ -86,6 +99,8 @@ function stageOf(week: string, stage: number, stars: Record<string, number>): To
     fee: tourFee(stage),
     merc: tourMerc(stage),
     stars: stars[String(stage)] ?? 0,
+    club,
+    players: [...CLUBS[lang][club]],
   };
 }
 
@@ -94,11 +109,18 @@ function matchView(
   stored: Stored,
   status: TourMatchView['status'],
   result: TourMatchView['result'],
+  lang: Lang,
 ): TourMatchView {
   const s = stored.live;
   const names = new Map(stored.cards.map((c) => [c.id, c.publicName]));
+  // 상대 선수는 한국어 이름으로 저장돼 있다. 요청 언어 명단의 같은 자리 이름으로 옮긴다(옛 기록의 유스 선수는 그대로).
+  const club = tourClub(row.week, row.stage);
+  const oppName = (anon: string) => {
+    const i = koClubs[club].indexOf(anon);
+    return i < 0 ? anonText(anon, lang) : CLUBS[lang][club][i]!;
+  };
   const label = (ref: { careerId: string | null; anon: string }) =>
-    (ref.careerId && names.get(ref.careerId)) || ref.anon;
+    (ref.careerId && names.get(ref.careerId)) || oppName(ref.anon);
   const timeout = status === 'live' && !tourLiveOver(s);
   const rules = tourRules(row.week, row.stage);
   const opp = tourOpponent(row.week, row.stage);
@@ -182,9 +204,15 @@ export function registerSquadTourRoutes(app: Hono<AppEnv>): void {
         score: mine.progress?.score ?? 0,
         rank,
         triesLeft: mine.triesLeft,
-        stages: Array.from({ length: last }, (_, i) => stageOf(week, i + 1, stars)),
+        stages: Array.from({ length: last }, (_, i) => stageOf(week, i + 1, stars, reqLang(c))),
         live: mine.live
-          ? matchView(mine.live, JSON.parse(mine.live.stateJson) as Stored, 'live', null)
+          ? matchView(
+              mine.live,
+              JSON.parse(mine.live.stateJson) as Stored,
+              'live',
+              null,
+              reqLang(c),
+            )
           : null,
       },
       200,
@@ -310,6 +338,7 @@ export function registerSquadTourRoutes(app: Hono<AppEnv>): void {
           stored,
           'live',
           null,
+          reqLang(c),
         ),
         triesLeft: mine.triesLeft - 1,
         balance: null,
@@ -339,6 +368,7 @@ export function registerSquadTourRoutes(app: Hono<AppEnv>): void {
             JSON.parse(r.stateJson) as Stored,
             r.status as TourMatchView['status'],
             null,
+            reqLang(c),
           ),
           triesLeft: await left(),
           balance: null,
@@ -375,7 +405,11 @@ export function registerSquadTourRoutes(app: Hono<AppEnv>): void {
       return ok(
         c,
         TourMatchResponseSchema,
-        { match: matchView(row, next, 'live', null), triesLeft: await left(), balance: null },
+        {
+          match: matchView(row, next, 'live', null, reqLang(c)),
+          triesLeft: await left(),
+          balance: null,
+        },
         200,
         NO_STORE,
       );
@@ -407,12 +441,18 @@ export function registerSquadTourRoutes(app: Hono<AppEnv>): void {
       c,
       TourMatchResponseSchema,
       {
-        match: matchView(row, next, res.win ? 'won' : 'lost', {
-          pens: res.pens,
-          stars,
-          score,
-          fee: done.fee,
-        }),
+        match: matchView(
+          row,
+          next,
+          res.win ? 'won' : 'lost',
+          {
+            pens: res.pens,
+            stars,
+            score,
+            fee: done.fee,
+          },
+          reqLang(c),
+        ),
         triesLeft: await left(),
         balance: done.balance,
       },

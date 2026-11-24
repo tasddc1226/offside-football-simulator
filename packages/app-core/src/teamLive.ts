@@ -272,6 +272,79 @@ export function liveScript(
 }
 
 /**
+ * T-11-827 원정 투어 작전 경기의 한 구간(span.from < 분 ≤ span.to) 대본. 서버는 구간마다 골만 돌려주므로 그 사이를 기회 · 선방 줄로
+ * 채우고, 골마다 직전에 빌드업 줄을 둔다. 줄은 경기 id와 구간으로 난수를 굴려 다시 봐도 같다. 골 줄의 score는 앞 구간 골까지 센 값이다.
+ */
+export function segmentScript(
+  id: string,
+  events: TeamMatch['events'],
+  team: { home: string; away: string },
+  name: (id: string | null, fallback: string) => string,
+  span: { from: number; to: number },
+  homeShare = 0.5,
+): LiveLine[] {
+  const rnd = rngOf(`${id}:${span.from}`);
+  const inSpan = events.filter((e) => e.minute > span.from && e.minute <= span.to);
+  const lines: LiveLine[] = [];
+  const goalMinutes = new Set(inSpan.flatMap((e) => [e.minute - 1, e.minute, e.minute + 1]));
+  const used = new Set<number>();
+  const fillers = 3 + Math.floor(rnd() * 3);
+  for (let i = 0; i < fillers; i++) {
+    const minute = span.from + 2 + Math.floor(rnd() * (span.to - span.from - 2));
+    if (goalMinutes.has(minute) || used.has(minute)) continue;
+    used.add(minute);
+    const side = rnd() < Math.min(0.75, Math.max(0.25, homeShare)) ? 'home' : 'away';
+    const r = rnd();
+    const [kind, keys] =
+      r < 0.35
+        ? (['chance', CHANCE] as const)
+        : r < 0.6
+          ? (['save', SAVE] as const)
+          : r < 0.8
+            ? (['miss', MISS] as const)
+            : (['corner', CORNER] as const);
+    lines.push({ minute, kind, side, ...sayOf(rnd, keys, team[side]) });
+  }
+  let h = 0;
+  let a = 0;
+  const tally = new Map<string, number>();
+  for (const e of events) {
+    const before: [number, number] = [h, a];
+    if (e.side === 'home') h++;
+    else a++;
+    const key = `${e.side}:${e.scorerId ?? e.scorer}`;
+    const n = (tally.get(key) ?? 0) + 1;
+    tally.set(key, n);
+    if (!inSpan.includes(e)) continue;
+    const t = team[e.side];
+    const scorer = name(e.scorerId, e.scorer);
+    const assist = e.assist ? name(e.assistId, e.assist) : null;
+    const at = e.slot ? { slot: e.slot } : {};
+    lines.push({
+      minute: Math.max(span.from + 1, e.minute - 1),
+      kind: 'build',
+      side: e.side,
+      ...sayOf(rnd, buildKeys(e.slot, !!e.assist), t),
+      ...at,
+    });
+    lines.push({
+      minute: e.minute,
+      kind: 'goal',
+      side: e.side,
+      text: goalLineText(t, e.side, e.minute, scorer, assist, before, n),
+      score: [h, a],
+      goal: { scorer, assist, key },
+      ...at,
+    });
+  }
+  const order = (k: LiveKind) => (k === 'build' ? 1 : k === 'goal' ? 2 : 3);
+  return lines
+    .map((l, i) => ({ l, i }))
+    .sort((x, y) => x.l.minute - y.l.minute || order(x.l.kind) - order(y.l.kind) || x.i - y.i)
+    .map((x) => x.l);
+}
+
+/**
  * T-11-214 컵 경기 중계. 서버는 공개 경기를 늘 홈 기준(mine: 'home')으로 주므로, 보는 사람의 팀 쪽으로 mine을 맞추고
  * 내 팀이 없는 경기면 neutral로 그린다(내 팀 강조 없음, 이긴 팀 이름으로 끝).
  */

@@ -12,6 +12,7 @@ import {
   tourFatigue,
   tourFee,
   tourLineupOk,
+  tourStarterOk,
   tourRankCompare,
   tourRules,
   tourScore,
@@ -62,6 +63,19 @@ describe('원정 투어 규칙', () => {
     expect(tourEligible(past, card({ season: 0 }), 3)).toBe(true);
     expect(tourEligible(past, card({ season: 2 }), 3)).toBe(true);
     expect(tourEligible(past, card({ season: 3 }), 3)).toBe(false);
+  });
+
+  it('선발은 이번 시즌 카드만 세울 수 있다(제한이 없는 경기도)', () => {
+    expect(tourStarterOk(card({ season: 2 }), 2)).toBe(true);
+    expect(tourStarterOk(card({ season: 1 }), 2)).toBe(false);
+    expect(tourStarterOk(card({ season: 0 }), 2)).toBe(false);
+    expect(tourLineupOk([], [card(), card()], 2)).toBe(true);
+    expect(tourLineupOk([], [card(), card({ season: 1 })], 2)).toBe(false);
+  });
+
+  it('지난 시즌 카드만 받는 제한은 더 뽑지 않는다(선발을 세울 수 없게 된다)', () => {
+    const all = [...TOUR_POOL.light, ...TOUR_POOL.mid, ...TOUR_POOL.late, ...TOUR_POOL.extra];
+    expect(all.some((r) => r.kind === 'season' && r.when === 'past')).toBe(false);
   });
 
   it('국적이 비어 있는 카드는 기본 국적 카드와 같은 묶음으로 센다', () => {
@@ -122,5 +136,17 @@ describe('원정 투어 규칙', () => {
     expect(tourAiTactic('wings', -1)).toBe('press');
     expect(tourAiTactic('wings', 2)).toBe('park');
     expect(tourAiTactic('wings', 0)).toBe('wings');
+  });
+});
+
+describe('상대 구단', () => {
+  it('같은 주 · 같은 경기는 늘 같은 구단이고, 본선 7경기는 서로 다른 구단이다', async () => {
+    const { TOUR_CLUBS, tourClub } = await import('./squad-tour.js');
+    const clubs = Array.from({ length: 7 }, (_, i) => tourClub('2026-11-23', i + 1));
+    expect(new Set(clubs).size).toBe(7);
+    expect(clubs).toEqual(Array.from({ length: 7 }, (_, i) => tourClub('2026-11-23', i + 1)));
+    expect(tourClub('2026-11-23', TOUR_CLUBS.length + 1)).toBe(clubs[0]);
+    const other = Array.from({ length: 7 }, (_, i) => tourClub('2026-11-30', i + 1));
+    expect(other).not.toEqual(clubs);
   });
 });
