@@ -265,6 +265,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   pastSalaryBudget: z.number().int().min(0).optional(),
   /** T-11-373 카드 강화를 받는가(밸런스 enhanceOpen). 구버전 응답에는 없다(닫힘). */
   enhanceOpen: z.boolean().optional(),
+  /** T-11-825 원정 투어가 열려 있는가(밸런스 tourOpen). 구버전 응답에는 없다(닫힘). */
+  tourOpen: z.boolean().optional(),
   /** T-11-113 창단 멤버(프리시즌에 은퇴 선수를 남긴 구단주). 배포 전 응답엔 없다. */
   founder: z.boolean().optional(),
   /** T-11-512 클럽 멤버십 서포터(구독 중). 배포 전 응답엔 없다. */

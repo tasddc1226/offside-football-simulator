@@ -41,6 +41,7 @@
     "./owner-team": "./src/owner-team.ts",
     "./team-division": "./src/team-division.ts",
     "./squad-tour": "./src/squad-tour.ts",
+    "./squad-tour-lineup": "./src/squad-tour-lineup.ts",
     "./owner-tier": "./src/owner-tier.ts",
     "./owner-title": "./src/owner-title.ts",
     "./card-tier": "./src/card-tier.ts",

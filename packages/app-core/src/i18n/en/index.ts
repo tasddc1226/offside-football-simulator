@@ -133,6 +133,7 @@ import { teamMoments } from './teamMoments';
 import { teamSynergy } from './teamSynergy';
 import { title } from './title';
 import { titleTag } from './titleTag';
+import { tour } from './tour';
 import { translate } from './translate';
 import { tutorial } from './tutorial';
 import { voice } from './voice';
@@ -272,6 +273,7 @@ export const en = {
   teamSynergy,
   title,
   titleTag,
+  tour,
   translate,
   tutorial,
   voice,

@@ -94,6 +94,7 @@ import {
   balanceVersionOf,
   matchRechargeFrom,
   enhanceOpenFrom,
+  tourOpenFrom,
   leagueFatigueFrom,
 } from '../db/repos/balance.js';
 import { leagueMatches, leagueState, ownerFunds, ownerTeams } from '../db/schema.js';
@@ -289,6 +290,8 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
         pastSalaryBudget: LEGACY_NO_SALARY_BUDGET,
         // T-11-373 강화 버튼을 보일지(이미 읽은 활성 밸런스 한 줄).
         enhanceOpen: enhanceOpenFrom(balance),
+        // T-11-825 원정 투어 입구를 보일지(같은 밸런스 한 줄).
+        tourOpen: tourOpenFrom(balance),
         founder: founder.length > 0,
         member: member.length > 0,
         // T-11-818 연속 구독 단계(연속 기록이 아직 없으면 1단계).

@@ -4,7 +4,6 @@ import {
   TourRankingResponseSchema,
   TourStartBodySchema,
   TourStateResponseSchema,
-  resolveBalance,
   type TourMatchView,
   type TourStage,
 } from '@offside/contracts';
@@ -23,7 +22,7 @@ import {
 } from '@offside/contracts/squad-tour';
 import type { Context, Hono } from 'hono';
 import { newId } from '../db/ids.js';
-import { activeBalanceQuery } from '../db/repos/balance.js';
+import { activeBalanceQuery, tourOpenFrom } from '../db/repos/balance.js';
 import { listEligibleCareers, toLineupCareer } from '../db/repos/ownerTeams.js';
 import {
   finishTourMatch,
@@ -146,7 +145,7 @@ export function registerSquadTourRoutes(app: Hono<AppEnv>): void {
     const week = tourWeekOf(now);
     const season = teamSeasonAt(now);
     const [balance] = await activeBalanceQuery(db);
-    const open = resolveBalance(balance && JSON.parse(balance.valuesJson)).tourOpen >= 1;
+    const open = tourOpenFrom(balance);
     if (!open || season === null)
       return ok(
         c,
@@ -226,8 +225,7 @@ export function registerSquadTourRoutes(app: Hono<AppEnv>): void {
       activeBalanceQuery(db),
       listEligibleCareers(db, me.id, season ?? 0),
     ]);
-    if (season === null || resolveBalance(balance && JSON.parse(balance.valuesJson)).tourOpen < 1)
-      throw closed(c);
+    if (season === null || !tourOpenFrom(balance)) throw closed(c);
     const mine = await tourMine(db, me.id, week, day);
     if (mine.live) throw conflictError(T(c).live, 'TOUR_LIVE');
     if (mine.triesLeft <= 0) throw conflictError(T(c).noTries, 'TOUR_NO_TRIES');
