@@ -49,7 +49,10 @@ function fundsHistoryRow(
               : TRADE_LABEL[e.kind],
     title:
       games !== null
-        ? H.matchGames({ n: games })
+        ? // 자정을 넘겨 한 번 더 받은 날은 그날 치른 경기가 없다(0경기로 적지 않는다).
+          games > 0
+          ? H.matchGames({ n: games })
+          : H.matchIncome
         : e.item
           ? SPEND_LABEL[e.item]
           : e.card
