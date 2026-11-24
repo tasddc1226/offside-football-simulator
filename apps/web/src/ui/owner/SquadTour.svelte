@@ -667,6 +667,8 @@
   .st-bench-row {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
   .st-bench-row:empty {display:none;}
   .st-bench-row .st-opt {min-width:0;padding:4px;}
+  /* 좁은 카드에서 이름이 넘쳐도 가로 스크롤 영역을 만들지 않는다(줄임 모션일 때 키보드로 닿지 않는 스크롤 영역이 된다). */
+  .st-bench-row :global(.card-name.scrolling) {overflow-x:hidden;}
   .st-picker {display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;}
   .st-picker:empty {display:none;}
   .st-opt {flex:none;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:76px;min-height:44px;padding:6px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:inherit;font:inherit;cursor:pointer;}

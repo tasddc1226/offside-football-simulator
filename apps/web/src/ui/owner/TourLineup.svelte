@@ -228,6 +228,7 @@
   .tl-text {flex:none;border:0;background:none;color:var(--accent-text);font:inherit;font-weight:600;min-height:44px;padding:4px 8px;cursor:pointer;}
   .tl-bench {display:grid;gap:8px;padding:12px;border-radius:var(--radius-md);background:var(--surface);}
   .tl-bench-row {display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;}
+  .tl-bench-row :global(.card-name.scrolling) {overflow-x:hidden;}
   .tl-bench-card {display:block;width:100%;max-width:86px;justify-self:center;padding:0;border:0;background:none;border-radius:var(--radius-md);cursor:pointer;}
   .tl-bench-card:focus-visible,.tl-select:focus-visible {outline:3px solid var(--accent);outline-offset:3px;}
   .tl-locker {display:grid;gap:12px;padding:16px;border-radius:var(--radius-lg);background:var(--surface);}
