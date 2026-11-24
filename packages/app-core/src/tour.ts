@@ -223,3 +223,10 @@ export function tourChances(match: TourMatchView) {
     return { tactic: t, pct: Math.round(p * 100), diff: Math.round((p - now) * 100) };
   });
 }
+
+/** 주 이름(그 주 월요일 'YYYY-MM-DD')을 화면 문구로. 이번 주는 '이번 주'. */
+export function tourWeekLabel(week: string, current: string): string {
+  if (week === current) return L.historyNow;
+  const [, m, d] = week.split('-').map(Number);
+  return L.historyWeek({ m: m ?? 0, d: d ?? 0 });
+}

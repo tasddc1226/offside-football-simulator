@@ -6,12 +6,14 @@ import { View } from 'react-native';
 import { fetchOwnerTeam, type TeamPlayer } from '@offside/app-core/api/team';
 import {
   fetchTour,
+  fetchTourHistory,
   fetchTourRanking,
   orderTourMatch,
   startTourMatch,
 } from '@offside/app-core/api/tour';
 import type {
   TourMatchView,
+  TourHistoryResponse,
   TourRankingResponse,
   TourStage,
   TourStateResponse,
@@ -38,6 +40,7 @@ import {
   tourTacticDesc,
   tourTacticName,
   tourTired,
+  tourWeekLabel,
   tourWeekLeft,
   type TourDraft,
   type TourTactic,
@@ -54,7 +57,7 @@ import { PlayerCard, type PlayerCardData } from '../../components/PlayerCard';
 import { TeamPitch } from '../../components/TeamPitch';
 import { playSfx } from '../../platform/sfx';
 
-type Step = 'map' | 'prep' | 'live' | 'result' | 'rank';
+type Step = 'map' | 'prep' | 'live' | 'result' | 'rank' | 'history';
 
 /** 선수 한 명을 그라운드 · 목록 카드 값으로(빈 자리는 팀 화면의 유소년 카드 모양). */
 const cellOf = (p: TeamPlayer | undefined, name: string, rating: number): PlayerCardData =>
@@ -140,6 +143,8 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
   // 주간 순위
   const [ranking, setRanking] = useState<TourRankingResponse | null>(null);
   const [rankFailed, setRankFailed] = useState(false);
+  const [history, setHistory] = useState<TourHistoryResponse | null>(null);
+  const [historyFailed, setHistoryFailed] = useState(false);
 
   const resetOrder = (m: TourMatchView | null) => {
     setOrderTactic(m?.tactic ?? 'possession');
@@ -305,6 +310,14 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
     if (r.ok) setRanking(r.data);
     else setRankFailed(true);
   }
+  // 주간 참여 기록도 열 때만 받는다.
+  async function openHistory() {
+    setView('history');
+    setHistoryFailed(false);
+    const r = await fetchTourHistory();
+    if (r.ok) setHistory(r.data);
+    else setHistoryFailed(true);
+  }
   const nextStage = tour ? (tour.stages.find((s) => s.stage === tour.cleared + 1) ?? null) : null;
 
   const box = {
@@ -398,15 +411,17 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
   const header =
     view === 'rank'
       ? L.rankingTitle
-      : stage && view === 'prep'
-        ? tourStageName(stage.stage)
-        : L.title;
+      : view === 'history'
+        ? L.historyTitle
+        : stage && view === 'prep'
+          ? tourStageName(stage.stage)
+          : L.title;
 
   return (
     <PopSheet label={L.title} step={view} testID="squad-tour" onClose={onClose}>
       <View style={{ gap: 12, paddingHorizontal: 16, paddingBottom: 20 }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          {view === 'prep' || view === 'rank' ? (
+          {view === 'prep' || view === 'rank' || view === 'history' ? (
             <Btn sm testID="tour-back" accessibilityLabel={L.back} onPress={() => setView('map')}>
               ‹
             </Btn>
@@ -448,6 +463,9 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
                 <Txt v="sm" tone="onPitch" style={{ flex: 1 }}>
                   {L.weekEnds(left)}
                 </Txt>
+                <Btn sm kind="ghost" testID="tour-history" onPress={() => void openHistory()}>
+                  {L.historyTitle}
+                </Btn>
                 <Btn sm kind="ghost" testID="tour-rank" onPress={() => void openRank()}>
                   {L.rankingTitle}
                 </Btn>
@@ -1117,6 +1135,65 @@ export function SquadTour({ onClose }: { onClose: () => void }) {
                     </Txt>
                   </View>
                 ))}
+              </View>
+            )}
+          </>
+        ) : view === 'history' ? (
+          <>
+            <Txt v="xs" tone="muted">
+              {L.historyLead}
+            </Txt>
+            {historyFailed ? (
+              <Txt tone="muted">{L.historyFail}</Txt>
+            ) : !history ? (
+              <Txt tone="muted">{L.loading}</Txt>
+            ) : !history.rows.length ? (
+              <Txt tone="muted" testID="tour-history-empty">
+                {L.historyEmpty}
+              </Txt>
+            ) : (
+              <View testID="tour-history-list">
+                {history.rows.map((r) => {
+                  const week = tourWeekLabel(r.week, history.week);
+                  const line = [
+                    L.rankingCleared({ n: r.cleared }),
+                    `★ ${r.stars}`,
+                    L.historyTries({ n: r.tries }),
+                    ...(r.fee ? [L.fee({ v: fmtValue(r.fee) })] : []),
+                  ].join(' · ');
+                  const rank = r.rank ? L.rank({ n: r.rank }) : L.rankNone;
+                  return (
+                    <View
+                      key={r.week}
+                      accessible
+                      accessibilityLabel={`${week}, ${rank}, ${line}, ${L.score} ${r.score}`}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 10,
+                        minHeight: 52,
+                        paddingVertical: 8,
+                        borderTopWidth: 1,
+                        borderTopColor: c.line,
+                      }}
+                    >
+                      <Txt num style={{ width: 32 }}>
+                        {r.rank ? String(r.rank) : '–'}
+                      </Txt>
+                      <View style={{ flex: 1, minWidth: 0, gap: 2 }}>
+                        <Txt bold numberOfLines={1}>
+                          {week}
+                        </Txt>
+                        <Txt v="xs" tone="muted">
+                          {line}
+                        </Txt>
+                      </View>
+                      <Txt num style={{ fontSize: rem(1.2) }}>
+                        {String(r.score)}
+                      </Txt>
+                    </View>
+                  );
+                })}
               </View>
             )}
           </>

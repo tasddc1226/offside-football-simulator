@@ -55,6 +55,7 @@ async function stub(page: Page, opts: { open?: boolean; start?: 'ok' | 'noTries'
   const s = {
     tourGets: 0,
     rankGets: 0,
+    historyGets: 0,
     starts: [] as { body: Record<string, unknown>; key: string | null }[],
     orders: [] as Record<string, unknown>[],
   };
@@ -158,6 +159,27 @@ async function stub(page: Page, opts: { open?: boolean; start?: 'ok' | 'noTries'
       ok({
         week: '2026-11-23',
         rows: [{ rank: 1, teamId: 't1', name: '선두FC', cleared: 7, score: 3150, stars: 20 }],
+      }),
+    );
+  });
+  await page.route(`${API}/v1/tour/history`, (r) => {
+    s.historyGets++;
+    return r.fulfill(
+      ok({
+        week: '2026-11-23',
+        rows: [
+          { week: '2026-11-23', cleared: 1, score: 170, stars: 3, tries: 1, rank: 3, fee: 500000 },
+          {
+            week: '2026-11-16',
+            cleared: 4,
+            score: 900,
+            stars: 9,
+            tries: 7,
+            rank: 12,
+            fee: 3000000,
+          },
+          { week: '2026-11-09', cleared: 0, score: 0, stars: 0, tries: 2, rank: null, fee: 0 },
+        ],
       }),
     );
   });
@@ -285,6 +307,25 @@ test('원정 투어: 지도 → 편성 → 작전 경기 → 결과, 순위는 �
   await sheet.locator('[data-act="tour-rank"]').click();
   await expect(sheet.locator('[data-tour-ranking]')).toContainText('선두FC');
   expect(s.rankGets).toBe(1);
+  expect(s.tourGets).toBe(gets);
+
+  // 참여 기록: 이번 주와 지난 주들이 최근 순으로. 열 때 한 번만 받는다.
+  await sheet.locator('[data-act="tour-back"]').click();
+  await sheet.locator('[data-act="tour-history"]').click();
+  const hist = sheet.locator('[data-tour-history] li');
+  await expect(hist).toHaveCount(3);
+  await expect(hist.nth(0)).toContainText('이번 주');
+  await expect(hist.nth(1)).toContainText('11월 16일 주');
+  await expect(hist.nth(1)).toContainText('4경기 통과');
+  await expect(hist.nth(1)).toContainText('도전 7판');
+  await expect(hist.nth(2)).toContainText('–');
+  const axeHist = await new AxeBuilder({ page }).include('[data-squad-tour]').analyze();
+  expect(axeHist.violations).toEqual([]);
+  await shot(page, 'tour-history');
+  await sheet.locator('[data-act="tour-back"]').click();
+  await sheet.locator('[data-act="tour-history"]').click();
+  await expect(hist).toHaveCount(3);
+  expect(s.historyGets).toBe(1);
   expect(s.tourGets).toBe(gets);
 });
 

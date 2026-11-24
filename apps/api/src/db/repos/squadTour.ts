@@ -61,6 +61,35 @@ export async function tourRankOf(db: Db, me: TourProgressRow | undefined): Promi
   return (row?.n ?? 0) + 1;
 }
 
+/** 내 주간 참여 기록의 주 수 상한. */
+export const TOUR_HISTORY_WEEKS = 12;
+
+/**
+ * 내 주간 참여 기록(최근 주부터 TOUR_HISTORY_WEEKS주). 주마다 그 주 순위를 같이 센다(순위 인덱스 week · score를 탄다).
+ * 점수가 없는 주는 순위가 없다.
+ */
+export async function tourHistory(db: Db, profileId: string) {
+  const rows = await db
+    .select({
+      week: tourProgress.week,
+      cleared: tourProgress.cleared,
+      score: tourProgress.score,
+      tries: tourProgress.tries,
+      starsJson: tourProgress.starsJson,
+      // 열 이름을 표 이름까지 적는다(drizzle은 표 하나짜리 조회에서 표 이름을 떼어 안쪽 o의 열로 읽힌다).
+      ahead: sql<number>`(SELECT count(*) FROM tour_progress o WHERE o.week = tour_progress.week
+        AND (o.score > tour_progress.score
+          OR (o.score = tour_progress.score AND o.tries_at_score < tour_progress.tries_at_score)
+          OR (o.score = tour_progress.score AND o.tries_at_score = tour_progress.tries_at_score
+              AND o.reached_at < tour_progress.reached_at)))`,
+    })
+    .from(tourProgress)
+    .where(eq(tourProgress.profileId, profileId))
+    .orderBy(desc(tourProgress.week))
+    .limit(TOUR_HISTORY_WEEKS);
+  return rows.map((r) => ({ ...r, rank: r.score > 0 ? r.ahead + 1 : null }));
+}
+
 export const tourMatchOf = (db: Db, profileId: string, id: string) =>
   db
     .select()

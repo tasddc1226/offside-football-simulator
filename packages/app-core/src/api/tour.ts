@@ -1,5 +1,6 @@
 // T-11-825 원정 투어 API. 투어 화면(지연 청크)만 import한다. 사다리 · 제한 · 수치는 contracts에 있어 따로 부르지 않는다.
 import type {
+  TourHistoryResponse,
   TourMatchResponse,
   TourOrderBody,
   TourRankingResponse,
@@ -12,6 +13,8 @@ import { apiFetch, cachedGet } from './client.js';
 export const fetchTour = () => cachedGet<TourStateResponse>('/v1/tour', 60_000);
 /** 주간 순위. 순위 탭을 열 때만, 메모 1분. */
 export const fetchTourRanking = () => cachedGet<TourRankingResponse>('/v1/tour/ranking', 60_000);
+/** 내 주간 참여 기록(최근 12주). 기록 탭을 열 때만, 메모 1분. */
+export const fetchTourHistory = () => cachedGet<TourHistoryResponse>('/v1/tour/history', 60_000);
 /** 원정 출발(도전권 한 번). 첫 30분까지 치른 경기를 돌려준다. */
 export const startTourMatch = (body: TourStartBody) =>
   apiFetch<TourMatchResponse>('/v1/tour/matches', { method: 'POST', body: JSON.stringify(body) });

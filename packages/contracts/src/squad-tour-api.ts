@@ -131,3 +131,20 @@ export const TourRankingResponseSchema = z.strictObject({
   ),
 });
 export type TourRankingResponse = z.infer<typeof TourRankingResponseSchema>;
+
+/** 내 주간 참여 기록(최근 주부터). rank는 그 주 순위(점수가 없으면 null), fee는 그 주에 받은 대전료 합(만 원). */
+export const TourHistoryResponseSchema = z.strictObject({
+  week: z.string(),
+  rows: z.array(
+    z.strictObject({
+      week: z.string(),
+      cleared: z.number().int(),
+      score: z.number().int(),
+      stars: z.number().int(),
+      tries: z.number().int(),
+      rank: z.number().int().nullable(),
+      fee: z.number().int(),
+    }),
+  ),
+});
+export type TourHistoryResponse = z.infer<typeof TourHistoryResponseSchema>;

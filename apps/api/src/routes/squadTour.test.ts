@@ -1,4 +1,5 @@
 import {
+  TourHistoryResponseSchema,
   TourMatchResponseSchema,
   TourRankingResponseSchema,
   TourStateResponseSchema,
@@ -21,6 +22,7 @@ import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
 
 const State = successEnvelope(TourStateResponseSchema);
 const Match = successEnvelope(TourMatchResponseSchema);
+const History = successEnvelope(TourHistoryResponseSchema);
 const Ranking = successEnvelope(TourRankingResponseSchema);
 // 화요일 낮(한국 시각). 그 주 월요일은 2026-11-23.
 const NOW = '2026-11-24T03:00:00.000Z';
@@ -276,6 +278,51 @@ describe('원정 투어 (T-11-825)', () => {
       .from(tourProgress)
       .where(eq(tourProgress.profileId, owner.profileId));
     expect(p).toMatchObject({ cleared: 1, tries: 1, triesAtScore: 1 });
+  });
+
+  it('주간 참여 기록: 최근 주부터, 주마다 순위 · 받은 대전료를 준다. 점수 없는 주는 순위가 없다', async () => {
+    await open();
+    const owner = await issueGoogleCookie(ctx);
+    const rival = await issueGoogleCookie(ctx);
+    const at = '2026-11-17T03:00:00.000Z';
+    const row = (profileId: string, week: string, cleared: number, score: number) => ({
+      profileId,
+      week,
+      cleared,
+      score,
+      tries: cleared + 1,
+      triesAtScore: cleared + 1,
+      reachedAt: score ? at : null,
+      starsJson: JSON.stringify(
+        Object.fromEntries(Array.from({ length: cleared }, (_, i) => [i + 1, 2])),
+      ),
+      updatedAt: at,
+    });
+    await ctx.db
+      .insert(tourProgress)
+      .values([
+        row(owner.profileId, '2026-11-16', 3, 500),
+        row(rival.profileId, '2026-11-16', 5, 900),
+        row(owner.profileId, '2026-11-09', 0, 0),
+      ]);
+    const res = await call('GET', '/v1/tour/history', { cookie: owner.cookie });
+    expect(res.status).toBe(200);
+    const body = History.parse(await res.json()).data;
+    expect(body.week).toBe(tourWeekOf(NOW));
+    expect(body.rows).toEqual([
+      {
+        week: '2026-11-16',
+        cleared: 3,
+        score: 500,
+        stars: 6,
+        tries: 4,
+        rank: 2,
+        fee: tourFee(1) + tourFee(2) + tourFee(3),
+      },
+      { week: '2026-11-09', cleared: 0, score: 0, stars: 0, tries: 1, rank: null, fee: 0 },
+    ]);
+    const anon = await issueCookie(ctx);
+    expect((await call('GET', '/v1/tour/history', { cookie: anon.cookie })).status).toBe(403);
   });
 
   it('약한 팀은 지고, 하루 세 판을 쓰면 더 갈 수 없다. 진 경기에는 대전료 · 점수가 없다', async () => {

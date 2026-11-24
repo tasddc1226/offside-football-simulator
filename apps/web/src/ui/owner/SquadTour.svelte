@@ -7,8 +7,8 @@
   import PlayerCard from '../team/PlayerCard.svelte';
   import type { TeamPlayer } from '@offside/app-core/api/team';
   import { fetchOwnerTeam } from '@offside/app-core/api/team';
-  import { fetchTour, fetchTourRanking, orderTourMatch, startTourMatch } from '@offside/app-core/api/tour';
-  import type { TourMatchView, TourRankingResponse, TourStage, TourStateResponse } from '@offside/contracts';
+  import { fetchTour, fetchTourHistory, fetchTourRanking, orderTourMatch, startTourMatch } from '@offside/app-core/api/tour';
+  import type { TourHistoryResponse, TourMatchView, TourRankingResponse, TourStage, TourStateResponse } from '@offside/contracts';
   import { FORMATIONS, FORMATION_IDS, type FormationId } from '@offside/contracts/owner-team';
   import { TOUR_TRIES_PER_DAY } from '@offside/contracts/squad-tour';
   import {
@@ -29,6 +29,7 @@
     tourTacticDesc,
     tourTacticName,
     tourTired,
+    tourWeekLabel,
     tourWeekLeft,
     type TourDraft,
     type TourTactic,
@@ -42,7 +43,7 @@
   const { onclose }: { onclose: () => void } = $props();
   const local = localCareerNames();
 
-  type View = 'map' | 'prep' | 'live' | 'result' | 'rank';
+  type View = 'map' | 'prep' | 'live' | 'result' | 'rank' | 'history';
   let view = $state<View>('map');
   let tour = $state<TourStateResponse | null>(null);
   let players = $state<TeamPlayer[]>([]);
@@ -218,14 +219,24 @@
     if (r.ok) ranking = r.data;
     else rankFailed = true;
   }
+  // 주간 참여 기록도 열 때만 받는다.
+  let history = $state<TourHistoryResponse | null>(null);
+  let historyFailed = $state(false);
+  async function openHistory() {
+    view = 'history';
+    historyFailed = false;
+    const r = await fetchTourHistory();
+    if (r.ok) history = r.data;
+    else historyFailed = true;
+  }
   const nextStage = $derived(tour ? (tour.stages.find((s) => s.stage === tour!.cleared + 1) ?? null) : null);
 </script>
 
 <PopSheet label={L.title} step={view} {onclose}>
   <div class="stack st" data-squad-tour aria-busy={busy}>
     <div class="st-head">
-      {#if view === 'prep' || view === 'rank'}<button class="btn btn-sm st-icon" data-act="tour-back" aria-label={L.back} onclick={() => (view = 'map')}>‹</button>{/if}
-      <h2>{view === 'rank' ? L.rankingTitle : stage && view === 'prep' ? tourStageName(stage.stage) : L.title}</h2>
+      {#if view === 'prep' || view === 'rank' || view === 'history'}<button class="btn btn-sm st-icon" data-act="tour-back" aria-label={L.back} onclick={() => (view = 'map')}>‹</button>{/if}
+      <h2>{view === 'rank' ? L.rankingTitle : view === 'history' ? L.historyTitle : stage && view === 'prep' ? tourStageName(stage.stage) : L.title}</h2>
       {#if view !== 'live'}<button class="btn btn-sm st-icon" data-act="tour-close" aria-label={L.close} onclick={onclose}>✕</button>{/if}
     </div>
 
@@ -240,7 +251,10 @@
       <div class="stack st-band" data-tour-summary>
         <div class="st-band-top">
           <span>{L.weekEnds(left)}</span>
-          <button class="btn btn-sm st-ghost" data-act="tour-rank" onclick={() => void openRank()}>{L.rankingTitle}</button>
+          <span class="st-band-acts">
+            <button class="btn btn-sm st-ghost" data-act="tour-history" onclick={() => void openHistory()}>{L.historyTitle}</button>
+            <button class="btn btn-sm st-ghost" data-act="tour-rank" onclick={() => void openRank()}>{L.rankingTitle}</button>
+          </span>
         </div>
         <div class="st-stats">
           <div><small>{L.score}</small><b class="st-num">{tour.score}</b></div>
@@ -450,6 +464,26 @@
           {/each}
         </ol>
       {/if}
+    {:else if view === 'history'}
+      <small class="muted">{L.historyLead}</small>
+      {#if historyFailed}
+        <p class="muted">{L.historyFail}</p>
+      {:else if !history}
+        <p class="muted">{L.loading}</p>
+      {:else if !history.rows.length}
+        <p class="muted" data-tour-history-empty>{L.historyEmpty}</p>
+      {:else}
+        <ol class="st-rank st-history" data-tour-history>
+          {#each history.rows as r (r.week)}
+            <li data-week={r.week}>
+              <span class="st-num">{r.rank ?? '–'}</span>
+              <b>{tourWeekLabel(r.week, history.week)}</b>
+              <small class="muted">{L.rankingCleared({ n: r.cleared })} · ★ {r.stars} · {L.historyTries({ n: r.tries })}{r.fee ? ` · ${L.fee({ v: fmtValue(r.fee) })}` : ''}</small>
+              <span class="st-num">{r.score}</span>
+            </li>
+          {/each}
+        </ol>
+      {/if}
     {/if}
   </div>
 </PopSheet>
@@ -528,5 +562,6 @@
   .st-actions .btn {flex:1;min-height:48px;}
   .st-rank li {display:grid;grid-template-columns:32px 1fr auto;column-gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);}
   .st-rank small {grid-column:2;}
+  .st-band-acts {display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
   .st-rank li > .st-num:last-child {grid-row:1 / span 2;grid-column:3;font-size:1.2rem;}
 </style>

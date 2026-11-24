@@ -1,4 +1,5 @@
 import {
+  TourHistoryResponseSchema,
   TourMatchResponseSchema,
   TourOrderBodySchema,
   TourRankingResponseSchema,
@@ -29,6 +30,7 @@ import {
   saveTourSegment,
   starsOf,
   startTourMatch,
+  tourHistory,
   tourMatchOf,
   tourMine,
   tourRankOf,
@@ -210,6 +212,34 @@ export function registerSquadTourRoutes(app: Hono<AppEnv>): void {
       };
     });
     return ok(c, TourRankingResponseSchema, data, 200, `public, max-age=${RANKING_TTL}`);
+  });
+
+  // 내 주간 참여 기록(최근 12주). 기록 탭을 열 때만 부른다. 대전료는 통과한 경기 수로 계산한다(첫 승리에만 받으므로).
+  app.get('/v1/tour/history', requireProfile, async (c) => {
+    const me = await requireOwner(c);
+    const rows = await tourHistory(getDb(c), me.id);
+    return ok(
+      c,
+      TourHistoryResponseSchema,
+      {
+        week: tourWeekOf(nowIso()),
+        rows: rows.map((r) => {
+          let fee = 0;
+          for (let s = 1; s <= r.cleared; s++) fee += tourFee(s);
+          return {
+            week: r.week,
+            cleared: r.cleared,
+            score: r.score,
+            stars: Object.values(starsOf(r)).reduce((a, b) => a + b, 0),
+            tries: r.tries,
+            rank: r.rank,
+            fee,
+          };
+        }),
+      },
+      200,
+      NO_STORE,
+    );
   });
 
   // 원정 출발: 도전권을 한 번 쓰고 첫 30분을 치른다. 편성(선발 11 + 교체 명단) · 전술을 받는다.
