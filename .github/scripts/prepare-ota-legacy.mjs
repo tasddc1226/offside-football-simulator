@@ -20,8 +20,7 @@ export const targets = Object.freeze({
       android: '3b6819b34ba45425ee879e20f824f81da095fa05', // 1.1.7 Android build 27 (T-11-563)
     },
   },
-  // T-11-751 iOS 1.1.10 became current on 2026-11-18. iOS 1.1.8 keeps receiving current JS through this lane. Android went
-  // 1.1.7 -> 1.1.9 on the store, so this lane has no Android runtime and the workflow excludes 1.1.8 / android.
+  // iOS 1.1.8 keeps receiving current JS through this lane.
   '1.1.8': {
     source: '05c79da6d0fd287c7a9bc9f6e7851e85ef2a8af8',
     runtimes: {
@@ -35,14 +34,6 @@ export const targets = Object.freeze({
     source: 'e93fbfa5d95759a09a03b01756070e67eb64121b',
     runtimes: {
       android: '5390fc5af2f92099eb176b14882b2989ac98e2a4', // 1.1.10 Android build 31 (T-11-738)
-    },
-  },
-  // T-11-751 Android 1.1.10 became current on 2026-11-17. 1.1.9 was public on Android only (iOS 1.1.9 was withdrawn from review and iOS goes 1.1.8 -> 1.1.10),
-  // so this lane has no iOS runtime and the workflow excludes 1.1.9 / ios.
-  '1.1.9': {
-    source: '59fb22277f64b5150235e56a187224b1fcef368c',
-    runtimes: {
-      android: '84aa755bbc152b4088e0a0e4017b4c009552ad70', // 1.1.9 Android build 30 (T-11-734)
     },
   },
 });
@@ -160,6 +151,6 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   else if (cmd === 'prepare') prepare(process.cwd(), name, platform);
   else
     throw new Error(
-      'Usage: prepare-ota-legacy.mjs prepare <current|1.1.10|1.1.9|1.1.8|1.1.7> <platform> | check <current|1.1.10|1.1.9|1.1.8|1.1.7> <platform> <fingerprint>',
+      'Usage: prepare-ota-legacy.mjs prepare <current|1.1.10|1.1.8|1.1.7> <platform> | check <current|1.1.10|1.1.8|1.1.7> <platform> <fingerprint>',
     );
 }

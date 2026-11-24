@@ -1,0 +1,26 @@
+{
+  "id": "android-store-update-1-1-11",
+  "title": "안드로이드 앱 업데이트 안내",
+  "items": [
+    "안드로이드에서 최신 버전 1.1.11 업데이트를 안내해요. 1.1.9를 이용 중이라면 Google Play에서 업데이트해야 앞으로의 게임 변경 사항을 받을 수 있어요."
+  ],
+  "en": {
+    "title": "Android app update",
+    "items": [
+      "Android now prompts you to update to version 1.1.11. If you use version 1.1.9, update on Google Play to keep receiving game updates."
+    ]
+  },
+  "ja": {
+    "title": "Androidアプリのアップデート案内",
+    "items": [
+      "Androidでは最新版1.1.11への更新をご案内します。1.1.9をご利用の方は、今後もゲームの更新を受け取るためにGoogle Playでアップデートしてください。"
+    ]
+  },
+  "zh": {
+    "title": "Android 版更新提醒",
+    "items": [
+      "Android 版現會提示你更新至最新的 1.1.11 版。若你使用 1.1.9 版，請前往 Google Play 更新，以繼續接收遊戲更新。"
+    ]
+  },
+  "availability": "app"
+}
