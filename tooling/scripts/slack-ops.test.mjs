@@ -329,6 +329,38 @@ describe('release reporting', () => {
     await releaseUpdate(db, {}, event, f);
     expect(f).toHaveBeenCalledTimes(3);
   });
+
+  it('reports a mode=rollback run under its own title (T-11-824)', async () => {
+    const { releaseUpdate } = await import('./slack-release.mjs');
+    const event = {
+      workflow_run: {
+        id: 124,
+        name: 'Production Release',
+        head_branch: 'main',
+        status: 'completed',
+        head_sha: 'abcd1234',
+        run_attempt: 1,
+        conclusion: 'success',
+      },
+    };
+    const f = vi.fn(async (url) =>
+      url.includes('api.github.com')
+        ? Response.json({
+            total_count: 1,
+            jobs: [{ name: 'Roll back production workers', conclusion: 'success' }],
+          })
+        : ok(),
+    );
+    await releaseUpdate(
+      dbFake(),
+      { SLACK_RELEASES_WEBHOOK: hooks.SLACK_ALERTS_WEBHOOK, GITHUB_TOKEN: 'fake' },
+      event,
+      f,
+    );
+    const payload = JSON.parse(f.mock.calls[1][1].body);
+    expect(payload.content).toContain('운영 되돌리기');
+    expect(payload.content).toContain('DB와 앱 OTA는 그대로');
+  });
 });
 
 describe('discord webhook delivery (T-11-576)', () => {

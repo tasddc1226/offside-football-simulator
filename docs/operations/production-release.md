@@ -6,14 +6,14 @@
 다시 쌓았다. 배포가 기대하는 운영 D1 테이블 목록의 정본은 `tooling/scripts/production-release.mjs`의
 `EXPECTED_TABLES`다(2026-09-25 기준 11개: profiles, sessions, auth_attempts, audit_log, idempotency,
 careers, career_seasons, club_customs, board_posts, board_comments, balance_versions). 새 테이블을 만드는
-migration은 이 목록도 함께 고친다.
+migration은 이 목록도 함께 고친다. 목록은 그 뒤로 계속 늘었으니 개수는 파일에서 센다.
 
 2026-09-06~09-23의 시즌 1 승격 절차(ruleset/content pack 버전 전환, `set-season-end` 모드 등)는
 `0015`로 무의미해졌다. 과거 기록이 필요하면 git 이력에서 이 파일의 이전 버전을 참고한다.
 
 ## 실행 대상: `.github/workflows/deploy-production.yml` ("Production Release")
 
-- 트리거: `workflow_dispatch`만. `mode`는 `preflight`(읽기 전용) 또는 `deploy`.
+- 트리거: `workflow_dispatch`만. `mode`는 `preflight`(읽기 전용) · `deploy` · `rollback`(T-11-824, 아래 "되돌리기").
 - `main` ref만 허용하고, `expected_sha`가 checkout한 HEAD·원격 `main` 양쪽과 정확히 같아야 한다.
 - `deploy`는 `confirmation` 입력이 정확히 `DEPLOY_PRODUCTION`이어야 통과한다.
 - `concurrency: cloudflare-production`으로 직렬 실행한다(취소 없음).
@@ -40,15 +40,14 @@ migration은 이 목록도 함께 고친다.
 8. `pnpm --filter @offside/web deploy:production`.
 9. `tooling/scripts/web-readiness.mjs`로 배포된 웹이 이번에 빌드한 자산(모듈 entry·CSS의
    SHA-256)을 실제로 서빙하는지 확인한다(2회 연속 일치, 요청당 10초·전체 180초 한도, redirect 거부).
-10. read-back: `GET $PRODUCTION_API_URL/v1/health` 200, `GET $PRODUCTION_API_URL/v1/profile` 200
-    (인증 없이도 익명 프로필을 만들고 200을 반환한다 — 운영에 실사용자가 없으므로 문제 없다),
-    `GET $PRODUCTION_WEB_URL/`가 200이며 본문에 `오프사이드`를 포함.
+10. read-back: `GET $PRODUCTION_API_URL/v1/health` 200, 잘못된 토큰으로 `GET $PRODUCTION_API_URL/v1/profile`이
+    401(인증 없는 프로필 GET은 프로필을 만들므로 부르지 않는다), `GET $PRODUCTION_WEB_URL/`가 200이며 본문에 `오프사이드`를 포함.
 11. **릴리즈 태그** (`release-tag` 잡, 위 단계가 모두 성공했을 때만): `.github/scripts/release-tag.mjs`가
     기존 `v*` 태그를 보고 `vYYYY.MM.DD.N`(KST 날짜 + 그날 순번)을 정하고, `gh release create`로 배포한
     SHA에 태그와 GitHub 릴리즈를 만든다. 노트는 배포 실행 링크 + 직전 릴리즈 이후 머지된 PR 목록
     (`--generate-notes`). 같은 SHA를 다시 배포하면 새 태그를 만들지 않는다. 이 잡만 `contents: write`
     권한을 갖는다.
-12. **앱 OTA** (`app-update` 잡, T-11-010, 위 배포가 성공했을 때만): 같은 커밋의 앱 JS 번들을
+12. **앱 OTA** (`app-update` 잡, T-11-010, 위 배포가 성공했을 때만 게시. T-11-824부터 웹 · API 배포와 나란히 설치 · 지문 확인을 하고 게시 직전 `wait-job.mjs`로 그 배포의 성공을 기다린다): 같은 커밋의 앱 JS 번들을
     `eas update --channel production --environment production --platform ios`와 같은 명령의
     `--platform android`로 EAS Update에 올린다. Svelte 웹은 별도로 배포하므로 Expo의 웹 SSR을
     함께 내보내지 않는다. 게시 단계는 명시적 `shell: bash`의 `pipefail`로 내보내기·업로드 실패를
@@ -72,9 +71,36 @@ migration은 이 목록도 함께 고친다.
     - 되돌리기: `cd apps/mobile && npx eas-cli@latest update:rollback` 또는 이전 커밋으로 다시 `eas update`.
     - 앱 OTA가 아직 안 간(또는 옛 런타임) 앱도 한동안 남으므로 API는 하위 호환을 유지한다.
 
-실패한 단계 이후의 단계는 실행되지 않는다(예: web-readiness 실패 시 read-back을 하지 않음). 워크플로
-자체에 자동 롤백은 없다 — 문제가 생기면 사람이 판단해서 수정 배포하거나 `wrangler d1 time-travel
-restore`로 되돌린다(그 경우도 그 시점 이후의 사용자 프로필/세션은 사라진다는 뜻이다).
+13. **에이전트 Worker** (`agents-release` 잡, T-11-824): `offside-agents`는 웹 · API와 따로 배포된다(11-02~11-17에 머지된
+    변경이 배포되지 않아 KPI 원천 5개가 비었다). `agents-drift.mjs`가 마지막 Worker 배포 시각 뒤에 main에 들어온
+    `apps/agents` 커밋을 찾는다. 저장소 변수 `AGENTS_AUTO_DEPLOY=1`이면 `wrangler deploy`로 올리고, 아니면 경고만 남긴다.
+    이 Worker는 `workers_dev: false` + 커스텀 도메인이라 존 권한 없는 지금의 배포 토큰으로는 실패할 수 있다 — 토큰에
+    Zone · Workers Routes 읽기를 더한 뒤 변수를 켠다. 그 전에는 경고가 뜨면 `apps/agents`에서 `wrangler deploy`를 직접 한다.
+14. **배포 뒤 확인** (`release-watch` 잡, T-11-824): 새 API가 트래픽을 받은 지 10분이 지나면 `release-watch.mjs`가
+    - `/v1/status` 5분 칸으로 배포 뒤 오류율 · 느린 요청을 배포 전 1시간과 비교한다(오류율은 1%와 배포 전 2배 중 큰 값,
+      느린 요청은 5%와 2배 중 큰 값을 넘으면 문제, 배포 뒤 요청이 200건 밑이면 비율로는 판정하지 않는다).
+    - 운영 지표 DB `client_errors`에서 배포 전 사흘 안에 없던 앱 오류 지문을 센다(20건 이상이면 문제). 메시지 원문은 옮기지 않는다.
+    - API 상태 · 서버 상태 화면 · 웹 첫 화면을 부른다.
+      결과(OTA · 에이전트 Worker 상태 포함)를 디스코드 운영 배포 채널로 보내고 문제가 있으면 잡을 실패시킨다. 자동으로 되돌리지 않는다.
+
+실패한 단계 이후의 단계는 실행되지 않는다(예: web-readiness 실패 시 read-back을 하지 않음). 자동 롤백은 없다 —
+배포 뒤 확인이 문제를 알리면 사람이 판단해서 수정 배포하거나 아래 "되돌리기"를 실행한다. DB까지 되돌려야 하면
+`wrangler d1 time-travel restore`(그 시점 이후의 사용자 데이터는 사라진다).
+
+## 되돌리기 (`mode=rollback`, T-11-824)
+
+웹 · API에 문제가 났는데 고친 배포가 바로 나가기 어려울 때 쓴다. `confirmation`은 `ROLLBACK_PRODUCTION`, `expected_sha`는
+현재 main SHA를 넣는다(값은 검사하지 않는다).
+
+- `offside-api` · `offside-web` · `offside-og` Worker를 지난 배포의 버전으로 돌린다. 운영 배포는 API에 버전을 셋 만든다
+  (코드 배포 뒤 Google · 관리자 비밀값 동기화가 하나씩 더 만든다). 그래서 "바로 전 버전"이 아니라 마지막 코드 배포 바로 앞의
+  버전(지난 배포의 코드와 비밀값)을 `rollback-target.mjs`가 고른다. 한 번에 한 배포만큼 가고, 다시 실행하면 한 칸 더 간다.
+- **D1은 되돌리지 않는다.** 확장 → 전환 → 정리 규칙을 지킨 배포(옛 코드가 새 스키마에서 도는 배포)만 안전하다. 마이그레이션이
+  옛 코드를 깨는 배포였다면 되돌리기 대신 수정 배포를 낸다.
+- **앱 OTA는 따로 되돌린다:** `cd apps/mobile && npx eas-cli@latest update:republish --group <직전 그룹 ID>`(플랫폼별).
+- 에이전트 Worker와 운영 지표 대시보드는 건드리지 않는다.
+- 끝나면 health · 웹 첫 화면을 다시 읽고, 디스코드 운영 배포 채널에 "운영 되돌리기 실행 결과"가 온다. 원인을 고친 커밋을
+  main에 넣고 평소처럼 `mode=deploy`를 실행하면 다시 앞으로 간다.
 
 ## 앱 버전 규칙 (2026-10-02)
 
@@ -127,7 +153,7 @@ read-only 보고 유틸리티. 시즌/manifest 관련 커맨드(`seasons`, `plan
    (`2cfe462c-204e-4842-805c-5840fc9b1758`). 원격 DB는 스키마·집계 건수만 읽고 개별 프로필/세션
    내용은 출력하지 않는다.
 3. migration 적용 전 Time Travel bookmark를 확보한다. 계정별 보존 기간을 확인하며 무기한 백업으로
-   오인하지 않는다. 일일 R2 export/Cron은 이 저장소에 구현돼 있지 않다.
+   오인하지 않는다. 일일 백업 · 복원 검증은 `d1-backup-verify.yml`(T-11-777)이 따로 돈다.
 
 ## 최초 cutover (완료)
 
@@ -197,6 +223,22 @@ npm 네이티브 모듈(`package.json` 의존성)은 복원 대상이 아니므�
 그 버전보다 옛 스토어 빌드 경로(`current` 포함)는 그 모듈을 빼고 잠금 파일을 그 자리에서 맞춘다. 앱 JS는 모듈이 없으면 그 기능을 끈다(T-11-738 1.1.10 `expo-audio`).
 네이티브 코드를 고치는 pnpm 패치(`pnpm-workspace.yaml`의 `patchedDependencies`, `patches/`)도 지문에 들어가므로 `NATIVE_PATCHED`에 처음 실린 스토어 버전과 함께 적는다.
 그 버전보다 옛 스토어 빌드 경로는 패치 없이 설치한다(T-11-750 1.1.11 Reanimated ANR 패치).
+
+### 네이티브 지문 검사 (PR, T-11-824)
+
+PR 검사 `Native fingerprint guard`(`.github/scripts/native-guard.mjs`, 앱이 영향받는 PR만)가 운영 배포 전에 막는다.
+
+- `apps/mobile/package.json`에 새로 더한 네이티브 모듈이 `NATIVE_ADDED`에 없으면 실패한다(11-17 효과음 OTA 크래시).
+- `pnpm-workspace.yaml`에 새로 더한 네이티브 패키지 패치가 `NATIVE_PATCHED`에 없으면 실패한다.
+- 지문에 들어가는 설정(`NATIVE_PATHS` · `.fingerprintignore`)을 바꾸면 실패한다(11-04 plugins 주석 한 줄). 다음 스토어 빌드와
+  함께 내는 의도한 변경이면 PR에 `native-change` 라벨을 붙이고 검사를 다시 돌린다(라벨은 실행할 때 읽는다).
+
+### OTA 경로 정리 (T-11-824)
+
+경로(플랫폼 × 스토어 버전)마다 OTA 잡이 하나씩 돌고, 경로마다 `prepare-ota-legacy.mjs`에 예외가 붙는다. 한 달에 한 번쯤
+`node .github/scripts/ota-lane-usage.mjs`(Cloudflare 읽기 자격 필요, 운영 피크 밖)로 최근 7일 알림 기기 기준 경로별 비율을 본다.
+2% 밑인 옛 경로가 정리 후보다(알림을 켠 기기만 잡혀 안드로이드는 표본이 작다). 정리는 운영자가 정한다:
+그 버전보다 높게 `APP_VERSIONS.min`을 올려 닫을 수 없는 업데이트 팝업을 띄우고, 다음 배포에서 matrix · `targets`를 뺀다.
 
 스토어에서 새 버전이 실제 제공되면 그 플랫폼의 `STORE_BUILDS`와 `APP_VERSIONS.latest`를 함께 갱신한다.
 기준 커밋은 CI의 전체 이력에서 조회할 수 있는 main 커밋을 사용한다. iOS와 Android의 승인 시점이 다르면 각각 반영한다.

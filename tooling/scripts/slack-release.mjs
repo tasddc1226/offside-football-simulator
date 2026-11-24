@@ -27,7 +27,9 @@ export async function releaseUpdate(db, env, event, fetcher = fetch) {
   if (!Array.isArray(payload.jobs) || payload.total_count > 100)
     throw new Error('Incomplete release jobs');
   const jobs = payload.jobs;
-  if (!jobs.some((j) => j.name === 'Deploy production')) return; // Read-only preflight is not a release.
+  // Read-only preflight is not a release. T-11-824 mode=rollback reports under its own title.
+  const rollback = jobs.some((j) => j.name === 'Roll back production workers');
+  if (!rollback && !jobs.some((j) => j.name === 'Deploy production')) return;
   const status = {
     success: '성공',
     failure: '실패',
@@ -41,14 +43,16 @@ export async function releaseUpdate(db, env, event, fetcher = fetch) {
     `${run.run_attempt}:${run.conclusion}`,
     env.SLACK_RELEASES_WEBHOOK,
     slackMessage(
-      '🚀 OFFSIDE 운영 배포 실행 결과',
+      rollback ? '↩️ OFFSIDE 운영 되돌리기 실행 결과' : '🚀 OFFSIDE 운영 배포 실행 결과',
       [
         `커밋: ${String(run.head_sha).slice(0, 8)}`,
         ...jobs.map(
           (j) =>
             `${j.name === 'Deploy production' ? '웹·API 배포' : j.name}: ${status[j.conclusion] ?? '결과 확인 필요'}`,
         ),
-        '웹·API 배포와 앱 OTA 결과를 구분합니다. 스토어 심사 승인을 뜻하지 않습니다.',
+        rollback
+          ? '웹 · API Worker만 지난 배포 버전으로 돌렸어요. DB와 앱 OTA는 그대로예요.'
+          : '웹·API 배포와 앱 OTA 결과를 구분합니다. 스토어 심사 승인을 뜻하지 않습니다.',
       ],
       [{ label: '실행·각 단계 확인', url: `https://github.com/${repo}/actions/runs/${run.id}` }],
     ),

@@ -93,6 +93,18 @@ jobs:
           key: pnpm-store-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: pnpm-store-${{ runner.os }}-
       - run: pnpm install --frozen-lockfile
+      # T-11-824 네이티브 지문 검사: 새 네이티브 모듈 · 패치가 옛 스토어 빌드 OTA 경로에 적혔는지, 지문에 들어가는 설정을
+      # 바꿨는지(의도한 변경이면 native-change 라벨). 설치된 node_modules로 네이티브 패키지를 가린다.
+      - name: Native fingerprint guard
+        if: needs.pr-plan.outputs.mobile == 'true'
+        env:
+          CI_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          CI_HEAD_SHA: ${{ github.sha }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git fetch --no-tags --depth=1 origin "$CI_BASE_SHA" "$CI_HEAD_SHA"
+          node .github/scripts/native-guard.mjs
       - name: Repository-wide checks
         run: |
           node --test .github/scripts/*.test.mjs
