@@ -193,13 +193,13 @@ export const CUP_EN: Record<CupTextKey, string> = {
   leagueEndBodyChampion:
     'Tier 1 champions! You earned the Season {season} League Champion title, {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s).',
   leagueEndBodyAll:
-    'Tier {tier}, {title}: finished in position {rank}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s). Sign up next season to start in Tier {next}.',
+    'Tier {tier}, {title}: finished in position {rank}. You received {n} player reroll ticket(s), {s} premium scout ticket(s) and {b} potential boost ticket(s). The next league takes entries on {date} only. Sign up to start in Tier {next}.',
   leagueEndBodyReroll:
-    'Tier {tier}, {title}: finished in position {rank}. You received {n} player reroll ticket(s). Sign up next season to start in Tier {next}.',
+    'Tier {tier}, {title}: finished in position {rank}. You received {n} player reroll ticket(s). The next league takes entries on {date} only. Sign up to start in Tier {next}.',
   leagueEndBodyNext:
-    'Tier {tier}, {title}: finished in position {rank}. Sign up next season to start in Tier {next}.',
+    'Tier {tier}, {title}: finished in position {rank}. The next league takes entries on {date} only. Sign up to start in Tier {next}.',
   leagueEndBodyForfeited:
-    'Tier {tier}, {title}: finished in position {rank}. Too many forfeits, so there is no reward and next season starts in the bottom tier.',
+    'Tier {tier}, {title}: finished in position {rank}. Too many forfeits, so there is no reward and the next league, open for entries on {date}, starts you in the bottom tier.',
   leagueFillTitle: 'Promoted in the OFFSIDE League!',
   leagueFillBody:
     'A spot opened up above, so you play in Tier {tier} in Season {season}. You received {s} premium scout ticket(s).',

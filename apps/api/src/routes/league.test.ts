@@ -107,7 +107,7 @@ describe('/v1/leagues (T-11-418)', () => {
     return who;
   }
 
-  it('시즌 2 개막으로 기본 일정을 만든다: 개막 7일 전 사전 신청, 개막 뒤 5일, 배치 09:00, 마감 전날까지 매일 13:00(KST)', async () => {
+  it('시즌 2 개막으로 기본 일정을 만든다: 개막 7일 전 사전 신청, 개막 뒤 5일, 배치 09:00, 28라운드(12/2)까지 매일 13:00(KST)', async () => {
     vi.setSystemTime(new Date(BEFORE));
     const soon = await view();
     expect(soon.phase).toBe('soon');
@@ -119,10 +119,10 @@ describe('/v1/leagues (T-11-418)', () => {
       drawAt: '2026-11-05T00:00:00.000Z',
       minFilled: 8,
     });
-    // T-11-540 마감 전에는 최대 기간 끝(12/30 00:00 KST) 전날까지 매일.
-    expect(soon.league.rounds).toHaveLength(55);
+    // T-11-828 시즌 마감과 상관없이 28라운드(12/2 13:00 KST)에서 끝난다.
+    expect(soon.league.rounds).toHaveLength(28);
     expect(soon.league.rounds[0]).toBe('2026-11-05T04:00:00.000Z');
-    expect(soon.league.rounds.at(-1)).toBe('2026-12-29T04:00:00.000Z');
+    expect(soon.league.rounds.at(-1)).toBe('2026-12-02T04:00:00.000Z');
     // 사전 신청 전에는 신청할 수 없다.
     const a = await owner(null);
     expect(await me(a.cookie)).toEqual({

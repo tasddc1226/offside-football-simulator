@@ -3,6 +3,7 @@ import { leagueKo } from './leagueCopy.js';
 import type { LeagueNewsResponse } from '@offside/contracts';
 import {
   LEAGUE_FORFEIT_LIMIT,
+  leagueNextCycleStartsAt,
   leagueNextTier,
   leagueTeamSeason,
   leagueReward,
@@ -11,7 +12,7 @@ import {
 } from '@offside/contracts/league';
 import { leagueTitleOf } from '@offside/contracts/league-names';
 import { cupKo } from '../cupText.js';
-import { kstHm } from '../time.js';
+import { kstDay, kstHm } from '../time.js';
 import {
   leagueTable,
   tiersOf,
@@ -22,9 +23,20 @@ import {
 import { pushHeadline } from './leagueNews.js';
 
 const leagueTitleKo = (tier: number, no: number) => leagueTitleOf('ko', tier, no) ?? String(no);
-/** 마지막 라운드 알림 본문: 최종 순위 · 받은 보상 · 다음 시즌 부. */
+/** T-11-828 다음 회차 접수 날(한국 날짜 M/D). 회차가 끝나면 이틀 뒤 하루 동안 받는다. */
+const nextEntryDay = (league: LeagueDef) => {
+  const [, m, d] = kstDay(leagueNextCycleStartsAt(league)).split('-');
+  return `${Number(m)}/${Number(d)}`;
+};
+
+/** 마지막 라운드 알림 본문: 최종 순위 · 받은 보상 · 다음 회차 부와 접수 날. */
 function endBody(e: LeagueEntryRow, rank: number, league: LeagueDef) {
-  const where = { tier: e.tier!, title: leagueTitleKo(e.tier!, e.leagueNo!), rank };
+  const where = {
+    tier: e.tier!,
+    title: leagueTitleKo(e.tier!, e.leagueNo!),
+    rank,
+    date: nextEntryDay(league),
+  };
   const outcome = e.outcome as LeagueOutcome | null;
   if (!outcome) return cupKo('leagueEndBody', where);
   if (outcome === 'forfeited') return cupKo('leagueEndBodyForfeited', where);

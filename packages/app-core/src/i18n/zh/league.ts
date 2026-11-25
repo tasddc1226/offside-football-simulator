@@ -6,7 +6,7 @@ export const league: Translation<LeagueMsgs> = {
   cyclePitch:
     '8支球隊每天進行1輪，與同一對手交手4次，共28輪。結束後確定獎勵與升降級，再開放下一期聯賽。',
   cycleEntry:
-    '首期在服務賽季開幕5天後分組，之後每期報名1天後分組。分組時先發陣容須有8名自己的退役球員。',
+    '每期結束後先公布結果一天，接著開放報名一天，隔天 09:00 分組。分組時先發陣容須有8名自己的退役球員。',
   cycleLate: '首次分組14天後開放一次中途參加。新組別進行主客場共14輪，採用相同的排名獎勵。',
   cycleMove: '各聯賽第1名於下期升一級，第7、8名降一級。',
   cycleReward: '最後一場比賽後確定排名與獎勵。每期採用相同獎勵表，沒有棄權才能獲得完賽獎勵。',
@@ -18,7 +18,7 @@ export const league: Translation<LeagueMsgs> = {
   open: '查看聯賽',
   loadFail: '無法載入聯賽資訊。',
   pitch:
-    '每個聯賽 8 支球隊，到賽季結束前一天為止每天進行一輪主客場對戰。依賽季結束時的排名決定下個賽季的級別升降。',
+    '每個聯賽 8 支球隊，每天進行一輪主客場對戰，共 28 輪。依最終排名決定下一期聯賽的級別升降。',
   phaseSoon: '即將開放報名',
   phaseOpen: '報名中',
   phaseClosed: '等待分組',
@@ -28,7 +28,7 @@ export const league: Translation<LeagueMsgs> = {
   openLine: (p) => `已有${p.entries}支球隊報名 · 截止至${p.until}`,
   closedLine: (p) => `將於${p.at}公布級別與聯賽分組。`,
   runningLine: '聯賽進行中。',
-  doneLine: '本賽季聯賽已結束。',
+  doneLine: '本期聯賽已結束。',
   scheduleTitle: '賽程',
   scheduleEntry: '報名',
   scheduleSeason: (p) => (p.season >= 3 ? `第${p.season}期報名開始` : `賽季 ${p.season} 開幕`),
@@ -44,11 +44,11 @@ export const league: Translation<LeagueMsgs> = {
     '第 1 級有 1 個聯賽、第 2 級有 2 個，越下面的級別聯賽數量加倍。第一個賽季依報名截止時的球隊 OVR，從上面的級別依序填入。視參加隊數，也可能出現 7 支球隊的聯賽，此時每輪會有 1 支球隊輪空。',
   rulePoints:
     '主場球隊稍佔優勢。勝 3 分、和 1 分。積分相同時，依淨勝球、總進球、相互對戰成績依序決定。',
-  ruleMove: '各聯賽第 1 名下個賽季升上一級，第 7、8 名降一級。',
+  ruleMove: '各聯賽第 1 名在下一期聯賽升上一級，第 7、8 名降一級。',
   ruleLock: '比賽開始前 1 小時到比賽結束為止，無法變更球隊成員。轉會市場不受影響。',
   ruleForfeit:
-    '比賽時若先發陣容中自己的退役球員不足 8 名，判 0-3 敗。棄權 3 次後，剩餘比賽全部判 0-3 敗，下個賽季從最低級別開始。',
-  ruleReward: '獎勵不是俱樂部資金，而是獎盃、稱號與道具。賽季結束時即可領取。',
+    '比賽時若先發陣容中自己的退役球員不足 8 名，判 0-3 敗。棄權 3 次後，剩餘比賽全部判 0-3 敗，下一期聯賽從最低級別開始。',
+  ruleReward: '獎勵不是俱樂部資金，而是獎盃、稱號與道具。28 輪結束後即可領取。',
   entries: (p) => `報名${p.n}隊`,
   loginToEnter: '登入後即可報名聯賽。',
   enter: '報名聯賽',
@@ -131,8 +131,8 @@ export const league: Translation<LeagueMsgs> = {
   rewardScout: (p) => `高級球探券${p.n}張`,
   rewardBoost: (p) => `潛力強化券${p.n}張`,
   rewardNone: '無獎勵',
-  finalNext: (p) => `報名下個賽季將從第${p.tier}級開始。`,
-  finalNextBottom: '因多次棄權，下個賽季將從最低級別開始。',
+  finalNext: (p) => `報名下一期聯賽將從第${p.tier}級開始。`,
+  finalNextBottom: '因多次棄權，下一期聯賽將從最低級別開始。',
   myLeague: '我的聯賽',
   pickLeague: '選擇聯賽',
   standingsTitle: '排名表',
@@ -186,7 +186,7 @@ export const league: Translation<LeagueMsgs> = {
   moveMid: (p) => `第 1 名下個賽季升到第${p.up}級，第 7、8 名降到第${p.down}級。`,
   ruleLate:
     '聯賽開始後也能報名。每週分級時間會把晚報名的球隊編成 7～8 隊的新聯賽，加到最低級別。球隊不夠時順延到下週分級。',
-  lateEnterNote: (p) => `${p.at} 會把晚報名的球隊編成聯賽，從當天起每天比賽到賽季結束。`,
+  lateEnterNote: (p) => `${p.at} 會把晚報名的球隊編成聯賽，從當天起每天比賽到聯賽結束。`,
   lateWaiting: (p) => `正在等待 ${p.at} 的分級。`,
   lateAskDeadline: (p) => `${p.at} 分級前都可以取消報名。湊不齊組成聯賽的球隊時會順延到下週分級。`,
 };

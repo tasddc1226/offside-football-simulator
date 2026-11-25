@@ -68,7 +68,8 @@ async function adminView(db: Db, league: LeagueDef, now: string) {
             league.season,
             league.startsAt,
             league.teamSeason,
-            league.season === LEAGUE_INDEPENDENT_FROM,
+            // 개막 준비 회차만 사전 신청이 있다(T-11-828 시즌 2 뒤에 바로 이은 제3기는 하루 접수).
+            league.season === LEAGUE_INDEPENDENT_FROM && league.opensAt < league.startsAt,
           ).drawAt),
     counts: {
       entries: counts?.entries ?? 0,

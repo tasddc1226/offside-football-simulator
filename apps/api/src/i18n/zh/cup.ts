@@ -169,12 +169,13 @@ export const CUP_ZH: Record<CupTextKey, string> = {
   leagueEndBodyChampion:
     '1 級冠軍！獲得第 {season} 賽季聯賽冠軍稱號、{n} 張球員候選重抽券、{s} 張高級球探券和 {b} 張潛力強化券。',
   leagueEndBodyAll:
-    '{tier} 級 {title}最終第 {rank} 名。獲得 {n} 張球員候選重抽券、{s} 張高級球探券和 {b} 張潛力強化券。下個賽季報名將從 {next} 級開始。',
+    '{tier} 級 {title}最終第 {rank} 名。獲得 {n} 張球員候選重抽券、{s} 張高級球探券和 {b} 張潛力強化券。下一期聯賽只在 {date} 一天接受報名，報名後將從 {next} 級開始。',
   leagueEndBodyReroll:
-    '{tier} 級 {title}最終第 {rank} 名。獲得 {n} 張球員候選重抽券。下個賽季報名將從 {next} 級開始。',
-  leagueEndBodyNext: '{tier} 級 {title}最終第 {rank} 名。下個賽季報名將從 {next} 級開始。',
+    '{tier} 級 {title}最終第 {rank} 名。獲得 {n} 張球員候選重抽券。下一期聯賽只在 {date} 一天接受報名，報名後將從 {next} 級開始。',
+  leagueEndBodyNext:
+    '{tier} 級 {title}最終第 {rank} 名。下一期聯賽只在 {date} 一天接受報名，報名後將從 {next} 級開始。',
   leagueEndBodyForfeited:
-    '{tier} 級 {title}最終第 {rank} 名。因多次棄權沒有獎勵，下個賽季將從最低級別開始。',
+    '{tier} 級 {title}最終第 {rank} 名。因多次棄權沒有獎勵，{date} 開放報名的下一期聯賽將從最低級別開始。',
   leagueFillTitle: 'OFFSIDE 聯賽升級！',
   leagueFillBody: '上一級有空位，第 {season} 賽季將在 {tier} 級出賽。獲得 {s} 張高級球探券。',
   leagueForfeitedTitle: 'OFFSIDE 聯賽剩餘比賽將判不戰而敗',

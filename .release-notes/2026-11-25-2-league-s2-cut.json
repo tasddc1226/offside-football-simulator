@@ -1,0 +1,35 @@
+{
+  "id": "t-11-828-league-s2-cut",
+  "title": "시즌 2 리그를 28라운드에서 마쳐요",
+  "items": [
+    "시즌 2 리그는 12월 2일 28라운드에서 끝나고, 그날 밤 바로 순위 · 승강 · 보상을 정해요.",
+    "제3기 리그는 12월 4일 하루 동안 신청받고, 12월 5일부터 28라운드를 치러요. 자동 참가가 아니라서 다시 신청해야 해요.",
+    "제3기는 지금 시즌 2 팀으로 뛰고, 시즌 2 결과대로 부가 오르내려요."
+  ],
+  "en": {
+    "title": "The Season 2 league ends at round 28",
+    "items": [
+      "The Season 2 league ends with round 28 on December 2, and standings, promotion, relegation and rewards are settled that night.",
+      "League Season 3 takes entries on December 4 only and plays 28 rounds from December 5. Entry is not automatic, so sign up again.",
+      "League Season 3 uses your current Season 2 team, with tiers set by the Season 2 results."
+    ]
+  },
+  "ja": {
+    "title": "シーズン2リーグは第28節で終了",
+    "items": [
+      "シーズン2リーグは12月2日の第28節で終わり、その夜すぐに順位・昇降格・報酬を確定します。",
+      "第3期リーグは12月4日の1日だけ申し込みを受け付け、12月5日から28節を戦います。自動参加ではないので、もう一度申し込んでください。",
+      "第3期は今のシーズン2チームで戦い、シーズン2の結果で部が上下します。"
+    ]
+  },
+  "zh": {
+    "title": "第2賽季聯賽在第28輪結束",
+    "items": [
+      "第2賽季聯賽在12月2日第28輪結束，當晚立即確定排名、升降級與獎勵。",
+      "第3期聯賽只在12月4日一天開放報名，12月5日起進行28輪。不會自動參加，請再次報名。",
+      "第3期使用目前的第2賽季球隊參賽，並依第2賽季結果升降級。"
+    ]
+  },
+  "availability": "web-app",
+  "balance": true
+}
