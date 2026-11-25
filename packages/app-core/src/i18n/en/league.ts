@@ -8,7 +8,7 @@ export const league: Translation<LeagueMsgs> = {
   cyclePitch:
     'Eight teams play one round a day, meeting each opponent four times over 28 rounds. Rewards and promotion or relegation are settled before the next league season opens.',
   cycleEntry:
-    'The first league season draws five days after the service season opens; later ones draw after one day of entry. Start at least eight of your retired players at the draw.',
+    'When a league season ends, results stay up for a day, then entries open for one day and the draw is at 09:00 the next morning. Start at least eight of your retired players at the draw.',
   cycleLate:
     'Late entry opens once, 14 days after the draw. New groups play 14 home-and-away rounds and use the same placement rewards.',
   cycleMove: 'In each league, 1st place moves up a tier next league season; 7th and 8th move down.',
@@ -24,7 +24,7 @@ export const league: Translation<LeagueMsgs> = {
   open: 'View league',
   loadFail: "We couldn't load the league.",
   pitch:
-    'Eight teams in a league play home and away, one round every day until the day before the season ends. Your finish at season end decides your tier next season.',
+    'Eight teams in a league play home and away, one round every day, for 28 rounds. Final standings decide your tier in the next league.',
   phaseSoon: 'Opening soon',
   phaseOpen: 'Entries open',
   phaseClosed: 'Awaiting draw',
@@ -34,7 +34,7 @@ export const league: Translation<LeagueMsgs> = {
   openLine: (p) => `${p.entries} teams entered · until ${p.until}`,
   closedLine: (p) => `Tiers and leagues are announced ${p.at}.`,
   runningLine: 'League matches are under way.',
-  doneLine: "This season's league has finished.",
+  doneLine: 'This league has finished.',
   scheduleTitle: 'Schedule',
   scheduleEntry: 'Entries',
   scheduleSeason: (p) =>
@@ -51,13 +51,13 @@ export const league: Translation<LeagueMsgs> = {
     'Tier 1 has one league, tier 2 has two, and each tier below doubles. In the first season, tiers fill from the top by team OVR at the entry deadline. Some leagues have 7 teams depending on entries, and in those one team rests each round.',
   rulePoints:
     'The home team has a small advantage. A win is 3 points and a draw is 1. Ties are broken by goal difference, goals scored, then head-to-head.',
-  ruleMove: 'In every league, 1st place goes up a tier next season and 7th and 8th go down a tier.',
+  ruleMove:
+    'In every league, 1st place goes up a tier in the next league and 7th and 8th go down a tier.',
   ruleLock:
     "You can't change your squad from 1 hour before a match until it ends. The transfer market stays open.",
   ruleForfeit:
-    'A team with fewer than 8 of your retired players in the starting XI forfeits 0–3. After 3 forfeits, every remaining match is a 0–3 loss and you start next season in the bottom tier.',
-  ruleReward:
-    'Rewards are trophies, titles and items, not club funds. They arrive when the season ends.',
+    'A team with fewer than 8 of your retired players in the starting XI forfeits 0–3. After 3 forfeits, every remaining match is a 0–3 loss and you start the next league in the bottom tier.',
+  ruleReward: 'Rewards are trophies, titles and items, not club funds. They arrive after round 28.',
   entries: (p) => `${p.n} teams entered`,
   loginToEnter: 'Log in to enter the league.',
   enter: 'Enter league',
@@ -144,8 +144,8 @@ export const league: Translation<LeagueMsgs> = {
   rewardScout: (p) => `${p.n} premium scout ticket(s)`,
   rewardBoost: (p) => `${p.n} potential boost ticket(s)`,
   rewardNone: 'No reward',
-  finalNext: (p) => `Sign up next season to start in Tier ${p.tier}.`,
-  finalNextBottom: 'Too many forfeits, so next season starts in the bottom tier.',
+  finalNext: (p) => `Sign up for the next league to start in Tier ${p.tier}.`,
+  finalNextBottom: 'Too many forfeits, so the next league starts in the bottom tier.',
   myLeague: 'My league',
   pickLeague: 'Choose a league',
   standingsTitle: 'Table',
@@ -204,7 +204,7 @@ export const league: Translation<LeagueMsgs> = {
   ruleLate:
     'You can still enter after the league starts. Each week at placement time, late entries are grouped into new leagues of 7 or 8 clubs in the bottom tier. If there are too few clubs, they move to the next week.',
   lateEnterNote: (p) =>
-    `Late entries are grouped into leagues on ${p.at}. They play every day from then until the season ends.`,
+    `Late entries are grouped into leagues on ${p.at}. They play every day from then until the league ends.`,
   lateWaiting: (p) => `Waiting for the ${p.at} placement.`,
   lateAskDeadline: (p) =>
     `You can cancel until the ${p.at} placement. If there are too few clubs to form a league, you move to the next week.`,

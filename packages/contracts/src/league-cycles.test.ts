@@ -9,9 +9,10 @@ import {
 } from './league.js';
 
 describe('28-round league seasons (T-11-708)', () => {
-  it('keeps announced legacy season 2 schedules unchanged', () => {
+  it('ends the legacy season 2 league after 28 rounds (T-11-828)', () => {
     const legacy = planLeague(2, '2026-10-30T15:00:00.000Z');
-    expect(legacy.rounds).toHaveLength(55);
+    expect(legacy.rounds).toHaveLength(28);
+    expect(legacy.rounds.at(-1)).toBe('2026-12-02T04:00:00.000Z');
     expect(legacy.teamSeason).toBeUndefined();
     expect(leagueTeamSeason(legacy)).toBe(2);
   });

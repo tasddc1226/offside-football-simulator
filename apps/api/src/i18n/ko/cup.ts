@@ -191,13 +191,13 @@ export const CUP_KO = {
   leagueEndBodyChampion:
     '1부 우승! 시즌 {season} 리그 챔피언 칭호와 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요.',
   leagueEndBodyAll:
-    '{tier}부 {title} 최종 {rank}위예요. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+    '{tier}부 {title} 최종 {rank}위예요. 선수 후보 리롤권 {n}장, 프리미엄 스카우트권 {s}장, 잠재력 강화권 {b}장을 받았어요. 다음 리그는 {date} 하루 동안 신청받고, 신청하면 {next}부에서 시작해요.',
   leagueEndBodyReroll:
-    '{tier}부 {title} 최종 {rank}위예요. 선수 후보 리롤권 {n}장을 받았어요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+    '{tier}부 {title} 최종 {rank}위예요. 선수 후보 리롤권 {n}장을 받았어요. 다음 리그는 {date} 하루 동안 신청받고, 신청하면 {next}부에서 시작해요.',
   leagueEndBodyNext:
-    '{tier}부 {title} 최종 {rank}위예요. 다음 시즌에 신청하면 {next}부에서 시작해요.',
+    '{tier}부 {title} 최종 {rank}위예요. 다음 리그는 {date} 하루 동안 신청받고, 신청하면 {next}부에서 시작해요.',
   leagueEndBodyForfeited:
-    '{tier}부 {title} 최종 {rank}위예요. 기권이 쌓여 보상은 없고, 다음 시즌은 맨 아래 부에서 시작해요.',
+    '{tier}부 {title} 최종 {rank}위예요. 기권이 쌓여 보상은 없고, {date}에 신청받는 다음 리그는 맨 아래 부에서 시작해요.',
   leagueFillTitle: '오프사이드 리그 승격!',
   leagueFillBody:
     '위 부에 빈자리가 생겨 시즌 {season}에는 {tier}부에서 뛰어요. 프리미엄 스카우트권 {s}장을 받았어요.',

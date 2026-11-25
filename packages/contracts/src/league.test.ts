@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   LEAGUE_CYCLE,
+  LEAGUE_ROUNDS,
   leagueFinalAt,
+  leagueNextCycleStartsAt,
   leagueFixtures,
   leagueKickoffAt,
   leagueLateSlotAt,
@@ -46,27 +48,33 @@ describe('leagueSeasonAt (T-11-418c)', () => {
     };
     const seasons = [{ ...s1, endsAt: s2.startsAt }, s2];
     expect(leagueSeasonAt('2026-11-19T05:00:00.000Z', seasons)?.id).toBe(2);
-    // T-11-540 마지막 라운드(마감 전날 12/4 13:00 KST) 뒤 하루가 지나면 다음 시즌.
-    expect(leagueSeasonAt('2026-12-05T11:00:00.000Z', seasons)?.id).toBe(2);
-    expect(leagueSeasonAt('2026-12-05T13:00:00.000Z', seasons)?.id).toBe(3);
+    // T-11-828 시즌 2 리그는 28라운드(12/2 21:00 KST)에서 끝나고, 그 뒤 하루가 지나면 다음 시즌.
+    expect(leagueSeasonAt('2026-12-03T11:00:00.000Z', seasons)?.id).toBe(2);
+    expect(leagueSeasonAt('2026-12-03T13:00:00.000Z', seasons)?.id).toBe(3);
   });
 });
 
 describe('planLeague 시즌 내내 (T-11-540)', () => {
   const S2 = '2026-10-30T15:00:00.000Z';
-  it('배치 날부터 시즌 마감 전날까지 매일 13:00 KST 한 라운드', () => {
+  it('배치 날부터 매일 13:00 KST 한 라운드, 시즌 2는 28라운드(12/2)에서 끝낸다 (T-11-828)', () => {
     const l = planLeague(2, S2, '2026-12-04T15:00:00.000Z');
     expect(l.drawAt).toBe('2026-11-05T00:00:00.000Z');
     expect(l.rounds[0]).toBe('2026-11-05T04:00:00.000Z');
-    expect(l.rounds.at(-1)).toBe('2026-12-04T04:00:00.000Z');
-    expect(l.rounds).toHaveLength(30);
+    expect(l.rounds.at(-1)).toBe('2026-12-02T04:00:00.000Z');
+    expect(l.rounds).toHaveLength(LEAGUE_ROUNDS);
   });
 
-  it('마감이 없으면 최대 기간 끝을 마감으로 보고, 마감이 당겨지면 라운드가 준다', () => {
+  it('마감이 없어도 28라운드에서 끝나고, 마감이 더 당겨지면 라운드가 준다', () => {
     const open = planLeague(2, S2);
-    const end = Date.parse(S2) + gaugeRules(2).maxDays * 86_400_000;
-    expect(Date.parse(open.rounds.at(-1)!)).toBe(end - 11 * 3_600_000);
+    expect(open.rounds).toHaveLength(LEAGUE_ROUNDS);
+    expect(gaugeRules(2).maxDays).toBeGreaterThan(LEAGUE_ROUNDS + 5);
     expect(planLeague(2, S2, '2026-12-01T15:00:00.000Z').rounds).toHaveLength(27);
+  });
+
+  it('다음 회차는 마지막 라운드 날(결산이 이르면 그날) 이틀 뒤 시작한다', () => {
+    const l = planLeague(2, S2);
+    expect(leagueNextCycleStartsAt(l)).toBe('2026-12-04T04:00:00.000Z');
+    expect(leagueNextCycleStartsAt(l, '2026-12-01T00:00:00.000Z')).toBe('2026-12-03T00:00:00.000Z');
   });
 
   it('한 바퀴(14라운드) 일정을 되풀이한다', () => {
@@ -115,15 +123,12 @@ describe('늦은 참가 배치 (T-11-564)', () => {
       { at: '2026-11-12T00:00:00.000Z', firstRound: 8, last: true },
     ]);
     expect(leagueLateSlots(planLeague(2, S2, '2026-11-17T15:00:00.000Z'))).toEqual([]);
-    // 시즌 2 실제 일정(11/5 ~ 12/29, 55라운드): 12/17까지 6번, 12/24는 6라운드만 남아 빠진다.
+    // 시즌 2 실제 일정(11/5 ~ 12/2, T-11-828로 28라운드): 11/26이 7라운드를 남긴 마지막 늦은 배치.
     const real = leagueLateSlots(planLeague(2, S2, '2026-12-29T15:00:00.000Z'));
     expect(real.map((x) => [x.at.slice(5, 10), x.firstRound, x.last])).toEqual([
       ['11-12', 8, false],
       ['11-19', 15, false],
-      ['11-26', 22, false],
-      ['12-03', 29, false],
-      ['12-10', 36, false],
-      ['12-17', 43, true],
+      ['11-26', 22, true],
     ]);
   });
 

@@ -28,6 +28,18 @@ export const LEAGUE_CYCLE = (LEAGUE_SIZE - 1) * 2;
 /** T-11-708: existing season 2 remains unchanged. New league seasons run independently. */
 export const LEAGUE_INDEPENDENT_FROM = 3;
 export const LEAGUE_ROUNDS = LEAGUE_CYCLE * 2;
+/**
+ * T-11-828 시즌 2 리그도 28라운드(12/2)에서 끝낸다. 시즌 마감 전날까지(최대 55라운드) 같은 일정을 되풀이하면 승강까지
+ * 너무 길다는 반응(11-25)에 운영자가 결정했다. 끝나면 제3기가 서비스 시즌 3 개막을 기다리지 않고 이틀 뒤 이어진다.
+ */
+export const LEAGUE_LEGACY_SEASON = LEAGUE_INDEPENDENT_FROM - 1;
+
+/** 끝난 회차 다음 회차의 시작(마지막 라운드 날 또는 결산 중 이른 날 + 2일). 결과를 하루 보여 주고 다음 날 접수한다. */
+export function leagueNextCycleStartsAt(l: Pick<LeagueDef, 'rounds'>, doneAt?: string | null) {
+  const last = Date.parse(l.rounds.at(-1)!);
+  const end = doneAt ? Math.min(last, Date.parse(doneAt)) : last;
+  return new Date(end + 2 * DAY_MS).toISOString();
+}
 
 /**
  * 시즌 일정의 기본값: 개막 7일 전(앞 시즌 막바지)부터 사전 신청을 받고, 개막 뒤 5일은 새 시즌 팀을 꾸리며 계속 받는다.
@@ -112,7 +124,7 @@ export function planLeagueCycle(
  * 개막 시각 하나로 리그 일정을 만든다. 접수는 개막 presignDays일 전 00:00(KST)부터 개막 entryDays일 뒤 00:00까지, 배치는
  * 그날 drawHour시, 라운드는 그날부터 시즌 마감 전날까지 하루 한 라운드 matchHour시(T-11-540). 마감이 아직 정해지지 않았으면
  * 최대 기간 끝을 마감으로 보고, 게이지가 마감을 당기면 그 뒤 라운드는 빠진다(cron이 치르지 않은 경기를 지운다).
- * 시즌 2(10/31 00:00 개막) = 접수 10/24~11/4, 배치 11/5 09:00, 경기 11/5 13:00부터 마감 전날까지.
+ * 시즌 2(10/31 00:00 개막) = 접수 10/24~11/4, 배치 11/5 09:00, 경기 11/5 13:00부터 28라운드(12/2, T-11-828)까지.
  */
 export function planLeague(season: number, startsAt: string, endsAt?: string | null): LeagueDef {
   const d = LEAGUE_PLAN_DEFAULTS;
@@ -123,7 +135,8 @@ export function planLeague(season: number, startsAt: string, endsAt?: string | n
   const end = endsAt ? Date.parse(endsAt) : base + gaugeRules(season).maxDays * DAY_MS;
   // 마감(00:00 KST) 전날까지의 날 수. 마감이 배치 날보다 이르면(짧은 시즌) 한 라운드는 둔다.
   const lastDay = Math.ceil((end - base) / DAY_MS) - 1;
-  const count = Math.max(1, lastDay - d.entryDays + 1);
+  const days = Math.max(1, lastDay - d.entryDays + 1);
+  const count = season === LEAGUE_LEGACY_SEASON ? Math.min(days, LEAGUE_ROUNDS) : days;
   return {
     season,
     startsAt,

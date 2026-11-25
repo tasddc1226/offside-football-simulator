@@ -101,7 +101,7 @@ describe('leagueView (T-11-418)', () => {
       '10월 24일 00:00 ~ 11월 4일 23:59',
       '10월 31일 00:00',
       '11월 5일 09:00',
-      '11월 5일 ~ 12월 4일, 매일 13:00부터',
+      '11월 5일 ~ 12월 2일, 매일 13:00부터',
     ]);
   });
   it('단계마다 배너 한 줄', () => {
@@ -221,7 +221,7 @@ describe('leagueView (T-11-418)', () => {
       { tier: 2, leagues: 2, teams: 15 },
     ];
     const running = { ...data('running'), tiers, playedRounds: 3 };
-    expect(leagueLine(running)).toBe('30라운드 중 3라운드를 치렀어요.');
+    expect(leagueLine(running)).toBe('28라운드 중 3라운드를 치렀어요.');
     const me = (
       placement: NonNullable<Parameters<typeof leaguePlacementLine>[0]>['placement'],
     ) => ({
@@ -256,7 +256,7 @@ describe('leagueView (T-11-418)', () => {
     expect([1, 2, 7, 8].map((r) => leagueZone(r, 8, 1, 2))).toEqual([null, null, 'down', 'down']);
     expect([1, 7].map((r) => leagueZone(r, 7, 2, 2))).toEqual(['up', null]);
     expect(leagueDefaultRound(running)).toBe(4);
-    expect(leagueDefaultRound({ playedRounds: 30, league: running.league })).toBe(30);
+    expect(leagueDefaultRound({ playedRounds: 28, league: running.league })).toBe(28);
     const team = (id: string) => ({ teamId: id, name: id, owner: 'o', logo: null, ovr: 80 });
     const table = {
       teams: ['a', 'b', 'c'].map(team),
@@ -438,7 +438,7 @@ describe('leagueView (T-11-418)', () => {
       label: '승격',
       line: '2부 오리온 리그 최종 1위',
       reward: '리롤권 9장 · 프리미엄 스카우트권 1장 · 잠재력 강화권 1장',
-      next: '다음 시즌에 신청하면 1부에서 시작해요.',
+      next: '다음 리그에 신청하면 1부에서 시작해요.',
       title: null,
     });
     expect(
@@ -627,7 +627,7 @@ describe('leagueView 늦은 참가 (T-11-564)', () => {
       kind: 'mine',
       entered: false,
       action: 'enter',
-      note: '11월 12일 09:00에 늦게 신청한 팀끼리 리그를 만들어요. 그날부터 시즌 끝까지 매일 경기해요.',
+      note: '11월 12일 09:00에 늦게 신청한 팀끼리 리그를 만들어요. 그날부터 리그가 끝날 때까지 매일 경기해요.',
       ovr: '지금 내 팀 OVR 74',
     });
     expect(leagueEntryCard(run, 'member', me({ entry }), false, before)).toMatchObject({
