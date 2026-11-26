@@ -195,7 +195,7 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
     expect(await ctx.env.BACKUP!.head(key)).not.toBeNull();
   });
 
-  it('T-10-006: 시즌 상세(무실점·리그 기록·A매치·대회별·커리어 하이)를 저장한다', async () => {
+  it('T-10-006: 시즌 상세(무실점·리그 기록·A매치)를 저장하고 대회별·커리어 하이는 버린다(T-11-829)', async () => {
     const owner = await issueCookie(ctx);
     const app = createApp();
     const detail = {
@@ -222,8 +222,8 @@ describe('PUT /v1/careers/:careerId/seasons/:year', () => {
       .from(careerSeasons)
       .where(eq(careerSeasons.careerId, CAREER_ID));
     expect(row).toMatchObject({ cs: 12, lgApps: 18, lgGoals: 8, caps: 3 });
-    expect(JSON.parse(row!.compsJson!)).toEqual(detail.comps);
-    expect(JSON.parse(row!.chJson!)).toEqual(detail.ch);
+    expect(row?.compsJson).toBeNull();
+    expect(row?.chJson).toBeNull();
   });
 
   it('T-10-006: 대회 기록 형식이 틀리면 400', async () => {
