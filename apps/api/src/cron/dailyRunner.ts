@@ -20,6 +20,7 @@ import { buildRetireCohort } from '../db/repos/retireCohort.js';
 import { purgeEdgeOrigin } from '../edgeCache.js';
 import { RETIRE_COHORT_PATH } from '@offside/contracts/retire-cohort';
 import { moveClubLogos } from './clubLogoMove.js';
+import { trimSeasonComps, type SeasonCompsTrimStep } from './seasonCompsTrim.js';
 
 export const DAILY_STATE_KEY = 'cron:daily:state';
 const LEASE_MS = 4 * 60_000;
@@ -36,6 +37,7 @@ export const DAILY_STAGES = [
   'kpi',
   'retireCohort',
   'clubLogos',
+  'seasonComps',
 ] as const;
 type Stage = (typeof DAILY_STAGES)[number];
 export type DailyState = {
@@ -151,6 +153,11 @@ function steps(env: Bindings): DailyStep {
         // T-11-683 옛 형식 구단 엠블럼 이미지를 R2로 옮긴다(틱마다 25행, 끝나면 읽기 한 번).
         const result = await moveClubLogos(env);
         return { done: result === 'skipped' || result.done, result };
+      }
+      case 'seasonComps': {
+        // T-11-829 읽지 않는 옛 시즌 대회별 기록을 비운다(틱마다 rowid 3만, 하루 40만, 끝나면 읽기 한 번).
+        const result = await trimSeasonComps(env.DB, prior as SeasonCompsTrimStep | undefined);
+        return { done: result.doneToday, result };
       }
     }
   };
