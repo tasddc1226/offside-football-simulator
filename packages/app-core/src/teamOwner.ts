@@ -451,7 +451,7 @@ export function achBonusView(
     title: TA.bonusTitle,
     next: TA.bonusNext({ pts: num(bonus.next), items: achRewardItems(bonus.reward) }),
     got: got ? TA.bonusGot({ items: achRewardItems(bonus.got) }) : null,
-    note: TA.bonusNote({ every: num(ACH_SCORE_BONUS.every) }),
+    note: TA.bonusNote({ every: num(bonus.every ?? ACH_SCORE_BONUS.every) }),
   };
 }
 

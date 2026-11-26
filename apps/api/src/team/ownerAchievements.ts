@@ -17,6 +17,7 @@ import {
   ACH_SEASON_GIFT,
   ACH_VARIETY_FROM_SEASON,
   achScoreBonusCount,
+  achScoreBonusEvery,
   achScoreBonusOf,
   usesRankLadder,
   type AchBonusReward,
@@ -222,7 +223,7 @@ export type AchBonusStep = { key: string; k: number } & AchBonusReward;
 /** T-11-541 그 시즌 점수로 닿은 점수 보너스(ACH_SCORE_BONUS). 보너스를 주기 전 시즌은 빈 목록. */
 export function achBonusSteps(season: number, score: number): AchBonusStep[] {
   if (season < ACH_SCORE_BONUS.fromSeason) return [];
-  return Array.from({ length: achScoreBonusCount(score) }, (_, i) => ({
+  return Array.from({ length: achScoreBonusCount(score, season) }, (_, i) => ({
     key: `score:${i + 1}`,
     k: i + 1,
     ...achScoreBonusOf(i + 1),
@@ -230,7 +231,13 @@ export function achBonusSteps(season: number, score: number): AchBonusStep[] {
 }
 
 /** T-11-541 업적 화면의 점수 보너스 — 다음 보너스 점수 · 그 아이템 · 이 시즌에 받은 보너스 합. */
-export type AchBonusView = { next: number; reward: AchBonusReward; got: AchBonusReward };
+export type AchBonusView = {
+  next: number;
+  /** T-11-832 그 시즌 보너스 간격(화면 안내 문구). */
+  every: number;
+  reward: AchBonusReward;
+  got: AchBonusReward;
+};
 
 /**
  * T-11-357 업적 달성 보상을 맞춘다 — 받은 기록에 없는 달성 업적·단계에 보상을 주고, 업적별로 이 시즌에 받은 보상을
@@ -271,9 +278,10 @@ export async function settleSeasonRewards(
       bonusGot.reroll += s.reroll;
     }
   }
-  const k = achScoreBonusCount(score) + 1;
+  const k = achScoreBonusCount(score, season) + 1;
+  const every = achScoreBonusEvery(season);
   const bonus = bonusOn
-    ? { next: k * ACH_SCORE_BONUS.every, reward: achScoreBonusOf(k), got: bonusGot }
+    ? { next: k * every, every, reward: achScoreBonusOf(k), got: bonusGot }
     : null;
   return { got, bonus };
 }

@@ -709,6 +709,8 @@ export const ClubAchievementsResponseSchema = z.strictObject({
   bonus: z
     .strictObject({
       next: count,
+      /** T-11-832 그 시즌 보너스 간격(시즌 3부터 2,000점). 옛 서버 응답엔 없다. */
+      every: count.optional(),
       reward: z.strictObject({ boost: count, scout: count, reroll: count }),
       got: z.strictObject({ boost: count, scout: count, reroll: count }),
     })

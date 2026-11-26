@@ -3,6 +3,8 @@
 import {
   ACH_SCORE_BONUS,
   achScoreBonusCount,
+  achScoreBonusEvery,
+  achEndlessRewardAt,
   achScoreBonusOf,
 } from '@offside/contracts/owner-team';
 import { eq } from 'drizzle-orm';
@@ -131,6 +133,16 @@ describe('끝없는 단계 업적(clubAchievements endless)', () => {
     ]);
     expect(steps.slice(-2).every((s) => s.boost === 1 && s.scout === 0)).toBe(true);
   });
+  it('T-11-832 시즌 3부터 끝없는 단계는 한 칸 걸러(첫 칸 · 셋째 칸 …) 강화권 1장', () => {
+    const groups = groupsOf([career({ goals: 300_000 })], { endless: true });
+    const s2 = achRewardSteps(groups, 2).filter((s) => s.id === 'goals');
+    const s3 = achRewardSteps(groups, 3).filter((s) => s.id === 'goals');
+    expect(s2.map((s) => s.key)).toContain('goals:8');
+    expect(s3.map((s) => s.key)).toEqual(s2.map((s) => s.key).filter((k) => k !== 'goals:8'));
+    expect(achEndlessRewardAt(2, 2)).toEqual({ boost: 1, scout: 0 });
+    expect(achEndlessRewardAt(3, 1)).toEqual({ boost: 1, scout: 0 });
+    expect(achEndlessRewardAt(3, 2)).toBeNull();
+  });
 });
 
 describe('점수 보너스(ACH_SCORE_BONUS)', () => {
@@ -155,6 +167,16 @@ describe('점수 보너스(ACH_SCORE_BONUS)', () => {
     expect(sum).toEqual({ boost: 8, scout: 2, reroll: 16 });
     // 시즌 1은 없다.
     expect(achBonusSteps(1, 12_345)).toEqual([]);
+  });
+  it('T-11-832 시즌 3부터 2,000점마다, 스카우트권은 네 번째(8,000점)마다', () => {
+    expect(achScoreBonusEvery(2)).toBe(1500);
+    expect(achScoreBonusEvery(3)).toBe(2000);
+    expect(achScoreBonusCount(13_830, 2)).toBe(9);
+    expect(achScoreBonusCount(13_830, 3)).toBe(6);
+    expect(achScoreBonusCount(1999, 3)).toBe(0);
+    const steps = achBonusSteps(3, 8000);
+    expect(steps).toHaveLength(4);
+    expect(steps.map((s) => s.scout)).toEqual([0, 0, 0, 1]);
   });
 });
 
@@ -194,6 +216,7 @@ describe('settleSeasonRewards — 점수 보너스는 한 번만', () => {
     const first = await settleSeasonRewards(ctx.db, me.profileId, 2, small, NOW);
     expect(first.bonus).toEqual({
       next: 1500,
+      every: 1500,
       reward: { boost: 1, scout: 0, reroll: 2 },
       got: { boost: 0, scout: 0, reroll: 0 },
     });
@@ -214,6 +237,7 @@ describe('settleSeasonRewards — 점수 보너스는 한 번만', () => {
     );
     expect(again.bonus).toEqual({
       next: (n + 1) * ACH_SCORE_BONUS.every,
+      every: ACH_SCORE_BONUS.every,
       reward: achScoreBonusOf(n + 1),
       got: bonus,
     });

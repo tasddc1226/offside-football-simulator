@@ -637,6 +637,14 @@ export const ACH_REWARD_V2_FROM_SEASON = 2;
  * 강화권 1장으로 묶어, 오래 뛸수록 보상이 끝없이 커지지 않게 한다.
  */
 export const ACH_ENDLESS_STEP_REWARD: AchReward = { boost: 1, scout: 0 };
+/**
+ * T-11-832 이 시즌부터 끝없는 단계는 한 칸 걸러 보상을 준다(첫 칸 · 셋째 칸 · …). 시즌 2(32일) 27일째 단계 보상 칸 최고
+ * 128칸으로, 오래 뛰는 최상위권의 강화권이 끝없이 늘었다. 정해 둔 단계 보상은 그대로다.
+ */
+export const ACH_ENDLESS_SPARSE_FROM_SEASON = 3;
+/** 끝없는 단계 n칸째(1부터)의 보상. 시즌 3부터 짝수 칸은 없다. */
+export const achEndlessRewardAt = (season: number, n: number): AchReward | null =>
+  season >= ACH_ENDLESS_SPARSE_FROM_SEASON && n % 2 === 0 ? null : ACH_ENDLESS_STEP_REWARD;
 /** 그 시즌의 업적(단계) 보상. 시즌 2부터 새 표, 그 앞은 예전 표. */
 export function achRewardAt(season: number, points: number): AchReward | null {
   if (season < ACH_REWARD_V2_FROM_SEASON) return achRewardOf(points);
@@ -669,6 +677,16 @@ export const ACH_SCORE_BONUS = {
   reroll: 2,
   scoutEvery: 4,
 } as const;
+/**
+ * T-11-832 시즌 3부터 점수 보너스 간격을 1,500 → 2,000점으로 넓힌다(스카우트권은 그대로 네 번째마다 → 8,000점마다).
+ * 시즌 2 27일째(32일 시즌) 최고 13,830점이 보너스 9번으로, 45일 시즌 추정 최고 5~6번을 넘었다. 같은 점수면 6번이 된다.
+ */
+export const ACH_SCORE_BONUS_V3 = { fromSeason: 3, every: 2000 } as const;
+/** 그 시즌의 점수 보너스 간격. 시즌을 모르면 예전 간격. */
+export const achScoreBonusEvery = (season?: number): number =>
+  season !== undefined && season >= ACH_SCORE_BONUS_V3.fromSeason
+    ? ACH_SCORE_BONUS_V3.every
+    : ACH_SCORE_BONUS.every;
 export type AchBonusReward = { boost: number; scout: number; reroll: number };
 /** k번째(1부터) 점수 보너스의 아이템. */
 export function achScoreBonusOf(k: number): AchBonusReward {
@@ -676,8 +694,8 @@ export function achScoreBonusOf(k: number): AchBonusReward {
   return { boost: b.boost, reroll: b.reroll, scout: k % b.scoutEvery === 0 ? 1 : 0 };
 }
 /** 점수로 닿은 보너스 수. */
-export const achScoreBonusCount = (score: number): number =>
-  Math.max(0, Math.floor(score / ACH_SCORE_BONUS.every));
+export const achScoreBonusCount = (score: number, season?: number): number =>
+  Math.max(0, Math.floor(score / achScoreBonusEvery(season)));
 
 /**
  * 업적 보상을 처음 주는 시즌. 시즌 중에는 경제를 바꾸지 않으므로 그 앞 시즌(시즌 1)에는 주지도 표시하지도 않는다 — 개막
