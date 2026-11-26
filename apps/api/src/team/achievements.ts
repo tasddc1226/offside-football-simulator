@@ -10,9 +10,9 @@ import { CAREER_FEATS } from '@offside/contracts/owner-title';
 import { ACHIEVEMENT_EUROPEAN_LEAGUES } from '@offside/contracts/game-center';
 import type { ClubAchievement, ClubAchievementGroup } from '@offside/contracts';
 import {
-  ACH_ENDLESS_STEP_REWARD,
   ACH_REWARD_V2_FROM_SEASON,
   LINEUP_SIZE,
+  achEndlessRewardAt,
   achRewardAt,
   type AchCategory,
   type AchReward,
@@ -515,7 +515,9 @@ export type AchRewardStep = { id: string; key: string } & AchReward;
 function rewardAt(i: ClubAchievement, k: number, season: number): AchReward | null {
   const ladder = ladderOf.get(i);
   if (!ladder) return achRewardAt(season, i.points || i.worth);
-  if (season >= ACH_REWARD_V2_FROM_SEASON && k > ladder.defined) return ACH_ENDLESS_STEP_REWARD;
+  // T-11-832 시즌 3부터 끝없는 단계는 한 칸 걸러 준다.
+  if (season >= ACH_REWARD_V2_FROM_SEASON && k > ladder.defined)
+    return achEndlessRewardAt(season, k - ladder.defined);
   return achRewardAt(season, ladder.points[k - 1] ?? 0);
 }
 
