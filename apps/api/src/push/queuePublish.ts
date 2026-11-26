@@ -1,9 +1,11 @@
 import type { Bindings } from '../env.js';
 import type { Lang } from '../lang.js';
+import type { NewsFanoutWork } from './enqueue.js';
 
 export type PushWork =
   | { version: 1; kind: 'news' | 'personal'; ids: string[] }
-  | { version: 1; kind: 'test'; id: string; lang: Lang };
+  | { version: 1; kind: 'test'; id: string; lang: Lang }
+  | NewsFanoutWork;
 export const pushTable = (kind: 'news' | 'personal') =>
   kind === 'news' ? 'push_news_deliveries' : 'push_deliveries';
 

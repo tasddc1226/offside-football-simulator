@@ -8,6 +8,7 @@ import type { AppEnv } from '../env.js';
 import { AppError } from '../errors.js';
 import { NO_STORE, nowIso, ok, readBody } from './shared.js';
 import { kickNewsPush } from '../push/dispatch.js';
+import { fanoutEnvOf, startNewsFanout } from '../push/enqueue.js';
 
 export function registerReleaseNoteRoutes(app: Hono<AppEnv>): void {
   app.post('/v1/internal/release-notes', async (c) => {
@@ -22,14 +23,17 @@ export function registerReleaseNoteRoutes(app: Hono<AppEnv>): void {
         message: '운영 배포 작업만 릴리즈 노트를 게시할 수 있어요.',
       });
     }
-    const result = await publishReleaseNotes(c.env.DB, input, nowIso());
+    let queued = false;
+    const result = await publishReleaseNotes(c.env.DB, input, nowIso(), async (p, b, n) => {
+      queued = await startNewsFanout(fanoutEnvOf(c.env), p, b, n);
+    });
     if (result.updated) {
       purgeEdge(c, [
         ...STALE.boardChanged('release'),
         // T-11-333 밸런스 패치를 쌓았으면 공개 이력 캐시도 지운다.
         ...(result.balancePatchIds?.length ? STALE.balancePatched() : []),
       ]);
-      kickNewsPush(c);
+      if (!queued) kickNewsPush(c);
     }
     return ok(c, PublishedReleaseNotesSchema, result, 200, NO_STORE);
   });

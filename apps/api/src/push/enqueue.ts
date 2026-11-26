@@ -44,6 +44,7 @@ export const NEWS_FANOUT_CHUNK = 100;
  * T-11-688 이 글이 오늘의 소식 이벤트를 만들었으면 받는 사람을 기기 묶음마다 따로 쓴다(알림함 원본 · 발송 대상).
  * 기기는 PK(installation_hash) 순서로 끊어 읽고, 같은 사람이 두 묶음에 걸쳐도 알림함은 (profile, source) 유일 키로
  * 한 번만 들어간다. 발송 대상 id도 이벤트 · 기기로 정해져 다시 돌려도 겹치지 않는다.
+ * 운영은 이 함수를 요청 안에서 한 번에 돌리지 않는다(T-11-831, startNewsFanout).
  */
 export async function fanoutNewsEvent(
   db: D1Database,
@@ -52,18 +53,33 @@ export async function fanoutNewsEvent(
   now: string,
   chunk = NEWS_FANOUT_CHUNK,
 ): Promise<number> {
+  return (await fanoutNewsPage(db, postId, board, now, '', Infinity, chunk))?.devices ?? 0;
+}
+
+/**
+ * 커서(after) 다음 기기부터 최대 maxChunks 묶음만 쓴다. 이벤트가 없으면(이 글이 오늘 이벤트를 만들지 않았으면) null.
+ * done이면 마지막 기기까지 썼다.
+ */
+export async function fanoutNewsPage(
+  db: D1Database,
+  postId: string,
+  board: BoardKey,
+  now: string,
+  after: string,
+  maxChunks: number,
+  chunk = NEWS_FANOUT_CHUNK,
+): Promise<{ devices: number; after: string; done: boolean } | null> {
   const { eventId } = newsEventKey(board, now);
   const event = await db
     .prepare('SELECT 1 AS ok FROM push_news_events WHERE id = ? AND post_id = ? AND created_at = ?')
     .bind(eventId, postId, now)
     .first<{ ok: number }>();
-  if (!event) return 0;
+  if (!event) return null;
   const sessionExpiry = now;
   const activeSince = new Date(Date.parse(now) - 90 * 86400_000).toISOString();
   const inboxExpiry = new Date(Date.parse(now) + 90 * 86400_000).toISOString();
-  let after = '';
   let devices = 0;
-  for (;;) {
+  for (let n = 0; n < maxChunks; n++) {
     const page = await db
       .prepare(
         'SELECT installation_hash AS h FROM push_devices WHERE installation_hash > ? ORDER BY installation_hash LIMIT ?',
@@ -71,7 +87,7 @@ export async function fanoutNewsEvent(
       .bind(after, chunk)
       .all<{ h: string }>();
     const ids = page.results.map((r) => r.h);
-    if (!ids.length) break;
+    if (!ids.length) return { devices, after, done: true };
     after = ids[ids.length - 1]!;
     devices += ids.length;
     const inChunk = JSON.stringify(ids);
@@ -104,7 +120,154 @@ export async function fanoutNewsEvent(
         )
         .bind(eventId, eventId, now, now, inChunk, sessionExpiry, activeSince, board),
     ]);
-    if (ids.length < chunk) break;
+    if (ids.length < chunk) return { devices, after, done: true };
   }
-  return devices;
+  return { devices, after, done: false };
+}
+
+// ───────── T-11-831 큐로 나눠 쓰기 ─────────
+// 2026-11-26 11:49 KST 공지 게시가 기기 6,043대(61묶음)를 요청 안에서 연달아 써서 10초 만에 D1이 "overloaded"를 냈다.
+// 글은 저장됐는데 응답은 503, 목록 캐시는 그대로였고, 같은 순간 다른 사람의 요청도 실패했다. 그래서 운영에서는 요청이
+// 큐 메시지 하나만 남기고, 큐 소비자가 메시지마다 NEWS_FANOUT_STEP묶음씩 쓰고 NEWS_FANOUT_DELAY_S초 뒤 다음 메시지로 잇는다.
+// 진행 위치는 app_meta(news-fanout:<이벤트>)에 남겨, 메시지를 잃어도 5분 cron(resumeNewsFanouts)이 이어 간다.
+
+/** 큐 메시지 하나가 쓰는 묶음 수와 다음 메시지까지 쉬는 시간. */
+export const NEWS_FANOUT_STEP = 5;
+export const NEWS_FANOUT_DELAY_S = 2;
+/** 진행 위치가 이만큼 멈춰 있으면 cron이 다시 넣고, 이만큼 지나면 포기하고 지운다. */
+export const NEWS_FANOUT_STALL_MS = 10 * 60_000;
+export const NEWS_FANOUT_GIVE_UP_MS = 2 * 86400_000;
+const FANOUT_PREFIX = 'news-fanout:';
+
+export type NewsFanoutWork = {
+  version: 1;
+  kind: 'fanout';
+  postId: string;
+  board: BoardKey;
+  now: string;
+  after: string;
+};
+type FanoutMarker = Omit<NewsFanoutWork, 'version' | 'kind'> & { at: number };
+
+const markerKey = (w: Pick<NewsFanoutWork, 'board' | 'now'>) =>
+  FANOUT_PREFIX + newsEventKey(w.board, w.now).eventId;
+
+async function saveMarker(db: D1Database, w: NewsFanoutWork, at: number) {
+  const value: FanoutMarker = {
+    postId: w.postId,
+    board: w.board,
+    now: w.now,
+    after: w.after,
+    at,
+  };
+  await db
+    .prepare(
+      'INSERT INTO app_meta (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',
+    )
+    .bind(markerKey(w), JSON.stringify(value))
+    .run();
+}
+
+type FanoutEnv = { DB: D1Database; PUSH_QUEUE?: Queue<unknown> | undefined };
+
+/** 큐 소비자는 운영 큐에만 붙어 있다. 그 밖의 환경은 큐 없이(바로 다 쓰기) 넘긴다. */
+export const fanoutEnvOf = (env: {
+  DB: D1Database;
+  ENVIRONMENT?: string | undefined;
+  PUSH_QUEUE?: Queue<unknown> | undefined;
+}): FanoutEnv => ({
+  DB: env.DB,
+  PUSH_QUEUE: env.ENVIRONMENT === 'production' ? env.PUSH_QUEUE : undefined,
+});
+
+/**
+ * 글 저장 뒤 받는 사람 쓰기를 시작한다. 큐가 있으면(운영) 진행 위치를 남기고 메시지 하나만 넣어 true, 없으면(로컬 · 테스트)
+ * 예전처럼 바로 다 쓰고 false. 이 글이 오늘 이벤트를 만들지 않았으면 아무것도 하지 않는다.
+ */
+export async function startNewsFanout(
+  env: FanoutEnv,
+  postId: string,
+  board: BoardKey,
+  now: string,
+  at = Date.now(),
+): Promise<boolean> {
+  if (!env.PUSH_QUEUE) {
+    await fanoutNewsEvent(env.DB, postId, board, now);
+    return false;
+  }
+  const { eventId } = newsEventKey(board, now);
+  const event = await env.DB.prepare(
+    'SELECT 1 AS ok FROM push_news_events WHERE id = ? AND post_id = ? AND created_at = ?',
+  )
+    .bind(eventId, postId, now)
+    .first<{ ok: number }>();
+  if (!event) return true;
+  const work: NewsFanoutWork = { version: 1, kind: 'fanout', postId, board, now, after: '' };
+  await saveMarker(env.DB, work, at);
+  // 보내기가 실패해도 진행 위치가 남아 cron이 이어 간다. 글 저장 응답은 실패로 바꾸지 않는다.
+  await env.PUSH_QUEUE.send(work).catch(() => {
+    console.error(JSON.stringify({ job: 'news-fanout', error: 'QUEUE_SEND_FAILED' }));
+  });
+  return true;
+}
+
+/** 큐 메시지 하나: 몇 묶음 쓰고 다음 메시지를 넣거나, 끝났으면 진행 위치를 지우고 true(발송을 깨운다). */
+export async function runNewsFanout(
+  env: FanoutEnv,
+  work: NewsFanoutWork,
+  at = Date.now(),
+): Promise<boolean> {
+  const page = await fanoutNewsPage(
+    env.DB,
+    work.postId,
+    work.board,
+    work.now,
+    work.after,
+    NEWS_FANOUT_STEP,
+  );
+  if (!page || page.done) {
+    await env.DB.prepare('DELETE FROM app_meta WHERE key = ?').bind(markerKey(work)).run();
+    return !!page;
+  }
+  const next: NewsFanoutWork = { ...work, after: page.after };
+  await saveMarker(env.DB, next, at);
+  if (!env.PUSH_QUEUE) throw new Error('PUSH_QUEUE binding missing');
+  await env.PUSH_QUEUE.send(next, { delaySeconds: NEWS_FANOUT_DELAY_S });
+  return false;
+}
+
+/** 5분 cron: 멈춘 진행 위치를 다시 큐에 넣는다(같은 기기를 다시 써도 겹치지 않는다). 너무 오래된 것은 지운다. */
+export async function resumeNewsFanouts(env: FanoutEnv, at = Date.now()): Promise<number> {
+  if (!env.PUSH_QUEUE) return 0;
+  const { results } = await env.DB.prepare(
+    'SELECT key, value FROM app_meta WHERE key >= ? AND key < ? LIMIT 20',
+  )
+    .bind(FANOUT_PREFIX, FANOUT_PREFIX + '\uffff')
+    .all<{ key: string; value: string }>();
+  let resumed = 0;
+  for (const row of results) {
+    let m: FanoutMarker | null;
+    try {
+      m = JSON.parse(row.value) as FanoutMarker;
+    } catch {
+      m = null;
+    }
+    if (!m || at - Date.parse(m.now) > NEWS_FANOUT_GIVE_UP_MS) {
+      await env.DB.prepare('DELETE FROM app_meta WHERE key = ?').bind(row.key).run();
+      continue;
+    }
+    if (at - m.at < NEWS_FANOUT_STALL_MS) continue;
+    const work: NewsFanoutWork = {
+      version: 1,
+      kind: 'fanout',
+      postId: m.postId,
+      board: m.board,
+      now: m.now,
+      after: m.after,
+    };
+    await saveMarker(env.DB, work, at);
+    await env.PUSH_QUEUE.send(work);
+    resumed++;
+  }
+  return resumed;
 }

@@ -32,6 +32,7 @@ import { fanoutNewsEvent, newsPushStatements } from '../../push/enqueue.js';
 import type { Lang } from '../../lang.js';
 
 const COMMENTS_MAX = 200;
+const d1Of = (db: Db) => db.$client;
 
 const summaryColumns = {
   id: boardPosts.id,
@@ -207,6 +208,9 @@ export async function createPost(
   fields: PostFields,
   authorProfileId: string,
   now: string,
+  /** T-11-831 받는 사람 쓰기. 운영 라우트는 큐로 나눠 쓰는 startNewsFanout을 넘긴다. */
+  fanout: (postId: string, board: BoardKey, now: string) => Promise<unknown> = (p, b, n) =>
+    fanoutNewsEvent(d1Of(db), p, b, n),
 ) {
   const id = newId('pst');
   const d1 = db.$client;
@@ -232,7 +236,7 @@ export async function createPost(
     ...newsPushStatements(d1, id, board, now),
   ]);
   // T-11-688 받는 사람은 글 batch가 끝난 뒤 기기 묶음마다 따로 쓴다(한 batch로 D1을 오래 붙잡지 않게).
-  await fanoutNewsEvent(d1, id, board, now);
+  await fanout(id, board, now);
   return id;
 }
 

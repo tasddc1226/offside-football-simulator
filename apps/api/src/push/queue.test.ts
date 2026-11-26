@@ -6,6 +6,12 @@ import { queueNotification } from '../db/repos/notifications.js';
 import { createPost } from '../db/repos/boards.js';
 import { publishPushWork, type PushWork } from './queuePublish.js';
 import { consumePushWork } from './queue.js';
+import {
+  fanoutNewsPage,
+  NEWS_FANOUT_STALL_MS,
+  resumeNewsFanouts,
+  startNewsFanout,
+} from './enqueue.js';
 import { createApp } from '../app.js';
 
 const time = Date.parse('2026-10-18T03:00:00Z'); // KST noon; session expiry is deliberately later.
@@ -332,4 +338,105 @@ it('cancels a manual test on failed publication and never sends even if that mes
   expect(await state()).toEqual({ state: 'cancelled' });
   await consume(late!, transport, Date.now());
   expect(transport).not.toHaveBeenCalled();
+});
+
+it('T-11-831 운영은 글 저장 때 받는 사람을 쓰지 않고 큐로 나눠 쓴 뒤 발송을 깨운다', async () => {
+  const now = new Date(time).toISOString();
+  const second = await addAppPushDevice(ctx, profileId);
+  let queued = false;
+  await createPost(
+    ctx.db,
+    'notice',
+    { title: 'News', body: 'Body', pinned: false },
+    profileId,
+    now,
+    async (p, b, n) => {
+      queued = await startNewsFanout(ctx.env, p, b, n, time);
+    },
+  );
+  expect(queued).toBe(true);
+  const count = async () =>
+    (await ctx.env.DB.prepare('SELECT count(*) AS n FROM push_news_deliveries').first<{
+      n: number;
+    }>())!.n;
+  // 요청 안에서는 한 대도 쓰지 않고 진행 위치와 메시지 하나만 남긴다.
+  expect(await count()).toBe(0);
+  const job = queue.jobs.shift()!;
+  expect(job).toMatchObject({ kind: 'fanout', board: 'notice', after: '' });
+  expect(
+    await ctx.env.DB.prepare("SELECT key FROM app_meta WHERE key LIKE 'news-fanout:%'").first(),
+  ).toEqual({ key: 'news-fanout:notice:2026-10-18' });
+
+  // 한 묶음씩 끊어도 다음 커서부터 이어 쓴다.
+  const first = await fanoutNewsPage(
+    ctx.env.DB,
+    (job as { postId: string }).postId,
+    'notice',
+    now,
+    '',
+    1,
+    1,
+  );
+  expect(first).toMatchObject({ devices: 1, done: false });
+  expect(await count()).toBe(1);
+
+  // 소비자: 남은 기기를 쓰고 진행 위치를 지운 뒤 소식 발송 메시지를 넣는다.
+  const b = await consume(
+    { ...(job as Extract<PushWork, { kind: 'fanout' }>), after: first!.after },
+    vi.fn(),
+  );
+  expect(b.ack).toHaveBeenCalledOnce();
+  expect(await count()).toBe(2);
+  expect(
+    await ctx.env.DB.prepare("SELECT key FROM app_meta WHERE key LIKE 'news-fanout:%'").first(),
+  ).toBeNull();
+  expect(queue.jobs.map((j) => j.kind)).toEqual(['news']);
+  expect(second).toBeTruthy();
+});
+
+it('T-11-831 멈춘 받는 사람 쓰기는 cron이 다시 넣고, 오래된 진행 위치는 지운다', async () => {
+  const now = new Date(time).toISOString();
+  const put = (key: string, value: unknown) =>
+    ctx.env.DB.prepare('INSERT INTO app_meta (key, value) VALUES (?, ?)')
+      .bind(key, JSON.stringify(value))
+      .run();
+  await put('news-fanout:notice:2026-10-18', {
+    postId: 'pst_a',
+    board: 'notice',
+    now,
+    after: 'h5',
+    at: time - NEWS_FANOUT_STALL_MS - 1,
+  });
+  await put('news-fanout:release:2026-10-18', {
+    postId: 'pst_b',
+    board: 'release',
+    now,
+    after: '',
+    at: time - 1000,
+  });
+  await put('news-fanout:notice:2026-10-10', {
+    postId: 'pst_old',
+    board: 'notice',
+    now: new Date(time - 3 * 86400_000).toISOString(),
+    after: '',
+    at: time - 3 * 86400_000,
+  });
+  expect(await resumeNewsFanouts(ctx.env, time)).toBe(1);
+  expect(queue.jobs).toEqual([
+    { version: 1, kind: 'fanout', postId: 'pst_a', board: 'notice', now, after: 'h5' },
+  ]);
+  const keys = (
+    await ctx.env.DB.prepare(
+      "SELECT key FROM app_meta WHERE key LIKE 'news-fanout:%' ORDER BY key",
+    ).all<{
+      key: string;
+    }>()
+  ).results.map((r) => r.key);
+  expect(keys).toEqual(['news-fanout:notice:2026-10-18', 'news-fanout:release:2026-10-18']);
+  // 모양이 틀린 메시지는 버린다.
+  const bad = await consume(
+    { version: 1, kind: 'fanout', postId: 'x', board: 'team', now, after: '' } as never,
+    vi.fn(),
+  );
+  expect(bad.ack).toHaveBeenCalledOnce();
 });

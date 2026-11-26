@@ -55,6 +55,7 @@ import { BOARD_PAGE_LIMIT } from '@offside/contracts/board-limits';
 import { EDGE, STALE } from '../edgeKeys.js';
 import { kickNewsPush } from '../push/dispatch.js';
 import { reqLang } from '../lang.js';
+import { fanoutEnvOf, startNewsFanout } from '../push/enqueue.js';
 import { draftTranslations } from '../translate/ai.js';
 import { assertCanComment } from './commentGuard.js';
 import { isTeamCommentId } from '../db/repos/teamComments.js';
@@ -189,9 +190,20 @@ export function registerBoardRoutes(app: Hono<AppEnv>): void {
     const board = parseWithAppError(BoardKeySchema, c.req.param('board'));
     const viewer = await requireAdmin(c);
     const input = readBody(c, PostInputSchema);
-    const id = await createPost(getDb(c), board, input, viewer.profileId!, nowIso());
+    // T-11-831 받는 사람(기기 수천 대)은 요청 안에서 쓰지 않고 큐로 나눠 쓴다. 큐가 다 쓴 뒤 발송을 깨운다.
+    let queued = false;
+    const id = await createPost(
+      getDb(c),
+      board,
+      input,
+      viewer.profileId!,
+      nowIso(),
+      async (p, b, n) => {
+        queued = await startNewsFanout(fanoutEnvOf(c.env), p, b, n);
+      },
+    );
     purgeList(c, board);
-    kickNewsPush(c);
+    if (!queued) kickNewsPush(c);
     return ok(c, PostSchema, localizePost(await postOr404(c, id), reqLang(c)), 201);
   });
 

@@ -102,7 +102,14 @@ export function appendReleaseNotes(
 }
 
 /** app_meta의 PK 조회로 영구 게시 이력을 읽는다. 글과 이력 쓰기는 D1 batch 한 트랜잭션이다. */
-export async function publishReleaseNotes(db: D1Database, input: PublishReleaseNotes, now: string) {
+export async function publishReleaseNotes(
+  db: D1Database,
+  input: PublishReleaseNotes,
+  now: string,
+  /** T-11-831 받는 사람 쓰기. 운영 라우트는 큐로 나눠 쓰는 startNewsFanout을 넘긴다. */
+  fanout: (postId: string, board: 'release', now: string) => Promise<unknown> = (p, b, n) =>
+    fanoutNewsEvent(db, p, b, n),
+) {
   if (!input.entries.length) return { postId: null, publishedIds: [], updated: false };
   const keys = input.entries.map((e) => keyOf(e.id));
   const hashes = new Map(
@@ -276,6 +283,6 @@ export async function publishReleaseNotes(db: D1Database, input: PublishReleaseN
       'RELEASE_POST_CONFLICT',
     );
   // T-11-688 받는 사람은 batch가 끝난 뒤 기기 묶음마다 따로 쓴다.
-  if (!post) await fanoutNewsEvent(db, postId, 'release', now);
+  if (!post) await fanout(postId, 'release', now);
   return { postId, publishedIds, updated: true, balancePatchIds };
 }

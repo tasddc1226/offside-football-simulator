@@ -1,8 +1,9 @@
 import { LOCALES } from '@offside/contracts/i18n';
 import type { Bindings } from '../env.js';
 import { runNewsPush } from './dispatch.js';
+import { runNewsFanout } from './enqueue.js';
 import { runPersonalPush } from './personal.js';
-import { pushTable, type PushWork } from './queuePublish.js';
+import { publishPushWork, pushTable, type PushWork } from './queuePublish.js';
 import { runQueuedPushTest } from './queuedTest.js';
 
 const validId = (value: unknown): value is string =>
@@ -11,6 +12,17 @@ function validWork(body: unknown): body is PushWork {
   if (!body || typeof body !== 'object') return false;
   const value = body as Partial<PushWork>;
   if (value.version !== 1) return false;
+  if (value.kind === 'fanout') {
+    const w = body as Partial<Extract<PushWork, { kind: 'fanout' }>>;
+    return (
+      validId(w.postId) &&
+      (w.board === 'notice' || w.board === 'release') &&
+      typeof w.now === 'string' &&
+      Number.isFinite(Date.parse(w.now)) &&
+      typeof w.after === 'string' &&
+      w.after.length <= 400
+    );
+  }
   if (value.kind === 'test')
     return (
       validId(value.id) &&
@@ -43,6 +55,12 @@ export async function consumePushWork(
       continue;
     }
     try {
+      // T-11-831 소식 글의 받는 사람 쓰기. 몇 묶음 쓰고 다음 메시지를 넣는다. 끝나면 발송을 깨운다.
+      if (work.kind === 'fanout') {
+        if (await runNewsFanout(env, work, now)) await publishPushWork(env, 'news', now);
+        message.ack();
+        continue;
+      }
       let processed = 0;
       if (work.kind === 'test') {
         processed = Number(await runQueuedPushTest(env, work, now, transport));

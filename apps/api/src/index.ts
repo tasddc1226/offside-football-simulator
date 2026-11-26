@@ -18,6 +18,7 @@ import { chatSocket } from './chat/socket.js';
 import { liveSocket } from './live/socket.js';
 import { publishPushWork } from './push/queuePublish.js';
 import { consumePushWork } from './push/queue.js';
+import { fanoutEnvOf, resumeNewsFanouts } from './push/enqueue.js';
 import { queueRetentionPushes, retentionPushEnabled } from './push/retention.js';
 import { queueReengagement } from './push/reengagement.js';
 import { consumeCareerReminders, queueCareerReminders } from './push/careerReminder.js';
@@ -104,6 +105,10 @@ export default {
       // 푸시 단계가 실패해도 뒤의 시즌 결산·컵 진행은 돈다(다음 5분에 다시 보낸다).
       await recoverBillingAlerts(env, controller.scheduledTime).catch(logged('billing-recovery'));
       mark('recoverBillingAlerts');
+      // T-11-831 소식 글 받는 사람 쓰기가 멈췄으면(큐 메시지 유실) 이어 간다.
+      await resumeNewsFanouts(fanoutEnvOf(env), controller.scheduledTime).catch(
+        logged('news-fanout-resume'),
+      );
       await publishPushWork(env, 'news', controller.scheduledTime).catch(
         logged('news-push-publish'),
       );
