@@ -33,6 +33,8 @@
     "./retire-cohort": "./src/retire-cohort.ts",
     "./league-names": "./src/league-names.ts",
     "./attendance": "./src/attendance-rules.ts",
+    "./xmas": "./src/xmas-rules.ts",
+    "./xmas-dates": "./src/xmas-dates.ts",
     "./season-pass": "./src/season-pass-rules.ts",
     "./membership": "./src/membership-rules.ts",
     "./starter-pack": "./src/starter-pack-rules.ts",

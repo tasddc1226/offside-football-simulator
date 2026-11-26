@@ -8,6 +8,7 @@ import { attendanceReminderText as attendanceJa } from '../i18n/ja/attendanceRem
 import { attendanceReminderText as attendanceZh } from '../i18n/zh/attendanceReminder.js';
 import { RETIRED_NUMBER_SCOUTS } from '@offside/contracts/cup';
 import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
+import { XMAS_INVITE_MULT } from '@offside/contracts/xmas';
 import { OLD_INVITEE, OLD_INVITER, PUSH_JA, PUSH_TAIL_JA } from '../i18n/ja/push.js';
 import { PUSH_TAIL_ZH, PUSH_ZH } from '../i18n/zh/push.js';
 import { cupText } from '../cupText.js';
@@ -43,6 +44,9 @@ const EN: Record<string, string> = {
   [`커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `You finished a career and got ${INVITE_REROLLS} candidate rerolls and ${INVITE_SCOUTS} premium scout ticket.`, // i18n-ignore: 번역표 키
   '초대한 친구가 커리어를 마쳤어요': 'A friend you invited finished a career', // i18n-ignore: 번역표 키
   [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `You got ${INVITE_REROLLS} candidate rerolls and ${INVITE_SCOUTS} premium scout ticket as an invite reward.`, // i18n-ignore: 번역표 키
+  // T-11-834 크리스마스 기간 2배 초대 보상.
+  [`커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS * XMAS_INVITE_MULT}장과 프리미엄 스카우트권 ${INVITE_SCOUTS * XMAS_INVITE_MULT}장을 받았어요.`]: `You finished a career and got ${INVITE_REROLLS * XMAS_INVITE_MULT} candidate rerolls and ${INVITE_SCOUTS * XMAS_INVITE_MULT} premium scout tickets.`, // i18n-ignore: 번역표 키
+  [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS * XMAS_INVITE_MULT}장과 프리미엄 스카우트권 ${INVITE_SCOUTS * XMAS_INVITE_MULT}장을 받았어요.`]: `You got ${INVITE_REROLLS * XMAS_INVITE_MULT} candidate rerolls and ${INVITE_SCOUTS * XMAS_INVITE_MULT} premium scout tickets as an invite reward.`, // i18n-ignore: 번역표 키
   // T-11-244 retired number reward (db/repos/itemShop.ts).
   '영구결번 보상을 받았어요': 'You got a retired number reward', // i18n-ignore: 번역표 키
   [`영구결번 보상으로 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`]: `Your retired number earned you ${RETIRED_NUMBER_SCOUTS} premium scout ticket.`, // i18n-ignore: 번역표 키

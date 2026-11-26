@@ -1,5 +1,7 @@
 // T-11-150 대표 칭호 표시 — 칭호 id('cup-3-champion')에서 회차와 단계를 읽어 문구와 트로피를 고른다.
 import {
+  EVENT_TITLE_RE,
+  isEventTitle,
   parseHonorTitle,
   parseTitle,
   permanentTitleOf,
@@ -28,6 +30,9 @@ const LABEL: Record<TitleStage, (p: { n: number; d?: string | undefined }) => st
 
 /** '제3회 챔피언'(지금 언어). 알 수 없는 id면 null. */
 export function titleLabel(id: string | null | undefined): string | null {
+  // T-11-834 이벤트 한정 칭호('event-xmas-2026').
+  const event = id ? EVENT_TITLE_RE.exec(id) : null;
+  if (event) return L.titleXmas({ year: Number(event[1]) });
   const honor = parseHonorTitle(id);
   if (honor) {
     const season = teamSeasonLabel(honor.season);
@@ -162,6 +167,21 @@ export function titleCondition(id: string): string | null {
 
 /** Shared 16 × 16 pixel art. Each filled cell is a square, with no font or stroke dependency. */
 const TITLE_PIXELS = {
+  // T-11-834 크리스마스 이벤트 한정 칭호(별 달린 트리).
+  'event-xmas': [
+    '.....##.....',
+    '.....##.....',
+    '....####....',
+    '...######...',
+    '....####....',
+    '...######...',
+    '..########..',
+    '...######...',
+    '..########..',
+    '.##########.',
+    '.....##.....',
+    '....####....',
+  ],
   'owner-founder': [
     '..########..',
     '..#..####...',
@@ -626,6 +646,7 @@ const HONOR_ICON = {
 } as const;
 export const titleIconPath = (id: string): string => {
   const honor = parseHonorTitle(id);
+  if (isEventTitle(id)) return PIXEL_PATHS['event-xmas'] ?? '';
   return (
     PIXEL_PATHS[honor ? HONOR_ICON[honor.kind] : (TITLE_ICON_OF[id as PermanentTitleId] ?? id)] ??
     ''
@@ -661,6 +682,7 @@ export const titleRelated = (id: string): string | null => {
 /** 칭호 이름 아래 작은 글자: 영구 칭호는 등급, 기록 배지는 '기록 배지', 컵 · 리그는 '컵'. */
 export const titleKindLabel = (id: string): string => {
   const grade = permanentTitleOf(id)?.grade;
+  if (isEventTitle(id)) return L.titleEvent;
   return grade ? titleGradeLabel(grade) : parseHonorTitle(id) ? L.categoryHonor : L.titleCup;
 };
 export const titleCategoryLabel = (category: TitleCategory | 'trophy' | 'honor'): string =>
@@ -677,9 +699,11 @@ export const titleCategoryLabel = (category: TitleCategory | 'trophy' | 'honor')
   })[category];
 /** Matching metal accents on light and dark backgrounds; grade is also expressed in text. */
 export const titleGradeColor = (id: string): string =>
-  ({ entry: '#93A49A', skilled: '#6EAA8C', honor: '#80A8C9', legend: '#D7AF54' })[
-    permanentTitleOf(id)?.grade ?? honorGrade(id)
-  ];
+  isEventTitle(id)
+    ? '#C8654F' // T-11-834 이벤트 칭호는 겨울 장식 빨강.
+    : { entry: '#93A49A', skilled: '#6EAA8C', honor: '#80A8C9', legend: '#D7AF54' }[
+        permanentTitleOf(id)?.grade ?? honorGrade(id)
+      ];
 /** T-11-619 기록 배지 색: 1위 금 · 상위 10과 최초 기록 은 · 그 아래 초록. */
 function honorGrade(id: string): TitleGrade {
   const h = parseHonorTitle(id);

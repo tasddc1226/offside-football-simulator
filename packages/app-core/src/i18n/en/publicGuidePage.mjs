@@ -174,7 +174,7 @@ export default (guideCopy) => {
       'Friends and friendlies',
       [
         'Owners can become friends through a friend request on a team profile, a friend code or an invite link. You can play up to 10 friendlies a day against a friend’s team. Friendlies do not count toward RP, record or achievements, and only your head-to-head record against that friend is kept.',
-        'Friend invite event: when an owner who has not yet retired any player sends a friend request using a friend’s invite link or friend code, it is recorded as an invite. When that owner finishes a player career through to retirement, both of you receive 3 player reroll tickets and 1 premium scout ticket. A person can be invited only once, and the inviter’s reward is limited to 10 times. You can see invite progress on the Friends screen.',
+        'Friend invite event: when an owner who has not yet retired any player sends a friend request using a friend’s invite link or friend code, it is recorded as an invite. When that owner finishes a player career through to retirement, both of you receive 3 player reroll tickets and 1 premium scout ticket. If the player retires between Dec 19, 2026 and Jan 4, 2027, inclusive (KST), both of you receive 6 reroll tickets and 2 scout tickets. A person can be invited only once, and the inviter’s reward is limited to 10 times. You can see invite progress on the Friends screen.',
       ],
     ],
     [
@@ -273,7 +273,7 @@ export default (guideCopy) => {
     ],
     [
       'What do I get for inviting a friend?',
-      'When a friend who has not yet retired any player sends a friend request with your invite link or friend code and finishes a player career through to retirement, both of you receive 3 player reroll tickets and 1 premium scout ticket. The reward goes to signed-in owners, and the inviter can receive it up to 10 times. The items you receive are used the same way as other items.',
+      'When a friend who has not yet retired any player sends a friend request with your invite link or friend code and finishes a player career through to retirement, both of you receive 3 player reroll tickets and 1 premium scout ticket. If the player retires between Dec 19, 2026 and Jan 4, 2027, inclusive (KST), both of you receive 6 reroll tickets and 2 scout tickets. The reward goes to signed-in owners, and the inviter can receive it up to 10 times. The items you receive are used the same way as other items.',
     ],
     [
       'Is there a faster way to get an S potential player?',

@@ -1,4 +1,5 @@
 import { INVITE_REROLLS, INVITE_REWARD_MAX, INVITE_SCOUTS } from '@offside/contracts/owner-team';
+import { xmasInviteMult } from '@offside/contracts/xmas';
 import type { AdminInvite, AdminInviteReport, AdminInviter } from '@offside/contracts';
 import { and, eq, isNull, or, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
@@ -28,7 +29,7 @@ export async function claimReferral(db: Db, inviteeId: string, inviterId: string
 
 /**
  * 초대받은 사람이 커리어를 은퇴까지 마쳤다: 초대를 끝내고 두 사람에게 리롤권을 준다. 초대한 쪽은 지금까지 보상받은 초대가
- * INVITE_REWARD_MAX명 미만일 때만 받는다. 같은 batch 안에서 앞 문장이 바꾼 줄(done_at · career_id)을 조건으로 걸어
+ * INVITE_REWARD_MAX명 미만일 때만 받는다. 같은 batch 안에서 아직 끝나지 않은 초대만 지급하고 마지막에 완료 처리해
  * 다시 불려도 두 번 주지 않는다.
  */
 export function completeReferralStatements(
@@ -36,12 +37,16 @@ export function completeReferralStatements(
   r: { inviteeId: string; inviterId: string; careerId: string },
   now: string,
 ) {
-  const done = (extra = '') => ({
-    sql: `EXISTS (SELECT 1 FROM referrals WHERE invitee_id = ? AND career_id = ? AND done_at = ?${extra})`,
-    params: [r.inviteeId, r.careerId, now],
+  const pending = (extra = '') => ({
+    sql: `EXISTS (SELECT 1 FROM referrals WHERE invitee_id = ? AND inviter_id = ? AND done_at IS NULL${extra})`,
+    params: [r.inviteeId, r.inviterId],
   });
-  const mine = done();
-  const inviterPaid = done(' AND inviter_rewarded = 1');
+  const mine = pending();
+  const inviterPaid = pending(' AND inviter_rewarded = 1');
+  // T-11-834 크리스마스 이벤트 기간에 끝난 초대는 두 사람 모두 2배로 받는다.
+  const mult = xmasInviteMult(Date.parse(now));
+  const rerolls = INVITE_REROLLS * mult;
+  const scouts = INVITE_SCOUTS * mult;
   const notice = (profileId: string, guard: typeof mine, title: string, body: string) =>
     eventNotificationStatements(
       d1,
@@ -57,33 +62,33 @@ export function completeReferralStatements(
   return [
     d1
       .prepare(
-        `UPDATE referrals SET done_at = ?, career_id = ? WHERE invitee_id = ? AND done_at IS NULL`,
-      )
-      .bind(now, r.careerId, r.inviteeId),
-    d1
-      .prepare(
         `UPDATE referrals SET inviter_rewarded = 1
-         WHERE invitee_id = ? AND career_id = ? AND done_at = ?
+         WHERE invitee_id = ? AND inviter_id = ? AND done_at IS NULL
            AND (SELECT count(*) FROM referrals WHERE inviter_id = ? AND inviter_rewarded = 1) < ?`,
       )
       .bind(...mine.params, r.inviterId, INVITE_REWARD_MAX),
-    grantItemStatement(d1, r.inviteeId, 'reroll', INVITE_REROLLS, now, mine),
-    grantItemStatement(d1, r.inviterId, 'reroll', INVITE_REROLLS, now, inviterPaid),
+    grantItemStatement(d1, r.inviteeId, 'reroll', rerolls, now, mine),
+    grantItemStatement(d1, r.inviterId, 'reroll', rerolls, now, inviterPaid),
     // T-11-244 프리미엄 스카우트권도 같은 조건으로 준다.
-    grantItemStatement(d1, r.inviteeId, 'scout', INVITE_SCOUTS, now, mine),
-    grantItemStatement(d1, r.inviterId, 'scout', INVITE_SCOUTS, now, inviterPaid),
+    grantItemStatement(d1, r.inviteeId, 'scout', scouts, now, mine),
+    grantItemStatement(d1, r.inviterId, 'scout', scouts, now, inviterPaid),
     ...notice(
       r.inviteeId,
       mine,
       '친구 초대 보상을 받았어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
-      `커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+      `커리어를 끝까지 마쳐 선수 후보 리롤권 ${rerolls}장과 프리미엄 스카우트권 ${scouts}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
     ),
     ...notice(
       r.inviterId,
       inviterPaid,
       '초대한 친구가 커리어를 마쳤어요', // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
-      `친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
+      `친구 초대 보상으로 선수 후보 리롤권 ${rerolls}장과 프리미엄 스카우트권 ${scouts}장을 받았어요.`, // i18n-ignore: 푸시·알림함 문구는 기기 언어를 모른다
     ),
+    d1
+      .prepare(
+        `UPDATE referrals SET done_at = ?, career_id = ? WHERE invitee_id = ? AND done_at IS NULL`,
+      )
+      .bind(now, r.careerId, r.inviteeId),
   ];
 }
 

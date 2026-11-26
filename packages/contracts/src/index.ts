@@ -224,6 +224,7 @@ export * from './web-pay.js';
 export * from './league.js';
 export * from './league-api.js';
 export * from './attendance.js';
+export * from './xmas.js';
 export * from './season-pass.js';
 export * from './starter-pack.js';
 export * from './membership.js';

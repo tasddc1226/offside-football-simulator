@@ -28,6 +28,8 @@ import { PartnerPopup } from './PartnerPopup';
 import { HomeFirsts } from './HomeFirsts';
 import { HomeGift } from './HomeGift';
 import { HomeAttendance } from './HomeAttendance';
+import { HomeXmas } from './HomeXmas';
+import { xmasPhase } from '@offside/contracts/xmas-dates';
 import { HomeEvents } from './HomeEvents';
 import { HomeLive } from './HomeLive';
 import { HomeNews } from './HomeNews';
@@ -39,7 +41,7 @@ import { PushOptInCard } from './PushOptInCard';
 import { ManagerResume } from '../owner/ManagerResume';
 import { InboxButton } from '../../components/InboxButton';
 import { openFriends } from '../../platform/inbox';
-import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
+import { inviteReward } from '@offside/app-core/friendText';
 import { friendText as LF } from '@offside/app-core/i18n/ko/friend';
 import { tn } from '@offside/game/i18n/names';
 import {
@@ -260,6 +262,8 @@ export default function Home() {
         )}
         {/* T-11-435 히어로 아래 블록 순서는 app-core homeOrder 한 곳에서 정한다(웹과 같다). 받을 선물 · 오늘 출석이 있으면
             그 블록이 히어로 바로 아래로 올라온다. 키로 그려서 순서가 바뀌어도 블록을 다시 만들지 않고 옮기기만 한다. */}
+        {/* T-11-834 크리스마스 이벤트 카드는 기기 시계로 기간(12/19~1/4 KST) 안일 때만 그린다. */}
+        {xmasPhase(Date.now()) === 'open' ? <HomeXmas /> : null}
         {order.map((b) => (
           <Fragment key={b}>{blocks[b]}</Fragment>
         ))}
@@ -302,7 +306,7 @@ export default function Home() {
           testID="home-invite"
           eyebrow="Invite event"
           title={LF.eventTitle}
-          sub={L.inviteSub({ n: INVITE_REROLLS, s: INVITE_SCOUTS })}
+          sub={L.inviteSub(inviteReward())}
           onPress={openFriends}
         />
         {/* 공지 · 릴리즈 노트를 합친 최근 글(최근 공지 1개 + 최신 글). */}

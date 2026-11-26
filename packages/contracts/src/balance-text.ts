@@ -451,6 +451,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '원정 투어 열기',
     desc: '1이면 원정 투어 도전과 주간 순위를 받는다. 0이면 닫는다(쌓인 진행 · 순위는 그대로 남는다)',
   },
+  xmasEvent: {
+    group: 'team',
+    label: '크리스마스 이벤트 켜기',
+    desc: '1이면 정해진 기간(12/19~1/4)에 크리스마스 이벤트를 연다. 0이면 기간이어도 닫는다(받은 보상 · 칭호는 그대로 남는다)',
+  },
   enhanceCostScale: {
     group: 'team',
     label: '카드 강화 비용 배율',

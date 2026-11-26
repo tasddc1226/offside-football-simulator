@@ -91,6 +91,8 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   titleSeasons: '穩健的老闆',
   titleDivisionElite: '菁英俱樂部',
   titleDivisionMaster: '大師俱樂部',
+  titleXmas: (p) => `${p.year} 聖誕`,
+  titleEvent: '活動稱號',
   conditionYouthKingdom: '親手培養的球員有 100 名在 30 歲以後退役',
   conditionStarFactory: '親手培養的最高能力值 90 以上球員 10 名，在 30 歲以後退役',
   conditionStarCradle: '親手培養的最高能力值 90 以上球員 30 名，在 30 歲以後退役',

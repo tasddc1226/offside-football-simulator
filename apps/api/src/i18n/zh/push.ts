@@ -1,5 +1,6 @@
 import { RETIRED_NUMBER_SCOUTS } from '@offside/contracts/cup';
 import { INVITE_REROLLS, INVITE_SCOUTS } from '@offside/contracts/owner-team';
+import { XMAS_INVITE_MULT } from '@offside/contracts/xmas';
 
 // T-11-553 서버가 만든 알림 문구의 번체 중국어. 키는 push/text.ts의 한국어 문구와 같다.
 export const PUSH_ZH: Record<string, string> = {
@@ -23,6 +24,8 @@ export const PUSH_ZH: Record<string, string> = {
   [`커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `完成整段生涯，獲得 ${INVITE_REROLLS} 張球員候選重抽券和 ${INVITE_SCOUTS} 張高級球探券。`,
   '초대한 친구가 커리어를 마쳤어요': '你邀請的好友完成了生涯',
   [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS}장과 프리미엄 스카우트권 ${INVITE_SCOUTS}장을 받았어요.`]: `好友邀請獎勵：獲得 ${INVITE_REROLLS} 張球員候選重抽券和 ${INVITE_SCOUTS} 張高級球探券。`,
+  [`커리어를 끝까지 마쳐 선수 후보 리롤권 ${INVITE_REROLLS * XMAS_INVITE_MULT}장과 프리미엄 스카우트권 ${INVITE_SCOUTS * XMAS_INVITE_MULT}장을 받았어요.`]: `完成整段生涯，獲得 ${INVITE_REROLLS * XMAS_INVITE_MULT} 張球員候選重抽券和 ${INVITE_SCOUTS * XMAS_INVITE_MULT} 張高級球探券。`,
+  [`친구 초대 보상으로 선수 후보 리롤권 ${INVITE_REROLLS * XMAS_INVITE_MULT}장과 프리미엄 스카우트권 ${INVITE_SCOUTS * XMAS_INVITE_MULT}장을 받았어요.`]: `好友邀請獎勵：獲得 ${INVITE_REROLLS * XMAS_INVITE_MULT} 張球員候選重抽券和 ${INVITE_SCOUTS * XMAS_INVITE_MULT} 張高級球探券。`,
   '영구결번 보상을 받았어요': '已領取退休背號獎勵',
   [`영구결번 보상으로 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`]: `退休背號獎勵：獲得 ${RETIRED_NUMBER_SCOUTS} 張高級球探券。`,
   [`영구결번을 받아 프리미엄 스카우트권 ${RETIRED_NUMBER_SCOUTS}장을 받았어요.`]: `背號獲得退休，拿到 ${RETIRED_NUMBER_SCOUTS} 張高級球探券。`,

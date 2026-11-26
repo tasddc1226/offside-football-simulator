@@ -64,6 +64,9 @@ export const CUP_KO = {
   attendanceChecked: '오늘은 이미 출석했어요.',
   attendanceAdNotChecked: '출석한 뒤에 한 번 더 받을 수 있어요.',
   attendanceAdTaken: '오늘은 이미 한 번 더 받았어요.',
+  xmasClosed: '크리스마스 이벤트 기간이 아니에요.',
+  xmasNotReady: '아직 받을 수 없어요. 조건을 먼저 채워 주세요.',
+  xmasClaimed: '이미 받았어요.',
   // T-11-174 인앱 상품 구매 확인.
   iapInvalid: '구매를 확인하지 못했어요.',
   iapPending: '결제가 아직 끝나지 않았어요. 결제가 끝나면 자동으로 받아요.',

@@ -17,6 +17,7 @@ import {
   titleIconPath,
   titleCategoryLabel,
   titleKindLabel,
+  titleGradeColor,
 } from './ownerTitle.js';
 import { titleGroups } from './ownerTitleCollection.js';
 
@@ -134,5 +135,19 @@ describe('T-11-619 기록 배지 대표 칭호', () => {
   it('명예관 목록에서 트로피 뒤 기록 배지 묶음으로 나온다', () => {
     const { earned } = titleGroups({ titles: ['cup-1-sf', 'honor-1-first'], permanent: [] });
     expect(earned.map((g) => g.key)).toEqual(['trophy', 'honor']);
+  });
+});
+
+describe('T-11-834 이벤트 칭호', () => {
+  it('이름 · 그림 · 종류 · 색이 있고 명예관 기록 묶음에 들어간다', () => {
+    expect(titleLabel('event-xmas-2026')).toBe('2026 크리스마스');
+    expect(titleIconPath('event-xmas-2026')).not.toBe('');
+    expect(titleKindLabel('event-xmas-2026')).toBe('이벤트 칭호');
+    expect(titleGradeColor('event-xmas-2026')).toMatch(/^#/);
+    const g = titleGroups({ titles: ['event-xmas-2026'], permanent: [] });
+    setLocale('en', en);
+    expect(titleLabel('event-xmas-2026')).toBe('Christmas 2026');
+    setLocale('ko');
+    expect(g.earned).toEqual([{ key: 'honor', ids: ['event-xmas-2026'] }]);
   });
 });
