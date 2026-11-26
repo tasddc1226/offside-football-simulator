@@ -12,17 +12,17 @@ describe('T-11-510 랭크 경기 점수 · 자동 매칭', () => {
       away: rankPoints(1150, 1100, 0, 2, true),
     });
     const lost = matchRatingChange(2, home, away, 1, 0, 0.75).away;
-    // 세미프로 I 감점 15, 약한 상대에게 져 보정 −2 → −17, 받은 경기라 절반(−8.5 → −8).
-    expect(lost).toBe(-8);
+    // 세미프로 I 감점 15(T-11-830부터 약한 상대에게 져도 더 깎지 않는다), 받은 경기라 절반(−7.5 → −7).
+    expect(lost).toBe(-7);
   });
 
   it('T-11-807 시즌 3부터 받은 쪽 패배는 밸런스 배율, 무승부는 절반 그대로', () => {
     const home = { rating: 1100, division: 2 };
     const away = { rating: 1150, division: 2 };
-    // 같은 경기(−17)를 시즌 2는 절반(−8), 시즌 3은 0.75배(−12.75 → −13).
-    expect(matchRatingChange(3, home, away, 1, 0, 0.75).away).toBe(-13);
-    expect(matchRatingChange(3, home, away, 1, 0, 1).away).toBe(-17);
-    expect(matchRatingChange(3, home, away, 1, 0, 0.5).away).toBe(-8);
+    // 같은 경기(−15)를 시즌 2는 절반(−7), 시즌 3은 0.75배(−11.25 → −11).
+    expect(matchRatingChange(3, home, away, 1, 0, 0.75).away).toBe(-11);
+    expect(matchRatingChange(3, home, away, 1, 0, 1).away).toBe(-15);
+    expect(matchRatingChange(3, home, away, 1, 0, 0.5).away).toBe(-7);
     // 이긴 쪽 · 건 쪽은 그대로다.
     expect(matchRatingChange(3, home, away, 1, 0, 0.75).home).toBe(rankPoints(1100, 1150, 1, 2));
     expect(matchRatingChange(3, home, away, 0, 0, 0.75)).toEqual({

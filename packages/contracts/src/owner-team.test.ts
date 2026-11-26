@@ -393,17 +393,17 @@ describe('T-11-510 RP 사다리', () => {
     // 보정은 ±8까지.
     expect(rankPoints(1000, 2000, 1, 0)).toBe(28);
     expect(rankPoints(2000, 1000, 1, 7)).toBe(12);
-    // T-11-701 RP가 낮은 상대에게 지면 더 깎는 몫은 4점까지(높은 상대에게 지면 덜 깎는 몫은 8점 그대로).
-    expect(rankPoints(2275, 2000, 0, 7)).toBe(-26);
-    expect(rankPoints(2275, 2000, 0, 7, true)).toBe(-13);
+    // T-11-830 RP가 낮은 상대에게 져도 더 깎지 않는다(높은 상대에게 지면 덜 깎는 몫은 8점 그대로).
+    expect(rankPoints(2275, 2000, 0, 7)).toBe(-22);
+    expect(rankPoints(2275, 2000, 0, 7, true)).toBe(-11);
     // T-11-807 받은 쪽 패배 배율(무승부는 절반 그대로).
-    expect(rankPoints(2275, 2000, 0, 7, true, 0.75)).toBe(-19);
-    expect(rankPoints(2275, 2000, 0, 7, true, 1)).toBe(-26);
+    expect(rankPoints(2275, 2000, 0, 7, true, 0.75)).toBe(-16);
+    expect(rankPoints(2275, 2000, 0, 7, true, 1)).toBe(-22);
     expect(rankPoints(2300, 2000, 0.5, 7, true, 1)).toBe(0);
     expect(rankDefenderLoss(2, 0.75)).toBe(0.5);
     expect(rankDefenderLoss(3, 0.75)).toBe(0.75);
     expect(rankPoints(2000, 2050, 0, 7)).toBe(-20);
-    expect(rankPoints(1500, 1475, 0, 4)).toBe(-19);
+    expect(rankPoints(1500, 1475, 0, 4)).toBe(-18);
     expect(rankPoints(2275, 2000, 0.5, 7)).toBe(-1);
   });
   it('받은 쪽은 깎일 때만 절반이고, 0 아래로는 내려가지 않는다', () => {
