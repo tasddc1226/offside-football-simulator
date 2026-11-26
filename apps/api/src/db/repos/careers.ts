@@ -139,14 +139,14 @@ export async function putCareerSeason(
   const ads = adsJson ?? null;
   const name = publicName !== undefined ? { publicName } : {};
   // T-10-006 시즌 상세 — 옛 페이로드엔 없으므로 없으면 NULL(기록 없음)로 둔다.
+  // T-11-829 대회별 기록(comps)·커리어 하이(ch)는 어디서도 읽지 않아 저장하지 않는다(시즌 표의 3할을 차지했다).
+  // 옛 행은 매일 단계(seasonCompsTrim)가 비운다. 형식 검사는 그대로 둔다.
   const detail = {
     cs: season.cs ?? null,
     lgApps: season.lgApps ?? null,
     lgGoals: season.lgGoals ?? null,
     caps: season.caps ?? null,
     clubId: season.clubId ?? null,
-    compsJson: season.comps ? JSON.stringify(season.comps) : null,
-    chJson: season.ch ? JSON.stringify(season.ch) : null,
   };
 
   const dpos = dposFor(meta.pos, meta.dpos);
