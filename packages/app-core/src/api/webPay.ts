@@ -11,7 +11,7 @@ export type { WebPayConfigResponse, WebPayMethod, WebPayOrderResponse } from '@o
 
 // 상점 카드 여럿이 같이 묻는다(같은 요청은 하나로 합쳐진다). 켜고 끄는 일은 드물어 10분 메모한다.
 export const fetchWebPayConfig = () =>
-  ownerCachedGet<WebPayConfigResponse>('/v1/web-pay/config', 10 * 60_000);
+  ownerCachedGet<WebPayConfigResponse>('/v1/web-pay/config?physique=1', 10 * 60_000);
 
 /**
  * 주문을 만들고 엑솔라 결제창 주소를 받는다(결제창 언어는 지금 화면 언어). trackingId는 크리에이터 링크로 들어온 경우만 있다.

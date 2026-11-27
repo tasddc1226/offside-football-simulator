@@ -83,6 +83,7 @@ const ko = {
   teamDivGuard: '디비전 강등 보호 점수',
   teamDivRewardFrom: '디비전 보상 시작 시즌',
   teamDivMinMatches: '디비전 보상 최소 경기 수',
+  retiredPhysiqueOpen: '은퇴 카드 체격 변경권',
   enhanceOpen: '카드 강화 열기',
   tourOpen: '원정 투어 열기',
   enhanceCostScale: '카드 강화 비용 배율',

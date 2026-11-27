@@ -250,6 +250,7 @@ export const OwnerItemsResponseSchema = z.strictObject({
   scout: z.number().int().min(0),
   /** T-11-377 선수 이름 변경권. 옛 서버 응답에는 없다. */
   rename: z.number().int().min(0).optional(),
+  physique: z.number().int().nonnegative().optional(),
   iap: z.strictObject({ account: z.uuid(), stores: z.array(IapStoreSchema) }).optional(),
   /** T-11-244 프리미엄 스카우트 천장 카운트(scoutPityView로 남은 장수를 그린다). */
   pity: z
@@ -456,3 +457,17 @@ export const CupPredictionMeResponseSchema = z.strictObject({
   ),
 });
 export type CupPredictionMeResponse = z.infer<typeof CupPredictionMeResponseSchema>;
+
+export const EditRetiredPhysiqueSchema = z.strictObject({
+  height: z.int(),
+  weight: z.int(),
+  expectedRevision: z.int().nonnegative(),
+});
+export const RetiredPhysiqueSchema = z.strictObject({
+  pos: z.enum(['FW', 'MF', 'DF', 'GK']),
+  height: z.int().nullable(),
+  weight: z.int().nullable(),
+  revision: z.int(),
+  tickets: z.int(),
+  listed: z.boolean(),
+});

@@ -83,6 +83,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivGuard: '組別降級保護分數',
   teamDivRewardFrom: '組別獎勵開始賽季',
   teamDivMinMatches: '組別獎勵最低場數',
+  retiredPhysiqueOpen: '退役球員卡體格變更券',
   enhanceOpen: '開放卡牌強化',
   tourOpen: '開放遠征巡迴賽',
   enhanceCostScale: '卡牌強化費用倍率',

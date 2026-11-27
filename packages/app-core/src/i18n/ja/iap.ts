@@ -2,6 +2,14 @@ import type { Translation } from '../core';
 import type { IapMsgs } from '../ko/iap';
 
 export const iap: Translation<IapMsgs> = {
+  physiqueTitle: '引退カード体格変更券',
+  physiqueNote: '所有選手の管理でカードの表示身長と体重を変更できます。試合の能力は変わりません。',
+  physiqueHave: '所持変更券',
+  physiqueApply: '変更券1枚で適用',
+  physiqueHeight: '身長 (cm)',
+  physiqueWeight: '体重 (kg)',
+  physiqueListed: '出品を取り下げると変更できます。',
+  physiqueDone: '体格変更券を受け取りました。',
   packsTitle: 'ストアで購入',
   rerollPack: (p) => `リロール券${p.n}枚`,
   boostPack: (p) => `ポテンシャル強化券${p.n}枚`,

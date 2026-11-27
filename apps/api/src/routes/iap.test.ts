@@ -1,7 +1,7 @@
 import { OwnerItemsResponseSchema, successEnvelope } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { grantIapPurchase, ownerItemsOf, revokeIapPurchase } from '../db/repos/iap.js';
-import { iapPurchases, ownerItems } from '../db/schema.js';
+import { balanceVersions, iapPurchases, ownerItems } from '../db/schema.js';
 import { resetGoogleTokenCache } from '../iap/google.js';
 import { billingAlertId } from '../iap/alerts.js';
 import { syncGoogleVoided } from '../iap/refunds.js';
@@ -100,6 +100,29 @@ describe('T-11-174 인앱 상품 구매 확인', () => {
     ).toBe(503);
     res = ItemsRes.parse(await (await call('GET', '/v1/items', { cookie: tester.cookie })).json());
     expect(res.data.iap?.stores).toEqual(['apple', 'google']);
+  });
+
+  it('gates physique receipts before verification and retries an enabled verified purchase exactly once', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const productId = 'com.offsidelab.app.physique_1';
+    appleTx.current = appleFor(me.profileId, { productId });
+    const body = { store: 'apple', productId, token: 'jws' };
+    expect((await claim(me.cookie, body)).status).toBe(503);
+    expect(await ctx.db.select().from(iapPurchases)).toEqual([]);
+    const now = new Date().toISOString();
+    await ctx.db.insert(balanceVersions).values({
+      version: 1,
+      status: 'active',
+      note: '',
+      valuesJson: JSON.stringify({ retiredPhysiqueOpen: 1 }),
+      createdBy: 'test',
+      createdAt: now,
+      updatedAt: now,
+      activatedAt: now,
+    });
+    for (let i = 0; i < 2; i++)
+      expect(ItemsRes.parse(await (await claim(me.cookie, body)).json()).data.physique).toBe(1);
+    expect(await ctx.db.select().from(iapPurchases)).toHaveLength(1);
   });
 
   it('Apple 거래 하나로 아이템을 한 번만 주고, 다른 계정의 거래 · 다른 상품은 받지 않는다', async () => {

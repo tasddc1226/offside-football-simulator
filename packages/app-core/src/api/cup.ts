@@ -51,6 +51,9 @@ export const withdrawCup = (cupId: string) =>
 const ITEMS_MEMO_MS = 5 * 60_000;
 // 후보 화면에 들어올 때마다 묻지 않게 메모한다. 리롤권을 쓰면(쓰기 성공) apiFetch가 메모를 비운다.
 export const fetchItems = () => ownerCachedGet<OwnerItemsResponse>('/v1/items', ITEMS_MEMO_MS);
+export const fetchPhysiqueItems = () =>
+  ownerCachedGet<OwnerItemsResponse>('/v1/items?physique=1', ITEMS_MEMO_MS);
+export const readPhysiqueAvailability = () => apiFetch<OwnerItemsResponse>('/v1/items?physique=1');
 /**
  * 리롤권 1장 쓰기. 성공하면 남은 장수 — 그다음 gameActions.rerollCandidates()로 후보를 다시 뽑는다.
  * key는 한 번의 '다시 뽑기' 시도마다 하나: 응답을 못 받아 다시 누르면 같은 key로 보내 서버가 두 번 차감하지 않는다.

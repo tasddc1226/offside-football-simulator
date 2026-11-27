@@ -83,6 +83,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivGuard: 'ディビジョン降格の猶予ポイント',
   teamDivRewardFrom: 'ディビジョン報酬の開始シーズン',
   teamDivMinMatches: 'ディビジョン報酬の最低試合数',
+  retiredPhysiqueOpen: '引退カード体格変更券',
   enhanceOpen: 'カード強化を開く',
   tourOpen: '遠征ツアーを開く',
   enhanceCostScale: 'カード強化の費用倍率',

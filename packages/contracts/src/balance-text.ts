@@ -441,6 +441,11 @@ export const BALANCE_TEXT: Record<BalanceKey, BalanceKnobText> = {
     label: '디비전 보상 최소 경기 수',
     desc: '시즌 마감 디비전 보상을 받으려면 그 시즌 팀이 치른 랭크 경기(건 경기 + 받은 경기) 수가 이만큼 있어야 한다',
   },
+  retiredPhysiqueOpen: {
+    group: 'team',
+    label: '은퇴 카드 체격 변경권', // i18n-ignore 운영 도구 설명
+    desc: '1이면 체격 변경권을 판매하고 카드 표시 체격을 편집할 수 있다', // i18n-ignore 운영 도구 설명
+  },
   enhanceOpen: {
     group: 'team',
     label: '카드 강화 열기',

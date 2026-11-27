@@ -5,7 +5,7 @@ const ko = {
   title: '웹에서 사기',
   sub: '카드 · PayPal · 나라별 결제 수단으로 사요. 이 구단주 계정에 바로 들어와요.',
   pack: (p: { item: string; n: number }) =>
-    `${{ reroll: '리롤권', boost: '잠재력 강화권', scout: '프리미엄 스카우트권', rename: '선수 이름 변경권' }[p.item] ?? p.item} ${p.n}장`,
+    `${{ reroll: '리롤권', boost: '잠재력 강화권', scout: '프리미엄 스카우트권', physique: '은퇴 카드 체격 변경권', rename: '선수 이름 변경권' }[p.item] ?? p.item} ${p.n}장`,
   price: (p: { won: string }) => `${p.won}원`,
   priceNote: '결제 화면에서 사는 나라 통화와 세금을 넣은 가격으로 보여요.',
   opening: '결제 화면으로 가는 중…',

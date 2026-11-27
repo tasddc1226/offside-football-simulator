@@ -30,6 +30,7 @@ export const billing = {
     reroll: '리롤권',
     boost: '잠재력 강화권',
     scout: '프리미엄 스카우트권',
+    physique: '체격 변경권',
     rename: '선수 이름 변경권',
   },
   quantity: (name: string, qty: number) => `${name} ${qty}장`,

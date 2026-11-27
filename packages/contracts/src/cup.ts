@@ -438,6 +438,8 @@ export const RETIRED_NUMBER_SCOUTS = 1;
 
 /** T-11-174 소모성 인앱 상품(App Store Connect·Play Console에 같은 ID로 만든다) — 사면 구단주 아이템이 qty만큼 는다. */
 export const REMOVE_ADS_PRODUCT_ID = 'com.offsidelab.app.remove_ads';
+export const PHYSIQUE_SKU = 'com.offsidelab.app.physique_1';
+export type StoreItem = OwnerItem | 'physique';
 export const IAP_PRODUCTS = {
   'com.offsidelab.app.reroll_5': { item: 'reroll', qty: 5 },
   'com.offsidelab.app.reroll_15': { item: 'reroll', qty: 15 },
@@ -452,8 +454,9 @@ export const IAP_PRODUCTS = {
   'com.offsidelab.app.scout_20': { item: 'scout', qty: 20 },
   'com.offsidelab.app.scout_50': { item: 'scout', qty: 50 },
   // T-11-377 선수 이름 변경권.
+  [PHYSIQUE_SKU]: { item: 'physique', qty: 1 },
   'com.offsidelab.app.rename_5': { item: 'rename', qty: 5 },
-} as const satisfies Record<string, { item: OwnerItem; qty: number }>;
+} as const satisfies Record<string, { item: StoreItem; qty: number }>;
 export type IapProductId = keyof typeof IAP_PRODUCTS;
 export const IAP_PRODUCT_IDS = Object.keys(IAP_PRODUCTS) as [IapProductId, ...IapProductId[]];
 

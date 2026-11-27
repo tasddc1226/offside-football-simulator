@@ -31,12 +31,14 @@ export const webPay = $state<{
   busy: boolean;
   /** T-11-591 결제가 확인된 횟수. 시즌 패스 · 멤버십 창이 바뀌면 상태를 다시 읽는다. */
   paid: number;
+  physiqueDraft: PhysiqueDraft | null;
   /** 결제창에서 돌아온 뒤 구단주 화면이 다시 열 창(시즌 패스 · 멤버십). */
   reopen: 'pass' | 'member' | null;
 }>({
   config: null,
   busy: false,
   paid: 0,
+  physiqueDraft: null,
   reopen: null,
 });
 
@@ -57,7 +59,8 @@ export function loadWebPay() {
  * 결제창에서 돌아갈 화면. game은 진행 중인 선수(선수 탭 강화 · 이름 옆 변경권), pass · member는 구단주 화면의 시즌 패스 · 멤버십
  * 창(T-11-591), 아니면 상점 화면(T-11-567, 저장값이라 이름은 owner 그대로).
  */
-export type WebPayBack = 'game' | 'owner' | 'pass' | 'member';
+export type PhysiqueDraft = { card: string; height: number; weight: number; revision: number };
+export type WebPayBack = 'game' | 'owner' | 'pass' | 'member' | PhysiqueDraft;
 type Pending = { orderId: string; at: number; back?: WebPayBack };
 /** 구매 퍼널 자리(commerceStage). 결제창에서 돌아갈 화면이 경기면 선수 탭, 아니면 상점. */
 export const commerceEntry = (back: WebPayBack): CommerceEntry =>
@@ -152,6 +155,10 @@ export async function handleWebPayReturn() {
   else if (back === 'pass' || back === 'member') {
     webPay.reopen = back;
     go('owner');
+  } else if (back && typeof back === 'object' && typeof back.card === 'string') {
+    webPay.physiqueDraft = back;
+    appState.playersView = 'manage';
+    go('players');
   } else go('shop');
   if (!ORDER_ID.test(orderId)) return;
   toast(L.confirming);

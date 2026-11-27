@@ -53,6 +53,7 @@ import {
   type AnyColumn,
   type SQL,
 } from 'drizzle-orm';
+import { displayBodyColumns } from '../displayBody.js';
 import type { Db } from '../client.js';
 import { readInChunks } from '../chunk.js';
 import { runBatch } from './batch.js';
@@ -394,8 +395,7 @@ function eligibleQuery(db: Db, profileId: string, only: SQL | undefined) {
       peak: cards.peak,
       peakProfile: cards.peakProfile,
       cardAttrsJson: careers.cardAttrsJson,
-      height: careers.height,
-      weight: careers.weight,
+      ...displayBodyColumns,
       number: cards.number,
       publicName: cardPublicName,
       look: careers.look,
@@ -522,8 +522,7 @@ export async function careersByIds(db: Db, ids: string[]) {
       peak: cards.peak,
       peakProfile: cards.peakProfile,
       cardAttrsJson: careers.cardAttrsJson,
-      height: careers.height,
-      weight: careers.weight,
+      ...displayBodyColumns,
       legendScore: cards.legendScore,
       number: cards.number,
       publicName: cardPublicName,

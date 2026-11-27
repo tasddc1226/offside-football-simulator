@@ -5,7 +5,7 @@ export const webPay: Translation<WebPayMsgs> = {
   title: 'Buy on the web',
   sub: 'Pay by card, PayPal, or a local payment method. Items go straight to this owner account.',
   pack: (p) =>
-    `${p.n} ${{ reroll: 'reroll tickets', boost: 'boost tickets', scout: 'premium scout tickets', rename: 'player rename tickets' }[p.item] ?? p.item}`,
+    `${p.n} ${{ reroll: 'reroll tickets', boost: 'boost tickets', scout: 'premium scout tickets', physique: 'Retired card physique ticket', rename: 'player rename tickets' }[p.item] ?? p.item}`,
   price: (p) => `from ₩${p.won}`,
   priceNote: 'Checkout shows the price in your local currency, including tax.',
   opening: 'Opening checkout…',
