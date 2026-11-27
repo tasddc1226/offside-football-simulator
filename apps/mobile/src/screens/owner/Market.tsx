@@ -36,6 +36,7 @@ import { detailPosOf } from '@offside/contracts/positions';
 import {
   buyListing,
   fetchListing,
+  fetchSaleCeiling,
   cancelListing,
   createListing,
   releaseCards,
@@ -177,11 +178,30 @@ export default function Market() {
   const [selling, setSelling] = useState<TeamPlayer | null>(null);
   const [pct, setPct] = useState(100);
   // T-11-373 강화한 카드는 기준가에 강화 가치를 더한 값으로 가격 범위를 잰다(서버와 같은 규칙).
+  const [ceiling, setCeiling] = useState<{ id: string; value: number } | null>(null);
+  const sellingId = selling?.careerId;
+  const ceilingBase = ceiling && ceiling.id === sellingId ? ceiling.value : undefined;
+  useEffect(() => {
+    if (!sellingId) return;
+    let active = true;
+    void fetchSaleCeiling(sellingId).then((r) => {
+      if (!active) return;
+      if (r.ok) setCeiling({ id: sellingId, value: r.data.ceilingBase });
+      else setError(r.error.message);
+    });
+    return () => {
+      active = false;
+    };
+  }, [sellingId]);
   const sellValue = selling?.cardValue ? tradeValue(selling.cardValue, selling.enhance) : 0;
   const sellPrice =
-    sellValue && me ? priceAtPct(selling!.cardValue!, pct, me.rules, selling!.enhance) : 0;
+    sellValue && me
+      ? priceAtPct(selling!.cardValue!, pct, me.rules, selling!.enhance, ceilingBase)
+      : 0;
   const quote =
-    sellValue && me ? sellQuote(selling!.cardValue!, sellPrice, me.rules, selling!.enhance) : null;
+    sellValue && me
+      ? sellQuote(selling!.cardValue!, sellPrice, me.rules, selling!.enhance, ceilingBase)
+      : null;
   // T-11-442 카드를 고르면 아래 가격 칸이 화면 밖일 수 있어, 다 보이지 않으면 그 칸이 위에 오게 내린다.
   const priceBox = useRef<View>(null);
   const [sellPick, setSellPick] = useState(0);
@@ -290,7 +310,9 @@ export default function Market() {
       {error}
     </Txt>
   ) : null;
-  const range = me ? sellSlider(me.rules, selling?.cardValue ?? 0, selling?.enhance) : null;
+  const range = me
+    ? sellSlider(me.rules, selling?.cardValue ?? 0, selling?.enhance, ceilingBase)
+    : null;
   const sellDiff = sellValue ? priceDiff(sellPrice, sellValue) : null;
   const buyDiff = buying
     ? priceDiff(buying.price, tradeValue(buying.card.cardValue, buying.card.enhance))

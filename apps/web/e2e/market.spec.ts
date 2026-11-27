@@ -64,6 +64,9 @@ const player = (careerId: string, raised: boolean, over: Record<string, unknown>
 });
 
 async function stub(page: Page) {
+  await page.route(`${API}/v1/market/cards/*/sale-ceiling`, (r) =>
+    r.fulfill(ok({ ceilingBase: 120_000 })),
+  );
   await page.route(`${API}/v1/profile`, (r) =>
     r.fulfill(
       ok({
@@ -420,7 +423,11 @@ test('팔기 — 이번 시즌 선수를 슬라이더로 값을 정해 내놓고
   // 카드를 고르면 기준가 그대로가 기본값, 슬라이더로 기준가의 %를 정한다.
   await page.locator(`[data-sell-pick="${RAISED}"]`).click();
   await expect(page.locator('[data-act="list"]')).toHaveText('8억에 내놓기');
-  await page.locator('[data-sell-pct]').fill('125');
+  const slider = page.locator('[data-sell-pct]');
+  await expect(slider).toHaveAttribute('max', '450');
+  await slider.fill('450');
+  await expect(page.locator('[data-act="list"]')).toHaveText('36억에 내놓기');
+  await slider.fill('125');
   await expect(page.locator('[data-act="list"]')).toHaveText('10억에 내놓기');
   await expect(page.locator('.mk-price-box')).toContainText('팔리면 받는 자금');
   await expect(page.locator('.mk-price-box')).toContainText('9억 5천만');

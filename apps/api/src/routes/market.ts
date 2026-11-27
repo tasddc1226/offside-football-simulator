@@ -9,6 +9,7 @@ import {
   FundsHistoryQuerySchema,
   FundsHistoryResponseSchema,
   ListingIdSchema,
+  SaleCeilingResponseSchema,
   MARKET_CHART_DAYS,
   MarketCardTradesResponseSchema,
   MarketChartQuerySchema,
@@ -38,6 +39,7 @@ import {
   getListing,
   insertListing,
   listOpenListings,
+  listingCeilingBase,
   openListing,
   marketChart,
   marketFacets,
@@ -83,6 +85,7 @@ const CACHE = `public, max-age=${LIST_TTL}`;
 const CHART_TTL = 60;
 const CHART_CACHE = `public, max-age=${CHART_TTL}`;
 
+const cardNotFound = () => notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
 const cardLocked = () =>
   conflictError('잠긴 선수예요. 잠금을 풀어야 내놓을 수 있어요.', 'CARD_LOCKED');
 
@@ -259,6 +262,16 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
   });
 
   // 판매 등록: 내 카드(T-11-425부터 출신 시즌과 상관없이) · 기준가 있음 · 숨김 아님 · 선발 아님 · 열린 등록 없음 · 가격이 범위 안. T-11-474 동시 등록 상한은 없앴다.
+  app.get('/v1/market/cards/:careerId/sale-ceiling', requireProfile, async (c) => {
+    const owner = await requireOwner(c);
+    const db = getDb(c);
+    const id = parseWithAppError(CareerIdParamSchema, c.req.param('careerId'));
+    const card = await cardForListing(db, id);
+    if (!card || card.ownerId !== owner.id) throw cardNotFound();
+    const ceilingBase = await listingCeilingBase(db, c.env, id, card);
+    return ok(c, SaleCeilingResponseSchema, { ceilingBase }, 200, NO_STORE);
+  });
+
   app.post('/v1/market/listings', requireProfile, idempotency, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
@@ -271,8 +284,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
       marketRules(db),
       teamSeason === null ? Promise.resolve([]) : myTeamIn(db, me.id, teamSeason),
     ]);
-    if (!card || card.ownerId !== me.id)
-      throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
+    if (!card || card.ownerId !== me.id) throw cardNotFound();
     if (card.cardValue === null || card.hidden)
       throw conflictError('기준가가 없는 선수는 내놓을 수 없어요.', 'CARD_NOT_TRADABLE');
     if (card.manager) throw cardManager();
@@ -281,7 +293,16 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     // T-11-474 지금 시즌 선발은 팀에서 뺀 뒤에 내놓는다(팔기 탭에도 보이지 않는다). T-11-604 컵 명단 프리셋도 같다.
     if (team && lockedIdsOf(team).has(input.careerId)) throw inLineup();
     await checkCupListing(db, me.id, input.careerId);
-    const band = tradeBand(card.cardValue, card.enhance, rules);
+    const original = tradeBand(card.cardValue, card.enhance, rules);
+    const band =
+      input.price > original.max
+        ? tradeBand(
+            card.cardValue,
+            card.enhance,
+            rules,
+            await listingCeilingBase(db, c.env, input.careerId, card),
+          )
+        : original;
     if (input.price < band.min || input.price > band.max)
       throw conflictError('판매가가 정해진 범위를 벗어났어요.', 'PRICE_OUT_OF_BAND');
     const id = newId('lst');
@@ -395,8 +416,7 @@ export function registerMarketRoutes(app: Hono<AppEnv>): void {
     )
       return ok(c, CardLockResponseSchema, { locked: input.locked }, 200, NO_STORE);
     const card = await cardForListing(db, input.careerId);
-    if (!card || card.ownerId !== me.id)
-      throw notFoundError('내 선수 카드를 찾을 수 없어요.', 'CARD_NOT_FOUND');
+    if (!card || card.ownerId !== me.id) throw cardNotFound();
     if (card.manager) throw cardManager();
     throw conflictError('판매 중인 선수예요. 판매를 내린 뒤 잠글 수 있어요.', 'CARD_LISTED');
   });

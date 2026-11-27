@@ -181,8 +181,9 @@ export function tradeBand(
   cardValue: number,
   enhance: number | null | undefined,
   r: { priceMin: number; priceMax: number },
+  ceilingBase = cardValue,
 ) {
   const band = priceBand(tradeValue(cardValue, enhance), r);
-  const max = Math.floor((cardValue * r.priceMax + enhanceValue(enhance ?? 0)) / 100) * 100;
+  const max = Math.floor((ceilingBase * r.priceMax + enhanceValue(enhance ?? 0)) / 100) * 100;
   return { min: band.min, max };
 }

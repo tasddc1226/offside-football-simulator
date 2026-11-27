@@ -9,6 +9,7 @@ import {
   retireValue,
   rowLeague,
   salaryFor,
+  saleCeilingBase,
   seasonValue,
   valueFor,
   type ValueRow,
@@ -126,4 +127,19 @@ describe('releasePayout (T-11-104 방출 지급)', () => {
     expect(releasePayout(1_000_000, 0.5)).toBe(500_000);
     expect(releasePayout(null, 1)).toBe(CARD_VALUE_FLOOR);
   });
+});
+
+it('uses PL finances only for the top-five listing ceiling, including legacy prices', () => {
+  const season = (league: string) => [row({ league, age: 24 })];
+  const pl = season('프리미어리그');
+  for (const league of ['라리가', '프리미어리그', 'K리그1']) {
+    const rows = season(league);
+    const value = cardValue(rows, 80);
+    const legacy = seasonValue(rows[0]!);
+    expect(saleCeilingBase(rows, 80, value)).toBe(league === 'K리그1' ? value : cardValue(pl, 80));
+    expect(saleCeilingBase(rows, 80, legacy)).toBe(
+      league === 'K리그1' ? legacy : seasonValue(pl[0]!),
+    );
+    expect(saleCeilingBase([], 80, value)).toBe(value);
+  }
 });
