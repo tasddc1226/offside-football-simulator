@@ -92,15 +92,54 @@ function cardSeasonValue(r: ValueRow): number {
  * 카드는 바뀌지 않는다.
  */
 export function cardValue(career: ValueRow[], peak: number): number {
-  const values = career.map(cardSeasonValue);
-  const best =
-    Math.max(0, ...values.filter((_, i) => career[i]!.ovr === peak)) || Math.max(0, ...values);
-  if (!best) return CARD_VALUE_FLOOR;
-  const pro = values.filter((v) => v > 0).length;
-  return Math.max(
-    CARD_VALUE_FLOOR,
-    Math.round((best * Math.min(1, pro / CARD_TENURE_FULL)) / 100) * 100,
-  );
+  return pricingSeason(career, peak, false).value;
+}
+
+const majorLeagues = new Set(['l1', 'bl', 'sa', 'll', 'pl']);
+
+/** Find the original pricing season before substituting PL wealth for the ceiling only. */
+function pricingSeason(career: ValueRow[], peak: number, legacy: boolean) {
+  const seasonPrice = legacy ? seasonValue : cardSeasonValue;
+  let best: ValueRow | undefined;
+  let highest = 0;
+  let pro = 0;
+  for (const row of career) {
+    const value = seasonPrice(row);
+    if (!value) continue;
+    pro++;
+    if (
+      !best ||
+      (row.ovr === peak && best.ovr !== peak) ||
+      ((row.ovr === peak) === (best.ovr === peak) && value > highest)
+    ) {
+      best = row;
+      highest = value;
+    }
+  }
+  if (!best) return { value: CARD_VALUE_FLOOR, ceilingBase: CARD_VALUE_FLOOR };
+  const adjusted = (value: number) =>
+    legacy
+      ? value
+      : Math.max(
+          CARD_VALUE_FLOOR,
+          Math.round((value * Math.min(1, pro / CARD_TENURE_FULL)) / 100) * 100,
+        );
+  const value = adjusted(highest);
+  const league = rowLeague(best);
+  const pl = BY_ID.get('pl')!;
+  const ceilingBase =
+    league && majorLeagues.has(league.id)
+      ? adjusted(seasonPrice({ ...best, league: pl.name, clubId: pl.id }))
+      : value;
+  return { value, ceilingBase };
+}
+
+/** Historical cards keep the price stamped at retirement. Unverifiable records keep that ceiling. */
+export function saleCeilingBase(career: ValueRow[], peak: number, storedValue: number) {
+  const current = pricingSeason(career, peak, false);
+  const legacy = pricingSeason(career, peak, true);
+  const matches = [current, legacy].filter((quote) => quote.value === storedValue);
+  return matches.length ? Math.min(...matches.map((quote) => quote.ceilingBase)) : storedValue;
 }
 
 /**

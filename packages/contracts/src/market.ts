@@ -433,3 +433,8 @@ export const ReleaseCardsResponseSchema = z.strictObject({
   balance: man,
 });
 export type ReleaseCardsResponse = z.infer<typeof ReleaseCardsResponseSchema>;
+
+export const SaleCeilingResponseSchema = z.strictObject({
+  ceilingBase: z.number().int().nonnegative(),
+});
+export type SaleCeilingResponse = z.infer<typeof SaleCeilingResponseSchema>;

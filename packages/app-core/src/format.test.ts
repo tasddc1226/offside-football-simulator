@@ -122,6 +122,10 @@ describe('이적시장 표시 (T-11-080d)', () => {
     expect(priceAtPct(80_000, 999, rules)).toBe(240_000);
   });
   it('강화한 카드는 상한 배수가 기준가에만 붙어 슬라이더 끝이 상한에 닿는다', () => {
+    const widened = sellSlider(rules, 300_000, 0, 400_000);
+    expect(widened.maxPct).toBe(400);
+    expect(priceAtPct(300_000, widened.maxPct, rules, 0, 400_000)).toBe(1_200_000);
+    expect(sellQuote(300_000, 0, rules, 0, 400_000).band.min).toBe(150_000);
     const base = sellSlider(rules, 700_000, 0);
     expect(base.maxPct).toBe(300);
     expect(base.maxLabelPct).toBe(300);

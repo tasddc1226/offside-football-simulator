@@ -24,6 +24,7 @@
     buyListing,
     cancelListing,
     fetchListing,
+  fetchSaleCeiling,
     createListing,
     releaseCards,
     setCardLock,
@@ -179,15 +180,22 @@
 
   // 팔기 — 고른 선수와 판매가(기준가의 %).
   let selling = $state<TeamPlayer | null>(null);
+  let ceilingBase = $state<number | undefined>();
   let pct = $state(100);
   // T-11-373 강화한 카드는 기준가에 강화 가치를 더한 값으로 가격 범위를 잰다(서버와 같은 규칙).
   const sellValue = $derived(selling?.cardValue ? tradeValue(selling.cardValue, selling.enhance) : 0);
-  const sellPrice = $derived(sellValue && me ? priceAtPct(selling!.cardValue!, pct, me.rules, selling!.enhance) : 0);
-  const quote = $derived(sellValue && me ? sellQuote(selling!.cardValue!, sellPrice, me.rules, selling!.enhance) : null);
+  const sellPrice = $derived(sellValue && me ? priceAtPct(selling!.cardValue!, pct, me.rules, selling!.enhance, ceilingBase) : 0);
+  const quote = $derived(sellValue && me ? sellQuote(selling!.cardValue!, sellPrice, me.rules, selling!.enhance, ceilingBase) : null);
   // T-11-442 카드를 고르면 아래 가격 칸이 화면 밖일 수 있어 그 칸이 보이게 내린다(이미 보이면 그대로).
   let priceBox = $state<HTMLElement | null>(null);
   function pickSell(p: TeamPlayer) {
     selling = p;
+    ceilingBase = undefined;
+    void fetchSaleCeiling(p.careerId).then((r) => {
+      if (selling?.careerId !== p.careerId) return;
+      if (r.ok) ceilingBase = r.data.ceilingBase;
+      else error = r.error.message;
+    });
     pct = 100;
     error = null;
     void flush().then(() => priceBox?.scrollIntoView({ block: 'nearest', behavior: dur(1) ? 'smooth' : 'instant' }));
@@ -527,7 +535,7 @@
         {/if}
         {#if selling && quote && me}
           {@const diff = priceDiff(sellPrice, sellValue)}
-          {@const range = sellSlider(me.rules, selling.cardValue ?? 0, selling.enhance)}
+          {@const range = sellSlider(me.rules, selling.cardValue ?? 0, selling.enhance, ceilingBase)}
           <div class="mk-price-box" bind:this={priceBox}>
             <h2 class="mk-step">{L.sellStep2({ name: nameOfPlayer(selling), pos: detailPosOf(selling), peak: selling.peak })}</h2>
             <div class="mk-presets">
