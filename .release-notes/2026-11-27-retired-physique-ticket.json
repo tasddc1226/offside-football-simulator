@@ -1,0 +1,34 @@
+{
+  "id": "t-11-840-retired-physique-ticket",
+  "title": "은퇴 카드 체격 변경권",
+  "items": [
+    "은퇴 카드 체격 변경권으로 가진 은퇴 선수 카드의 키와 몸무게를 바꿀 수 있어요. 내 선수 화면의 선수 관리에서 바꿔요.",
+    "주발과 포지션은 그대로이고 경기 실력 · OVR · 기준가도 바뀌지 않아요. 명예의 전당에는 은퇴 당시 체격이 남아요.",
+    "변경권은 상점에서 1장씩 살 수 있어요."
+  ],
+  "en": {
+    "title": "Retired card physique ticket",
+    "items": [
+      "Use a retired card physique ticket to change the height and weight of a retired player card you own. Change it in Player management on your players screen.",
+      "Preferred foot and position stay the same, and match strength, OVR and base value do not change. The Hall of Fame keeps the physique at retirement.",
+      "Tickets are sold one at a time in the shop."
+    ]
+  },
+  "ja": {
+    "title": "引退カード体格変更券",
+    "items": [
+      "引退カード体格変更券で、持っている引退選手カードの身長と体重を変えられます。自分の選手画面の選手管理で変えます。",
+      "利き足とポジションはそのままで、試合の実力・OVR・基準額も変わりません。殿堂には引退時の体格が残ります。",
+      "変更券はショップで1枚ずつ買えます。"
+    ]
+  },
+  "zh": {
+    "title": "退役球員卡體格變更券",
+    "items": [
+      "可用退役球員卡體格變更券更改持有的退役球員卡的身高與體重，在我的球員畫面的球員管理中更改。",
+      "慣用腳與位置維持不變，比賽實力・OVR・基準價也不會改變。名人堂會保留退役時的體格。",
+      "變更券可在商店一張一張購買。"
+    ]
+  },
+  "availability": "web-app"
+}
