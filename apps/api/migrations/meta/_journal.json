@@ -1233,6 +1233,13 @@
       "when": 1795520595254,
       "tag": "0178_squad_tour",
       "breakpoints": true
+    },
+    {
+      "idx": 179,
+      "version": "6",
+      "when": 1795750491018,
+      "tag": "0179_legend_firsts_repair",
+      "breakpoints": true
     }
   ]
 }

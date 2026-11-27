@@ -4,6 +4,7 @@ import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
 import { runBackupStep } from './cron/backup.js';
+import { repairNextLegendSeason } from './cron/legendFirsts.js';
 import { runDailyTick } from './cron/dailyRunner.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
 import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
@@ -290,10 +291,11 @@ export default {
       mark('runInfraHealth');
       // T-11-156 서버 최초 기록 전체 재계산을 제한된 조각만큼 이어 간다 — 공개 목록 조회가 조각을 기다리지 않게. 시간 한도까지
       // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다. 피크와 백업 조각을 읽은 틱에는 쉰다(T-11-643).
-      await runFirstsRescan(
-        createDb(env.DB),
-        firstsRescanBudgetMs(controller.scheduledTime, backupRan),
-      )
+      const rescanBudget = firstsRescanBudgetMs(controller.scheduledTime, backupRan);
+      const rescanDeadline = Date.now() + rescanBudget;
+      if (rescanBudget > 0)
+        await repairNextLegendSeason(env.DB).catch(logged('legend-firsts-repair'));
+      await runFirstsRescan(createDb(env.DB), Math.max(0, rescanDeadline - Date.now()))
         .then(
           (n) =>
             n && console.log(JSON.stringify({ level: 'info', job: 'firsts-rescan', chunks: n })),

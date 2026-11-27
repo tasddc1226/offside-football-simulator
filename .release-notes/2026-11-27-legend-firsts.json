@@ -1,0 +1,24 @@
+{
+  "id": "t-11-836-legend-firsts",
+  "title": "레전드 은퇴 기록",
+  "items": [
+    "시즌 레전드 점수 기록 보유자가 순위에서 빠지면 최초 달성과 최고 기록에 다음 선수가 더 빨리 반영돼요."
+  ],
+  "en": {
+    "title": "Legend retirement records",
+    "items": [
+      "When a Legend Score holder leaves the season rankings, milestones and the high score update sooner to show the next eligible players."
+    ]
+  },
+  "ja": {
+    "title": "引退時のレジェンド記録",
+    "items": [
+      "シーズンのレジェンドスコア記録保持者がランキングから外れたとき、各スコアの初達成者と最高記録の更新が早くなりました。"
+    ]
+  },
+  "zh": {
+    "title": "退役傳奇分數紀錄",
+    "items": ["當傳奇分數紀錄保持者退出賽季排行榜，各門檻的首位達成者與最高分紀錄會更快更新。"]
+  },
+  "availability": "web-app"
+}
