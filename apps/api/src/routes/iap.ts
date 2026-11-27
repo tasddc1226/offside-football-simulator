@@ -1,3 +1,5 @@
+import { PHYSIQUE_SKU } from '@offside/contracts/cup';
+import { physiqueOpen, physiqueTickets } from '../db/repos/cardPhysique.js';
 import { REMOVE_ADS_PRODUCT_ID } from '@offside/contracts/cup';
 import { recordAdFreePurchase } from '../db/repos/adFreePurchases.js';
 import { getSessionOrThrow } from '../middleware/requireProfile.js';
@@ -101,11 +103,21 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
     const input = readBody(c, IapClaimBodySchema);
     if (!iapStores(c.env, me.id).includes(input.store)) throw unavailable();
     const db = getDb(c);
+    const physique = input.productId === PHYSIQUE_SKU;
+    if (physique && !(await physiqueOpen(db))) throw unavailable();
+    const ticketCount = async () =>
+      physique ? { physique: await physiqueTickets(db, me.id) } : {};
     // Google은 거래 id가 purchaseToken이라 확인 전에 원장을 본다 — 이미 받은 거래의 재전송은 Google을 부르지 않는다.
     if (input.store === 'google') {
       const owner = await iapOwnerOf(db, 'google', input.token);
       if (owner === me.id)
-        return ok(c, OwnerItemsResponseSchema, await ownerItemsOf(db, me.id), 200, NO_STORE);
+        return ok(
+          c,
+          OwnerItemsResponseSchema,
+          { ...(await ownerItemsOf(db, me.id)), ...(await ticketCount()) },
+          200,
+          NO_STORE,
+        );
       if (owner) throw reject('OTHER_ACCOUNT');
     }
     const verdict = await verifyIapClaim(c.env, input, iapAccount(me.id), {
@@ -169,6 +181,6 @@ export function registerIapRoutes(app: Hono<AppEnv>) {
           test: verdict.test,
         }),
       );
-    return ok(c, OwnerItemsResponseSchema, items, 200, NO_STORE);
+    return ok(c, OwnerItemsResponseSchema, { ...items, ...(await ticketCount()) }, 200, NO_STORE);
   });
 }

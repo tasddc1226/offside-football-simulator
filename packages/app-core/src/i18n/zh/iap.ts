@@ -2,6 +2,14 @@ import type { Translation } from '../core';
 import type { IapMsgs } from '../ko/iap';
 
 export const iap: Translation<IapMsgs> = {
+  physiqueTitle: '退役球員卡體格變更券',
+  physiqueNote: '可在球員管理中變更卡片顯示的身高與體重，球員實力維持不變。',
+  physiqueHave: '持有變更券',
+  physiqueApply: '使用 1 張變更券套用',
+  physiqueHeight: '身高 (cm)',
+  physiqueWeight: '體重 (kg)',
+  physiqueListed: '下架後即可變更。',
+  physiqueDone: '已取得體格變更券。',
   packsTitle: '在商店購買',
   rerollPack: (p) => `重抽券${p.n}張`,
   boostPack: (p) => `潛力強化券${p.n}張`,

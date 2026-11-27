@@ -2,6 +2,14 @@
 import { ns } from '../core';
 
 const ko = {
+  physiqueTitle: '은퇴 카드 체격 변경권',
+  physiqueNote: '보유 선수 관리에서 카드에 표시할 키와 몸무게를 바꿔요. 경기력은 그대로예요.',
+  physiqueHave: '보유 변경권',
+  physiqueApply: '변경권 1장으로 적용',
+  physiqueHeight: '키 (cm)',
+  physiqueWeight: '몸무게 (kg)',
+  physiqueListed: '판매를 내린 뒤 바꿀 수 있어요.',
+  physiqueDone: '체격 변경권을 받았어요.',
   packsTitle: '스토어에서 사기',
   rerollPack: (p: { n: number }) => `리롤권 ${p.n}장`,
   boostPack: (p: { n: number }) => `잠재력 강화권 ${p.n}장`,

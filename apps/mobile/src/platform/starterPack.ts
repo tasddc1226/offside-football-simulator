@@ -66,7 +66,7 @@ async function claim(p: Purchase, silent: boolean): Promise<boolean> {
     left = false;
     starterPackStore.pack = r.data.pack;
     starterPackStore.price = null;
-    iapItems.items = r.data.have;
+    iapItems.items = { ...iapItems.items, ...r.data.have };
     quiet(FOREVER);
     await finishTransaction({ purchase: p, isConsumable: true }).catch(() => {});
     toast(L.bought);

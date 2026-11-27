@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { IAP_PRICE_KRW } from './admin-items.js';
-import { IAP_PRODUCT_IDS, IAP_PRODUCTS, OWNER_ITEMS } from './cup.js';
+import { IAP_PRODUCT_IDS, IAP_PRODUCTS, type IapProductId, OWNER_ITEMS } from './cup.js';
 import { MEMBERSHIP_PRICE_KRW, MEMBERSHIP_PRODUCT_ID } from './membership-rules.js';
 import { SEASON_PASS_PRICE_KRW, SEASON_PASS_PRODUCT_ID } from './season-pass-rules.js';
 
@@ -12,11 +12,14 @@ import { SEASON_PASS_PRICE_KRW, SEASON_PASS_PRODUCT_ID } from './season-pass-rul
 export const WEB_PAY_STORE = 'xsolla';
 
 /** 웹 결제 상품 목록(앱 상품 순서 그대로). amount는 한국 기준가(원). 실제 결제 금액 · 통화는 결제창이 나라에 맞춰 보인다. */
-export const WEB_PAY_PRODUCTS = IAP_PRODUCT_IDS.map((productId) => ({
-  productId,
-  ...IAP_PRODUCTS[productId],
-  amount: IAP_PRICE_KRW[productId],
-}));
+export const WEB_PAY_PRODUCTS = IAP_PRODUCT_IDS.map(
+  (productId: IapProductId) =>
+    ({
+      productId,
+      ...IAP_PRODUCTS[productId],
+      amount: IAP_PRICE_KRW[productId],
+    }) as const,
+);
 
 /**
  * T-11-591 웹에서 파는 시즌 패스 · 클럽 멤버십(광고 제거는 앱 전용). SKU는 앱 상품 id와 같다. 시즌 패스는 앱과 같은 시즌
@@ -45,7 +48,7 @@ export const WebPayConfigResponseSchema = z.strictObject({
     .array(
       z.strictObject({
         productId: z.enum(IAP_PRODUCT_IDS),
-        item: z.enum(OWNER_ITEMS),
+        item: z.enum([...OWNER_ITEMS, 'physique']),
         qty: z.number().int().min(1),
         amount: z.number().int().min(100),
       }),

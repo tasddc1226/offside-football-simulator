@@ -17,6 +17,7 @@ import { Card, Press, Screen, Topbar, Txt } from '../../ui';
 import { useRefresh } from '../../ui/refresh';
 import { BoostShop } from './BoostShop';
 import { LoginButtons } from './LoginButtons';
+import { PhysiqueShop } from './PhysiqueShop';
 import { RenameShop } from './RenameShop';
 import { RerollShop } from './RerollShop';
 import { ScoutShop } from './ScoutShop';
@@ -88,6 +89,7 @@ export default function Shop() {
           <RerollShop focus={shopFocus} onBought={bought} />
           <BoostShop />
           <RenameShop />
+          <PhysiqueShop />
           <ScoutShop focus={scoutFocus} onBought={bought} />
         </>
       ) : guest ? (

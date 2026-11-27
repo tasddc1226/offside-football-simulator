@@ -5,7 +5,7 @@ export const webPay: Translation<WebPayMsgs> = {
   title: 'ウェブで購入',
   sub: 'カード・PayPal・各国の決済手段で購入できます。このオーナーアカウントにすぐ入ります。',
   pack: (p) =>
-    `${{ reroll: 'リロール券', boost: 'ポテンシャル強化券', scout: 'プレミアムスカウト券', rename: '選手名変更券' }[p.item] ?? p.item}${p.n}枚`,
+    `${{ reroll: 'リロール券', boost: 'ポテンシャル強化券', scout: 'プレミアムスカウト券', physique: '引退カード体格変更券', rename: '選手名変更券' }[p.item] ?? p.item}${p.n}枚`,
   price: (p) => `₩${p.won}から`,
   priceNote: '決済画面ではお住まいの国の通貨・税込みの価格で表示されます。',
   opening: '決済画面に移動しています…',

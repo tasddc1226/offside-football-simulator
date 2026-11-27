@@ -16,9 +16,15 @@ import {
   IAP_PRODUCT_IDS,
   IAP_PRODUCTS,
   type IapProductId,
-  type OwnerItem,
+  type StoreItem,
+  PHYSIQUE_SKU,
 } from '@offside/contracts/cup';
-import { claimIap, fetchItems, type OwnerItemsResponse } from '@offside/app-core/api/cup';
+import {
+  claimIap,
+  fetchPhysiqueItems as fetchItems,
+  readPhysiqueAvailability,
+  type OwnerItemsResponse,
+} from '@offside/app-core/api/cup';
 import { needsOwnerLogin } from '@offside/app-core/market';
 import {
   commerceOffer,
@@ -59,12 +65,15 @@ export const iapItems = proxy({
   /** 결제 중인 상품. */
   busy: null as IapProductId | null,
   /** 서버가 마지막으로 알려 준 장수. 받은 뒤 화면이 바로 고친다. */
-  items: null as Pick<OwnerItemsResponse, 'reroll' | 'boost' | 'scout' | 'rename'> | null,
+  items: null as Pick<
+    OwnerItemsResponse,
+    'reroll' | 'boost' | 'scout' | 'rename' | 'physique'
+  > | null,
 });
 
 /** 이 아이템의 묶음 중 지금 살 수 있는(스토어가 가격을 알려 준) 상품. 스토어를 열 수 없으면 빈 목록. */
 export const sellablePacks = (
-  item: OwnerItem,
+  item: StoreItem,
   s: { open: boolean; prices: typeof iapItems.prices },
 ) => (s.open ? IAP_PRODUCT_IDS.filter((id) => IAP_PRODUCTS[id].item === item && s.prices[id]) : []);
 
@@ -83,7 +92,7 @@ try {
   /* 계측이 없는 빌드 */
 }
 /** 묶음 자리가 보일 때(IapPacks). 강화권 · 스카우트권만. */
-export function trackIapOffer(item: OwnerItem, entry: CommerceEntry) {
+export function trackIapOffer(item: StoreItem, entry: CommerceEntry) {
   if (item === 'boost' || item === 'scout') funnel.view({ item, entry, store: STORE });
 }
 
@@ -100,6 +109,8 @@ async function claim(p: Purchase, quiet: boolean, attempt: CheckoutTicket | null
     return false;
   }
   iapItems.items = {
+    ...(iapItems.items?.physique !== undefined ? { physique: iapItems.items.physique } : {}),
+    ...(r.data.physique !== undefined ? { physique: r.data.physique } : {}),
     reroll: r.data.reroll,
     boost: r.data.boost,
     scout: r.data.scout,
@@ -110,13 +121,15 @@ async function claim(p: Purchase, quiet: boolean, attempt: CheckoutTicket | null
   await finishTransaction({ purchase: p, isConsumable: true }).catch(() => {});
   const { item } = IAP_PRODUCTS[productId];
   toast(
-    item === 'boost'
-      ? L.boostDone({ n: r.data.boost })
-      : item === 'scout'
-        ? SL.got({ n: r.data.scout })
-        : item === 'rename'
-          ? L.renameDone({ n: r.data.rename ?? 0 })
-          : L.rerollDone({ n: r.data.reroll }),
+    item === 'physique'
+      ? L.physiqueDone
+      : item === 'boost'
+        ? L.boostDone({ n: r.data.boost })
+        : item === 'scout'
+          ? SL.got({ n: r.data.scout })
+          : item === 'rename'
+            ? L.renameDone({ n: r.data.rename ?? 0 })
+            : L.rerollDone({ n: r.data.reroll }),
   );
   return true;
 }
@@ -173,6 +186,7 @@ export async function syncIapItems(): Promise<boolean> {
   }
   account = r.data.iap.account;
   iapItems.items = {
+    ...(r.data.physique !== undefined ? { physique: r.data.physique } : {}),
     reroll: r.data.reroll,
     boost: r.data.boost,
     scout: r.data.scout,
@@ -185,7 +199,10 @@ export async function syncIapItems(): Promise<boolean> {
   }
   try {
     const [products, pending] = await Promise.all([
-      fetchProducts({ skus: [...IAP_PRODUCT_IDS], type: 'in-app' }),
+      fetchProducts({
+        skus: IAP_PRODUCT_IDS.filter((id) => id !== PHYSIQUE_SKU || r.data.physique !== undefined),
+        type: 'in-app',
+      }),
       getAvailablePurchases(),
     ]);
     const prices: Partial<Record<IapProductId, string>> = {};
@@ -217,6 +234,18 @@ export async function syncIapItems(): Promise<boolean> {
 /** 상품 하나 사기(entry: 누른 자리, 계측에만 쓴다). 결과는 구매 이벤트로 온다. */
 export async function buyIapItem(productId: IapProductId, entry: CommerceEntry = 'shop') {
   if (!STORE_SUPPORTED || iapItems.busy || !account) return;
+  if (productId === PHYSIQUE_SKU) {
+    const current = await readPhysiqueAvailability();
+    if (
+      !current.ok ||
+      current.data.physique === undefined ||
+      !current.data.iap?.stores.includes(STORE) ||
+      current.data.iap.account !== account ||
+      iapItems.busy ||
+      !account
+    )
+      return;
+  }
   iapItems.busy = productId;
   funnel.begin(productId, commerceOffer(productId, entry, STORE));
   if (!(await connectStore())) {

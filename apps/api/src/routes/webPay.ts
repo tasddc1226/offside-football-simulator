@@ -1,3 +1,5 @@
+import { PHYSIQUE_SKU } from '@offside/contracts/cup';
+import { physiqueOpen } from '../db/repos/cardPhysique.js';
 import {
   CreatorAttributionBodySchema,
   IAP_PRODUCTS,
@@ -110,6 +112,7 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
   app.get('/v1/web-pay/config', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const enabled = webPayEnabled(c.env, me.id);
+    const physique = enabled && c.req.query('physique') === '1' && (await physiqueOpen(getDb(c)));
     const now = nowIso();
     return ok(
       c,
@@ -117,7 +120,9 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
       enabled
         ? {
             enabled,
-            products: WEB_PAY_PRODUCTS.filter((p) => itemOnSale(c.env, p.productId)),
+            products: WEB_PAY_PRODUCTS.filter(
+              (p) => itemOnSale(c.env, p.productId) && (p.productId !== PHYSIQUE_SKU || physique),
+            ),
             ...(passOnSale(c.env, now) ? { pass: WEB_PAY_PASS } : {}),
             ...(memberOnSale(c.env) ? { membership: WEB_PAY_MEMBERSHIP } : {}),
           }
@@ -135,6 +140,7 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
     const now = nowIso();
     if (
       !itemOnSale(c.env, productId) ||
+      (productId === PHYSIQUE_SKU && !(await physiqueOpen(db))) ||
       (productId === SEASON_PASS_PRODUCT_ID && !passOnSale(c.env, now)) ||
       (productId === MEMBERSHIP_PRODUCT_ID && !memberOnSale(c.env))
     )
@@ -306,6 +312,8 @@ export function registerWebPayRoutes(app: Hono<AppEnv>) {
     if (typeof profileId !== 'string' || !(await profileExists(c, profileId)))
       return hookError(c, 'INVALID_USER');
     const order = await webPayOrderByXsollaId(db, xsollaOrderId);
+    // This product is authorized by a gated checkout. A webhook can race its order insert.
+    if (sku === PHYSIQUE_SKU && !order) return c.body(null, 503);
     if (order && (order.profileId !== profileId || order.productId !== sku))
       return hookError(c, 'INVALID_PARAMETER');
     const test = hook.order?.mode === 'sandbox' || Number(hook.billing?.transaction?.dry_run) === 1;

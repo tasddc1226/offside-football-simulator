@@ -21,7 +21,15 @@ import { renameText as RN } from '@offside/app-core/i18n/ko/rename';
 import { RenameSheet } from '../rename/RenameSheet';
 import { Skeleton } from '../../ui/Skeleton';
 
+import { fetchPhysiqueItems } from '@offside/app-core/api/cup';
+import { iapText as I } from '@offside/app-core/i18n/ko/iap';
+import { CardPhysique } from './CardPhysique';
 export function PlayerRelease({ season }: { season: number }) {
+  const [physiqueOn, setPhysiqueOn] = useState(false);
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+  useEffect(() => {
+    void fetchPhysiqueItems().then((r) => setPhysiqueOn(r.ok && r.data.physique !== undefined));
+  }, []);
   const manager = useMemo(() => new PlayerManagement(), []);
   const [state, setState] = useState(manager.state);
   const local = useMemo(() => localCareerNames(), []);
@@ -43,6 +51,16 @@ export function PlayerRelease({ season }: { season: number }) {
     renamed[p.careerId] ?? local.get(p.careerId) ?? playerName(p.publicName, p.pos, p.number);
   return (
     <View style={{ gap: 12 }} testID="player-management">
+      {editing && (
+        <CardPhysique
+          {...editing}
+          onClose={() => setEditing(null)}
+          onDone={() => {
+            setEditing(null);
+            void manager.load(season);
+          }}
+        />
+      )}
       <Txt tone="muted">{M.releaseIntro}</Txt>
       {state.notice ? (
         <Txt accessibilityLiveRegion="polite" tone="good">
@@ -77,6 +95,15 @@ export function PlayerRelease({ season }: { season: number }) {
                   testID={`managed-player-${p.careerId}`}
                   style={{ gap: 8, paddingVertical: 12, borderTopWidth: 1, borderTopColor: c.line }}
                 >
+                  {physiqueOn && (
+                    <Btn
+                      sm
+                      disabled={state.busy}
+                      onPress={() => setEditing({ id: p.careerId, name: nameOf(p) })}
+                    >
+                      {I.physiqueTitle}
+                    </Btn>
+                  )}
                   <Press
                     accessibilityRole="checkbox"
                     accessibilityLabel={M.releasePickLabel({ name: nameOf(p) })}

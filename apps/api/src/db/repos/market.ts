@@ -21,6 +21,7 @@ import { boundValueRows } from '../../plausibility.js';
 import { retireAtOf } from '@offside/contracts/service-seasons';
 import { saleCeilingBase, type ValueRow } from '@offside/contracts/market-value';
 import type { Bindings } from '../../env.js';
+import { displayBodyColumns } from '../displayBody.js';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 import { eventNotificationStatements } from '../../push/events.js';
@@ -63,8 +64,7 @@ const cardCols = {
   peakProfile: cards.peakProfile,
   type: careers.type,
   foot: careers.foot,
-  height: careers.height,
-  weight: careers.weight,
+  ...displayBodyColumns,
   cardValue: cards.cardValue,
   transfers: cards.transfers,
   season: cards.serviceSeason,
