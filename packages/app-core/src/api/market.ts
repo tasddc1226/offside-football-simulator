@@ -13,6 +13,7 @@ import type {
   MarketMeResponse,
   MarketSort,
   ReleaseCardsResponse,
+  SaleCeilingResponse,
   CardLockResponse,
 } from '@offside/contracts';
 import { apiFetch, cachedGet, clearApiCache, type ApiResult } from './client.js';
@@ -76,6 +77,11 @@ export const fetchCardTrades = (careerId: string) =>
 export const fetchMarketFunds = () => cachedGet<MarketFundsResponse>('/v1/market/funds', 60_000);
 /** 내 자금 · 구단 가치 · 열린 등록 · 최근 거래(구글 연결 구단주만). 이적시장 화면을 열 때만. */
 export const fetchMarketMe = () => cachedGet<MarketMeResponse>('/v1/market/me', 60_000);
+export const fetchSaleCeiling = (careerId: string) =>
+  cachedGet<SaleCeilingResponse>(
+    `/v1/market/cards/${encodeURIComponent(careerId)}/sale-ceiling`,
+    60_000,
+  );
 export const createListing = (careerId: string, price: number) =>
   apiFetch<CreateListingResponse>('/v1/market/listings', {
     method: 'POST',

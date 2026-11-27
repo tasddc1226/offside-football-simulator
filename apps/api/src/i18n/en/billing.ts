@@ -30,6 +30,7 @@ export const billing: typeof ko = {
     reroll: 'Reroll tickets',
     boost: 'Potential boost tickets',
     scout: 'Premium scout tickets',
+    physique: 'Physique ticket',
     rename: 'Player rename tickets',
   },
   quantity: (name: string, qty: number) => `${name} × ${qty}`,

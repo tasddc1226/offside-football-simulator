@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "37706ee5-ab05-4db9-a7c9-fb22b0425b00",
+  "id": "55e67049-aa39-4391-bc6e-2124d949685b",
   "prevId": "a390a0e8-9994-4163-a2d4-cf32f2008839",
   "tables": {
     "acquisition_consents": {
@@ -1495,6 +1495,66 @@
         }
       }
     },
+    "card_physique_edits": {
+      "name": "card_physique_edits",
+      "columns": {
+        "career_id": {
+          "name": "career_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "height": {
+          "name": "height",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "weight": {
+          "name": "weight",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "editor": {
+          "name": "editor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "edited_at": {
+          "name": "edited_at",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "card_physique_edits_career_id_revision_pk": {
+          "columns": [
+            "career_id",
+            "revision"
+          ],
+          "name": "card_physique_edits_career_id_revision_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
     "card_specials": {
       "name": "card_specials",
       "columns": {
@@ -2593,14 +2653,6 @@
           "autoincrement": false,
           "default": 0
         },
-        "firsts_revision": {
-          "name": "firsts_revision",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
         "pot": {
           "name": "pot",
           "type": "integer",
@@ -2617,14 +2669,6 @@
         }
       },
       "indexes": {
-        "careers_firsts_season_idx": {
-          "name": "careers_firsts_season_idx",
-          "columns": [
-            "coalesce(\"service_season\", 0)"
-          ],
-          "isUnique": false,
-          "where": "\"careers\".\"hidden\" = 0"
-        },
         "careers_detail_archive_idx": {
           "name": "careers_detail_archive_idx",
           "columns": [
@@ -3886,88 +3930,6 @@
           "name": "daily_rank_winners_day_rank_pk"
         }
       },
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "firsts_repairs": {
-      "name": "firsts_repairs",
-      "columns": {
-        "seq": {
-          "name": "seq",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": true
-        },
-        "work": {
-          "name": "work",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "season": {
-          "name": "season",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "cursor": {
-          "name": "cursor",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        }
-      },
-      "indexes": {
-        "firsts_repairs_slot_idx": {
-          "name": "firsts_repairs_slot_idx",
-          "columns": [
-            "season",
-            "kind",
-            "id"
-          ],
-          "isUnique": true
-        },
-        "firsts_repairs_order_idx": {
-          "name": "firsts_repairs_order_idx",
-          "columns": [
-            "work",
-            "seq"
-          ],
-          "isUnique": false
-        },
-        "firsts_repairs_page_idx": {
-          "name": "firsts_repairs_page_idx",
-          "columns": [
-            "season",
-            "cursor",
-            "work",
-            "seq"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -11013,13 +10975,6 @@
   },
   "internal": {
     "indexes": {
-      "careers_firsts_season_idx": {
-        "columns": {
-          "coalesce(\"service_season\", 0)": {
-            "isExpression": true
-          }
-        }
-      },
       "careers_hof_score_order_idx": {
         "columns": {
           "\"legend_score\" desc": {

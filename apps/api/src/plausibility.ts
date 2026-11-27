@@ -199,7 +199,7 @@ export interface StoredValueSeason extends StoredSeason {
  */
 export function boundValueRows<R extends ValueRow & { year: number }>(
   career: readonly R[],
-  rows: readonly StoredValueSeason[],
+  rows: readonly Pick<StoredValueSeason, 'year' | 'age' | 'ovr' | 'league' | 'clubId' | 'mil'>[],
   retireAt?: number,
 ): ValueRow[] {
   const byYear = new Map(lifeSeasons(rows, retireAt).map((r) => [r.year, r]));

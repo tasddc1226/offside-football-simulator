@@ -5,7 +5,7 @@ export const webPay: Translation<WebPayMsgs> = {
   title: '在網頁購買',
   sub: '可使用信用卡・PayPal・各國付款方式購買，會立即存入這個球隊老闆帳號。',
   pack: (p) =>
-    `${{ reroll: '重抽券', boost: '潛力強化券', scout: '高級球探券', rename: '球員改名券' }[p.item] ?? p.item} ${p.n} 張`,
+    `${{ reroll: '重抽券', boost: '潛力強化券', scout: '高級球探券', physique: '退役球員卡體格變更券', rename: '球員改名券' }[p.item] ?? p.item} ${p.n} 張`,
   price: (p) => `₩${p.won} 起`,
   priceNote: '付款畫面會以你所在國家的幣別、含稅價格顯示。',
   opening: '正在前往付款畫面…',

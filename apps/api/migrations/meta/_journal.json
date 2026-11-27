@@ -1244,8 +1244,15 @@
     {
       "idx": 180,
       "version": "6",
-      "when": 1795755977180,
-      "tag": "0180_targeted_firsts_repair",
+      "when": 1795763861759,
+      "tag": "0180_retired_card_physique",
+      "breakpoints": true
+    },
+    {
+      "idx": 181,
+      "version": "6",
+      "when": 1795768236460,
+      "tag": "0181_targeted_firsts_repair",
       "breakpoints": true
     }
   ]

@@ -11,6 +11,21 @@
   import { openPublicLegendById } from '../legend.js';
   import { renameText as RN } from '@offside/app-core/i18n/ko/rename';
   const { season }: { season: number } = $props();
+  import { fetchPhysiqueItems } from '@offside/app-core/api/cup';
+  import { iapText as I } from '@offside/app-core/i18n/ko/iap';
+  import {webPay,type PhysiqueDraft} from '../cup/webPay.svelte.js';
+  let returning=$state<PhysiqueDraft|null>(null);
+  $effect(()=>{
+    const draft=webPay.physiqueDraft;
+    if(!physiqueOn || !draft || pm.loading)return;
+    const player=pm.players.find(p=>p.careerId===draft.card);
+    if(!player)return;
+    webPay.physiqueDraft=null;
+    returning=draft;
+    editing={id:player.careerId,name:nameOf(player)};
+  });
+  let physiqueOn=$state(false), editing=$state<{id:string;name:string}|null>(null);
+  onMount(()=>{void fetchPhysiqueItems().then(r=>physiqueOn=r.ok && r.data.physique!==undefined);});
   const manager = new PlayerManagement();
   let pm = $state(manager.state);
   const local = localCareerNames();
@@ -38,6 +53,7 @@
           <span class="stack" style="gap:4px;min-width:0"><b>{nameOf(p)}</b><small class="muted" data-release-info>{releaseRowInfo(p)}</small>{#if locked}<small class="muted">{locked}</small>{:else}<small data-release-gets>{M.releaseGets({ amount: fundsText(releaseValue(p, pm.rate)) })}</small>{/if}</span>
         </label>
         <button class="btn btn-sm" disabled={pm.busy} data-player-detail={p.careerId} onclick={() => openPublicLegendById(p.careerId)}>{L.viewRecord}</button>
+        {#if physiqueOn}<button class="btn btn-sm" disabled={pm.busy} onclick={()=>{returning=null;editing={id:p.careerId,name:nameOf(p)};}}>{I.physiqueTitle}</button>{/if}
         <button class="btn btn-sm" disabled={pm.busy} data-player-rename={p.careerId} aria-label={RN.entryLabel({ name: nameOf(p) })} onclick={() => (renaming = { careerId: p.careerId, name: nameOf(p) })}>{RN.entry}</button>
       </div>
     {:else}<p class="empty">{L.noOwned}</p>{/each}
@@ -53,6 +69,12 @@
     {/if}
   {/if}
 </div>
+{#if editing}
+  {@const e=editing}
+  {#await import('./CardPhysique.svelte') then {default: Editor}}
+    <Editor id={e.id} name={e.name} draft={returning} onclose={()=>editing=null} ondone={()=>{editing=null;void manager.load(season);}} />
+  {/await}
+{/if}
 {#if renaming}
   {@const r = renaming}
   {#await import('../RenameSheet.svelte') then { default: RenameSheet }}<RenameSheet careerId={r.careerId} name={r.name} onclose={() => (renaming = null)} ondone={(n) => (renamed = { ...renamed, [r.careerId]: n })} />{/await}

@@ -23,8 +23,10 @@ vi.mock('expo-iap', () => ({
   requestPurchase: f.requestPurchase,
 }));
 vi.mock('@offside/contracts/cup', () => ({
-  IAP_PRODUCT_IDS: ['reroll_5', 'boost_3', 'boost_100'],
+  PHYSIQUE_SKU: 'physique_1',
+  IAP_PRODUCT_IDS: ['reroll_5', 'boost_3', 'boost_100', 'physique_1'],
   IAP_PRODUCTS: {
+    physique_1: { item: 'physique', qty: 1 },
     reroll_5: { item: 'reroll', qty: 5 },
     boost_3: { item: 'boost', qty: 3 },
     boost_100: { item: 'boost', qty: 100 },
@@ -37,7 +39,11 @@ vi.mock('../analytics', () => ({
     return () => {};
   },
 }));
-vi.mock('@offside/app-core/api/cup', () => ({ claimIap: f.claimIap, fetchItems: f.fetchItems }));
+vi.mock('@offside/app-core/api/cup', () => ({
+  claimIap: f.claimIap,
+  fetchPhysiqueItems: f.fetchItems,
+  readPhysiqueAvailability: f.fetchItems,
+}));
 vi.mock('@offside/app-core/market', () => ({
   needsOwnerLogin: (e) => e.code === 'PROFILE_REQUIRED' || e.reason === 'GOOGLE_LOGIN_REQUIRED',
 }));
@@ -103,6 +109,19 @@ describe('iap items sync (T-11-434)', () => {
       expect(m.sellablePacks('boost', { ...m.iapItems, open: false })).toEqual([]);
     },
   );
+  it('filters the physique SKU while closed and rechecks before starting a store payment', async () => {
+    f.fetchItems.mockResolvedValue({ ok: true, data: items });
+    await m.retryIapItems();
+    expect(f.fetchProducts.mock.calls[0][0].skus).not.toContain('physique_1');
+    await m.buyIapItem('physique_1');
+    expect(f.requestPurchase).not.toHaveBeenCalled();
+    f.handlers.session();
+    f.fetchItems.mockResolvedValue({ ok: true, data: { ...items, physique: 0 } });
+    await m.retryIapItems();
+    expect(f.fetchProducts.mock.lastCall[0].skus).toContain('physique_1');
+    await m.buyIapItem('physique_1');
+    expect(f.requestPurchase).toHaveBeenCalledTimes(1);
+  });
   it('does not remember a failed load and asks again on retry', async () => {
     f.fetchItems.mockResolvedValueOnce({ ok: false, error: { code: 'NETWORK', retryable: true } });
     m.useIapItems(true);

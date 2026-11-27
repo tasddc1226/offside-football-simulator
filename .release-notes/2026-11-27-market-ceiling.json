@@ -1,0 +1,26 @@
+{
+  "id": "t-11-838-europe-market-ceiling",
+  "title": "유럽 5대 리그 카드 판매가",
+  "items": [
+    "은퇴 카드 기준가를 정한 시즌이 유럽 5대 리그라면 판매가 상한에 프리미어리그의 리그 자금력을 적용해요."
+  ],
+  "en": {
+    "title": "Selling cards from Europe’s top five leagues",
+    "items": [
+      "If a retired card’s base value comes from a season in one of Europe’s top five leagues, its listing ceiling uses Premier League finances."
+    ]
+  },
+  "ja": {
+    "title": "欧州5大リーグのカードの販売価格",
+    "items": [
+      "引退カードの基準額を決めたシーズンが欧州5大リーグの場合、出品上限にはプレミアリーグの資金力を使います。"
+    ]
+  },
+  "zh": {
+    "title": "歐洲五大聯賽球員卡售價",
+    "items": [
+      "若退役球員卡的基準價取自歐洲五大聯賽的賽季，掛牌上限會按英超的財力計算。"
+    ]
+  },
+  "availability": "web-app"
+}

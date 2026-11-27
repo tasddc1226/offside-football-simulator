@@ -5,7 +5,7 @@
   // T-11-736 상품을 누르면 바로 결제창으로 가지 않고 이 자리에서 무엇을 얼마에 사는지 한 번 더 보여 준다. 결제창을 연 주문의 9%만
   // 결제됐다(10-30 ~ 11-16, 가장 싼 강화권 3장은 156번 중 2번). 한국어 화면은 여기서 카카오페이 · 다른 수단을 골라 엑솔라의
   // 수단 고르기 단계를 건너뛴다(카카오페이는 서버가 한국 요청에만 싣는다).
-  import type { OwnerItem } from '@offside/contracts/cup';
+  import type { StoreItem } from '@offside/contracts/cup';
   import type { WebPayMethod } from '@offside/app-core/api/webPay';
   import { getLocale } from '@offside/contracts/i18n';
   import { hasSessionHint } from '@offside/app-core/api/client';
@@ -16,7 +16,7 @@
   import { packUnits } from '@offside/app-core/packCompare';
   import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
 
-  let { item, note, back = 'owner' }: { item: OwnerItem; note?: string; back?: WebPayBack } = $props();
+  let { item, note, back = 'owner' }: { item: StoreItem; note?: string; back?: WebPayBack } = $props();
 
   const packs = $derived(
     webPay.config?.enabled ? (webPay.config.products ?? []).filter((p) => p.item === item) : [],

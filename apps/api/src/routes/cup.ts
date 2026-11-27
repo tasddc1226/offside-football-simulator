@@ -1,3 +1,4 @@
+import { physiqueOpen, physiqueTickets } from '../db/repos/cardPhysique.js';
 import {
   CupMatchResponseSchema,
   CupMeResponseSchema,
@@ -775,7 +776,19 @@ export function registerCupRoutes(app: Hono<AppEnv>): void {
     const me = await requireOwner(c);
     const items = await ownerItemsOf(getDb(c), me.id);
     const iap = { account: iapAccount(me.id), stores: iapStores(c.env, me.id) };
-    return ok(c, OwnerItemsResponseSchema, { ...items, iap }, 200, NO_STORE);
+    return ok(
+      c,
+      OwnerItemsResponseSchema,
+      {
+        ...items,
+        iap,
+        ...(c.req.query('physique') === '1' && (await physiqueOpen(getDb(c)))
+          ? { physique: await physiqueTickets(getDb(c), me.id) }
+          : {}),
+      },
+      200,
+      NO_STORE,
+    );
   });
 
   // 아이템 1장 쓰기 — 선수 후보 리롤권(reroll) · 잠재력 강화권(boost, T-11-174) · 프리미엄 스카우트권(scout, T-11-196). 남은 장수를 돌려준다. 없으면 409.

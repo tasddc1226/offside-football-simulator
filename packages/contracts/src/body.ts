@@ -36,3 +36,39 @@ export const BODY_DEFAULT: Record<'GK' | 'DF' | 'MF' | 'FW', Body> = {
   MF: { h: 177, w: 71 },
   FW: { h: 180, w: 74 },
 };
+
+export const RETIRED_BODY_LIMITS = {
+  GK: { minH: 168, maxH: 200, minW: 60, maxW: 100 },
+  DF: { minH: 163, maxH: 200, minW: 57, maxW: 100 },
+  MF: { minH: 160, maxH: 198, minW: 55, maxW: 96 },
+  FW: { minH: 160, maxH: 200, minW: 55, maxW: 100 },
+} as const;
+export type PhysiquePosition = keyof typeof RETIRED_BODY_LIMITS;
+export interface RetiredPhysique {
+  pos: PhysiquePosition;
+  height: number | null;
+  weight: number | null;
+  revision: number;
+  tickets: number;
+  listed: boolean;
+}
+export function retiredWeightLimits(pos: PhysiquePosition, height: number) {
+  const { minW, maxW } = RETIRED_BODY_LIMITS[pos];
+  const area = height * height;
+  return {
+    min: Math.max(minW, Math.ceil((18.5 * area) / 10000)),
+    max: Math.min(maxW, Math.floor((30 * area) / 10000)),
+  };
+}
+export function validRetiredBody(pos: PhysiquePosition, height: number, weight: number) {
+  const { minH, maxH } = RETIRED_BODY_LIMITS[pos];
+  const { min, max } = retiredWeightLimits(pos, height);
+  return (
+    Number.isInteger(height) &&
+    Number.isInteger(weight) &&
+    height >= minH &&
+    height <= maxH &&
+    weight >= min &&
+    weight <= max
+  );
+}

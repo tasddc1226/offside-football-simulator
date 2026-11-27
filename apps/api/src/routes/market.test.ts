@@ -8,10 +8,12 @@ import {
   AdminFundsOwnerSchema,
   AdminFundsReportSchema,
   MarketMeResponseSchema,
+  SaleCeilingResponseSchema,
   OwnerTeamResponseSchema,
   RerollShopResponseSchema,
   successEnvelope,
 } from '@offside/contracts';
+import { cardValue } from '@offside/contracts/market-value';
 import { tradeValue } from '@offside/contracts/card-enhance';
 import { readFileSync } from 'node:fs';
 import { eq } from 'drizzle-orm';
@@ -19,6 +21,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   cards,
   careers,
+  careerSeasons,
   marketDaily,
   marketListings,
   ownerFunds,
@@ -457,6 +460,50 @@ describe('이적시장 · 구단 자금 · 방출 (T-11-080)', () => {
     const data = ListRes.parse(await (await call('GET', '/v1/market?sort=ovr')).json()).data;
     expect(data.items.map((i) => i.card.careerId)).toEqual([hi, mid, lo]);
   });
+
+  it.each(['라리가', '프리미어리그', 'K리그1'])(
+    'bounds listings from %s using the pricing season',
+    async (league) => {
+      const seller = await issueGoogleCookie(ctx);
+      const id = await addCard(seller.profileId);
+      const season = { year: 2030, age: 24, league, ovr: 85 };
+      await ctx.db.insert(careerSeasons).values({
+        ...season,
+        careerId: id,
+        club: 'FC',
+        apps: 20,
+        goals: 2,
+        assists: 0,
+        rating: 7,
+        rank: '1',
+        honorsJson: '[]',
+        mil: 0,
+        eventsJson: '[]',
+        createdAt: '2026-09-28T00:00:00Z',
+      });
+      const value = cardValue([season], 85);
+      await ctx.db.update(cards).set({ cardValue: value }).where(eq(cards.careerId, id));
+      await ctx.db
+        .update(careers)
+        .set({ snapshotJson: JSON.stringify({ career: [season] }) })
+        .where(eq(careers.id, id));
+      const ceilingBase =
+        league === 'K리그1' ? value : cardValue([{ ...season, league: '프리미어리그' }], 85);
+      const quote = await call('GET', `/v1/market/cards/${id}/sale-ceiling`, {
+        cookie: seller.cookie,
+      });
+      expect(
+        successEnvelope(SaleCeilingResponseSchema).parse(await quote.json()).data.ceilingBase,
+      ).toBe(ceilingBase);
+      expect(
+        await reason(await list(seller.cookie, id, Math.ceil((value * 0.5) / 100) * 100 - 100)),
+      ).toBe('PRICE_OUT_OF_BAND');
+      expect(await reason(await list(seller.cookie, id, ceilingBase * 3 + 100))).toBe(
+        'PRICE_OUT_OF_BAND',
+      );
+      expect((await list(seller.cookie, id, ceilingBase * 3)).status).toBe(201);
+    },
+  );
 
   it('내놓고 사면 자금이 오가고 카드 주인이 바뀐다(수수료는 판매자 몫에서 뗀다)', async () => {
     const seller = await issueGoogleCookie(ctx);

@@ -22,7 +22,7 @@ import { eventNotificationStatements } from '../../push/events.js';
 export const grantItemStatement = (
   d1: D1Database,
   profileId: string,
-  item: OwnerItem,
+  item: OwnerItem | 'physique',
   qty: number,
   now: string,
   guard: { sql: string; params?: unknown[] },

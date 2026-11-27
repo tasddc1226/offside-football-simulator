@@ -6,7 +6,7 @@ import { View } from 'react-native';
 import type { CommerceEntry } from '@offside/app-core/commerceStage';
 import { watchMeasuredShown } from '@offside/app-core/offerVisibility';
 import { packUnits } from '@offside/app-core/packCompare';
-import { IAP_PRODUCTS, type OwnerItem } from '@offside/contracts/cup';
+import { IAP_PRODUCTS, type StoreItem } from '@offside/contracts/cup';
 import { intlLocale } from '@offside/contracts/i18n';
 import { iapText as L } from '@offside/app-core/i18n/ko/iap';
 import { scoutText as SL } from '@offside/app-core/i18n/ko/scout';
@@ -28,6 +28,7 @@ const PACK = {
   boost: L.boostPack,
   scout: SL.pack,
   rename: L.renamePack,
+  physique: () => L.physiqueTitle,
 } as const;
 
 /**
@@ -41,7 +42,7 @@ export function IapPacks({
   login = true,
   entry = 'shop',
 }: {
-  item: OwnerItem;
+  item: StoreItem;
   note?: string;
   login?: boolean;
   entry?: CommerceEntry;

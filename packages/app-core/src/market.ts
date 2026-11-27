@@ -208,14 +208,21 @@ export function priceDiff(
  * 판매가 슬라이더 범위(기준가 + 강화 가치의 %)와 한 칸, 수수료(%). priceAtPct와 같은 규칙을 쓴다. 강화한 카드는 상한 배수가
  * 기준가에만 붙어 최고 %가 카드마다 다르다. maxPct는 슬라이더 끝이 상한에 닿도록 한 칸 단위로 올리고, maxLabelPct는 실제 상한의 %다.
  */
-export function sellSlider(rules: MarketRules, cardValue = 0, enhance?: number | null) {
+export function sellSlider(
+  rules: MarketRules,
+  cardValue = 0,
+  enhance?: number | null,
+  ceilingBase = cardValue,
+) {
   const step = 5;
   const value = tradeValue(cardValue, enhance);
   const ratio =
-    value > 0 ? (tradeBand(cardValue, enhance, rules).max * 100) / value : rules.priceMax * 100;
+    value > 0
+      ? (tradeBand(cardValue, enhance, rules, ceilingBase).max * 100) / value
+      : rules.priceMax * 100;
   return {
     minPct: Math.round(rules.priceMin * 100),
-    maxPct: Math.min(Math.round(rules.priceMax * 100), Math.ceil(ratio / step - 1e-9) * step),
+    maxPct: Math.ceil(ratio / step - 1e-9) * step,
     maxLabelPct: Math.round(ratio),
     step,
     feePct: Math.round(rules.feeRate * 100),
@@ -228,8 +235,9 @@ export function priceAtPct(
   pct: number,
   rules: MarketRules,
   enhance?: number | null,
+  ceilingBase = cardValue,
 ): number {
-  const band = tradeBand(cardValue, enhance, rules);
+  const band = tradeBand(cardValue, enhance, rules, ceilingBase);
   const value = tradeValue(cardValue, enhance);
   return Math.min(band.max, Math.max(band.min, Math.round((value * pct) / 100 / 100) * 100));
 }
@@ -240,8 +248,9 @@ export function sellQuote(
   price: number,
   rules: MarketRules,
   enhance?: number | null,
+  ceilingBase = cardValue,
 ) {
-  const band = tradeBand(cardValue, enhance, rules);
+  const band = tradeBand(cardValue, enhance, rules, ceilingBase);
   const fee = marketFee(price, rules.feeRate);
   const error =
     !Number.isInteger(price) || price < band.min

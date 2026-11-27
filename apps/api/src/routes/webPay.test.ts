@@ -6,7 +6,7 @@ import {
   WebPayOrderStatusResponseSchema,
 } from '@offside/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { iapPurchases, webPayOrders } from '../db/schema.js';
+import { balanceVersions, iapPurchases, webPayOrders } from '../db/schema.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
 import { callJson, issueCookie, issueGoogleCookie } from '../test/http.js';
 import { createApp } from '../app.js';
@@ -92,6 +92,47 @@ describe('T-11-454 웹 결제(엑솔라)', () => {
     ).data;
   const items = async (cookie: string) =>
     ItemsRes.parse(await (await call('GET', '/v1/items', { cookie })).json()).data;
+
+  it('authorizes physique checkout only while open, then delivers and refunds its existing order', async () => {
+    const me = await issueGoogleCookie(ctx);
+    const productId = 'com.offsidelab.app.physique_1';
+    const calls = stubXsolla();
+    const catalogue = async (suffix: string) =>
+      ConfigRes.parse(
+        await (await call('GET', '/v1/web-pay/config' + suffix, { cookie: me.cookie })).json(),
+      ).data.products;
+    const sku = { productId, item: 'physique', qty: 1, amount: 1100 };
+    expect(await catalogue('?physique=1')).not.toContainEqual(sku);
+    expect(
+      (await call('POST', '/v1/web-pay/orders', { cookie: me.cookie, body: { productId } })).status,
+    ).toBe(503);
+    expect(calls).toHaveLength(0);
+    const now = new Date().toISOString();
+    await ctx.db.insert(balanceVersions).values({
+      version: 1,
+      status: 'active',
+      note: '',
+      valuesJson: JSON.stringify({ retiredPhysiqueOpen: 1 }),
+      createdBy: 'test',
+      createdAt: now,
+      updatedAt: now,
+      activatedAt: now,
+    });
+    expect(await catalogue('')).not.toContainEqual(sku);
+    expect(await catalogue('?physique=1')).toContainEqual(sku);
+    await order(me.cookie, productId);
+    await ctx.db.delete(balanceVersions);
+    const event = paid(1001, me.profileId, {
+      items: [{ sku: productId, type: 'virtual_good', quantity: 1 }],
+    });
+    expect((await hook(ctx, event)).status).toBe(204);
+    expect((await hook(ctx, event)).status).toBe(204);
+    const purchases = await ctx.db.select().from(iapPurchases);
+    expect(purchases).toHaveLength(1);
+    expect(purchases[0]).toMatchObject({ productId, profileId: me.profileId, qty: 1 });
+    expect((await hook(ctx, { ...event, notification_type: 'order_canceled' })).status).toBe(204);
+    expect((await ctx.db.select().from(iapPurchases))[0]?.revokedQty).toBe(1);
+  });
 
   it('T-11-620 스카우트권 50장 묶음을 팔고 결제마다 50장을 한 번만 주고 남은 장수만 회수한다', async () => {
     const me = await issueGoogleCookie(ctx);

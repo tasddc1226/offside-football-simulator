@@ -39,7 +39,7 @@ async function setup(
   await page.route(`${API}/v1/items`, (r) =>
     r.fulfill(ok({ reroll: 0, boost: 0, scout: 0, rename: 0 })),
   );
-  await page.route(`${API}/v1/web-pay/config`, (r) =>
+  await page.route(`${API}/v1/web-pay/config?physique=1`, (r) =>
     r.fulfill(
       ok(
         webPass

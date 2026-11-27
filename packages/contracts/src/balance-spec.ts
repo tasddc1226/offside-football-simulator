@@ -572,6 +572,8 @@ export const BALANCE_SPEC = {
     max: 500,
     step: 1,
   },
+  // T-11-839 은퇴 카드 체격 변경권. 기본 0(닫힘)이고 1이면 상품 노출 · 구매 · 편집이 열린다. 닫아도 잔액과 바꾼 체격은 그대로.
+  retiredPhysiqueOpen: { def: 0, min: 0, max: 1, step: 1 },
   // T-11-373 카드 강화(card-enhance.ts). 단계별 확률 · 비용 · 강화 OVR의 모양은 contracts 표에 고정하고, 열기 · 시도권 경기 수 ·
   // 비용 · 확률 배율만 연다. 기본은 열림이고, enhanceOpen = 0이면 시도를 닫는다(이미 올린 단계의 효과는 그대로).
   enhanceOpen: {

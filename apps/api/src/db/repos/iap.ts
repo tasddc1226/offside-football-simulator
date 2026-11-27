@@ -163,7 +163,7 @@ export async function grantIapPurchase(
     transactionId: string;
     profileId: string;
     productId: string;
-    item: OwnerItem;
+    item: OwnerItem | 'physique';
     qty: number;
     test: boolean;
     now: string;

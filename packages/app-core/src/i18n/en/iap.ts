@@ -2,6 +2,15 @@ import type { Translation } from '../core';
 import type { IapMsgs } from '../ko/iap';
 
 export const iap: Translation<IapMsgs> = {
+  physiqueTitle: 'Retired card physique ticket',
+  physiqueNote:
+    'Edit a card’s displayed height and weight in player management. Match performance stays the same.',
+  physiqueHave: 'Tickets available',
+  physiqueApply: 'Apply with 1 ticket',
+  physiqueHeight: 'Height (cm)',
+  physiqueWeight: 'Weight (kg)',
+  physiqueListed: 'Remove the listing to edit this card.',
+  physiqueDone: 'Physique ticket received.',
   packsTitle: 'Buy in the store',
   rerollPack: (p) => `${p.n} reroll tickets`,
   boostPack: (p) => `${p.n} boost tickets`,

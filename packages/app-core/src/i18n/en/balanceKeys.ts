@@ -83,6 +83,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivGuard: 'Division demotion buffer',
   teamDivRewardFrom: 'Division rewards start season',
   teamDivMinMatches: 'Division rewards: minimum matches',
+  retiredPhysiqueOpen: 'Retired card physique ticket',
   enhanceOpen: 'Card enhance: open',
   tourOpen: 'Away tour: open',
   enhanceCostScale: 'Card enhance: cost multiplier',

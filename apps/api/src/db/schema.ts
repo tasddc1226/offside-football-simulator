@@ -2744,3 +2744,17 @@ export const tourMatches = sqliteTable(
       .where(sql`${t.status} = 'live'`),
   ],
 );
+
+// Only edited retired cards have rows. The latest revision is a backward primary-key seek.
+export const cardPhysiqueEdits = sqliteTable(
+  'card_physique_edits',
+  {
+    careerId: text('career_id').notNull(),
+    revision: integer('revision').notNull(),
+    height: integer('height').notNull(),
+    weight: integer('weight').notNull(),
+    editor: text('editor').notNull(),
+    editedAt: text('edited_at').notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.careerId, t.revision] })],
+);

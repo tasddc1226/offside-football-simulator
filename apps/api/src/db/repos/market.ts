@@ -16,6 +16,12 @@ import { CARD_VALUE_FLOOR, marketRatio } from '@offside/contracts/market-value';
 import { DEFAULT_NATION } from '@offside/contracts/nations';
 import type { DetailPos, PosGroup } from '@offside/contracts/positions';
 import { and, asc, desc, eq, gte, isNotNull, sql } from 'drizzle-orm';
+import { readSnapshotJson } from '../../careerSnapshots.js';
+import { boundValueRows } from '../../plausibility.js';
+import { retireAtOf } from '@offside/contracts/service-seasons';
+import { saleCeilingBase, type ValueRow } from '@offside/contracts/market-value';
+import type { Bindings } from '../../env.js';
+import { displayBodyColumns } from '../displayBody.js';
 import type { Db } from '../client.js';
 import { getActiveBalance } from './balance.js';
 import { eventNotificationStatements } from '../../push/events.js';
@@ -23,6 +29,7 @@ import { bodyOf, peakOf } from './ownerTeams.js';
 import {
   cards,
   careers,
+  careerSeasons,
   marketDaily,
   marketListings,
   ownerFundLedger,
@@ -57,8 +64,7 @@ const cardCols = {
   peakProfile: cards.peakProfile,
   type: careers.type,
   foot: careers.foot,
-  height: careers.height,
-  weight: careers.weight,
+  ...displayBodyColumns,
   cardValue: cards.cardValue,
   transfers: cards.transfers,
   season: cards.serviceSeason,
@@ -246,6 +252,9 @@ export async function cardForListing(db: Db, careerId: string) {
   const [row] = await db
     .select({
       ownerId: cards.ownerId,
+      peak: cards.peak,
+      snapshotKey: careers.snapshotKey,
+      snapshotJson: careers.snapshotJson,
       season: cards.serviceSeason,
       cardValue: cards.cardValue,
       enhance: cards.enhance,
@@ -262,6 +271,38 @@ export async function cardForListing(db: Db, careerId: string) {
     )
     .where(eq(cards.careerId, careerId));
   return row;
+}
+
+/** Only resolve the selected card. Reuse retirement's trusted season bounds. */
+export async function listingCeilingBase(
+  db: Db,
+  env: Pick<Bindings, 'BACKUP'>,
+  careerId: string,
+  card: NonNullable<Awaited<ReturnType<typeof cardForListing>>>,
+) {
+  const value = card.cardValue ?? 0;
+  const json = await readSnapshotJson(env, card);
+  if (!json) return value;
+  const snapshot = JSON.parse(json) as { career?: (ValueRow & { year: number })[] };
+  if (!Array.isArray(snapshot.career)) return value;
+  const s = careerSeasons;
+  const rows = await db
+    .select({
+      year: s.year,
+      age: s.age,
+      league: s.league,
+      clubId: s.clubId,
+      ovr: s.ovr,
+      mil: s.mil,
+    })
+    .from(s)
+    .where(eq(s.careerId, careerId));
+  const verified = boundValueRows(
+    snapshot.career,
+    rows.map((r) => ({ ...r, mil: !!r.mil })),
+    retireAtOf(card.season),
+  );
+  return saleCeilingBase(verified, card.peak, value);
 }
 
 /** T-11-145 이 선수들 중 시장에 내놓은(열린 매물) 수.
