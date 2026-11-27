@@ -474,6 +474,8 @@ function nextStep(l: FirstLadder, top: number): number | null {
 
 const LADDERS = SPECS.filter(isLadder);
 const LADDER_ID = new Map(LADDERS.map((l) => [l.key, l]));
+export const LEGEND_THRESHOLDS = stepsUpTo(LADDER_ID.get('legend')!, Infinity);
+
 /** 단계 id → (단계, 값). 단계 id가 아니면 null. */
 function parseLadderId(id: string): { l: FirstLadder; v: number } | null {
   const m = /^([a-z_]+?)(\d+)$/.exec(id);

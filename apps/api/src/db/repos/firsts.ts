@@ -39,27 +39,35 @@ type RecordClaim = Claim & { value: number };
 /** 같은 기록은 시각이 더 이른 쪽만 남긴다(동시 업로드·재계산 순서와 상관없이 결과가 같다). */
 function upsertFirst(db: Db, c: Claim) {
   const set = { careerId: c.careerId, achievedAt: c.at, year: c.year };
-  return db
-    .insert(serverFirsts)
-    .values({ season: c.season, id: c.id, ...set })
-    .onConflictDoUpdate({
-      target: [serverFirsts.season, serverFirsts.id],
-      set,
-      setWhere: sql`excluded.achieved_at < ${serverFirsts.achievedAt}`,
-    });
+  const insert = db.insert(serverFirsts);
+  // Recheck the live retirement before applying a claim from an earlier read.
+  const claim = c.id.startsWith('legend')
+    ? insert.select(sql`SELECT ${c.season}, ${c.id}, id, retired_at, NULL FROM careers
+        WHERE id = ${c.careerId} AND status = 'retired' AND hidden = 0 AND retired_at = ${c.at}
+        AND legend_score >= ${Number(c.id.slice('legend'.length))}`)
+    : insert.values({ season: c.season, id: c.id, ...set });
+  return claim.onConflictDoUpdate({
+    target: [serverFirsts.season, serverFirsts.id],
+    set,
+    setWhere: sql`excluded.achieved_at < ${serverFirsts.achievedAt}`,
+  });
 }
 
 /** 서버 기록은 더 큰 값만 자리를 바꾼다(같은 값이면 먼저 세운 쪽이 지킨다). */
 function upsertRecord(db: Db, r: RecordClaim) {
   const set = { careerId: r.careerId, value: r.value, achievedAt: r.at, year: r.year };
-  return db
-    .insert(serverRecords)
-    .values({ season: r.season, id: r.id, ...set })
-    .onConflictDoUpdate({
-      target: [serverRecords.season, serverRecords.id],
-      set,
-      setWhere: sql`excluded.value > ${serverRecords.value}`,
-    });
+  const insert = db.insert(serverRecords);
+  const claim =
+    r.id === 'legend'
+      ? insert.select(sql`SELECT ${r.season}, ${r.id}, id, legend_score, retired_at, NULL FROM careers
+        WHERE id = ${r.careerId} AND status = 'retired' AND hidden = 0 AND retired_at = ${r.at}
+        AND legend_score = ${r.value}`)
+      : insert.values({ season: r.season, id: r.id, ...set });
+  return claim.onConflictDoUpdate({
+    target: [serverRecords.season, serverRecords.id],
+    set,
+    setWhere: sql`excluded.value > ${serverRecords.value}`,
+  });
 }
 
 const chunks = <T>(xs: T[], n = IN_CHUNK): T[][] =>
