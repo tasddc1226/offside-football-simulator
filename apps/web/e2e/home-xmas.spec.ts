@@ -41,7 +41,11 @@ function eventOf(over: { claimed?: string[]; owner?: boolean } = {}) {
 
 async function stub(page: Page, now: string) {
   await page.clock.setFixedTime(new Date(now));
-  await page.addInitScript(() => localStorage.setItem('ft_session', '1'));
+  const kstDay = new Date(Date.parse(now) + 9 * 3600_000).toISOString().slice(0, 10);
+  await page.addInitScript((day) => {
+    localStorage.setItem('ft_session', '1');
+    localStorage.setItem('ft_partner_amachuggu_hide', day);
+  }, kstDay);
   const calls = { get: 0, post: [] as string[] };
   const claimed: string[] = [];
   await page.route(`${API}/v1/events/xmas`, (r) => {
