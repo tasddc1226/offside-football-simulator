@@ -434,11 +434,15 @@ export const careers = sqliteTable(
     nameHiddenAt: text('name_hidden_at'),
     // 1이면 공개 순위(명예의 전당·서버 기록·결번·홈 소식)에서 뺀다. 은퇴 때 시즌 신호가 자동 플레이로 판정되면 서버가 켠다.
     hidden: integer('hidden').notNull().default(0),
+    firstsRevision: integer('firsts_revision').notNull().default(0),
     // T-11-030 잠재력 관찰. pot은 비공개 최초 스카우트 평가, potReal은 은퇴 리포트·기록실에 공개하는 은퇴 시점 값.
     pot: integer('pot'),
     potReal: integer('pot_real'),
   },
   (table) => [
+    index('careers_firsts_season_idx')
+      .on(sql`coalesce(${table.serviceSeason}, 0)`)
+      .where(sql`${table.hidden} = 0`),
     index('careers_detail_archive_idx').on(table.detailArchiveKey),
     // T-11-659 profile_id 단일 인덱스는 지웠다. 아래 (profile_id, …) 복합 인덱스들이 같은 조회 · 외래키 삭제를 맡는다.
     index('careers_owner_title_updated_idx').on(table.profileId, table.status, table.updatedAt),
@@ -1089,8 +1093,27 @@ export const balancePatches = sqliteTable(
   (table) => [index('balance_patches_applied_idx').on(table.appliedAt)],
 );
 
+// A replacement job gets a new sequence so stale workers cannot acknowledge it.
+export const firstsRepairs = sqliteTable(
+  'firsts_repairs',
+  {
+    seq: integer('seq').primaryKey({ autoIncrement: true }),
+    // Indexed retirement query, single-career evaluation, or season page.
+    work: integer('work').notNull().default(0),
+    season: integer('season').notNull(),
+    kind: text('kind', { enum: ['first', 'record', 'career', 'legacy'] }).notNull(),
+    id: text('id').notNull(),
+    cursor: integer('cursor').notNull().default(0),
+  },
+  (t) => [
+    uniqueIndex('firsts_repairs_slot_idx').on(t.season, t.kind, t.id),
+    index('firsts_repairs_order_idx').on(t.work, t.seq),
+    index('firsts_repairs_page_idx').on(t.season, t.cursor, t.work, t.seq),
+  ],
+);
+
 /** T-10-027 서버 최초 기록. 기록 id(src/firsts.ts firstsCatalog)마다 가장 먼저 달성한 커리어 한 줄. 커리어가 지워지면
- * 함께 지워지고, 다음 재계산(app_meta 버전) 때 그다음으로 이른 커리어가 채운다.
+ * 함께 지워지고, 해당 시즌·기록의 수리 작업이 다음 달성자를 찾는다.
  * T-11-029 시즌마다 따로 겨룬다 — season은 커리어의 service_season(NULL이면 0, 0 = 프리시즌), 키는 (season, id). */
 export const serverFirsts = sqliteTable(
   'server_firsts',

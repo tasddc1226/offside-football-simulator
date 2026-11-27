@@ -623,6 +623,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     // T-11-735 최고 소장품 등급 · 은퇴 유산 등급.
     'item_top',
     'legacy_tier',
+    'firsts_revision',
   ],
   career_seasons: [
     'career_id',
@@ -782,6 +783,7 @@ const EXPECTED_COLUMNS: Record<string, string[]> = {
     'changes_json',
     'created_at',
   ],
+  firsts_repairs: ['seq', 'work', 'season', 'kind', 'id', 'cursor'],
   server_firsts: ['season', 'id', 'career_id', 'achieved_at', 'year'],
   app_meta: ['key', 'value'],
   server_records: ['season', 'id', 'career_id', 'value', 'achieved_at', 'year'],

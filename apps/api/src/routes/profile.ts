@@ -291,8 +291,7 @@ export function registerProfileRoutes(app: Hono<AppEnv>): void {
         now,
       },
     );
-    // 지운 커리어가 가진 최초·서버 기록은 삭제 배치가 재계산 표시를 지웠으니, 목록 캐시만 비우면 다음 공개
-    // 조회부터 조각씩 다시 훑어 채운다. 나머지는 바뀐 공개 캐시만 비운다(명예의 전당 목록은 TTL 1분).
+    // Ledger deletes enqueue their specific slots in the deletion transaction.
     if (previousAvatar?.id) {
       purgeEdge(c, [`/v1/avatars/${previousAvatar.id}`]);
       if (c.env.CHAT)

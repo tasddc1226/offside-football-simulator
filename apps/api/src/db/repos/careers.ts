@@ -44,6 +44,7 @@ import { runBatch } from './batch.js';
 import { sha256Hex } from '../hash.js';
 import { retryTransientRead, retryTransientWrite } from '../retry.js';
 import { kstDay } from '../../time.js';
+import { queueFirstsRejudge, queuedFirstsRevision } from './firstsMutations.js';
 import { honorsOf, hideCareerStatements } from './firsts.js';
 import {
   appMeta,
@@ -156,11 +157,22 @@ export async function putCareerSeason(
   const revision = input.uploadRevision ?? 0;
   // Check inside the same transaction, before updating the season. This also covers
   // a committed write whose HTTP response was lost, and concurrent duplicate PUTs.
+  const alreadyReceived = sql`upload_hash = ${uploadHash} OR (${revision} > 0 AND upload_revision >= ${revision})`;
   const accept = sql`not exists (select 1 from career_seasons where career_id = ${careerId}
-    and year = ${year} and (upload_hash = ${uploadHash}
-      or (${revision} > 0 and upload_revision >= ${revision})))`;
+    and year = ${year} and (${alreadyReceived}))`;
   const results = await retryTransientWrite(() =>
     runBatch(db, [
+      // One (career_id, year) seek. A later first match means a missing year is being
+      // inserted. An exact match only matters if the accepted upload changes record evidence.
+      queueFirstsRejudge(
+        db,
+        careerId,
+        sql`hidden=0 AND (
+        SELECT CASE WHEN s.year>${year} THEN 1 WHEN (${alreadyReceived}) OR careers.status='retired' THEN 0
+          ELSE (s.age,s.club,s.league,s.apps,s.goals,s.assists,s.cs,s.caps,s.rating,s.ovr,s.honors_json,s.mil)
+            IS NOT (${season.age},${season.club},${season.league},${season.apps},${season.goals},${season.assists},${detail.cs},${detail.caps},${season.rating},${season.ovr},${JSON.stringify(season.honors)},${season.mil ? 1 : 0}) END
+        FROM career_seasons s WHERE s.career_id=${careerId} AND s.year>=${year} ORDER BY s.year LIMIT 1)`,
+      ),
       db
         .insert(careers)
         .values({
@@ -194,6 +206,7 @@ export async function putCareerSeason(
           set: {
             // 포지션·주발·유형·특성·시작 연도는 커리어를 만들 때 정해져 바뀌지 않는다 — 처음 값을 지킨다(뒤늦게
             // 포지션을 바꿔 레전드 점수·결번 가중을 고르지 못하게).
+            firstsRevision: queuedFirstsRevision,
             appVersion: meta.appVersion,
             // 처음 스카우트 평가는 비어 있을 때만 채운다(첫 시즌 업로드가 늦게 와도 한 번만).
             ...(meta.pot !== undefined && { pot: sql`coalesce(${careers.pot}, ${meta.pot})` }),
@@ -358,10 +371,17 @@ export async function putRetirement(
         target: appMeta.key,
         set: { value: sql`cast(${appMeta.value} as integer) + 1` },
       }),
+    queueFirstsRejudge(
+      db,
+      careerId,
+      sql`hidden=0 AND retired_at IS NOT NULL
+      AND (legend_score IS NOT ${summary.legendScore} OR retire_age IS NOT ${summary.retireAge})`,
+    ),
     db
       .update(careers)
       .set({
         status: 'retired',
+        firstsRevision: queuedFirstsRevision,
         retiredAt: sql`coalesce(${careers.retiredAt}, ${now})`,
         updatedAt: now,
         retireAge: summary.retireAge,
@@ -508,7 +528,7 @@ export async function putRetirement(
       )
       .onConflictDoNothing(),
   ]);
-  return (results[1] as RetiredHead[])[0];
+  return (results[2] as RetiredHead[])[0];
 }
 
 // ───────── T-10-005 공개 명예의 전당 (로그인 불필요 · 읽기 전용) ─────────

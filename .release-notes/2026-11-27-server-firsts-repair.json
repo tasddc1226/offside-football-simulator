@@ -1,0 +1,26 @@
+{
+  "id": "t-11-837-server-firsts-repair",
+  "title": "시즌 최초 달성과 최고 기록",
+  "items": [
+    "기록 보유자가 순위에서 빠지거나 경기 기록이 정정되면, 영향을 받은 시즌 기록부터 다음 달성자를 찾아요."
+  ],
+  "en": {
+    "title": "Season milestones and records",
+    "items": [
+      "When a record holder leaves the rankings or match statistics are corrected, the affected season records are checked for the next eligible players."
+    ]
+  },
+  "ja": {
+    "title": "シーズンの初達成と最高記録",
+    "items": [
+      "記録保持者がランキングから外れたり試合記録が訂正されたりしたときは、影響を受けたシーズン記録から次の達成者を確認します。"
+    ]
+  },
+  "zh": {
+    "title": "賽季首位達成者與最高紀錄",
+    "items": [
+      "當紀錄保持者退出排行榜或比賽數據更正時，系統會優先核對受影響的賽季紀錄，找出下一位符合資格的球員。"
+    ]
+  },
+  "availability": "web-app"
+}

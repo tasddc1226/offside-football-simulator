@@ -514,6 +514,14 @@ export function firstsCatalog(achieved: Iterable<string>, season?: number): Firs
   });
 }
 
+// Resolve only the requested slot, using the same ladder and single-record rules as uploads.
+export function firstRule(id: string): FirstDef['at'] | undefined {
+  const ladder = parseLadderId(id);
+  if (ladder && stepsUpTo(ladder.l, ladder.v).includes(ladder.v)) return ladder.l.at(ladder.v);
+  const fixed = SPECS.find((s): s is FirstDef => !isLadder(s) && s.id === id);
+  return fixed?.at;
+}
+
 /** 한 커리어가 채운 기록과 그 시각. */
 export function evaluateCareer(c: FirstCareer): { id: string; at: string; year: number | null }[] {
   const out: { id: string; at: string; year: number | null }[] = [];

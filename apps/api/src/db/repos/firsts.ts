@@ -1,12 +1,19 @@
-import { META_KEY, CURSOR_KEY, setMeta } from './firstsMutations.js';
-export { resetFirstsBackfillStatement, hideCareerStatements, setMeta } from './firstsMutations.js';
+import { META_KEY, CURSOR_KEY } from './firstsMutations.js';
+export { hideCareerStatements, setMeta } from './firstsMutations.js';
 import type { FirstsResponse } from '@offside/contracts';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { Db } from '../client.js';
 import { blockingReasons } from './automation.js';
 import { autoHideCareer } from './automationEnforcement.js';
 import { runBatch } from './batch.js';
-import { appMeta, careers, careerSeasons, serverFirsts, serverRecords } from '../schema.js';
+import {
+  appMeta,
+  careers,
+  careerSeasons,
+  firstsRepairs,
+  serverFirsts,
+  serverRecords,
+} from '../schema.js';
 import {
   RECORDS,
   evaluateCareer,
@@ -16,8 +23,8 @@ import {
 } from '../../firsts.js';
 
 // T-10-027 서버 최초 기록 · T-10-056 서버 기록. 시즌·은퇴 업로드 때 그 커리어만 다시 판정해 "더 이른 달성"이면
-// 최초 기록 자리를, "더 큰 값"이면 서버 기록 자리를 바꾼다. 판정 규칙이 바뀌거나 처음 배포될 때, 또는 기록을
-// 가진 커리어가 지워졌을 때는 전체 커리어를 다시 훑는다 — 한 요청에 다 읽으면 Workers 무료 플랜 CPU(10ms)를
+// 최초 기록 자리를, "더 큰 값"이면 서버 기록 자리를 바꾼다. 처음 배포하거나
+// 새 판정 규칙을 도입할 때는 전체 커리어를 다시 훑는다 — 한 요청에 다 읽으면 Workers 무료 플랜 CPU(10ms)를
 // 넘으므로 조각으로 나눠 5분 cron이 저장된 위치(app_meta)에서 제한된 수의 조각만 이어서 훑는다.
 // 다시 훑기는 더 이른 달성·더 큰 값만 더한다 — 규칙이 늘어날 때는 BACKFILL_VERSION만 올리면 되지만, 규칙을
 // 좁히거나 없애면 기존 행이 남으므로 마이그레이션으로 해당 행을 지운 뒤 버전을 올린다.
@@ -33,19 +40,22 @@ const MAX_RESCAN_CHUNKS_PER_TICK = 8;
 /** D1 바인딩 변수 한도(100) 아래로 IN 목록을 나눈다. */
 const IN_CHUNK = 90;
 
-type Claim = { season: number; id: string; careerId: string; at: string; year: number | null };
+type Claim = {
+  revision: number;
+  season: number;
+  id: string;
+  careerId: string;
+  at: string;
+  year: number | null;
+};
 type RecordClaim = Claim & { value: number };
 
 /** 같은 기록은 시각이 더 이른 쪽만 남긴다(동시 업로드·재계산 순서와 상관없이 결과가 같다). */
-function upsertFirst(db: Db, c: Claim) {
+export function upsertFirst(db: Db, c: Claim) {
   const set = { careerId: c.careerId, achievedAt: c.at, year: c.year };
-  const insert = db.insert(serverFirsts);
-  // Recheck the live retirement before applying a claim from an earlier read.
-  const claim = c.id.startsWith('legend')
-    ? insert.select(sql`SELECT ${c.season}, ${c.id}, id, retired_at, NULL FROM careers
-        WHERE id = ${c.careerId} AND status = 'retired' AND hidden = 0 AND retired_at = ${c.at}
-        AND legend_score >= ${Number(c.id.slice('legend'.length))}`)
-    : insert.values({ season: c.season, id: c.id, ...set });
+  const claim = db.insert(serverFirsts)
+    .select(sql`SELECT ${c.season}, ${c.id}, id, ${c.at}, ${c.year} FROM careers
+      WHERE id = ${c.careerId} AND hidden = 0 AND firsts_revision = ${c.revision}`);
   return claim.onConflictDoUpdate({
     target: [serverFirsts.season, serverFirsts.id],
     set,
@@ -54,19 +64,17 @@ function upsertFirst(db: Db, c: Claim) {
 }
 
 /** 서버 기록은 더 큰 값만 자리를 바꾼다(같은 값이면 먼저 세운 쪽이 지킨다). */
-function upsertRecord(db: Db, r: RecordClaim) {
+export function upsertRecord(db: Db, r: RecordClaim, repair = false) {
   const set = { careerId: r.careerId, value: r.value, achievedAt: r.at, year: r.year };
-  const insert = db.insert(serverRecords);
-  const claim =
-    r.id === 'legend'
-      ? insert.select(sql`SELECT ${r.season}, ${r.id}, id, legend_score, retired_at, NULL FROM careers
-        WHERE id = ${r.careerId} AND status = 'retired' AND hidden = 0 AND retired_at = ${r.at}
-        AND legend_score = ${r.value}`)
-      : insert.values({ season: r.season, id: r.id, ...set });
+  const claim = db.insert(serverRecords)
+    .select(sql`SELECT ${r.season}, ${r.id}, id, ${r.value}, ${r.at}, ${r.year} FROM careers
+      WHERE id = ${r.careerId} AND hidden = 0 AND firsts_revision = ${r.revision}`);
   return claim.onConflictDoUpdate({
     target: [serverRecords.season, serverRecords.id],
     set,
-    setWhere: sql`excluded.value > ${serverRecords.value}`,
+    setWhere: repair
+      ? sql`excluded.value > ${serverRecords.value} OR (excluded.value = ${serverRecords.value} AND excluded.achieved_at < ${serverRecords.achievedAt})`
+      : sql`excluded.value > ${serverRecords.value}`,
   });
 }
 
@@ -89,7 +97,6 @@ const seasonColumns = {
   honorsJson: careerSeasons.honorsJson,
   mil: careerSeasons.mil,
   createdAt: careerSeasons.createdAt,
-  signalsJson: careerSeasons.signalsJson,
 };
 type SeasonRow = Pick<typeof careerSeasons.$inferSelect, keyof typeof seasonColumns>;
 
@@ -103,7 +110,7 @@ export function honorsOf(json: string): string[] {
 }
 
 /** 판정할 커리어 + 그 커리어가 겨루는 시즌(service_season, NULL이면 0). */
-type SeasonCareer = FirstCareer & { season: number };
+type SeasonCareer = FirstCareer & { season: number; revision: number };
 
 function toCareers(
   cs: {
@@ -112,6 +119,7 @@ function toCareers(
     retiredAt: string | null;
     retireAge: number | null;
     serviceSeason: number | null;
+    revision: number;
   }[],
   rows: SeasonRow[],
 ): SeasonCareer[] {
@@ -146,10 +154,11 @@ const careerColumns = {
   retiredAt: careers.retiredAt,
   retireAge: careers.retireAge,
   serviceSeason: careers.serviceSeason,
+  revision: careers.firstsRevision,
 };
 
 /** 여러 커리어를 판정해, 지금 가진 기록보다 나은 것만 쓰는 문장들. */
-async function claimStatements(db: Db, list: SeasonCareer[]) {
+async function claimStatements(db: Db, list: SeasonCareer[], repair = false) {
   // 기록 자리는 (시즌, 기록 id) — 같은 기록도 시즌마다 따로 겨룬다.
   const key = (season: number, id: string) => `${season}\t${id}`;
   const firsts = new Map<string, Claim>();
@@ -158,12 +167,22 @@ async function claimStatements(db: Db, list: SeasonCareer[]) {
     for (const g of evaluateCareer(c)) {
       const b = firsts.get(key(c.season, g.id));
       if (!b || g.at < b.at)
-        firsts.set(key(c.season, g.id), { ...g, season: c.season, careerId: c.id });
+        firsts.set(key(c.season, g.id), {
+          ...g,
+          season: c.season,
+          revision: c.revision,
+          careerId: c.id,
+        });
     }
     for (const r of evaluateRecords(c)) {
       const b = records.get(key(c.season, r.id));
-      if (!b || r.value > b.value) {
-        records.set(key(c.season, r.id), { ...r, season: c.season, careerId: c.id });
+      if (!b || r.value > b.value || (repair && r.value === b.value && r.at < b.at)) {
+        records.set(key(c.season, r.id), {
+          ...r,
+          season: c.season,
+          revision: c.revision,
+          careerId: c.id,
+        });
       }
     }
   }
@@ -173,8 +192,14 @@ async function claimStatements(db: Db, list: SeasonCareer[]) {
   for (const g of firsts.values()) wanted.set(g.season, [...(wanted.get(g.season) ?? []), g.id]);
   const [heldRecords, ...heldFirsts] = await db.batch([
     db
-      .select({ season: serverRecords.season, id: serverRecords.id, value: serverRecords.value })
-      .from(serverRecords),
+      .select({
+        season: serverRecords.season,
+        id: serverRecords.id,
+        value: serverRecords.value,
+        at: serverRecords.achievedAt,
+      })
+      .from(serverRecords)
+      .where(inArray(serverRecords.season, [...new Set(list.map((c) => c.season))])),
     ...[...wanted].flatMap(([season, seasonIds]) =>
       chunks(seasonIds).map((ids) =>
         db
@@ -190,14 +215,20 @@ async function claimStatements(db: Db, list: SeasonCareer[]) {
     ),
   ]);
   const cur = new Map(heldFirsts.flat().map((h) => [key(h.season, h.id), h]));
-  const top = new Map(heldRecords.map((r) => [key(r.season, r.id), r.value]));
+  const top = new Map(heldRecords.map((r) => [key(r.season, r.id), r]));
   // 이미 이 커리어가 가졌거나 더 이른 기록이 있으면 쓰지 않는다.
   const wins = [...firsts.values()].filter((g) => {
     const h = cur.get(key(g.season, g.id));
     return !h || (h.careerId !== g.careerId && g.at < h.at);
   });
-  const broken = [...records.values()].filter((r) => r.value > (top.get(key(r.season, r.id)) ?? 0));
-  return [...wins.map((g) => upsertFirst(db, g)), ...broken.map((r) => upsertRecord(db, r))];
+  const broken = [...records.values()].filter((r) => {
+    const h = top.get(key(r.season, r.id));
+    return r.value > (h?.value ?? 0) || (repair && h && r.value === h.value && r.at < h.at);
+  });
+  return [
+    ...wins.map((g) => upsertFirst(db, g)),
+    ...broken.map((r) => upsertRecord(db, r, repair)),
+  ];
 }
 
 /** 공개 순위에서 뺀(자동 플레이로 판정된) 커리어는 기록을 쥘 수 없다. */
@@ -214,7 +245,10 @@ export async function recordCareerFirsts(
     ? [await db.select(careerColumns).from(careers).where(shown(careerId)), []]
     : await db.batch([
         db.select(careerColumns).from(careers).where(shown(careerId)),
-        db.select(seasonColumns).from(careerSeasons).where(eq(careerSeasons.careerId, careerId)),
+        db
+          .select({ ...seasonColumns, signalsJson: careerSeasons.signalsJson })
+          .from(careerSeasons)
+          .where(eq(careerSeasons.careerId, careerId)),
       ]);
   const [career] = toCareers(cs, rows);
   if (!career) return false;
@@ -231,6 +265,67 @@ export async function recordCareerFirsts(
   return statements.length > 0;
 }
 
+// Re-evaluate just the restored/corrected player. Vacating a changed holding queues
+// that exact slot via trigger; unchanged holdings keep their original tie priority.
+export async function rejudgeCareer(db: Db, id: string, seq: number) {
+  const [cs, rows] = await db.batch([
+    db.select(careerColumns).from(careers).where(shown(id)),
+    db.select(seasonColumns).from(careerSeasons).where(eq(careerSeasons.careerId, id)),
+  ]);
+  const [career] = toCareers(cs, rows);
+  const acknowledge = db.delete(firstsRepairs).where(eq(firstsRepairs.seq, seq));
+  if (!career) {
+    await acknowledge;
+    return;
+  }
+  const current = sql`EXISTS (SELECT 1 FROM firsts_repairs WHERE seq=${seq})
+    AND EXISTS (SELECT 1 FROM careers WHERE id=${id} AND hidden=0 AND firsts_revision=${career.revision})`;
+  const firsts = JSON.stringify(evaluateCareer(career));
+  const records = JSON.stringify(evaluateRecords(career));
+  const claims = await claimStatements(db, [career], true);
+  await runBatch(db, [
+    db.delete(serverFirsts).where(sql`career_id=${id} AND ${current} AND NOT EXISTS
+      (SELECT 1 FROM json_each(${firsts}) j WHERE json_extract(j.value,'$.id')=server_firsts.id
+       AND json_extract(j.value,'$.at')=server_firsts.achieved_at AND json_extract(j.value,'$.year') IS server_firsts.year)`),
+    db.delete(serverRecords).where(sql`career_id=${id} AND ${current} AND NOT EXISTS
+      (SELECT 1 FROM json_each(${records}) j WHERE json_extract(j.value,'$.id')=server_records.id
+       AND json_extract(j.value,'$.at')=server_records.achieved_at AND json_extract(j.value,'$.year') IS server_records.year
+       AND json_extract(j.value,'$.value')=server_records.value)`),
+    ...claims,
+    acknowledge,
+  ]);
+}
+
+// SQLite's secondary index ends in rowid. The exact same predicate selects both halves of a page.
+export async function readFirstsPage(db: Db, cursor: number, size: number, season?: number) {
+  const where = and(
+    sql`rowid > ${cursor} AND hidden = 0`,
+    season === undefined ? undefined : sql`coalesce(service_season,0) = ${season}`,
+  );
+  const ids = db
+    .select({ id: careers.id })
+    .from(careers)
+    .where(where)
+    .orderBy(sql`rowid`)
+    .limit(size);
+  const [cs, rows] = await db.batch([
+    db
+      .select({ ...careerColumns, rowid: sql<number>`rowid` })
+      .from(careers)
+      .where(where)
+      .orderBy(sql`rowid`)
+      .limit(size),
+    db.select(seasonColumns).from(careerSeasons).where(inArray(careerSeasons.careerId, ids)),
+  ]);
+  const versions = JSON.stringify(cs.map((c) => [c.id, c.revision]));
+  // If the strongest candidate disappeared while we computed the page, retry the page
+  // so that its runner-up is not skipped. Each individual claim also checks eligibility.
+  const unchanged = sql`NOT EXISTS (SELECT 1 FROM json_each(${versions}) j
+    LEFT JOIN careers c ON c.id=json_extract(j.value,'$[0]')
+    WHERE c.id IS NULL OR c.hidden<>0 OR c.firsts_revision<>json_extract(j.value,'$[1]'))`;
+  return { careers: toCareers(cs, rows), last: cs.at(-1)?.rowid ?? cursor, unchanged };
+}
+
 /** 다시 훑는 중이면 다음 한 조각(chunk명)을 판정한다. 무언가 했으면 true. */
 export async function ensureFirstsBackfilled(db: Db, chunk = RESCAN_CHUNK): Promise<boolean> {
   const meta = await db
@@ -240,39 +335,31 @@ export async function ensureFirstsBackfilled(db: Db, chunk = RESCAN_CHUNK): Prom
   const m = new Map(meta.map((r) => [r.key, r.value]));
   if (m.get(META_KEY) === BACKFILL_VERSION) return false;
   const cursor = Number(m.get(CURSOR_KEY) ?? 0);
-  const [cs, rows] = await db.batch([
-    db
-      .select({ ...careerColumns, rowid: sql<number>`rowid` })
-      .from(careers)
-      .where(sql`rowid > ${cursor} and hidden = 0`)
-      .orderBy(sql`rowid`)
-      .limit(chunk),
-    db
-      .select(seasonColumns)
-      .from(careerSeasons)
-      .where(
-        sql`${careerSeasons.careerId} in (select id from careers where rowid > ${cursor} and hidden = 0 order by rowid limit ${chunk})`,
-      ),
-  ]);
-  const statements = await claimStatements(db, toCareers(cs, rows));
-  const done = cs.length < chunk;
+  const page = await readFirstsPage(db, cursor, chunk);
+  const statements = await claimStatements(db, page.careers);
+  const current = sql`${page.unchanged} AND NOT EXISTS (SELECT 1 FROM app_meta WHERE key=${META_KEY} AND value=${BACKFILL_VERSION}) AND coalesce((SELECT CAST(value AS INTEGER) FROM app_meta WHERE key=${CURSOR_KEY}),0)=${cursor}`;
+  const done = page.careers.length < chunk;
+  const key = done ? META_KEY : CURSOR_KEY;
+  const value = done ? BACKFILL_VERSION : String(page.last);
   await runBatch(db, [
     ...statements,
+    db
+      .insert(appMeta)
+      .select(sql`SELECT ${key},${value} WHERE ${current}`)
+      .onConflictDoUpdate({ target: appMeta.key, set: { value } }),
     ...(done
       ? [
-          setMeta(db, META_KEY, BACKFILL_VERSION),
-          db.delete(appMeta).where(eq(appMeta.key, CURSOR_KEY)),
+          db.delete(appMeta).where(sql`key=${CURSOR_KEY} AND EXISTS
+      (SELECT 1 FROM app_meta WHERE key=${META_KEY} AND value=${BACKFILL_VERSION})`),
         ]
-      : [setMeta(db, CURSOR_KEY, String(cs[cs.length - 1]!.rowid))]),
+      : []),
   ]);
   return true;
 }
 
 /**
- * T-11-643 5분 cron이 다시 훑기에 쓰는 시간. 기록 보유자가 숨겨지거나 탈퇴할 때마다 전체(약 36만 커리어)를 한 번씩
- * 다시 봐야 해서 숨김이 잦으면 다시 훑기가 하루 종일 쉬지 않는다. 그동안 다른 무거운 일과 겹치는 틱에서 D1이 "overloaded"로
- * 사용자 요청까지 거절했다(2026-11-05~06). 사용자가 몰리는 KST 19시~다음 날 2시와 백업 조각을 읽은 틱에는 쉰다. 쉬는 동안에도
- * 업로드는 자기 커리어를 바로 판정하므로, 늦어지는 것은 빈 기록 자리를 채우는 일뿐이다.
+ * Full scans for rule changes and targeted repair share the off-peak maintenance budget.
+ * Uploads still evaluate their own career while maintenance is paused.
  */
 export function firstsRescanBudgetMs(nowMs: number, backupRan: boolean): number {
   if (backupRan) return 0;
@@ -281,10 +368,10 @@ export function firstsRescanBudgetMs(nowMs: number, backupRan: boolean): number 
 }
 
 /** 전체 재계산을 시간 한도 안에서 이어 간다(5분 cron). 훑은 조각 수를 돌려준다(T-11-156). */
-export async function runFirstsRescan(db: Db, budgetMs = 20_000): Promise<number> {
+export async function runFirstsRescan(db: Db, budgetMs = 20_000, usedChunks = 0): Promise<number> {
   const until = Date.now() + budgetMs;
   let chunks = 0;
-  while (chunks < MAX_RESCAN_CHUNKS_PER_TICK && Date.now() < until) {
+  while (chunks + usedChunks < MAX_RESCAN_CHUNKS_PER_TICK && Date.now() < until) {
     if (!(await ensureFirstsBackfilled(db))) break;
     chunks++;
   }

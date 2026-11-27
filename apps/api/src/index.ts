@@ -4,7 +4,7 @@ import { LIVE_SOCKET_PATH } from '@offside/contracts/polling';
 import { app } from './app.js';
 import { updateClubStrength } from './clubStrength/update.js';
 import { runBackupStep } from './cron/backup.js';
-import { repairNextLegendSeason } from './cron/legendFirsts.js';
+import { repairNextFirsts } from './cron/firstsRepair.js';
 import { runDailyTick } from './cron/dailyRunner.js';
 import { runSeasonEventsArchive } from './cron/seasonEventsArchive.js';
 import { runSeasonTelemetryArchive } from './cron/seasonTelemetryArchive.js';
@@ -34,7 +34,7 @@ import { runLeague } from './team/league.js';
 import { alertLeagueStalls } from './team/leagueAlert.js';
 import { writeLeagueNewsAi } from './team/leagueNewsAi.js';
 import { purgeEdgeOrigin } from './edgeCache.js';
-import { STALE } from './edgeKeys.js';
+import { EDGE, STALE } from './edgeKeys.js';
 import { runSeasonClose } from './team/seasonClose.js';
 import { runDailyRank } from './team/dailyRank.js';
 import { logErrorText } from './logError.js';
@@ -293,14 +293,27 @@ export default {
       // 돌 수 있어 앞 단계를 밀지 않게 맨 끝에 둔다. 피크와 백업 조각을 읽은 틱에는 쉰다(T-11-643).
       const rescanBudget = firstsRescanBudgetMs(controller.scheduledTime, backupRan);
       const rescanDeadline = Date.now() + rescanBudget;
-      if (rescanBudget > 0)
-        await repairNextLegendSeason(env.DB).catch(logged('legend-firsts-repair'));
-      await runFirstsRescan(createDb(env.DB), Math.max(0, rescanDeadline - Date.now()))
+      // Leave half the shared time for an in-flight rule-version backfill.
+      const repairDeadline = rescanDeadline - rescanBudget / 2;
+      const repairedSeasons = new Set<number>();
+      let repaired = 0;
+      for (; repaired < 4 && Date.now() < repairDeadline; repaired++) {
+        const job = await repairNextFirsts(env.DB, repaired % 2 === 0).catch(
+          logged('firsts-repair'),
+        );
+        if (!job) break;
+        repairedSeasons.add(job.season);
+      }
+      await runFirstsRescan(createDb(env.DB), Math.max(0, rescanDeadline - Date.now()), repaired)
         .then(
           (n) =>
             n && console.log(JSON.stringify({ level: 'info', job: 'firsts-rescan', chunks: n })),
         )
         .catch(logged('firsts-rescan'));
+      if (env.PUBLIC_API_ORIGIN && repairedSeasons.size)
+        await purgeEdgeOrigin(env.PUBLIC_API_ORIGIN, [...repairedSeasons].map(EDGE.firsts)).catch(
+          logged('firsts-purge'),
+        );
       mark('runFirstsRescan');
     }
   },

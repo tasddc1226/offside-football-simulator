@@ -1,10 +1,15 @@
 import { actionEntry } from './automationEnforcement.js';
 import type { AnomalyCareer, AnomalyReason, AnomalyReport, SeasonGrowth } from '@offside/contracts';
-import { eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { OVR_CAP_BY_AGE, ovrCapAt } from '../../plausibility.js';
 import { createDb, type Db } from '../client.js';
 import { runBatch } from './batch.js';
-import { hideCareerStatements, resetFirstsBackfillStatement, setMeta } from './firsts.js';
+import {
+  hideCareerStatements,
+  setMeta,
+  queueFirstsRejudge,
+  queuedFirstsRevision,
+} from './firstsMutations.js';
 import { appMeta, careers } from '../schema.js';
 import { sweepFarmedPotential } from './potentialAudit.js';
 
@@ -363,9 +368,12 @@ export async function setCareerHidden(
           db.delete(appMeta).where(eq(appMeta.key, clearedKey(careerId))),
         ]
       : [
-          db.update(careers).set({ hidden: 0 }).where(eq(careers.id, careerId)),
+          queueFirstsRejudge(db, careerId, sql`hidden=1`),
+          db
+            .update(careers)
+            .set({ hidden: 0, firstsRevision: queuedFirstsRevision })
+            .where(and(eq(careers.id, careerId), eq(careers.hidden, 1))),
           setMeta(db, clearedKey(careerId), new Date(now).toISOString()),
-          resetFirstsBackfillStatement(db),
         ]),
   ]);
   return true;
