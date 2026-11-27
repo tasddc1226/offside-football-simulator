@@ -2,8 +2,9 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { recordCareerFirsts } from '../db/repos/firsts.js';
 import { setCareerHidden } from '../db/repos/anomalies.js';
 import { createTestD1, type TestD1 } from '../test/d1.js';
-import { deleteProfile, issueCookie } from '../test/http.js';
-import { repairNextLegendSeason } from './legendFirsts.js';
+import { putRetirement } from '../db/repos/careers.js';
+import { deleteProfile, issueCookie, RETIREMENT } from '../test/http.js';
+import { repairNextFirsts } from './firstsRepair.js';
 
 let ctx: TestD1;
 let db: D1Database;
@@ -33,6 +34,13 @@ async function retire(
     .bind(id, profile, at, at, at, score, season)
     .run();
 }
+const rescore = (id: string, legendScore: number) =>
+  putRetirement(ctx.db, {
+    careerId: id,
+    summary: { ...RETIREMENT, legendScore },
+    bonusRate: 0,
+    now: '2026-11-27',
+  });
 const first = (stage: number, season = 2) =>
   db
     .prepare('SELECT career_id FROM server_firsts WHERE season=? AND id=?')
@@ -43,7 +51,9 @@ const record = (season = 2) =>
     .prepare("SELECT career_id,value FROM server_records WHERE season=? AND id='legend'")
     .bind(season)
     .first();
-const repair = () => repairNextLegendSeason(db);
+const repair = async () => {
+  while (await repairNextFirsts(db));
+};
 
 it('repairs the existing empty stage on upgrade, then transfers firsts and the high score after departure', async () => {
   const leader = await issueCookie(ctx);
@@ -68,11 +78,11 @@ it('repairs score decreases, hidden holders and restoration across both preseaso
   await repair(); // consume the migration repair for season 2
   await retire('older', 3901, '2026-09-10', null);
   await retire('later', 3920, '2026-09-20', 0);
-  await db.prepare("UPDATE careers SET legend_score=3950 WHERE id='older'").run();
+  await rescore('older', 3950);
   await repair();
   expect(await first(3900, 0)).toBe('older');
   expect(await record(0)).toEqual({ career_id: 'older', value: 3950 });
-  await db.prepare("UPDATE careers SET legend_score=3800 WHERE id='older'").run();
+  await rescore('older', 3800);
   await repair();
   expect(await first(3900, 0)).toBe('later');
   expect(await first(3800, 0)).toBe('older');
@@ -95,7 +105,7 @@ it('does not reinsert an ineligible claim from an in-flight full scan after repa
     .spyOn(ctx.db, 'batch')
     .mockImplementationOnce(batch) // read existing firsts and records
     .mockImplementationOnce(async (statements) => {
-      await db.prepare("UPDATE careers SET legend_score=3790 WHERE id='departed'").run();
+      await rescore('departed', 3790);
       await repair();
       return batch(statements);
     });

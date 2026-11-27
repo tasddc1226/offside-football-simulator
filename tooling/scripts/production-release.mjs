@@ -95,6 +95,7 @@ export const EXPECTED_TABLES = Object.freeze([
   'reroll_mileage',
   'billing_alerts',
   'retired_numbers',
+  'firsts_repairs',
   'server_firsts',
   'season_passes',
   'starter_packs',

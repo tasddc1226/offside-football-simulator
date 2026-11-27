@@ -70,8 +70,10 @@ it.each(['Alpha', null])(
     await putCareerSeason(db, { ...input, year: 2027, now: T1 });
     expect(batches).toHaveLength(1);
     // Hot-path write budget: new indexes must account for write amplification.
-    expect(batches[0]![0]).toBe(4);
-    expect(batches[0]![1]).toBe(0);
+    const [repairWrites, careerWrites, nameWrites] = batches[0]!;
+    expect(repairWrites).toBe(0);
+    expect(careerWrites).toBe(4);
+    expect(nameWrites).toBe(0);
     const control = await ctx.env.DB.prepare(
       'UPDATE careers SET app_version = ?, public_name = ?, updated_at = ? WHERE id = ?',
     )
@@ -79,7 +81,7 @@ it.each(['Alpha', null])(
       .run();
     // T-11-663 명예의 전당 인덱스가 은퇴 커리어만 담아, 진행 중 커리어는 이름을 바꿔도(control) 그 인덱스를 쓰지 않는다.
     // 예전엔 control이 명예의 전당 이름 인덱스 2개를 더 썼다(4 < control). 이제 둘이 같다.
-    expect(batches[0]![0]).toBeLessThanOrEqual(control.meta.rows_written);
+    expect(careerWrites).toBeLessThanOrEqual(control.meta.rows_written);
     expect(control.meta.rows_written).toBe(4);
   },
 );
