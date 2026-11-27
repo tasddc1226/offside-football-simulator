@@ -14,8 +14,10 @@ import {
 import {
   TITLE_NONE,
   honorTitleIdsOf,
+  isEventTitle,
   parseHonorTitle,
   titlesOf,
+  XMAS_TITLE,
 } from '@offside/contracts/owner-title';
 import { desc, eq, inArray } from 'drizzle-orm';
 import type { Hono } from 'hono';
@@ -30,6 +32,7 @@ import { appMeta, ownerTitleAwards } from '../db/schema.js';
 import { requireAdmin } from '../auth/admin.js';
 import { and } from 'drizzle-orm';
 import { ownerProfileOf } from '../db/repos/ownerProfile.js';
+import { hasXmasTitle } from '../db/repos/xmas.js';
 import { liveTeam } from '../db/repos/ownerTeams.js';
 import { ownerTeams, profiles } from '../db/schema.js';
 import { getDb, type AppEnv } from '../env.js';
@@ -164,15 +167,21 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
       const [found] = await liveTeam(db, id);
       if (!found) throw teamNotFound();
       const profileId = found.team.profileId;
-      const [closedHonors, cups, leagues, permanent] = await Promise.all([
+      const [closedHonors, cups, leagues, permanent, xmas] = await Promise.all([
         finishedHonorsOf(db, profileId),
         cupHonorsOf(db, profileId),
         leagueChampionSeasons(db, profileId),
         earnedPermanentTitleIds(db, profileId),
+        hasXmasTitle(db, profileId),
       ]);
       return {
         honors: closedHonors,
-        titles: [...titlesOf(cups, leagues), ...permanent, ...honorTitleIdsOf(closedHonors)],
+        titles: [
+          ...titlesOf(cups, leagues),
+          ...permanent,
+          ...honorTitleIdsOf(closedHonors),
+          ...(xmas ? [XMAS_TITLE] : []),
+        ],
       };
     });
     return ok(c, OwnerHallVisitResponseSchema, data);
@@ -190,7 +199,7 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
   app.get('/v1/owner/title', requireProfile, async (c) => {
     const me = await requireOwner(c);
     const db = getDb(c);
-    const [honors, leagues, permanent, recordBadges, [latest]] = await Promise.all([
+    const [honors, leagues, permanent, recordBadges, [latest], xmas] = await Promise.all([
       cupHonorsOf(db, me.id),
       leagueChampionSeasons(db, me.id),
       permanentTitlesOf(db, me.id, nowIso()),
@@ -201,6 +210,7 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
         .where(eq(ownerTeams.profileId, me.id))
         .orderBy(desc(ownerTeams.season))
         .limit(1),
+      hasXmasTitle(db, me.id),
     ]);
     return ok(
       c,
@@ -211,6 +221,8 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
           ...titlesOf(honors, leagues),
           ...permanent.filter((t) => t.earnedAt).map((t) => t.id),
           ...honorTitleIdsOf(recordBadges),
+          // T-11-834 크리스마스 한정 칭호(큰 양말).
+          ...(xmas ? [XMAS_TITLE] : []),
         ],
         permanent,
         pinned: me.titlePinned,
@@ -227,17 +239,19 @@ export function registerOwnerProfileRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const { title } = readBody(c, PutOwnerTitleBodySchema);
     // T-11-619 기록 배지를 고를 때만 배지를 읽는다.
-    const [honors, leagues, permanent, recordBadges] = await Promise.all([
+    const [honors, leagues, permanent, recordBadges, xmas] = await Promise.all([
       cupHonorsOf(db, me.id),
       leagueChampionSeasons(db, me.id),
       permanentTitlesOf(db, me.id, nowIso()),
       parseHonorTitle(title) ? finishedHonorsOf(db, me.id) : [],
+      isEventTitle(title) ? hasXmasTitle(db, me.id) : false,
     ]);
     const cupTitles = titlesOf(honors, leagues);
     const titles = [
       ...cupTitles,
       ...permanent.filter((t) => t.earnedAt).map((t) => t.id),
       ...honorTitleIdsOf(recordBadges),
+      ...(xmas ? [XMAS_TITLE] : []),
     ];
     if (title && title !== TITLE_NONE && !titles.includes(title))
       throw conflictError(cupKo('titleNotOwned'), 'TITLE_NOT_OWNED');

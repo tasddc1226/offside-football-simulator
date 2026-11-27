@@ -22,8 +22,12 @@
   import { DC_GALLERY_URL } from '@offside/app-core/links';
   import { homeText as L } from '@offside/app-core/i18n/ko/home';
   import { homeOrder, NO_HOME_TODO, type HomeBlock, type HomeTodo } from '@offside/app-core/homeOrder';
+  import { xmasPhase } from '@offside/contracts/xmas-dates';
 
   const firstHome = !homeShown.seen;
+  // T-11-834 크리스마스 이벤트 카드는 기기 시계로 기간(12/19~1/4 KST) 안일 때만 청크를 받는다. 운영자는 ?xmas=preview로 미리 본다.
+  const xmasPreview = typeof location !== 'undefined' && new URLSearchParams(location.search).get('xmas') === 'preview';
+  const xmasOn = xmasPreview || xmasPhase(Date.now()) === 'open';
   homeShown.seen = true;
   const live = $derived(!!appState.G && !appState.G.retired);
   // T-11-435 받을 선물 · 오늘 출석. 선물 · 출석 블록이 부르는 것과 같은 메모 조회라 새 요청이 없다(불러오기는 첫 화면 번들 밖).
@@ -71,6 +75,9 @@
       <p>{L.kickoffSub}</p>
       <button class="btn btn-accent btn-block" data-act="new" data-coach="new" onclick={goNew} onpointerenter={warmGame} onfocus={warmGame}>{L.kickoffBtn}</button>
     </section>
+  {/if}
+  {#if xmasOn}
+    {#await import('./HomeXmas.svelte') then { default: HomeXmas }}<HomeXmas preview={xmasPreview} />{/await}
   {/if}
   <!-- T-11-435 히어로 아래 블록 순서는 app-core homeOrder 한 곳에서 정한다(앱과 같다). 받을 선물 · 오늘 출석이 있으면 그 블록이
        히어로 바로 아래로 올라온다. 키 있는 each라 순서가 바뀌어도 블록을 다시 만들지 않고 옮기기만 한다. -->

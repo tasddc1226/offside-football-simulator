@@ -1,4 +1,5 @@
 import {
+  isEventTitle,
   TITLE_CATEGORIES,
   titleLadderOf,
   type TitleCategory,
@@ -19,7 +20,9 @@ export type TitleGroupKey = TitleCategory | 'trophy' | 'honor';
 export function titleCollection(hall: Pick<OwnerTitlesResponse, 'titles' | 'permanent'>) {
   const earned = [
     ...new Set([...hall.permanent.filter((t) => t.earnedAt).map((t) => t.id), ...hall.titles]),
-  ].filter((id) => permanentTitleOf(id) || parseTitle(id) || parseHonorTitle(id));
+  ].filter(
+    (id) => permanentTitleOf(id) || parseTitle(id) || parseHonorTitle(id) || isEventTitle(id),
+  );
   const metricSeen = new Set<string>();
   const locked = hall.permanent
     .filter((t) => !t.earnedAt)
@@ -43,7 +46,8 @@ export function titleGroups(hall: Pick<OwnerTitlesResponse, 'titles' | 'permanen
   const { earned, locked } = titleCollection(hall);
   const keys: TitleGroupKey[] = [...TITLE_CATEGORIES, 'trophy', 'honor'];
   const groupOf = (id: string): TitleGroupKey =>
-    permanentTitleOf(id)?.category ?? (parseHonorTitle(id) ? 'honor' : 'trophy');
+    permanentTitleOf(id)?.category ??
+    (parseHonorTitle(id) || isEventTitle(id) ? 'honor' : 'trophy');
   return {
     earned: keys
       .map((key) => ({ key, ids: earned.filter((id) => groupOf(id) === key) }))

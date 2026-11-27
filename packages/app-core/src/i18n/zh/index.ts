@@ -138,6 +138,7 @@ import { translate } from './translate';
 import { tutorial } from './tutorial';
 import { voice } from './voice';
 import { webPay } from './webPay';
+import { xmas } from './xmas';
 
 export const zh = {
   ...gameEngine,
@@ -278,4 +279,5 @@ export const zh = {
   tutorial,
   voice,
   webPay,
+  xmas,
 };

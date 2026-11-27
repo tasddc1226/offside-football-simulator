@@ -587,6 +587,13 @@ export const BALANCE_SPEC = {
     max: 1,
     step: 1,
   },
+  // T-11-834 크리스마스 이벤트. 기간(contracts xmas-rules)은 코드에 있고, 0이면 기간이어도 닫는다(문제가 생겼을 때 끄는 스위치).
+  xmasEvent: {
+    def: 1,
+    min: 0,
+    max: 1,
+    step: 1,
+  },
   enhanceCostScale: {
     def: 1,
     min: 0.1,

@@ -94,6 +94,9 @@ const ko = {
   titleSeasons: '꾸준한 구단주',
   titleDivisionElite: '엘리트 구단',
   titleDivisionMaster: '마스터 구단',
+  /** T-11-834 크리스마스 이벤트 한정 칭호. */
+  titleXmas: (p: { year: number }) => `${p.year} 크리스마스`,
+  titleEvent: '이벤트 칭호',
   conditionYouthKingdom: '직접 키운 선수를 30세 이상까지 육성해 100명 은퇴',
   conditionStarFactory: '직접 키운 최고 능력치 90 이상 선수 10명이 30세 이후에 은퇴',
   conditionStarCradle: '직접 키운 최고 능력치 90 이상 선수 30명이 30세 이후에 은퇴',

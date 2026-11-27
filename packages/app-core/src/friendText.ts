@@ -6,6 +6,7 @@ import type {
   InviteStatus,
 } from '@offside/contracts';
 import { INVITE_REROLLS, INVITE_REWARD_MAX, INVITE_SCOUTS } from '@offside/contracts/owner-team';
+import { xmasInviteMult } from '@offside/contracts/xmas-dates';
 import { getLocale } from './i18n/core.js';
 import { friendText as L } from './i18n/ko/friend.js';
 import { teamCoreText } from './i18n/ko/teamCore.js';
@@ -24,6 +25,12 @@ export const friendInviteUrl = (code: string, origin = FRIEND_INVITE_ORIGIN, lan
 export const friendInviteText = (code: string, origin?: string) =>
   L.invite({ code: friendCodeLabel(code), url: friendInviteUrl(code, origin) });
 
+/** T-11-834 지금 초대를 끝내면 받는 장수(크리스마스 기간이면 2배). n = 리롤권, s = 스카우트권. */
+export function inviteReward(nowMs = Date.now()) {
+  const k = xmasInviteMult(nowMs);
+  return { n: INVITE_REROLLS * k, s: INVITE_SCOUTS * k, doubled: k > 1 };
+}
+
 /** 친구가 됐을 때 알림. */
 export const friendAcceptedText = (name: string) => L.accepted({ name });
 
@@ -33,7 +40,7 @@ export const friendRequestText = (r: { state: 'sent' | 'accepted'; friend: { nam
 
 /** T-11-171 신청 결과 토스트 — 이 신청으로 친구 초대 이벤트에 참여했으면 그 안내를 먼저 보인다. */
 export const friendRequestToast = (r: FriendRequestResponse) =>
-  r.invited ? L.joinedEvent({ n: INVITE_REROLLS, s: INVITE_SCOUTS }) : friendRequestText(r);
+  r.invited ? L.joinedEvent(inviteReward()) : friendRequestText(r);
 
 /**
  * T-11-171 친구 초대 이벤트 카드 문구. mine: 나를 초대한 사람이 있을 때의 한 줄, status: 내가 초대한 친구가 있을 때의 현황,
@@ -42,7 +49,7 @@ export const friendRequestToast = (r: FriendRequestResponse) =>
 export function inviteEventLines(i: InviteStatus) {
   return {
     title: L.eventTitle,
-    body: L.eventBody({ n: INVITE_REROLLS, s: INVITE_SCOUTS }),
+    body: L.eventBody(inviteReward()),
     mine: i.invitedBy
       ? i.invitedBy.done
         ? L.invitedDone({ name: i.invitedBy.name })

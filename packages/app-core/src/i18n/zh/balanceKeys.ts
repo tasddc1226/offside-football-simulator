@@ -85,6 +85,7 @@ export const balanceKeys: Translation<BalanceKeysMsgs> = {
   teamDivMinMatches: '組別獎勵最低場數',
   enhanceOpen: '開放卡牌強化',
   tourOpen: '開放遠征巡迴賽',
+  xmasEvent: '開啟聖誕活動',
   enhanceCostScale: '卡牌強化費用倍率',
   enhanceRateScale: '卡牌強化成功率倍率',
   teamDivReward3: '職業 II 賽季獎勵重抽券',

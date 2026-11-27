@@ -1,6 +1,12 @@
 // T-11-150 컵 성적과 여러 시즌의 육성 이력을 담는 대표 칭호. zod 없는 공통 서브패스.
 import { divisionRank, type CupDivision, type CupStage } from './cup.js';
 
+/** T-11-834 이벤트 한정 칭호. 크리스마스 이벤트 큰 양말로 받는다(대표 칭호로 달 수 있다). */
+export const XMAS_TITLE = 'event-xmas-2026';
+export const EVENT_TITLE_RE = /^event-xmas-(20\d\d)$/;
+export const isEventTitle = (id: string | null | undefined): boolean =>
+  !!id && EVENT_TITLE_RE.test(id);
+
 export const TITLE_STAGES = ['champion', 'runnerup', 'sf'] as const;
 export type TitleStage = (typeof TITLE_STAGES)[number];
 /** 'cup-1-champion' 같은 칭호 id. T-11-410 구간 대회는 'cup-3-master-champion'. T-11-418e 리그 1부 우승은 'league-2-champion'. */
@@ -568,7 +574,7 @@ export const TITLE_CRITERIA_VERSION = 6;
 export const permanentTitleOf = (id: string | null | undefined) =>
   PERMANENT_TITLES.find((t) => t.id === id);
 export const isOwnerTitle = (id: string): boolean =>
-  !!parseTitle(id) || !!permanentTitleOf(id) || !!parseHonorTitle(id);
+  !!parseTitle(id) || !!permanentTitleOf(id) || !!parseHonorTitle(id) || isEventTitle(id);
 
 /** T-11-556 같은 metric 칭호의 단계(target 순). step은 1부터. */
 export function titleLadderOf(id: string) {

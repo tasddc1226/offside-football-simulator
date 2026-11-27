@@ -93,6 +93,8 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   titleSeasons: 'Steady Owner',
   titleDivisionElite: 'Elite Club',
   titleDivisionMaster: 'Master Club',
+  titleXmas: (p) => `Christmas ${p.year}`,
+  titleEvent: 'Event title',
   conditionYouthKingdom: 'Retire 100 players you developed at age 30 or older.',
   conditionStarFactory:
     'Retire 10 players you developed with a peak rating of 90+ at age 30 or older.',

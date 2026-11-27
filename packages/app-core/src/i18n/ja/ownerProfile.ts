@@ -93,6 +93,8 @@ export const ownerProfile: Translation<OwnerProfileMsgs> = {
   titleSeasons: '堅実なオーナー',
   titleDivisionElite: 'エリートクラブ',
   titleDivisionMaster: 'マスタークラブ',
+  titleXmas: (p) => `${p.year} クリスマス`,
+  titleEvent: 'イベント称号',
   conditionYouthKingdom: '自分で育てた選手100人が30歳以上で引退',
   conditionStarFactory: '自分で育てた最高能力90以上の選手10人が30歳以上で引退',
   conditionStarCradle: '自分で育てた最高能力90以上の選手30人が30歳以上で引退',
