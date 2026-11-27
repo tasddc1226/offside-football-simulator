@@ -44,7 +44,10 @@ async function setup(page: Page, cfg: unknown) {
     r.fulfill(ok({ reroll: 0, boost: 0, scout: 0, rename: 0 })),
   );
   let configCalls = 0;
-  await page.route(`${API}/v1/web-pay/config`, (r) => (configCalls++, r.fulfill(ok(cfg))));
+  await page.route(
+    `${API}/v1/web-pay/config?physique=1`,
+    (r) => (configCalls++, r.fulfill(ok(cfg))),
+  );
   return () => configCalls;
 }
 
@@ -179,7 +182,7 @@ test('T-11-736 한국어가 아닌 화면은 카카오페이 없이 결제 화�
   await page.addInitScript(() => localStorage.setItem('ft_lang', JSON.stringify('en')));
   await setup(page, config);
   // 영어 화면은 요청 주소에 `?lang=en`이 붙어 같은 응답을 쿼리까지 받는 경로로 다시 건다.
-  await page.route(/\/v1\/(profile|items|web-pay\/config)\?lang=en$/, (r) => {
+  await page.route(/\/v1\/(profile|items|web-pay\/config)\?(physique=1&)?lang=en$/, (r) => {
     const path = new URL(r.request().url()).pathname;
     if (path.endsWith('/profile'))
       return r.fulfill(
@@ -223,7 +226,7 @@ test('경기 화면 이름 변경 창: 변경권이 없으면 묶음을 보이�
   await page.route(`${API}/v1/items`, (r) =>
     r.fulfill(ok({ reroll: 0, boost: 0, scout: 0, rename: 0 })),
   );
-  await page.route(`${API}/v1/web-pay/config`, (r) => r.fulfill(ok(config)));
+  await page.route(`${API}/v1/web-pay/config?physique=1`, (r) => r.fulfill(ok(config)));
   await page.route(`${API}/v1/web-pay/orders/${ORDER}`, (r) => r.fulfill(ok({ status: 'PAID' })));
   const orderBody = await fakePayStation(page);
   await resumeFixture(page);
