@@ -41,6 +41,7 @@ export const account: Translation<AccountMsgs> = {
   appleVia: 'Appleアカウントでログインしています。',
   loginGoogle: 'Googleでログイン',
   loginApple: 'Appleでサインイン',
+  googleNotFinished: 'Googleログイン画面が閉じました。もう一度タップしてログインしてください。',
   googleFinishFail: 'Googleログインを完了できませんでした。もう一度お試しください。',
   appleStartFail: 'Appleログインを開始できませんでした。',
   appleFinishFail: 'Appleログインを完了できませんでした。もう一度お試しください。',

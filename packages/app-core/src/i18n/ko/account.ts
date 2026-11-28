@@ -46,6 +46,7 @@ const ko = {
   // 로그인 버튼 · auth.ts
   loginGoogle: '구글로 로그인',
   loginApple: 'Apple로 로그인',
+  googleNotFinished: '구글 로그인 창이 닫혔어요. 다시 눌러 로그인해 주세요.',
   googleFinishFail: '구글 로그인을 마치지 못했어요. 다시 시도해 주세요.',
   appleStartFail: 'Apple 로그인을 시작하지 못했어요.',
   appleFinishFail: 'Apple 로그인을 마치지 못했어요. 다시 시도해 주세요.',
