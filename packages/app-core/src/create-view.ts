@@ -50,11 +50,13 @@ export function scoutLine(
   pos: Pos,
   attrs: Record<AttrKey, number>,
   focus?: readonly AttrKey[],
+  dpos?: DetailPos | null,
 ): string {
   const [a, b] = ATTR_KEYS.slice().sort((x, y) => attrs[y] - attrs[x]) as [AttrKey, AttrKey];
   const labels = attrLabels(pos);
   const kind =
-    (focus?.length ? typeName(pos, typeForFocus(pos, focus)) : null) ?? L.archetype({ pos, k: a });
+    (focus?.length ? typeName(pos, typeForFocus(pos, focus, dpos)) : null) ??
+    L.archetype({ pos, k: a });
   if (attrs[a] - attrs[b] <= 1) return L.scoutBoth({ a: labels[a], b: labels[b], kind });
   return L.scoutOne({ a: labels[a], kind });
 }
@@ -79,7 +81,7 @@ export function bodyNote(pos: Pos, body: Body): string {
 
 /** Display the same role used after creation, including legacy focus-based roles. No RNG or save writes. */
 export function ovrFocusView(pos: Pos, focus: readonly AttrKey[], dpos?: DetailPos | null) {
-  const typeId = typeForFocus(pos, [...focus]);
+  const typeId = typeForFocus(pos, [...focus], dpos);
   const role = mainRole({ pos, type: typeId, ...(dpos ? { dpos } : {}) });
   const type = TYPES[pos].find((t) => t.id === typeId)!;
   const weights = ROLES[role]!;

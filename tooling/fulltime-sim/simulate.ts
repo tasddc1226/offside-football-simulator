@@ -9,7 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   LEAGUES,
-  TYPES,
+  typesFor,
   TRAITS,
   DPOS,
   DETAILS_OF,
@@ -170,7 +170,8 @@ function run(N: number, policy: 'random' | 'smart'): { rows: Row[]; agg: Agg } {
   for (let iter = 0; iter < N; iter++) {
     setActiveRng(createRng(nextSeed()));
     const pos = pick(['FW', 'MF', 'DF', 'GK'] as const);
-    const type = pick(TYPES[pos]).id;
+    // 세부 포지션 없이 만드는 옛 방식이라 세부 포지션 전용 유형(T-11-844 공격수 윙어)은 고르지 않는다.
+    const type = pick(typesFor(pos)).id;
     const trait = pick(TRAITS).id;
     // T-10-091 DPOS=1: 세부 포지션을 고른 시즌 1 선수(주력 능력치는 그 포지션의 기본값).
     const dpos = DETAIL ? pick(DETAILS_OF[pos]) : undefined;

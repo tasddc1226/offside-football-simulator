@@ -1,0 +1,30 @@
+{
+  "id": "t-11-844-fw-winger-type",
+  "title": "LW · RW 공격수 윙어 유형",
+  "items": [
+    "LW · RW 공격수를 만들 때 주력을 스피드 · 드리블, 스피드 · 피지컬, 패스 · 드리블로 고르면 윙어 유형이 돼요. 전에는 스피드스터만 나와 양 날개 · 삼지창 · 측면 듀오 조건에 들지 못했어요.",
+    "새로 만드는 선수부터 적용돼요. 이미 만든 선수의 유형과 스트라이커(ST · CF · SS)의 유형은 그대로예요."
+  ],
+  "en": {
+    "title": "Winger type for LW / RW forwards",
+    "items": [
+      "When creating an LW / RW forward, picking Pace + Dribbling, Pace + Physical or Passing + Dribbling as focus attributes now makes a Winger. Before, only Speedsters came out, so they could not meet Twin wings, Trident or other flank duo conditions.",
+      "This applies to newly created players. Existing players and strikers (ST / CF / SS) keep their types."
+    ]
+  },
+  "ja": {
+    "title": "LW・RWのFWにウインガー型",
+    "items": [
+      "LW・RWのFWを作るとき、主力をスピード・ドリブル、スピード・フィジカル、パス・ドリブルにするとウインガー型になります。これまではスピードスターしか出ず、両翼・トライデント・サイドのデュオ条件を満たせませんでした。",
+      "新しく作る選手から適用されます。すでに作った選手とストライカー(ST・CF・SS)のタイプはそのままです。"
+    ]
+  },
+  "zh": {
+    "title": "LW・RW 前鋒的邊鋒型",
+    "items": [
+      "建立 LW・RW 前鋒時，主力選速度・盤帶、速度・身體或傳球・盤帶會成為邊鋒型。以前只會出現速度型，無法符合雙翼齊飛、三叉戟等邊路組合條件。",
+      "從新建立的球員開始適用。已建立的球員與中鋒（ST・CF・SS）的類型維持不變。"
+    ]
+  },
+  "availability": "web-app"
+}

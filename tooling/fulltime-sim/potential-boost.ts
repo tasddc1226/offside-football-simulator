@@ -8,7 +8,7 @@
 //   tickets: 강화권만으로 최고 단계까지 가는 시도 수(T-11-593 대성공 비율별)
 // 환경: SEED(기본 2026), INVEST=1(자기 투자 정책도 자금을 쓴다), RETIRE_AT(서비스 시즌 은퇴 나이, 기본 45)
 import {
-  TYPES,
+  typesFor,
   TRAITS,
   POS,
   ATTR_KEYS,
@@ -188,7 +188,7 @@ export type Career = {
 function career(seed: number, hook?: Hook, cfg?: BoostConfig, pre?: Hook): Career {
   setActiveRng(createRng(seed));
   const pos = pick(['FW', 'MF', 'DF', 'GK'] as const);
-  const type = pick(TYPES[pos]).id;
+  const type = pick(typesFor(pos)).id;
   const trait = pick(TRAITS).id;
   const s = newGame(
     { name: 'SIM', number: 9, pos, foot: '오른발', type, trait, retireAt: RETIRE_AT },

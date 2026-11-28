@@ -49,6 +49,7 @@ export const gData: Translation<GDataMsgs> = {
   typeB2bDesc: 'フィジカル・守備 ▲ · ドリブル ▼',
   typeWinger: 'ウインガー',
   typeWingerDesc: 'ドリブル・スピード ▲ · 守備 ▼',
+  typeWingerFwDesc: 'ドリブル・スピード ▲ · 守備 ▼ · LW・RWのFWのみ',
   typeStopper: 'ストッパー',
   typeStopperDesc: '守備・フィジカル ▲ · パス ▼',
   typeFullback: '攻撃的サイドバック',

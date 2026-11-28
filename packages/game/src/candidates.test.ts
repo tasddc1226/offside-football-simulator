@@ -88,7 +88,8 @@ describe('주력 능력치 (T-10-008)', () => {
 
   it('유형 ↔ 주력 변환이 서로 맞물린다', () => {
     for (const pos of ['FW', 'MF', 'DF', 'GK'] as const)
-      for (const t of TYPES[pos]) expect(typeForFocus(pos, focusOfType(pos, t.id))).toBe(t.id);
+      for (const t of TYPES[pos])
+        expect(typeForFocus(pos, focusOfType(pos, t.id), t.only?.[0])).toBe(t.id);
   });
 
   it('newGame에 focus를 넘기면 저장되고 type은 가장 가까운 유형으로 파생된다', () => {
@@ -278,5 +279,26 @@ describe('T-11-196 프리미엄 스카우트', () => {
     const a = generateCandidates('MF', ['pas', 'dri'], 'CM', 42);
     const b = generateCandidates('MF', ['pas', 'dri'], 'CM', 42, 3, false);
     expect(a).toEqual(b);
+  });
+});
+
+describe('T-11-844 공격수 윙어 유형', () => {
+  it('LW · RW 공격수는 드리블 주력이면 윙어가 되고, 스트라이커는 그대로다', () => {
+    for (const dpos of ['LW', 'RW'] as const) {
+      expect(typeForFocus('FW', ['pac', 'dri'], dpos)).toBe('winger');
+      expect(typeForFocus('FW', ['dri', 'pas'], dpos)).toBe('winger');
+      expect(typeForFocus('FW', ['pac', 'phy'], dpos)).toBe('winger');
+      expect(typeForFocus('FW', ['pac', 'pas'], dpos)).toBe('speed');
+      expect(typeForFocus('FW', ['pac', 'def'], dpos)).toBe('speed');
+      expect(typeForFocus('FW', ['sho', 'dri'], dpos)).toBe('poacher');
+    }
+    for (const dpos of ['ST', 'CF', 'SS', undefined] as const) {
+      expect(typeForFocus('FW', ['pac', 'dri'], dpos)).toBe('speed');
+      expect(typeForFocus('FW', ['dri', 'pas'], dpos)).toBe('speed');
+    }
+  });
+  it('미드필더 윙어는 세부 포지션과 상관없이 그대로다', () => {
+    expect(typeForFocus('MF', ['pac', 'dri'])).toBe('winger');
+    expect(typeForFocus('MF', ['pac', 'dri'], 'CM')).toBe('winger');
   });
 });

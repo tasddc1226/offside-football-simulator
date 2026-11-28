@@ -2,7 +2,7 @@
 // 한 구간은 화면과 같은 game/turn.ts playPhase로 진행하고, 이벤트·이적·은퇴는 ui/actions.ts의
 // chooseEvent()·pickOption()·doRetire()와 같은 순서로 부른다.
 // 선택(훈련·이벤트·이적)은 fulltime-sim의 random 정책처럼 시드 RNG로 고른다.
-import { ATTR_KEYS, LAST_PHASE, TRAITS, TYPES } from '../data.js';
+import { ATTR_KEYS, LAST_PHASE, TRAITS, typesFor } from '../data.js';
 import { newGame, resolveChoice } from '../engine.js';
 import { eventById } from '../events-data.js';
 import { acceptOption, endSeason, market, retire } from '../season.js';
@@ -30,7 +30,8 @@ export function playCareer(i: number, onPhase?: (s: GameState) => void): GameSta
   const seed = 0x5eed + i * 7919;
   setActiveRng(createRng(seed));
   const pos = (['FW', 'MF', 'DF', 'GK'] as const)[i % 4]!;
-  const types = TYPES[pos];
+  // 세부 포지션 없이 만드는 옛 방식이라 세부 포지션 전용 유형(T-11-844 공격수 윙어)은 고르지 않는다.
+  const types = typesFor(pos);
   const s = newGame(
     {
       name: 'GOLDEN',
