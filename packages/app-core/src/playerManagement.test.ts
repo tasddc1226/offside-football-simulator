@@ -3,7 +3,7 @@ import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { fetchOwnerTeam } from './api/team.js';
 import { fetchMarketMe, releaseCards } from './api/market.js';
 import { invalidateApiCache } from './api/client.js';
-import { PlayerManagement, managedPlayers } from './playerManagement.js';
+import { PlayerManagement, managedPlayers, manageView, manageNations } from './playerManagement.js';
 
 vi.mock('./api/team.js', () => ({ fetchOwnerTeam: vi.fn() }));
 vi.mock('./api/market.js', () => ({ fetchMarketMe: vi.fn(), releaseCards: vi.fn() }));
@@ -112,5 +112,58 @@ describe('owner player release', () => {
     await old;
     expect(m.state.season).toBe(1);
     expect(m.state.players[0]?.careerId).toBe('new');
+  });
+});
+
+describe('T-11-841 owned player filter and sort', () => {
+  const list = [
+    player('a', { pos: 'FW', nation: 'BR', peak: 88, legendScore: 900, cardValue: 300 }),
+    player('b', {
+      pos: 'DF',
+      nation: null,
+      peak: 92,
+      legendScore: 500,
+      cardValue: 900,
+      enhance: 3,
+    }),
+    player('c', { pos: 'FW', nation: 'KR', peak: 92, legendScore: 700, cardValue: 100 }),
+    player('d', {
+      pos: 'GK',
+      nation: 'BR',
+      peak: 70,
+      legendScore: 1200,
+      cardValue: 50,
+      enhance: 5,
+    }),
+  ];
+  it('sorts high to low with peak and score as tie-breakers', () => {
+    expect(manageView(list, {}, 'peak').map((p) => p.careerId)).toEqual(['c', 'b', 'a', 'd']);
+    expect(manageView(list, {}, 'score').map((p) => p.careerId)).toEqual(['d', 'a', 'c', 'b']);
+    expect(manageView(list, {}, 'value').map((p) => p.careerId)).toEqual(['b', 'a', 'c', 'd']);
+    expect(manageView(list, {}, 'enhance').map((p) => p.careerId)).toEqual(['d', 'b', 'c', 'a']);
+  });
+  it('filters by position and nation, reading a missing nation as Korea', () => {
+    expect(manageView(list, { pos: 'FW' }, 'peak').map((p) => p.careerId)).toEqual(['c', 'a']);
+    expect(manageView(list, { nation: 'KR' }, 'peak').map((p) => p.careerId)).toEqual(['c', 'b']);
+    expect(manageView(list, { pos: 'FW', nation: 'BR' }, 'peak').map((p) => p.careerId)).toEqual([
+      'a',
+    ]);
+    expect(manageNations(list)).toEqual([
+      { code: 'BR', n: 2 },
+      { code: 'KR', n: 2 },
+    ]);
+  });
+  it('bulk select picks only visible releasable players and keeps picks across filters', async () => {
+    vi.mocked(fetchOwnerTeam).mockImplementation(async (season) =>
+      ok(team(season ?? 1, list, [{ careerId: 'd' }])),
+    );
+    const m = new PlayerManagement();
+    await m.load(1);
+    m.setFilter({ nation: 'BR' });
+    expect(m.visible.map((p) => p.careerId)).toEqual(['a', 'd']);
+    m.selectAll();
+    expect([...m.state.selected]).toEqual(['a']);
+    m.setFilter({ nation: undefined, pos: 'DF' });
+    expect(m.selectedPlayers.map((p) => p.careerId)).toEqual(['a']);
   });
 });

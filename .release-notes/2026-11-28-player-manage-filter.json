@@ -1,0 +1,30 @@
+{
+  "id": "t-11-841-player-manage-filter",
+  "title": "보유 선수 거르기 · 정렬",
+  "items": [
+    "선수 관리의 보유 선수를 포지션 · 국적으로 거르고, 최고 OVR · 레전드 점수 · 방출 자금 · 강화 단계 순으로 정렬할 수 있어요.",
+    "강화한 카드는 목록에 강화 단계가 함께 보여요. 전체 선택은 지금 보이는 선수 안에서 골라요."
+  ],
+  "en": {
+    "title": "Filter and sort owned players",
+    "items": [
+      "In Player management you can filter owned players by position and nationality, and sort them by peak OVR, legend score, release funds or enhancement.",
+      "Enhanced cards now show their enhancement level in the list. Select all picks only from the players currently shown."
+    ]
+  },
+  "ja": {
+    "title": "保有選手の絞り込み・並び替え",
+    "items": [
+      "選手管理の保有選手をポジション・国籍で絞り込み、最高OVR・レジェンドスコア・放出資金・強化段階の順に並び替えられます。",
+      "強化したカードは一覧に強化段階も表示されます。全選択は今表示されている選手の中から選びます。"
+    ]
+  },
+  "zh": {
+    "title": "持有球員篩選與排序",
+    "items": [
+      "球員管理中的持有球員可依位置、國籍篩選，並依最高 OVR、傳奇分數、釋出資金或強化階段排序。",
+      "已強化的球員卡會在清單中一併顯示強化階段。全選只會從目前顯示的球員中選取。"
+    ]
+  },
+  "availability": "web-app"
+}

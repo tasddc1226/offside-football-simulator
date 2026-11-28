@@ -2,8 +2,66 @@ import type { TeamPlayer, OwnerTeamResponse } from './api/team.js';
 import { invalidateApiCache } from './api/client.js';
 import { fetchOwnerTeam } from './api/team.js';
 import { fetchMarketMe, releaseCards } from './api/market.js';
-import { lineupOf, releaseLock, releaseAmount, MARKET_TOAST } from './market.js';
+import { lineupOf, releaseLock, releaseAmount, releaseRowInfo, MARKET_TOAST } from './market.js';
+import { ownerPlayersText as L } from './i18n/ko/ownerPlayers.js';
+import { cardEnhanceText as CE } from './i18n/ko/cardEnhance.js';
 import { RELEASE_MAX } from '@offside/contracts/market-value';
+import type { CareerPos } from '@offside/contracts';
+import { DEFAULT_NATION } from '@offside/contracts/nations';
+
+/** T-11-841 보유 선수 정렬: 최고 OVR · 레전드 점수 · 카드 기준가(방출 자금) · 강화 단계. */
+export type ManageSort = 'peak' | 'score' | 'value' | 'enhance';
+export const MANAGE_SORTS: readonly ManageSort[] = ['peak', 'score', 'value', 'enhance'];
+/** T-11-841 보유 선수 필터: 포지션군 · 국적(없으면 전체). */
+export type ManageFilter = { pos?: CareerPos | undefined; nation?: string | undefined };
+
+export const MANAGE_SORT_LABEL: Record<ManageSort, () => string> = {
+  peak: () => L.sortPeak,
+  score: () => L.sortScore,
+  value: () => L.sortValue,
+  enhance: () => L.sortEnhance,
+};
+/** 보유 선수 한 줄: 세부 포지션 · 최고 OVR · 레전드 점수, 강화한 카드면 강화 단계를 붙인다. */
+export const manageRowInfo = (p: TeamPlayer) =>
+  p.enhance ? `${releaseRowInfo(p)} · ${CE.openLv({ lv: p.enhance })}` : releaseRowInfo(p);
+
+const nationOf = (p: Pick<TeamPlayer, 'nation'>) => p.nation ?? DEFAULT_NATION;
+const sortKey: Record<ManageSort, (p: TeamPlayer) => number> = {
+  peak: (p) => p.peak,
+  score: (p) => p.legendScore ?? 0,
+  value: (p) => p.cardValue ?? 0,
+  enhance: (p) => p.enhance ?? 0,
+};
+
+/** 화면에 보일 보유 선수: 필터를 거쳐 고른 기준으로 높은 순. 같으면 최고 OVR · 레전드 점수 순으로 고정한다. */
+export function manageView(
+  players: readonly TeamPlayer[],
+  filter: ManageFilter,
+  sort: ManageSort,
+): TeamPlayer[] {
+  const key = sortKey[sort];
+  return players
+    .filter(
+      (p) =>
+        (!filter.pos || p.pos === filter.pos) && (!filter.nation || nationOf(p) === filter.nation),
+    )
+    .sort(
+      (a, b) =>
+        key(b) - key(a) ||
+        b.peak - a.peak ||
+        (b.legendScore ?? 0) - (a.legendScore ?? 0) ||
+        a.careerId.localeCompare(b.careerId),
+    );
+}
+
+/** 국적 필터 선택지: 보유 선수가 있는 나라만, 많은 순(같으면 코드 순). */
+export function manageNations(players: readonly TeamPlayer[]): { code: string; n: number }[] {
+  const count = new Map<string, number>();
+  for (const p of players) count.set(nationOf(p), (count.get(nationOf(p)) ?? 0) + 1);
+  return [...count]
+    .map(([code, n]) => ({ code, n }))
+    .sort((a, b) => b.n - a.n || a.code.localeCompare(b.code));
+}
 
 export type PlayerManagementState = {
   season: number;
@@ -16,6 +74,8 @@ export type PlayerManagementState = {
   confirm: boolean;
   error: string | null;
   notice: string | null;
+  filter: ManageFilter;
+  sort: ManageSort;
 };
 export const managedPlayers = (team: OwnerTeamResponse) =>
   team.players.filter((p) => (p.season ?? team.season) === team.season);
@@ -33,6 +93,8 @@ export class PlayerManagement {
     confirm: false,
     error: null,
     notice: null,
+    filter: {},
+    sort: 'peak',
   };
   private epoch = 0;
   private listeners = new Set<(state: PlayerManagementState) => void>();
@@ -53,6 +115,16 @@ export class PlayerManagement {
   }
   get eligible() {
     return this.state.players.filter((p) => !releaseLock(p, this.state.lineup));
+  }
+  /** 필터 · 정렬을 거친 목록. 고른 선수는 필터 밖으로 나가도 선택이 유지된다. */
+  get visible() {
+    return manageView(this.state.players, this.state.filter, this.state.sort);
+  }
+  setFilter(patch: ManageFilter) {
+    this.update({ filter: { ...this.state.filter, ...patch } });
+  }
+  setSort(sort: ManageSort) {
+    this.update({ sort });
   }
   get selectedPlayers() {
     return this.eligible.filter((p) => this.state.selected.has(p.careerId));
@@ -114,7 +186,12 @@ export class PlayerManagement {
     this.update({
       selected: this.state.selected.size
         ? new Set()
-        : new Set(this.eligible.slice(0, RELEASE_MAX).map((p) => p.careerId)),
+        : new Set(
+            this.visible
+              .filter((p) => !releaseLock(p, this.state.lineup))
+              .slice(0, RELEASE_MAX)
+              .map((p) => p.careerId),
+          ),
       notice: null,
     });
   }

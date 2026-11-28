@@ -20,6 +20,17 @@ const ko = {
   seasonGroup: '시즌',
   tagPublic: '공개',
   openRecord: (p: { name: string }) => `${p.name} 선수 기록 열기`,
+  filterPos: '포지션',
+  filterNation: '국적',
+  nationAll: '모든 국적',
+  sortLabel: '정렬',
+  sortPeak: '최고 OVR 높은 순',
+  sortScore: '레전드 점수 높은 순',
+  sortValue: '방출 자금 많은 순',
+  sortEnhance: '강화 단계 높은 순',
+  shownCount: (p: { n: number; total: number }) => `${p.total}명 중 ${p.n}명`,
+  filterEmpty: '이 조건에 맞는 보유 선수가 없어요.',
+  filterReset: '필터 초기화',
   showAll: (p: { n: number }) => `모두 보기 (${p.n}명)`,
 };
 
