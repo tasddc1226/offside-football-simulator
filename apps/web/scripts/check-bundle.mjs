@@ -25,7 +25,9 @@ import { fileURLToPath } from 'node:url';
 // 함께 첫 화면에 실려 운영 빌드 144.29KB → 145.18KB. 모두 엔진이 동기로 쓰는 코드라 지연 청크로 못 뺀다. 146KB로.
 // T-11-599: 리그 개인 기록과 시상식이 같은 공용 집계를 동기로 읽는다. 일정·순위 화면과 사전은 지연 청크에 두고,
 // 엔진의 집계·저장 호환·아시안게임 보정을 더한 로컬 첫 화면은 146.40KB다. 예산은 147KB로 제한한다.
-const LIMIT_BYTES = 147 * 1024;
+// T-11-844: LW · RW 공격수 윙어 유형(엔진 유형 표 한 줄 · 세부 포지션으로 유형을 거르는 함수)이 엔진과 함께 첫 화면에 실려
+// 운영 빌드 147.03KB로 넘었다(로컬 146.84KB). 유형 표는 선수 생성 엔진이 동기로 쓴다. 운영자 결정으로 148KB로.
+const LIMIT_BYTES = 148 * 1024;
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.resolve(scriptDir, '../dist');
