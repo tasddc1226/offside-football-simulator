@@ -2,7 +2,9 @@ import type { TeamPlayer, OwnerTeamResponse } from './api/team.js';
 import { invalidateApiCache } from './api/client.js';
 import { fetchOwnerTeam } from './api/team.js';
 import { fetchMarketMe, releaseCards } from './api/market.js';
-import { lineupOf, releaseLock, releaseAmount, releaseRowInfo, MARKET_TOAST } from './market.js';
+import { lineupOf, releaseLock, releaseAmount, MARKET_TOAST } from './market.js';
+import { detailPosOf } from '@offside/contracts/positions';
+import { intlLocale } from './i18n/core.js';
 import { ownerPlayersText as L } from './i18n/ko/ownerPlayers.js';
 import { cardEnhanceText as CE } from './i18n/ko/cardEnhance.js';
 import { RELEASE_MAX } from '@offside/contracts/market-value';
@@ -12,8 +14,14 @@ import { DEFAULT_NATION } from '@offside/contracts/nations';
 /** T-11-841 보유 선수 정렬: 최고 OVR · 레전드 점수 · 카드 기준가(방출 자금) · 강화 단계. */
 export type ManageSort = 'peak' | 'score' | 'value' | 'enhance';
 export const MANAGE_SORTS: readonly ManageSort[] = ['peak', 'score', 'value', 'enhance'];
-/** T-11-841 보유 선수 필터: 포지션군 · 국적(없으면 전체). */
-export type ManageFilter = { pos?: CareerPos | undefined; nation?: string | undefined };
+/** T-11-841 보유 선수 필터: 포지션군 · 국적 · 이름 검색어(없으면 전체). */
+export type ManageFilter = {
+  pos?: CareerPos | undefined;
+  nation?: string | undefined;
+  q?: string | undefined;
+};
+/** 한 번에 그리는 보유 선수 수. 더 있으면 '더 보기'로 이만큼씩 늘린다. */
+export const MANAGE_PAGE = 50;
 
 export const MANAGE_SORT_LABEL: Record<ManageSort, () => string> = {
   peak: () => L.sortPeak,
@@ -21,9 +29,28 @@ export const MANAGE_SORT_LABEL: Record<ManageSort, () => string> = {
   value: () => L.sortValue,
   enhance: () => L.sortEnhance,
 };
-/** 보유 선수 한 줄: 세부 포지션 · 최고 OVR · 레전드 점수, 강화한 카드면 강화 단계를 붙인다. */
+/** 보유 선수 한 줄 아래 정보: 세부 포지션 · 레전드 점수, 강화한 카드면 강화 단계(OVR은 줄 왼쪽 배지에 따로 그린다). */
 export const manageRowInfo = (p: TeamPlayer) =>
-  p.enhance ? `${releaseRowInfo(p)} · ${CE.openLv({ lv: p.enhance })}` : releaseRowInfo(p);
+  [
+    detailPosOf(p),
+    L.rowLegend({ score: (p.legendScore ?? 0).toLocaleString(intlLocale()) }),
+    ...(p.enhance ? [CE.openLv({ lv: p.enhance })] : []),
+  ]
+    // 좁은 화면에서 줄이 넘어가도 '강화 +5'처럼 한 덩어리는 끊기지 않게(가운뎃점 사이에서만 줄을 바꾼다).
+    .map((part) => part.replace(/ /g, '\u00a0'))
+    .join(' · ');
+
+/** 방출할 수 없는 선수의 짧은 표시(배지). 긴 이유는 releaseLock. 고를 수 있으면 null. */
+export function manageLockTag(p: TeamPlayer, lineup: ReadonlySet<string>): string | null {
+  if (!p.raised) return L.tagBought;
+  if (p.listing) return L.tagListed;
+  if (p.locked) return L.tagLocked;
+  if (lineup.has(p.careerId)) return L.tagStarter;
+  return null;
+}
+
+/** 이름 검색용으로 대소문자 · 띄어쓰기를 지운다. */
+const squash = (s: string) => s.toLowerCase().replace(/\s+/g, '');
 
 const nationOf = (p: Pick<TeamPlayer, 'nation'>) => p.nation ?? DEFAULT_NATION;
 const sortKey: Record<ManageSort, (p: TeamPlayer) => number> = {
@@ -38,12 +65,16 @@ export function manageView(
   players: readonly TeamPlayer[],
   filter: ManageFilter,
   sort: ManageSort,
+  nameOf: (p: TeamPlayer) => string = (p) => p.publicName ?? '',
 ): TeamPlayer[] {
   const key = sortKey[sort];
+  const q = squash(filter.q ?? '');
   return players
     .filter(
       (p) =>
-        (!filter.pos || p.pos === filter.pos) && (!filter.nation || nationOf(p) === filter.nation),
+        (!filter.pos || p.pos === filter.pos) &&
+        (!filter.nation || nationOf(p) === filter.nation) &&
+        (!q || squash(nameOf(p)).includes(q)),
     )
     .sort(
       (a, b) =>
@@ -77,6 +108,12 @@ export type PlayerManagementState = {
   filter: ManageFilter;
   sort: ManageSort;
 };
+/** T-11-841 고른 필터 · 정렬은 앱을 켜 둔 동안 기억한다(기록을 보고 돌아와도 그대로). 저장소에는 남기지 않는다. */
+let remembered: { filter: ManageFilter; sort: ManageSort } = { filter: {}, sort: 'peak' };
+/** 테스트용: 기억한 필터 · 정렬을 지운다. */
+export const forgetManageView = () => {
+  remembered = { filter: {}, sort: 'peak' };
+};
 export const managedPlayers = (team: OwnerTeamResponse) =>
   team.players.filter((p) => (p.season ?? team.season) === team.season);
 
@@ -93,9 +130,11 @@ export class PlayerManagement {
     confirm: false,
     error: null,
     notice: null,
-    filter: {},
-    sort: 'peak',
+    filter: remembered.filter,
+    sort: remembered.sort,
   };
+  /** 이름 검색에 쓸 표시 이름(바꾼 이름 · 이 기기 이름을 화면이 넘긴다). */
+  constructor(private nameOf?: (p: TeamPlayer) => string) {}
   private epoch = 0;
   private listeners = new Set<(state: PlayerManagementState) => void>();
   subscribe(fn: (state: PlayerManagementState) => void) {
@@ -118,12 +157,15 @@ export class PlayerManagement {
   }
   /** 필터 · 정렬을 거친 목록. 고른 선수는 필터 밖으로 나가도 선택이 유지된다. */
   get visible() {
-    return manageView(this.state.players, this.state.filter, this.state.sort);
+    return manageView(this.state.players, this.state.filter, this.state.sort, this.nameOf);
   }
   setFilter(patch: ManageFilter) {
-    this.update({ filter: { ...this.state.filter, ...patch } });
+    const filter = { ...this.state.filter, ...patch };
+    remembered = { ...remembered, filter };
+    this.update({ filter });
   }
   setSort(sort: ManageSort) {
+    remembered = { ...remembered, sort };
     this.update({ sort });
   }
   get selectedPlayers() {

@@ -31,6 +31,16 @@ const ko = {
   shownCount: (p: { n: number; total: number }) => `${p.total}명 중 ${p.n}명`,
   filterEmpty: '이 조건에 맞는 보유 선수가 없어요.',
   filterReset: '필터 초기화',
+  rowLegend: (p: { score: string }) => `레전드 ${p.score}`,
+  tagBought: '영입',
+  tagListed: '판매 중',
+  tagLocked: '잠금',
+  tagStarter: '선발',
+  releaseValueLabel: '방출 시',
+  searchLabel: '이름 검색',
+  searchPlaceholder: '선수 이름',
+  moreActions: (p: { name: string }) => `${p.name} 메뉴`,
+  showMore: (p: { n: number }) => `더 보기 (${p.n}명 남음)`,
   showAll: (p: { n: number }) => `모두 보기 (${p.n}명)`,
 };
 

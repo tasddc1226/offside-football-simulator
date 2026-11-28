@@ -136,9 +136,31 @@ test('내 선수: 320px 별도 화면, 시즌 기록과 방출 관리 및 캐시
   await expect(page.locator('[data-managed-player]')).toHaveCount(6);
   // T-11-443 행마다 포지션 · 최고 OVR · 레전드, 방출하면 받는 자금을 보인다(잠긴 선수는 잠긴 이유).
   const first = page.locator(`[data-managed-player="${id(1)}"]`);
-  await expect(first.locator('[data-release-info]')).toHaveText('ST · 최고 OVR 80 · 레전드 500');
-  await expect(first.locator('[data-release-gets]')).toContainText('방출하면 받는 자금');
+  // T-11-841 한 줄: OVR 배지 · 세부 포지션 · 레전드, 오른쪽에 방출 자금(잠긴 선수는 짧은 배지, 누르면 이유).
+  await expect(first.locator('[data-release-info]')).toHaveText('ST · 레전드 500');
+  await expect(first.locator('[data-release-gets]')).toHaveText('1억');
   await expect(page.locator(`[data-managed-player="${id(4)}"] [data-release-gets]`)).toHaveCount(0);
+  await expect(page.locator(`[data-managed-player="${id(6)}"] [data-release-tag]`)).toHaveText(
+    '선발',
+  );
+  await page.locator(`[data-managed-player="${id(6)}"] [data-release-tag]`).click();
+  await expect(page.locator(`#why-${id(6)}`)).toContainText('선발이나 컵 명단');
+  // 포지션 · 이름 검색 · 초기화는 받은 목록 안에서만 거른다(서버를 다시 부르지 않는다).
+  const beforeFilter = { mineGets, teamGets };
+  await page.locator('[data-players-pos="DF"]').click();
+  await expect(page.locator('[data-managed-player]')).toHaveCount(0);
+  await expect(page.locator('[data-players-count]')).toHaveText('6명 중 0명');
+  await page.locator('[data-players-pos="all"]').click();
+  await page.fill('[data-players-search]', '보유선수2');
+  await expect(page.locator('[data-managed-player]')).toHaveCount(1);
+  await page.locator('[data-players-reset]').click();
+  await expect(page.locator('[data-managed-player]')).toHaveCount(6);
+  expect({ mineGets, teamGets }).toEqual(beforeFilter);
+  // ⋯ 메뉴에서 이름 바꾸기를 연다.
+  await page.locator(`[data-player-more="${id(1)}"]`).click();
+  await expect(page.locator(`[data-player-rename="${id(1)}"]`)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator(`[data-player-rename="${id(1)}"]`)).toHaveCount(0);
   for (const n of [3, 4, 5, 6])
     await expect(page.locator(`[data-managed-player="${id(n)}"] input`)).toBeDisabled();
   await page.locator('[data-act="players-pick-all"]').click();

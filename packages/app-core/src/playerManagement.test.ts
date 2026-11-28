@@ -3,7 +3,15 @@ import type { OwnerTeamResponse, TeamPlayer } from './api/team.js';
 import { fetchOwnerTeam } from './api/team.js';
 import { fetchMarketMe, releaseCards } from './api/market.js';
 import { invalidateApiCache } from './api/client.js';
-import { PlayerManagement, managedPlayers, manageView, manageNations } from './playerManagement.js';
+import {
+  PlayerManagement,
+  managedPlayers,
+  manageView,
+  manageNations,
+  manageLockTag,
+  manageRowInfo,
+  forgetManageView,
+} from './playerManagement.js';
 
 vi.mock('./api/team.js', () => ({ fetchOwnerTeam: vi.fn() }));
 vi.mock('./api/market.js', () => ({ fetchMarketMe: vi.fn(), releaseCards: vi.fn() }));
@@ -16,6 +24,7 @@ const ok = <T>(data: T) => ({ ok: true as const, data });
 
 beforeEach(() => {
   vi.resetAllMocks();
+  forgetManageView();
   vi.mocked(fetchMarketMe).mockResolvedValue(ok({ rules: { releaseRate: 1 } }) as never);
   vi.mocked(fetchOwnerTeam).mockResolvedValue(ok(team(1, [player('a'), player('b')])));
 });
@@ -165,5 +174,39 @@ describe('T-11-841 owned player filter and sort', () => {
     expect([...m.state.selected]).toEqual(['a']);
     m.setFilter({ nation: undefined, pos: 'DF' });
     expect(m.selectedPlayers.map((p) => p.careerId)).toEqual(['a']);
+  });
+});
+
+describe('T-11-841 search, remembered view and compact rows', () => {
+  const list = [
+    player('a', { pos: 'FW', publicName: 'Carlos Silva', peak: 90 }),
+    player('b', { pos: 'DF', publicName: '김 민재', peak: 95 }),
+  ];
+  it('searches the shown name ignoring case and spaces', () => {
+    expect(manageView(list, { q: 'carlos s' }, 'peak').map((p) => p.careerId)).toEqual(['a']);
+    expect(manageView(list, { q: '민재' }, 'peak').map((p) => p.careerId)).toEqual(['b']);
+    const renamed = (p: TeamPlayer) => (p.careerId === 'a' ? '호날두' : (p.publicName ?? ''));
+    expect(manageView(list, { q: '호날' }, 'peak', renamed).map((p) => p.careerId)).toEqual(['a']);
+  });
+  it('remembers filter and sort for the next screen visit', () => {
+    const first = new PlayerManagement();
+    first.setFilter({ pos: 'DF', q: 'kim' });
+    first.setSort('score');
+    const next = new PlayerManagement();
+    expect(next.state.filter).toEqual({ pos: 'DF', q: 'kim' });
+    expect(next.state.sort).toBe('score');
+  });
+  it('shows a short lock tag and keeps OVR out of the row info', () => {
+    const lineup = new Set(['s']);
+    expect(manageLockTag(player('x', { raised: false }), lineup)).toBe('영입');
+    expect(manageLockTag(player('x', { listing: { id: 'l', price: 1 } }), lineup)).toBe('판매 중');
+    expect(manageLockTag(player('x', { locked: true }), lineup)).toBe('잠금');
+    expect(manageLockTag(player('s'), lineup)).toBe('선발');
+    expect(manageLockTag(player('x'), lineup)).toBeNull();
+    expect(
+      manageRowInfo(
+        player('x', { pos: 'DF', dpos: 'CB', peak: 96, legendScore: 2210, enhance: 5 }),
+      ),
+    ).toBe('CB · 레전드\u00a02,210 · 강화\u00a0+5');
   });
 });
