@@ -1,0 +1,30 @@
+{
+  "id": "t-11-843-synergy-s3",
+  "title": "시즌 3 듀오 시너지 조정 예고",
+  "items": [
+    "서비스 시즌 3부터 잘 쓰이지 않던 듀오 여섯 개의 효과가 커져요. 스리백은 수비 +2, 더블 볼란치는 중원 +1 · 수비 +1, 빅 앤 스몰과 양 날개는 공격 +1.5, 섀도 스트라이커는 공격 +1이 돼요.",
+    "철벽은 골문 +2 대신 수비 +1.5 · 골문 +1을 올려요. 시즌 2 경기와 팀은 지금 효과 그대로 계산해요."
+  ],
+  "en": {
+    "title": "Season 3 duo synergy changes",
+    "items": [
+      "From service season 3, six rarely used duos get stronger: Back three gives defense +2, Double pivot midfield +1 and defense +1, Big and small and Twin wings attack +1.5, and Shadow striker attack +1.",
+      "Brick wall changes from goal line +2 to defense +1.5 and goal line +1. Season 2 matches and teams keep the current effects."
+    ]
+  },
+  "ja": {
+    "title": "シーズン3のデュオシナジー調整予告",
+    "items": [
+      "サービスシーズン3から、あまり使われていなかったデュオ6つの効果が大きくなります。3バックは守備+2、ダブルボランチは中盤+1・守備+1、ビッグ・アンド・スモールと両翼は攻撃+1.5、シャドーストライカーは攻撃+1になります。",
+      "鉄壁はゴール前+2の代わりに守備+1.5・ゴール前+1を上げます。シーズン2の試合とチームは今の効果のまま計算します。"
+    ]
+  },
+  "zh": {
+    "title": "賽季 3 組合默契調整預告",
+    "items": [
+      "從服務賽季 3 起，較少使用的六種組合默契效果會變大：三中衛防守 +2，雙後腰中場 +1・防守 +1，大小搭配與雙翼齊飛進攻 +1.5，影子前鋒進攻 +1。",
+      "銅牆鐵壁從門前 +2 改為防守 +1.5・門前 +1。賽季 2 的比賽與球隊照現在的效果計算。"
+    ]
+  },
+  "availability": "web-app"
+}
