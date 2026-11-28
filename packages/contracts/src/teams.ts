@@ -253,6 +253,8 @@ export const OwnerTeamResponseSchema = z.strictObject({
   players: z.array(TeamPlayerSchema),
   /** 새 팀을 만들 때 채워 둘 감독 이름(가장 최근 팀의 감독). */
   lastManager: z.string().nullable(),
+  /** T-11-842 지난 시즌 팀 이름(이번 시즌 팀을 처음 만들 때 미리 채운다). 팀을 만든 적이 없으면 null, 구버전 응답에는 없다. */
+  lastTeamName: z.string().nullable().optional(),
   /** 오늘(한국 시각) 남은 경기 수. */
   matchesLeft: z.number().int().min(0),
   matchesPerDay: z.number().int().min(1),

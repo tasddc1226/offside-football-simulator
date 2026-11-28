@@ -62,7 +62,7 @@
   import type { ReportLine } from '@offside/contracts/owner-team';
   import { cupText as CT } from '@offside/app-core/i18n/ko/cup';
   import { cardSeasonBadge } from '@offside/app-core/format';
-  import { assignSlot, autoFillSlots, keeperEmpty, matchHintOf, seasonCupSlots, teamEditableIn } from '@offside/app-core/teamOwner';
+  import { assignSlot, autoFillSlots, firstTeamDefaults, firstTeamNote, keeperEmpty, matchHintOf, seasonCupSlots, teamEditableIn } from '@offside/app-core/teamOwner';
   import { accountCache } from '../account-state.svelte.js';
   import { teamHomeText as L } from '@offside/app-core/i18n/ko/teamHome';
   import { managerText as MG } from '@offside/app-core/i18n/ko/manager';
@@ -117,6 +117,8 @@
   let draftKey = $state<string | null>(null);
   let pendingDraft = $state<TeamDraft | null>(null);
   let restoredDraft = $state(false);
+  /** T-11-842 팀이 없을 때 미리 채운 첫 초안(자동 배치 · 이름). 이것과 같으면 바뀐 것이 없다고 본다. */
+  let autoDefaults = $state<string | null>(null);
   let loadSequence = 0;
   /** T-11-145 컵에 참가 중이면 편성 화면에 명단 마감 띠(잠겼는지 · 다음 마감 시각). */
   let cupBand = $state<{ locked: boolean; when: string | null } | null>(null);
@@ -201,7 +203,7 @@
   const draftValue = () => ({ name, manager, logo, formation, layout, slots });
   function preserveDraft() {
     if (status !== 'ready' || !editable || !draftKey || pendingDraft) return;
-    const hasChanges = team ? dirty : !!name || !!logo || !!layout || slots.some(Boolean) || formation !== '4-3-3' || manager !== (lastManager ?? '');
+    const hasChanges = team ? dirty : autoDefaults ? JSON.stringify(draftValue()) !== autoDefaults : !!name || !!logo || !!layout || slots.some(Boolean) || formation !== '4-3-3' || manager !== (lastManager ?? '');
     writeTeamDraft(draftKey, hasChanges ? { base: teamDraftBase(team), value: draftValue() } : null);
   }
   $effect(preserveDraft);
@@ -312,6 +314,15 @@
     divisionNotice =
       editable && team && season === current ? (takeDivisionChange(season, team.division)?.text ?? null) : null;
     const account = accountCache.value;
+    // T-11-842 이번 시즌 팀이 없으면 가진 선수로 선발을 채우고 팀 · 감독 이름을 미리 넣어 둔다(저장 전까지 초안).
+    autoDefaults = null;
+    if (!team && editable) {
+      const d = firstTeamDefaults({ players, season, editable, lastManager, lastTeamName: r.data.lastTeamName, nickname: account && account !== 'error' ? account.nickname : null });
+      name = d.name;
+      manager = d.manager || manager;
+      slots = d.slots;
+      autoDefaults = JSON.stringify(draftValue());
+    }
     draftKey = team?.id ?? (account && account !== 'error' ? `${account.id}:${season}` : null);
     pendingDraft = null;
     restoredDraft = false;
@@ -549,6 +560,7 @@
         </section>
       {/if}
       {#if editingLogo && editable}<TeamLogoEditor {logo} name={name.trim() || L.myTeam} onapply={(value) => { logo = value; editingLogo = false; }} onclose={() => (editingLogo = false)} />{/if}
+      {#if !team && editable && autoDefaults && !restoredDraft && !pendingDraft && firstTeamNote(filled, !!name.trim())}<p class="muted fs-sm" data-team-prefilled>{firstTeamNote(filled, !!name.trim())}</p>{/if}
       <TeamLineup
         {team}
         teamLogo={logo}

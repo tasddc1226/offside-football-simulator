@@ -30,6 +30,11 @@ import {
   TEAM_RULES,
   lineStrength,
   presetLayout,
+  positionedLayout,
+  TEAM_NAME_MIN,
+  TEAM_NAME_MAX,
+  MANAGER_NAME_MIN,
+  MANAGER_NAME_MAX,
   slotRating,
   synergyApplies,
   teamSynergy,
@@ -144,6 +149,48 @@ export function staminaOf(f: LeagueFatigue | null | undefined, careerId: string)
     left: STAMINA_CELLS - leagueFatigueSteps(streak),
     pct: Math.round(leagueFatiguePenalty(streak, f.rate) * 100),
   };
+}
+
+/**
+ * T-11-842 이번 시즌 팀이 없는 구단주가 팀 화면을 열 때의 첫 초안: 가진 선수로 선발을 자동 배치하고(유스 선수보다 나을 때만)
+ * 팀 이름 · 감독 이름을 미리 넣는다. 팀 이름은 지난 팀 이름, 없으면 닉네임 + ' FC'. 감독 이름은 지난 감독 이름, 없으면 닉네임.
+ * 길이가 맞지 않으면 비워 둔다(사용자가 직접 쓴다). 기본 포메이션(4-3-3) 기준이다.
+ */
+export function firstTeamDefaults(input: {
+  players: readonly TeamPlayer[];
+  season: number;
+  editable: boolean;
+  lastManager: string | null | undefined;
+  lastTeamName?: string | null | undefined;
+  nickname: string | null | undefined;
+}): { name: string; manager: string; slots: (string | null)[] } {
+  const fits = (v: string | null | undefined, min: number, max: number) => {
+    const t = v?.trim() ?? '';
+    return t.length >= min && t.length <= max ? t : '';
+  };
+  const nick = input.nickname?.trim() ?? '';
+  const name =
+    fits(input.lastTeamName, TEAM_NAME_MIN, TEAM_NAME_MAX) ||
+    (nick ? fits(`${nick.slice(0, TEAM_NAME_MAX - 3)} FC`, TEAM_NAME_MIN, TEAM_NAME_MAX) : '');
+  const manager =
+    fits(input.lastManager, MANAGER_NAME_MIN, MANAGER_NAME_MAX) ||
+    fits(nick, MANAGER_NAME_MIN, MANAGER_NAME_MAX);
+  const base = presetLayout('4-3-3');
+  const layout = input.editable && input.season > 0 ? positionedLayout(base) : base;
+  return {
+    name,
+    manager,
+    slots: autoFillSlots(
+      layout.map((p) => p.slot),
+      input.players,
+    ),
+  };
+}
+
+/** T-11-842 미리 채운 첫 초안 안내(선발 · 이름 중 채운 것만 말한다). 채운 것이 없으면 null. */
+export function firstTeamNote(filled: number, named: boolean): string | null {
+  if (filled > 0) return named ? TH.prefilledNote : TH.prefilledSlotsNote;
+  return named ? TH.prefilledNameNote : null;
 }
 
 /** 실력이 같으면 먼저 채울 자리(스트라이커·골키퍼·센터백 …). */

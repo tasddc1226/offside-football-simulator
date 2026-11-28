@@ -1,0 +1,30 @@
+{
+  "id": "t-11-842-first-team-defaults",
+  "title": "팀 만들기 미리 채우기",
+  "items": [
+    "이번 시즌 팀을 처음 만들 때 가진 선수로 선발을 자동으로 채워 둬요. 유스 선수보다 잘 맞는 자리에만 넣어요.",
+    "팀 이름과 감독 이름도 미리 넣어 둬요. 지난 시즌 이름이 있으면 그 이름을, 없으면 닉네임을 써요. 그대로 저장해도 되고 바꿔도 돼요."
+  ],
+  "en": {
+    "title": "Prefilled team creation",
+    "items": [
+      "When you create this season's team for the first time, your players are placed in the lineup automatically, only where they fit better than a youth player.",
+      "The team name and manager name are filled in too, using last season's names or your nickname. Save as is or change them."
+    ]
+  },
+  "ja": {
+    "title": "チーム作成の事前入力",
+    "items": [
+      "今シーズンのチームを初めて作るとき、保有選手で先発を自動で埋めておきます。ユース選手より合うポジションにだけ入れます。",
+      "チーム名と監督名も入れておきます。前シーズンの名前があればそれを、なければニックネームを使います。そのまま保存しても、変えてもかまいません。"
+    ]
+  },
+  "zh": {
+    "title": "建立球隊預先填入",
+    "items": [
+      "首次建立本賽季球隊時，會自動用你的球員排好先發，只放在比青年球員更適合的位置。",
+      "球隊名稱與教練名稱也會預先填入，有上賽季名稱就沿用，沒有就使用暱稱。可直接儲存，也可以修改。"
+    ]
+  },
+  "availability": "web-app"
+}

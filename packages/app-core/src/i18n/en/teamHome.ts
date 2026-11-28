@@ -38,6 +38,10 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   draftRestoredApp: 'Restored an unsaved lineup. Tap Save lineup to apply it to your team.',
   draftRevertApp: 'Revert to saved team',
   savedPartial: 'Saved. Changes you made after that are not saved yet.',
+  prefilledNote:
+    'We filled your lineup with your players and added names. Save as is or change anything.',
+  prefilledNameNote: 'We added a team name and manager name. Save as is or change them.',
+  prefilledSlotsNote: 'We filled your lineup with your players. Pick a team name and save.',
   toastCreated: 'Team created',
   toastSavedWeb: 'Changes saved',
   toastSavedApp: 'Lineup saved',
