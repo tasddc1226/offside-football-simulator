@@ -104,6 +104,52 @@ describe('/v1/teams (T-10-092 라이브 랭킹 · 팀 프로필)', () => {
     ProfileRes.parse(await (await call('GET', `/v1/teams/${id}`, cookie ? { cookie } : {})).json())
       .data;
 
+  it('T-11-845 컵 화면에서 열면(view=cup) 컵 명단 프리셋으로 보여 주고, 기본 프로필은 그대로다', async () => {
+    const t = await team(3, 90, '컵감독');
+    const ids = t.team.slots.flatMap((x) => (x.careerId ? [x.careerId] : []));
+    const cupSlots: (string | null)[] = Array(11).fill(null);
+    cupSlots[9] = ids[0]!;
+    await ctx.db
+      .update(ownerTeams)
+      .set({
+        presetsJson: JSON.stringify([
+          {
+            name: '컵 정예',
+            formation: '4-4-2',
+            slots: cupSlots,
+            layout: null,
+            cup: true,
+            ovr: 55,
+            filled: 1,
+          },
+        ]),
+        cupOvr: 55,
+      })
+      .where(eq(ownerTeams.id, t.team.id));
+    const base = ProfileRes.parse(await (await call('GET', `/v1/teams/${t.team.id}`)).json());
+    expect(base.data.cupLineup).toBeUndefined();
+    expect(base.data.team.formation).toBe('4-3-3');
+    expect(base.data.team.slots.filter((x) => x.careerId)).toHaveLength(3);
+    const cup = ProfileRes.parse(
+      await (await call('GET', `/v1/teams/${t.team.id}?view=cup`)).json(),
+    );
+    expect(cup.data.cupLineup).toEqual({ name: '컵 정예' });
+    expect(cup.data.team.formation).toBe('4-4-2');
+    expect(cup.data.team.slots.filter((x) => x.careerId).map((x) => x.careerId)).toEqual([ids[0]]);
+    expect(cup.data.team).toMatchObject({
+      id: t.team.id,
+      manager: '컵감독',
+      name: base.data.team.name,
+    });
+    // 컵 명단이 없는 팀은 view=cup이어도 기본 팀 그대로다.
+    const plain = await team(1, 70);
+    const noCup = ProfileRes.parse(
+      await (await call('GET', `/v1/teams/${plain.team.id}?view=cup`)).json(),
+    );
+    expect(noCup.data.cupLineup).toBeUndefined();
+    expect(noCup.data.team.slots.filter((x) => x.careerId)).toHaveLength(1);
+  });
+
   it('선수가 있는 팀만 레이팅 순으로 오르고, OVR 순으로도 본다', async () => {
     const strong = await team(3, 90, '강감독');
     const weak = await team(1, 70);

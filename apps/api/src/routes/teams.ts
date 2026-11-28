@@ -51,6 +51,8 @@ import {
   layoutOf,
   logoOf,
   teamPlayerCard,
+  cupPresetOf,
+  cupTeamOf,
 } from '../db/repos/ownerTeams.js';
 import { friendStateOf } from '../db/repos/friends.js';
 import {
@@ -279,7 +281,9 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
     const db = getDb(c);
     const [[found], session] = await Promise.all([liveTeam(db, id), resolveSession(c)]);
     if (!found) throw teamNotFound();
-    const t = found.team;
+    // T-11-845 컵 화면에서 열면 컵 명단 프리셋(선발 · 포메이션 · 배치 · OVR)으로 보여 준다. 이름 · 로고 · 감독 · 기록은 팀 것.
+    const cupPreset = c.req.query('view') === 'cup' ? cupPresetOf(found.team) : null;
+    const t = cupPreset ? cupTeamOf(found.team) : found.team;
     const ids = slotIdsOf(t);
     const other = session && session.profileId !== t.profileId ? session.profileId : null;
     const { ownerNickname } = found;
@@ -343,6 +347,7 @@ export function registerTeamRoutes(app: Hono<AppEnv>): void {
         liked,
         mine: session?.profileId === t.profileId,
         friend,
+        ...(cupPreset ? { cupLineup: { name: cupPreset.name } } : {}),
       },
       200,
       NO_STORE,

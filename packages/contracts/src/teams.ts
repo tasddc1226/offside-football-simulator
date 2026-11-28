@@ -970,6 +970,8 @@ export const TeamProfileResponseSchema = z.strictObject({
   liked: z.boolean(),
   mine: z.boolean(),
   friend: FriendStateSchema.nullable().optional(),
+  /** T-11-845 `?view=cup`으로 열었고 그 팀에 컵 명단 프리셋이 있으면 그 이름(선발 · 포메이션 · OVR · 시너지가 컵 명단 것). */
+  cupLineup: z.strictObject({ name: z.string() }).optional(),
 });
 export type TeamProfileResponse = z.infer<typeof TeamProfileResponseSchema>;
 

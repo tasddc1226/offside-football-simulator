@@ -51,6 +51,10 @@
   /** T-11-098 나와 이 팀 구단주의 친구 상태(로그인한 구단주가 남의 팀을 볼 때만 온다). */
   let friend = $state<FriendState | null>(null);
   let befriending = $state(false);
+  // T-11-845 컵 화면에서 열면 그 팀의 컵 명단으로 보여 주고, 기본 팀으로 바꿔 볼 수 있다.
+  let cupView = $state(!!appState.hof.cup);
+  let cupLineup = $state<{ name: string } | null>(null);
+  let hasCup = $state(false);
   // T-11-290 시너지 표에서 고른 항목 — 그라운드에서 그 선수들을 잇는다(내 팀 TeamLineup과 같은 동작, 읽기 전용).
   let synFocus = $state<string | null>(null);
   const syn = $derived(team?.synergy ? synergyFocus(team.synergy, synFocus) : null);
@@ -63,16 +67,21 @@
   // 내 팀이면 이 기기에 남은 (비공개) 이름으로 보여 준다.
   const localNames = localCareerNames();
 
-  async function load() {
-    status = 'loading';
-    const r = await fetchTeamProfile(id);
+  async function load(first = true) {
+    // 컵 명단 ↔ 기본 팀을 바꿀 때(first=false)는 화면을 비우지 않고, 실패하면 보던 화면을 둔다.
+    if (first) status = 'loading';
+    const r = await fetchTeamProfile(id, cupView);
     if (!r.ok) {
-      status = 'error';
+      if (first) status = 'error';
+      else cupView = !cupView;
       return;
     }
     ({ team, liked, mine } = r.data);
     friend = r.data.friend ?? null;
+    cupLineup = r.data.cupLineup ?? null;
+    if (cupLineup) hasCup = true;
     status = 'ready';
+    if (!first) return;
     if (appState.hof.squad) {
       appState.hof.squad = false;
       void tick().then(scrollToSquad);
@@ -196,6 +205,12 @@
       </dl>
     </section>
 
+    {#if hasCup}
+      <p class="tp-cup muted fs-sm" data-team-cup-view={cupView ? 'cup' : 'base'}>
+        <span>{cupView && cupLineup ? L.profCupLineup({ name: cupLineup.name }) : L.profBaseLineup}</span>
+        <button class="btn btn-sm" data-act="team-cup-toggle" onclick={() => { cupView = !cupView; void load(false); }}>{cupView ? L.profShowBase : L.profShowCup}</button>
+      </p>
+    {/if}
     <TeamPitch formation={team.formation} layout={team.layout} {cells} links={syn?.links ?? []} focus={syn?.members ?? null} applied={syn?.applied ?? []} caption={syn ? syn.caption : null} />
 
     <section class="card stack" style="gap:12px">
@@ -406,4 +421,5 @@
   .tp-badges li.final {
     box-shadow: inset 0 0 0 2px var(--pitch-accent);
   }
+  .tp-cup {display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0;}
 </style>

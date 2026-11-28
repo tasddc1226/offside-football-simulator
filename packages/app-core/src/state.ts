@@ -44,6 +44,8 @@ export type HofView = {
   owner?: boolean;
   /** 팀 프로필을 열면 선발 그라운드까지 내려서 보여 준다(라운지 팀 공유). 한 번 쓰면 지운다. */
   squad?: boolean;
+  /** T-11-845 컵 화면에서 연 팀 프로필은 그 팀의 컵 명단으로 보여 준다. */
+  cup?: boolean;
 };
 /** 기록실을 열 때의 상태. 시즌이 진행 중이면 그 시즌 순위부터 보여 준다. */
 export const hofStart = (): HofView => ({
