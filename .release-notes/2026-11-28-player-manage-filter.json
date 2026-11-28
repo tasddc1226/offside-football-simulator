@@ -1,0 +1,34 @@
+{
+  "id": "t-11-841-player-manage-filter",
+  "title": "보유 선수 관리 개편",
+  "items": [
+    "선수 관리의 보유 선수를 이름으로 찾고, 포지션 · 국적으로 거르고, 최고 OVR · 레전드 점수 · 방출 자금 · 강화 단계 순으로 정렬할 수 있어요. 고른 조건은 기록을 보고 돌아와도 그대로예요.",
+    "선수 한 명이 한 줄로 줄어 한 화면에 더 많이 보여요. 줄을 누르면 기록이 열리고, 이름 · 체격 바꾸기는 ⋯ 메뉴에 있어요.",
+    "고른 선수의 합계와 방출 버튼이 화면 아래에 붙어 있어 목록 끝까지 내려가지 않아도 돼요."
+  ],
+  "en": {
+    "title": "Owned players, reworked",
+    "items": [
+      "In Player management you can search owned players by name, filter them by position and nationality, and sort by peak OVR, legend score, release funds or enhancement. Your choices stay when you come back from a record.",
+      "Each player now takes one row, so more fit on screen. Tap a row to open the record; rename and physique are in the ⋯ menu.",
+      "The total and release button for picked players stay at the bottom of the screen."
+    ]
+  },
+  "ja": {
+    "title": "保有選手の管理を改善",
+    "items": [
+      "選手管理の保有選手を名前で検索し、ポジション・国籍で絞り込み、最高OVR・レジェンドスコア・放出資金・強化段階の順に並び替えられます。選んだ条件は記録を見て戻ってもそのままです。",
+      "選手1人が1行になり、1画面により多く表示されます。行を押すと記録が開き、名前・体格の変更は⋯メニューにあります。",
+      "選んだ選手の合計と放出ボタンは画面下に固定されます。"
+    ]
+  },
+  "zh": {
+    "title": "持有球員管理改版",
+    "items": [
+      "球員管理中的持有球員可依姓名搜尋、依位置與國籍篩選，並依最高 OVR、傳奇分數、釋出資金或強化階段排序。查看紀錄後返回，條件仍會保留。",
+      "每名球員縮成一列，一個畫面能看到更多。點一下該列會開啟紀錄，改名與體格變更在 ⋯ 選單中。",
+      "已選球員的合計與釋出按鈕固定在畫面下方。"
+    ]
+  },
+  "availability": "web-app"
+}
