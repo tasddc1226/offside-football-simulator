@@ -360,7 +360,7 @@ export const TYPES: Record<Pos, TypeDef[]> = {
         return L.typeWinger;
       },
       get desc() {
-        return L.typeWingerFwDesc;
+        return L.typeWingerDesc;
       },
       mod: { dri: 6, pac: 5, def: -6 },
       only: ['LW', 'RW'],

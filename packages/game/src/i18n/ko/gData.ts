@@ -52,7 +52,6 @@ const ko = {
   typeB2bDesc: '피지컬·수비 ▲ · 드리블 ▼',
   typeWinger: '윙어',
   typeWingerDesc: '드리블·스피드 ▲ · 수비 ▼',
-  typeWingerFwDesc: '드리블·스피드 ▲ · 수비 ▼ · LW·RW 공격수만',
   typeStopper: '스토퍼',
   typeStopperDesc: '수비·피지컬 ▲ · 패스 ▼',
   typeFullback: '공격형 풀백',
