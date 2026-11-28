@@ -471,7 +471,7 @@
             {:else}
               <span class="muted" data-cand-potential={i}>{L.potentialLocked}</span>
             {/if}
-            <span class="cc-scout">“{scoutLine(C.pos, cand.attrs, C.focus)}”</span>
+            <span class="cc-scout">“{scoutLine(C.pos, cand.attrs, C.focus, dpos)}”</span>
             {#if appState.candidatePick === i}
             <span class="cc-detail" transition:slide={{ duration: dur(360), easing: cubicOut }}>
             <span class="muted fs-sm" data-cand-edge={i}>{candidateEdge(C.pos, appState.candidates, i)}</span>

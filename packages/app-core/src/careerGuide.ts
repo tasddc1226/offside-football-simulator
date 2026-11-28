@@ -44,7 +44,8 @@ export function positionGuide(pos: Pos) {
     name: t.name,
     desc: t.desc,
     focus: join(focusOfType(pos, t.id)),
-    combos: pairs.filter((f) => typeForFocus(pos, f) === t.id).map(join),
+    // T-11-844 세부 포지션 전용 유형(공격수 윙어)은 그 자리로 만들 때의 조합을 보여 준다.
+    combos: pairs.filter((f) => typeForFocus(pos, f, t.only?.[0]) === t.id).map(join),
     // T-11-542 트리오(스리백)처럼 한 유형이 두 조건에 들면 시너지 하나로 묶고 자리를 합친다.
     synergies: DUOS.flatMap((d) => {
       const needs = d.needs.filter((n) => n.types.includes(t.id));

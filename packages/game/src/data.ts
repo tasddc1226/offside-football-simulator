@@ -317,6 +317,8 @@ export interface TypeDef {
   name: string;
   desc: string;
   mod: Partial<Record<AttrKey, number>>;
+  /** T-11-844 이 세부 포지션으로 만들 때만 고른다(공격수 윙어는 LW · RW 전용). 없으면 그 포지션군 어디서나. */
+  only?: readonly DetailPos[];
 }
 export const TYPES: Record<Pos, TypeDef[]> = {
   FW: [
@@ -349,6 +351,19 @@ export const TYPES: Record<Pos, TypeDef[]> = {
         return L.typeTargetDesc;
       },
       mod: { phy: 8, sho: 3, pac: -6 },
+    },
+    {
+      // T-11-844 LW · RW 공격수도 드리블 주력이면 윙어 유형이 된다(전에는 스피드스터만 나와 측면 듀오 조건에 못 들었다).
+      // 스트라이커(ST · CF · SS)는 그대로다. 미드필더 윙어와 같은 id · 이름이라 시너지 조건도 같다.
+      id: 'winger',
+      get name() {
+        return L.typeWinger;
+      },
+      get desc() {
+        return L.typeWingerFwDesc;
+      },
+      mod: { dri: 6, pac: 5, def: -6 },
+      only: ['LW', 'RW'],
     },
   ],
   MF: [
@@ -484,10 +499,14 @@ export const defaultFocus = (pos: Pos): AttrKey[] =>
     .sort((a, b) => (POS[pos].w[b] ?? 0) - (POS[pos].w[a] ?? 0))
     .slice(0, FOCUS_PICK);
 
-/** 주력 조합에 가장 가까운 기존 유형(동점이면 목록 앞쪽). */
-export function typeForFocus(pos: Pos, focus: readonly AttrKey[]): string {
+/** 그 세부 포지션으로 만들 때 고를 수 있는 유형(T-11-844 공격수 윙어는 LW · RW만). */
+export const typesFor = (pos: Pos, dpos?: DetailPos | null): TypeDef[] =>
+  TYPES[pos].filter((t) => !t.only || (!!dpos && t.only.includes(dpos)));
+
+/** 주력 조합에 가장 가까운 기존 유형(동점이면 목록 앞쪽). dpos를 모르면 세부 포지션 전용 유형은 빼고 고른다. */
+export function typeForFocus(pos: Pos, focus: readonly AttrKey[], dpos?: DetailPos | null): string {
   const score = (t: TypeDef) => focus.reduce((sum, k) => sum + (t.mod[k] ?? 0), 0);
-  return TYPES[pos].reduce((best, t) => (score(t) > score(best) ? t : best)).id;
+  return typesFor(pos, dpos).reduce((best, t) => (score(t) > score(best) ? t : best)).id;
 }
 
 /** 유형 id의 이름(플레이메이커 · 박스 투 박스 …). 모르는 id·기록이 지워진 선수는 null. */

@@ -933,7 +933,7 @@ export default function Create() {
                             {
                               n: i + 1,
                               ovr: startOvr(C.pos, cand.attrs),
-                              line: scoutLine(C.pos, cand.attrs, C.focus),
+                              line: scoutLine(C.pos, cand.attrs, C.focus, dpos),
                             },
                           )}`}
                           testID={`cand-${i}`}
@@ -1022,7 +1022,7 @@ export default function Create() {
                           <Txt
                             tone="accent"
                             style={{ fontSize: rem(FONT.body2), fontWeight: '600' }}
-                          >{`“${scoutLine(C.pos, cand.attrs, C.focus)}”`}</Txt>
+                          >{`“${scoutLine(C.pos, cand.attrs, C.focus, dpos)}”`}</Txt>
                           {isPicked ? (
                             <Txt v="sm" tone="muted" testID={`candidate-edge-${i}`}>
                               {candidateEdge(C.pos, s.candidates!, i)}

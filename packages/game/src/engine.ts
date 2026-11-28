@@ -76,7 +76,7 @@ export function newGame(
   presetPotential?: { value: number; scouted: number },
 ): GameState {
   const attrs = {} as Record<AttrKey, number>;
-  const typeId = o.focus ? typeForFocus(o.pos, o.focus) : o.type;
+  const typeId = o.focus ? typeForFocus(o.pos, o.focus, o.dpos) : o.type;
   const focus = o.focus ? [...o.focus] : focusOfType(o.pos, typeId);
   const mod = o.focus ? focusMod(o.pos, o.focus) : TYPES[o.pos].find((t) => t.id === typeId)!.mod;
   const dmod = o.dpos ? DPOS[o.dpos].mod : {};

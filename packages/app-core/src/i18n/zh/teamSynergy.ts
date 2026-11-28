@@ -95,7 +95,7 @@ export const teamSynergy: Translation<TeamSynergyMsgs> = {
   fitEffect: (p) => `位置適性 ${p.v}`,
   fitEffectBoth: (p) => `位置適性 ${p.v}（雙足 ${p.both}）`,
   requirementsHint:
-    '組合需要球員類型與配置位置都符合。括號內為配置位置。點擊球員卡片即可確認類型。放在 W・LW・RW 的速度型不符合邊鋒型條件。W・LW・RW 位置以邊鋒角色的實力出賽，因此培養成進攻型・中路中場的邊鋒型，若速度・傳中不足，表現會低於 OVR。',
+    '組合需要球員類型與配置位置都符合。括號內為配置位置。點擊球員卡片即可確認類型。放在 W・LW・RW 的速度型不符合邊鋒型條件。LW・RW 前鋒若選速度・盤帶、速度・身體或傳球・盤帶為主力，會成為邊鋒型。W・LW・RW 位置以邊鋒角色的實力出賽，因此培養成進攻型・中路中場的邊鋒型，若速度・傳中不足，表現會低於 OVR。',
   title: '球隊默契',
   chipApplied: '套用中',
   chipViewing: '檢視中',

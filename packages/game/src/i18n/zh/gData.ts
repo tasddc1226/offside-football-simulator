@@ -49,6 +49,7 @@ export const gData: Translation<GDataMsgs> = {
   typeB2bDesc: '身體·防守 ▲ · 盤帶 ▼',
   typeWinger: '邊鋒',
   typeWingerDesc: '盤帶·速度 ▲ · 防守 ▼',
+  typeWingerFwDesc: '盤帶·速度 ▲ · 防守 ▼ · 僅限 LW·RW 前鋒',
   typeStopper: '盯人中衛',
   typeStopperDesc: '防守·身體 ▲ · 傳球 ▼',
   typeFullback: '進攻型邊後衛',

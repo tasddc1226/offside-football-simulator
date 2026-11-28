@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { positionGuide, teamNameIssues } from './careerGuide.js';
 import { createRng, getActiveRng, setActiveRng } from '@offside/game/rng';
 import { DUOS, MANAGER_NAME_MAX, TEAM_NAME_MAX } from '@offside/contracts/owner-team';
-import { ATTR_KEYS, attrLabels, typeForFocus } from '@offside/game/data';
+import { ATTR_KEYS, TYPES, attrLabels, typeForFocus } from '@offside/game/data';
 it('reading every position guide does not consume career RNG and uses goalkeeper-specific names', () => {
   setActiveRng(createRng(71));
   const before = getActiveRng().getState();
@@ -21,15 +21,17 @@ it('type guide derives every focus pair from the creation rule and lists the duo
   const before = getActiveRng().getState();
   for (const pos of ['FW', 'MF', 'DF', 'GK'] as const) {
     const guide = positionGuide(pos);
-    // 6개 중 2개 조합 15가지가 정확히 한 유형씩에 들어간다(선수 생성의 typeForFocus와 같은 결과).
-    expect(guide.reduce((n, e) => n + e.combos.length, 0)).toBe(15);
+    // 6개 중 2개 조합 15가지가 세부 포지션 전용이 아닌 유형에 정확히 한 번씩 들어간다(선수 생성의 typeForFocus와 같은 결과).
+    // T-11-844 세부 포지션 전용 유형(공격수 윙어)은 그 자리로 만들 때의 조합을 따로 보여 준다.
+    const only = (id: string) => TYPES[pos].find((t) => t.id === id)?.only?.[0];
+    expect(guide.filter((e) => !only(e.id)).reduce((n, e) => n + e.combos.length, 0)).toBe(15);
     const labels = attrLabels(pos);
     for (const e of guide) {
       for (const a of ATTR_KEYS)
         for (const b of ATTR_KEYS) {
           if (ATTR_KEYS.indexOf(b) <= ATTR_KEYS.indexOf(a)) continue;
           const listed = e.combos.includes(`${labels[a]} · ${labels[b]}`);
-          expect(listed).toBe(typeForFocus(pos, [a, b]) === e.id);
+          expect(listed).toBe(typeForFocus(pos, [a, b], only(e.id)) === e.id);
         }
       for (const s of e.synergies) {
         const duo = DUOS.find((d) => d.id === s.id)!;
@@ -38,6 +40,10 @@ it('type guide derives every focus pair from the creation rule and lists the duo
       }
     }
   }
+  // T-11-844 LW · RW 공격수 윙어는 스피드 · 드리블, 스피드 · 피지컬, 패스 · 드리블로 된다.
+  const fwWinger = positionGuide('FW').find((e) => e.id === 'winger')!;
+  expect(fwWinger.combos).toHaveLength(3);
+  expect(fwWinger.synergies.map((s) => s.id)).toContain('wings');
   const speed = positionGuide('FW').find((e) => e.id === 'speed')!;
   expect(speed.synergies.map((s) => s.id)).toEqual(['trident', 'counter']);
   expect(speed.synergies[1]!.slots.split('·')).toEqual(['ST', 'CF', 'SS', 'LW', 'RW']);

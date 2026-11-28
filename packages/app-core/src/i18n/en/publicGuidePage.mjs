@@ -369,7 +369,7 @@ export default (guideCopy) => {
     ],
     [
       'How are player types like Speedster and Stopper decided?',
-      'They are decided by the combination of the two focus attributes you pick when creating a player, and they do not change when you raise attributes. Within the same position, each focus combination has a set type, and the type is used for the duo synergy conditions of an owner team (a synergy turns on only when both the type and the lineup spot match). You can see the type and synergy for each combination in the Player type guide on the player creation screen and in the Odds guide.',
+      'They are decided by the combination of the two focus attributes you pick when creating a player, and they do not change when you raise attributes. Within the same position, each focus combination has a set type (LW / RW forwards become Wingers with Pace + Dribbling, Pace + Physical or Passing + Dribbling), and the type is used for the duo synergy conditions of an owner team (a synergy turns on only when both the type and the lineup spot match). You can see the type and synergy for each combination in the Player type guide on the player creation screen and in the Odds guide.',
     ],
     [
       'Is the player type a random draw?',
