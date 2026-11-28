@@ -41,6 +41,7 @@ export const account: Translation<AccountMsgs> = {
   appleVia: "You're logged in with your Apple account.",
   loginGoogle: 'Log in with Google',
   loginApple: 'Sign in with Apple',
+  googleNotFinished: 'The Google sign-in window closed. Tap again to sign in.',
   googleFinishFail: "Couldn't finish Google login. Please try again.",
   appleStartFail: "Couldn't start Apple login.",
   appleFinishFail: "Couldn't finish Apple login. Please try again.",

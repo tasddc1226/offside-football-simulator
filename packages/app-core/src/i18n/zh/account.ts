@@ -39,6 +39,7 @@ export const account: Translation<AccountMsgs> = {
   appleVia: '已使用 Apple 帳號登入。',
   loginGoogle: '使用 Google 登入',
   loginApple: '使用 Apple 登入',
+  googleNotFinished: 'Google 登入視窗已關閉，請再點一次登入。',
   googleFinishFail: '無法完成 Google 登入，請再試一次。',
   appleStartFail: '無法開始 Apple 登入。',
   appleFinishFail: '無法完成 Apple 登入，請再試一次。',

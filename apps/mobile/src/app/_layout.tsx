@@ -14,6 +14,7 @@ import {
 } from '@expo-google-fonts/barlow-condensed';
 import { boot } from '../game/boot';
 import { startAppLinks } from '../platform/appLink';
+import { startAuthReturns } from '../platform/auth';
 import { openAppLink } from '../platform/inbox';
 import { startPush } from '../platform/push';
 import { syncAdFree } from '../platform/adFree';
@@ -54,6 +55,7 @@ export default function RootLayout() {
     void askTracking();
     startPush();
     startAppLinks(openAppLink);
+    startAuthReturns();
     void syncAdFree();
     void recoverIapItems();
     void recoverSeasonPass();

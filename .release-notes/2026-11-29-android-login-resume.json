@@ -1,0 +1,30 @@
+{
+  "id": "t-11-846-android-login-resume",
+  "title": "Android 구글 로그인 이어 받기",
+  "items": [
+    "Android에서 구글 로그인 중에 앱으로 먼저 돌아왔다가 브라우저에서 로그인을 마치거나, 로그인하는 동안 앱이 종료돼도 다시 열면 로그인이 이어져요.",
+    "로그인을 마치기 전에 창이 닫히면 닫혔다고 알려 줘요."
+  ],
+  "en": {
+    "title": "Google sign-in resumes on Android",
+    "items": [
+      "On Android, if you go back to the app before finishing Google sign-in and then finish it in the browser, or the app closes while you sign in, sign-in now continues when you return.",
+      "If the window closes before you finish, you now see a notice."
+    ]
+  },
+  "ja": {
+    "title": "AndroidのGoogleログインの再開",
+    "items": [
+      "Androidで、Googleログイン中に先にアプリへ戻ってからブラウザでログインを終えたり、ログイン中にアプリが終了したりしても、アプリを開き直すとログインが続きます。",
+      "ログインを終える前に画面が閉じると、閉じたことをお知らせします。"
+    ]
+  },
+  "zh": {
+    "title": "Android Google 登入可接續",
+    "items": [
+      "在 Android 上，若 Google 登入途中先回到 App 再於瀏覽器完成登入，或登入期間 App 被關閉，重新開啟後會接續完成登入。",
+      "若在完成登入前視窗被關閉，會顯示提示。"
+    ]
+  },
+  "availability": "app"
+}

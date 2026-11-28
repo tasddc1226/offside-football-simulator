@@ -16,6 +16,7 @@ export default {
       'src/platform/gameCenterOffer.test.mjs',
       'src/platform/pushAsk.test.mjs',
       'src/platform/chatUnread.test.mjs',
+      'src/platform/auth.test.mjs',
       'src/platform/adConsent.test.mjs',
       'src/platform/adPersonalization.test.mjs',
       'src/platform/rewarded.test.mjs',
