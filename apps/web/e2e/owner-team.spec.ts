@@ -302,7 +302,9 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="team"]').click();
-  await expect(page.locator('h1')).toHaveText('팀 만들기');
+  // T-11-842 팀이 없으면 닉네임으로 팀 이름을 미리 넣고 가진 선수를 자동 배치해 둔다.
+  await expect(page.locator('h1')).toHaveText('구단주 FC');
+  await expect(page.locator('[data-team-prefilled]')).toContainText('가진 선수로 선발을 채우고');
   // 저장 전에는 경기할 수 없다 — 하단 '경기' 탭은 상대 대신 이유를 보인다.
   await page.locator('[data-team-tab="opponents"]').click();
   await expect(page.locator('[data-match-hint]')).toContainText('저장');
@@ -312,10 +314,11 @@ test('팀을 만들고(자동 배치) 다른 구단주와 경기한다', async (
   // 구단주 화면을 오가도 같은 요청을 다시 하지 않는다(메모).
   await page.locator('[data-act="team-back"]').click();
   await page.locator('[data-act="team"]').click();
-  await expect(page.locator('h1')).toHaveText('팀 만들기');
+  await expect(page.locator('h1')).toHaveText('구단주 FC');
   expect(getCount).toBe(1);
 
   await page.locator('[data-team-name]').fill('우리 동네 FC');
+  await page.locator('[data-team-manager]').fill('');
   // 감독 이름이 비면 저장할 수 없고 이유를 보여 준다.
   await expect(page.locator('[data-act="team-save"]')).toBeDisabled();
   await expect(page.locator('[data-team-save-reason]')).toContainText('팀 대표 이름');
@@ -1124,8 +1127,8 @@ test('시즌별 팀 — 지난 시즌 팀은 보기만 하고, 라이브 랭킹�
   await page.goto('/');
   await page.locator('[data-act="owner"]').click();
   await page.locator('[data-act="team"]').click();
-  // 새 시즌 — 팀이 없고 감독 이름은 지난 팀에서 채워 둔다.
-  await expect(page.locator('h1')).toHaveText('팀 만들기');
+  // 새 시즌 — 팀이 없고 감독 이름은 지난 팀에서 채워 둔다(팀 이름은 지난 팀 이름이 없으면 닉네임으로, T-11-842).
+  await expect(page.locator('h1')).toHaveText('구단주 FC');
   await expect(page.locator('[data-team-manager]')).toHaveValue('홍감독');
   await expect(page.locator('.tm-head')).toContainText('시즌 1에 뛰고 은퇴한');
 
@@ -2013,8 +2016,9 @@ for (const width of [320, 390, 1280]) {
       'height',
       '210',
     );
-    // 비어 있는 유스 자리는 선수 얼굴을 임의로 만들지 않는다.
-    await expect(page.locator('.tm-slot[data-slot="0"] .avatar')).toHaveCount(0);
+    // 비어 있는 유스 자리는 선수 얼굴을 임의로 만들지 않는다(T-11-842부터 가진 선수는 자동 배치돼 있어 유스 자리를 골라 본다).
+    await expect(page.locator('.tm-slot:has(.player-card.youth)').first()).toBeVisible();
+    await expect(page.locator('.tm-slot:has(.player-card.youth) .avatar')).toHaveCount(0);
     expect(calls).toBe(1);
   });
 }

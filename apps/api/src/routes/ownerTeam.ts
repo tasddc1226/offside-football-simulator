@@ -284,6 +284,7 @@ export function registerOwnerTeamRoutes(app: Hono<AppEnv>): void {
           listing: p.listingId ? { id: p.listingId, price: p.listPrice! } : null,
         })),
         lastManager: teams.findLast((t) => t.manager)?.manager ?? null,
+        lastTeamName: teams.findLast((t) => t.name)?.name ?? null,
         ...matchAllowance([...played, ...openLive], now, matchRechargeFrom(balance)),
         matchesPerDay: TEAM_MATCHES_PER_DAY,
         // 급여 예산은 없앴다. OTA 전의 옛 앱이 편성을 막지 않게 닿지 않는 값을 보낸다.

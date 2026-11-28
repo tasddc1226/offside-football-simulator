@@ -51,6 +51,8 @@ import {
   synergyFocus,
   teamEditableIn,
   seasonCupSlots,
+  firstTeamDefaults,
+  firstTeamNote,
 } from '@offside/app-core/teamOwner';
 import { cupText as CT } from '@offside/app-core/i18n/ko/cup';
 import { MARKET_TOAST, marketName, needsOwnerLogin } from '@offside/app-core/market';
@@ -187,6 +189,8 @@ export default function Team() {
   const [draftKey, setDraftKey] = useState<string | null>(null);
   const [pendingDraft, setPendingDraft] = useState<TeamDraft | null>(null);
   const [restored, setRestored] = useState(false);
+  /** T-11-842 팀이 없어 첫 초안(자동 배치 · 이름)을 미리 채웠다. */
+  const [prefilled, setPrefilled] = useState(false);
   const loadSequence = useRef(0);
   const savingRef = useRef(false);
   const draftNow = useRef<PutOwnerTeamBody | null>(null);
@@ -391,9 +395,17 @@ export default function Team() {
   draftNow.current = draftValue;
   dirtyNow.current = dirty;
   teamNow.current = team;
+  // T-11-842 미리 채운 첫 초안과 같으면 바뀐 것이 없다고 보고 초안을 남기지 않는다(다시 열면 새 선수로 다시 채운다).
+  const autoDefaults = useRef<string | null>(null);
   useEffect(() => {
     if (status !== 'ready' || !editable || !draftKey || pendingDraft) return;
-    writeTeamDraft(draftKey, dirty ? { base: teamDraftBase(team), value: draftValue } : null);
+    const now = JSON.stringify(draftValue);
+    if (prefilled && !team && autoDefaults.current === null) autoDefaults.current = now;
+    const untouched = !team && autoDefaults.current === now;
+    writeTeamDraft(
+      draftKey,
+      dirty && !untouched ? { base: teamDraftBase(team), value: draftValue } : null,
+    );
   }, [
     name,
     manager,
@@ -406,8 +418,10 @@ export default function Team() {
     draftKey,
     pendingDraft,
     team,
+    prefilled,
   ]);
   function applyDraft(value: PutOwnerTeamBody) {
+    setPrefilled(false);
     setName(value.name);
     setManager(value.manager);
     setLogo(value.logo ?? null);
@@ -440,6 +454,7 @@ export default function Team() {
     const r = await fetchOwnerTeam(want);
     if (sequence !== loadSequence.current) return;
     if (silent && !r.ok) return;
+    if (!silent) autoDefaults.current = null;
     if (!r.ok) {
       const login = needsOwnerLogin(r.error);
       setNeedLogin(login);
@@ -470,6 +485,23 @@ export default function Team() {
     if (!d.team && d.season === d.current)
       trackFunnel({ kind: 'team_view', players: d.players.length });
     applyTeam(d.team, d.lastManager);
+    // T-11-842 이번 시즌 팀이 없으면 가진 선수로 선발을 채우고 팀 · 감독 이름을 미리 넣어 둔다(저장 전까지 초안).
+    const account = accountCache.value;
+    const canEdit = teamEditableIn(d.season, d.current, d.cupSeason);
+    if (!d.team && canEdit) {
+      const first = firstTeamDefaults({
+        players: d.players,
+        season: d.season,
+        editable: canEdit,
+        lastManager: d.lastManager,
+        lastTeamName: d.lastTeamName,
+        nickname: account && typeof account === 'object' ? account.nickname : null,
+      });
+      setName(first.name);
+      if (first.manager) setManager(first.manager);
+      setSlots(first.slots);
+      setPrefilled(true);
+    } else setPrefilled(false);
     setDivisionNotice(
       d.team && teamEditableIn(d.season, d.current) && d.season === d.current
         ? (takeDivisionChange(d.season, d.team.division)?.text ?? null)
@@ -898,6 +930,16 @@ export default function Team() {
               {L.draftRevertApp}
             </Btn>
           </Card>
+        ) : null}
+        {prefilled &&
+        !team &&
+        editable &&
+        !restored &&
+        !pendingDraft &&
+        firstTeamNote(filled, !!name.trim()) ? (
+          <Txt v="sm" tone="muted" testID="team-prefilled">
+            {firstTeamNote(filled, !!name.trim())}
+          </Txt>
         ) : null}
         {editable || team ? (
           <>

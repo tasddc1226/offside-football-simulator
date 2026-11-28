@@ -37,6 +37,11 @@ export const teamHome: Translation<TeamHomeMsgs> = {
   draftRestoredApp: '保存前の編成を復元しました。「編成を保存」を押すとチームに反映されます。',
   draftRevertApp: '保存済みのチームに戻す',
   savedPartial: '保存しました。その後に変えた内容はまだ保存されていません。',
+  prefilledNote:
+    '保有選手で先発を埋め、名前も入れておきました。そのまま保存しても、変えてもかまいません。',
+  prefilledNameNote:
+    'チーム名と監督名を入れておきました。そのまま保存しても、変えてもかまいません。',
+  prefilledSlotsNote: '保有選手で先発を埋めておきました。チーム名を決めて保存しましょう。',
   toastCreated: 'チームを作りました',
   toastSavedWeb: '変更を保存しました',
   toastSavedApp: '編成を保存しました',
