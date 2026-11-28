@@ -74,10 +74,18 @@ type DuoDef = {
   /** T-11-542 이 서비스 시즌부터 켜진다(없으면 처음부터). 지난 시즌 팀 · 경기는 그 시즌 규칙으로 센다. */
   since?: number;
   effect: Partial<SynergyLines>;
+  /** T-11-843 서비스 시즌 3부터 쓰는 효과(없으면 effect 그대로). 시즌 2까지의 팀 · 경기는 effect로 센다. */
+  s3?: Partial<SynergyLines>;
 };
 
 /** T-11-542 시즌 2에 더한 트리오 · 듀오 · 나라별 색깔이 켜지는 서비스 시즌. 시즌 1 남은 경기는 그대로 둔다. */
 export const SYNERGY_S2_SEASON = 2;
+/**
+ * T-11-843 시즌 3부터 거의 안 쓰이던 듀오(스리백 · 철벽 · 빅 앤 스몰 · 양 날개 · 섀도 · 더블 볼란치)의 효과를 올린다.
+ * 시즌 2 상위 200팀에서 4-2-3-1이 듀오를 평균 11.1개 켜는 동안 스리백은 7.4개였다(이 듀오들이 5~17팀에서만 켜짐).
+ * 시너지 총량은 건드리지 않고 다른 포메이션도 비슷하게 켤 수 있게 맞춘다. 기획: docs/tracking/synergy-s3-rebalance.md.
+ */
+export const SYNERGY_S3_SEASON = 3;
 /** 그 시즌에 쓰는 규칙인지(season을 모르면 지금 규칙 전부). */
 const ruleOn = (since: number | undefined, season: number | undefined): boolean =>
   since === undefined || season === undefined || season >= since;
@@ -122,6 +130,7 @@ export const DUOS: readonly DuoDef[] = [
     ],
     since: SYNERGY_S2_SEASON,
     effect: { mid: 0.5, def: 1 },
+    s3: { mid: 0.5, def: 2 },
   },
   {
     id: 'cross',
@@ -152,6 +161,7 @@ export const DUOS: readonly DuoDef[] = [
       { types: ['stopper'], slots: ['CB'], count: 2 },
     ],
     effect: { gk: 2 },
+    s3: { def: 1.5, gk: 1 },
   },
   {
     id: 'cb_pair',
@@ -224,6 +234,7 @@ export const DUOS: readonly DuoDef[] = [
     ],
     since: SYNERGY_S2_SEASON,
     effect: { atk: 1 },
+    s3: { atk: 1.5 },
   },
   {
     id: 'wings',
@@ -233,6 +244,7 @@ export const DUOS: readonly DuoDef[] = [
     oppositeSide: true,
     since: SYNERGY_S2_SEASON,
     effect: { atk: 1 },
+    s3: { atk: 1.5 },
   },
   {
     id: 'shadow',
@@ -244,6 +256,7 @@ export const DUOS: readonly DuoDef[] = [
     ],
     since: SYNERGY_S2_SEASON,
     effect: { atk: 0.5 },
+    s3: { atk: 1 },
   },
   {
     id: 'double_pivot',
@@ -252,6 +265,7 @@ export const DUOS: readonly DuoDef[] = [
     needs: [{ types: ['b2b'], slots: ['DM', 'CM'], count: 2 }],
     since: SYNERGY_S2_SEASON,
     effect: { def: 0.5 },
+    s3: { mid: 1, def: 1 },
   },
   {
     id: 'anchor',
@@ -504,7 +518,9 @@ function matchDuo(players: readonly (SynergyPlayer | null)[], d: DuoDef): number
 
 /** 그 서비스 시즌에 쓰는 듀오 · 트리오(season을 모르면 전부). */
 export const duosFor = (season?: number): readonly DuoDef[] =>
-  DUOS.filter((d) => ruleOn(d.since, season));
+  DUOS.filter((d) => ruleOn(d.since, season)).map((d) =>
+    d.s3 && ruleOn(SYNERGY_S3_SEASON, season) ? { ...d, effect: d.s3 } : d,
+  );
 
 /**
  * 선발 11자리 → 켜진 시너지·주발 보정·줄 보정. season은 그 팀의 서비스 시즌(T-11-542 — 시즌 2 규칙은 시즌 2부터).

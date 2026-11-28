@@ -13,6 +13,7 @@ import {
   CONFED_STYLES,
   SYNERGY_FROM_SEASON,
   SYNERGY_S2_SEASON,
+  SYNERGY_S3_SEASON,
   duosFor,
   footBonus,
   nationStyle,
@@ -340,5 +341,34 @@ describe('T-11-467 리그 컬러 · 클럽 동료', () => {
     const s = teamSynergy(all(() => ({})));
     expect(ids(s)).not.toContain('league');
     expect(ids(s)).not.toContain('club');
+  });
+});
+
+describe('T-11-843 시즌 3 듀오 재조정', () => {
+  const S3 = SYNERGY_S3_SEASON;
+  const eff = (season: number | undefined, id: string) =>
+    duosFor(season).find((d) => d.id === id)!.effect;
+  it('안 쓰이던 듀오 여섯 개만 시즌 3부터 효과가 바뀌고 시즌 2까지는 그대로다', () => {
+    const changed = DUOS.filter((d) => d.s3).map((d) => d.id);
+    expect(changed.sort()).toEqual(
+      ['back_three', 'big_small', 'double_pivot', 'shadow', 'wall', 'wings'].sort(),
+    );
+    for (const d of DUOS) {
+      expect(eff(S3 - 1, d.id) ?? d.effect).toEqual(d.effect);
+      expect(eff(S3, d.id)).toEqual(d.s3 ?? d.effect);
+    }
+    expect(eff(undefined, 'wall')).toEqual(eff(S3, 'wall'));
+  });
+  it('철벽은 시즌 3부터 골문 대신 수비 쪽으로 더한다(경기 계산에 쓰는 줄 힘)', () => {
+    // 4-3-3: 0 GK(벽 키퍼) · 2 · 3 CB(스토퍼 둘)
+    const players = lineup({ 0: 'wall', 2: 'stopper', 3: 'stopper' });
+    expect(teamSynergy(players, S3 - 1).lines).toMatchObject({ def: 0, gk: 2 });
+    expect(teamSynergy(players, S3).lines).toMatchObject({ def: 1.5, gk: 1 });
+  });
+  it('바뀐 듀오는 줄 힘 기준으로 시즌 2보다 크고, 기존 듀오는 건드리지 않는다', () => {
+    const w = { atk: 0.03, mid: 0.01, def: 0.021, gk: 0.009 } as const;
+    const value = (e: Partial<Record<keyof typeof w, number>>) =>
+      (Object.keys(w) as (keyof typeof w)[]).reduce((t, k) => t + w[k] * (e[k] ?? 0), 0);
+    for (const d of DUOS.filter((x) => x.s3)) expect(value(d.s3!)).toBeGreaterThan(value(d.effect));
   });
 });
