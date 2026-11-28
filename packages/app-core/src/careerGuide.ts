@@ -42,7 +42,8 @@ export function positionGuide(pos: Pos) {
   return TYPES[pos].map((t) => ({
     id: t.id,
     name: t.name,
-    desc: t.desc,
+    // T-11-844 세부 포지션 전용 유형(공격수 윙어)은 그 자리를 설명 뒤에 붙인다(첫 화면 엔진 사전을 늘리지 않으려고 여기서 붙인다).
+    desc: t.only ? `${t.desc} · ${t.only.join('·')}` : t.desc,
     focus: join(focusOfType(pos, t.id)),
     // T-11-844 세부 포지션 전용 유형(공격수 윙어)은 그 자리로 만들 때의 조합을 보여 준다.
     combos: pairs.filter((f) => typeForFocus(pos, f, t.only?.[0]) === t.id).map(join),

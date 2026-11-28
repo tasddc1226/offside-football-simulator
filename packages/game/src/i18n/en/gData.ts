@@ -49,7 +49,6 @@ export const gData: Translation<GDataMsgs> = {
   typeB2bDesc: 'Physical, Defending ▲ · Dribbling ▼',
   typeWinger: 'Winger',
   typeWingerDesc: 'Dribbling, Pace ▲ · Defending ▼',
-  typeWingerFwDesc: 'Dribbling, Pace ▲ · Defending ▼ · LW/RW forwards only',
   typeStopper: 'Stopper',
   typeStopperDesc: 'Defending, Physical ▲ · Passing ▼',
   typeFullback: 'Attacking fullback',
