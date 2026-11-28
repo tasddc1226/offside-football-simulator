@@ -1,0 +1,30 @@
+{
+  "id": "t-11-845-cup-team-profile",
+  "title": "컵에서 연 팀은 컵 명단으로",
+  "items": [
+    "컵 화면에서 팀을 눌러 프로필을 열면 그 팀이 컵에 등록한 명단(선발 · 포메이션 · OVR · 시너지)으로 보여요. 컵 명단을 따로 짜지 않은 팀은 기본 팀 그대로예요.",
+    "프로필 위 버튼으로 리그 · 랭크에 쓰는 기본 팀과 컵 명단을 바꿔 볼 수 있어요."
+  ],
+  "en": {
+    "title": "Cup lineups on team profiles opened from the cup",
+    "items": [
+      "When you tap a team on the cup screen, its profile now shows the lineup it registered for the cup (starters, formation, OVR and synergy). Teams without a separate cup lineup show their default team.",
+      "Use the button above the pitch to switch between the default team used for league and ranked matches and the cup lineup."
+    ]
+  },
+  "ja": {
+    "title": "カップから開いたチームはカップメンバーで表示",
+    "items": [
+      "カップ画面でチームをタップしてプロフィールを開くと、そのチームがカップに登録したメンバー(スタメン・フォーメーション・OVR・シナジー)で表示されます。カップメンバーを別に組んでいないチームは基本チームのままです。",
+      "プロフィール上のボタンで、リーグ・ランクで使う基本チームとカップメンバーを切り替えられます。"
+    ]
+  },
+  "zh": {
+    "title": "從盃賽開啟的球隊顯示盃賽名單",
+    "items": [
+      "在盃賽畫面點選球隊開啟檔案時，會顯示該球隊為盃賽登記的名單（先發・陣型・OVR・默契）。沒有另外安排盃賽名單的球隊維持基本球隊。",
+      "可用檔案上方的按鈕切換聯賽・排位使用的基本球隊與盃賽名單。"
+    ]
+  },
+  "availability": "web-app"
+}

@@ -60,6 +60,10 @@ export default function TeamProfile({ id }: { id: string }) {
   // T-11-098 친구 신청. null이면 버튼을 그리지 않는다(로그인 전 · 내 팀 · 구버전 응답).
   const [friend, setFriend] = useState<FriendState | null>(null);
   const [requesting, setRequesting] = useState(false);
+  // T-11-845 컵 화면에서 열면 그 팀의 컵 명단으로 보여 주고, 기본 팀으로 바꿔 볼 수 있다.
+  const [cupView, setCupView] = useState(() => !!appState.hof.cup);
+  const [cupLineup, setCupLineup] = useState<{ name: string } | null>(null);
+  const [hasCup, setHasCup] = useState(false);
   // T-11-029 끝난 시즌의 팀은 좋아요가 굳는다(서버가 409로 거절한다).
   const closed = !!team && teamSeasonClosed(team.season, new Date().toISOString());
 
@@ -70,11 +74,13 @@ export default function TeamProfile({ id }: { id: string }) {
   const load = useCallback(
     async (silent = false) => {
       if (!silent) setStatus('loading');
-      const r = await fetchTeamProfile(id);
+      const r = await fetchTeamProfile(id, cupView);
       if (!r.ok) {
         if (!silent) setStatus('error');
         return;
       }
+      setCupLineup(r.data.cupLineup ?? null);
+      if (r.data.cupLineup) setHasCup(true);
       setLiked(r.data.liked);
       setMine(r.data.mine);
       setFriend(r.data.friend ?? null);
@@ -84,9 +90,14 @@ export default function TeamProfile({ id }: { id: string }) {
       } else setTeam(r.data.team);
       setStatus('ready');
     },
-    [id],
+    [id, cupView],
   );
-  useEffect(() => void load(), [load]);
+  // 컵 명단 ↔ 기본 팀을 바꿀 때는 조회수를 다시 세지 않는다(silent).
+  const firstLoad = useRef(true);
+  useEffect(() => {
+    void load(!firstLoad.current);
+    firstLoad.current = false;
+  }, [load]);
   useOnPull(() => (liking || requesting ? undefined : load(true)));
 
   // T-11-358 경기 통계 — '경기 통계 보기'를 누를 때만 불러온다.
@@ -348,6 +359,27 @@ export default function TeamProfile({ id }: { id: string }) {
             </View>
           </Card>
 
+          {hasCup ? (
+            <View
+              testID={`team-cup-view-${cupView ? 'cup' : 'base'}`}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 8,
+                flexWrap: 'wrap',
+              }}
+            >
+              <Txt tone="muted" style={{ flex: 1, fontSize: rem(FONT.caption) }}>
+                {cupView && cupLineup
+                  ? L.profCupLineup({ name: cupLineup.name })
+                  : L.profBaseLineup}
+              </Txt>
+              <Btn sm testID="team-cup-toggle" onPress={() => setCupView((v) => !v)}>
+                {cupView ? L.profShowBase : L.profShowCup}
+              </Btn>
+            </View>
+          ) : null}
           <TeamPitch
             layout={team.layout}
             formation={team.formation}

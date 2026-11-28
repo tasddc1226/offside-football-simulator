@@ -730,6 +730,8 @@ function CupBody({
       team: id,
       season: data?.cup.season ?? null,
       owner,
+      // T-11-845 컵에서 연 팀은 그 팀의 컵 명단으로 보여 준다.
+      cup: true,
     };
     go('hof');
   }

@@ -55,8 +55,11 @@ const matches = [
 test('대진 경기 → 팀 프로필 → 뒤로: 고른 경기와 스크롤 자리가 남는다', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 700 });
   await page.clock.setFixedTime(new Date('2026-10-16T13:00:00.000Z'));
+  const profileQueries: string[] = [];
   await page.route(`${API}/**`, async (r) => {
-    const path = new URL(r.request().url()).pathname;
+    const url = new URL(r.request().url());
+    const path = url.pathname;
+    if (/^\/v1\/teams\/[^/]+$/.test(path)) profileQueries.push(url.search);
     if (path === '/v1/cups/home')
       return r.fulfill(
         ok({
@@ -97,6 +100,8 @@ test('대진 경기 → 팀 프로필 → 뒤로: 고른 경기와 스크롤 자
   await page.clock.setFixedTime(new Date('2026-10-16T13:05:00.000Z'));
   await row.locator('[data-act="cup-team"]').first().click();
   await expect(page.locator('[data-cup-hero]')).toHaveCount(0);
+  // T-11-845 컵에서 연 팀 프로필은 그 팀의 컵 명단으로 받는다.
+  await expect.poll(() => profileQueries).toContain('?view=cup');
   await page.goBack();
   await expect(page.locator('[data-bracket-selected]')).toContainText('팀6');
   await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(before - 40);
